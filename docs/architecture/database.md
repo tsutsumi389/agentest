@@ -1,95 +1,67 @@
 # データベース設計
 
-## 概要
+詳細なテーブル定義は [database/](./database/index.md) ディレクトリを参照してください。
 
-PostgreSQL を使用。Prisma ORM でスキーマ管理。
-
-## ER 図
-
-```
-┌──────────────┐       ┌──────────────┐       ┌──────────────┐
-│     User     │       │ Organization │       │   Project    │
-├──────────────┤       ├──────────────┤       ├──────────────┤
-│ id           │──┬─┐  │ id           │──┐    │ id           │
-│ email        │  │ │  │ name         │  │    │ name         │
-│ name         │  │ │  │ slug         │  │    │ description  │
-│ avatarUrl    │  │ │  │ createdAt    │  ├───▶│ organizationId│
-│ createdAt    │  │ │  │ updatedAt    │  │    │ createdAt    │
-└──────────────┘  │ │  └──────────────┘  │    └──────────────┘
-                  │ │                    │           │
-                  │ ▼                    │           ▼
-                  │ ┌──────────────┐     │    ┌──────────────┐
-                  │ │   Account    │     │    │  TestSuite   │
-                  │ ├──────────────┤     │    ├──────────────┤
-                  │ │ id           │     │    │ id           │
-                  │ │ userId       │     │    │ name         │
-                  │ │ provider     │     │    │ description  │
-                  │ │ providerAccId│     │    │ projectId    │
-                  │ │ accessToken  │     │    │ createdAt    │
-                  │ │ refreshToken │     │    └──────────────┘
-                  │ │ createdAt    │     │
-                  │ └──────────────┘     │
-                  ▼                      │
-┌─────────────────────┐                  │
-│ OrganizationMember  │                  │
-├─────────────────────┤                  │
-│ userId              │◀─────────────────┘
-│ organizationId      │
-│ role                │
-│ joinedAt            │
-└─────────────────────┘
-                                                     │
-                                                     ▼
-┌──────────────┐       ┌──────────────┐       ┌──────────────┐
-│  TestCase    │       │  Execution   │       │ ExecutionResult│
-├──────────────┤       ├──────────────┤       ├──────────────┤
-│ id           │◀──────│ testCaseId   │       │ id           │
-│ title        │       │ id           │──────▶│ executionId  │
-│ description  │       │ status       │       │ status       │
-│ steps        │       │ startedAt    │       │ duration     │
-│ expectedResult│      │ completedAt  │       │ error        │
-│ testSuiteId  │       │ executedBy   │       │ createdAt    │
-│ priority     │       └──────────────┘       └──────────────┘
-│ createdAt    │
-└──────────────┘
-```
-
-## 主要テーブル
+## テーブル一覧
 
 ### 認証関連
 
 | テーブル | 説明 |
 |---------|------|
-| `User` | ユーザー情報 |
-| `Account` | OAuth アカウント（GitHub, Google） |
-| `RefreshToken` | JWT リフレッシュトークン |
+| [User](./database/auth.md#user) | ユーザー情報 |
+| [Account](./database/auth.md#account) | OAuth アカウント（GitHub, Google） |
+| [RefreshToken](./database/auth.md#refreshtoken) | JWT リフレッシュトークン |
 
 ### 組織・プロジェクト
 
 | テーブル | 説明 |
 |---------|------|
-| `Organization` | 組織（チーム） |
-| `OrganizationMember` | 組織メンバー（多対多） |
-| `Project` | プロジェクト |
+| [Organization](./database/organization.md#organization) | 組織（チーム） |
+| [OrganizationMember](./database/organization.md#organizationmember) | 組織メンバー（多対多） |
+| [Project](./database/organization.md#project) | プロジェクト |
+| [ProjectHistory](./database/organization.md#projecthistory) | プロジェクトの変更履歴 |
 
-### テスト管理
+### テストスイート
 
 | テーブル | 説明 |
 |---------|------|
-| `TestSuite` | テストスイート（テストケースのグループ） |
-| `TestCase` | テストケース |
-| `Execution` | テスト実行 |
-| `ExecutionResult` | 実行結果 |
+| [TestSuite](./database/test-suite.md#testsuite) | テストスイート |
+| [TestSuitePrecondition](./database/test-suite.md#testsuiteprecondition) | テストスイートの前提条件 |
+| [TestSuiteHistory](./database/test-suite.md#testsuitehistory) | テストスイートの変更履歴 |
 
-## インデックス戦略
+### テストケース
 
-```sql
--- 頻繁な検索に対するインデックス
-CREATE INDEX idx_test_cases_suite_id ON "TestCase"("testSuiteId");
-CREATE INDEX idx_executions_test_case_id ON "Execution"("testCaseId");
-CREATE INDEX idx_executions_status ON "Execution"("status");
-CREATE INDEX idx_org_members_user_id ON "OrganizationMember"("userId");
-```
+| テーブル | 説明 |
+|---------|------|
+| [TestCase](./database/test-case.md#testcase) | テストケース |
+| [TestCasePrecondition](./database/test-case.md#testcaseprecondition) | テストケースの前提条件 |
+| [TestCaseStep](./database/test-case.md#testcasestep) | テストケースの手順 |
+| [TestCaseExpectedResult](./database/test-case.md#testcaseexpectedresult) | テストケースの期待値 |
+| [TestCaseHistory](./database/test-case.md#testcasehistory) | テストケースの変更履歴 |
+
+### テスト実行
+
+| テーブル | 説明 |
+|---------|------|
+| [Execution](./database/execution.md#execution) | テスト実行 |
+| [ExecutionSnapshot](./database/execution.md#executionsnapshot) | 実行時のスナップショット |
+| [ExecutionPreconditionResult](./database/execution.md#executionpreconditionresult) | 前提条件の実施結果 |
+| [ExecutionStepResult](./database/execution.md#executionstepresult) | 手順の実施結果 |
+| [ExecutionExpectedResult](./database/execution.md#executionexpectedresult) | 期待値の判定結果 |
+| [ExecutionEvidence](./database/execution.md#executionevidence) | エビデンス（添付ファイル） |
+
+### レビュー
+
+| テーブル | 説明 |
+|---------|------|
+| [ReviewComment](./database/review.md#reviewcomment) | レビューコメント |
+| [ReviewCommentReply](./database/review.md#reviewcommentreply) | レビューコメントへの返信 |
+
+### 同時編集制御
+
+| テーブル | 説明 |
+|---------|------|
+| [EditLock](./database/edit-lock.md#editlock) | 編集ロック管理 |
 
 ## マイグレーション
 
@@ -103,5 +75,6 @@ docker compose exec api pnpm --filter @agentest/db prisma migrate deploy
 
 ## 関連ドキュメント
 
+- [データベース設計詳細](./database/index.md)
 - [システム全体像](./overview.md)
 - [API 設計方針](./api-design.md)
