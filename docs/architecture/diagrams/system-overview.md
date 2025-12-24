@@ -42,6 +42,7 @@ graph TB
     WS --> Auth
     WS --> Redis
 
+    MCPServer --> Auth
     MCPServer --> DB
     MCPServer --> Shared
 
@@ -70,9 +71,11 @@ sequenceDiagram
     GitHub->>API: ユーザー情報
     API->>API: JWT 生成
     API->>Redis: リフレッシュトークン保存
-    API->>Web: JWT Cookie 設定
+    API->>Web: Set-Cookie (HttpOnly, Secure, SameSite=Strict)
     Web->>User: ダッシュボード表示
 ```
+
+> **Note**: トークンは HttpOnly Cookie で管理されるため、JavaScript からアクセス不可。XSS 耐性を確保。
 
 ## リアルタイム更新フロー
 

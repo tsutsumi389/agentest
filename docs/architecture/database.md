@@ -10,23 +10,34 @@ PostgreSQL を使用。Prisma ORM でスキーマ管理。
 ┌──────────────┐       ┌──────────────┐       ┌──────────────┐
 │     User     │       │ Organization │       │   Project    │
 ├──────────────┤       ├──────────────┤       ├──────────────┤
-│ id           │──┐    │ id           │──┐    │ id           │
-│ email        │  │    │ name         │  │    │ name         │
-│ name         │  │    │ slug         │  │    │ description  │
-│ avatarUrl    │  │    │ createdAt    │  ├───▶│ organizationId│
-│ createdAt    │  │    │ updatedAt    │  │    │ createdAt    │
-└──────────────┘  │    └──────────────┘  │    └──────────────┘
-                  │                      │           │
-                  ▼                      │           ▼
-┌─────────────────────┐                  │    ┌──────────────┐
-│ OrganizationMember  │                  │    │  TestSuite   │
-├─────────────────────┤                  │    ├──────────────┤
-│ userId              │◀─────────────────┘    │ id           │
-│ organizationId      │                       │ name         │
-│ role                │                       │ description  │
-│ joinedAt            │                       │ projectId    │
-└─────────────────────┘                       │ createdAt    │
-                                              └──────────────┘
+│ id           │──┬─┐  │ id           │──┐    │ id           │
+│ email        │  │ │  │ name         │  │    │ name         │
+│ name         │  │ │  │ slug         │  │    │ description  │
+│ avatarUrl    │  │ │  │ createdAt    │  ├───▶│ organizationId│
+│ createdAt    │  │ │  │ updatedAt    │  │    │ createdAt    │
+└──────────────┘  │ │  └──────────────┘  │    └──────────────┘
+                  │ │                    │           │
+                  │ ▼                    │           ▼
+                  │ ┌──────────────┐     │    ┌──────────────┐
+                  │ │   Account    │     │    │  TestSuite   │
+                  │ ├──────────────┤     │    ├──────────────┤
+                  │ │ id           │     │    │ id           │
+                  │ │ userId       │     │    │ name         │
+                  │ │ provider     │     │    │ description  │
+                  │ │ providerAccId│     │    │ projectId    │
+                  │ │ accessToken  │     │    │ createdAt    │
+                  │ │ refreshToken │     │    └──────────────┘
+                  │ │ createdAt    │     │
+                  │ └──────────────┘     │
+                  ▼                      │
+┌─────────────────────┐                  │
+│ OrganizationMember  │                  │
+├─────────────────────┤                  │
+│ userId              │◀─────────────────┘
+│ organizationId      │
+│ role                │
+│ joinedAt            │
+└─────────────────────┘
                                                      │
                                                      ▼
 ┌──────────────┐       ┌──────────────┐       ┌──────────────┐
