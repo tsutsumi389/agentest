@@ -167,12 +167,14 @@ ALTER TABLE "Project" ADD CONSTRAINT "project_owner_check"
 |--------|------|------|------------|------|
 | `id` | UUID | NO | gen_random_uuid() | 主キー |
 | `projectId` | UUID | NO | - | プロジェクト ID（外部キー） |
-| `changedBy` | UUID | NO | - | 変更者 ID |
-| `changedByType` | ENUM | NO | - | 変更者種別（USER, AGENT） |
+| `changedByUserId` | UUID | YES | NULL | 変更者ユーザー ID（外部キー）※1 |
+| `changedByAgentSessionId` | UUID | YES | NULL | 変更者 Agent セッション ID（外部キー）※1 |
 | `changeType` | ENUM | NO | - | 変更種別（CREATE, UPDATE, DELETE） |
 | `snapshot` | JSONB | NO | - | 変更時点のスナップショット |
 | `changeReason` | TEXT | YES | NULL | 変更理由 |
 | `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
+
+※1: `changedByUserId` と `changedByAgentSessionId` はどちらか一方のみ設定（排他制約）
 
 ### 変更種別
 
@@ -196,11 +198,6 @@ ALTER TABLE "Project" ADD CONSTRAINT "project_owner_check"
 ### Prisma スキーマ
 
 ```prisma
-enum ActorType {
-  USER
-  AGENT
-}
-
 enum ChangeType {
   CREATE
   UPDATE
@@ -208,16 +205,18 @@ enum ChangeType {
 }
 
 model ProjectHistory {
-  id            String     @id @default(uuid()) @db.Uuid
-  projectId     String     @db.Uuid
-  changedBy     String     @db.Uuid
-  changedByType ActorType
-  changeType    ChangeType
-  snapshot      Json
-  changeReason  String?
-  createdAt     DateTime   @default(now())
+  id                      String     @id @default(uuid()) @db.Uuid
+  projectId               String     @db.Uuid
+  changedByUserId         String?    @db.Uuid
+  changedByAgentSessionId String?    @db.Uuid
+  changeType              ChangeType
+  snapshot                Json
+  changeReason            String?
+  createdAt               DateTime   @default(now())
 
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  project               Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  changedByUser         User?         @relation(fields: [changedByUserId], references: [id])
+  changedByAgentSession AgentSession? @relation(fields: [changedByAgentSessionId], references: [id])
 
   @@index([projectId])
 }

@@ -17,11 +17,13 @@
 | `name` | VARCHAR(200) | NO | - | テストスイート名 |
 | `description` | TEXT | YES | NULL | 説明 |
 | `status` | ENUM | NO | DRAFT | ステータス |
-| `createdBy` | UUID | NO | - | 作成者 ID |
-| `createdByType` | ENUM | NO | USER | 作成者種別（USER, AGENT） |
+| `createdByUserId` | UUID | YES | NULL | 作成者ユーザー ID（外部キー）※1 |
+| `createdByAgentSessionId` | UUID | YES | NULL | 作成者 Agent セッション ID（外部キー）※1 |
 | `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
 | `updatedAt` | TIMESTAMP | NO | now() | 更新日時 |
 | `deletedAt` | TIMESTAMP | YES | NULL | 削除日時（論理削除） |
+
+※1: `createdByUserId` と `createdByAgentSessionId` はどちらか一方のみ設定（排他制約）
 
 ### ステータス
 
@@ -41,22 +43,24 @@ enum TestSuiteStatus {
 }
 
 model TestSuite {
-  id            String          @id @default(uuid()) @db.Uuid
-  projectId     String          @db.Uuid
-  name          String          @db.VarChar(200)
-  description   String?
-  status        TestSuiteStatus @default(DRAFT)
-  createdBy     String          @db.Uuid
-  createdByType ActorType       @default(USER)
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  deletedAt     DateTime?
+  id                      String          @id @default(uuid()) @db.Uuid
+  projectId               String          @db.Uuid
+  name                    String          @db.VarChar(200)
+  description             String?
+  status                  TestSuiteStatus @default(DRAFT)
+  createdByUserId         String?         @db.Uuid
+  createdByAgentSessionId String?         @db.Uuid
+  createdAt               DateTime        @default(now())
+  updatedAt               DateTime        @updatedAt
+  deletedAt               DateTime?
 
-  project       Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  preconditions TestSuitePrecondition[]
-  testCases     TestCase[]
-  histories     TestSuiteHistory[]
-  executions    Execution[]
+  project             Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdByUser       User?                   @relation(fields: [createdByUserId], references: [id])
+  createdByAgentSession AgentSession?         @relation(fields: [createdByAgentSessionId], references: [id])
+  preconditions       TestSuitePrecondition[]
+  testCases           TestCase[]
+  histories           TestSuiteHistory[]
+  executions          Execution[]
 
   @@index([projectId])
 }
@@ -75,9 +79,26 @@ model TestSuite {
 | `id` | UUID | NO | gen_random_uuid() | 主キー |
 | `testSuiteId` | UUID | NO | - | テストスイート ID（外部キー） |
 | `content` | TEXT | NO | - | 前提条件の内容 |
-| `orderIndex` | INTEGER | NO | - | 表示順序 |
+| `orderKey` | VARCHAR(255) | NO | - | 表示順序キー（Fractional Indexing） |
 | `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
 | `updatedAt` | TIMESTAMP | NO | now() | 更新日時 |
+
+### 順序管理（Fractional Indexing）
+
+間への挿入時に後続要素の更新が不要な方式を採用。
+
+```
+初期状態:
+  項目A: "a"
+  項目B: "b"
+  項目C: "c"
+
+AとBの間に挿入:
+  項目A: "a"
+  項目X: "aV"  ← 新規挿入
+  項目B: "b"
+  項目C: "c"
+```
 
 ### Prisma スキーマ
 
@@ -86,13 +107,14 @@ model TestSuitePrecondition {
   id          String   @id @default(uuid()) @db.Uuid
   testSuiteId String   @db.Uuid
   content     String
-  orderIndex  Int
+  orderKey    String   @db.VarChar(255)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   testSuite TestSuite @relation(fields: [testSuiteId], references: [id], onDelete: Cascade)
 
   @@index([testSuiteId])
+  @@index([testSuiteId, orderKey])
 }
 ```
 
@@ -108,12 +130,14 @@ model TestSuitePrecondition {
 |--------|------|------|------------|------|
 | `id` | UUID | NO | gen_random_uuid() | 主キー |
 | `testSuiteId` | UUID | NO | - | テストスイート ID（外部キー） |
-| `changedBy` | UUID | NO | - | 変更者 ID |
-| `changedByType` | ENUM | NO | - | 変更者種別（USER, AGENT） |
+| `changedByUserId` | UUID | YES | NULL | 変更者ユーザー ID（外部キー）※1 |
+| `changedByAgentSessionId` | UUID | YES | NULL | 変更者 Agent セッション ID（外部キー）※1 |
 | `changeType` | ENUM | NO | - | 変更種別（CREATE, UPDATE, DELETE） |
 | `snapshot` | JSONB | NO | - | 変更時点のスナップショット |
 | `changeReason` | TEXT | YES | NULL | 変更理由 |
 | `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
+
+※1: `changedByUserId` と `changedByAgentSessionId` はどちらか一方のみ設定（排他制約）
 
 ### スナップショット構造
 
@@ -124,12 +148,14 @@ model TestSuitePrecondition {
   "status": "ACTIVE",
   "preconditions": [
     {
+      "id": "uuid-1",
       "content": "前提条件1",
-      "orderIndex": 0
+      "orderKey": "a"
     },
     {
+      "id": "uuid-2",
       "content": "前提条件2",
-      "orderIndex": 1
+      "orderKey": "b"
     }
   ]
 }
@@ -139,16 +165,18 @@ model TestSuitePrecondition {
 
 ```prisma
 model TestSuiteHistory {
-  id            String     @id @default(uuid()) @db.Uuid
-  testSuiteId   String     @db.Uuid
-  changedBy     String     @db.Uuid
-  changedByType ActorType
-  changeType    ChangeType
-  snapshot      Json
-  changeReason  String?
-  createdAt     DateTime   @default(now())
+  id                      String     @id @default(uuid()) @db.Uuid
+  testSuiteId             String     @db.Uuid
+  changedByUserId         String?    @db.Uuid
+  changedByAgentSessionId String?    @db.Uuid
+  changeType              ChangeType
+  snapshot                Json
+  changeReason            String?
+  createdAt               DateTime   @default(now())
 
-  testSuite TestSuite @relation(fields: [testSuiteId], references: [id], onDelete: Cascade)
+  testSuite             TestSuite     @relation(fields: [testSuiteId], references: [id], onDelete: Cascade)
+  changedByUser         User?         @relation(fields: [changedByUserId], references: [id])
+  changedByAgentSession AgentSession? @relation(fields: [changedByAgentSessionId], references: [id])
 
   @@index([testSuiteId])
 }
@@ -195,3 +223,4 @@ model TestSuiteHistory {
 - [組織・プロジェクト](./organization.md)
 - [テストケース](./test-case.md)
 - [テスト実行](./execution.md)
+- [Agent セッション](./agent-session.md)

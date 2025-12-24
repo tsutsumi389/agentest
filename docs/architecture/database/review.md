@@ -2,7 +2,7 @@
 
 ## 概要
 
-テストスイート・テストケースに対するレビューコメントを管理するテーブル群。スレッド形式で返信が可能。
+テストスイート・テストケースに対するレビューコメントを管理するテーブル群。GitHub のようにテストケースの詳細な項目（手順1、期待値2など）に対してコメント可能。スレッド形式で返信が可能。
 
 ## ReviewComment
 
@@ -15,12 +15,16 @@
 | `id` | UUID | NO | gen_random_uuid() | 主キー |
 | `targetType` | ENUM | NO | - | 対象種別（SUITE, CASE） |
 | `targetId` | UUID | NO | - | 対象 ID（テストスイート or テストケース） |
-| `authorId` | UUID | NO | - | 作成者 ID |
-| `authorType` | ENUM | NO | USER | 作成者種別（USER, AGENT） |
+| `targetField` | ENUM | YES | NULL | 対象フィールド（詳細項目へのコメント時） |
+| `targetItemId` | UUID | YES | NULL | 対象アイテム ID（前提条件/手順/期待値の ID） |
+| `authorUserId` | UUID | YES | NULL | 作成者ユーザー ID（外部キー）※1 |
+| `authorAgentSessionId` | UUID | YES | NULL | 作成者 Agent セッション ID（外部キー）※1 |
 | `content` | TEXT | NO | - | コメント内容 |
 | `status` | ENUM | NO | OPEN | ステータス |
 | `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
 | `updatedAt` | TIMESTAMP | NO | now() | 更新日時 |
+
+※1: `authorUserId` と `authorAgentSessionId` はどちらか一方のみ設定（排他制約）
 
 ### 対象種別
 
@@ -28,6 +32,16 @@
 |------|------|
 | `SUITE` | テストスイート |
 | `CASE` | テストケース |
+
+### 対象フィールド（詳細項目へのコメント時）
+
+| フィールド | 説明 |
+|------------|------|
+| `TITLE` | タイトル |
+| `DESCRIPTION` | 説明 |
+| `PRECONDITION` | 前提条件 |
+| `STEP` | 手順 |
+| `EXPECTED_RESULT` | 期待値 |
 
 ### ステータス
 
@@ -44,26 +58,38 @@ enum ReviewTargetType {
   CASE
 }
 
+enum ReviewTargetField {
+  TITLE
+  DESCRIPTION
+  PRECONDITION
+  STEP
+  EXPECTED_RESULT
+}
+
 enum ReviewStatus {
   OPEN
   RESOLVED
 }
 
 model ReviewComment {
-  id         String           @id @default(uuid()) @db.Uuid
-  targetType ReviewTargetType
-  targetId   String           @db.Uuid
-  authorId   String           @db.Uuid
-  authorType ActorType        @default(USER)
-  content    String
-  status     ReviewStatus     @default(OPEN)
-  createdAt  DateTime         @default(now())
-  updatedAt  DateTime         @updatedAt
+  id                   String             @id @default(uuid()) @db.Uuid
+  targetType           ReviewTargetType
+  targetId             String             @db.Uuid
+  targetField          ReviewTargetField?
+  targetItemId         String?            @db.Uuid
+  authorUserId         String?            @db.Uuid
+  authorAgentSessionId String?            @db.Uuid
+  content              String
+  status               ReviewStatus       @default(OPEN)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
 
-  author  User                 @relation(fields: [authorId], references: [id])
-  replies ReviewCommentReply[]
+  authorUser         User?                @relation(fields: [authorUserId], references: [id])
+  authorAgentSession AgentSession?        @relation(fields: [authorAgentSessionId], references: [id])
+  replies            ReviewCommentReply[]
 
   @@index([targetType, targetId])
+  @@index([targetType, targetId, targetField, targetItemId])
 }
 ```
 
@@ -79,28 +105,95 @@ model ReviewComment {
 |--------|------|------|------------|------|
 | `id` | UUID | NO | gen_random_uuid() | 主キー |
 | `commentId` | UUID | NO | - | コメント ID（外部キー） |
-| `authorId` | UUID | NO | - | 作成者 ID |
-| `authorType` | ENUM | NO | USER | 作成者種別（USER, AGENT） |
+| `authorUserId` | UUID | YES | NULL | 作成者ユーザー ID（外部キー）※1 |
+| `authorAgentSessionId` | UUID | YES | NULL | 作成者 Agent セッション ID（外部キー）※1 |
 | `content` | TEXT | NO | - | 返信内容 |
 | `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
 | `updatedAt` | TIMESTAMP | NO | now() | 更新日時 |
+
+※1: `authorUserId` と `authorAgentSessionId` はどちらか一方のみ設定（排他制約）
 
 ### Prisma スキーマ
 
 ```prisma
 model ReviewCommentReply {
-  id         String    @id @default(uuid()) @db.Uuid
-  commentId  String    @db.Uuid
-  authorId   String    @db.Uuid
-  authorType ActorType @default(USER)
-  content    String
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id                   String    @id @default(uuid()) @db.Uuid
+  commentId            String    @db.Uuid
+  authorUserId         String?   @db.Uuid
+  authorAgentSessionId String?   @db.Uuid
+  content              String
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
 
-  comment ReviewComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
-  author  User          @relation(fields: [authorId], references: [id])
+  comment            ReviewComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  authorUser         User?         @relation(fields: [authorUserId], references: [id])
+  authorAgentSession AgentSession? @relation(fields: [authorAgentSessionId], references: [id])
 
   @@index([commentId])
+}
+```
+
+---
+
+## コメント対象の例
+
+### テストスイート全体へのコメント
+
+```json
+{
+  "targetType": "SUITE",
+  "targetId": "suite-uuid-1",
+  "targetField": null,
+  "targetItemId": null,
+  "content": "全体的にテストケースが不足しています"
+}
+```
+
+### テストケース全体へのコメント
+
+```json
+{
+  "targetType": "CASE",
+  "targetId": "case-uuid-1",
+  "targetField": null,
+  "targetItemId": null,
+  "content": "このテストケースは境界値テストが必要です"
+}
+```
+
+### テストケースの手順1へのコメント
+
+```json
+{
+  "targetType": "CASE",
+  "targetId": "case-uuid-1",
+  "targetField": "STEP",
+  "targetItemId": "step-uuid-1",
+  "content": "この手順は具体的な操作内容を記載してください"
+}
+```
+
+### テストケースの期待値2へのコメント
+
+```json
+{
+  "targetType": "CASE",
+  "targetId": "case-uuid-1",
+  "targetField": "EXPECTED_RESULT",
+  "targetItemId": "expected-uuid-2",
+  "content": "期待値が曖昧です。具体的な値を記載してください"
+}
+```
+
+### テストスイートの前提条件へのコメント
+
+```json
+{
+  "targetType": "SUITE",
+  "targetId": "suite-uuid-1",
+  "targetField": "PRECONDITION",
+  "targetItemId": "precond-uuid-1",
+  "content": "この前提条件は環境依存があります"
 }
 ```
 
@@ -112,6 +205,7 @@ model ReviewCommentReply {
 1. Agent がテストケースを作成・編集
 2. 人がレビューコメントを登録
    └─▶ ReviewComment 作成（status: OPEN）
+   └─▶ 特定の項目（手順、期待値など）に対してコメント可能
 3. Agent がコメントを確認して修正
 4. Agent がコメントに返信（対応内容を説明）
    └─▶ ReviewCommentReply 作成
@@ -128,8 +222,10 @@ ReviewComment
 ├── id
 ├── targetType (SUITE / CASE)
 ├── targetId
-├── authorId (人 or Agent)
-├── authorType (USER / AGENT)
+├── targetField (TITLE / DESCRIPTION / PRECONDITION / STEP / EXPECTED_RESULT)
+├── targetItemId (前提条件/手順/期待値の ID)
+├── authorUserId (人の場合)
+├── authorAgentSessionId (Agent の場合)
 ├── content
 ├── status (OPEN / RESOLVED)
 ├── createdAt
@@ -137,10 +233,39 @@ ReviewComment
     └── ReviewCommentReply
         ├── id
         ├── commentId
-        ├── authorId
-        ├── authorType (USER / AGENT)
+        ├── authorUserId (人の場合)
+        ├── authorAgentSessionId (Agent の場合)
         ├── content
         └── createdAt
+```
+
+---
+
+## UI での表示イメージ
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ テストケース: ログイン機能の正常系テスト                           │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│ 前提条件:                                                       │
+│   1. ユーザーアカウントが存在すること 💬(1)                       │
+│   2. ユーザーがログアウト状態であること                            │
+│                                                                 │
+│ 手順:                                                           │
+│   1. ログインページを開く                                        │
+│   2. ユーザー名を入力する 💬(2)                                   │
+│      └─ 💬 [Agent] 「具体的なユーザー名を記載してください」        │
+│         └─ ↳ [User] 「test@example.com を使用します」            │
+│         └─ ↳ [Agent] 「修正しました」 ✅ Resolved                │
+│   3. パスワードを入力する                                        │
+│   4. ログインボタンをクリックする                                 │
+│                                                                 │
+│ 期待値:                                                         │
+│   1. ダッシュボード画面が表示されること                           │
+│   2. ユーザー名が右上に表示されること 💬(1)                       │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -163,3 +288,4 @@ ReviewComment
 - [テーブル一覧](./index.md)
 - [テストスイート](./test-suite.md)
 - [テストケース](./test-case.md)
+- [Agent セッション](./agent-session.md)

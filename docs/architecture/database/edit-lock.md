@@ -15,11 +15,13 @@
 | `id` | UUID | NO | gen_random_uuid() | 主キー |
 | `targetType` | ENUM | NO | - | 対象種別（SUITE, CASE） |
 | `targetId` | UUID | NO | - | 対象 ID（テストスイート or テストケース） |
-| `lockedBy` | UUID | NO | - | ロック取得者 ID |
-| `lockedByType` | ENUM | NO | USER | ロック取得者種別（USER, AGENT） |
+| `lockedByUserId` | UUID | YES | NULL | ロック取得者ユーザー ID（外部キー）※1 |
+| `lockedByAgentSessionId` | UUID | YES | NULL | ロック取得者 Agent セッション ID（外部キー）※1 |
 | `lockedAt` | TIMESTAMP | NO | now() | ロック取得日時 |
 | `lastHeartbeat` | TIMESTAMP | NO | now() | 最終ハートビート日時 |
 | `expiresAt` | TIMESTAMP | NO | - | ロック有効期限 |
+
+※1: `lockedByUserId` と `lockedByAgentSessionId` はどちらか一方のみ設定（排他制約）
 
 ### 対象種別
 
@@ -37,16 +39,17 @@ enum LockTargetType {
 }
 
 model EditLock {
-  id            String         @id @default(uuid()) @db.Uuid
-  targetType    LockTargetType
-  targetId      String         @db.Uuid
-  lockedBy      String         @db.Uuid
-  lockedByType  ActorType      @default(USER)
-  lockedAt      DateTime       @default(now())
-  lastHeartbeat DateTime       @default(now())
-  expiresAt     DateTime
+  id                     String         @id @default(uuid()) @db.Uuid
+  targetType             LockTargetType
+  targetId               String         @db.Uuid
+  lockedByUserId         String?        @db.Uuid
+  lockedByAgentSessionId String?        @db.Uuid
+  lockedAt               DateTime       @default(now())
+  lastHeartbeat          DateTime       @default(now())
+  expiresAt              DateTime
 
-  user User? @relation(fields: [lockedBy], references: [id], onDelete: Cascade)
+  lockedByUser         User?         @relation(fields: [lockedByUserId], references: [id], onDelete: Cascade)
+  lockedByAgentSession AgentSession? @relation(fields: [lockedByAgentSessionId], references: [id], onDelete: Cascade)
 
   @@unique([targetType, targetId])
   @@index([targetType, targetId])
@@ -63,8 +66,8 @@ EditLock
 ├── id
 ├── targetType (SUITE / CASE)
 ├── targetId
-├── lockedBy (userId or agentId)
-├── lockedByType (USER / AGENT)
+├── lockedByUserId (人の場合)
+├── lockedByAgentSessionId (Agent の場合)
 ├── lockedAt
 ├── lastHeartbeat
 └── expiresAt
@@ -149,11 +152,13 @@ EditLock
 POST /mcp HTTP/1.1
 Cookie: session=xxx
 X-MCP-Client-Id: claude-desktop-v1.2.3
+X-MCP-Session-Id: agent-session-uuid
 Content-Type: application/json
 ```
 
 - `X-MCP-Client-Id` ヘッダーで Agent を識別
-- ロックの `lockedByType` を `AGENT` に設定
+- `X-MCP-Session-Id` ヘッダーでセッションを識別
+- ロックの `lockedByAgentSessionId` に Agent セッション ID を設定
 
 ---
 
@@ -193,3 +198,4 @@ Content-Type: application/json
 - [テーブル一覧](./index.md)
 - [テストスイート](./test-suite.md)
 - [テストケース](./test-case.md)
+- [Agent セッション](./agent-session.md)

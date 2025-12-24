@@ -21,6 +21,12 @@
 | [Project](./database/organization.md#project) | プロジェクト |
 | [ProjectHistory](./database/organization.md#projecthistory) | プロジェクトの変更履歴 |
 
+### Agent セッション
+
+| テーブル | 説明 |
+|---------|------|
+| [AgentSession](./database/agent-session.md#agentsession) | Coding Agent のセッション管理 |
+
 ### テストスイート
 
 | テーブル | 説明 |
@@ -45,7 +51,7 @@
 |---------|------|
 | [Execution](./database/execution.md#execution) | テスト実行 |
 | [ExecutionSnapshot](./database/execution.md#executionsnapshot) | 実行時のスナップショット |
-| [ExecutionPreconditionResult](./database/execution.md#executionpreconditionresult) | 前提条件の実施結果 |
+| [ExecutionPreconditionResult](./database/execution.md#executionpreconditionresult) | 前提条件の確認結果 |
 | [ExecutionStepResult](./database/execution.md#executionstepresult) | 手順の実施結果 |
 | [ExecutionExpectedResult](./database/execution.md#executionexpectedresult) | 期待値の判定結果 |
 | [ExecutionEvidence](./database/execution.md#executionevidence) | エビデンス（添付ファイル） |
@@ -54,7 +60,7 @@
 
 | テーブル | 説明 |
 |---------|------|
-| [ReviewComment](./database/review.md#reviewcomment) | レビューコメント |
+| [ReviewComment](./database/review.md#reviewcomment) | レビューコメント（詳細項目対応） |
 | [ReviewCommentReply](./database/review.md#reviewcommentreply) | レビューコメントへの返信 |
 
 ### 同時編集制御
