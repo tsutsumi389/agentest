@@ -63,6 +63,17 @@ model Execution {
 }
 ```
 
+### 排他制約（SQL）
+
+```sql
+-- executedByUserId か executedByAgentSessionId のどちらか一方のみ設定
+ALTER TABLE "Execution" ADD CONSTRAINT "execution_executor_check"
+  CHECK (
+    (executed_by_user_id IS NOT NULL AND executed_by_agent_session_id IS NULL) OR
+    (executed_by_user_id IS NULL AND executed_by_agent_session_id IS NOT NULL)
+  );
+```
+
 ---
 
 ## ExecutionSnapshot
@@ -348,6 +359,17 @@ model ExecutionEvidence {
 
   @@index([expectedResultId])
 }
+```
+
+### 排他制約（SQL）
+
+```sql
+-- uploadedByUserId か uploadedByAgentSessionId のどちらか一方のみ設定
+ALTER TABLE "ExecutionEvidence" ADD CONSTRAINT "execution_evidence_uploader_check"
+  CHECK (
+    (uploaded_by_user_id IS NOT NULL AND uploaded_by_agent_session_id IS NULL) OR
+    (uploaded_by_user_id IS NULL AND uploaded_by_agent_session_id IS NOT NULL)
+  );
 ```
 
 ---

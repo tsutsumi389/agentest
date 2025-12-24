@@ -54,11 +54,7 @@ enum TestCasePriority {
   LOW
 }
 
-enum TestCaseStatus {
-  DRAFT
-  ACTIVE
-  ARCHIVED
-}
+// EntityStatus は TestSuite / TestCase 共通の ENUM（test-suite.md で定義）
 
 model TestCase {
   id                      String           @id @default(uuid()) @db.Uuid
@@ -66,7 +62,7 @@ model TestCase {
   title                   String           @db.VarChar(300)
   description             String?
   priority                TestCasePriority @default(MEDIUM)
-  status                  TestCaseStatus   @default(DRAFT)
+  status                  EntityStatus     @default(DRAFT)
   orderKey                String           @db.VarChar(255)
   createdByUserId         String?          @db.Uuid
   createdByAgentSessionId String?          @db.Uuid
@@ -85,6 +81,17 @@ model TestCase {
   @@index([testSuiteId])
   @@index([testSuiteId, orderKey])
 }
+```
+
+### 排他制約（SQL）
+
+```sql
+-- createdByUserId か createdByAgentSessionId のどちらか一方のみ設定
+ALTER TABLE "TestCase" ADD CONSTRAINT "test_case_creator_check"
+  CHECK (
+    (created_by_user_id IS NOT NULL AND created_by_agent_session_id IS NULL) OR
+    (created_by_user_id IS NULL AND created_by_agent_session_id IS NOT NULL)
+  );
 ```
 
 ---
@@ -270,6 +277,17 @@ model TestCaseHistory {
 
   @@index([testCaseId])
 }
+```
+
+### 排他制約（SQL）
+
+```sql
+-- changedByUserId か changedByAgentSessionId のどちらか一方のみ設定
+ALTER TABLE "TestCaseHistory" ADD CONSTRAINT "test_case_history_changer_check"
+  CHECK (
+    (changed_by_user_id IS NOT NULL AND changed_by_agent_session_id IS NULL) OR
+    (changed_by_user_id IS NULL AND changed_by_agent_session_id IS NOT NULL)
+  );
 ```
 
 ---

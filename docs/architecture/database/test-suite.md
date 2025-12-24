@@ -36,18 +36,19 @@
 ### Prisma スキーマ
 
 ```prisma
-enum TestSuiteStatus {
+// EntityStatus は TestSuite / TestCase 共通の ENUM
+enum EntityStatus {
   DRAFT
   ACTIVE
   ARCHIVED
 }
 
 model TestSuite {
-  id                      String          @id @default(uuid()) @db.Uuid
-  projectId               String          @db.Uuid
-  name                    String          @db.VarChar(200)
+  id                      String       @id @default(uuid()) @db.Uuid
+  projectId               String       @db.Uuid
+  name                    String       @db.VarChar(200)
   description             String?
-  status                  TestSuiteStatus @default(DRAFT)
+  status                  EntityStatus @default(DRAFT)
   createdByUserId         String?         @db.Uuid
   createdByAgentSessionId String?         @db.Uuid
   createdAt               DateTime        @default(now())
@@ -64,6 +65,17 @@ model TestSuite {
 
   @@index([projectId])
 }
+```
+
+### 排他制約（SQL）
+
+```sql
+-- createdByUserId か createdByAgentSessionId のどちらか一方のみ設定
+ALTER TABLE "TestSuite" ADD CONSTRAINT "test_suite_creator_check"
+  CHECK (
+    (created_by_user_id IS NOT NULL AND created_by_agent_session_id IS NULL) OR
+    (created_by_user_id IS NULL AND created_by_agent_session_id IS NOT NULL)
+  );
 ```
 
 ---
@@ -180,6 +192,17 @@ model TestSuiteHistory {
 
   @@index([testSuiteId])
 }
+```
+
+### 排他制約（SQL）
+
+```sql
+-- changedByUserId か changedByAgentSessionId のどちらか一方のみ設定
+ALTER TABLE "TestSuiteHistory" ADD CONSTRAINT "test_suite_history_changer_check"
+  CHECK (
+    (changed_by_user_id IS NOT NULL AND changed_by_agent_session_id IS NULL) OR
+    (changed_by_user_id IS NULL AND changed_by_agent_session_id IS NOT NULL)
+  );
 ```
 
 ---

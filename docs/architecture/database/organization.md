@@ -134,10 +134,11 @@ model Project {
   updatedAt      DateTime  @updatedAt
   deletedAt      DateTime?
 
-  organization Organization?    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  owner        User?            @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
-  testSuites   TestSuite[]
-  histories    ProjectHistory[]
+  organization  Organization?    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner         User?            @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  testSuites    TestSuite[]
+  histories     ProjectHistory[]
+  agentSessions AgentSession[]
 
   @@index([organizationId])
   @@index([ownerId])
@@ -220,6 +221,17 @@ model ProjectHistory {
 
   @@index([projectId])
 }
+```
+
+### 排他制約（SQL）
+
+```sql
+-- changedByUserId か changedByAgentSessionId のどちらか一方のみ設定
+ALTER TABLE "ProjectHistory" ADD CONSTRAINT "project_history_changer_check"
+  CHECK (
+    (changed_by_user_id IS NOT NULL AND changed_by_agent_session_id IS NULL) OR
+    (changed_by_user_id IS NULL AND changed_by_agent_session_id IS NOT NULL)
+  );
 ```
 
 ---

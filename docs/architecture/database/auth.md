@@ -44,6 +44,9 @@ model User {
   reviewCommentReplies  ReviewCommentReply[]
   editLocks             EditLock[]
   uploadedEvidences     ExecutionEvidence[]
+  projectHistories      ProjectHistory[]
+  testSuiteHistories    TestSuiteHistory[]
+  testCaseHistories     TestCaseHistory[]
 }
 ```
 

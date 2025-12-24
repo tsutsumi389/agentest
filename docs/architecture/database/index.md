@@ -117,7 +117,7 @@ Coding Agent が理解しやすい英語の文字列を使用。
 
 | ENUM | 値 | 説明 |
 |------|-----|------|
-| `TestSuiteStatus` | DRAFT, ACTIVE, ARCHIVED | スイート/ケースのステータス |
+| `EntityStatus` | DRAFT, ACTIVE, ARCHIVED | スイート/ケース共通のステータス |
 | `TestCasePriority` | CRITICAL, HIGH, MEDIUM, LOW | 優先度 |
 | `ExecutionStatus` | IN_PROGRESS, COMPLETED, ABORTED | 実行ステータス |
 | `PreconditionStatus` | UNCHECKED, MET, NOT_MET | 前提条件の確認状態 |

@@ -93,6 +93,17 @@ model ReviewComment {
 }
 ```
 
+### 排他制約（SQL）
+
+```sql
+-- authorUserId か authorAgentSessionId のどちらか一方のみ設定
+ALTER TABLE "ReviewComment" ADD CONSTRAINT "review_comment_author_check"
+  CHECK (
+    (author_user_id IS NOT NULL AND author_agent_session_id IS NULL) OR
+    (author_user_id IS NULL AND author_agent_session_id IS NOT NULL)
+  );
+```
+
 ---
 
 ## ReviewCommentReply
@@ -131,6 +142,17 @@ model ReviewCommentReply {
 
   @@index([commentId])
 }
+```
+
+### 排他制約（SQL）
+
+```sql
+-- authorUserId か authorAgentSessionId のどちらか一方のみ設定
+ALTER TABLE "ReviewCommentReply" ADD CONSTRAINT "review_comment_reply_author_check"
+  CHECK (
+    (author_user_id IS NOT NULL AND author_agent_session_id IS NULL) OR
+    (author_user_id IS NULL AND author_agent_session_id IS NOT NULL)
+  );
 ```
 
 ---
