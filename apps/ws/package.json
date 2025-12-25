@@ -1,0 +1,27 @@
+{
+  "name": "@agentest/ws",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "@agentest/auth": "workspace:*",
+    "@agentest/db": "workspace:*",
+    "@agentest/shared": "workspace:*",
+    "@agentest/ws-types": "workspace:*",
+    "ioredis": "catalog:",
+    "ws": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/ws": "catalog:",
+    "tsx": "^4.7.0",
+    "typescript": "catalog:"
+  }
+}

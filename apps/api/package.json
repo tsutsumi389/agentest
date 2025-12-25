@@ -1,0 +1,41 @@
+{
+  "name": "@agentest/api",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "lint": "eslint src/"
+  },
+  "dependencies": {
+    "@agentest/auth": "workspace:*",
+    "@agentest/db": "workspace:*",
+    "@agentest/shared": "workspace:*",
+    "@agentest/storage": "workspace:*",
+    "cookie-parser": "catalog:",
+    "cors": "catalog:",
+    "express": "catalog:",
+    "express-rate-limit": "catalog:",
+    "helmet": "catalog:",
+    "ioredis": "catalog:",
+    "morgan": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/cookie-parser": "catalog:",
+    "@types/cors": "catalog:",
+    "@types/express": "catalog:",
+    "@types/morgan": "catalog:",
+    "@types/node": "catalog:",
+    "@types/supertest": "catalog:",
+    "supertest": "catalog:",
+    "tsx": "^4.7.0",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

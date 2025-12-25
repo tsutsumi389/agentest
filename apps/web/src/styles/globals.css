@@ -1,0 +1,136 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  /* スクロールバーのスタイリング */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #30363d;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #484f58;
+  }
+
+  /* フォーカススタイル */
+  *:focus-visible {
+    outline: 2px solid #58a6ff;
+    outline-offset: 2px;
+  }
+
+  /* 選択テキストのスタイル */
+  ::selection {
+    background: rgba(88, 166, 255, 0.3);
+  }
+}
+
+@layer components {
+  /* ボタンの基本スタイル */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-primary {
+    @apply bg-accent text-background hover:bg-accent-hover;
+  }
+
+  .btn-secondary {
+    @apply bg-background-tertiary text-foreground border border-border hover:bg-background-secondary;
+  }
+
+  .btn-danger {
+    @apply bg-danger text-white hover:bg-danger-muted;
+  }
+
+  .btn-ghost {
+    @apply text-foreground-muted hover:text-foreground hover:bg-background-tertiary;
+  }
+
+  /* 入力フィールドの基本スタイル */
+  .input {
+    @apply w-full px-3 py-2 text-sm bg-background-secondary border border-border rounded focus:border-accent focus:ring-1 focus:ring-accent placeholder:text-foreground-subtle;
+  }
+
+  /* カードスタイル */
+  .card {
+    @apply bg-background-secondary border border-border rounded-lg shadow-card;
+  }
+
+  .card-hover {
+    @apply transition-shadow hover:shadow-card-hover;
+  }
+
+  /* バッジスタイル */
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full;
+  }
+
+  .badge-success {
+    @apply bg-success-muted text-success;
+  }
+
+  .badge-warning {
+    @apply bg-warning-muted text-warning;
+  }
+
+  .badge-danger {
+    @apply bg-danger-muted text-danger;
+  }
+
+  .badge-accent {
+    @apply bg-accent-muted text-accent;
+  }
+
+  /* ステータスドット */
+  .status-dot {
+    @apply w-2 h-2 rounded-full;
+  }
+
+  .status-dot-success {
+    @apply bg-success;
+  }
+
+  .status-dot-warning {
+    @apply bg-warning;
+  }
+
+  .status-dot-danger {
+    @apply bg-danger;
+  }
+
+  .status-dot-muted {
+    @apply bg-foreground-subtle;
+  }
+}
+
+@layer utilities {
+  /* テキストの省略 */
+  .truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .truncate-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* モノスペースフォント */
+  .font-code {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  }
+}

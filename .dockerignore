@@ -1,0 +1,39 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Git
+.git
+.gitignore
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Documentation
+*.md
+docs
+
+# Build cache
+.turbo
+dist
+coverage
+
+# IDE
+.idea
+.vscode
+
+# GitHub
+.github
+
+# Test files
+**/__tests__
+**/*.test.ts
+**/*.spec.ts
+
+# Dev files
+.nvmrc
+.prettierrc
+.prettierignore
+eslint.config.js

@@ -1,0 +1,38 @@
+{
+  "name": "@agentest/auth",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./middleware": {
+      "import": "./dist/middleware.js",
+      "types": "./dist/middleware.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@agentest/db": "workspace:*",
+    "@agentest/shared": "workspace:*",
+    "jsonwebtoken": "catalog:",
+    "passport": "catalog:",
+    "passport-github2": "catalog:",
+    "passport-google-oauth20": "catalog:"
+  },
+  "devDependencies": {
+    "@types/express": "catalog:",
+    "@types/jsonwebtoken": "catalog:",
+    "@types/passport": "catalog:",
+    "@types/passport-github2": "catalog:",
+    "@types/passport-google-oauth20": "catalog:",
+    "typescript": "catalog:"
+  }
+}

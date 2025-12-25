@@ -34,6 +34,10 @@ packages/
   db/            # Prismaスキーマ
 ```
 
+## コーディング規約
+
+- コードのコメントは日本語で記載する
+
 ## 詳細
 
 - [アーキテクチャ](docs/architecture/overview.md)

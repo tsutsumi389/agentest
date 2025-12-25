@@ -1,0 +1,978 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// 列挙型 (ENUMS)
+// ============================================
+
+enum UserPlan {
+  FREE
+  PRO
+}
+
+enum OrganizationPlan {
+  TEAM
+  ENTERPRISE
+}
+
+enum OrganizationRole {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum ProjectRole {
+  ADMIN
+  WRITE
+  READ
+}
+
+enum EntityStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum TestCasePriority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum ExecutionStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABORTED
+}
+
+enum PreconditionStatus {
+  UNCHECKED
+  MET
+  NOT_MET
+}
+
+enum StepStatus {
+  PENDING
+  DONE
+  SKIPPED
+}
+
+enum JudgmentStatus {
+  PENDING
+  PASS
+  FAIL
+  SKIPPED
+  NOT_EXECUTABLE
+}
+
+enum ReviewStatus {
+  OPEN
+  RESOLVED
+}
+
+enum ReviewTargetType {
+  SUITE
+  CASE
+}
+
+enum ReviewTargetField {
+  TITLE
+  DESCRIPTION
+  PRECONDITION
+  STEP
+  EXPECTED_RESULT
+}
+
+enum LockTargetType {
+  SUITE
+  CASE
+}
+
+enum AgentSessionStatus {
+  ACTIVE
+  IDLE
+  ENDED
+  TIMEOUT
+}
+
+enum SubscriptionPlan {
+  FREE
+  PRO
+  TEAM
+  ENTERPRISE
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  TRIALING
+}
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  FAILED
+  VOID
+}
+
+enum PaymentMethodType {
+  CARD
+}
+
+enum ChangeType {
+  CREATE
+  UPDATE
+  DELETE
+}
+
+enum NotificationType {
+  ORG_INVITATION
+  INVITATION_ACCEPTED
+  PROJECT_ADDED
+  REVIEW_COMMENT
+  TEST_COMPLETED
+  TEST_FAILED
+  USAGE_ALERT
+  BILLING
+  SECURITY_ALERT
+}
+
+enum AuditLogCategory {
+  AUTH
+  USER
+  ORGANIZATION
+  MEMBER
+  PROJECT
+  API_TOKEN
+  BILLING
+}
+
+// ============================================
+// 認証モデル
+// ============================================
+
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique @db.VarChar(255)
+  name      String    @db.VarChar(100)
+  avatarUrl String?   @map("avatar_url")
+  plan      UserPlan  @default(FREE)
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  // リレーション
+  accounts               Account[]
+  refreshTokens          RefreshToken[]
+  sessions               Session[]
+  organizationMembers    OrganizationMember[]
+  sentInvitations        OrganizationInvitation[]
+  ownedProjects          Project[]                @relation("ProjectOwner")
+  projectMembers         ProjectMember[]
+  testSuites             TestSuite[]              @relation("TestSuiteCreator")
+  testCases              TestCase[]               @relation("TestCaseCreator")
+  executions             Execution[]              @relation("ExecutionUser")
+  reviewComments         ReviewComment[]          @relation("ReviewCommentUser")
+  reviewCommentReplies   ReviewCommentReply[]     @relation("ReviewReplyUser")
+  editLocks              EditLock[]               @relation("EditLockUser")
+  uploadedEvidences      ExecutionEvidence[]      @relation("EvidenceUploader")
+  projectHistories       ProjectHistory[]         @relation("ProjectHistoryUser")
+  testSuiteHistories     TestSuiteHistory[]       @relation("TestSuiteHistoryUser")
+  testCaseHistories      TestCaseHistory[]        @relation("TestCaseHistoryUser")
+  apiTokens              ApiToken[]               @relation("UserApiTokens")
+  subscription           Subscription?            @relation("UserSubscription")
+  paymentMethods         PaymentMethod[]          @relation("UserPaymentMethods")
+  notifications          Notification[]
+  notificationPreferences NotificationPreference[]
+  auditLogs              AuditLog[]
+  usageRecords           UsageRecord[]            @relation("UserUsageRecords")
+
+  @@index([email])
+  @@index([deletedAt])
+  @@map("users")
+}
+
+model Account {
+  id                String    @id @default(uuid())
+  userId            String    @map("user_id")
+  provider          String    @db.VarChar(50)
+  providerAccountId String    @map("provider_account_id") @db.VarChar(255)
+  accessToken       String?   @map("access_token")
+  refreshToken      String?   @map("refresh_token")
+  expiresAt         DateTime? @map("expires_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, provider])
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  token     String    @unique @db.VarChar(500)
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+model Session {
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
+  token        String    @unique @db.VarChar(500)
+  userAgent    String?   @map("user_agent")
+  ipAddress    String?   @map("ip_address") @db.VarChar(45)
+  lastActiveAt DateTime  @default(now()) @map("last_active_at")
+  expiresAt    DateTime  @map("expires_at")
+  revokedAt    DateTime? @map("revoked_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("sessions")
+}
+
+// ============================================
+// 組織・プロジェクトモデル
+// ============================================
+
+model Organization {
+  id           String           @id @default(uuid())
+  name         String           @db.VarChar(100)
+  slug         String           @unique @db.VarChar(50)
+  description  String?          @db.Text
+  avatarUrl    String?          @map("avatar_url")
+  plan         OrganizationPlan @default(TEAM)
+  billingEmail String?          @map("billing_email") @db.VarChar(255)
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+  deletedAt    DateTime?        @map("deleted_at")
+
+  // リレーション
+  members              OrganizationMember[]
+  invitations          OrganizationInvitation[]
+  projects             Project[]
+  subscription         Subscription?                     @relation("OrgSubscription")
+  paymentMethods       PaymentMethod[]                   @relation("OrgPaymentMethods")
+  apiTokens            ApiToken[]                        @relation("OrgApiTokens")
+  notificationSettings OrganizationNotificationSetting[]
+  auditLogs            AuditLog[]
+  usageRecords         UsageRecord[]                     @relation("OrgUsageRecords")
+
+  @@index([slug])
+  @@index([deletedAt])
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id             String           @id @default(uuid())
+  organizationId String           @map("organization_id")
+  userId         String           @map("user_id")
+  role           OrganizationRole @default(MEMBER)
+  joinedAt       DateTime         @default(now()) @map("joined_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([organizationId])
+  @@index([userId])
+  @@map("organization_members")
+}
+
+model OrganizationInvitation {
+  id              String           @id @default(uuid())
+  organizationId  String           @map("organization_id")
+  email           String           @db.VarChar(255)
+  role            OrganizationRole @default(MEMBER)
+  token           String           @unique @db.VarChar(255)
+  invitedByUserId String           @map("invited_by_user_id")
+  expiresAt       DateTime         @map("expires_at")
+  acceptedAt      DateTime?        @map("accepted_at")
+  declinedAt      DateTime?        @map("declined_at")
+  createdAt       DateTime         @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy    User         @relation(fields: [invitedByUserId], references: [id])
+
+  @@index([organizationId])
+  @@index([token])
+  @@index([email])
+  @@map("organization_invitations")
+}
+
+model Project {
+  id             String    @id @default(uuid())
+  name           String    @db.VarChar(100)
+  description    String?   @db.Text
+  organizationId String?   @map("organization_id")
+  ownerId        String?   @map("owner_id")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+  deletedAt      DateTime? @map("deleted_at")
+
+  // リレーション
+  organization  Organization?        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  owner         User?                @relation("ProjectOwner", fields: [ownerId], references: [id])
+  members       ProjectMember[]
+  environments  ProjectEnvironment[]
+  testSuites    TestSuite[]
+  histories     ProjectHistory[]
+  agentSessions AgentSession[]
+
+  @@index([organizationId])
+  @@index([ownerId])
+  @@index([deletedAt])
+  @@map("projects")
+}
+
+model ProjectEnvironment {
+  id          String   @id @default(uuid())
+  projectId   String   @map("project_id")
+  name        String   @db.VarChar(50)
+  slug        String   @db.VarChar(50)
+  baseUrl     String?  @map("base_url")
+  description String?  @db.VarChar(200)
+  isDefault   Boolean  @default(false) @map("is_default")
+  sortOrder   Int      @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  executions Execution[]
+
+  @@unique([projectId, slug])
+  @@index([projectId])
+  @@map("project_environments")
+}
+
+model ProjectMember {
+  id        String      @id @default(uuid())
+  projectId String      @map("project_id")
+  userId    String      @map("user_id")
+  role      ProjectRole @default(READ)
+  addedAt   DateTime    @default(now()) @map("added_at")
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, userId])
+  @@index([projectId])
+  @@index([userId])
+  @@map("project_members")
+}
+
+model ProjectHistory {
+  id                    String     @id @default(uuid())
+  projectId             String     @map("project_id")
+  changedByUserId       String?    @map("changed_by_user_id")
+  changedByAgentSessionId String?  @map("changed_by_agent_session_id")
+  changeType            ChangeType @map("change_type")
+  snapshot              Json
+  changeReason          String?    @map("change_reason") @db.Text
+  createdAt             DateTime   @default(now()) @map("created_at")
+
+  project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  changedBy    User?         @relation("ProjectHistoryUser", fields: [changedByUserId], references: [id])
+  agentSession AgentSession? @relation(fields: [changedByAgentSessionId], references: [id])
+
+  @@index([projectId])
+  @@index([createdAt])
+  @@map("project_histories")
+}
+
+// ============================================
+// テストスイートモデル
+// ============================================
+
+model TestSuite {
+  id                      String       @id @default(uuid())
+  projectId               String       @map("project_id")
+  name                    String       @db.VarChar(200)
+  description             String?      @db.Text
+  status                  EntityStatus @default(DRAFT)
+  createdByUserId         String?      @map("created_by_user_id")
+  createdByAgentSessionId String?      @map("created_by_agent_session_id")
+  createdAt               DateTime     @default(now()) @map("created_at")
+  updatedAt               DateTime     @updatedAt @map("updated_at")
+  deletedAt               DateTime?    @map("deleted_at")
+
+  project       Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdByUser User?                  @relation("TestSuiteCreator", fields: [createdByUserId], references: [id])
+  agentSession  AgentSession?          @relation(fields: [createdByAgentSessionId], references: [id])
+  preconditions TestSuitePrecondition[]
+  testCases     TestCase[]
+  histories     TestSuiteHistory[]
+  executions    Execution[]
+
+  @@index([projectId])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("test_suites")
+}
+
+model TestSuitePrecondition {
+  id          String   @id @default(uuid())
+  testSuiteId String   @map("test_suite_id")
+  content     String   @db.Text
+  orderKey    String   @map("order_key") @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  testSuite TestSuite @relation(fields: [testSuiteId], references: [id], onDelete: Cascade)
+
+  @@index([testSuiteId])
+  @@index([testSuiteId, orderKey])
+  @@map("test_suite_preconditions")
+}
+
+model TestSuiteHistory {
+  id                      String     @id @default(uuid())
+  testSuiteId             String     @map("test_suite_id")
+  changedByUserId         String?    @map("changed_by_user_id")
+  changedByAgentSessionId String?    @map("changed_by_agent_session_id")
+  changeType              ChangeType @map("change_type")
+  snapshot                Json
+  changeReason            String?    @map("change_reason") @db.Text
+  createdAt               DateTime   @default(now()) @map("created_at")
+
+  testSuite    TestSuite     @relation(fields: [testSuiteId], references: [id], onDelete: Cascade)
+  changedBy    User?         @relation("TestSuiteHistoryUser", fields: [changedByUserId], references: [id])
+  agentSession AgentSession? @relation(fields: [changedByAgentSessionId], references: [id])
+
+  @@index([testSuiteId])
+  @@index([createdAt])
+  @@map("test_suite_histories")
+}
+
+// ============================================
+// テストケースモデル
+// ============================================
+
+model TestCase {
+  id                      String           @id @default(uuid())
+  testSuiteId             String           @map("test_suite_id")
+  title                   String           @db.VarChar(200)
+  description             String?          @db.Text
+  priority                TestCasePriority @default(MEDIUM)
+  status                  EntityStatus     @default(DRAFT)
+  orderKey                String           @map("order_key") @db.VarChar(255)
+  createdByUserId         String?          @map("created_by_user_id")
+  createdByAgentSessionId String?          @map("created_by_agent_session_id")
+  createdAt               DateTime         @default(now()) @map("created_at")
+  updatedAt               DateTime         @updatedAt @map("updated_at")
+  deletedAt               DateTime?        @map("deleted_at")
+
+  testSuite       TestSuite                @relation(fields: [testSuiteId], references: [id], onDelete: Cascade)
+  createdByUser   User?                    @relation("TestCaseCreator", fields: [createdByUserId], references: [id])
+  agentSession    AgentSession?            @relation(fields: [createdByAgentSessionId], references: [id])
+  preconditions   TestCasePrecondition[]
+  steps           TestCaseStep[]
+  expectedResults TestCaseExpectedResult[]
+  histories       TestCaseHistory[]
+
+  @@index([testSuiteId])
+  @@index([testSuiteId, orderKey])
+  @@index([status])
+  @@index([deletedAt])
+  @@map("test_cases")
+}
+
+model TestCasePrecondition {
+  id         String   @id @default(uuid())
+  testCaseId String   @map("test_case_id")
+  content    String   @db.Text
+  orderKey   String   @map("order_key") @db.VarChar(255)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  testCase TestCase @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+
+  @@index([testCaseId])
+  @@index([testCaseId, orderKey])
+  @@map("test_case_preconditions")
+}
+
+model TestCaseStep {
+  id         String   @id @default(uuid())
+  testCaseId String   @map("test_case_id")
+  content    String   @db.Text
+  orderKey   String   @map("order_key") @db.VarChar(255)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  testCase TestCase @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+
+  @@index([testCaseId])
+  @@index([testCaseId, orderKey])
+  @@map("test_case_steps")
+}
+
+model TestCaseExpectedResult {
+  id         String   @id @default(uuid())
+  testCaseId String   @map("test_case_id")
+  content    String   @db.Text
+  orderKey   String   @map("order_key") @db.VarChar(255)
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  testCase TestCase @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+
+  @@index([testCaseId])
+  @@index([testCaseId, orderKey])
+  @@map("test_case_expected_results")
+}
+
+model TestCaseHistory {
+  id                      String     @id @default(uuid())
+  testCaseId              String     @map("test_case_id")
+  changedByUserId         String?    @map("changed_by_user_id")
+  changedByAgentSessionId String?    @map("changed_by_agent_session_id")
+  changeType              ChangeType @map("change_type")
+  snapshot                Json
+  changeReason            String?    @map("change_reason") @db.Text
+  createdAt               DateTime   @default(now()) @map("created_at")
+
+  testCase     TestCase      @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
+  changedBy    User?         @relation("TestCaseHistoryUser", fields: [changedByUserId], references: [id])
+  agentSession AgentSession? @relation(fields: [changedByAgentSessionId], references: [id])
+
+  @@index([testCaseId])
+  @@index([createdAt])
+  @@map("test_case_histories")
+}
+
+// ============================================
+// 実行モデル
+// ============================================
+
+model Execution {
+  id                      String          @id @default(uuid())
+  testSuiteId             String          @map("test_suite_id")
+  environmentId           String?         @map("environment_id")
+  executedByUserId        String?         @map("executed_by_user_id")
+  executedByAgentSessionId String?        @map("executed_by_agent_session_id")
+  status                  ExecutionStatus @default(IN_PROGRESS)
+  startedAt               DateTime        @default(now()) @map("started_at")
+  completedAt             DateTime?       @map("completed_at")
+  createdAt               DateTime        @default(now()) @map("created_at")
+  updatedAt               DateTime        @updatedAt @map("updated_at")
+
+  testSuite           TestSuite                    @relation(fields: [testSuiteId], references: [id], onDelete: Cascade)
+  environment         ProjectEnvironment?          @relation(fields: [environmentId], references: [id])
+  executedByUser      User?                        @relation("ExecutionUser", fields: [executedByUserId], references: [id])
+  agentSession        AgentSession?                @relation(fields: [executedByAgentSessionId], references: [id])
+  snapshot            ExecutionSnapshot?
+  preconditionResults ExecutionPreconditionResult[]
+  stepResults         ExecutionStepResult[]
+  expectedResults     ExecutionExpectedResult[]
+
+  @@index([testSuiteId])
+  @@index([status])
+  @@index([startedAt])
+  @@map("executions")
+}
+
+model ExecutionSnapshot {
+  id           String   @id @default(uuid())
+  executionId  String   @unique @map("execution_id")
+  snapshotData Json     @map("snapshot_data")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  execution Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  @@map("execution_snapshots")
+}
+
+model ExecutionPreconditionResult {
+  id                     String             @id @default(uuid())
+  executionId            String             @map("execution_id")
+  snapshotTestCaseId     String?            @map("snapshot_test_case_id")
+  snapshotPreconditionId String             @map("snapshot_precondition_id")
+  status                 PreconditionStatus @default(UNCHECKED)
+  checkedAt              DateTime?          @map("checked_at")
+  note                   String?            @db.Text
+  createdAt              DateTime           @default(now()) @map("created_at")
+  updatedAt              DateTime           @updatedAt @map("updated_at")
+
+  execution Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  @@unique([executionId, snapshotPreconditionId])
+  @@index([executionId])
+  @@map("execution_precondition_results")
+}
+
+model ExecutionStepResult {
+  id                 String     @id @default(uuid())
+  executionId        String     @map("execution_id")
+  snapshotTestCaseId String     @map("snapshot_test_case_id")
+  snapshotStepId     String     @map("snapshot_step_id")
+  status             StepStatus @default(PENDING)
+  executedAt         DateTime?  @map("executed_at")
+  note               String?    @db.Text
+  createdAt          DateTime   @default(now()) @map("created_at")
+  updatedAt          DateTime   @updatedAt @map("updated_at")
+
+  execution Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+
+  @@unique([executionId, snapshotStepId])
+  @@index([executionId])
+  @@map("execution_step_results")
+}
+
+model ExecutionExpectedResult {
+  id                       String         @id @default(uuid())
+  executionId              String         @map("execution_id")
+  snapshotTestCaseId       String         @map("snapshot_test_case_id")
+  snapshotExpectedResultId String         @map("snapshot_expected_result_id")
+  status                   JudgmentStatus @default(PENDING)
+  judgedAt                 DateTime?      @map("judged_at")
+  note                     String?        @db.Text
+  createdAt                DateTime       @default(now()) @map("created_at")
+  updatedAt                DateTime       @updatedAt @map("updated_at")
+
+  execution Execution           @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  evidences ExecutionEvidence[]
+
+  @@unique([executionId, snapshotExpectedResultId])
+  @@index([executionId])
+  @@map("execution_expected_results")
+}
+
+model ExecutionEvidence {
+  id                      String   @id @default(uuid())
+  expectedResultId        String   @map("expected_result_id")
+  fileName                String   @map("file_name") @db.VarChar(255)
+  fileUrl                 String   @map("file_url")
+  fileType                String   @map("file_type") @db.VarChar(100)
+  fileSize                BigInt   @map("file_size")
+  description             String?  @db.Text
+  uploadedByUserId        String?  @map("uploaded_by_user_id")
+  uploadedByAgentSessionId String? @map("uploaded_by_agent_session_id")
+  createdAt               DateTime @default(now()) @map("created_at")
+
+  expectedResult ExecutionExpectedResult @relation(fields: [expectedResultId], references: [id], onDelete: Cascade)
+  uploadedBy     User?                   @relation("EvidenceUploader", fields: [uploadedByUserId], references: [id])
+  agentSession   AgentSession?           @relation(fields: [uploadedByAgentSessionId], references: [id])
+
+  @@index([expectedResultId])
+  @@map("execution_evidences")
+}
+
+// ============================================
+// レビュー・編集ロックモデル
+// ============================================
+
+model ReviewComment {
+  id                    String            @id @default(uuid())
+  targetType            ReviewTargetType  @map("target_type")
+  targetId              String            @map("target_id")
+  targetField           ReviewTargetField @map("target_field")
+  targetItemId          String?           @map("target_item_id")
+  authorUserId          String?           @map("author_user_id")
+  authorAgentSessionId  String?           @map("author_agent_session_id")
+  content               String            @db.Text
+  status                ReviewStatus      @default(OPEN)
+  createdAt             DateTime          @default(now()) @map("created_at")
+  updatedAt             DateTime          @updatedAt @map("updated_at")
+
+  author       User?                @relation("ReviewCommentUser", fields: [authorUserId], references: [id])
+  agentSession AgentSession?        @relation(fields: [authorAgentSessionId], references: [id])
+  replies      ReviewCommentReply[]
+
+  @@index([targetType, targetId])
+  @@index([targetType, targetId, targetField, targetItemId])
+  @@map("review_comments")
+}
+
+model ReviewCommentReply {
+  id                   String   @id @default(uuid())
+  commentId            String   @map("comment_id")
+  authorUserId         String?  @map("author_user_id")
+  authorAgentSessionId String?  @map("author_agent_session_id")
+  content              String   @db.Text
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+
+  comment      ReviewComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  author       User?         @relation("ReviewReplyUser", fields: [authorUserId], references: [id])
+  agentSession AgentSession? @relation(fields: [authorAgentSessionId], references: [id])
+
+  @@index([commentId])
+  @@map("review_comment_replies")
+}
+
+model EditLock {
+  id                   String         @id @default(uuid())
+  targetType           LockTargetType @map("target_type")
+  targetId             String         @map("target_id")
+  lockedByUserId       String?        @map("locked_by_user_id")
+  lockedByAgentSessionId String?      @map("locked_by_agent_session_id")
+  lockedAt             DateTime       @default(now()) @map("locked_at")
+  lastHeartbeat        DateTime       @default(now()) @map("last_heartbeat")
+  expiresAt            DateTime       @map("expires_at")
+
+  lockedBy     User?         @relation("EditLockUser", fields: [lockedByUserId], references: [id])
+  agentSession AgentSession? @relation(fields: [lockedByAgentSessionId], references: [id])
+
+  @@unique([targetType, targetId])
+  @@index([expiresAt])
+  @@map("edit_locks")
+}
+
+// ============================================
+// エージェントセッションモデル
+// ============================================
+
+model AgentSession {
+  id            String             @id @default(uuid())
+  projectId     String             @map("project_id")
+  clientId      String             @map("client_id") @db.VarChar(255)
+  clientName    String?            @map("client_name") @db.VarChar(100)
+  status        AgentSessionStatus @default(ACTIVE)
+  startedAt     DateTime           @default(now()) @map("started_at")
+  lastHeartbeat DateTime           @default(now()) @map("last_heartbeat")
+  endedAt       DateTime?          @map("ended_at")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+
+  project              Project              @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  testSuites           TestSuite[]
+  testCases            TestCase[]
+  executions           Execution[]
+  projectHistories     ProjectHistory[]
+  testSuiteHistories   TestSuiteHistory[]
+  testCaseHistories    TestCaseHistory[]
+  reviewComments       ReviewComment[]
+  reviewCommentReplies ReviewCommentReply[]
+  editLocks            EditLock[]
+  executionEvidences   ExecutionEvidence[]
+
+  @@index([projectId])
+  @@index([status])
+  @@index([lastHeartbeat])
+  @@map("agent_sessions")
+}
+
+// ============================================
+// 課金モデル
+// ============================================
+
+model Subscription {
+  id                 String             @id @default(uuid())
+  userId             String?            @unique @map("user_id")
+  organizationId     String?            @unique @map("organization_id")
+  plan               SubscriptionPlan   @default(FREE)
+  status             SubscriptionStatus @default(ACTIVE)
+  billingCycle       BillingCycle       @default(MONTHLY) @map("billing_cycle")
+  currentPeriodStart DateTime           @map("current_period_start")
+  currentPeriodEnd   DateTime           @map("current_period_end")
+  cancelAtPeriodEnd  Boolean            @default(false) @map("cancel_at_period_end")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  user         User?         @relation("UserSubscription", fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization? @relation("OrgSubscription", fields: [organizationId], references: [id], onDelete: Cascade)
+  invoices     Invoice[]
+
+  @@index([status])
+  @@map("subscriptions")
+}
+
+model Invoice {
+  id             String        @id @default(uuid())
+  subscriptionId String        @map("subscription_id")
+  invoiceNumber  String        @unique @map("invoice_number") @db.VarChar(50)
+  amount         Decimal       @db.Decimal(10, 2)
+  currency       String        @default("JPY") @db.VarChar(3)
+  status         InvoiceStatus @default(PENDING)
+  periodStart    DateTime      @map("period_start")
+  periodEnd      DateTime      @map("period_end")
+  dueDate        DateTime      @map("due_date")
+  pdfUrl         String?       @map("pdf_url")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+
+  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([subscriptionId])
+  @@index([status])
+  @@map("invoices")
+}
+
+model PaymentMethod {
+  id             String            @id @default(uuid())
+  userId         String?           @map("user_id")
+  organizationId String?           @map("organization_id")
+  type           PaymentMethodType @default(CARD)
+  externalId     String            @map("external_id") @db.VarChar(255)
+  brand          String?           @db.VarChar(50)
+  last4          String?           @db.VarChar(4)
+  expiryMonth    Int?              @map("expiry_month")
+  expiryYear     Int?              @map("expiry_year")
+  isDefault      Boolean           @default(false) @map("is_default")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+
+  user         User?         @relation("UserPaymentMethods", fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization? @relation("OrgPaymentMethods", fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([organizationId])
+  @@map("payment_methods")
+}
+
+// ============================================
+// APIトークン・通知モデル
+// ============================================
+
+model ApiToken {
+  id             String    @id @default(uuid())
+  userId         String?   @map("user_id")
+  organizationId String?   @map("organization_id")
+  name           String    @db.VarChar(100)
+  tokenHash      String    @unique @map("token_hash") @db.VarChar(64)
+  tokenPrefix    String    @map("token_prefix") @db.VarChar(10)
+  scopes         String[]
+  expiresAt      DateTime? @map("expires_at")
+  lastUsedAt     DateTime? @map("last_used_at")
+  revokedAt      DateTime? @map("revoked_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  user         User?         @relation("UserApiTokens", fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization? @relation("OrgApiTokens", fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([tokenHash])
+  @@map("api_tokens")
+}
+
+model Notification {
+  id          String           @id @default(uuid())
+  userId      String           @map("user_id")
+  type        NotificationType
+  title       String           @db.VarChar(200)
+  body        String           @db.Text
+  data        Json?
+  readAt      DateTime?        @map("read_at")
+  emailSentAt DateTime?        @map("email_sent_at")
+  createdAt   DateTime         @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, readAt])
+  @@map("notifications")
+}
+
+model NotificationPreference {
+  id           String           @id @default(uuid())
+  userId       String           @map("user_id")
+  type         NotificationType
+  emailEnabled Boolean          @default(true) @map("email_enabled")
+  inAppEnabled Boolean          @default(true) @map("in_app_enabled")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type])
+  @@index([userId])
+  @@map("notification_preferences")
+}
+
+model OrganizationNotificationSetting {
+  id             String           @id @default(uuid())
+  organizationId String           @map("organization_id")
+  type           NotificationType
+  emailEnabled   Boolean          @default(true) @map("email_enabled")
+  inAppEnabled   Boolean          @default(true) @map("in_app_enabled")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, type])
+  @@index([organizationId])
+  @@map("organization_notification_settings")
+}
+
+// ============================================
+// 監査ログ・使用量モデル
+// ============================================
+
+model AuditLog {
+  id             String           @id @default(uuid())
+  organizationId String?          @map("organization_id")
+  userId         String?          @map("user_id")
+  category       AuditLogCategory
+  action         String           @db.VarChar(100)
+  targetType     String?          @map("target_type") @db.VarChar(50)
+  targetId       String?          @map("target_id")
+  details        Json?
+  ipAddress      String?          @map("ip_address") @db.VarChar(45)
+  userAgent      String?          @map("user_agent")
+  createdAt      DateTime         @default(now()) @map("created_at")
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  user         User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([userId])
+  @@index([category])
+  @@index([createdAt])
+  @@index([organizationId, createdAt])
+  @@map("audit_logs")
+}
+
+model UsageRecord {
+  id              String    @id @default(uuid())
+  userId          String?   @map("user_id")
+  organizationId  String?   @map("organization_id")
+  periodStart     DateTime  @map("period_start") @db.Date
+  periodEnd       DateTime  @map("period_end") @db.Date
+  mcpSessions     Int       @default(0) @map("mcp_sessions")
+  mcpSessionLimit Int       @default(0) @map("mcp_session_limit")
+  alertSentAt     DateTime? @map("alert_sent_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  user         User?         @relation("UserUsageRecords", fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization? @relation("OrgUsageRecords", fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, periodStart])
+  @@unique([organizationId, periodStart])
+  @@index([userId])
+  @@index([organizationId])
+  @@index([periodStart])
+  @@map("usage_records")
+}
