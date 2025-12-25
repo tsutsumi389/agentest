@@ -19,6 +19,7 @@
 | [Organization](./database/organization.md#organization) | 組織（チーム） |
 | [OrganizationMember](./database/organization.md#organizationmember) | 組織メンバー（多対多） |
 | [Project](./database/organization.md#project) | プロジェクト |
+| [ProjectEnvironment](./database/organization.md#projectenvironment) | プロジェクトの環境設定（dev/stg/prod等） |
 | [ProjectHistory](./database/organization.md#projecthistory) | プロジェクトの変更履歴 |
 
 ### Agent セッション

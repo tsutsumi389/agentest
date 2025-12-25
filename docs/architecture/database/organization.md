@@ -161,6 +161,7 @@ model Project {
   organization  Organization?    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   owner         User?            @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   members       ProjectMember[]
+  environments  ProjectEnvironment[]
   testSuites    TestSuite[]
   histories     ProjectHistory[]
   agentSessions AgentSession[]
@@ -179,6 +180,64 @@ ALTER TABLE "Project" ADD CONSTRAINT "project_owner_check"
     (organization_id IS NOT NULL AND owner_id IS NULL) OR
     (organization_id IS NULL AND owner_id IS NOT NULL)
   );
+```
+
+---
+
+## ProjectEnvironment
+
+プロジェクトの環境設定を管理するテーブル。各環境（dev/stg/prod等）のエンドポイント URL を登録。
+
+### カラム定義
+
+| カラム | 型 | NULL | デフォルト | 説明 |
+|--------|------|------|------------|------|
+| `id` | UUID | NO | gen_random_uuid() | 主キー |
+| `projectId` | UUID | NO | - | プロジェクト ID（外部キー） |
+| `name` | VARCHAR(100) | NO | - | 環境名（例: "開発環境", "ステージング", "本番"） |
+| `slug` | VARCHAR(50) | NO | - | URL スラッグ（例: "dev", "stg", "prod"） |
+| `baseUrl` | TEXT | NO | - | エンドポイント URL（例: "https://dev.example.com"） |
+| `description` | TEXT | YES | NULL | 環境の説明 |
+| `isDefault` | BOOLEAN | NO | false | デフォルト環境フラグ |
+| `sortOrder` | INTEGER | NO | 0 | 表示順 |
+| `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
+| `updatedAt` | TIMESTAMP | NO | now() | 更新日時 |
+
+### 制約
+
+- `projectId` + `slug` は一意（同一プロジェクト内でスラッグは重複不可）
+- `isDefault` が true の環境はプロジェクト内で1つのみ（アプリケーション層で制御）
+
+### Prisma スキーマ
+
+```prisma
+model ProjectEnvironment {
+  id          String   @id @default(uuid()) @db.Uuid
+  projectId   String   @db.Uuid
+  name        String   @db.VarChar(100)
+  slug        String   @db.VarChar(50)
+  baseUrl     String
+  description String?
+  isDefault   Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  executions Execution[]
+
+  @@unique([projectId, slug])
+  @@index([projectId])
+}
+```
+
+### 使用例
+
+```
+プロジェクト: ECサイト
+├── dev:  https://dev.ec-site.example.com (isDefault: true)
+├── stg:  https://stg.ec-site.example.com
+└── prod: https://ec-site.example.com
 ```
 
 ---
