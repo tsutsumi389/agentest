@@ -1,0 +1,50 @@
+import { prisma } from '@agentest/db';
+
+/**
+ * 組織リポジトリ
+ */
+export class OrganizationRepository {
+  /**
+   * IDで組織を検索
+   */
+  async findById(id: string) {
+    return prisma.organization.findFirst({
+      where: {
+        id,
+        deletedAt: null,
+      },
+    });
+  }
+
+  /**
+   * スラッグで組織を検索
+   */
+  async findBySlug(slug: string) {
+    return prisma.organization.findFirst({
+      where: {
+        slug,
+        deletedAt: null,
+      },
+    });
+  }
+
+  /**
+   * 組織を更新
+   */
+  async update(id: string, data: { name?: string; description?: string | null; billingEmail?: string | null }) {
+    return prisma.organization.update({
+      where: { id },
+      data,
+    });
+  }
+
+  /**
+   * 組織を論理削除
+   */
+  async softDelete(id: string) {
+    return prisma.organization.update({
+      where: { id },
+      data: { deletedAt: new Date() },
+    });
+  }
+}
