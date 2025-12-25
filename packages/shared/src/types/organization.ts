@@ -66,7 +66,7 @@ export interface ProjectMember {
   addedAt: Date;
 }
 
-// API Response types
+// APIレスポンス型
 export interface OrganizationPublic {
   id: string;
   name: string;

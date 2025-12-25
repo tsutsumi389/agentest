@@ -53,7 +53,7 @@ export interface TestCaseHistory {
   createdAt: Date;
 }
 
-// API Request/Response types
+// APIリクエスト/レスポンス型
 export interface TestCaseCreateInput {
   title: string;
   description?: string | null;

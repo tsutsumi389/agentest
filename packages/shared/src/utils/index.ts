@@ -1,6 +1,6 @@
 /**
- * Generate a fractional index key for ordering
- * Used for reordering items without updating all subsequent items
+ * 順序付けのためのFractional Indexキーを生成
+ * 後続の全要素を更新せずに並び替えを可能にする
  */
 export function generateOrderKey(prevKey: string | null, nextKey: string | null): string {
   const CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
@@ -11,7 +11,7 @@ export function generateOrderKey(prevKey: string | null, nextKey: string | null)
   }
 
   if (!prevKey) {
-    // Insert before the first item
+    // 最初の要素の前に挿入
     const firstChar = nextKey!.charCodeAt(0);
     if (firstChar > CHARS.charCodeAt(0)) {
       return String.fromCharCode(firstChar - 1);
@@ -20,7 +20,7 @@ export function generateOrderKey(prevKey: string | null, nextKey: string | null)
   }
 
   if (!nextKey) {
-    // Insert after the last item
+    // 最後の要素の後に挿入
     const lastChar = prevKey.charCodeAt(prevKey.length - 1);
     if (lastChar < CHARS.charCodeAt(BASE - 1)) {
       return prevKey.slice(0, -1) + String.fromCharCode(lastChar + 1);
@@ -28,7 +28,7 @@ export function generateOrderKey(prevKey: string | null, nextKey: string | null)
     return prevKey + 'a';
   }
 
-  // Insert between two items
+  // 2つの要素の間に挿入
   let i = 0;
   while (i < prevKey.length && i < nextKey.length && prevKey[i] === nextKey[i]) {
     i++;
@@ -56,14 +56,14 @@ export function generateOrderKey(prevKey: string | null, nextKey: string | null)
 }
 
 /**
- * Sleep for a given number of milliseconds
+ * 指定ミリ秒間スリープする
  */
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
- * Retry a function with exponential backoff
+ * 指数バックオフでリトライする
  */
 export async function retry<T>(
   fn: () => Promise<T>,
@@ -96,7 +96,7 @@ export async function retry<T>(
 }
 
 /**
- * Omit keys from an object
+ * オブジェクトから指定キーを除外する
  */
 export function omit<T extends object, K extends keyof T>(obj: T, keys: K[]): Omit<T, K> {
   const result = { ...obj };
@@ -107,7 +107,7 @@ export function omit<T extends object, K extends keyof T>(obj: T, keys: K[]): Om
 }
 
 /**
- * Pick keys from an object
+ * オブジェクトから指定キーのみ抽出する
  */
 export function pick<T extends object, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> {
   const result = {} as Pick<T, K>;

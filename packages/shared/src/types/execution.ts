@@ -74,7 +74,7 @@ export interface ExecutionEvidence {
   createdAt: Date;
 }
 
-// API Request/Response types
+// APIリクエスト/レスポンス型
 export interface ExecutionCreateInput {
   testSuiteId: string;
   environmentId?: string | null;

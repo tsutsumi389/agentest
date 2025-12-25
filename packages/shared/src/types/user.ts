@@ -44,7 +44,7 @@ export interface RefreshToken {
   createdAt: Date;
 }
 
-// API Response types
+// APIレスポンス型
 export interface UserPublic {
   id: string;
   email: string;

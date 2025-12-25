@@ -33,7 +33,7 @@ export interface TestSuiteHistory {
   createdAt: Date;
 }
 
-// API Request/Response types
+// APIリクエスト/レスポンス型
 export interface TestSuiteCreateInput {
   name: string;
   description?: string | null;

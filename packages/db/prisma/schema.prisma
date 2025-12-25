@@ -8,7 +8,7 @@ datasource db {
 }
 
 // ============================================
-// ENUMS
+// 列挙型 (ENUMS)
 // ============================================
 
 enum UserPlan {
@@ -161,7 +161,7 @@ enum AuditLogCategory {
 }
 
 // ============================================
-// AUTH MODELS
+// 認証モデル
 // ============================================
 
 model User {
@@ -174,7 +174,7 @@ model User {
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
-  // Relations
+  // リレーション
   accounts               Account[]
   refreshTokens          RefreshToken[]
   sessions               Session[]
@@ -260,7 +260,7 @@ model Session {
 }
 
 // ============================================
-// ORGANIZATION & PROJECT MODELS
+// 組織・プロジェクトモデル
 // ============================================
 
 model Organization {
@@ -275,7 +275,7 @@ model Organization {
   updatedAt    DateTime         @updatedAt @map("updated_at")
   deletedAt    DateTime?        @map("deleted_at")
 
-  // Relations
+  // リレーション
   members              OrganizationMember[]
   invitations          OrganizationInvitation[]
   projects             Project[]
@@ -338,7 +338,7 @@ model Project {
   updatedAt      DateTime  @updatedAt @map("updated_at")
   deletedAt      DateTime? @map("deleted_at")
 
-  // Relations
+  // リレーション
   organization  Organization?        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   owner         User?                @relation("ProjectOwner", fields: [ownerId], references: [id])
   members       ProjectMember[]
@@ -409,7 +409,7 @@ model ProjectHistory {
 }
 
 // ============================================
-// TEST SUITE MODELS
+// テストスイートモデル
 // ============================================
 
 model TestSuite {
@@ -473,7 +473,7 @@ model TestSuiteHistory {
 }
 
 // ============================================
-// TEST CASE MODELS
+// テストケースモデル
 // ============================================
 
 model TestCase {
@@ -570,7 +570,7 @@ model TestCaseHistory {
 }
 
 // ============================================
-// EXECUTION MODELS
+// 実行モデル
 // ============================================
 
 model Execution {
@@ -687,7 +687,7 @@ model ExecutionEvidence {
 }
 
 // ============================================
-// REVIEW & EDIT LOCK MODELS
+// レビュー・編集ロックモデル
 // ============================================
 
 model ReviewComment {
@@ -748,7 +748,7 @@ model EditLock {
 }
 
 // ============================================
-// AGENT SESSION MODEL
+// エージェントセッションモデル
 // ============================================
 
 model AgentSession {
@@ -782,7 +782,7 @@ model AgentSession {
 }
 
 // ============================================
-// BILLING MODELS
+// 課金モデル
 // ============================================
 
 model Subscription {
@@ -850,7 +850,7 @@ model PaymentMethod {
 }
 
 // ============================================
-// API TOKEN & NOTIFICATION MODELS
+// APIトークン・通知モデル
 // ============================================
 
 model ApiToken {
@@ -927,7 +927,7 @@ model OrganizationNotificationSetting {
 }
 
 // ============================================
-// AUDIT LOG & USAGE MODELS
+// 監査ログ・使用量モデル
 // ============================================
 
 model AuditLog {

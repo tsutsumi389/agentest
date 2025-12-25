@@ -50,7 +50,7 @@ export interface OAuthProfile {
   refreshToken?: string;
 }
 
-// Extend Express Request
+// Express Requestの拡張
 declare global {
   namespace Express {
     interface Request {

@@ -12,7 +12,7 @@ import {
   JudgmentStatus,
 } from '../types/enums.js';
 
-// Common schemas
+// 共通スキーマ
 export const uuidSchema = z.string().uuid();
 
 export const paginationSchema = z.object({
@@ -25,7 +25,7 @@ export const sortSchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
-// Enum schemas
+// Enumスキーマ
 export const userPlanSchema = z.enum([UserPlan.FREE, UserPlan.PRO]);
 export const organizationPlanSchema = z.enum([OrganizationPlan.TEAM, OrganizationPlan.ENTERPRISE]);
 export const organizationRoleSchema = z.enum([
@@ -64,7 +64,7 @@ export const judgmentStatusSchema = z.enum([
   JudgmentStatus.NOT_EXECUTABLE,
 ]);
 
-// User schemas
+// ユーザースキーマ
 export const userCreateSchema = z.object({
   email: z.string().email().max(255),
   name: z.string().min(1).max(100),
@@ -76,7 +76,7 @@ export const userUpdateSchema = z.object({
   avatarUrl: z.string().url().nullish(),
 });
 
-// Organization schemas
+// 組織スキーマ
 export const organizationCreateSchema = z.object({
   name: z.string().min(1).max(100),
   slug: z
@@ -99,7 +99,7 @@ export const organizationInviteSchema = z.object({
   role: organizationRoleSchema.exclude(['OWNER']),
 });
 
-// Project schemas
+// プロジェクトスキーマ
 export const projectCreateSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).nullish(),
@@ -123,7 +123,7 @@ export const projectEnvironmentSchema = z.object({
   isDefault: z.boolean().default(false),
 });
 
-// Test Suite schemas
+// テストスイートスキーマ
 export const testSuiteCreateSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(2000).nullish(),
@@ -143,7 +143,7 @@ export const testSuiteUpdateSchema = z.object({
   status: entityStatusSchema.optional(),
 });
 
-// Test Case schemas
+// テストケーススキーマ
 export const testCaseCreateSchema = z.object({
   title: z.string().min(1).max(200),
   description: z.string().max(2000).nullish(),
@@ -179,7 +179,7 @@ export const testCaseUpdateSchema = z.object({
   status: entityStatusSchema.optional(),
 });
 
-// Execution schemas
+// 実行スキーマ
 export const executionCreateSchema = z.object({
   testSuiteId: z.string().uuid(),
   environmentId: z.string().uuid().nullish(),
@@ -190,7 +190,7 @@ export const executionResultUpdateSchema = z.object({
   note: z.string().max(1000).nullish(),
 });
 
-// Type exports
+// 型エクスポート
 export type UserCreate = z.infer<typeof userCreateSchema>;
 export type UserUpdate = z.infer<typeof userUpdateSchema>;
 export type OrganizationCreate = z.infer<typeof organizationCreateSchema>;

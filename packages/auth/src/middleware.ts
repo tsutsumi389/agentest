@@ -11,16 +11,16 @@ export interface AuthMiddlewareOptions {
 }
 
 /**
- * Extract token from Authorization header or cookie
+ * Authorizationヘッダーまたはクッキーからトークンを抽出
  */
 function extractToken(req: Request): string | null {
-  // Check Authorization header
+  // Authorizationヘッダーをチェック
   const authHeader = req.headers.authorization;
   if (authHeader?.startsWith('Bearer ')) {
     return authHeader.slice(7);
   }
 
-  // Check cookie
+  // クッキーをチェック
   const cookieToken = req.cookies?.access_token;
   if (cookieToken) {
     return cookieToken;
@@ -30,8 +30,8 @@ function extractToken(req: Request): string | null {
 }
 
 /**
- * Authentication middleware
- * Verifies JWT token and attaches user to request
+ * 認証ミドルウェア
+ * JWTトークンを検証し、リクエストにユーザーを添付
  */
 export function authenticate(options: AuthMiddlewareOptions = {}) {
   const { config = defaultAuthConfig, optional = false } = options;
@@ -50,7 +50,7 @@ export function authenticate(options: AuthMiddlewareOptions = {}) {
       const payload = verifyAccessToken(token, config);
       req.token = payload;
 
-      // Load user from database
+      // データベースからユーザーを取得
       const user = await prisma.user.findUnique({
         where: { id: payload.sub },
       });
@@ -71,22 +71,22 @@ export function authenticate(options: AuthMiddlewareOptions = {}) {
 }
 
 /**
- * Require authentication - stricter version that always requires a valid user
+ * 認証必須 - 常に有効なユーザーを要求する厳格版
  */
 export function requireAuth(config?: AuthConfig) {
   return authenticate({ config, optional: false });
 }
 
 /**
- * Optional authentication - continues even if no token is present
+ * 認証任意 - トークンがなくても処理を継続
  */
 export function optionalAuth(config?: AuthConfig) {
   return authenticate({ config, optional: true });
 }
 
 /**
- * Authorization middleware factory
- * Check if user has required role in organization
+ * 認可ミドルウェアファクトリ
+ * ユーザーが組織内で必要なロールを持っているかチェック
  */
 export function requireOrgRole(roles: string[]) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -121,8 +121,8 @@ export function requireOrgRole(roles: string[]) {
 }
 
 /**
- * Authorization middleware factory
- * Check if user has required role in project
+ * 認可ミドルウェアファクトリ
+ * ユーザーがプロジェクト内で必要なロールを持っているかチェック
  */
 export function requireProjectRole(roles: string[]) {
   return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -136,7 +136,7 @@ export function requireProjectRole(roles: string[]) {
         throw new AuthorizationError('Project ID required');
       }
 
-      // Check if user is project owner
+      // ユーザーがプロジェクトオーナーかチェック
       const project = await prisma.project.findUnique({
         where: { id: projectId },
         include: {
@@ -150,15 +150,15 @@ export function requireProjectRole(roles: string[]) {
         throw new AuthorizationError('Project not found');
       }
 
-      // Owner has all permissions
+      // オーナーは全権限を持つ
       if (project.ownerId === req.user.id) {
         return next();
       }
 
-      // Check project membership
+      // プロジェクトメンバーシップをチェック
       const member = project.members[0];
       if (!member || !roles.includes(member.role)) {
-        // Check organization membership if project belongs to org
+        // プロジェクトが組織に属する場合、組織メンバーシップをチェック
         if (project.organizationId) {
           const orgMember = await prisma.organizationMember.findUnique({
             where: {

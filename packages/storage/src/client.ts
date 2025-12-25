@@ -58,7 +58,7 @@ export class StorageClient {
   }
 
   /**
-   * Upload a file to storage
+   * ストレージにファイルをアップロード
    */
   async upload(
     key: string,
@@ -86,7 +86,7 @@ export class StorageClient {
   }
 
   /**
-   * Download a file from storage
+   * ストレージからファイルをダウンロード
    */
   async download(key: string): Promise<GetObjectCommandOutput> {
     const command = new GetObjectCommand({
@@ -98,7 +98,7 @@ export class StorageClient {
   }
 
   /**
-   * Delete a file from storage
+   * ストレージからファイルを削除
    */
   async delete(key: string): Promise<void> {
     const command = new DeleteObjectCommand({
@@ -110,7 +110,7 @@ export class StorageClient {
   }
 
   /**
-   * Check if a file exists
+   * ファイルの存在確認
    */
   async exists(key: string): Promise<boolean> {
     try {
@@ -126,7 +126,7 @@ export class StorageClient {
   }
 
   /**
-   * Get file metadata
+   * ファイルのメタデータを取得
    */
   async getMetadata(key: string): Promise<{
     contentType?: string;
@@ -152,7 +152,7 @@ export class StorageClient {
   }
 
   /**
-   * List files with a prefix
+   * プレフィックスでファイル一覧を取得
    */
   async list(prefix: string, maxKeys = 1000): Promise<string[]> {
     const command = new ListObjectsV2Command({
@@ -166,7 +166,7 @@ export class StorageClient {
   }
 
   /**
-   * Copy a file within storage
+   * ストレージ内でファイルをコピー
    */
   async copy(sourceKey: string, destinationKey: string): Promise<void> {
     const command = new CopyObjectCommand({
@@ -179,7 +179,7 @@ export class StorageClient {
   }
 
   /**
-   * Generate a presigned URL for upload
+   * アップロード用の署名付きURLを生成
    */
   async getUploadUrl(key: string, options: PresignedUrlOptions = {}): Promise<string> {
     const command = new PutObjectCommand({
@@ -194,7 +194,7 @@ export class StorageClient {
   }
 
   /**
-   * Generate a presigned URL for download
+   * ダウンロード用の署名付きURLを生成
    */
   async getDownloadUrl(key: string, options: PresignedUrlOptions = {}): Promise<string> {
     const command = new GetObjectCommand({
@@ -208,7 +208,7 @@ export class StorageClient {
   }
 
   /**
-   * Get public URL (for public-read objects)
+   * 公開URL取得（public-readオブジェクト用）
    */
   getPublicUrl(key: string): string {
     return `${this.endpoint}/${this.bucket}/${key}`;
@@ -216,7 +216,7 @@ export class StorageClient {
 }
 
 /**
- * Create storage client from environment variables
+ * 環境変数からストレージクライアントを作成
  */
 export function createStorageClient(env: NodeJS.ProcessEnv = process.env): StorageClient {
   return new StorageClient({

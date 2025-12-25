@@ -1,4 +1,4 @@
-// User & Organization Plans
+// ユーザー & 組織プラン
 export const UserPlan = {
   FREE: 'FREE',
   PRO: 'PRO',
@@ -11,7 +11,7 @@ export const OrganizationPlan = {
 } as const;
 export type OrganizationPlan = (typeof OrganizationPlan)[keyof typeof OrganizationPlan];
 
-// Roles
+// ロール
 export const OrganizationRole = {
   OWNER: 'OWNER',
   ADMIN: 'ADMIN',
@@ -26,7 +26,7 @@ export const ProjectRole = {
 } as const;
 export type ProjectRole = (typeof ProjectRole)[keyof typeof ProjectRole];
 
-// Entity Status
+// エンティティステータス
 export const EntityStatus = {
   DRAFT: 'DRAFT',
   ACTIVE: 'ACTIVE',
@@ -34,7 +34,7 @@ export const EntityStatus = {
 } as const;
 export type EntityStatus = (typeof EntityStatus)[keyof typeof EntityStatus];
 
-// Test Case Priority
+// テストケース優先度
 export const TestCasePriority = {
   CRITICAL: 'CRITICAL',
   HIGH: 'HIGH',
@@ -43,7 +43,7 @@ export const TestCasePriority = {
 } as const;
 export type TestCasePriority = (typeof TestCasePriority)[keyof typeof TestCasePriority];
 
-// Execution Status
+// 実行ステータス
 export const ExecutionStatus = {
   IN_PROGRESS: 'IN_PROGRESS',
   COMPLETED: 'COMPLETED',
@@ -51,7 +51,7 @@ export const ExecutionStatus = {
 } as const;
 export type ExecutionStatus = (typeof ExecutionStatus)[keyof typeof ExecutionStatus];
 
-// Execution Result Status
+// 実行結果ステータス
 export const PreconditionStatus = {
   UNCHECKED: 'UNCHECKED',
   MET: 'MET',
@@ -75,7 +75,7 @@ export const JudgmentStatus = {
 } as const;
 export type JudgmentStatus = (typeof JudgmentStatus)[keyof typeof JudgmentStatus];
 
-// Review & Edit Lock
+// レビュー & 編集ロック
 export const ReviewStatus = {
   OPEN: 'OPEN',
   RESOLVED: 'RESOLVED',
@@ -103,7 +103,7 @@ export const LockTargetType = {
 } as const;
 export type LockTargetType = (typeof LockTargetType)[keyof typeof LockTargetType];
 
-// Agent Session
+// エージェントセッション
 export const AgentSessionStatus = {
   ACTIVE: 'ACTIVE',
   IDLE: 'IDLE',
@@ -112,7 +112,7 @@ export const AgentSessionStatus = {
 } as const;
 export type AgentSessionStatus = (typeof AgentSessionStatus)[keyof typeof AgentSessionStatus];
 
-// Billing
+// 課金
 export const SubscriptionPlan = {
   FREE: 'FREE',
   PRO: 'PRO',
@@ -148,7 +148,7 @@ export const PaymentMethodType = {
 } as const;
 export type PaymentMethodType = (typeof PaymentMethodType)[keyof typeof PaymentMethodType];
 
-// History & Audit
+// 履歴 & 監査
 export const ChangeType = {
   CREATE: 'CREATE',
   UPDATE: 'UPDATE',

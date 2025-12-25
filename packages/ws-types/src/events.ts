@@ -8,7 +8,7 @@ import type {
 } from '@agentest/shared';
 
 // ============================================
-// Base Types
+// 基本型
 // ============================================
 
 export interface BaseMessage {
@@ -21,7 +21,7 @@ export interface BaseEvent extends BaseMessage {
 }
 
 // ============================================
-// Client -> Server Messages
+// クライアント -> サーバー メッセージ
 // ============================================
 
 export interface AuthenticateMessage extends BaseMessage {
@@ -56,7 +56,7 @@ export type ClientMessage =
   | HeartbeatMessage;
 
 // ============================================
-// Server -> Client Messages
+// サーバー -> クライアント メッセージ
 // ============================================
 
 export interface AuthenticatedMessage extends BaseMessage {
@@ -80,7 +80,7 @@ export interface SubscribedMessage extends BaseMessage {
 }
 
 // ============================================
-// Execution Events
+// 実行イベント
 // ============================================
 
 export interface ExecutionStartedEvent extends BaseEvent {
@@ -152,7 +152,7 @@ export type ExecutionEvent =
   | ExecutionEvidenceAddedEvent;
 
 // ============================================
-// Edit Lock Events
+// 編集ロックイベント
 // ============================================
 
 export interface LockAcquiredEvent extends BaseEvent {
@@ -185,7 +185,7 @@ export interface LockExpiredEvent extends BaseEvent {
 export type LockEvent = LockAcquiredEvent | LockReleasedEvent | LockExpiredEvent;
 
 // ============================================
-// Presence Events
+// プレゼンスイベント
 // ============================================
 
 export interface UserJoinedEvent extends BaseEvent {
@@ -217,7 +217,7 @@ export interface PresenceListEvent extends BaseEvent {
 export type PresenceEvent = UserJoinedEvent | UserLeftEvent | PresenceListEvent;
 
 // ============================================
-// Review Events
+// レビューイベント
 // ============================================
 
 export interface ReviewCommentAddedEvent extends BaseEvent {
@@ -265,7 +265,7 @@ export type ReviewEvent =
   | ReviewReplyAddedEvent;
 
 // ============================================
-// Test Suite/Case Events
+// テストスイート/ケースイベント
 // ============================================
 
 export interface TestSuiteUpdatedEvent extends BaseEvent {
@@ -303,7 +303,7 @@ export interface TestCaseUpdatedEvent extends BaseEvent {
 export type TestUpdateEvent = TestSuiteUpdatedEvent | TestCaseUpdatedEvent;
 
 // ============================================
-// Agent Session Events
+// エージェントセッションイベント
 // ============================================
 
 export interface AgentSessionStartedEvent extends BaseEvent {
@@ -324,7 +324,7 @@ export interface AgentSessionEndedEvent extends BaseEvent {
 export type AgentEvent = AgentSessionStartedEvent | AgentSessionEndedEvent;
 
 // ============================================
-// Combined Types
+// 統合型
 // ============================================
 
 export type ServerMessage =
@@ -344,7 +344,7 @@ export type ServerEvent =
 export type WebSocketMessage = ClientMessage | ServerMessage | ServerEvent;
 
 // ============================================
-// Channel Helpers
+// チャンネルヘルパー
 // ============================================
 
 export const Channels = {

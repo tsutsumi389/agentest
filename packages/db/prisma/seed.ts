@@ -3,9 +3,9 @@ import { PrismaClient, UserPlan, OrganizationPlan, EntityStatus, TestCasePriorit
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Seeding database...');
+  console.log('データベースのシード処理を開始...');
 
-  // Create demo user
+  // デモユーザーを作成
   const demoUser = await prisma.user.upsert({
     where: { email: 'demo@agentest.dev' },
     update: {},
@@ -16,9 +16,9 @@ async function main() {
     },
   });
 
-  console.log('Created demo user:', demoUser.email);
+  console.log('デモユーザーを作成:', demoUser.email);
 
-  // Create demo organization
+  // デモ組織を作成
   const demoOrg = await prisma.organization.upsert({
     where: { slug: 'demo-org' },
     update: {},
@@ -31,9 +31,9 @@ async function main() {
     },
   });
 
-  console.log('Created demo organization:', demoOrg.slug);
+  console.log('デモ組織を作成:', demoOrg.slug);
 
-  // Add demo user to organization
+  // デモユーザーを組織に追加
   await prisma.organizationMember.upsert({
     where: {
       organizationId_userId: {
@@ -49,7 +49,7 @@ async function main() {
     },
   });
 
-  // Create demo project
+  // デモプロジェクトを作成
   const demoProject = await prisma.project.upsert({
     where: { id: '00000000-0000-0000-0000-000000000001' },
     update: {},
@@ -61,9 +61,9 @@ async function main() {
     },
   });
 
-  console.log('Created demo project:', demoProject.name);
+  console.log('デモプロジェクトを作成:', demoProject.name);
 
-  // Create demo environment
+  // デモ環境を作成
   await prisma.projectEnvironment.upsert({
     where: {
       projectId_slug: {
@@ -82,7 +82,7 @@ async function main() {
     },
   });
 
-  // Create demo test suite
+  // デモテストスイートを作成
   const demoSuite = await prisma.testSuite.upsert({
     where: { id: '00000000-0000-0000-0000-000000000002' },
     update: {},
@@ -96,9 +96,9 @@ async function main() {
     },
   });
 
-  console.log('Created demo test suite:', demoSuite.name);
+  console.log('デモテストスイートを作成:', demoSuite.name);
 
-  // Create demo test case
+  // デモテストケースを作成
   const demoTestCase = await prisma.testCase.upsert({
     where: { id: '00000000-0000-0000-0000-000000000003' },
     update: {},
@@ -114,7 +114,7 @@ async function main() {
     },
   });
 
-  // Create test case steps
+  // テストケースのステップを作成
   await prisma.testCaseStep.createMany({
     skipDuplicates: true,
     data: [
@@ -141,7 +141,7 @@ async function main() {
     ],
   });
 
-  // Create expected results
+  // 期待結果を作成
   await prisma.testCaseExpectedResult.createMany({
     skipDuplicates: true,
     data: [
@@ -158,14 +158,14 @@ async function main() {
     ],
   });
 
-  console.log('Created demo test case:', demoTestCase.title);
+  console.log('デモテストケースを作成:', demoTestCase.title);
 
-  console.log('Database seeding completed!');
+  console.log('データベースのシード処理が完了しました!');
 }
 
 main()
   .catch((e) => {
-    console.error('Error seeding database:', e);
+    console.error('データベースシード処理でエラー:', e);
     process.exit(1);
   })
   .finally(async () => {
