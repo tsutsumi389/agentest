@@ -13,6 +13,7 @@ PostgreSQL を使用。Prisma ORM でスキーマ管理。
 | `User` | ユーザー情報 | [auth.md](./auth.md#user) |
 | `Account` | OAuth アカウント（GitHub, Google） | [auth.md](./auth.md#account) |
 | `RefreshToken` | JWT リフレッシュトークン | [auth.md](./auth.md#refreshtoken) |
+| `Session` | ユーザーセッション | [auth.md](./auth.md#session) |
 
 ### 組織・プロジェクト
 
@@ -20,8 +21,44 @@ PostgreSQL を使用。Prisma ORM でスキーマ管理。
 |---------|------|------|
 | `Organization` | 組織（チーム） | [organization.md](./organization.md#organization) |
 | `OrganizationMember` | 組織メンバー（多対多） | [organization.md](./organization.md#organizationmember) |
+| `OrganizationInvitation` | 組織への招待 | [organization.md](./organization.md#organizationinvitation) |
 | `Project` | プロジェクト | [organization.md](./organization.md#project) |
+| `ProjectMember` | プロジェクトメンバー（多対多） | [organization.md](./organization.md#projectmember) |
 | `ProjectHistory` | プロジェクトの変更履歴 | [organization.md](./organization.md#projecthistory) |
+
+### 課金・サブスクリプション
+
+| テーブル | 説明 | 詳細 |
+|---------|------|------|
+| `Subscription` | サブスクリプション情報 | [billing.md](./billing.md#subscription) |
+| `Invoice` | 請求書 | [billing.md](./billing.md#invoice) |
+| `PaymentMethod` | 支払い方法 | [billing.md](./billing.md#paymentmethod) |
+
+### API トークン
+
+| テーブル | 説明 | 詳細 |
+|---------|------|------|
+| `ApiToken` | API トークン | [api-token.md](./api-token.md#apitoken) |
+
+### 通知
+
+| テーブル | 説明 | 詳細 |
+|---------|------|------|
+| `Notification` | 通知 | [notification.md](./notification.md#notification) |
+| `NotificationPreference` | 通知設定 | [notification.md](./notification.md#notificationpreference) |
+| `OrganizationNotificationSetting` | 組織通知設定 | [notification.md](./notification.md#organizationnotificationsetting) |
+
+### 監査ログ
+
+| テーブル | 説明 | 詳細 |
+|---------|------|------|
+| `AuditLog` | 監査ログ | [audit-log.md](./audit-log.md#auditlog) |
+
+### 使用量記録
+
+| テーブル | 説明 | 詳細 |
+|---------|------|------|
+| `UsageRecord` | 月次使用量記録 | [usage.md](./usage.md#usagerecord) |
 
 ### Agent セッション
 
@@ -125,6 +162,8 @@ Coding Agent が理解しやすい英語の文字列を使用。
 | `JudgmentStatus` | PENDING, PASS, FAIL, SKIPPED, NOT_EXECUTABLE | 期待値の判定結果 |
 | `ReviewStatus` | OPEN, RESOLVED | レビューコメントのステータス |
 | `AgentSessionStatus` | ACTIVE, IDLE, ENDED, TIMEOUT | Agent セッションのステータス |
+| `SubscriptionStatus` | ACTIVE, PAST_DUE, CANCELED, TRIALING | サブスクリプションステータス |
+| `InvoiceStatus` | PENDING, PAID, FAILED, VOID | 請求書ステータス |
 
 ### 種別系
 
@@ -135,6 +174,19 @@ Coding Agent が理解しやすい英語の文字列を使用。
 | `ReviewTargetField` | TITLE, DESCRIPTION, PRECONDITION, STEP, EXPECTED_RESULT | レビュー対象フィールド |
 | `LockTargetType` | SUITE, CASE | ロック対象種別 |
 | `OrganizationRole` | OWNER, ADMIN, MEMBER | 組織内の権限 |
+| `ProjectRole` | ADMIN, WRITE, READ | プロジェクト内の権限 |
+| `BillingCycle` | MONTHLY, YEARLY | 請求サイクル |
+| `PaymentMethodType` | CARD | 支払い方法タイプ |
+| `NotificationType` | ORG_INVITATION, INVITATION_ACCEPTED, PROJECT_ADDED, REVIEW_COMMENT, TEST_COMPLETED, TEST_FAILED, USAGE_ALERT, BILLING, SECURITY_ALERT | 通知種別 |
+| `AuditLogCategory` | AUTH, USER, ORGANIZATION, MEMBER, PROJECT, API_TOKEN, BILLING | 監査ログカテゴリ |
+
+### プラン系
+
+| ENUM | 値 | 説明 |
+|------|-----|------|
+| `UserPlan` | FREE, PRO | 個人プラン |
+| `OrganizationPlan` | TEAM, ENTERPRISE | 組織プラン |
+| `SubscriptionPlan` | FREE, PRO, TEAM, ENTERPRISE | サブスクリプションプラン |
 
 ## インデックス戦略
 
@@ -187,9 +239,74 @@ CREATE INDEX idx_review_replies_comment_id ON "ReviewCommentReply"("commentId");
 CREATE INDEX idx_edit_locks_target ON "EditLock"("targetType", "targetId");
 CREATE INDEX idx_edit_locks_expires ON "EditLock"("expiresAt");
 
--- 全文検索用（PostgreSQL）
-CREATE INDEX idx_test_suites_search ON "TestSuite" USING gin(to_tsvector('simple', name || ' ' || COALESCE(description, '')));
-CREATE INDEX idx_test_cases_search ON "TestCase" USING gin(to_tsvector('simple', title || ' ' || COALESCE(description, '')));
+-- セッション
+CREATE INDEX idx_sessions_user_id ON "Session"("userId");
+CREATE INDEX idx_sessions_token ON "Session"("token");
+CREATE INDEX idx_sessions_expires ON "Session"("expiresAt");
+
+-- 組織招待
+CREATE INDEX idx_org_invitations_org_id ON "OrganizationInvitation"("organizationId");
+CREATE INDEX idx_org_invitations_token ON "OrganizationInvitation"("token");
+CREATE INDEX idx_org_invitations_email ON "OrganizationInvitation"("email");
+
+-- プロジェクトメンバー
+CREATE INDEX idx_project_members_project_id ON "ProjectMember"("projectId");
+CREATE INDEX idx_project_members_user_id ON "ProjectMember"("userId");
+
+-- 課金・サブスクリプション
+CREATE INDEX idx_subscriptions_user_id ON "Subscription"("userId");
+CREATE INDEX idx_subscriptions_org_id ON "Subscription"("organizationId");
+CREATE INDEX idx_subscriptions_status ON "Subscription"("status");
+CREATE INDEX idx_invoices_subscription_id ON "Invoice"("subscriptionId");
+CREATE INDEX idx_invoices_status ON "Invoice"("status");
+CREATE INDEX idx_payment_methods_user_id ON "PaymentMethod"("userId");
+CREATE INDEX idx_payment_methods_org_id ON "PaymentMethod"("organizationId");
+
+-- API トークン
+CREATE INDEX idx_api_tokens_user_id ON "ApiToken"("userId");
+CREATE INDEX idx_api_tokens_org_id ON "ApiToken"("organizationId");
+CREATE INDEX idx_api_tokens_hash ON "ApiToken"("tokenHash");
+
+-- 通知
+CREATE INDEX idx_notifications_user_id ON "Notification"("userId");
+CREATE INDEX idx_notifications_user_read ON "Notification"("userId", "readAt");
+CREATE INDEX idx_notifications_created ON "Notification"("createdAt");
+CREATE INDEX idx_notification_prefs_user_id ON "NotificationPreference"("userId");
+CREATE INDEX idx_org_notification_settings_org_id ON "OrganizationNotificationSetting"("organizationId");
+
+-- 監査ログ
+CREATE INDEX idx_audit_logs_org_id ON "AuditLog"("organizationId");
+CREATE INDEX idx_audit_logs_user_id ON "AuditLog"("userId");
+CREATE INDEX idx_audit_logs_category ON "AuditLog"("category");
+CREATE INDEX idx_audit_logs_created ON "AuditLog"("createdAt");
+CREATE INDEX idx_audit_logs_org_created ON "AuditLog"("organizationId", "createdAt");
+
+-- 使用量記録
+CREATE INDEX idx_usage_records_user_id ON "UsageRecord"("userId");
+CREATE INDEX idx_usage_records_org_id ON "UsageRecord"("organizationId");
+CREATE INDEX idx_usage_records_period ON "UsageRecord"("periodStart");
+
+-- 全文検索用（pg_bigm: 日本語対応）
+-- 拡張の有効化（マイグレーション時に1回実行）
+CREATE EXTENSION IF NOT EXISTS pg_bigm;
+
+-- テストスイート検索用
+CREATE INDEX idx_test_suites_name_search ON "TestSuite" USING gin(name gin_bigm_ops);
+CREATE INDEX idx_test_suites_desc_search ON "TestSuite" USING gin(description gin_bigm_ops) WHERE description IS NOT NULL;
+
+-- テストケース検索用
+CREATE INDEX idx_test_cases_title_search ON "TestCase" USING gin(title gin_bigm_ops);
+CREATE INDEX idx_test_cases_desc_search ON "TestCase" USING gin(description gin_bigm_ops) WHERE description IS NOT NULL;
+```
+
+### 検索クエリ例
+
+```sql
+-- LIKE 検索（pg_bigm でインデックスが効く）
+SELECT * FROM "TestSuite" WHERE name LIKE '%ログイン%';
+
+-- OR 検索
+SELECT * FROM "TestCase" WHERE title LIKE '%認証%' OR description LIKE '%認証%';
 ```
 
 ## マイグレーション
@@ -212,5 +329,11 @@ docker compose exec api pnpm --filter @agentest/db prisma migrate deploy
 - [テスト実行](./execution.md)
 - [レビュー](./review.md)
 - [同時編集制御](./edit-lock.md)
+- [課金・サブスクリプション](./billing.md)
+- [API トークン](./api-token.md)
+- [通知](./notification.md)
+- [監査ログ](./audit-log.md)
+- [使用量記録](./usage.md)
 - [システム全体像](../overview.md)
 - [API 設計方針](../api-design.md)
+- [ユーザー・オーガナイゼーション機能](../../requirements/user-organization.md)
