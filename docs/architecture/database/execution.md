@@ -14,6 +14,7 @@
 |--------|------|------|------------|------|
 | `id` | UUID | NO | gen_random_uuid() | 主キー |
 | `testSuiteId` | UUID | NO | - | テストスイート ID（外部キー） |
+| `environmentId` | UUID | NO | - | 実行対象環境 ID（外部キー） |
 | `executedByUserId` | UUID | YES | NULL | 実行者ユーザー ID（外部キー）※1 |
 | `executedByAgentSessionId` | UUID | YES | NULL | 実行者 Agent セッション ID（外部キー）※1 |
 | `status` | ENUM | NO | IN_PROGRESS | 実行ステータス |
@@ -43,6 +44,7 @@ enum ExecutionStatus {
 model Execution {
   id                       String          @id @default(uuid()) @db.Uuid
   testSuiteId              String          @db.Uuid
+  environmentId            String          @db.Uuid
   executedByUserId         String?         @db.Uuid
   executedByAgentSessionId String?         @db.Uuid
   status                   ExecutionStatus @default(IN_PROGRESS)
@@ -51,6 +53,7 @@ model Execution {
   createdAt                DateTime        @default(now())
 
   testSuite               TestSuite                     @relation(fields: [testSuiteId], references: [id], onDelete: Cascade)
+  environment             ProjectEnvironment            @relation(fields: [environmentId], references: [id])
   executedByUser          User?                         @relation(fields: [executedByUserId], references: [id])
   executedByAgentSession  AgentSession?                 @relation(fields: [executedByAgentSessionId], references: [id])
   snapshot                ExecutionSnapshot?
@@ -59,6 +62,7 @@ model Execution {
   expectedResults         ExecutionExpectedResult[]
 
   @@index([testSuiteId])
+  @@index([environmentId])
   @@index([status])
 }
 ```
@@ -409,7 +413,7 @@ ALTER TABLE "ExecutionEvidence" ADD CONSTRAINT "execution_evidence_uploader_chec
 
 | 機能 ID | 機能 | 説明 |
 |---------|------|------|
-| EX-001 | テスト実行開始 | テストスイート単位でテストを実行 |
+| EX-001 | テスト実行開始 | テストスイート単位でテストを実行（対象環境を選択） |
 | EX-002 | スナップショット作成 | 実行開始時にテストスイート・テストケースをスナップショット |
 | EX-003 | 繰り返し実行 | 同じテストスイートを何度でも実行可能 |
 | EX-004 | 手順実施記録 | 各前提条件・手順の実施状況を記録 |
@@ -423,6 +427,7 @@ ALTER TABLE "ExecutionEvidence" ADD CONSTRAINT "execution_evidence_uploader_chec
 ## 関連ドキュメント
 
 - [テーブル一覧](./index.md)
+- [組織・プロジェクト](./organization.md)（ProjectEnvironment）
 - [テストスイート](./test-suite.md)
 - [テストケース](./test-case.md)
 - [Agent セッション](./agent-session.md)
