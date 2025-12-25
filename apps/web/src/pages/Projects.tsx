@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router';
-import { FolderKanban, Plus, Search, MoreHorizontal, Trash2 } from 'lucide-react';
+import { FolderKanban, Plus, Search, MoreHorizontal } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { usersApi, projectsApi, type Project } from '../lib/api';
 
@@ -10,7 +10,6 @@ import { usersApi, projectsApi, type Project } from '../lib/api';
  */
 export function ProjectsPage() {
   const { user } = useAuthStore();
-  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 

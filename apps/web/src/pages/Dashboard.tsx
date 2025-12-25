@@ -6,7 +6,6 @@ import {
   Play,
   CheckCircle2,
   XCircle,
-  Clock,
   ArrowRight,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';

@@ -18,7 +18,7 @@ interface AuthState {
 /**
  * 認証ストア
  */
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set, _get) => ({
   user: null,
   isAuthenticated: false,
   isLoading: true,

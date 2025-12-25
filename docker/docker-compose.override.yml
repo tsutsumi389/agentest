@@ -1,6 +1,11 @@
 # Agentest Docker Compose - 開発用上書き設定
 # docker compose up で自動的にこのファイルがマージされる
 
+# 環境変数ファイル参照（親の定義を継承）
+x-env-file: &env-file
+  env_file:
+    - ../.env
+
 services:
   # ===========================================
   # 開発用コマンド実行コンテナ
@@ -135,7 +140,7 @@ services:
       VITE_API_URL: ${VITE_API_URL:-http://localhost:3001}
       VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:3002}
     ports:
-      - "3000:5173"
+      - "${WEB_EXTERNAL_PORT:-3000}:5173"
     restart: "no"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5173"]
@@ -160,7 +165,7 @@ services:
       NODE_ENV: development
       VITE_API_URL: ${VITE_API_URL:-http://localhost:3001}
     ports:
-      - "3003:5174"
+      - "${ADMIN_EXTERNAL_PORT:-3003}:5174"
     restart: "no"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5174"]

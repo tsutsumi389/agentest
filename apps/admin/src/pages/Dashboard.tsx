@@ -6,7 +6,6 @@ import {
   FileText,
   Play,
   CheckCircle2,
-  XCircle,
   Clock,
   TrendingUp,
   TrendingDown,

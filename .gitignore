@@ -7,6 +7,9 @@ dist
 build
 .next
 out
+*.tsbuildinfo
+vite.config.d.ts
+vite.config.js
 
 # Turbo
 .turbo

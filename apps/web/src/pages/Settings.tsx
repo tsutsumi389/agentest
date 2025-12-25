@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { User, Bell, Shield, Key } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
+import type { User as UserType } from '../lib/api';
 
 type SettingsTab = 'profile' | 'notifications' | 'security' | 'api-tokens';
 
@@ -67,7 +68,7 @@ export function SettingsPage() {
 /**
  * プロフィール設定
  */
-function ProfileSettings({ user }: { user: ReturnType<typeof useAuthStore>['user'] }) {
+function ProfileSettings({ user }: { user: UserType | null }) {
   const [name, setName] = useState(user?.name || '');
 
   const handleSubmit = (e: React.FormEvent) => {

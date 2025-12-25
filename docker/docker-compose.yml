@@ -1,6 +1,12 @@
 # Agentest Docker Compose - 本番構成
 # 開発時は docker-compose.override.yml で上書きされる
 
+# 環境変数ファイル（プロジェクトルートの.envを参照）
+# .env.exampleをコピーして.envを作成してください
+x-env-file: &env-file
+  env_file:
+    - ../.env
+
 services:
   # ===========================================
   # インフラストラクチャ
@@ -8,6 +14,7 @@ services:
 
   # PostgreSQL 16
   db:
+    <<: *env-file
     image: postgres:16-alpine
     container_name: agentest-db
     restart: unless-stopped
@@ -18,7 +25,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "${DB_EXTERNAL_PORT:-5432}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-agentest} -d ${DB_NAME:-agentest}"]
       interval: 10s
@@ -27,6 +34,7 @@ services:
 
   # Redis 7
   redis:
+    <<: *env-file
     image: redis:7-alpine
     container_name: agentest-redis
     restart: unless-stopped
@@ -34,7 +42,7 @@ services:
     volumes:
       - redis_data:/data
     ports:
-      - "6379:6379"
+      - "${REDIS_EXTERNAL_PORT:-6379}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-agentest}", "ping"]
       interval: 10s
@@ -43,6 +51,7 @@ services:
 
   # MinIO (S3互換ストレージ)
   minio:
+    <<: *env-file
     image: minio/minio:latest
     container_name: agentest-minio
     restart: unless-stopped
@@ -53,8 +62,8 @@ services:
     volumes:
       - minio_data:/data
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "${MINIO_API_EXTERNAL_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_EXTERNAL_PORT:-9001}:9001"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
       interval: 10s
@@ -67,6 +76,7 @@ services:
 
   # API サーバー
   api:
+    <<: *env-file
     build:
       context: ..
       dockerfile: docker/Dockerfile.api
@@ -100,6 +110,7 @@ services:
 
   # WebSocket サーバー
   ws:
+    <<: *env-file
     build:
       context: ..
       dockerfile: docker/Dockerfile.ws
@@ -125,7 +136,9 @@ services:
       retries: 3
 
   # Web フロントエンド
+  # 本番: nginx (port 80)、開発: vite dev server (port 5173)
   web:
+    <<: *env-file
     build:
       context: ..
       dockerfile: docker/Dockerfile.web
@@ -134,18 +147,13 @@ services:
         VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:3002}
     container_name: agentest-web
     restart: unless-stopped
-    ports:
-      - "3000:80"
     depends_on:
       - api
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
   # Admin 管理画面
+  # 本番: nginx (port 80)、開発: vite dev server (port 5174)
   admin:
+    <<: *env-file
     build:
       context: ..
       dockerfile: docker/Dockerfile.admin
@@ -153,15 +161,8 @@ services:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:3001}
     container_name: agentest-admin
     restart: unless-stopped
-    ports:
-      - "3003:80"
     depends_on:
       - api
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:80"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
 
 volumes:
   postgres_data:
