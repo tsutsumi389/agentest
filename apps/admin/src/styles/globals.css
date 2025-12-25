@@ -1,0 +1,132 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * ベーススタイル
+ */
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: 'rlig' 1, 'calt' 1;
+  }
+
+  /* スクロールバー（Webkit） */
+  ::-webkit-scrollbar {
+    @apply w-2 h-2;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-background;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-border rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-foreground-subtle;
+  }
+}
+
+/**
+ * コンポーネントスタイル
+ */
+@layer components {
+  /* ボタン */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:pointer-events-none;
+  }
+
+  .btn-primary {
+    @apply bg-accent text-white hover:bg-accent-hover;
+  }
+
+  .btn-secondary {
+    @apply bg-background-tertiary text-foreground hover:bg-border;
+  }
+
+  .btn-danger {
+    @apply bg-danger text-white hover:opacity-90;
+  }
+
+  .btn-ghost {
+    @apply bg-transparent text-foreground-muted hover:bg-background-tertiary hover:text-foreground;
+  }
+
+  /* 入力フィールド */
+  .input {
+    @apply w-full px-3 py-2 bg-background-secondary border border-border rounded-md text-foreground placeholder:text-foreground-subtle focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-colors;
+  }
+
+  /* カード */
+  .card {
+    @apply bg-background-secondary border border-border rounded-lg;
+  }
+
+  .card-hover {
+    @apply hover:border-foreground-subtle transition-colors;
+  }
+
+  /* バッジ */
+  .badge {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-background-tertiary text-foreground-muted;
+  }
+
+  .badge-accent {
+    @apply bg-accent-muted text-accent;
+  }
+
+  .badge-success {
+    @apply bg-success-muted text-success;
+  }
+
+  .badge-warning {
+    @apply bg-warning-muted text-warning;
+  }
+
+  .badge-danger {
+    @apply bg-danger-muted text-danger;
+  }
+
+  /* 統計カード */
+  .stat-card {
+    @apply card p-6 flex flex-col;
+  }
+
+  .stat-value {
+    @apply text-3xl font-bold text-foreground;
+  }
+
+  .stat-label {
+    @apply text-sm text-foreground-muted mt-1;
+  }
+
+  .stat-change {
+    @apply text-xs mt-2;
+  }
+
+  .stat-change-up {
+    @apply text-success;
+  }
+
+  .stat-change-down {
+    @apply text-danger;
+  }
+}
+
+/**
+ * ユーティリティ
+ */
+@layer utilities {
+  .truncate-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
