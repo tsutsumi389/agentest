@@ -15,7 +15,7 @@
 | `id` | UUID | NO | gen_random_uuid() | 主キー |
 | `userId` | UUID | YES | NULL | ユーザー ID（外部キー）※1 |
 | `organizationId` | UUID | YES | NULL | 組織 ID（外部キー）※1 |
-| `plan` | VARCHAR(50) | NO | - | プラン名（FREE, PRO, TEAM, ENTERPRISE） |
+| `plan` | ENUM | NO | - | プラン種別（SubscriptionPlan） |
 | `status` | ENUM | NO | ACTIVE | ステータス |
 | `billingCycle` | ENUM | NO | MONTHLY | 請求サイクル（MONTHLY, YEARLY） |
 | `currentPeriodStart` | TIMESTAMP | NO | - | 現在の請求期間開始日 |
@@ -43,6 +43,15 @@
 | `MONTHLY` | 月払い |
 | `YEARLY` | 年払い（2ヶ月分無料） |
 
+### プラン種別
+
+| プラン | 説明 |
+|--------|------|
+| `FREE` | 無料プラン（個人） |
+| `PRO` | 有料プラン（個人） |
+| `TEAM` | チームプラン（組織） |
+| `ENTERPRISE` | エンタープライズプラン（組織） |
+
 ### 制約
 
 - `userId` か `organizationId` のどちらか一方が必ず設定される（排他制約）
@@ -62,11 +71,18 @@ enum BillingCycle {
   YEARLY
 }
 
+enum SubscriptionPlan {
+  FREE
+  PRO
+  TEAM
+  ENTERPRISE
+}
+
 model Subscription {
   id                 String             @id @default(uuid()) @db.Uuid
   userId             String?            @db.Uuid
   organizationId     String?            @db.Uuid
-  plan               String             @db.VarChar(50)
+  plan               SubscriptionPlan
   status             SubscriptionStatus @default(ACTIVE)
   billingCycle       BillingCycle       @default(MONTHLY)
   currentPeriodStart DateTime

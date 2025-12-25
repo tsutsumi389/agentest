@@ -124,6 +124,53 @@ model NotificationPreference {
 
 ---
 
+## OrganizationNotificationSetting
+
+組織全体の通知設定を管理するテーブル。Admin 以上が設定可能。
+
+### カラム定義
+
+| カラム | 型 | NULL | デフォルト | 説明 |
+|--------|------|------|------------|------|
+| `id` | UUID | NO | gen_random_uuid() | 主キー |
+| `organizationId` | UUID | NO | - | 組織 ID（外部キー） |
+| `type` | ENUM | NO | - | 通知種別 |
+| `emailEnabled` | BOOLEAN | NO | true | メール通知のデフォルト有効/無効 |
+| `inAppEnabled` | BOOLEAN | NO | true | アプリ内通知のデフォルト有効/無効 |
+| `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
+| `updatedAt` | TIMESTAMP | NO | now() | 更新日時 |
+
+### 制約
+
+- `organizationId` + `type` は一意
+
+### 通知設定の優先順位
+
+1. ユーザー個別設定（`NotificationPreference`）
+2. 組織設定（`OrganizationNotificationSetting`）
+3. システムデフォルト（全て ON）
+
+### Prisma スキーマ
+
+```prisma
+model OrganizationNotificationSetting {
+  id             String           @id @default(uuid()) @db.Uuid
+  organizationId String           @db.Uuid
+  type           NotificationType
+  emailEnabled   Boolean          @default(true)
+  inAppEnabled   Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, type])
+  @@index([organizationId])
+}
+```
+
+---
+
 ## 関連機能
 
 | 機能 ID | 機能 | 説明 |

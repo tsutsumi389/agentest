@@ -46,6 +46,7 @@ PostgreSQL を使用。Prisma ORM でスキーマ管理。
 |---------|------|------|
 | `Notification` | 通知 | [notification.md](./notification.md#notification) |
 | `NotificationPreference` | 通知設定 | [notification.md](./notification.md#notificationpreference) |
+| `OrganizationNotificationSetting` | 組織通知設定 | [notification.md](./notification.md#organizationnotificationsetting) |
 
 ### 監査ログ
 
@@ -185,6 +186,7 @@ Coding Agent が理解しやすい英語の文字列を使用。
 |------|-----|------|
 | `UserPlan` | FREE, PRO | 個人プラン |
 | `OrganizationPlan` | TEAM, ENTERPRISE | 組織プラン |
+| `SubscriptionPlan` | FREE, PRO, TEAM, ENTERPRISE | サブスクリプションプラン |
 
 ## インデックス戦略
 
@@ -270,6 +272,7 @@ CREATE INDEX idx_notifications_user_id ON "Notification"("userId");
 CREATE INDEX idx_notifications_user_read ON "Notification"("userId", "readAt");
 CREATE INDEX idx_notifications_created ON "Notification"("createdAt");
 CREATE INDEX idx_notification_prefs_user_id ON "NotificationPreference"("userId");
+CREATE INDEX idx_org_notification_settings_org_id ON "OrganizationNotificationSetting"("organizationId");
 
 -- 監査ログ
 CREATE INDEX idx_audit_logs_org_id ON "AuditLog"("organizationId");
@@ -283,9 +286,27 @@ CREATE INDEX idx_usage_records_user_id ON "UsageRecord"("userId");
 CREATE INDEX idx_usage_records_org_id ON "UsageRecord"("organizationId");
 CREATE INDEX idx_usage_records_period ON "UsageRecord"("periodStart");
 
--- 全文検索用（PostgreSQL）
-CREATE INDEX idx_test_suites_search ON "TestSuite" USING gin(to_tsvector('simple', name || ' ' || COALESCE(description, '')));
-CREATE INDEX idx_test_cases_search ON "TestCase" USING gin(to_tsvector('simple', title || ' ' || COALESCE(description, '')));
+-- 全文検索用（pg_bigm: 日本語対応）
+-- 拡張の有効化（マイグレーション時に1回実行）
+CREATE EXTENSION IF NOT EXISTS pg_bigm;
+
+-- テストスイート検索用
+CREATE INDEX idx_test_suites_name_search ON "TestSuite" USING gin(name gin_bigm_ops);
+CREATE INDEX idx_test_suites_desc_search ON "TestSuite" USING gin(description gin_bigm_ops) WHERE description IS NOT NULL;
+
+-- テストケース検索用
+CREATE INDEX idx_test_cases_title_search ON "TestCase" USING gin(title gin_bigm_ops);
+CREATE INDEX idx_test_cases_desc_search ON "TestCase" USING gin(description gin_bigm_ops) WHERE description IS NOT NULL;
+```
+
+### 検索クエリ例
+
+```sql
+-- LIKE 検索（pg_bigm でインデックスが効く）
+SELECT * FROM "TestSuite" WHERE name LIKE '%ログイン%';
+
+-- OR 検索
+SELECT * FROM "TestCase" WHERE title LIKE '%認証%' OR description LIKE '%認証%';
 ```
 
 ## マイグレーション
