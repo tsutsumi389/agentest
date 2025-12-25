@@ -1,0 +1,23 @@
+# Agentest 開発用 Dockerfile
+# pnpmコマンド実行とホットリロード開発に使用
+
+FROM node:22-alpine
+
+# 必要なツールをインストール
+RUN apk add --no-cache \
+    curl \
+    git \
+    bash
+
+# pnpmをインストール
+RUN corepack enable && corepack prepare pnpm@10.0.0 --activate
+
+# 作業ディレクトリを設定
+WORKDIR /app
+
+# pnpmストアのパスを設定
+ENV PNPM_HOME="/root/.local/share/pnpm"
+ENV PATH="${PNPM_HOME}:${PATH}"
+
+# デフォルトコマンド（インタラクティブシェル用）
+CMD ["sh"]
