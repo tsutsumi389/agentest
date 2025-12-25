@@ -17,17 +17,26 @@
 
 ## クイックリンク
 
+### 新メンバー向け
+- [オンボーディングガイド](./guides/onboarding.md) - 最初に読む
+- [初回セットアップ](./guides/getting-started.md) - 開発環境構築
+- [システム全体像](./architecture/overview.md) - アーキテクチャ理解
+
 ### 開発者向け
-- [初回セットアップ](./guides/getting-started.md)
-- [開発フロー](./guides/development.md)
-- [システム全体像](./architecture/overview.md)
-- [API 認証](./api/auth.md)
-- [API レート制限](./api/rate-limits.md)
+- [開発フロー](./guides/development.md) - 日常のワークフロー
+- [トラブルシューティング](./guides/troubleshooting.md) - よくある問題と解決方法
+- [API 認証](./api/auth.md) - 認証の実装
+- [API レート制限](./api/rate-limits.md) - レート制限仕様
 
 ### サービス運用
-- [SLA（サービスレベルアグリーメント）](./operations/sla.md)
-- [セキュリティ対策](./operations/security.md)
-- [インシデント対応](./operations/incident-response.md)
+- [Runbook（運用手順書）](./operations/runbook.md) - 日常運用タスク
+- [監視・アラート設定](./operations/monitoring.md) - メトリクス・ログ・アラート
+- [バックアップ・リストア](./operations/backup-restore.md) - データ保護
+- [データベース運用](./operations/database-operations.md) - DB管理
+- [シークレット管理](./operations/secrets-management.md) - 環境変数・機密情報
+- [インシデント対応](./operations/incident-response.md) - 障害対応フロー
+- [SLA](./operations/sla.md) - サービスレベル保証
+- [セキュリティ対策](./operations/security.md) - セキュリティ実装
 
 ### 法的文書
 - [利用規約](./legal/terms-of-service.md)
