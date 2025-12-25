@@ -14,6 +14,9 @@ export default tseslint.config(
       '**/coverage/**',
       '**/.turbo/**',
       '**/prisma/generated/**',
+      '**/vite.config.ts',
+      '**/tailwind.config.ts',
+      '**/postcss.config.js',
     ],
   },
   {

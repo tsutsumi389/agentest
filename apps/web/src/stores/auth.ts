@@ -40,7 +40,7 @@ export const useAuthStore = create<AuthState>((set, _get) => ({
 
       // WebSocket接続（トークンはクッキーにあるので空文字で接続試行）
       // 実際にはクッキーからトークンを取得する必要がある
-    } catch (error) {
+    } catch {
       set({
         user: null,
         isAuthenticated: false,
