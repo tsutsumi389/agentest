@@ -59,7 +59,7 @@ describe('SessionController', () => {
       await controller.getSessions(req, res, mockNext);
 
       expect(mockSessionService.getUserSessions).toHaveBeenCalledWith('user-1', 'current-session-id');
-      expect(res.json).toHaveBeenCalledWith({ sessions: mockSessions });
+      expect(res.json).toHaveBeenCalledWith({ data: mockSessions });
     });
 
     it('未認証の場合はエラーをnextに渡す', async () => {
@@ -84,7 +84,7 @@ describe('SessionController', () => {
       await controller.revokeSession(req, res, mockNext);
 
       expect(mockSessionService.revokeSession).toHaveBeenCalledWith('user-1', 'session-to-revoke');
-      expect(res.json).toHaveBeenCalledWith({ success: true });
+      expect(res.json).toHaveBeenCalledWith({ data: { success: true } });
     });
 
     it('現在のセッションは終了できない', async () => {
@@ -156,11 +156,7 @@ describe('SessionController', () => {
       await controller.revokeOtherSessions(req, res, mockNext);
 
       expect(mockSessionService.revokeOtherSessions).toHaveBeenCalledWith('user-1', 'current-session-id');
-      expect(res.json).toHaveBeenCalledWith({
-        message: '3件のセッションを終了しました',
-        success: true,
-        revokedCount: 3,
-      });
+      expect(res.json).toHaveBeenCalledWith({ data: { success: true, revokedCount: 3 } });
     });
 
     it('未認証の場合はエラーをnextに渡す', async () => {
@@ -192,7 +188,7 @@ describe('SessionController', () => {
       await controller.getSessionCount(req, res, mockNext);
 
       expect(mockSessionService.getActiveSessionCount).toHaveBeenCalledWith('user-1');
-      expect(res.json).toHaveBeenCalledWith({ count: 5 });
+      expect(res.json).toHaveBeenCalledWith({ data: { count: 5 } });
     });
 
     it('未認証の場合はエラーをnextに渡す', async () => {

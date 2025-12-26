@@ -26,7 +26,7 @@ export class SessionController {
         currentSessionId
       );
 
-      res.json({ sessions });
+      res.json({ data: sessions });
     } catch (error) {
       next(error);
     }
@@ -56,7 +56,7 @@ export class SessionController {
 
       const result = await this.sessionService.revokeSession(req.user.id, sessionId);
 
-      res.json(result);
+      res.json({ data: result });
     } catch (error) {
       next(error);
     }
@@ -81,10 +81,7 @@ export class SessionController {
         req.sessionId
       );
 
-      res.json({
-        message: `${result.revokedCount}件のセッションを終了しました`,
-        ...result,
-      });
+      res.json({ data: result });
     } catch (error) {
       next(error);
     }
@@ -102,7 +99,7 @@ export class SessionController {
 
       const count = await this.sessionService.getActiveSessionCount(req.user.id);
 
-      res.json({ count });
+      res.json({ data: { count } });
     } catch (error) {
       next(error);
     }

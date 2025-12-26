@@ -62,8 +62,12 @@ export class SessionService {
   async updateSessionActivity(sessionId: string) {
     try {
       await this.sessionRepo.updateLastActiveAt(sessionId);
-    } catch {
-      // セッションが存在しない場合は無視
+    } catch (error) {
+      // セッションが存在しない場合は警告ログを出力
+      console.warn('セッション活動時刻の更新に失敗:', {
+        sessionId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
     }
   }
 

@@ -1,28 +1,11 @@
 import { Router } from 'express';
-import { passport, requireAuth, generateTokens } from '@agentest/auth';
-import { prisma } from '@agentest/db';
+import { passport, requireAuth } from '@agentest/auth';
 import { AuthController } from '../controllers/auth.controller.js';
+import { authConfig } from '../config/auth.js';
 import { env } from '../config/env.js';
 
 const router = Router();
 const authController = new AuthController();
-
-// 認証設定
-const authConfig = {
-  jwt: {
-    accessSecret: env.JWT_ACCESS_SECRET,
-    refreshSecret: env.JWT_REFRESH_SECRET,
-    accessExpiry: env.JWT_ACCESS_EXPIRES_IN,
-    refreshExpiry: env.JWT_REFRESH_EXPIRES_IN,
-  },
-  cookie: {
-    httpOnly: true,
-    secure: env.NODE_ENV === 'production',
-    sameSite: 'strict' as const,
-    path: '/',
-  },
-  oauth: {},
-};
 
 /**
  * 現在のユーザー情報を取得
