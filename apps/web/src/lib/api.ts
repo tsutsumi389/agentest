@@ -295,5 +295,9 @@ export const accountsApi = {
   unlink: (userId: string, provider: string) =>
     api.delete<{ data: { success: boolean } }>(`/api/users/${userId}/accounts/${provider}`),
   // OAuth連携開始URL（フロントエンドでリダイレクト用）
-  getLinkUrl: (provider: 'github' | 'google') => `/api/auth/${provider}/link`,
+  getLinkUrl: (provider: 'github' | 'google') => {
+    // window.location.href でリダイレクトするため、APIサーバーのフルURLが必要
+    const apiUrl = import.meta.env.VITE_API_URL || '';
+    return `${apiUrl}/api/auth/${provider}/link`;
+  },
 };
