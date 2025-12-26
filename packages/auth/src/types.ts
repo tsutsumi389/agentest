@@ -1,5 +1,8 @@
 import type { User } from '@agentest/db';
 
+// User 型を re-export して使用を明示
+export type { User };
+
 export interface JwtPayload {
   sub: string; // User ID
   email: string;

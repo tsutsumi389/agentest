@@ -1,6 +1,6 @@
 import passport from 'passport';
-import { Strategy as GitHubStrategy } from 'passport-github2';
-import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import { Strategy as GitHubStrategy, type Profile as GitHubProfile } from 'passport-github2';
+import { Strategy as GoogleStrategy, type Profile as GoogleProfile } from 'passport-google-oauth20';
 import type { AuthConfig, OAuthProfile } from './types.js';
 
 export type OAuthCallback = (
@@ -21,7 +21,7 @@ export function configurePassport(config: AuthConfig, onOAuth: OAuthCallback): v
         async (
           accessToken: string,
           refreshToken: string,
-          profile: GitHubStrategy.Profile,
+          profile: GitHubProfile,
           done: (error: Error | null, user?: { userId: string; email: string }) => void
         ) => {
           try {
@@ -62,7 +62,7 @@ export function configurePassport(config: AuthConfig, onOAuth: OAuthCallback): v
         async (
           accessToken: string,
           refreshToken: string,
-          profile: GoogleStrategy.Profile,
+          profile: GoogleProfile,
           done: (error: Error | null, user?: { userId: string; email: string }) => void
         ) => {
           try {
