@@ -1,17 +1,10 @@
 import { Router } from 'express';
 import { requireAuth, requireOrgRole } from '@agentest/auth';
 import { OrganizationController } from '../controllers/organization.controller.js';
-import { env } from '../config/env.js';
+import { authConfig } from '../config/auth.js';
 
-const router = Router();
+const router: Router = Router();
 const orgController = new OrganizationController();
-
-const authConfig = {
-  accessSecret: env.JWT_ACCESS_SECRET,
-  refreshSecret: env.JWT_REFRESH_SECRET,
-  accessExpiresIn: env.JWT_ACCESS_EXPIRES_IN,
-  refreshExpiresIn: env.JWT_REFRESH_EXPIRES_IN,
-};
 
 /**
  * 組織作成

@@ -1,5 +1,4 @@
-import { prisma } from '@agentest/db';
-import type { EntityStatus } from '@prisma/client';
+import { prisma, type EntityStatus } from '@agentest/db';
 
 /**
  * テストスイートリポジトリ

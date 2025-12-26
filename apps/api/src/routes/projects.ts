@@ -1,17 +1,10 @@
 import { Router } from 'express';
 import { requireAuth, requireProjectRole } from '@agentest/auth';
 import { ProjectController } from '../controllers/project.controller.js';
-import { env } from '../config/env.js';
+import { authConfig } from '../config/auth.js';
 
-const router = Router();
+const router: Router = Router();
 const projectController = new ProjectController();
-
-const authConfig = {
-  accessSecret: env.JWT_ACCESS_SECRET,
-  refreshSecret: env.JWT_REFRESH_SECRET,
-  accessExpiresIn: env.JWT_ACCESS_EXPIRES_IN,
-  refreshExpiresIn: env.JWT_REFRESH_EXPIRES_IN,
-};
 
 /**
  * プロジェクト作成

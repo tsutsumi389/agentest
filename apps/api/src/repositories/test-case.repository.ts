@@ -1,5 +1,4 @@
-import { prisma } from '@agentest/db';
-import type { TestCasePriority, EntityStatus } from '@prisma/client';
+import { prisma, type TestCasePriority, type EntityStatus } from '@agentest/db';
 
 /**
  * テストケースリポジトリ

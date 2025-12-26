@@ -1,5 +1,4 @@
-import { prisma } from '@agentest/db';
-import type { PreconditionStatus, StepStatus, JudgmentStatus } from '@prisma/client';
+import { prisma, type PreconditionStatus, type StepStatus, type JudgmentStatus } from '@agentest/db';
 import { NotFoundError, ConflictError } from '@agentest/shared';
 import { ExecutionRepository } from '../repositories/execution.repository.js';
 

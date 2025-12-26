@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { prisma } from '@agentest/db';
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
 import { env } from '../config/env.js';
 
-const router = Router();
+const router: Router = Router();
 
 /**
  * データベース接続チェック

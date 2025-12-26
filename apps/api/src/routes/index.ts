@@ -9,7 +9,7 @@ import testSuiteRoutes from './test-suites.js';
 import testCaseRoutes from './test-cases.js';
 import executionRoutes from './executions.js';
 
-const router = Router();
+const router: Router = Router();
 
 // ヘルスチェック（認証不要）
 router.use('/', healthRoutes);

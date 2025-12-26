@@ -1,17 +1,10 @@
 import { Router } from 'express';
 import { requireAuth } from '@agentest/auth';
 import { ExecutionController } from '../controllers/execution.controller.js';
-import { env } from '../config/env.js';
+import { authConfig } from '../config/auth.js';
 
-const router = Router();
+const router: Router = Router();
 const executionController = new ExecutionController();
-
-const authConfig = {
-  accessSecret: env.JWT_ACCESS_SECRET,
-  refreshSecret: env.JWT_REFRESH_SECRET,
-  accessExpiresIn: env.JWT_ACCESS_EXPIRES_IN,
-  refreshExpiresIn: env.JWT_REFRESH_EXPIRES_IN,
-};
 
 /**
  * 実行詳細取得

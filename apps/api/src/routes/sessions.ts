@@ -3,7 +3,7 @@ import { requireAuth } from '@agentest/auth';
 import { SessionController } from '../controllers/session.controller.js';
 import { authConfig } from '../config/auth.js';
 
-const router = Router();
+const router: Router = Router();
 const sessionController = new SessionController();
 
 /**

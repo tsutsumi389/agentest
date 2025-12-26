@@ -1,5 +1,4 @@
-import { prisma } from '@agentest/db';
-import type { EntityStatus } from '@prisma/client';
+import { prisma, type EntityStatus } from '@agentest/db';
 import { NotFoundError } from '@agentest/shared';
 import { TestSuiteRepository } from '../repositories/test-suite.repository.js';
 

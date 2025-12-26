@@ -1,5 +1,5 @@
 import { NotFoundError, AuthorizationError } from '@agentest/shared';
-import { SessionRepository, CreateSessionData } from '../repositories/session.repository.js';
+import { SessionRepository, type CreateSessionData } from '../repositories/session.repository.js';
 
 /**
  * セッション情報（レスポンス用）

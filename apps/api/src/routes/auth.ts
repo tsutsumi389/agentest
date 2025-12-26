@@ -4,7 +4,7 @@ import { AuthController } from '../controllers/auth.controller.js';
 import { authConfig } from '../config/auth.js';
 import { env } from '../config/env.js';
 
-const router = Router();
+const router: Router = Router();
 const authController = new AuthController();
 
 /**
