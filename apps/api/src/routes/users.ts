@@ -43,4 +43,16 @@ router.get('/:userId/organizations', requireAuth(authConfig), userController.get
  */
 router.get('/:userId/projects', requireAuth(authConfig), userController.getUserProjects);
 
+/**
+ * OAuth連携一覧取得
+ * GET /api/users/:userId/accounts
+ */
+router.get('/:userId/accounts', requireAuth(authConfig), userController.getAccounts);
+
+/**
+ * OAuth連携解除
+ * DELETE /api/users/:userId/accounts/:provider
+ */
+router.delete('/:userId/accounts/:provider', requireAuth(authConfig), userController.unlinkAccount);
+
 export default router;
