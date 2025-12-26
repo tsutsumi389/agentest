@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
-import { SessionController } from './session.controller.js';
+import { SessionController } from '../../controllers/session.controller.js';
 import { AuthenticationError, ValidationError, NotFoundError, AuthorizationError } from '@agentest/shared';
 
 // SessionService のモック
@@ -16,7 +16,7 @@ const mockSessionService = {
   cleanupExpiredSessions: vi.fn(),
 };
 
-vi.mock('../services/session.service.js', () => ({
+vi.mock('../../services/session.service.js', () => ({
   SessionService: vi.fn().mockImplementation(() => mockSessionService),
 }));
 

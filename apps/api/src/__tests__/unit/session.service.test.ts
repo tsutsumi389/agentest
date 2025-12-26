@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SessionService } from './session.service.js';
+import { SessionService } from '../../services/session.service.js';
 import { NotFoundError, AuthorizationError } from '@agentest/shared';
 
 // SessionRepository のモック
@@ -17,7 +17,7 @@ const mockSessionRepo = {
   deleteExpired: vi.fn(),
 };
 
-vi.mock('../repositories/session.repository.js', () => ({
+vi.mock('../../repositories/session.repository.js', () => ({
   SessionRepository: vi.fn().mockImplementation(() => mockSessionRepo),
 }));
 

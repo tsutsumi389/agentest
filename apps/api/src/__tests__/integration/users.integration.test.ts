@@ -10,7 +10,7 @@ import {
 } from './test-helpers.js';
 
 import { AuthenticationError } from '@agentest/shared';
-import { createApp } from '../app.js';
+import { createApp } from '../../app.js';
 
 // グローバルな認証状態（モック用）
 let mockAuthUser: { id: string; email: string } | null = null;

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { SessionRepository } from './session.repository.js';
+import { SessionRepository } from '../../repositories/session.repository.js';
 
 // Prisma のモック（vi.hoistedでホイスティング問題を回避）
 const mockPrismaSession = vi.hoisted(() => ({

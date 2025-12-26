@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { AccountService } from './account.service.js';
+import { AccountService } from '../../services/account.service.js';
 import { NotFoundError, ValidationError } from '@agentest/shared';
 
 // AccountRepository のモック
@@ -11,7 +11,7 @@ const mockAccountRepo = {
   findByProviderAccountId: vi.fn(),
 };
 
-vi.mock('../repositories/account.repository.js', () => ({
+vi.mock('../../repositories/account.repository.js', () => ({
   AccountRepository: vi.fn().mockImplementation(() => mockAccountRepo),
 }));
 
