@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { User, Bell, Shield, Key, Loader2 } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { toast } from '../stores/toast';
@@ -75,7 +75,18 @@ function ProfileSettings() {
   const [validationError, setValidationError] = useState<string | null>(null);
 
   // ユーザー情報が変更されたら入力値をリセット
+  useEffect(() => {
+    setName(user?.name || '');
+    setValidationError(null);
+  }, [user?.name]);
+
   const hasChanges = name !== user?.name;
+
+  // 入力値を元に戻す
+  const handleCancel = () => {
+    setName(user?.name || '');
+    setValidationError(null);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -170,7 +181,7 @@ function ProfileSettings() {
           </p>
         </div>
 
-        <div className="pt-4">
+        <div className="pt-4 flex gap-2">
           <button
             type="submit"
             className="btn btn-primary"
@@ -179,6 +190,16 @@ function ProfileSettings() {
             {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
             {isSaving ? '保存中...' : '保存'}
           </button>
+          {hasChanges && (
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={handleCancel}
+              disabled={isSaving}
+            >
+              キャンセル
+            </button>
+          )}
         </div>
       </form>
     </div>
