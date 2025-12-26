@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { User, Bell, Shield, Key } from 'lucide-react';
+import { User, Bell, Shield, Key, Loader2 } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
-import type { User as UserType } from '../lib/api';
+import { toast } from '../stores/toast';
+import { ApiError } from '../lib/api';
 
 type SettingsTab = 'profile' | 'notifications' | 'security' | 'api-tokens';
 
@@ -10,7 +11,6 @@ type SettingsTab = 'profile' | 'notifications' | 'security' | 'api-tokens';
  */
 export function SettingsPage() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
-  const { user } = useAuthStore();
 
   const tabs = [
     { id: 'profile' as const, label: 'プロフィール', icon: User },
@@ -55,7 +55,7 @@ export function SettingsPage() {
 
         {/* コンテンツ */}
         <div className="flex-1">
-          {activeTab === 'profile' && <ProfileSettings user={user} />}
+          {activeTab === 'profile' && <ProfileSettings />}
           {activeTab === 'notifications' && <NotificationSettings />}
           {activeTab === 'security' && <SecuritySettings />}
           {activeTab === 'api-tokens' && <ApiTokenSettings />}
@@ -68,12 +68,47 @@ export function SettingsPage() {
 /**
  * プロフィール設定
  */
-function ProfileSettings({ user }: { user: UserType | null }) {
+function ProfileSettings() {
+  const { user, updateUser } = useAuthStore();
   const [name, setName] = useState(user?.name || '');
+  const [isSaving, setIsSaving] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // ユーザー情報が変更されたら入力値をリセット
+  const hasChanges = name !== user?.name;
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: プロフィール更新API呼び出し
+    setValidationError(null);
+
+    // バリデーション
+    const trimmedName = name.trim();
+    if (!trimmedName) {
+      setValidationError('表示名を入力してください');
+      return;
+    }
+    if (trimmedName.length > 100) {
+      setValidationError('表示名は100文字以内で入力してください');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await updateUser({ name: trimmedName });
+      toast.success('プロフィールを更新しました');
+    } catch (error) {
+      if (error instanceof ApiError) {
+        if (error.details?.name) {
+          setValidationError(error.details.name[0]);
+        } else {
+          toast.error(error.message);
+        }
+      } else {
+        toast.error('プロフィールの更新に失敗しました');
+      }
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -108,9 +143,16 @@ function ProfileSettings({ user }: { user: UserType | null }) {
           <input
             type="text"
             value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="input max-w-md"
+            onChange={(e) => {
+              setName(e.target.value);
+              setValidationError(null);
+            }}
+            className={`input max-w-md ${validationError ? 'border-danger focus:border-danger focus:ring-danger' : ''}`}
+            disabled={isSaving}
           />
+          {validationError && (
+            <p className="text-xs text-danger mt-1">{validationError}</p>
+          )}
         </div>
 
         <div>
@@ -129,8 +171,13 @@ function ProfileSettings({ user }: { user: UserType | null }) {
         </div>
 
         <div className="pt-4">
-          <button type="submit" className="btn btn-primary">
-            保存
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={isSaving || !hasChanges}
+          >
+            {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+            {isSaving ? '保存中...' : '保存'}
           </button>
         </div>
       </form>

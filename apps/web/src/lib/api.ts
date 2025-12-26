@@ -168,10 +168,17 @@ export const authApi = {
 // ユーザーAPI
 // ============================================
 
+export interface UpdateUserRequest {
+  name?: string;
+  avatarUrl?: string | null;
+}
+
 export const usersApi = {
   getOrganizations: (userId: string) =>
     api.get<{ organizations: Array<{ organization: Organization; role: string }> }>(`/api/users/${userId}/organizations`),
   getProjects: (userId: string) => api.get<{ projects: Project[] }>(`/api/users/${userId}/projects`),
+  update: (userId: string, data: UpdateUserRequest) =>
+    api.put<{ data: User }>(`/api/users/${userId}`, data),
 };
 
 // ============================================
