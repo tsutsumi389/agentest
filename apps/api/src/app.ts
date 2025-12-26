@@ -3,7 +3,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import morgan from 'morgan';
-import { configurePassport } from '@agentest/auth';
+import { configurePassport, type OAuthProfile } from '@agentest/auth';
+import { prisma } from '@agentest/db';
 import { env } from './config/env.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { requestLogger } from './middleware/request-logger.js';
@@ -89,9 +90,53 @@ export function createApp(): Express {
         : {}),
     },
   };
-  configurePassport(authConfig, async (profile) => {
-    // OAuth コールバック処理は auth.routes.ts で行う
-    return { userId: '', email: profile.email };
+  configurePassport(authConfig, async (profile: OAuthProfile) => {
+    // OAuth プロバイダーからのプロフィール情報でユーザーを作成または取得
+
+    // 既存のアカウント（OAuth連携）を検索
+    let account = await prisma.account.findUnique({
+      where: {
+        provider_providerAccountId: {
+          provider: profile.provider,
+          providerAccountId: profile.providerAccountId,
+        },
+      },
+      include: { user: true },
+    });
+
+    if (account) {
+      // 既存ユーザーが見つかった場合
+      return { userId: account.user.id, email: account.user.email };
+    }
+
+    // 同じメールアドレスの既存ユーザーを検索
+    let user = await prisma.user.findUnique({
+      where: { email: profile.email },
+    });
+
+    if (!user) {
+      // 新規ユーザーを作成
+      user = await prisma.user.create({
+        data: {
+          email: profile.email,
+          name: profile.name,
+          avatarUrl: profile.avatarUrl,
+        },
+      });
+    }
+
+    // OAuth アカウント連携を作成
+    await prisma.account.create({
+      data: {
+        userId: user.id,
+        provider: profile.provider,
+        providerAccountId: profile.providerAccountId,
+        accessToken: profile.accessToken,
+        refreshToken: profile.refreshToken,
+      },
+    });
+
+    return { userId: user.id, email: user.email };
   });
 
   // レート制限

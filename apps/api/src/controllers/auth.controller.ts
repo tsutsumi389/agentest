@@ -5,10 +5,19 @@ import { AuthenticationError } from '@agentest/shared';
 import { env } from '../config/env.js';
 
 const authConfig = {
-  accessSecret: env.JWT_ACCESS_SECRET,
-  refreshSecret: env.JWT_REFRESH_SECRET,
-  accessExpiresIn: env.JWT_ACCESS_EXPIRES_IN,
-  refreshExpiresIn: env.JWT_REFRESH_EXPIRES_IN,
+  jwt: {
+    accessSecret: env.JWT_ACCESS_SECRET,
+    refreshSecret: env.JWT_REFRESH_SECRET,
+    accessExpiry: env.JWT_ACCESS_EXPIRES_IN,
+    refreshExpiry: env.JWT_REFRESH_EXPIRES_IN,
+  },
+  cookie: {
+    httpOnly: true,
+    secure: env.NODE_ENV === 'production',
+    sameSite: 'strict' as const,
+    path: '/',
+  },
+  oauth: {},
 };
 
 // クッキー設定
@@ -87,10 +96,7 @@ export class AuthController {
       });
 
       // 新しいトークンを生成
-      const tokens = generateTokens(
-        { sub: user.id, email: user.email },
-        authConfig
-      );
+      const tokens = generateTokens(user.id, user.email, authConfig);
 
       // 新しいリフレッシュトークンを保存
       await prisma.refreshToken.create({
@@ -150,20 +156,20 @@ export class AuthController {
    */
   oauthCallback = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      if (!req.user) {
+      // OAuth コールバックでは req.user は { userId, email } 形式
+      const oauthUser = req.user as { userId: string; email: string } | undefined;
+
+      if (!oauthUser || !oauthUser.userId) {
         throw new AuthenticationError('OAuth認証に失敗しました');
       }
 
       // トークンを生成
-      const tokens = generateTokens(
-        { sub: req.user.id, email: req.user.email },
-        authConfig
-      );
+      const tokens = generateTokens(oauthUser.userId, oauthUser.email, authConfig);
 
       // リフレッシュトークンを保存
       await prisma.refreshToken.create({
         data: {
-          userId: req.user.id,
+          userId: oauthUser.userId,
           token: tokens.refreshToken,
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         },

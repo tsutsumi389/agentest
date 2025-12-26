@@ -13,12 +13,14 @@ export function LoginPage() {
     return <Navigate to="/dashboard" replace />;
   }
 
+  const apiUrl = import.meta.env.VITE_API_URL || '';
+
   const handleGitHubLogin = () => {
-    window.location.href = '/api/auth/github';
+    window.location.href = `${apiUrl}/api/auth/github`;
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = '/api/auth/google';
+    window.location.href = `${apiUrl}/api/auth/google`;
   };
 
   return (
