@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import { useAuthStore } from './stores/auth';
 import { Layout } from './components/Layout';
@@ -36,6 +37,13 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
  * アプリケーションルート
  */
 export function App() {
+  const { initialize } = useAuthStore();
+
+  // 初回マウント時に認証状態を確認
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+
   return (
     <ErrorBoundary>
       <BrowserRouter>

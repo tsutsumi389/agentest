@@ -56,12 +56,43 @@ export function createApp(): Express {
 
   // Passport設定
   const authConfig = {
-    accessSecret: env.JWT_ACCESS_SECRET,
-    refreshSecret: env.JWT_REFRESH_SECRET,
-    accessExpiresIn: env.JWT_ACCESS_EXPIRES_IN,
-    refreshExpiresIn: env.JWT_REFRESH_EXPIRES_IN,
+    jwt: {
+      accessSecret: env.JWT_ACCESS_SECRET,
+      refreshSecret: env.JWT_REFRESH_SECRET,
+      accessExpiry: env.JWT_ACCESS_EXPIRES_IN,
+      refreshExpiry: env.JWT_REFRESH_EXPIRES_IN,
+    },
+    cookie: {
+      httpOnly: true,
+      secure: env.NODE_ENV === 'production',
+      sameSite: 'strict' as const,
+      path: '/',
+    },
+    oauth: {
+      ...(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET && env.GITHUB_CALLBACK_URL
+        ? {
+            github: {
+              clientId: env.GITHUB_CLIENT_ID,
+              clientSecret: env.GITHUB_CLIENT_SECRET,
+              callbackUrl: env.GITHUB_CALLBACK_URL,
+            },
+          }
+        : {}),
+      ...(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET && env.GOOGLE_CALLBACK_URL
+        ? {
+            google: {
+              clientId: env.GOOGLE_CLIENT_ID,
+              clientSecret: env.GOOGLE_CLIENT_SECRET,
+              callbackUrl: env.GOOGLE_CALLBACK_URL,
+            },
+          }
+        : {}),
+    },
   };
-  configurePassport(authConfig);
+  configurePassport(authConfig, async (profile) => {
+    // OAuth コールバック処理は auth.routes.ts で行う
+    return { userId: '', email: profile.email };
+  });
 
   // レート制限
   app.use('/api', apiLimiter);
