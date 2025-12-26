@@ -1,4 +1,4 @@
-import { NotFoundError, ForbiddenError } from '@agentest/shared';
+import { NotFoundError, AuthorizationError } from '@agentest/shared';
 import { SessionRepository, CreateSessionData } from '../repositories/session.repository.js';
 
 /**
@@ -82,7 +82,7 @@ export class SessionService {
 
     // 他ユーザーのセッションは終了不可
     if (session.userId !== userId) {
-      throw new ForbiddenError('他のユーザーのセッションは終了できません');
+      throw new AuthorizationError('他のユーザーのセッションは終了できません');
     }
 
     // 既に失効済みの場合
