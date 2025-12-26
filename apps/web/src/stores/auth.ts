@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { authApi, type User } from '../lib/api';
+import { authApi, usersApi, type User, type UpdateUserRequest } from '../lib/api';
 import { wsClient } from '../lib/ws';
 
 interface AuthState {
@@ -12,13 +12,14 @@ interface AuthState {
   initialize: () => Promise<void>;
   logout: () => Promise<void>;
   setUser: (user: User) => void;
+  updateUser: (data: UpdateUserRequest) => Promise<void>;
   clearError: () => void;
 }
 
 /**
  * 認証ストア
  */
-export const useAuthStore = create<AuthState>((set, _get) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   isAuthenticated: false,
   isLoading: true,
@@ -77,6 +78,19 @@ export const useAuthStore = create<AuthState>((set, _get) => ({
       isAuthenticated: true,
       isLoading: false,
     });
+  },
+
+  /**
+   * ユーザー情報を更新
+   */
+  updateUser: async (data: UpdateUserRequest) => {
+    const currentUser = get().user;
+    if (!currentUser) {
+      throw new Error('ユーザーが見つかりません');
+    }
+
+    const response = await usersApi.update(currentUser.id, data);
+    set({ user: response.data });
   },
 
   /**

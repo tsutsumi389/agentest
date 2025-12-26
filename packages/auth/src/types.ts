@@ -1,4 +1,4 @@
-import type { User } from '@agentest/db';
+import type { User as PrismaUser } from '@agentest/db';
 
 export interface JwtPayload {
   sub: string; // User ID
@@ -54,7 +54,7 @@ export interface OAuthProfile {
 declare global {
   namespace Express {
     interface Request {
-      user?: User;
+      user?: PrismaUser;
       token?: JwtPayload;
     }
   }

@@ -1,4 +1,4 @@
-import type { WebSocket } from 'ws';
+import { WebSocket } from 'ws';
 import type {
   UserJoinedEvent,
   UserLeftEvent,

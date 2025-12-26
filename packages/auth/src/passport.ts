@@ -1,13 +1,29 @@
 import passport from 'passport';
-import { Strategy as GitHubStrategy } from 'passport-github2';
-import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
+import { Strategy as GitHubStrategy, type Profile as GitHubProfile } from 'passport-github2';
+import { Strategy as GoogleStrategy, type Profile as GoogleProfile } from 'passport-google-oauth20';
 import type { AuthConfig, OAuthProfile } from './types.js';
+
+// OAuthコールバックの戻り値の型
+export interface OAuthCallbackResult {
+  userId: string;
+  email: string;
+  // 連携追加処理で使用するプロファイル情報
+  profile: {
+    provider: string;
+    providerAccountId: string;
+    accessToken?: string;
+    refreshToken?: string;
+  };
+}
 
 export type OAuthCallback = (
   profile: OAuthProfile
-) => Promise<{ userId: string; email: string }>;
+) => Promise<OAuthCallbackResult>;
 
-export function configurePassport(config: AuthConfig, onOAuth: OAuthCallback): void {
+export function configurePassport(
+  config: AuthConfig,
+  onOAuth: OAuthCallback
+): void {
   // GitHub Strategy
   if (config.oauth.github) {
     passport.use(
@@ -21,8 +37,8 @@ export function configurePassport(config: AuthConfig, onOAuth: OAuthCallback): v
         async (
           accessToken: string,
           refreshToken: string,
-          profile: GitHubStrategy.Profile,
-          done: (error: Error | null, user?: { userId: string; email: string }) => void
+          profile: GitHubProfile,
+          done: (error: Error | null, user?: OAuthCallbackResult) => void
         ) => {
           try {
             const email =
@@ -39,8 +55,8 @@ export function configurePassport(config: AuthConfig, onOAuth: OAuthCallback): v
               refreshToken,
             };
 
-            const user = await onOAuth(oauthProfile);
-            done(null, user);
+            const result = await onOAuth(oauthProfile);
+            done(null, result);
           } catch (error) {
             done(error as Error);
           }
@@ -62,8 +78,8 @@ export function configurePassport(config: AuthConfig, onOAuth: OAuthCallback): v
         async (
           accessToken: string,
           refreshToken: string,
-          profile: GoogleStrategy.Profile,
-          done: (error: Error | null, user?: { userId: string; email: string }) => void
+          profile: GoogleProfile,
+          done: (error: Error | null, user?: OAuthCallbackResult) => void
         ) => {
           try {
             const email = profile.emails?.[0]?.value;
@@ -81,8 +97,8 @@ export function configurePassport(config: AuthConfig, onOAuth: OAuthCallback): v
               refreshToken,
             };
 
-            const user = await onOAuth(oauthProfile);
-            done(null, user);
+            const result = await onOAuth(oauthProfile);
+            done(null, result);
           } catch (error) {
             done(error as Error);
           }
@@ -90,6 +106,7 @@ export function configurePassport(config: AuthConfig, onOAuth: OAuthCallback): v
       )
     );
   }
+
 }
 
 export { passport };

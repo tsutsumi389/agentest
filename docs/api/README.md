@@ -39,9 +39,31 @@ Authorization: Bearer <access_token>
 | メソッド | パス | 説明 |
 |---------|------|------|
 | GET | `/users/:id` | ユーザー詳細 |
-| PUT | `/users/:id` | ユーザー更新 |
+| PATCH | `/users/:id` | ユーザー更新 |
+| DELETE | `/users/:id` | ユーザー削除（論理削除） |
 
 → [ユーザー API 詳細](./users.md)
+
+### セッション管理
+
+| メソッド | パス | 説明 |
+|---------|------|------|
+| GET | `/sessions` | セッション一覧 |
+| GET | `/sessions/count` | セッション数 |
+| DELETE | `/sessions/:sessionId` | 特定セッション無効化 |
+| DELETE | `/sessions` | 他セッション全無効化 |
+
+→ [セッション API 詳細](./sessions.md)
+
+### OAuth 連携管理
+
+| メソッド | パス | 説明 |
+|---------|------|------|
+| GET | `/users/:userId/accounts` | 連携一覧 |
+| GET | `/auth/:provider/link` | 連携追加開始 |
+| DELETE | `/users/:userId/accounts/:provider` | 連携解除 |
+
+→ [OAuth 連携 API 詳細](./accounts.md)
 
 ### 組織
 

@@ -1,5 +1,4 @@
-import { prisma } from '@agentest/db';
-import type { ProjectRole } from '@prisma/client';
+import { prisma, type ProjectRole } from '@agentest/db';
 import { NotFoundError, ConflictError } from '@agentest/shared';
 import { ProjectRepository } from '../repositories/project.repository.js';
 

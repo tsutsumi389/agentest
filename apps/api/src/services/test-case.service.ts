@@ -1,5 +1,4 @@
-import { prisma } from '@agentest/db';
-import type { TestCasePriority, EntityStatus } from '@prisma/client';
+import { prisma, type TestCasePriority, type EntityStatus } from '@agentest/db';
 import { NotFoundError } from '@agentest/shared';
 import { TestCaseRepository } from '../repositories/test-case.repository.js';
 

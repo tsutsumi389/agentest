@@ -140,10 +140,10 @@ services:
       VITE_API_URL: ${VITE_API_URL:-http://localhost:3001}
       VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:3002}
     ports:
-      - "${WEB_EXTERNAL_PORT:-3000}:5173"
+      - "${WEB_EXTERNAL_PORT:-3000}:3000"
     restart: "no"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5173"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
       interval: 10s
       timeout: 5s
       retries: 10

@@ -1,4 +1,4 @@
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
 import { env } from './config.js';
 
 // パブリッシャー用Redisクライアント
@@ -12,7 +12,7 @@ publisher.on('connect', () => {
   console.log('✅ Redis Publisher に接続しました');
 });
 
-publisher.on('error', (error) => {
+publisher.on('error', (error: Error) => {
   console.error('❌ Redis Publisher エラー:', error);
 });
 
@@ -20,7 +20,7 @@ subscriber.on('connect', () => {
   console.log('✅ Redis Subscriber に接続しました');
 });
 
-subscriber.on('error', (error) => {
+subscriber.on('error', (error: Error) => {
   console.error('❌ Redis Subscriber エラー:', error);
 });
 

@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { UserService } from '../services/user.service.js';
+import { AccountService } from '../services/account.service.js';
 import { AuthorizationError } from '@agentest/shared';
 
 const updateUserSchema = z.object({
@@ -13,6 +14,7 @@ const updateUserSchema = z.object({
  */
 export class UserController {
   private userService = new UserService();
+  private accountService = new AccountService();
 
   /**
    * ユーザー詳細取得
@@ -104,6 +106,48 @@ export class UserController {
       const projects = await this.userService.getProjects(userId);
 
       res.json({ projects });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * OAuth連携一覧取得
+   * GET /api/users/:userId/accounts
+   */
+  getAccounts = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { userId } = req.params;
+
+      // 自分の連携のみ取得可能
+      if (req.user?.id !== userId) {
+        throw new AuthorizationError('自分のOAuth連携のみ取得できます');
+      }
+
+      const accounts = await this.accountService.getAccounts(userId);
+
+      res.json({ data: accounts });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * OAuth連携解除
+   * DELETE /api/users/:userId/accounts/:provider
+   */
+  unlinkAccount = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { userId, provider } = req.params;
+
+      // 自分の連携のみ解除可能
+      if (req.user?.id !== userId) {
+        throw new AuthorizationError('自分のOAuth連携のみ解除できます');
+      }
+
+      const result = await this.accountService.unlinkAccount(userId, provider);
+
+      res.json({ data: result });
     } catch (error) {
       next(error);
     }

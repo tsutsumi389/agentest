@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt, { type SignOptions } from 'jsonwebtoken';
 import type { JwtPayload, TokenPair, AuthConfig } from './types.js';
 import { AuthenticationError } from '@agentest/shared';
 
@@ -7,8 +7,6 @@ export function generateTokens(
   email: string,
   config: AuthConfig
 ): TokenPair {
-  const now = Math.floor(Date.now() / 1000);
-
   const accessPayload: Omit<JwtPayload, 'iat' | 'exp'> = {
     sub: userId,
     email,
@@ -21,13 +19,17 @@ export function generateTokens(
     type: 'refresh',
   };
 
-  const accessToken = jwt.sign(accessPayload, config.jwt.accessSecret, {
-    expiresIn: config.jwt.accessExpiry,
-  });
+  const accessOptions: SignOptions = {
+    expiresIn: config.jwt.accessExpiry as SignOptions['expiresIn'],
+  };
 
-  const refreshToken = jwt.sign(refreshPayload, config.jwt.refreshSecret, {
-    expiresIn: config.jwt.refreshExpiry,
-  });
+  const refreshOptions: SignOptions = {
+    expiresIn: config.jwt.refreshExpiry as SignOptions['expiresIn'],
+  };
+
+  const accessToken = jwt.sign(accessPayload, config.jwt.accessSecret, accessOptions);
+
+  const refreshToken = jwt.sign(refreshPayload, config.jwt.refreshSecret, refreshOptions);
 
   return { accessToken, refreshToken };
 }

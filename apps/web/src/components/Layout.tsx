@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { useAuthStore } from '../stores/auth';
+import { ToastContainer } from './Toast';
 
 /**
  * ナビゲーションリンク
@@ -156,6 +157,9 @@ export function Layout() {
           <Outlet />
         </main>
       </div>
+
+      {/* トースト通知 */}
+      <ToastContainer />
     </div>
   );
 }

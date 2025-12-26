@@ -1,18 +1,20 @@
 import { Router } from 'express';
-import { passport, requireAuth, generateTokens } from '@agentest/auth';
-import { prisma } from '@agentest/db';
+import { passport, requireAuth } from '@agentest/auth';
 import { AuthController } from '../controllers/auth.controller.js';
+import { authConfig } from '../config/auth.js';
 import { env } from '../config/env.js';
 
-const router = Router();
+const router: Router = Router();
 const authController = new AuthController();
 
-// 認証設定
-const authConfig = {
-  accessSecret: env.JWT_ACCESS_SECRET,
-  refreshSecret: env.JWT_REFRESH_SECRET,
-  accessExpiresIn: env.JWT_ACCESS_EXPIRES_IN,
-  refreshExpiresIn: env.JWT_REFRESH_EXPIRES_IN,
+// OAuth連携追加モードを示すクッキー設定
+const LINK_MODE_COOKIE = 'oauth_link_mode';
+const linkCookieOptions = {
+  httpOnly: true,
+  secure: env.NODE_ENV === 'production',
+  sameSite: 'lax' as const, // OAuthリダイレクトで必要
+  path: '/',
+  maxAge: 5 * 60 * 1000, // 5分間有効
 };
 
 /**
@@ -48,6 +50,22 @@ if (env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET) {
     passport.authenticate('github', { session: false, failureRedirect: '/login?error=oauth_failed' }),
     authController.oauthCallback
   );
+
+  /**
+   * GitHub連携追加開始（ログイン済みユーザー用）
+   * GET /api/auth/github/link
+   *
+   * クッキーに連携追加モードを設定し、通常のOAuthフローにリダイレクト
+   */
+  router.get('/github/link', requireAuth(authConfig), (req, res) => {
+    // 連携追加モードをクッキーに設定（ユーザーIDを含む）
+    res.cookie(LINK_MODE_COOKIE, JSON.stringify({
+      provider: 'github',
+      userId: req.user!.id,
+    }), linkCookieOptions);
+    // 通常のOAuth開始エンドポイントにリダイレクト
+    res.redirect('/api/auth/github');
+  });
 }
 
 /**
@@ -65,6 +83,22 @@ if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
     passport.authenticate('google', { session: false, failureRedirect: '/login?error=oauth_failed' }),
     authController.oauthCallback
   );
+
+  /**
+   * Google連携追加開始（ログイン済みユーザー用）
+   * GET /api/auth/google/link
+   *
+   * クッキーに連携追加モードを設定し、通常のOAuthフローにリダイレクト
+   */
+  router.get('/google/link', requireAuth(authConfig), (req, res) => {
+    // 連携追加モードをクッキーに設定（ユーザーIDを含む）
+    res.cookie(LINK_MODE_COOKIE, JSON.stringify({
+      provider: 'google',
+      userId: req.user!.id,
+    }), linkCookieOptions);
+    // 通常のOAuth開始エンドポイントにリダイレクト
+    res.redirect('/api/auth/google');
+  });
 }
 
 export default router;

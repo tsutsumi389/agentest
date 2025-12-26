@@ -1,17 +1,10 @@
 import { Router } from 'express';
 import { requireAuth } from '@agentest/auth';
 import { UserController } from '../controllers/user.controller.js';
-import { env } from '../config/env.js';
+import { authConfig } from '../config/auth.js';
 
-const router = Router();
+const router: Router = Router();
 const userController = new UserController();
-
-const authConfig = {
-  accessSecret: env.JWT_ACCESS_SECRET,
-  refreshSecret: env.JWT_REFRESH_SECRET,
-  accessExpiresIn: env.JWT_ACCESS_EXPIRES_IN,
-  refreshExpiresIn: env.JWT_REFRESH_EXPIRES_IN,
-};
 
 /**
  * ユーザープロフィール取得
@@ -42,5 +35,17 @@ router.get('/:userId/organizations', requireAuth(authConfig), userController.get
  * GET /api/users/:userId/projects
  */
 router.get('/:userId/projects', requireAuth(authConfig), userController.getUserProjects);
+
+/**
+ * OAuth連携一覧取得
+ * GET /api/users/:userId/accounts
+ */
+router.get('/:userId/accounts', requireAuth(authConfig), userController.getAccounts);
+
+/**
+ * OAuth連携解除
+ * DELETE /api/users/:userId/accounts/:provider
+ */
+router.delete('/:userId/accounts/:provider', requireAuth(authConfig), userController.unlinkAccount);
 
 export default router;

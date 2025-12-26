@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
-import { AppError, isAppError, ValidationError } from '@agentest/shared';
+import { isAppError, ValidationError } from '@agentest/shared';
 import { env } from '../config/env.js';
 
 /**

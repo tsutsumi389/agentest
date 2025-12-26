@@ -2,7 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { prisma } from '@agentest/db';
 import { AuthenticationError, AuthorizationError } from '@agentest/shared';
 import { verifyAccessToken } from './jwt.js';
-import type { AuthConfig, JwtPayload } from './types.js';
+import type { AuthConfig } from './types.js';
 import { defaultAuthConfig } from './config.js';
 
 export interface AuthMiddlewareOptions {
@@ -36,7 +36,7 @@ function extractToken(req: Request): string | null {
 export function authenticate(options: AuthMiddlewareOptions = {}) {
   const { config = defaultAuthConfig, optional = false } = options;
 
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     try {
       const token = extractToken(req);
 
@@ -89,7 +89,7 @@ export function optionalAuth(config?: AuthConfig) {
  * ユーザーが組織内で必要なロールを持っているかチェック
  */
 export function requireOrgRole(roles: string[]) {
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!req.user) {
         throw new AuthenticationError('Not authenticated');
@@ -100,11 +100,12 @@ export function requireOrgRole(roles: string[]) {
         throw new AuthorizationError('Organization ID required');
       }
 
+      const user = req.user as { id: string };
       const member = await prisma.organizationMember.findUnique({
         where: {
           organizationId_userId: {
             organizationId: orgId,
-            userId: req.user.id,
+            userId: user.id,
           },
         },
       });
@@ -125,12 +126,13 @@ export function requireOrgRole(roles: string[]) {
  * ユーザーがプロジェクト内で必要なロールを持っているかチェック
  */
 export function requireProjectRole(roles: string[]) {
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!req.user) {
         throw new AuthenticationError('Not authenticated');
       }
 
+      const user = req.user as { id: string };
       const projectId = req.params.projectId || req.body?.projectId;
       if (!projectId) {
         throw new AuthorizationError('Project ID required');
@@ -141,7 +143,7 @@ export function requireProjectRole(roles: string[]) {
         where: { id: projectId },
         include: {
           members: {
-            where: { userId: req.user.id },
+            where: { userId: user.id },
           },
         },
       });
@@ -151,7 +153,7 @@ export function requireProjectRole(roles: string[]) {
       }
 
       // オーナーは全権限を持つ
-      if (project.ownerId === req.user.id) {
+      if (project.ownerId === user.id) {
         return next();
       }
 
@@ -164,7 +166,7 @@ export function requireProjectRole(roles: string[]) {
             where: {
               organizationId_userId: {
                 organizationId: project.organizationId,
-                userId: req.user.id,
+                userId: user.id,
               },
             },
           });
