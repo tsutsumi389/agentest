@@ -9,6 +9,7 @@ import { env } from './config/env.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { requestLogger } from './middleware/request-logger.js';
 import { apiLimiter, authLimiter } from './middleware/rate-limiter.js';
+import { trackSession } from './middleware/session.middleware.js';
 import routes from './routes/index.js';
 
 /**
@@ -48,6 +49,9 @@ export function createApp(): Express {
 
   // クッキーパーサー
   app.use(cookieParser());
+
+  // セッション追跡
+  app.use(trackSession());
 
   // リクエストログ
   if (env.NODE_ENV !== 'test') {

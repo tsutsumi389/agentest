@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import healthRoutes from './health.js';
 import authRoutes from './auth.js';
+import sessionRoutes from './sessions.js';
 import userRoutes from './users.js';
 import organizationRoutes from './organizations.js';
 import projectRoutes from './projects.js';
@@ -15,6 +16,7 @@ router.use('/', healthRoutes);
 
 // API ルート
 router.use('/api/auth', authRoutes);
+router.use('/api/sessions', sessionRoutes);
 router.use('/api/users', userRoutes);
 router.use('/api/organizations', organizationRoutes);
 router.use('/api/projects', projectRoutes);

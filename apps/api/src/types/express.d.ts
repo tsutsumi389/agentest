@@ -10,6 +10,8 @@ declare global {
       user?: User;
       /** JWTトークンペイロード */
       token?: JwtPayload;
+      /** 現在のセッションID */
+      sessionId?: string;
     }
   }
 }

@@ -3,6 +3,8 @@ import { generateTokens, verifyRefreshToken } from '@agentest/auth';
 import { prisma } from '@agentest/db';
 import { AuthenticationError } from '@agentest/shared';
 import { env } from '../config/env.js';
+import { SessionService } from '../services/session.service.js';
+import { extractClientInfo } from '../middleware/session.middleware.js';
 
 const authConfig = {
   jwt: {
@@ -28,10 +30,15 @@ const cookieOptions = {
   path: '/',
 };
 
+// セッション有効期限（7日）
+const SESSION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
+
 /**
  * 認証コントローラー
  */
 export class AuthController {
+  private sessionService = new SessionService();
+
   /**
    * 現在のユーザー情報を取得
    */
@@ -89,23 +96,41 @@ export class AuthController {
         throw new AuthenticationError('ユーザーが見つかりません');
       }
 
-      // 古いトークンを無効化
-      await prisma.refreshToken.update({
-        where: { id: storedToken.id },
-        data: { revokedAt: new Date() },
-      });
+      // 古いトークン・セッションを無効化
+      await Promise.all([
+        prisma.refreshToken.update({
+          where: { id: storedToken.id },
+          data: { revokedAt: new Date() },
+        }),
+        prisma.session.updateMany({
+          where: { token: refreshToken },
+          data: { revokedAt: new Date() },
+        }),
+      ]);
 
       // 新しいトークンを生成
       const tokens = generateTokens(user.id, user.email, authConfig);
 
-      // 新しいリフレッシュトークンを保存
-      await prisma.refreshToken.create({
-        data: {
+      // クライアント情報を抽出
+      const clientInfo = extractClientInfo(req);
+
+      // 新しいリフレッシュトークンとセッションを保存
+      await Promise.all([
+        prisma.refreshToken.create({
+          data: {
+            userId: user.id,
+            token: tokens.refreshToken,
+            expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
+          },
+        }),
+        this.sessionService.createSession({
           userId: user.id,
           token: tokens.refreshToken,
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7日
-        },
-      });
+          userAgent: clientInfo.userAgent,
+          ipAddress: clientInfo.ipAddress,
+          expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
+        }),
+      ]);
 
       // クッキーに設定
       res.cookie('access_token', tokens.accessToken, {
@@ -114,7 +139,7 @@ export class AuthController {
       });
       res.cookie('refresh_token', tokens.refreshToken, {
         ...cookieOptions,
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7日
+        maxAge: SESSION_EXPIRY_MS,
       });
 
       res.json({
@@ -134,11 +159,17 @@ export class AuthController {
       const refreshToken = req.cookies?.refresh_token;
 
       if (refreshToken) {
-        // リフレッシュトークンを無効化
-        await prisma.refreshToken.updateMany({
-          where: { token: refreshToken },
-          data: { revokedAt: new Date() },
-        });
+        // リフレッシュトークンとセッションを無効化
+        await Promise.all([
+          prisma.refreshToken.updateMany({
+            where: { token: refreshToken },
+            data: { revokedAt: new Date() },
+          }),
+          prisma.session.updateMany({
+            where: { token: refreshToken },
+            data: { revokedAt: new Date() },
+          }),
+        ]);
       }
 
       // クッキーをクリア
@@ -166,14 +197,26 @@ export class AuthController {
       // トークンを生成
       const tokens = generateTokens(oauthUser.userId, oauthUser.email, authConfig);
 
-      // リフレッシュトークンを保存
-      await prisma.refreshToken.create({
-        data: {
+      // クライアント情報を抽出
+      const clientInfo = extractClientInfo(req);
+
+      // リフレッシュトークンとセッションを保存
+      await Promise.all([
+        prisma.refreshToken.create({
+          data: {
+            userId: oauthUser.userId,
+            token: tokens.refreshToken,
+            expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
+          },
+        }),
+        this.sessionService.createSession({
           userId: oauthUser.userId,
           token: tokens.refreshToken,
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        },
-      });
+          userAgent: clientInfo.userAgent,
+          ipAddress: clientInfo.ipAddress,
+          expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
+        }),
+      ]);
 
       // クッキーに設定
       res.cookie('access_token', tokens.accessToken, {
