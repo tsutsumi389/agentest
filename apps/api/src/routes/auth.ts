@@ -9,10 +9,19 @@ const authController = new AuthController();
 
 // 認証設定
 const authConfig = {
-  accessSecret: env.JWT_ACCESS_SECRET,
-  refreshSecret: env.JWT_REFRESH_SECRET,
-  accessExpiresIn: env.JWT_ACCESS_EXPIRES_IN,
-  refreshExpiresIn: env.JWT_REFRESH_EXPIRES_IN,
+  jwt: {
+    accessSecret: env.JWT_ACCESS_SECRET,
+    refreshSecret: env.JWT_REFRESH_SECRET,
+    accessExpiry: env.JWT_ACCESS_EXPIRES_IN,
+    refreshExpiry: env.JWT_REFRESH_EXPIRES_IN,
+  },
+  cookie: {
+    httpOnly: true,
+    secure: env.NODE_ENV === 'production',
+    sameSite: 'strict' as const,
+    path: '/',
+  },
+  oauth: {},
 };
 
 /**

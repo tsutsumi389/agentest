@@ -159,9 +159,9 @@ export interface Execution {
 // ============================================
 
 export const authApi = {
-  me: () => api.get<{ user: User }>('/auth/me'),
-  refresh: () => api.post<{ accessToken: string; refreshToken: string }>('/auth/refresh'),
-  logout: () => api.post<{ message: string }>('/auth/logout'),
+  me: () => api.get<{ user: User }>('/api/auth/me'),
+  refresh: () => api.post<{ accessToken: string; refreshToken: string }>('/api/auth/refresh'),
+  logout: () => api.post<{ message: string }>('/api/auth/logout'),
 };
 
 // ============================================
@@ -170,8 +170,8 @@ export const authApi = {
 
 export const usersApi = {
   getOrganizations: (userId: string) =>
-    api.get<{ organizations: Array<{ organization: Organization; role: string }> }>(`/users/${userId}/organizations`),
-  getProjects: (userId: string) => api.get<{ projects: Project[] }>(`/users/${userId}/projects`),
+    api.get<{ organizations: Array<{ organization: Organization; role: string }> }>(`/api/users/${userId}/organizations`),
+  getProjects: (userId: string) => api.get<{ projects: Project[] }>(`/api/users/${userId}/projects`),
 };
 
 // ============================================
@@ -180,13 +180,13 @@ export const usersApi = {
 
 export const projectsApi = {
   create: (data: { name: string; description?: string; organizationId?: string }) =>
-    api.post<{ project: Project }>('/projects', data),
-  getById: (projectId: string) => api.get<{ project: Project }>(`/projects/${projectId}`),
+    api.post<{ project: Project }>('/api/projects', data),
+  getById: (projectId: string) => api.get<{ project: Project }>(`/api/projects/${projectId}`),
   update: (projectId: string, data: { name?: string; description?: string }) =>
-    api.patch<{ project: Project }>(`/projects/${projectId}`, data),
-  delete: (projectId: string) => api.delete<void>(`/projects/${projectId}`),
+    api.patch<{ project: Project }>(`/api/projects/${projectId}`, data),
+  delete: (projectId: string) => api.delete<void>(`/api/projects/${projectId}`),
   getTestSuites: (projectId: string) =>
-    api.get<{ testSuites: TestSuite[] }>(`/projects/${projectId}/test-suites`),
+    api.get<{ testSuites: TestSuite[] }>(`/api/projects/${projectId}/test-suites`),
 };
 
 // ============================================
@@ -195,24 +195,24 @@ export const projectsApi = {
 
 export const testSuitesApi = {
   create: (data: { projectId: string; name: string; description?: string }) =>
-    api.post<{ testSuite: TestSuite }>('/test-suites', data),
-  getById: (testSuiteId: string) => api.get<{ testSuite: TestSuite }>(`/test-suites/${testSuiteId}`),
+    api.post<{ testSuite: TestSuite }>('/api/test-suites', data),
+  getById: (testSuiteId: string) => api.get<{ testSuite: TestSuite }>(`/api/test-suites/${testSuiteId}`),
   update: (testSuiteId: string, data: { name?: string; description?: string; status?: string }) =>
-    api.patch<{ testSuite: TestSuite }>(`/test-suites/${testSuiteId}`, data),
-  delete: (testSuiteId: string) => api.delete<void>(`/test-suites/${testSuiteId}`),
+    api.patch<{ testSuite: TestSuite }>(`/api/test-suites/${testSuiteId}`, data),
+  delete: (testSuiteId: string) => api.delete<void>(`/api/test-suites/${testSuiteId}`),
   getTestCases: (testSuiteId: string) =>
-    api.get<{ testCases: TestCase[] }>(`/test-suites/${testSuiteId}/test-cases`),
+    api.get<{ testCases: TestCase[] }>(`/api/test-suites/${testSuiteId}/test-cases`),
   getExecutions: (testSuiteId: string, params?: { limit?: number; offset?: number }) => {
     const query = new URLSearchParams();
     if (params?.limit) query.set('limit', String(params.limit));
     if (params?.offset) query.set('offset', String(params.offset));
     const queryString = query.toString();
     return api.get<{ executions: Execution[] }>(
-      `/test-suites/${testSuiteId}/executions${queryString ? `?${queryString}` : ''}`
+      `/api/test-suites/${testSuiteId}/executions${queryString ? `?${queryString}` : ''}`
     );
   },
   startExecution: (testSuiteId: string, data?: { environmentId?: string }) =>
-    api.post<{ execution: Execution }>(`/test-suites/${testSuiteId}/executions`, data),
+    api.post<{ execution: Execution }>(`/api/test-suites/${testSuiteId}/executions`, data),
 };
 
 // ============================================
@@ -221,11 +221,11 @@ export const testSuitesApi = {
 
 export const testCasesApi = {
   create: (data: { testSuiteId: string; title: string; description?: string; priority?: string }) =>
-    api.post<{ testCase: TestCase }>('/test-cases', data),
-  getById: (testCaseId: string) => api.get<{ testCase: TestCase }>(`/test-cases/${testCaseId}`),
+    api.post<{ testCase: TestCase }>('/api/test-cases', data),
+  getById: (testCaseId: string) => api.get<{ testCase: TestCase }>(`/api/test-cases/${testCaseId}`),
   update: (testCaseId: string, data: { title?: string; description?: string; priority?: string; status?: string }) =>
-    api.patch<{ testCase: TestCase }>(`/test-cases/${testCaseId}`, data),
-  delete: (testCaseId: string) => api.delete<void>(`/test-cases/${testCaseId}`),
+    api.patch<{ testCase: TestCase }>(`/api/test-cases/${testCaseId}`, data),
+  delete: (testCaseId: string) => api.delete<void>(`/api/test-cases/${testCaseId}`),
 };
 
 // ============================================
@@ -233,7 +233,7 @@ export const testCasesApi = {
 // ============================================
 
 export const executionsApi = {
-  getById: (executionId: string) => api.get<{ execution: Execution }>(`/executions/${executionId}`),
-  abort: (executionId: string) => api.post<{ execution: Execution }>(`/executions/${executionId}/abort`),
-  complete: (executionId: string) => api.post<{ execution: Execution }>(`/executions/${executionId}/complete`),
+  getById: (executionId: string) => api.get<{ execution: Execution }>(`/api/executions/${executionId}`),
+  abort: (executionId: string) => api.post<{ execution: Execution }>(`/api/executions/${executionId}/abort`),
+  complete: (executionId: string) => api.post<{ execution: Execution }>(`/api/executions/${executionId}/complete`),
 };
