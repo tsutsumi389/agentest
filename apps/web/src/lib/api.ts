@@ -244,3 +244,34 @@ export const executionsApi = {
   abort: (executionId: string) => api.post<{ execution: Execution }>(`/api/executions/${executionId}/abort`),
   complete: (executionId: string) => api.post<{ execution: Execution }>(`/api/executions/${executionId}/complete`),
 };
+
+// ============================================
+// セッションAPI
+// ============================================
+
+export interface Session {
+  id: string;
+  userAgent: string | null;
+  ipAddress: string | null;
+  lastActiveAt: string;
+  expiresAt: string;
+  createdAt: string;
+  isCurrent: boolean;
+}
+
+export interface RevokeSessionsResult {
+  success: boolean;
+  revokedCount: number;
+}
+
+export const sessionsApi = {
+  // セッション一覧を取得
+  list: () => api.get<{ data: Session[] }>('/api/sessions'),
+  // セッション数を取得
+  count: () => api.get<{ data: { count: number } }>('/api/sessions/count'),
+  // 特定のセッションを終了
+  revoke: (sessionId: string) =>
+    api.delete<{ data: { success: boolean } }>(`/api/sessions/${sessionId}`),
+  // 他の全セッションを終了
+  revokeOthers: () => api.delete<{ data: RevokeSessionsResult }>('/api/sessions'),
+};
