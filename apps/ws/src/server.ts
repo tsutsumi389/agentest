@@ -4,10 +4,6 @@ import type {
   ClientMessage,
   ServerMessage,
   ServerEvent,
-  AuthenticatedMessage,
-  ErrorMessage,
-  PongMessage,
-  SubscribedMessage,
 } from '@agentest/ws-types';
 import { authenticateToken, extractTokenFromUrl, type AuthenticatedUser } from './auth.js';
 import { subscriber, subscribeToChannel, unsubscribeFromChannel } from './redis.js';
@@ -231,7 +227,8 @@ async function handleUnsubscribe(ws: ExtendedWebSocket, channels: string[]): Pro
  */
 function handleRedisMessage(channel: string, message: string): void {
   try {
-    const event = JSON.parse(message) as ServerEvent;
+    // 型チェックのためにパース（送信時は元のメッセージを使用）
+    JSON.parse(message) as ServerEvent;
     const subscribers = channelSubscribers.get(channel);
 
     if (subscribers) {

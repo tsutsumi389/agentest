@@ -1,13 +1,5 @@
-import { verifyAccessToken, type JwtPayload } from '@agentest/auth';
+import { verifyAccessToken, defaultAuthConfig } from '@agentest/auth';
 import { prisma } from '@agentest/db';
-import { env } from './config.js';
-
-const authConfig = {
-  accessSecret: env.JWT_ACCESS_SECRET,
-  refreshSecret: '', // WebSocketでは使用しない
-  accessExpiresIn: '15m',
-  refreshExpiresIn: '7d',
-};
 
 export interface AuthenticatedUser {
   id: string;
@@ -21,7 +13,7 @@ export interface AuthenticatedUser {
  */
 export async function authenticateToken(token: string): Promise<AuthenticatedUser | null> {
   try {
-    const payload = verifyAccessToken(token, authConfig);
+    const payload = verifyAccessToken(token, defaultAuthConfig);
 
     // データベースからユーザーを取得
     const user = await prisma.user.findUnique({
