@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { User, Bell, Shield, Key, Loader2, Monitor, Smartphone, Tablet, X, AlertTriangle } from 'lucide-react';
+import { useSearchParams } from 'react-router';
+import { User, Bell, Shield, Key, Loader2, Monitor, Smartphone, Tablet, X, AlertTriangle, Github, Link2, Unlink } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { toast } from '../stores/toast';
-import { ApiError, sessionsApi, type Session } from '../lib/api';
+import { ApiError, sessionsApi, accountsApi, type Session, type Account } from '../lib/api';
 
 type SettingsTab = 'profile' | 'notifications' | 'security' | 'api-tokens';
 
@@ -10,7 +11,40 @@ type SettingsTab = 'profile' | 'notifications' | 'security' | 'api-tokens';
  * 設定ページ
  */
 export function SettingsPage() {
-  const [activeTab, setActiveTab] = useState<SettingsTab>('profile');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get('tab') as SettingsTab | null;
+  const [activeTab, setActiveTab] = useState<SettingsTab>(
+    tabParam && ['profile', 'notifications', 'security', 'api-tokens'].includes(tabParam)
+      ? tabParam
+      : 'profile'
+  );
+
+  // OAuth連携結果のハンドリング
+  useEffect(() => {
+    const link = searchParams.get('link');
+    const message = searchParams.get('message');
+
+    if (link === 'success') {
+      toast.success('OAuth連携を追加しました');
+      // パラメータをクリア
+      searchParams.delete('link');
+      searchParams.delete('message');
+      setSearchParams(searchParams, { replace: true });
+    } else if (link === 'error') {
+      toast.error(message || 'OAuth連携に失敗しました');
+      // パラメータをクリア
+      searchParams.delete('link');
+      searchParams.delete('message');
+      setSearchParams(searchParams, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
+  // タブを変更するとURLパラメータも更新
+  const handleTabChange = (tab: SettingsTab) => {
+    setActiveTab(tab);
+    searchParams.set('tab', tab);
+    setSearchParams(searchParams, { replace: true });
+  };
 
   const tabs = [
     { id: 'profile' as const, label: 'プロフィール', icon: User },
@@ -36,7 +70,7 @@ export function SettingsPage() {
             {tabs.map((tab) => (
               <li key={tab.id}>
                 <button
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => handleTabChange(tab.id)}
                   className={`
                     w-full flex items-center gap-2 px-3 py-2 text-sm font-medium rounded transition-colors
                     ${activeTab === tab.id
@@ -431,17 +465,40 @@ function SessionItem({
   );
 }
 
+// サポートするOAuthプロバイダー
+const OAUTH_PROVIDERS = [
+  { id: 'github' as const, name: 'GitHub', icon: Github },
+  { id: 'google' as const, name: 'Google', icon: GoogleIcon },
+];
+
+// Googleアイコンコンポーネント
+function GoogleIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+    </svg>
+  );
+}
+
 /**
  * セキュリティ設定
  */
 function SecuritySettings() {
+  const { user } = useAuthStore();
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(true);
+  const [isLoadingAccounts, setIsLoadingAccounts] = useState(true);
   const [revokingSessionId, setRevokingSessionId] = useState<string | null>(null);
   const [isRevokingAll, setIsRevokingAll] = useState(false);
+  const [unlinkingProvider, setUnlinkingProvider] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
-    type: 'single' | 'all';
+    type: 'session' | 'all-sessions' | 'unlink';
     sessionId?: string;
+    provider?: string;
   } | null>(null);
 
   // セッション一覧を取得
@@ -456,13 +513,31 @@ function SecuritySettings() {
         toast.error('セッション一覧の取得に失敗しました');
       }
     } finally {
-      setIsLoading(false);
+      setIsLoadingSessions(false);
     }
   }, []);
 
+  // OAuth連携一覧を取得
+  const fetchAccounts = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const response = await accountsApi.list(user.id);
+      setAccounts(response.data);
+    } catch (error) {
+      if (error instanceof ApiError) {
+        toast.error(error.message);
+      } else {
+        toast.error('OAuth連携一覧の取得に失敗しました');
+      }
+    } finally {
+      setIsLoadingAccounts(false);
+    }
+  }, [user?.id]);
+
   useEffect(() => {
     fetchSessions();
-  }, [fetchSessions]);
+    fetchAccounts();
+  }, [fetchSessions, fetchAccounts]);
 
   // 個別セッションを終了
   const handleRevokeSession = async (sessionId: string) => {
@@ -503,9 +578,38 @@ function SecuritySettings() {
     }
   };
 
+  // OAuth連携を解除
+  const handleUnlinkAccount = async (provider: string) => {
+    if (!user?.id) return;
+    setUnlinkingProvider(provider);
+    try {
+      await accountsApi.unlink(user.id, provider);
+      toast.success(`${provider}との連携を解除しました`);
+      setAccounts((prev) => prev.filter((a) => a.provider !== provider));
+    } catch (error) {
+      if (error instanceof ApiError) {
+        toast.error(error.message);
+      } else {
+        toast.error('連携解除に失敗しました');
+      }
+    } finally {
+      setUnlinkingProvider(null);
+      setConfirmDialog(null);
+    }
+  };
+
+  // OAuth連携を追加
+  const handleLinkAccount = (provider: 'github' | 'google') => {
+    // 現在のページのURLを維持するため、API経由でリダイレクト
+    window.location.href = accountsApi.getLinkUrl(provider);
+  };
+
   // 確認ダイアログを開く
-  const openConfirmDialog = (type: 'single' | 'all', sessionId?: string) => {
-    setConfirmDialog({ type, sessionId });
+  const openConfirmDialog = (
+    type: 'session' | 'all-sessions' | 'unlink',
+    options?: { sessionId?: string; provider?: string }
+  ) => {
+    setConfirmDialog({ type, ...options });
   };
 
   // 確認ダイアログを閉じる
@@ -515,11 +619,18 @@ function SecuritySettings() {
 
   // 確認ダイアログで確定
   const handleConfirm = () => {
-    if (confirmDialog?.type === 'single' && confirmDialog.sessionId) {
+    if (confirmDialog?.type === 'session' && confirmDialog.sessionId) {
       handleRevokeSession(confirmDialog.sessionId);
-    } else if (confirmDialog?.type === 'all') {
+    } else if (confirmDialog?.type === 'all-sessions') {
       handleRevokeAllSessions();
+    } else if (confirmDialog?.type === 'unlink' && confirmDialog.provider) {
+      handleUnlinkAccount(confirmDialog.provider);
     }
+  };
+
+  // プロバイダーが連携済みかどうかを判定
+  const isProviderLinked = (providerId: string) => {
+    return accounts.some((a) => a.provider === providerId);
   };
 
   const otherSessionsCount = sessions.filter((s) => !s.isCurrent).length;
@@ -528,18 +639,85 @@ function SecuritySettings() {
     <div className="space-y-6">
       {/* 接続済みアカウント */}
       <div className="card p-6">
-        <h2 className="text-lg font-semibold text-foreground mb-4">接続済みアカウント</h2>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between p-3 bg-background-tertiary rounded">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded bg-background flex items-center justify-center">
-                <span className="text-xs font-medium">GH</span>
-              </div>
-              <span className="text-foreground">GitHub</span>
-            </div>
-            <span className="badge badge-success">接続済み</span>
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">接続済みアカウント</h2>
+            <p className="text-sm text-foreground-muted mt-1">
+              OAuthプロバイダーとの連携を管理します
+            </p>
           </div>
         </div>
+
+        {isLoadingAccounts ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-foreground-muted" />
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {OAUTH_PROVIDERS.map((provider) => {
+              const linked = isProviderLinked(provider.id);
+              const account = accounts.find((a) => a.provider === provider.id);
+              const isUnlinking = unlinkingProvider === provider.id;
+              const canUnlink = accounts.length > 1;
+
+              return (
+                <div
+                  key={provider.id}
+                  className="flex items-center justify-between p-3 bg-background-tertiary rounded"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded bg-background flex items-center justify-center">
+                      <provider.icon className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-foreground font-medium">{provider.name}</span>
+                      {linked && account && (
+                        <p className="text-xs text-foreground-muted">
+                          連携日: {new Date(account.createdAt).toLocaleDateString('ja-JP')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {linked ? (
+                      <>
+                        <span className="badge badge-success">接続済み</span>
+                        {canUnlink && (
+                          <button
+                            className="btn btn-ghost btn-sm text-danger hover:bg-danger-muted"
+                            onClick={() => openConfirmDialog('unlink', { provider: provider.id })}
+                            disabled={isUnlinking}
+                            title="連携を解除"
+                          >
+                            {isUnlinking ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Unlink className="w-4 h-4" />
+                            )}
+                          </button>
+                        )}
+                      </>
+                    ) : (
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={() => handleLinkAccount(provider.id)}
+                      >
+                        <Link2 className="w-4 h-4" />
+                        連携する
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {accounts.length === 1 && (
+          <p className="text-xs text-foreground-subtle mt-4">
+            ※ 最低1つのOAuth連携が必要です。連携を解除するには別のプロバイダーを先に連携してください。
+          </p>
+        )}
       </div>
 
       {/* セッション管理 */}
@@ -554,7 +732,7 @@ function SecuritySettings() {
           {otherSessionsCount > 0 && (
             <button
               className="btn btn-danger btn-sm"
-              onClick={() => openConfirmDialog('all')}
+              onClick={() => openConfirmDialog('all-sessions')}
               disabled={isRevokingAll}
             >
               {isRevokingAll && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -563,7 +741,7 @@ function SecuritySettings() {
           )}
         </div>
 
-        {isLoading ? (
+        {isLoadingSessions ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="w-6 h-6 animate-spin text-foreground-muted" />
           </div>
@@ -580,7 +758,7 @@ function SecuritySettings() {
                 <SessionItem
                   key={session.id}
                   session={session}
-                  onRevoke={(id) => openConfirmDialog('single', id)}
+                  onRevoke={(id) => openConfirmDialog('session', { sessionId: id })}
                   isRevoking={revokingSessionId === session.id}
                 />
               ))}
@@ -591,16 +769,30 @@ function SecuritySettings() {
       {/* 確認ダイアログ */}
       <ConfirmDialog
         isOpen={confirmDialog !== null}
-        title={confirmDialog?.type === 'all' ? '他のすべてのセッションを終了' : 'セッションを終了'}
+        title={
+          confirmDialog?.type === 'all-sessions'
+            ? '他のすべてのセッションを終了'
+            : confirmDialog?.type === 'unlink'
+            ? 'OAuth連携を解除'
+            : 'セッションを終了'
+        }
         message={
-          confirmDialog?.type === 'all'
+          confirmDialog?.type === 'all-sessions'
             ? '現在のセッション以外のすべてのセッションを終了します。他のデバイスからは再度ログインが必要になります。'
+            : confirmDialog?.type === 'unlink'
+            ? `${confirmDialog.provider}との連携を解除します。この操作は取り消せません。`
             : 'このセッションを終了します。該当デバイスからは再度ログインが必要になります。'
         }
-        confirmLabel="終了する"
+        confirmLabel={confirmDialog?.type === 'unlink' ? '解除する' : '終了する'}
         onConfirm={handleConfirm}
         onCancel={closeConfirmDialog}
-        isLoading={confirmDialog?.type === 'all' ? isRevokingAll : revokingSessionId !== null}
+        isLoading={
+          confirmDialog?.type === 'all-sessions'
+            ? isRevokingAll
+            : confirmDialog?.type === 'unlink'
+            ? unlinkingProvider !== null
+            : revokingSessionId !== null
+        }
       />
     </div>
   );

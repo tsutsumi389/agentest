@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { passport, requireAuth } from '@agentest/auth';
+import { passport, requireAuth, optionalAuth } from '@agentest/auth';
 import { AuthController } from '../controllers/auth.controller.js';
 import { authConfig } from '../config/auth.js';
 import { env } from '../config/env.js';
@@ -40,6 +40,25 @@ if (env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET) {
     passport.authenticate('github', { session: false, failureRedirect: '/login?error=oauth_failed' }),
     authController.oauthCallback
   );
+
+  /**
+   * GitHub連携追加開始（ログイン済みユーザー用）
+   * GET /api/auth/github/link
+   */
+  router.get('/github/link',
+    requireAuth(authConfig),
+    passport.authenticate('github-link', { session: false, scope: ['user:email'] })
+  );
+
+  /**
+   * GitHub連携追加コールバック
+   * GET /api/auth/github/link/callback
+   */
+  router.get('/github/link/callback',
+    optionalAuth(authConfig),
+    passport.authenticate('github-link', { session: false, failureRedirect: '/settings?tab=security&link=error' }),
+    authController.oauthLinkCallback
+  );
 }
 
 /**
@@ -56,6 +75,25 @@ if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
   router.get('/google/callback',
     passport.authenticate('google', { session: false, failureRedirect: '/login?error=oauth_failed' }),
     authController.oauthCallback
+  );
+
+  /**
+   * Google連携追加開始（ログイン済みユーザー用）
+   * GET /api/auth/google/link
+   */
+  router.get('/google/link',
+    requireAuth(authConfig),
+    passport.authenticate('google-link', { session: false, scope: ['profile', 'email'] })
+  );
+
+  /**
+   * Google連携追加コールバック
+   * GET /api/auth/google/link/callback
+   */
+  router.get('/google/link/callback',
+    optionalAuth(authConfig),
+    passport.authenticate('google-link', { session: false, failureRedirect: '/settings?tab=security&link=error' }),
+    authController.oauthLinkCallback
   );
 }
 

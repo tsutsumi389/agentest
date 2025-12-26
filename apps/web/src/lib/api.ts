@@ -275,3 +275,25 @@ export const sessionsApi = {
   // 他の全セッションを終了
   revokeOthers: () => api.delete<{ data: RevokeSessionsResult }>('/api/sessions'),
 };
+
+// ============================================
+// OAuth連携アカウントAPI
+// ============================================
+
+export interface Account {
+  id: string;
+  provider: 'github' | 'google';
+  providerAccountId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const accountsApi = {
+  // 連携一覧を取得
+  list: (userId: string) => api.get<{ data: Account[] }>(`/api/users/${userId}/accounts`),
+  // 連携を解除
+  unlink: (userId: string, provider: string) =>
+    api.delete<{ data: { success: boolean } }>(`/api/users/${userId}/accounts/${provider}`),
+  // OAuth連携開始URL（フロントエンドでリダイレクト用）
+  getLinkUrl: (provider: 'github' | 'google') => `/api/auth/${provider}/link`,
+};

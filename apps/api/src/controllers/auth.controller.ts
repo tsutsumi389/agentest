@@ -234,4 +234,27 @@ export class AuthController {
       next(error);
     }
   };
+
+  /**
+   * OAuth連携追加コールバック処理
+   */
+  oauthLinkCallback = async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+    // OAuth連携追加コールバックでは req.user は { success, error? } 形式
+    const linkResult = req.user as { success: boolean; error?: string } | undefined;
+
+    if (!linkResult) {
+      // 認証失敗
+      res.redirect(`${env.CORS_ORIGIN}/settings?tab=security&link=error&message=${encodeURIComponent('OAuth認証に失敗しました')}`);
+      return;
+    }
+
+    if (!linkResult.success) {
+      // 連携失敗（エラーメッセージ付き）
+      res.redirect(`${env.CORS_ORIGIN}/settings?tab=security&link=error&message=${encodeURIComponent(linkResult.error || '連携に失敗しました')}`);
+      return;
+    }
+
+    // 連携成功
+    res.redirect(`${env.CORS_ORIGIN}/settings?tab=security&link=success`);
+  };
 }

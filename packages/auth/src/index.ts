@@ -20,7 +20,7 @@ export {
 
 // Passport
 export { configurePassport, passport } from './passport.js';
-export type { OAuthCallback } from './passport.js';
+export type { OAuthCallback, OAuthLinkCallback } from './passport.js';
 
 // Middleware
 export {
