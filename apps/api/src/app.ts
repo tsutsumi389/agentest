@@ -96,7 +96,8 @@ export function createApp(): Express {
   };
   configurePassport(
     authConfig,
-    // 通常のOAuth認証コールバック（ログイン・新規登録用）
+    // OAuth認証コールバック（ログイン・新規登録用）
+    // 連携追加モードの場合は、auth.controller.ts で profile 情報を使って処理
     async (profile: OAuthProfile) => {
       // OAuth プロバイダーからのプロフィール情報でユーザーを作成または取得
 
@@ -113,7 +114,16 @@ export function createApp(): Express {
 
       if (account) {
         // 既存ユーザーが見つかった場合
-        return { userId: account.user.id, email: account.user.email };
+        return {
+          userId: account.user.id,
+          email: account.user.email,
+          profile: {
+            provider: profile.provider,
+            providerAccountId: profile.providerAccountId,
+            accessToken: profile.accessToken,
+            refreshToken: profile.refreshToken,
+          },
+        };
       }
 
       // 同じメールアドレスの既存ユーザーを検索
@@ -143,53 +153,16 @@ export function createApp(): Express {
         },
       });
 
-      return { userId: user.id, email: user.email };
-    },
-    // OAuth連携追加コールバック（既存ユーザーへのプロバイダー追加用）
-    async (userId: string, profile: OAuthProfile) => {
-      // 同じプロバイダーアカウントが他のユーザーに紐づいていないか確認
-      const existingAccount = await prisma.account.findUnique({
-        where: {
-          provider_providerAccountId: {
-            provider: profile.provider,
-            providerAccountId: profile.providerAccountId,
-          },
-        },
-      });
-
-      if (existingAccount) {
-        if (existingAccount.userId === userId) {
-          // 同じユーザーに既に連携済み
-          return { success: false, error: `この${profile.provider}アカウントは既に連携されています` };
-        } else {
-          // 別のユーザーに連携済み
-          return { success: false, error: `この${profile.provider}アカウントは別のユーザーに連携されています` };
-        }
-      }
-
-      // 同じユーザー・プロバイダーの組み合わせが存在しないか確認
-      const duplicateProvider = await prisma.account.findUnique({
-        where: {
-          userId_provider: { userId, provider: profile.provider },
-        },
-      });
-
-      if (duplicateProvider) {
-        return { success: false, error: `${profile.provider}は既に別のアカウントで連携されています` };
-      }
-
-      // 新しい連携を作成
-      await prisma.account.create({
-        data: {
-          userId,
+      return {
+        userId: user.id,
+        email: user.email,
+        profile: {
           provider: profile.provider,
           providerAccountId: profile.providerAccountId,
           accessToken: profile.accessToken,
           refreshToken: profile.refreshToken,
         },
-      });
-
-      return { success: true };
+      };
     }
   );
 

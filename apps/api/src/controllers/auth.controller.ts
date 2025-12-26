@@ -33,6 +33,15 @@ const cookieOptions = {
 // セッション有効期限（7日）
 const SESSION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 
+// OAuth連携追加モードを示すクッキー名
+const LINK_MODE_COOKIE = 'oauth_link_mode';
+
+// 連携追加モードのクッキー情報
+interface LinkModeInfo {
+  provider: string;
+  userId: string;
+}
+
 /**
  * 認証コントローラー
  */
@@ -184,16 +193,52 @@ export class AuthController {
 
   /**
    * OAuthコールバック処理
+   *
+   * 連携追加モード（クッキーにoauth_link_modeがある場合）と
+   * 通常ログインモードの両方を処理する
    */
   oauthCallback = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      // OAuth コールバックでは req.user は { userId, email } 形式
-      const oauthUser = req.user as { userId: string; email: string } | undefined;
+      // OAuth コールバックでは req.user は { userId, email, profile } 形式
+      const oauthUser = req.user as {
+        userId: string;
+        email: string;
+        profile?: { provider: string; providerAccountId: string };
+      } | undefined;
 
       if (!oauthUser || !oauthUser.userId) {
         throw new AuthenticationError('OAuth認証に失敗しました');
       }
 
+      // 連携追加モードかどうかをクッキーで判定
+      const linkModeCookie = req.cookies?.[LINK_MODE_COOKIE];
+      if (linkModeCookie) {
+        // 連携追加モードのクッキーをクリア
+        res.clearCookie(LINK_MODE_COOKIE, { path: '/' });
+
+        try {
+          const linkMode: LinkModeInfo = JSON.parse(linkModeCookie);
+
+          // プロバイダーが一致するか確認
+          if (oauthUser.profile && linkMode.provider === oauthUser.profile.provider) {
+            // 連携追加処理を実行
+            const result = await this.handleOAuthLink(linkMode.userId, oauthUser.profile);
+
+            if (!result.success) {
+              res.redirect(`${env.CORS_ORIGIN}/settings?tab=security&link=error&message=${encodeURIComponent(result.error || '連携に失敗しました')}`);
+              return;
+            }
+
+            // 連携成功
+            res.redirect(`${env.CORS_ORIGIN}/settings?tab=security&link=success`);
+            return;
+          }
+        } catch {
+          // クッキーのパースに失敗した場合は通常ログインとして処理
+        }
+      }
+
+      // 通常のログイン処理
       // トークンを生成
       const tokens = generateTokens(oauthUser.userId, oauthUser.email, authConfig);
 
@@ -236,25 +281,54 @@ export class AuthController {
   };
 
   /**
-   * OAuth連携追加コールバック処理
+   * OAuth連携追加処理
+   *
+   * 既存ユーザーに新しいOAuthプロバイダーを連携する
    */
-  oauthLinkCallback = async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
-    // OAuth連携追加コールバックでは req.user は { success, error? } 形式
-    const linkResult = req.user as { success: boolean; error?: string } | undefined;
+  private handleOAuthLink = async (
+    userId: string,
+    profile: { provider: string; providerAccountId: string; accessToken?: string; refreshToken?: string }
+  ): Promise<{ success: boolean; error?: string }> => {
+    // 同じプロバイダーアカウントが他のユーザーに紐づいていないか確認
+    const existingAccount = await prisma.account.findUnique({
+      where: {
+        provider_providerAccountId: {
+          provider: profile.provider,
+          providerAccountId: profile.providerAccountId,
+        },
+      },
+    });
 
-    if (!linkResult) {
-      // 認証失敗
-      res.redirect(`${env.CORS_ORIGIN}/settings?tab=security&link=error&message=${encodeURIComponent('OAuth認証に失敗しました')}`);
-      return;
+    if (existingAccount) {
+      if (existingAccount.userId === userId) {
+        return { success: false, error: `この${profile.provider}アカウントは既に連携されています` };
+      } else {
+        return { success: false, error: `この${profile.provider}アカウントは別のユーザーに連携されています` };
+      }
     }
 
-    if (!linkResult.success) {
-      // 連携失敗（エラーメッセージ付き）
-      res.redirect(`${env.CORS_ORIGIN}/settings?tab=security&link=error&message=${encodeURIComponent(linkResult.error || '連携に失敗しました')}`);
-      return;
+    // 同じユーザー・プロバイダーの組み合わせが存在しないか確認
+    const duplicateProvider = await prisma.account.findUnique({
+      where: {
+        userId_provider: { userId, provider: profile.provider },
+      },
+    });
+
+    if (duplicateProvider) {
+      return { success: false, error: `${profile.provider}は既に別のアカウントで連携されています` };
     }
 
-    // 連携成功
-    res.redirect(`${env.CORS_ORIGIN}/settings?tab=security&link=success`);
+    // 新しい連携を作成
+    await prisma.account.create({
+      data: {
+        userId,
+        provider: profile.provider,
+        providerAccountId: profile.providerAccountId,
+        accessToken: profile.accessToken,
+        refreshToken: profile.refreshToken,
+      },
+    });
+
+    return { success: true };
   };
 }

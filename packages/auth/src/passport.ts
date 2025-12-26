@@ -1,23 +1,28 @@
 import passport from 'passport';
 import { Strategy as GitHubStrategy, type Profile as GitHubProfile } from 'passport-github2';
 import { Strategy as GoogleStrategy, type Profile as GoogleProfile } from 'passport-google-oauth20';
-import type { Request } from 'express';
 import type { AuthConfig, OAuthProfile } from './types.js';
+
+// OAuthコールバックの戻り値の型
+export interface OAuthCallbackResult {
+  userId: string;
+  email: string;
+  // 連携追加処理で使用するプロファイル情報
+  profile: {
+    provider: string;
+    providerAccountId: string;
+    accessToken?: string;
+    refreshToken?: string;
+  };
+}
 
 export type OAuthCallback = (
   profile: OAuthProfile
-) => Promise<{ userId: string; email: string }>;
-
-// 連携追加用のコールバック（既存ユーザーにプロバイダーを追加）
-export type OAuthLinkCallback = (
-  userId: string,
-  profile: OAuthProfile
-) => Promise<{ success: boolean; error?: string }>;
+) => Promise<OAuthCallbackResult>;
 
 export function configurePassport(
   config: AuthConfig,
-  onOAuth: OAuthCallback,
-  onOAuthLink?: OAuthLinkCallback
+  onOAuth: OAuthCallback
 ): void {
   // GitHub Strategy
   if (config.oauth.github) {
@@ -33,7 +38,7 @@ export function configurePassport(
           accessToken: string,
           refreshToken: string,
           profile: GitHubProfile,
-          done: (error: Error | null, user?: { userId: string; email: string }) => void
+          done: (error: Error | null, user?: OAuthCallbackResult) => void
         ) => {
           try {
             const email =
@@ -50,8 +55,8 @@ export function configurePassport(
               refreshToken,
             };
 
-            const user = await onOAuth(oauthProfile);
-            done(null, user);
+            const result = await onOAuth(oauthProfile);
+            done(null, result);
           } catch (error) {
             done(error as Error);
           }
@@ -74,7 +79,7 @@ export function configurePassport(
           accessToken: string,
           refreshToken: string,
           profile: GoogleProfile,
-          done: (error: Error | null, user?: { userId: string; email: string }) => void
+          done: (error: Error | null, user?: OAuthCallbackResult) => void
         ) => {
           try {
             const email = profile.emails?.[0]?.value;
@@ -92,8 +97,8 @@ export function configurePassport(
               refreshToken,
             };
 
-            const user = await onOAuth(oauthProfile);
-            done(null, user);
+            const result = await onOAuth(oauthProfile);
+            done(null, result);
           } catch (error) {
             done(error as Error);
           }
@@ -102,112 +107,6 @@ export function configurePassport(
     );
   }
 
-  // 連携追加用ストラテジー（onOAuthLinkが提供されている場合のみ）
-  if (onOAuthLink) {
-    // GitHub Link Strategy
-    if (config.oauth.github) {
-      const linkCallbackUrl = config.oauth.github.callbackUrl.replace('/callback', '/link/callback');
-      passport.use(
-        'github-link',
-        new GitHubStrategy(
-          {
-            clientID: config.oauth.github.clientId,
-            clientSecret: config.oauth.github.clientSecret,
-            callbackURL: linkCallbackUrl,
-            scope: ['user:email'],
-            passReqToCallback: true,
-          },
-          async (
-            req: Request,
-            accessToken: string,
-            refreshToken: string,
-            profile: GitHubProfile,
-            done: (error: Error | null, user?: { success: boolean; error?: string }) => void
-          ) => {
-            try {
-              const userId = req.user?.id;
-              if (!userId) {
-                done(null, { success: false, error: 'ログインが必要です' });
-                return;
-              }
-
-              const email =
-                profile.emails?.[0]?.value ||
-                `${profile.id}@users.noreply.github.com`;
-
-              const oauthProfile: OAuthProfile = {
-                provider: 'github',
-                providerAccountId: profile.id,
-                email,
-                name: profile.displayName || profile.username || 'GitHub User',
-                avatarUrl: profile.photos?.[0]?.value,
-                accessToken,
-                refreshToken,
-              };
-
-              const result = await onOAuthLink(userId, oauthProfile);
-              done(null, result);
-            } catch (error) {
-              done(error as Error);
-            }
-          }
-        )
-      );
-    }
-
-    // Google Link Strategy
-    if (config.oauth.google) {
-      const linkCallbackUrl = config.oauth.google.callbackUrl.replace('/callback', '/link/callback');
-      passport.use(
-        'google-link',
-        new GoogleStrategy(
-          {
-            clientID: config.oauth.google.clientId,
-            clientSecret: config.oauth.google.clientSecret,
-            callbackURL: linkCallbackUrl,
-            scope: ['profile', 'email'],
-            passReqToCallback: true,
-          },
-          async (
-            req: Request,
-            accessToken: string,
-            refreshToken: string,
-            profile: GoogleProfile,
-            done: (error: Error | null, user?: { success: boolean; error?: string }) => void
-          ) => {
-            try {
-              const userId = req.user?.id;
-              if (!userId) {
-                done(null, { success: false, error: 'ログインが必要です' });
-                return;
-              }
-
-              const email = profile.emails?.[0]?.value;
-              if (!email) {
-                done(null, { success: false, error: 'メールアドレスが取得できませんでした' });
-                return;
-              }
-
-              const oauthProfile: OAuthProfile = {
-                provider: 'google',
-                providerAccountId: profile.id,
-                email,
-                name: profile.displayName || 'Google User',
-                avatarUrl: profile.photos?.[0]?.value,
-                accessToken,
-                refreshToken,
-              };
-
-              const result = await onOAuthLink(userId, oauthProfile);
-              done(null, result);
-            } catch (error) {
-              done(error as Error);
-            }
-          }
-        )
-      );
-    }
-  }
 }
 
 export { passport };
