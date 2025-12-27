@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import {
@@ -7,15 +8,20 @@ import {
   CheckCircle2,
   XCircle,
   ArrowRight,
+  Plus,
+  Clock,
+  TrendingUp,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { usersApi } from '../lib/api';
+import { usePageSidebar } from '../components/Layout';
 
 /**
  * ダッシュボードページ
  */
 export function DashboardPage() {
   const { user } = useAuthStore();
+  const { setSidebarContent } = usePageSidebar();
 
   // プロジェクト一覧を取得
   const { data: projectsData, isLoading } = useQuery({
@@ -25,6 +31,12 @@ export function DashboardPage() {
   });
 
   const projects = projectsData?.projects || [];
+
+  // サイドバーコンテンツを設定
+  useEffect(() => {
+    setSidebarContent(<DashboardSidebar projects={projects} />);
+    return () => setSidebarContent(null);
+  }, [setSidebarContent, projects]);
 
   return (
     <div className="space-y-6">
@@ -39,7 +51,7 @@ export function DashboardPage() {
       </div>
 
       {/* 統計カード */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard
           icon={FolderKanban}
           label="プロジェクト"
@@ -129,6 +141,74 @@ export function DashboardPage() {
           <p className="text-foreground-muted">
             最近の実行はありません
           </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * ダッシュボード用サイドバー
+ */
+function DashboardSidebar({ projects }: { projects: { id: string; name: string }[] }) {
+  return (
+    <div className="h-full flex flex-col">
+      {/* クイックアクション */}
+      <div className="p-4 border-b border-border">
+        <h3 className="text-xs font-medium text-foreground-muted uppercase tracking-wider mb-3">
+          クイックアクション
+        </h3>
+        <div className="space-y-1">
+          <Link
+            to="/projects"
+            className="flex items-center gap-2 px-3 py-2 text-sm text-foreground-secondary hover:text-foreground hover:bg-background-tertiary rounded-md transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            新規プロジェクト
+          </Link>
+          <Link
+            to="/executions"
+            className="flex items-center gap-2 px-3 py-2 text-sm text-foreground-secondary hover:text-foreground hover:bg-background-tertiary rounded-md transition-colors"
+          >
+            <Play className="w-4 h-4" />
+            テスト実行
+          </Link>
+        </div>
+      </div>
+
+      {/* 最近のプロジェクト */}
+      <div className="flex-1 p-4 overflow-y-auto">
+        <h3 className="text-xs font-medium text-foreground-muted uppercase tracking-wider mb-3">
+          最近のプロジェクト
+        </h3>
+        <div className="space-y-1">
+          {projects.slice(0, 8).map((project) => (
+            <Link
+              key={project.id}
+              to={`/projects/${project.id}`}
+              className="flex items-center gap-2 px-3 py-2 text-sm text-foreground-secondary hover:text-foreground hover:bg-background-tertiary rounded-md transition-colors"
+            >
+              <FolderKanban className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">{project.name}</span>
+            </Link>
+          ))}
+          {projects.length === 0 && (
+            <p className="px-3 py-2 text-sm text-foreground-muted">
+              プロジェクトがありません
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* サマリー */}
+      <div className="p-4 border-t border-border bg-background-tertiary/50">
+        <div className="flex items-center gap-2 text-xs text-foreground-muted">
+          <TrendingUp className="w-3.5 h-3.5" />
+          <span>今週のテスト: 0回</span>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-foreground-muted mt-1">
+          <Clock className="w-3.5 h-3.5" />
+          <span>最終実行: -</span>
         </div>
       </div>
     </div>
