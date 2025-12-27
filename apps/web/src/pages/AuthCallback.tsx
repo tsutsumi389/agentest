@@ -10,10 +10,15 @@ export function AuthCallbackPage() {
   const { initialize } = useAuthStore();
 
   useEffect(() => {
-    // 認証状態を初期化してダッシュボードにリダイレクト
+    // 認証状態を初期化してリダイレクト
     const handleCallback = async () => {
       await initialize();
-      navigate('/dashboard', { replace: true });
+
+      // sessionStorageからリダイレクト先を取得（招待ページ等からの遷移用）
+      const redirectTo = sessionStorage.getItem('auth_redirect');
+      sessionStorage.removeItem('auth_redirect');
+
+      navigate(redirectTo || '/dashboard', { replace: true });
     };
 
     handleCallback();
