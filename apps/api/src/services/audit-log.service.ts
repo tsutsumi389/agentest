@@ -1,12 +1,15 @@
 import type { AuditLog } from '@agentest/db';
 import {
   AuditLogRepository,
+  AUDIT_LOG_DEFAULT_LIMIT,
+  AUDIT_LOG_MAX_LIMIT,
   type AuditLogQueryOptions,
   type AuditLogCreateParams,
 } from '../repositories/audit-log.repository.js';
 
-// 型をre-export（外部から利用しやすくする）
+// 型と定数をre-export（外部から利用しやすくする）
 export type { AuditLogQueryOptions, AuditLogCreateParams };
+export { AUDIT_LOG_DEFAULT_LIMIT, AUDIT_LOG_MAX_LIMIT };
 
 /**
  * 監査ログサービス

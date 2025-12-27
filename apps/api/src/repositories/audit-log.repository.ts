@@ -1,7 +1,10 @@
 import { prisma, type AuditLogCategory, type Prisma } from '@agentest/db';
 
-/** 監査ログ取得の上限 */
-const MAX_LIMIT = 100;
+/** 監査ログ取得のデフォルト件数 */
+export const AUDIT_LOG_DEFAULT_LIMIT = 50;
+
+/** 監査ログ取得の上限件数 */
+export const AUDIT_LOG_MAX_LIMIT = 100;
 
 /**
  * 監査ログのクエリオプション
@@ -59,8 +62,8 @@ export class AuditLogRepository {
     organizationId: string,
     options: AuditLogQueryOptions = {}
   ) {
-    const { page = 1, limit: requestedLimit = 50, category, startDate, endDate } = options;
-    const limit = Math.min(requestedLimit, MAX_LIMIT);
+    const { page = 1, limit: requestedLimit = AUDIT_LOG_DEFAULT_LIMIT, category, startDate, endDate } = options;
+    const limit = Math.min(requestedLimit, AUDIT_LOG_MAX_LIMIT);
     const skip = (page - 1) * limit;
 
     const where: Prisma.AuditLogWhereInput = {
@@ -106,8 +109,8 @@ export class AuditLogRepository {
     userId: string,
     options: AuditLogQueryOptions = {}
   ) {
-    const { page = 1, limit: requestedLimit = 50, category, startDate, endDate } = options;
-    const limit = Math.min(requestedLimit, MAX_LIMIT);
+    const { page = 1, limit: requestedLimit = AUDIT_LOG_DEFAULT_LIMIT, category, startDate, endDate } = options;
+    const limit = Math.min(requestedLimit, AUDIT_LOG_MAX_LIMIT);
     const skip = (page - 1) * limit;
 
     const where: Prisma.AuditLogWhereInput = {

@@ -1,8 +1,8 @@
 import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import type { AuditLogCategory } from '@agentest/db';
+import { AuditLogCategory } from '@agentest/db';
 import { OrganizationService } from '../services/organization.service.js';
-import { auditLogService } from '../services/audit-log.service.js';
+import { auditLogService, AUDIT_LOG_DEFAULT_LIMIT, AUDIT_LOG_MAX_LIMIT } from '../services/audit-log.service.js';
 
 const createOrgSchema = z.object({
   name: z.string().min(1).max(100),
@@ -29,13 +29,28 @@ const transferOwnershipSchema = z.object({
   newOwnerId: z.string().uuid(),
 });
 
+// AuditLogCategoryの値を配列として取得
+const auditLogCategories = Object.values(AuditLogCategory) as [string, ...string[]];
+
 const auditLogQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(100).optional().default(50),
-  category: z.enum(['AUTH', 'USER', 'ORGANIZATION', 'MEMBER', 'PROJECT', 'API_TOKEN', 'BILLING']).optional(),
+  limit: z.coerce.number().int().min(1).max(AUDIT_LOG_MAX_LIMIT).optional().default(AUDIT_LOG_DEFAULT_LIMIT),
+  category: z.enum(auditLogCategories).optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
-});
+}).refine(
+  (data) => {
+    // startDateとendDateの両方が指定されている場合のみチェック
+    if (data.startDate && data.endDate) {
+      return data.startDate <= data.endDate;
+    }
+    return true;
+  },
+  {
+    message: 'startDateはendDate以前の日付を指定してください',
+    path: ['startDate'],
+  }
+);
 
 /**
  * 組織コントローラー
