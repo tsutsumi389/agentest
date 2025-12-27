@@ -104,10 +104,16 @@ function RoleDropdown({
   const isOwner = member.role === 'OWNER';
   // 自分自身は変更できない
   const isSelf = member.userId === currentUserId;
-  // ADMINはオーナーの操作はできない（自分の変更もできない）
-  const canManage = currentRole === 'OWNER' || (currentRole === 'ADMIN' && !isOwner && !isSelf);
-  // 操作不可理由
-  const disabledReason = getDisabledReason(member, currentRole, isSelf);
+
+  // 自分自身の場合は3点リーダー自体を非表示
+  if (isSelf) {
+    return null;
+  }
+
+  // ADMINはオーナーの操作はできない
+  const canManage = currentRole === 'OWNER' || (currentRole === 'ADMIN' && !isOwner);
+  // 操作不可理由（自分自身の判定は上で済んでいるので isSelf は常にfalse）
+  const disabledReason = getDisabledReason(member, currentRole, false);
 
   // ドロップダウン外クリックで閉じる
   useEffect(() => {
@@ -211,21 +217,26 @@ function RoleDropdown({
             </button>
           )}
 
-          {/* 区切り線 */}
-          <div className="border-t border-border my-1" />
+          {/* オーナー以外の場合のみ削除ボタンを表示 */}
+          {!isOwner && (
+            <>
+              {/* 区切り線 */}
+              <div className="border-t border-border my-1" />
 
-          {/* メンバー削除 */}
-          <button
-            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-danger hover:bg-danger-subtle transition-colors"
-            onClick={() => {
-              onRemove(member.userId);
-              setIsOpen(false);
-            }}
-            role="menuitem"
-          >
-            <UserMinus className="w-4 h-4" />
-            メンバーを削除
-          </button>
+              {/* メンバー削除 */}
+              <button
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-danger hover:bg-danger-subtle transition-colors"
+                onClick={() => {
+                  onRemove(member.userId);
+                  setIsOpen(false);
+                }}
+                role="menuitem"
+              >
+                <UserMinus className="w-4 h-4" />
+                メンバーを削除
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>
