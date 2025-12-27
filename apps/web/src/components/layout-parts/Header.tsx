@@ -2,8 +2,6 @@ import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
 import {
   Menu,
-  Search,
-  User,
   Settings,
   LogOut,
   ChevronDown,
@@ -18,7 +16,6 @@ interface HeaderProps {
 /**
  * ヘッダーコンポーネント
  * - 左: ハンバーガーメニュー + ロゴ
- * - 中央: 検索トリガー
  * - 右: ユーザードロップダウン
  */
 export function Header({ onMenuClick }: HeaderProps) {
@@ -41,26 +38,6 @@ export function Header({ onMenuClick }: HeaderProps) {
             </span>
           </Link>
         </div>
-
-        {/* 中央: 検索トリガー */}
-        <button
-          className="hidden md:flex items-center gap-2 px-3 py-1.5 text-sm text-foreground-muted bg-background-tertiary border border-border rounded-lg hover:border-border-emphasis transition-colors"
-          onClick={() => {
-            // コマンドパレットを開く (⌘+K)
-            const event = new KeyboardEvent('keydown', {
-              key: 'k',
-              metaKey: true,
-              bubbles: true,
-            });
-            document.dispatchEvent(event);
-          }}
-        >
-          <Search className="w-4 h-4" />
-          <span>検索...</span>
-          <kbd className="ml-4 px-1.5 py-0.5 text-xs bg-background-secondary border border-border rounded">
-            ⌘K
-          </kbd>
-        </button>
 
         {/* 右: ユーザードロップダウン */}
         <UserDropdown />
@@ -161,14 +138,6 @@ function UserDropdown() {
             >
               <Settings className="w-4 h-4" />
               設定
-            </Link>
-            <Link
-              to="/settings/profile"
-              onClick={() => setIsOpen(false)}
-              className="flex items-center gap-3 px-4 py-2 text-sm text-foreground-secondary hover:bg-background-tertiary transition-colors"
-            >
-              <User className="w-4 h-4" />
-              プロフィール
             </Link>
           </div>
 
