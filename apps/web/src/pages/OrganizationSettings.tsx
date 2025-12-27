@@ -12,10 +12,13 @@ import {
 } from 'lucide-react';
 import { organizationsApi, ApiError, type Organization } from '../lib/api';
 import { useOrganization } from '../contexts/OrganizationContext';
+import { useAuth } from '../hooks/useAuth';
 import { toast } from '../stores/toast';
 import { MemberList } from '../components/organization/MemberList';
 import { InvitationList } from '../components/organization/InvitationList';
 import { AuditLogList } from '../components/organization/AuditLogList';
+import { TransferOwnershipModal } from '../components/organization/TransferOwnershipModal';
+import { DeleteOrganizationModal } from '../components/organization/DeleteOrganizationModal';
 
 type SettingsTab = 'general' | 'members' | 'invitations' | 'audit-logs' | 'danger';
 
@@ -213,6 +216,14 @@ export function OrganizationSettingsPage() {
             <DangerSettings
               organization={organization}
               currentRole={currentRole}
+              onDeleted={() => {
+                refreshOrganizations();
+                navigate('/organizations');
+              }}
+              onTransferred={() => {
+                refreshOrganizations();
+                fetchOrganization();
+              }}
             />
           )}
         </div>
@@ -471,14 +482,23 @@ function AuditLogsSettings({ organizationId }: { organizationId: string }) {
 }
 
 /**
- * 危険な操作タブ（プレースホルダー）
+ * 危険な操作タブ
  */
 function DangerSettings({
+  organization,
   currentRole,
+  onDeleted,
+  onTransferred,
 }: {
   organization: Organization;
   currentRole?: 'OWNER' | 'ADMIN' | 'MEMBER';
+  onDeleted: () => void;
+  onTransferred: () => void;
 }) {
+  const { user } = useAuth();
+  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
   return (
     <div className="space-y-6">
       {/* オーナー移譲 */}
@@ -491,6 +511,7 @@ function DangerSettings({
         <button
           className="btn btn-secondary"
           disabled={currentRole !== 'OWNER'}
+          onClick={() => setIsTransferModalOpen(true)}
         >
           オーナー権限を移譲
         </button>
@@ -511,6 +532,7 @@ function DangerSettings({
         <button
           className="btn btn-danger"
           disabled={currentRole !== 'OWNER'}
+          onClick={() => setIsDeleteModalOpen(true)}
         >
           組織を削除
         </button>
@@ -520,6 +542,25 @@ function DangerSettings({
           </p>
         )}
       </div>
+
+      {/* オーナー移譲モーダル */}
+      {user && (
+        <TransferOwnershipModal
+          isOpen={isTransferModalOpen}
+          organization={organization}
+          currentUserId={user.id}
+          onClose={() => setIsTransferModalOpen(false)}
+          onSuccess={onTransferred}
+        />
+      )}
+
+      {/* 組織削除モーダル */}
+      <DeleteOrganizationModal
+        isOpen={isDeleteModalOpen}
+        organization={organization}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onSuccess={onDeleted}
+      />
     </div>
   );
 }
