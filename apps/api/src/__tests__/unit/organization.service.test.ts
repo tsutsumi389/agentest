@@ -66,6 +66,121 @@ describe('OrganizationService', () => {
     service = new OrganizationService();
   });
 
+  describe('getInvitationByToken', () => {
+    const mockInvitation = {
+      id: 'inv-1',
+      organizationId: 'org-1',
+      email: 'user@example.com',
+      role: 'MEMBER',
+      token: 'token-1',
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      createdAt: new Date(),
+      acceptedAt: null,
+      declinedAt: null,
+      organization: {
+        id: 'org-1',
+        name: 'Test Org',
+        slug: 'test-org',
+        avatarUrl: null,
+      },
+      invitedBy: {
+        id: 'inviter-1',
+        email: 'admin@example.com',
+        name: 'Admin',
+        avatarUrl: null,
+      },
+    };
+
+    it('トークンで招待詳細を取得できる', async () => {
+      mockPrisma.organizationInvitation.findUnique.mockResolvedValue(mockInvitation);
+
+      const result = await service.getInvitationByToken('token-1');
+
+      expect(mockPrisma.organizationInvitation.findUnique).toHaveBeenCalledWith({
+        where: { token: 'token-1' },
+        include: {
+          organization: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+              avatarUrl: true,
+            },
+          },
+          invitedBy: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              avatarUrl: true,
+            },
+          },
+        },
+      });
+      expect(result.id).toBe('inv-1');
+      expect(result.email).toBe('user@example.com');
+      expect(result.status).toBe('pending');
+      expect(result.organization.name).toBe('Test Org');
+      expect(result.invitedBy.name).toBe('Admin');
+    });
+
+    it('招待が存在しない場合はNotFoundErrorを投げる', async () => {
+      mockPrisma.organizationInvitation.findUnique.mockResolvedValue(null);
+
+      await expect(service.getInvitationByToken('invalid-token'))
+        .rejects.toThrow(NotFoundError);
+    });
+
+    it('承諾済みの招待はstatus=acceptedを返す', async () => {
+      const acceptedInvitation = {
+        ...mockInvitation,
+        acceptedAt: new Date(),
+      };
+      mockPrisma.organizationInvitation.findUnique.mockResolvedValue(acceptedInvitation);
+
+      const result = await service.getInvitationByToken('token-1');
+
+      expect(result.status).toBe('accepted');
+    });
+
+    it('辞退済みの招待はstatus=declinedを返す', async () => {
+      const declinedInvitation = {
+        ...mockInvitation,
+        declinedAt: new Date(),
+      };
+      mockPrisma.organizationInvitation.findUnique.mockResolvedValue(declinedInvitation);
+
+      const result = await service.getInvitationByToken('token-1');
+
+      expect(result.status).toBe('declined');
+    });
+
+    it('期限切れの招待はstatus=expiredを返す', async () => {
+      const expiredInvitation = {
+        ...mockInvitation,
+        expiresAt: new Date(Date.now() - 1000),
+      };
+      mockPrisma.organizationInvitation.findUnique.mockResolvedValue(expiredInvitation);
+
+      const result = await service.getInvitationByToken('token-1');
+
+      expect(result.status).toBe('expired');
+    });
+
+    it('承諾済みかつ期限切れの場合はacceptedを優先する', async () => {
+      const acceptedExpiredInvitation = {
+        ...mockInvitation,
+        acceptedAt: new Date(),
+        expiresAt: new Date(Date.now() - 1000),
+      };
+      mockPrisma.organizationInvitation.findUnique.mockResolvedValue(acceptedExpiredInvitation);
+
+      const result = await service.getInvitationByToken('token-1');
+
+      expect(result.status).toBe('accepted');
+    });
+  });
+
   describe('getPendingInvitations', () => {
     const mockInvitations = [
       {
