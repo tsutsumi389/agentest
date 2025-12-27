@@ -1,9 +1,7 @@
 import { Link } from 'react-router';
 import { Building2, Users, Settings, Crown, Shield, User, RotateCcw } from 'lucide-react';
+import { DELETION_GRACE_PERIOD_DAYS } from '@agentest/shared';
 import type { Organization } from '../../lib/api';
-
-// 削除猶予期間（日数）
-const DELETION_GRACE_PERIOD_DAYS = 30;
 
 /**
  * 削除済み組織の残り日数を計算
@@ -87,7 +85,7 @@ export function OrganizationCard({ organization, role, onSelect, onRestore, isRe
           </div>
           {isDeleted && remainingDays !== null && (
             <div className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-danger/10 text-danger">
-              <span>削除予定 あと{remainingDays}日</span>
+              <span>削除予定 {remainingDays === 0 ? '本日中' : `あと${remainingDays}日`}</span>
             </div>
           )}
         </div>
@@ -115,6 +113,7 @@ export function OrganizationCard({ organization, role, onSelect, onRestore, isRe
                 onClick={onRestore}
                 disabled={isRestoring}
                 className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-success hover:bg-success/10 rounded transition-colors disabled:opacity-50"
+                aria-label={`${organization.name}を復元`}
               >
                 <RotateCcw className={`w-4 h-4 ${isRestoring ? 'animate-spin' : ''}`} aria-hidden="true" />
                 {isRestoring ? '復元中...' : '復元'}

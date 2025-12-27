@@ -1,5 +1,5 @@
 import { prisma } from '@agentest/db';
-import { NotFoundError, ConflictError, AuthorizationError } from '@agentest/shared';
+import { NotFoundError, ConflictError, AuthorizationError, DELETION_GRACE_PERIOD_DAYS } from '@agentest/shared';
 import { OrganizationRepository } from '../repositories/organization.repository.js';
 import { auditLogService } from './audit-log.service.js';
 
@@ -557,9 +557,6 @@ export class OrganizationService {
     return result;
   }
 
-  // 削除猶予期間（日数）
-  private static readonly DELETION_GRACE_PERIOD_DAYS = 30;
-
   /**
    * 組織を復元
    */
@@ -574,7 +571,7 @@ export class OrganizationService {
     const deletedAt = new Date(org.deletedAt!);
     const permanentDeletionDate = new Date(deletedAt);
     permanentDeletionDate.setDate(
-      permanentDeletionDate.getDate() + OrganizationService.DELETION_GRACE_PERIOD_DAYS
+      permanentDeletionDate.getDate() + DELETION_GRACE_PERIOD_DAYS
     );
 
     if (new Date() > permanentDeletionDate) {
