@@ -557,6 +557,9 @@ export class OrganizationService {
     return result;
   }
 
+  // 削除猶予期間（日数）
+  private static readonly DELETION_GRACE_PERIOD_DAYS = 30;
+
   /**
    * 組織を復元
    */
@@ -565,6 +568,17 @@ export class OrganizationService {
     const org = await this.orgRepo.findDeletedById(organizationId);
     if (!org) {
       throw new NotFoundError('Organization', organizationId);
+    }
+
+    // 猶予期間チェック
+    const deletedAt = new Date(org.deletedAt!);
+    const permanentDeletionDate = new Date(deletedAt);
+    permanentDeletionDate.setDate(
+      permanentDeletionDate.getDate() + OrganizationService.DELETION_GRACE_PERIOD_DAYS
+    );
+
+    if (new Date() > permanentDeletionDate) {
+      throw new ConflictError('復元期間（30日間）を過ぎています。この組織は復元できません');
     }
 
     // 復元実行

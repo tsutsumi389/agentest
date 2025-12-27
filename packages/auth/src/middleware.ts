@@ -84,11 +84,21 @@ export function optionalAuth(config?: AuthConfig) {
   return authenticate({ config, optional: true });
 }
 
+export interface RequireOrgRoleOptions {
+  /**
+   * 削除済み組織への操作を許可するか（デフォルト: false）
+   * trueの場合、deletedAtがnullでない組織でも権限チェックを通過する
+   */
+  allowDeletedOrg?: boolean;
+}
+
 /**
  * 認可ミドルウェアファクトリ
  * ユーザーが組織内で必要なロールを持っているかチェック
  */
-export function requireOrgRole(roles: string[]) {
+export function requireOrgRole(roles: string[], options: RequireOrgRoleOptions = {}) {
+  const { allowDeletedOrg = false } = options;
+
   return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!req.user) {
@@ -101,6 +111,8 @@ export function requireOrgRole(roles: string[]) {
       }
 
       const user = req.user as { id: string };
+
+      // メンバーシップと組織情報を同時に取得
       const member = await prisma.organizationMember.findUnique({
         where: {
           organizationId_userId: {
@@ -108,10 +120,20 @@ export function requireOrgRole(roles: string[]) {
             userId: user.id,
           },
         },
+        include: {
+          organization: {
+            select: { deletedAt: true },
+          },
+        },
       });
 
       if (!member || !roles.includes(member.role)) {
         throw new AuthorizationError('Insufficient permissions');
+      }
+
+      // 削除済み組織のチェック
+      if (member.organization.deletedAt && !allowDeletedOrg) {
+        throw new AuthorizationError('Organization has been deleted');
       }
 
       next();
