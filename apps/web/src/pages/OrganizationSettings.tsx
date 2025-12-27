@@ -13,6 +13,7 @@ import {
 import { organizationsApi, ApiError, type Organization } from '../lib/api';
 import { useOrganization } from '../contexts/OrganizationContext';
 import { toast } from '../stores/toast';
+import { MemberList } from '../components/organization/MemberList';
 
 type SettingsTab = 'general' | 'members' | 'invitations' | 'audit-logs' | 'danger';
 
@@ -431,19 +432,17 @@ function GeneralSettings({
 }
 
 /**
- * メンバー設定タブ（プレースホルダー）
+ * メンバー設定タブ
  */
-function MembersSettings(_props: {
+function MembersSettings({
+  organizationId,
+  currentRole,
+}: {
   organizationId: string;
   currentRole?: 'OWNER' | 'ADMIN' | 'MEMBER';
 }) {
   return (
-    <div className="card p-6">
-      <h2 className="text-lg font-semibold text-foreground mb-4">メンバー管理</h2>
-      <p className="text-foreground-muted">
-        メンバー管理機能は次のステップで実装されます。
-      </p>
-    </div>
+    <MemberList organizationId={organizationId} currentRole={currentRole} />
   );
 }
 
