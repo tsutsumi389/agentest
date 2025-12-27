@@ -12,6 +12,33 @@ const orgController = new OrganizationController();
  */
 router.post('/', requireAuth(authConfig), orgController.create);
 
+// ====================================================================
+// 招待関連ルート（認証不要/トークンベース）
+// 注意: これらのルートは /:organizationId より前に定義する必要がある
+// ====================================================================
+
+/**
+ * 招待詳細取得（認証不要）
+ * GET /api/organizations/invitations/:token
+ */
+router.get('/invitations/:token', orgController.getInvitationByToken);
+
+/**
+ * 招待を承認
+ * POST /api/organizations/invitations/:token/accept
+ */
+router.post('/invitations/:token/accept', requireAuth(authConfig), orgController.acceptInvitation);
+
+/**
+ * 招待を辞退
+ * POST /api/organizations/invitations/:token/decline
+ */
+router.post('/invitations/:token/decline', requireAuth(authConfig), orgController.declineInvitation);
+
+// ====================================================================
+// 組織操作ルート（:organizationId パラメータを含む）
+// ====================================================================
+
 /**
  * 組織詳細取得
  * GET /api/organizations/:organizationId
@@ -53,18 +80,6 @@ router.get('/:organizationId/invitations', requireAuth(authConfig), requireOrgRo
  * DELETE /api/organizations/:organizationId/invitations/:invitationId
  */
 router.delete('/:organizationId/invitations/:invitationId', requireAuth(authConfig), requireOrgRole(['OWNER', 'ADMIN']), orgController.cancelInvitation);
-
-/**
- * 招待を承認
- * POST /api/organizations/invitations/:token/accept
- */
-router.post('/invitations/:token/accept', requireAuth(authConfig), orgController.acceptInvitation);
-
-/**
- * 招待を辞退
- * POST /api/organizations/invitations/:token/decline
- */
-router.post('/invitations/:token/decline', requireAuth(authConfig), orgController.declineInvitation);
 
 /**
  * メンバーのロール更新

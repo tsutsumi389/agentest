@@ -206,6 +206,58 @@ export class OrganizationService {
   }
 
   /**
+   * トークンで招待詳細を取得（認証不要）
+   */
+  async getInvitationByToken(token: string) {
+    const invitation = await prisma.organizationInvitation.findUnique({
+      where: { token },
+      include: {
+        organization: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            avatarUrl: true,
+          },
+        },
+        invitedBy: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    });
+
+    if (!invitation) {
+      throw new NotFoundError('Invitation');
+    }
+
+    // 招待の状態を判定
+    let status: 'pending' | 'accepted' | 'declined' | 'expired' = 'pending';
+    if (invitation.acceptedAt) {
+      status = 'accepted';
+    } else if (invitation.declinedAt) {
+      status = 'declined';
+    } else if (invitation.expiresAt < new Date()) {
+      status = 'expired';
+    }
+
+    return {
+      id: invitation.id,
+      email: invitation.email,
+      role: invitation.role,
+      expiresAt: invitation.expiresAt.toISOString(),
+      createdAt: invitation.createdAt.toISOString(),
+      status,
+      organization: invitation.organization,
+      invitedBy: invitation.invitedBy,
+    };
+  }
+
+  /**
    * 招待を承認
    */
   async acceptInvitation(token: string, userId: string) {

@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router';
+import { Navigate, useSearchParams } from 'react-router';
 import { Github, Chrome, FlaskConical } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 
@@ -7,10 +7,19 @@ import { useAuthStore } from '../stores/auth';
  */
 export function LoginPage() {
   const { isAuthenticated, isLoading } = useAuthStore();
+  const [searchParams] = useSearchParams();
 
-  // 既にログイン済みの場合はダッシュボードにリダイレクト
+  // リダイレクト先を取得（認証後に戻る先）
+  const redirectTo = searchParams.get('redirect');
+
+  // 既にログイン済みの場合はリダイレクト先またはダッシュボードにリダイレクト
   if (isAuthenticated && !isLoading) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={redirectTo || '/dashboard'} replace />;
+  }
+
+  // リダイレクト先をsessionStorageに保存（OAuth認証後に使用）
+  if (redirectTo) {
+    sessionStorage.setItem('auth_redirect', redirectTo);
   }
 
   const apiUrl = import.meta.env.VITE_API_URL || '';
