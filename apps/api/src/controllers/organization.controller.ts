@@ -171,4 +171,46 @@ export class OrganizationController {
       next(error);
     }
   };
+
+  /**
+   * 保留中の招待一覧取得
+   */
+  getInvitations = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { organizationId } = req.params;
+      const invitations = await this.orgService.getPendingInvitations(organizationId);
+
+      res.json({ invitations });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 招待取消
+   */
+  cancelInvitation = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { organizationId, invitationId } = req.params;
+      await this.orgService.cancelInvitation(organizationId, invitationId);
+
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 招待辞退
+   */
+  declineInvitation = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { token } = req.params;
+      const invitation = await this.orgService.declineInvitation(token, req.user!.id);
+
+      res.json({ invitation });
+    } catch (error) {
+      next(error);
+    }
+  };
 }
