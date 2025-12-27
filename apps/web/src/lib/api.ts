@@ -178,7 +178,7 @@ export const usersApi = {
     api.get<{ organizations: Array<{ organization: Organization; role: string }> }>(`/api/users/${userId}/organizations`),
   getProjects: (userId: string) => api.get<{ projects: Project[] }>(`/api/users/${userId}/projects`),
   update: (userId: string, data: UpdateUserRequest) =>
-    api.patch<{ data: User }>(`/api/users/${userId}`, data),
+    api.patch<{ user: User }>(`/api/users/${userId}`, data),
 };
 
 // ============================================

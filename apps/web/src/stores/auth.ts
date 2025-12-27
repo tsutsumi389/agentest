@@ -90,7 +90,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     const response = await usersApi.update(currentUser.id, data);
-    set({ user: response.data });
+    set({ user: response.user });
   },
 
   /**
