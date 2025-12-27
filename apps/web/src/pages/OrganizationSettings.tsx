@@ -14,6 +14,7 @@ import { organizationsApi, ApiError, type Organization } from '../lib/api';
 import { useOrganization } from '../contexts/OrganizationContext';
 import { toast } from '../stores/toast';
 import { MemberList } from '../components/organization/MemberList';
+import { InvitationList } from '../components/organization/InvitationList';
 
 type SettingsTab = 'general' | 'members' | 'invitations' | 'audit-logs' | 'danger';
 
@@ -447,19 +448,17 @@ function MembersSettings({
 }
 
 /**
- * 招待設定タブ（プレースホルダー）
+ * 招待設定タブ
  */
-function InvitationsSettings(_props: {
+function InvitationsSettings({
+  organizationId,
+  currentRole,
+}: {
   organizationId: string;
   currentRole?: 'OWNER' | 'ADMIN' | 'MEMBER';
 }) {
   return (
-    <div className="card p-6">
-      <h2 className="text-lg font-semibold text-foreground mb-4">招待管理</h2>
-      <p className="text-foreground-muted">
-        招待管理機能は次のステップで実装されます。
-      </p>
-    </div>
+    <InvitationList organizationId={organizationId} currentRole={currentRole} />
   );
 }
 
