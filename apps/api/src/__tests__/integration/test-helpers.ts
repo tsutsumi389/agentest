@@ -152,10 +152,47 @@ export async function createTestInvitation(
 }
 
 /**
+ * テスト用監査ログを作成
+ */
+export async function createTestAuditLog(
+  overrides: Partial<{
+    id: string;
+    organizationId: string | null;
+    userId: string | null;
+    category: 'AUTH' | 'USER' | 'ORGANIZATION' | 'MEMBER' | 'PROJECT' | 'API_TOKEN' | 'BILLING';
+    action: string;
+    targetType: string | null;
+    targetId: string | null;
+    details: Record<string, unknown> | null;
+    ipAddress: string | null;
+    userAgent: string | null;
+    createdAt: Date;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.auditLog.create({
+    data: {
+      id,
+      organizationId: overrides.organizationId ?? null,
+      userId: overrides.userId ?? null,
+      category: overrides.category ?? 'ORGANIZATION',
+      action: overrides.action ?? 'test.action',
+      targetType: overrides.targetType ?? null,
+      targetId: overrides.targetId ?? null,
+      details: overrides.details ?? null,
+      ipAddress: overrides.ipAddress ?? null,
+      userAgent: overrides.userAgent ?? null,
+      createdAt: overrides.createdAt ?? new Date(),
+    },
+  });
+}
+
+/**
  * テストデータをクリーンアップ
  */
 export async function cleanupTestData() {
   // 外部キー制約を考慮した順序で削除
+  await prisma.auditLog.deleteMany({});
   await prisma.organizationInvitation.deleteMany({});
   await prisma.organizationMember.deleteMany({});
   await prisma.organization.deleteMany({});

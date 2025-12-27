@@ -1,6 +1,8 @@
 import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
+import { AuditLogCategory } from '@agentest/db';
 import { OrganizationService } from '../services/organization.service.js';
+import { auditLogService, AUDIT_LOG_DEFAULT_LIMIT, AUDIT_LOG_MAX_LIMIT } from '../services/audit-log.service.js';
 
 const createOrgSchema = z.object({
   name: z.string().min(1).max(100),
@@ -26,6 +28,29 @@ const updateMemberRoleSchema = z.object({
 const transferOwnershipSchema = z.object({
   newOwnerId: z.string().uuid(),
 });
+
+// AuditLogCategoryの値を配列として取得
+const auditLogCategories = Object.values(AuditLogCategory) as [string, ...string[]];
+
+const auditLogQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(AUDIT_LOG_MAX_LIMIT).optional().default(AUDIT_LOG_DEFAULT_LIMIT),
+  category: z.enum(auditLogCategories).optional(),
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
+}).refine(
+  (data) => {
+    // startDateとendDateの両方が指定されている場合のみチェック
+    if (data.startDate && data.endDate) {
+      return data.startDate <= data.endDate;
+    }
+    return true;
+  },
+  {
+    message: 'startDateはendDate以前の日付を指定してください',
+    path: ['startDate'],
+  }
+);
 
 /**
  * 組織コントローラー
@@ -232,6 +257,34 @@ export class OrganizationController {
       );
 
       res.json({ member });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 監査ログ取得
+   */
+  getAuditLogs = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { organizationId } = req.params;
+      const query = auditLogQuerySchema.parse(req.query);
+
+      const result = await auditLogService.getByOrganization(organizationId, {
+        page: query.page,
+        limit: query.limit,
+        category: query.category as AuditLogCategory | undefined,
+        startDate: query.startDate,
+        endDate: query.endDate,
+      });
+
+      res.json({
+        logs: result.logs,
+        total: result.total,
+        page: query.page,
+        limit: query.limit,
+        totalPages: Math.ceil(result.total / query.limit),
+      });
     } catch (error) {
       next(error);
     }
