@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Mail, Loader2, Copy, Check, Link } from 'lucide-react';
 import { organizationsApi, ApiError, type OrganizationInvitation } from '../../lib/api';
 import { toast } from '../../stores/toast';
+import { getInvitationUrl } from '../../lib/url';
 
 interface InviteMemberModalProps {
   /** モーダルが開いているかどうか */
@@ -12,14 +13,6 @@ interface InviteMemberModalProps {
   onClose: () => void;
   /** 招待成功時のコールバック */
   onSuccess?: (invitation: OrganizationInvitation) => void;
-}
-
-/**
- * 招待リンクを生成する
- */
-function getInvitationUrl(token: string): string {
-  // 現在のホストを使用して招待URLを生成
-  return `${window.location.origin}/invitations/${token}`;
 }
 
 /**
@@ -73,21 +66,28 @@ export function InviteMemberModal({
     }
   }, [isOpen, resetForm]);
 
-  // フォーカストラップ
-  const handleTabKey = useCallback((e: KeyboardEvent) => {
+  // キーボードイベントハンドラー（フォーカストラップ + ESCキー）
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if (!isOpen || !modalRef.current) return;
 
-    const focusableSelector = [
-      'button:not([disabled])',
-      'input:not([disabled])',
-      'select:not([disabled])',
-      '[tabindex]:not([tabindex="-1"])',
-    ].join(', ');
-    const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(focusableSelector);
-    const firstElement = focusableElements[0];
-    const lastElement = focusableElements[focusableElements.length - 1];
+    // ESCキーでモーダルを閉じる
+    if (e.key === 'Escape') {
+      onClose();
+      return;
+    }
 
+    // フォーカストラップ
     if (e.key === 'Tab') {
+      const focusableSelector = [
+        'button:not([disabled])',
+        'input:not([disabled])',
+        'select:not([disabled])',
+        '[tabindex]:not([tabindex="-1"])',
+      ].join(', ');
+      const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(focusableSelector);
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
       if (e.shiftKey) {
         if (document.activeElement === firstElement) {
           e.preventDefault();
@@ -100,26 +100,17 @@ export function InviteMemberModal({
         }
       }
     }
-  }, [isOpen]);
-
-  // ESCキーでモーダルを閉じる
-  const handleEscapeKey = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onClose();
-    }
-  }, [onClose]);
+  }, [isOpen, onClose]);
 
   // キーボードイベントリスナー
   useEffect(() => {
     if (isOpen) {
-      document.addEventListener('keydown', handleTabKey);
-      document.addEventListener('keydown', handleEscapeKey);
+      document.addEventListener('keydown', handleKeyDown);
       return () => {
-        document.removeEventListener('keydown', handleTabKey);
-        document.removeEventListener('keydown', handleEscapeKey);
+        document.removeEventListener('keydown', handleKeyDown);
       };
     }
-  }, [isOpen, handleTabKey, handleEscapeKey]);
+  }, [isOpen, handleKeyDown]);
 
   // バリデーション
   const validate = (): boolean => {
@@ -177,6 +168,16 @@ export function InviteMemberModal({
     }
   };
 
+  // コピー状態のリセット（クリーンアップ付き）
+  useEffect(() => {
+    if (isCopied) {
+      const timer = setTimeout(() => {
+        setIsCopied(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isCopied]);
+
   // 招待リンクをコピー
   const handleCopyLink = async () => {
     if (!createdInvitation) return;
@@ -186,11 +187,6 @@ export function InviteMemberModal({
       await navigator.clipboard.writeText(url);
       setIsCopied(true);
       toast.success('招待リンクをコピーしました');
-
-      // 2秒後にコピー状態をリセット
-      setTimeout(() => {
-        setIsCopied(false);
-      }, 2000);
     } catch {
       toast.error('コピーに失敗しました');
     }

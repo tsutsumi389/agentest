@@ -5,6 +5,7 @@ import { toast } from '../../stores/toast';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { InviteMemberModal } from './InviteMemberModal';
 import { formatDate } from '../../lib/date';
+import { getInvitationUrl } from '../../lib/url';
 
 interface InvitationListProps {
   /** 組織ID */
@@ -16,17 +17,10 @@ interface InvitationListProps {
 /**
  * ロールの表示名
  */
-const ROLE_LABELS: Record<string, string> = {
+const ROLE_LABELS: Record<'ADMIN' | 'MEMBER', string> = {
   ADMIN: '管理者',
   MEMBER: 'メンバー',
 };
-
-/**
- * 招待リンクを生成する
- */
-function getInvitationUrl(token: string): string {
-  return `${window.location.origin}/invitations/${token}`;
-}
 
 /**
  * 有効期限の状態を判定
@@ -124,6 +118,16 @@ export function InvitationList({ organizationId, currentRole }: InvitationListPr
     }
   };
 
+  // コピー状態のリセット（クリーンアップ付き）
+  useEffect(() => {
+    if (copiedId) {
+      const timer = setTimeout(() => {
+        setCopiedId(null);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [copiedId]);
+
   // 招待リンクをコピー
   const handleCopyLink = async (invitation: OrganizationInvitation) => {
     const url = getInvitationUrl(invitation.token);
@@ -131,11 +135,6 @@ export function InvitationList({ organizationId, currentRole }: InvitationListPr
       await navigator.clipboard.writeText(url);
       setCopiedId(invitation.id);
       toast.success('招待リンクをコピーしました');
-
-      // 2秒後にコピー状態をリセット
-      setTimeout(() => {
-        setCopiedId(null);
-      }, 2000);
     } catch {
       toast.error('コピーに失敗しました');
     }
