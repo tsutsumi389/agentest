@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import { useAuthStore } from './stores/auth';
+import { OrganizationProvider } from './contexts/OrganizationContext';
 import { Layout } from './components/Layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoginPage } from './pages/Login';
@@ -57,7 +58,9 @@ export function App() {
             path="/"
             element={
               <ProtectedRoute>
-                <Layout />
+                <OrganizationProvider>
+                  <Layout />
+                </OrganizationProvider>
               </ProtectedRoute>
             }
           >
