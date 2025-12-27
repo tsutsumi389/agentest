@@ -12,6 +12,7 @@ import {
   CreditCard,
   Filter,
   Calendar,
+  HelpCircle,
 } from 'lucide-react';
 import {
   organizationsApi,
@@ -42,6 +43,17 @@ const AUDIT_LOG_CATEGORIES = {
 type CategoryKey = keyof typeof AUDIT_LOG_CATEGORIES;
 
 /**
+ * カテゴリキーかどうかを判定する型ガード
+ */
+function isCategoryKey(key: string): key is CategoryKey {
+  return key in AUDIT_LOG_CATEGORIES;
+}
+
+/** カテゴリフィルタの「すべて」を表す定数 */
+const CATEGORY_FILTER_ALL = 'all' as const;
+type CategoryFilter = CategoryKey | typeof CATEGORY_FILTER_ALL;
+
+/**
  * カテゴリに対応するアイコンを取得
  */
 function CategoryIcon({
@@ -51,21 +63,25 @@ function CategoryIcon({
   category: string;
   className?: string;
 }) {
-  const categoryConfig = AUDIT_LOG_CATEGORIES[category as CategoryKey];
-  if (!categoryConfig) {
-    return <Shield className={className} />;
+  // 型ガードを使用して安全にアクセス
+  if (isCategoryKey(category)) {
+    const Icon = AUDIT_LOG_CATEGORIES[category].icon;
+    return <Icon className={className} />;
   }
-  const Icon = categoryConfig.icon;
-  return <Icon className={className} />;
+  // 未知のカテゴリの場合はヘルプアイコンを表示
+  return <HelpCircle className={className} />;
 }
 
 /**
  * カテゴリバッジ
  */
 function CategoryBadge({ category }: { category: string }) {
-  const config = AUDIT_LOG_CATEGORIES[category as CategoryKey];
-  const label = config?.label || category;
-  const colorClass = config?.color || 'text-foreground-muted';
+  // 型ガードを使用して安全にアクセス
+  const isKnownCategory = isCategoryKey(category);
+  const label = isKnownCategory ? AUDIT_LOG_CATEGORIES[category].label : category;
+  const colorClass = isKnownCategory
+    ? AUDIT_LOG_CATEGORIES[category].color
+    : 'text-foreground-muted';
 
   return (
     <span
@@ -78,9 +94,11 @@ function CategoryBadge({ category }: { category: string }) {
 }
 
 /**
- * ページサイズ
+ * ページサイズオプション
  */
-const PAGE_SIZE = 20;
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
+type PageSize = (typeof PAGE_SIZE_OPTIONS)[number];
+const DEFAULT_PAGE_SIZE: PageSize = 20;
 
 /**
  * 日付範囲オプション
@@ -92,6 +110,7 @@ const DATE_RANGE_OPTIONS = [
   { label: '過去30日', value: '30days' },
   { label: '過去90日', value: '90days' },
 ] as const;
+type DateRangeValue = (typeof DATE_RANGE_OPTIONS)[number]['value'];
 
 /**
  * 日付範囲を計算する
@@ -140,12 +159,13 @@ export function AuditLogList({ organizationId }: AuditLogListProps) {
 
   // ページネーション状態
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<PageSize>(DEFAULT_PAGE_SIZE);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
 
-  // フィルタ状態
-  const [selectedCategory, setSelectedCategory] = useState<string>('');
-  const [selectedDateRange, setSelectedDateRange] = useState<string>('all');
+  // フィルタ状態（型安全）
+  const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>(CATEGORY_FILTER_ALL);
+  const [selectedDateRange, setSelectedDateRange] = useState<DateRangeValue>('all');
 
   // 監査ログを取得
   const fetchLogs = useCallback(async () => {
@@ -156,8 +176,8 @@ export function AuditLogList({ organizationId }: AuditLogListProps) {
       const dateRange = getDateRange(selectedDateRange);
       const params: AuditLogQueryParams = {
         page,
-        limit: PAGE_SIZE,
-        ...(selectedCategory && { category: selectedCategory }),
+        limit: pageSize,
+        ...(selectedCategory !== CATEGORY_FILTER_ALL && { category: selectedCategory }),
         ...dateRange,
       };
 
@@ -177,12 +197,12 @@ export function AuditLogList({ organizationId }: AuditLogListProps) {
     } finally {
       setIsLoading(false);
     }
-  }, [organizationId, page, selectedCategory, selectedDateRange]);
+  }, [organizationId, page, pageSize, selectedCategory, selectedDateRange]);
 
-  // フィルタ変更時にページをリセット
+  // フィルタ・ページサイズ変更時にページをリセット
   useEffect(() => {
     setPage(1);
-  }, [selectedCategory, selectedDateRange]);
+  }, [selectedCategory, selectedDateRange, pageSize]);
 
   // データ取得
   useEffect(() => {
@@ -195,15 +215,24 @@ export function AuditLogList({ organizationId }: AuditLogListProps) {
     setPage(newPage);
   };
 
+  // ページサイズ変更ハンドラ
+  const handlePageSizeChange = (newSize: PageSize) => {
+    setPageSize(newSize);
+  };
+
   // フィルタリセット
   const handleResetFilters = () => {
-    setSelectedCategory('');
+    setSelectedCategory(CATEGORY_FILTER_ALL);
     setSelectedDateRange('all');
+    setPageSize(DEFAULT_PAGE_SIZE);
     setPage(1);
   };
 
   // フィルタが適用されているか
-  const hasFilters = selectedCategory !== '' || selectedDateRange !== 'all';
+  const hasFilters =
+    selectedCategory !== CATEGORY_FILTER_ALL ||
+    selectedDateRange !== 'all' ||
+    pageSize !== DEFAULT_PAGE_SIZE;
 
   // ローディング表示
   if (isLoading && logs.length === 0) {
@@ -247,10 +276,10 @@ export function AuditLogList({ organizationId }: AuditLogListProps) {
           <Filter className="w-4 h-4 text-foreground-muted" />
           <select
             value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
+            onChange={(e) => setSelectedCategory(e.target.value as CategoryFilter)}
             className="input text-sm py-1.5"
           >
-            <option value="">すべてのカテゴリ</option>
+            <option value={CATEGORY_FILTER_ALL}>すべてのカテゴリ</option>
             {Object.entries(AUDIT_LOG_CATEGORIES).map(([key, { label }]) => (
               <option key={key} value={key}>
                 {label}
@@ -264,12 +293,28 @@ export function AuditLogList({ organizationId }: AuditLogListProps) {
           <Calendar className="w-4 h-4 text-foreground-muted" />
           <select
             value={selectedDateRange}
-            onChange={(e) => setSelectedDateRange(e.target.value)}
+            onChange={(e) => setSelectedDateRange(e.target.value as DateRangeValue)}
             className="input text-sm py-1.5"
           >
             {DATE_RANGE_OPTIONS.map(({ label, value }) => (
               <option key={value} value={value}>
                 {label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* ページサイズ選択 */}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-foreground-muted">表示件数:</span>
+          <select
+            value={pageSize}
+            onChange={(e) => handlePageSizeChange(Number(e.target.value) as PageSize)}
+            className="input text-sm py-1.5"
+          >
+            {PAGE_SIZE_OPTIONS.map((size) => (
+              <option key={size} value={size}>
+                {size}件
               </option>
             ))}
           </select>
@@ -316,8 +361,8 @@ export function AuditLogList({ organizationId }: AuditLogListProps) {
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
               <p className="text-sm text-foreground-muted">
-                {total}件中 {(page - 1) * PAGE_SIZE + 1} -{' '}
-                {Math.min(page * PAGE_SIZE, total)}件を表示
+                {total}件中 {(page - 1) * pageSize + 1} -{' '}
+                {Math.min(page * pageSize, total)}件を表示
               </p>
 
               <div className="flex items-center gap-2">
@@ -351,6 +396,34 @@ export function AuditLogList({ organizationId }: AuditLogListProps) {
   );
 }
 
+/** 詳細表示から除外するフィールド */
+const EXCLUDED_DETAIL_FIELDS = new Set(['id', 'userId', 'organizationId', 'createdAt', 'updatedAt']);
+
+/** 既知のフィールドラベルマッピング */
+const KNOWN_FIELD_LABELS: Record<string, string> = {
+  email: 'メール',
+  name: '名前',
+  role: 'ロール',
+  oldRole: '変更前ロール',
+  newRole: '変更後ロール',
+  targetName: '対象',
+  reason: '理由',
+  description: '説明',
+  ipAddress: 'IPアドレス',
+};
+
+/**
+ * 値を表示用文字列に変換
+ */
+function formatValue(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (Array.isArray(value)) return value.map(formatValue).join(', ');
+  if (typeof value === 'object') return JSON.stringify(value);
+  return String(value);
+}
+
 /**
  * 監査ログアイテム
  */
@@ -360,22 +433,41 @@ function AuditLogItem({ log }: { log: AuditLog }) {
     if (!details) return '';
 
     const parts: string[] = [];
+    const processedFields = new Set<string>();
 
-    // 共通の詳細フィールドを処理
-    if (details.email) {
-      parts.push(`${details.email}`);
-    }
-    if (details.name) {
-      parts.push(`${details.name}`);
-    }
-    if (details.role) {
-      parts.push(`ロール: ${details.role}`);
-    }
+    // ロール変更の特別処理（oldRole → newRole として表示）
     if (details.oldRole && details.newRole) {
       parts.push(`${details.oldRole} → ${details.newRole}`);
+      processedFields.add('oldRole');
+      processedFields.add('newRole');
     }
-    if (details.targetName) {
-      parts.push(`${details.targetName}`);
+
+    // 既知のフィールドを優先的に処理
+    const priorityFields = ['email', 'name', 'targetName', 'role', 'reason'];
+    for (const field of priorityFields) {
+      if (details[field] && !processedFields.has(field)) {
+        const value = formatValue(details[field]);
+        if (value) {
+          // email, name, targetNameはラベルなしで表示
+          if (['email', 'name', 'targetName'].includes(field)) {
+            parts.push(value);
+          } else {
+            const label = KNOWN_FIELD_LABELS[field] || field;
+            parts.push(`${label}: ${value}`);
+          }
+          processedFields.add(field);
+        }
+      }
+    }
+
+    // 残りのフィールドをフォールバックとして処理
+    for (const [key, value] of Object.entries(details)) {
+      if (processedFields.has(key) || EXCLUDED_DETAIL_FIELDS.has(key)) continue;
+      const formattedValue = formatValue(value);
+      if (formattedValue) {
+        const label = KNOWN_FIELD_LABELS[key] || key;
+        parts.push(`${label}: ${formattedValue}`);
+      }
     }
 
     return parts.join(' | ');
