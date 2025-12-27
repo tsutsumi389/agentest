@@ -123,6 +123,7 @@ export function InvitationAcceptPage() {
   const handleAccept = async () => {
     if (!token) return;
 
+    setError(null);
     setIsProcessing(true);
     try {
       await organizationsApi.acceptInvitation(token);
@@ -142,6 +143,7 @@ export function InvitationAcceptPage() {
   const handleDecline = async () => {
     if (!token) return;
 
+    setError(null);
     setIsProcessing(true);
     try {
       await organizationsApi.declineInvitation(token);
@@ -167,11 +169,9 @@ export function InvitationAcceptPage() {
     navigate('/dashboard');
   };
 
-  // ロール表示用のラベル
+  // ロール表示用のラベル（招待はADMINまたはMEMBERのみ）
   const getRoleLabel = (role: string) => {
     switch (role) {
-      case 'OWNER':
-        return 'オーナー';
       case 'ADMIN':
         return '管理者';
       case 'MEMBER':
