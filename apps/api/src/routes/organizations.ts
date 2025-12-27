@@ -58,6 +58,13 @@ router.patch('/:organizationId', requireAuth(authConfig), requireOrgRole(['OWNER
 router.delete('/:organizationId', requireAuth(authConfig), requireOrgRole(['OWNER']), orgController.delete);
 
 /**
+ * 組織復元
+ * POST /api/organizations/:organizationId/restore
+ * 削除済み組織のOWNERのみ実行可能
+ */
+router.post('/:organizationId/restore', requireAuth(authConfig), requireOrgRole(['OWNER'], { allowDeletedOrg: true }), orgController.restore);
+
+/**
  * 組織メンバー一覧取得
  * GET /api/organizations/:organizationId/members
  */

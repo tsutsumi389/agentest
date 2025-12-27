@@ -87,7 +87,10 @@ describe('UserService', () => {
       const result = await userService.getOrganizations('user-1');
 
       expect(prisma.organizationMember.findMany).toHaveBeenCalledWith({
-        where: { userId: 'user-1' },
+        where: {
+          userId: 'user-1',
+          organization: { deletedAt: null },
+        },
         include: {
           organization: {
             select: {
@@ -98,6 +101,7 @@ describe('UserService', () => {
               avatarUrl: true,
               plan: true,
               createdAt: true,
+              deletedAt: true,
               _count: {
                 select: { members: true },
               },

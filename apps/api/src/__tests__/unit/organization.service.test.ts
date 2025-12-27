@@ -7,6 +7,8 @@ const mockOrgRepo = vi.hoisted(() => ({
   findBySlug: vi.fn(),
   update: vi.fn(),
   softDelete: vi.fn(),
+  findDeletedById: vi.fn(),
+  restore: vi.fn(),
 }));
 
 vi.mock('../../repositories/organization.repository.js', () => ({
@@ -656,6 +658,110 @@ describe('OrganizationService', () => {
 
       await expect(service.updateMemberRole('org-1', 'owner-1', 'ADMIN'))
         .rejects.toThrow(ConflictError);
+    });
+  });
+
+  describe('restore', () => {
+    const mockDeletedOrg = {
+      id: 'org-1',
+      name: 'Deleted Org',
+      slug: 'deleted-org',
+      deletedAt: new Date(),
+    };
+
+    it('削除済み組織を復元できる', async () => {
+      mockOrgRepo.findDeletedById.mockResolvedValue(mockDeletedOrg);
+      mockOrgRepo.restore.mockResolvedValue({
+        ...mockDeletedOrg,
+        deletedAt: null,
+      });
+
+      const result = await service.restore('org-1', 'user-1');
+
+      expect(mockOrgRepo.findDeletedById).toHaveBeenCalledWith('org-1');
+      expect(mockOrgRepo.restore).toHaveBeenCalledWith('org-1');
+      expect(result.deletedAt).toBeNull();
+    });
+
+    it('削除済み組織が見つからない場合はNotFoundErrorを投げる', async () => {
+      mockOrgRepo.findDeletedById.mockResolvedValue(null);
+
+      await expect(service.restore('invalid-org', 'user-1'))
+        .rejects.toThrow(NotFoundError);
+    });
+
+    it('猶予期間（30日）を過ぎている場合はConflictErrorを投げる', async () => {
+      // 31日前に削除された組織
+      const deletedAt = new Date();
+      deletedAt.setDate(deletedAt.getDate() - 31);
+      const expiredOrg = {
+        ...mockDeletedOrg,
+        deletedAt,
+      };
+      mockOrgRepo.findDeletedById.mockResolvedValue(expiredOrg);
+
+      await expect(service.restore('org-1', 'user-1'))
+        .rejects.toThrow(ConflictError);
+    });
+
+    it('猶予期間内（29日目）の組織は復元できる', async () => {
+      // 29日前に削除された組織
+      const deletedAt = new Date();
+      deletedAt.setDate(deletedAt.getDate() - 29);
+      const recentlyDeletedOrg = {
+        ...mockDeletedOrg,
+        deletedAt,
+      };
+      mockOrgRepo.findDeletedById.mockResolvedValue(recentlyDeletedOrg);
+      mockOrgRepo.restore.mockResolvedValue({
+        ...recentlyDeletedOrg,
+        deletedAt: null,
+      });
+
+      const result = await service.restore('org-1', 'user-1');
+
+      expect(result.deletedAt).toBeNull();
+    });
+
+    it('猶予期間のちょうど30日目の組織は復元できる', async () => {
+      // ちょうど30日前の削除（境界値テスト）
+      const deletedAt = new Date();
+      deletedAt.setDate(deletedAt.getDate() - 30);
+      // 時刻をずらして猶予期間内に収める
+      deletedAt.setHours(deletedAt.getHours() + 1);
+      const boundaryOrg = {
+        ...mockDeletedOrg,
+        deletedAt,
+      };
+      mockOrgRepo.findDeletedById.mockResolvedValue(boundaryOrg);
+      mockOrgRepo.restore.mockResolvedValue({
+        ...boundaryOrg,
+        deletedAt: null,
+      });
+
+      const result = await service.restore('org-1', 'user-1');
+
+      expect(result.deletedAt).toBeNull();
+    });
+
+    it('復元時に監査ログを記録する', async () => {
+      mockOrgRepo.findDeletedById.mockResolvedValue(mockDeletedOrg);
+      mockOrgRepo.restore.mockResolvedValue({
+        ...mockDeletedOrg,
+        deletedAt: null,
+      });
+
+      await service.restore('org-1', 'user-1');
+
+      expect(mockAuditLogService.log).toHaveBeenCalledWith({
+        userId: 'user-1',
+        organizationId: 'org-1',
+        category: 'ORGANIZATION',
+        action: 'organization.restored',
+        targetType: 'Organization',
+        targetId: 'org-1',
+        details: { name: 'Deleted Org', slug: 'deleted-org' },
+      });
     });
   });
 

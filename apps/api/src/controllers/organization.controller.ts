@@ -116,6 +116,20 @@ export class OrganizationController {
   };
 
   /**
+   * 組織復元
+   */
+  restore = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { organizationId } = req.params;
+      const organization = await this.orgService.restore(organizationId, req.user!.id);
+
+      res.json({ organization });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
    * メンバー一覧取得
    */
   getMembers = async (req: Request, res: Response, next: NextFunction): Promise<void> => {

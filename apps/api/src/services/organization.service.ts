@@ -1,5 +1,5 @@
 import { prisma } from '@agentest/db';
-import { NotFoundError, ConflictError, AuthorizationError } from '@agentest/shared';
+import { NotFoundError, ConflictError, AuthorizationError, DELETION_GRACE_PERIOD_DAYS } from '@agentest/shared';
 import { OrganizationRepository } from '../repositories/organization.repository.js';
 import { auditLogService } from './audit-log.service.js';
 
@@ -555,6 +555,44 @@ export class OrganizationService {
     });
 
     return result;
+  }
+
+  /**
+   * 組織を復元
+   */
+  async restore(organizationId: string, userId: string) {
+    // 削除済み組織を取得
+    const org = await this.orgRepo.findDeletedById(organizationId);
+    if (!org) {
+      throw new NotFoundError('Organization', organizationId);
+    }
+
+    // 猶予期間チェック
+    const deletedAt = new Date(org.deletedAt!);
+    const permanentDeletionDate = new Date(deletedAt);
+    permanentDeletionDate.setDate(
+      permanentDeletionDate.getDate() + DELETION_GRACE_PERIOD_DAYS
+    );
+
+    if (new Date() > permanentDeletionDate) {
+      throw new ConflictError('復元期間（30日間）を過ぎています。この組織は復元できません');
+    }
+
+    // 復元実行
+    const restoredOrg = await this.orgRepo.restore(organizationId);
+
+    // 監査ログを記録
+    await auditLogService.log({
+      userId,
+      organizationId,
+      category: 'ORGANIZATION',
+      action: 'organization.restored',
+      targetType: 'Organization',
+      targetId: organizationId,
+      details: { name: org.name, slug: org.slug },
+    });
+
+    return restoredOrg;
   }
 
   /**

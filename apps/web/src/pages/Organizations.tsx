@@ -3,6 +3,9 @@ import { useNavigate } from 'react-router';
 import { Building2, Plus, Search } from 'lucide-react';
 import { useOrganization } from '../contexts/OrganizationContext';
 import { OrganizationCard, CreateOrganizationModal } from '../components/organization';
+import { ConfirmDialog } from '../components/common/ConfirmDialog';
+import { organizationsApi } from '../lib/api';
+import { toast } from '../stores/toast';
 
 /**
  * 組織一覧ページ
@@ -11,7 +14,9 @@ export function OrganizationsPage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const { organizations, isLoading, selectOrganization } = useOrganization();
+  const [restoringId, setRestoringId] = useState<string | null>(null);
+  const [restoreTarget, setRestoreTarget] = useState<{ id: string; name: string } | null>(null);
+  const { organizations, isLoading, selectOrganization, refreshOrganizations } = useOrganization();
 
   // 検索フィルター
   const filteredOrganizations = organizations.filter((org) =>
@@ -23,6 +28,29 @@ export function OrganizationsPage() {
   const handleSelectOrganization = (organizationId: string) => {
     selectOrganization(organizationId);
     navigate('/dashboard');
+  };
+
+  // 復元確認モーダルを開く
+  const handleRestoreOrganization = (organizationId: string, organizationName: string) => {
+    setRestoreTarget({ id: organizationId, name: organizationName });
+  };
+
+  // 復元を実行
+  const executeRestore = async () => {
+    if (!restoreTarget) return;
+
+    setRestoringId(restoreTarget.id);
+    try {
+      await organizationsApi.restore(restoreTarget.id);
+      toast.success(`「${restoreTarget.name}」を復元しました`);
+      setRestoreTarget(null);
+      await refreshOrganizations();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '組織の復元に失敗しました';
+      toast.error(message);
+    } finally {
+      setRestoringId(null);
+    }
   };
 
   return (
@@ -86,6 +114,8 @@ export function OrganizationsPage() {
               organization={organization}
               role={role}
               onSelect={() => handleSelectOrganization(organization.id)}
+              onRestore={() => handleRestoreOrganization(organization.id, organization.name)}
+              isRestoring={restoringId === organization.id}
             />
           ))}
         </div>
@@ -110,6 +140,18 @@ export function OrganizationsPage() {
           selectOrganization(organizationId);
           navigate('/dashboard');
         }}
+      />
+
+      {/* 復元確認ダイアログ */}
+      <ConfirmDialog
+        isOpen={!!restoreTarget}
+        title="組織を復元"
+        message={`「${restoreTarget?.name ?? ''}」を復元しますか？復元すると、組織のすべてのデータが再び利用可能になります。`}
+        confirmLabel="復元する"
+        onConfirm={executeRestore}
+        onCancel={() => setRestoreTarget(null)}
+        isLoading={!!restoringId}
+        isDanger={false}
       />
     </div>
   );

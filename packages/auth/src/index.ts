@@ -30,4 +30,4 @@ export {
   requireOrgRole,
   requireProjectRole,
 } from './middleware.js';
-export type { AuthMiddlewareOptions } from './middleware.js';
+export type { AuthMiddlewareOptions, RequireOrgRoleOptions } from './middleware.js';

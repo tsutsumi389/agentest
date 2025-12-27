@@ -78,7 +78,8 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     setError(null);
 
     try {
-      const response = await usersApi.getOrganizations(userId);
+      // 削除済み組織も含めて取得（復元機能のため）
+      const response = await usersApi.getOrganizations(userId, { includeDeleted: true });
       setOrganizations(
         response.organizations.map((o) => ({
           organization: o.organization,
