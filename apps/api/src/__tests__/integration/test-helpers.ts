@@ -69,10 +69,96 @@ export async function createTestAccount(
 }
 
 /**
+ * テスト用組織を作成
+ */
+export async function createTestOrganization(
+  ownerId: string,
+  overrides: Partial<{
+    id: string;
+    name: string;
+    slug: string;
+    description: string | null;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  const org = await prisma.organization.create({
+    data: {
+      id,
+      name: overrides.name ?? `Test Org ${id.slice(0, 8)}`,
+      slug: overrides.slug ?? `test-org-${id.slice(0, 8)}`,
+      description: overrides.description ?? null,
+    },
+  });
+
+  // オーナーをメンバーとして追加
+  await prisma.organizationMember.create({
+    data: {
+      organizationId: org.id,
+      userId: ownerId,
+      role: 'OWNER',
+    },
+  });
+
+  return org;
+}
+
+/**
+ * テスト用組織メンバーを作成
+ */
+export async function createTestOrgMember(
+  organizationId: string,
+  userId: string,
+  role: 'OWNER' | 'ADMIN' | 'MEMBER' = 'MEMBER'
+) {
+  return prisma.organizationMember.create({
+    data: {
+      organizationId,
+      userId,
+      role,
+    },
+  });
+}
+
+/**
+ * テスト用組織招待を作成
+ */
+export async function createTestInvitation(
+  organizationId: string,
+  invitedByUserId: string,
+  overrides: Partial<{
+    id: string;
+    email: string;
+    role: 'ADMIN' | 'MEMBER';
+    token: string;
+    expiresAt: Date;
+    acceptedAt: Date | null;
+    declinedAt: Date | null;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.organizationInvitation.create({
+    data: {
+      id,
+      organizationId,
+      email: overrides.email ?? `invited-${id.slice(0, 8)}@example.com`,
+      role: overrides.role ?? 'MEMBER',
+      token: overrides.token ?? `inv-token-${id}`,
+      invitedByUserId,
+      expiresAt: overrides.expiresAt ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      acceptedAt: overrides.acceptedAt ?? null,
+      declinedAt: overrides.declinedAt ?? null,
+    },
+  });
+}
+
+/**
  * テストデータをクリーンアップ
  */
 export async function cleanupTestData() {
   // 外部キー制約を考慮した順序で削除
+  await prisma.organizationInvitation.deleteMany({});
+  await prisma.organizationMember.deleteMany({});
+  await prisma.organization.deleteMany({});
   await prisma.session.deleteMany({});
   await prisma.refreshToken.deleteMany({});
   await prisma.account.deleteMany({});
