@@ -79,6 +79,12 @@ router.patch('/:organizationId/members/:userId', requireAuth(authConfig), requir
 router.delete('/:organizationId/members/:userId', requireAuth(authConfig), requireOrgRole(['OWNER', 'ADMIN']), orgController.removeMember);
 
 /**
+ * オーナー権限移譲
+ * POST /api/organizations/:organizationId/transfer-ownership
+ */
+router.post('/:organizationId/transfer-ownership', requireAuth(authConfig), requireOrgRole(['OWNER']), orgController.transferOwnership);
+
+/**
  * 組織のプロジェクト一覧取得
  * GET /api/organizations/:organizationId/projects
  */

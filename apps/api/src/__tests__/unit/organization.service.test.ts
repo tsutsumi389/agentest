@@ -364,4 +364,174 @@ describe('OrganizationService', () => {
       })).rejects.toThrow(NotFoundError);
     });
   });
+
+  describe('transferOwnership', () => {
+    const mockOrg = { id: 'org-1', name: 'Test Org' };
+    const mockCurrentOwner = {
+      organizationId: 'org-1',
+      userId: 'owner-1',
+      role: 'OWNER',
+    };
+    const mockNewOwner = {
+      organizationId: 'org-1',
+      userId: 'admin-1',
+      role: 'ADMIN',
+      user: {
+        id: 'admin-1',
+        email: 'admin@example.com',
+        name: 'Admin User',
+        avatarUrl: null,
+      },
+    };
+
+    it('オーナー権限を移譲できる', async () => {
+      mockOrgRepo.findById.mockResolvedValue(mockOrg);
+      mockPrisma.organizationMember.findUnique
+        .mockResolvedValueOnce(mockCurrentOwner) // 現オーナー確認
+        .mockResolvedValueOnce(mockNewOwner); // 新オーナー確認
+      mockPrisma.organizationMember.update.mockResolvedValue({
+        ...mockNewOwner,
+        role: 'OWNER',
+      });
+
+      const result = await service.transferOwnership('org-1', 'owner-1', 'admin-1');
+
+      expect(mockOrgRepo.findById).toHaveBeenCalledWith('org-1');
+      expect(mockPrisma.organizationMember.findUnique).toHaveBeenCalledTimes(2);
+      expect(mockPrisma.organizationMember.update).toHaveBeenCalledTimes(2);
+      // 現オーナー→ADMIN
+      expect(mockPrisma.organizationMember.update).toHaveBeenNthCalledWith(1, {
+        where: {
+          organizationId_userId: { organizationId: 'org-1', userId: 'owner-1' },
+        },
+        data: { role: 'ADMIN' },
+      });
+      // 新オーナー→OWNER
+      expect(mockPrisma.organizationMember.update).toHaveBeenNthCalledWith(2, {
+        where: {
+          organizationId_userId: { organizationId: 'org-1', userId: 'admin-1' },
+        },
+        data: { role: 'OWNER' },
+        include: {
+          user: {
+            select: { id: true, email: true, name: true, avatarUrl: true },
+          },
+        },
+      });
+      expect(result.role).toBe('OWNER');
+    });
+
+    it('組織が存在しない場合はNotFoundErrorを投げる', async () => {
+      mockOrgRepo.findById.mockResolvedValue(null);
+
+      await expect(service.transferOwnership('invalid-org', 'owner-1', 'admin-1'))
+        .rejects.toThrow(NotFoundError);
+    });
+
+    it('自分自身への移譲はConflictErrorを投げる', async () => {
+      mockOrgRepo.findById.mockResolvedValue(mockOrg);
+
+      await expect(service.transferOwnership('org-1', 'owner-1', 'owner-1'))
+        .rejects.toThrow(ConflictError);
+    });
+
+    it('非オーナーからの移譲はAuthorizationErrorを投げる', async () => {
+      mockOrgRepo.findById.mockResolvedValue(mockOrg);
+      mockPrisma.organizationMember.findUnique.mockResolvedValueOnce({
+        ...mockCurrentOwner,
+        role: 'ADMIN', // オーナーではない
+      });
+
+      await expect(service.transferOwnership('org-1', 'admin-1', 'member-1'))
+        .rejects.toThrow(AuthorizationError);
+    });
+
+    it('現オーナーがメンバーでない場合はAuthorizationErrorを投げる', async () => {
+      mockOrgRepo.findById.mockResolvedValue(mockOrg);
+      mockPrisma.organizationMember.findUnique.mockResolvedValueOnce(null);
+
+      await expect(service.transferOwnership('org-1', 'non-member', 'admin-1'))
+        .rejects.toThrow(AuthorizationError);
+    });
+
+    it('新オーナーがメンバーでない場合はNotFoundErrorを投げる', async () => {
+      mockOrgRepo.findById.mockResolvedValue(mockOrg);
+      mockPrisma.organizationMember.findUnique
+        .mockResolvedValueOnce(mockCurrentOwner) // 現オーナー確認
+        .mockResolvedValueOnce(null); // 新オーナーが存在しない
+
+      await expect(service.transferOwnership('org-1', 'owner-1', 'non-member'))
+        .rejects.toThrow(NotFoundError);
+    });
+  });
+
+  describe('updateMemberRole', () => {
+    const mockMember = {
+      organizationId: 'org-1',
+      userId: 'member-1',
+      role: 'MEMBER',
+      user: {
+        id: 'member-1',
+        email: 'member@example.com',
+        name: 'Member User',
+        avatarUrl: null,
+      },
+    };
+
+    it('メンバーのロールをADMINに変更できる', async () => {
+      mockPrisma.organizationMember.findUnique.mockResolvedValue(mockMember);
+      mockPrisma.organizationMember.update.mockResolvedValue({
+        ...mockMember,
+        role: 'ADMIN',
+      });
+
+      const result = await service.updateMemberRole('org-1', 'member-1', 'ADMIN');
+
+      expect(mockPrisma.organizationMember.findUnique).toHaveBeenCalledWith({
+        where: {
+          organizationId_userId: { organizationId: 'org-1', userId: 'member-1' },
+        },
+      });
+      expect(mockPrisma.organizationMember.update).toHaveBeenCalledWith({
+        where: {
+          organizationId_userId: { organizationId: 'org-1', userId: 'member-1' },
+        },
+        data: { role: 'ADMIN' },
+        include: {
+          user: {
+            select: { id: true, email: true, name: true, avatarUrl: true },
+          },
+        },
+      });
+      expect(result.role).toBe('ADMIN');
+    });
+
+    it('ADMINのロールをMEMBERに変更できる', async () => {
+      const mockAdmin = { ...mockMember, role: 'ADMIN' };
+      mockPrisma.organizationMember.findUnique.mockResolvedValue(mockAdmin);
+      mockPrisma.organizationMember.update.mockResolvedValue({
+        ...mockAdmin,
+        role: 'MEMBER',
+      });
+
+      const result = await service.updateMemberRole('org-1', 'member-1', 'MEMBER');
+
+      expect(result.role).toBe('MEMBER');
+    });
+
+    it('メンバーが存在しない場合はNotFoundErrorを投げる', async () => {
+      mockPrisma.organizationMember.findUnique.mockResolvedValue(null);
+
+      await expect(service.updateMemberRole('org-1', 'invalid-user', 'ADMIN'))
+        .rejects.toThrow(NotFoundError);
+    });
+
+    it('OWNERのロール変更はConflictErrorを投げる', async () => {
+      const mockOwner = { ...mockMember, role: 'OWNER' };
+      mockPrisma.organizationMember.findUnique.mockResolvedValue(mockOwner);
+
+      await expect(service.updateMemberRole('org-1', 'owner-1', 'ADMIN'))
+        .rejects.toThrow(ConflictError);
+    });
+  });
 });
