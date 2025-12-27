@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router';
 import { Building2, Plus, Search } from 'lucide-react';
 import { useOrganization } from '../contexts/OrganizationContext';
 import { OrganizationCard, CreateOrganizationModal } from '../components/organization';
+import { organizationsApi } from '../lib/api';
+import { toast } from '../stores/toast';
 
 /**
  * 組織一覧ページ
@@ -11,7 +13,8 @@ export function OrganizationsPage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const { organizations, isLoading, selectOrganization } = useOrganization();
+  const [restoringId, setRestoringId] = useState<string | null>(null);
+  const { organizations, isLoading, selectOrganization, refreshOrganizations } = useOrganization();
 
   // 検索フィルター
   const filteredOrganizations = organizations.filter((org) =>
@@ -23,6 +26,25 @@ export function OrganizationsPage() {
   const handleSelectOrganization = (organizationId: string) => {
     selectOrganization(organizationId);
     navigate('/dashboard');
+  };
+
+  // 組織を復元
+  const handleRestoreOrganization = async (organizationId: string, organizationName: string) => {
+    if (!window.confirm(`「${organizationName}」を復元しますか？`)) {
+      return;
+    }
+
+    setRestoringId(organizationId);
+    try {
+      await organizationsApi.restore(organizationId);
+      toast.success(`「${organizationName}」を復元しました`);
+      await refreshOrganizations();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '組織の復元に失敗しました';
+      toast.error(message);
+    } finally {
+      setRestoringId(null);
+    }
   };
 
   return (
@@ -86,6 +108,8 @@ export function OrganizationsPage() {
               organization={organization}
               role={role}
               onSelect={() => handleSelectOrganization(organization.id)}
+              onRestore={() => handleRestoreOrganization(organization.id, organization.name)}
+              isRestoring={restoringId === organization.id}
             />
           ))}
         </div>

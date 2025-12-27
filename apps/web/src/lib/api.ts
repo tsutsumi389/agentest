@@ -107,6 +107,7 @@ export interface Organization {
   plan: string;
   createdAt: string;
   updatedAt?: string;
+  deletedAt?: string | null;
   // 組織一覧取得時にメンバー数が含まれる
   _count?: {
     members: number;
@@ -252,8 +253,14 @@ export interface UpdateUserRequest {
 }
 
 export const usersApi = {
-  getOrganizations: (userId: string) =>
-    api.get<{ organizations: Array<{ organization: Organization; role: string }> }>(`/api/users/${userId}/organizations`),
+  getOrganizations: (userId: string, options?: { includeDeleted?: boolean }) => {
+    const query = new URLSearchParams();
+    if (options?.includeDeleted) query.set('includeDeleted', 'true');
+    const queryString = query.toString();
+    return api.get<{ organizations: Array<{ organization: Organization; role: string }> }>(
+      `/api/users/${userId}/organizations${queryString ? `?${queryString}` : ''}`
+    );
+  },
   getProjects: (userId: string) => api.get<{ projects: Project[] }>(`/api/users/${userId}/projects`),
   update: (userId: string, data: UpdateUserRequest) =>
     api.patch<{ user: User }>(`/api/users/${userId}`, data),
@@ -491,4 +498,8 @@ export const organizationsApi = {
   // 組織のプロジェクト一覧を取得
   getProjects: (organizationId: string) =>
     api.get<{ projects: Project[] }>(`/api/organizations/${organizationId}/projects`),
+
+  // 削除済み組織を復元
+  restore: (organizationId: string) =>
+    api.post<{ organization: Organization }>(`/api/organizations/${organizationId}/restore`),
 };

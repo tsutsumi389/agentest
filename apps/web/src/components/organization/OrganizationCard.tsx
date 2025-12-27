@@ -1,11 +1,29 @@
 import { Link } from 'react-router';
-import { Building2, Users, Settings, Crown, Shield, User } from 'lucide-react';
+import { Building2, Users, Settings, Crown, Shield, User, RotateCcw } from 'lucide-react';
 import type { Organization } from '../../lib/api';
+
+// 削除猶予期間（日数）
+const DELETION_GRACE_PERIOD_DAYS = 30;
+
+/**
+ * 削除済み組織の残り日数を計算
+ */
+function getRemainingDays(deletedAt: string): number {
+  const deletionDate = new Date(deletedAt);
+  const permanentDeletionDate = new Date(deletionDate);
+  permanentDeletionDate.setDate(permanentDeletionDate.getDate() + DELETION_GRACE_PERIOD_DAYS);
+
+  const now = new Date();
+  const remainingMs = permanentDeletionDate.getTime() - now.getTime();
+  return Math.max(0, Math.ceil(remainingMs / (1000 * 60 * 60 * 24)));
+}
 
 interface OrganizationCardProps {
   organization: Organization;
   role: 'OWNER' | 'ADMIN' | 'MEMBER';
   onSelect?: () => void;
+  onRestore?: () => void;
+  isRestoring?: boolean;
 }
 
 /**
@@ -40,11 +58,15 @@ function getRoleLabel(role: 'OWNER' | 'ADMIN' | 'MEMBER') {
  * 組織カード
  * 組織一覧で各組織を表示するカード
  */
-export function OrganizationCard({ organization, role, onSelect }: OrganizationCardProps) {
+export function OrganizationCard({ organization, role, onSelect, onRestore, isRestoring }: OrganizationCardProps) {
   const RoleIcon = getRoleIcon(role);
+  const isDeleted = !!organization.deletedAt;
+  const remainingDays = isDeleted ? getRemainingDays(organization.deletedAt!) : null;
 
   return (
-    <div className="bg-background-secondary border border-border rounded-lg p-4 hover:border-accent transition-colors">
+    <div className={`bg-background-secondary border border-border rounded-lg p-4 transition-colors ${
+      isDeleted ? 'opacity-60' : 'hover:border-accent'
+    }`}>
       {/* ヘッダー */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
@@ -57,10 +79,17 @@ export function OrganizationCard({ organization, role, onSelect }: OrganizationC
           </div>
         </div>
 
-        {/* ロールバッジ */}
-        <div className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-background-tertiary text-foreground-secondary">
-          <RoleIcon className="w-3 h-3" aria-hidden="true" />
-          <span>{getRoleLabel(role)}</span>
+        {/* ロールバッジと削除予定バッジ */}
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-background-tertiary text-foreground-secondary">
+            <RoleIcon className="w-3 h-3" aria-hidden="true" />
+            <span>{getRoleLabel(role)}</span>
+          </div>
+          {isDeleted && remainingDays !== null && (
+            <div className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-danger/10 text-danger">
+              <span>削除予定 あと{remainingDays}日</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -79,24 +108,40 @@ export function OrganizationCard({ organization, role, onSelect }: OrganizationC
         </div>
 
         <div className="flex items-center gap-2">
-          {/* 設定リンク（OWNER/ADMINのみ） */}
-          {(role === 'OWNER' || role === 'ADMIN') && (
-            <Link
-              to={`/organizations/${organization.id}/settings`}
-              className="p-1.5 text-foreground-muted hover:text-foreground hover:bg-background-tertiary rounded transition-colors"
-              aria-label="組織設定"
-            >
-              <Settings className="w-4 h-4" aria-hidden="true" />
-            </Link>
-          )}
+          {isDeleted ? (
+            // 削除済み組織の場合は復元ボタンを表示（OWNERのみ）
+            role === 'OWNER' && onRestore && (
+              <button
+                onClick={onRestore}
+                disabled={isRestoring}
+                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-success hover:bg-success/10 rounded transition-colors disabled:opacity-50"
+              >
+                <RotateCcw className={`w-4 h-4 ${isRestoring ? 'animate-spin' : ''}`} aria-hidden="true" />
+                {isRestoring ? '復元中...' : '復元'}
+              </button>
+            )
+          ) : (
+            <>
+              {/* 設定リンク（OWNER/ADMINのみ） */}
+              {(role === 'OWNER' || role === 'ADMIN') && (
+                <Link
+                  to={`/organizations/${organization.id}/settings`}
+                  className="p-1.5 text-foreground-muted hover:text-foreground hover:bg-background-tertiary rounded transition-colors"
+                  aria-label="組織設定"
+                >
+                  <Settings className="w-4 h-4" aria-hidden="true" />
+                </Link>
+              )}
 
-          {/* 選択ボタン */}
-          <button
-            onClick={onSelect}
-            className="px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent-subtle rounded transition-colors"
-          >
-            選択
-          </button>
+              {/* 選択ボタン */}
+              <button
+                onClick={onSelect}
+                className="px-3 py-1.5 text-sm font-medium text-accent hover:bg-accent-subtle rounded transition-colors"
+              >
+                選択
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
