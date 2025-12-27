@@ -1,8 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Loader2, MoreVertical, UserMinus, Shield, User, Crown, X, AlertTriangle } from 'lucide-react';
+import { Loader2, MoreVertical, UserMinus, Shield, User, Crown } from 'lucide-react';
 import { organizationsApi, ApiError, type OrganizationMember } from '../../lib/api';
 import { useAuthStore } from '../../stores/auth';
 import { toast } from '../../stores/toast';
+import { ConfirmDialog } from '../common/ConfirmDialog';
+import { formatDate } from '../../lib/date';
+
+/** ロールの型定義 */
+type MemberRole = 'OWNER' | 'ADMIN' | 'MEMBER';
 
 interface MemberListProps {
   /** 組織ID */
@@ -34,134 +39,44 @@ function RoleIcon({ role, className }: { role: string; className?: string }) {
   }
 }
 
-/**
- * 日付フォーマット
- */
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('ja-JP', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-}
+/** ロールの優先順位（ソート用） */
+const ROLE_ORDER: Record<MemberRole, number> = {
+  OWNER: 0,
+  ADMIN: 1,
+  MEMBER: 2,
+};
 
 /**
- * 確認ダイアログ
+ * 操作不可理由を取得
  */
-function ConfirmDialog({
-  isOpen,
-  title,
-  message,
-  confirmLabel,
-  onConfirm,
-  onCancel,
-  isLoading,
-  isDanger = true,
-}: {
-  isOpen: boolean;
-  title: string;
-  message: string;
-  confirmLabel: string;
-  onConfirm: () => void;
-  onCancel: () => void;
-  isLoading?: boolean;
-  isDanger?: boolean;
-}) {
-  const modalRef = useRef<HTMLDivElement>(null);
-  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+function getDisabledReason(
+  member: OrganizationMember,
+  currentRole?: MemberRole,
+  isSelf?: boolean
+): string | null {
+  const isOwner = member.role === 'OWNER';
 
-  // ESCキーでモーダルを閉じる + フォーカストラップ
-  useEffect(() => {
-    if (!isOpen) return;
+  // 自分がオーナーで、対象もオーナー（つまり自分自身）
+  if (isOwner && isSelf) {
+    return 'オーナー権限は「危険な操作」タブで移譲できます';
+  }
 
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onCancel();
-      }
-      if (e.key === 'Tab' && modalRef.current) {
-        const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
-          'button:not([disabled])'
-        );
-        const firstElement = focusableElements[0];
-        const lastElement = focusableElements[focusableElements.length - 1];
+  // 自分自身（オーナー以外）
+  if (isSelf) {
+    return '自分自身のロールは変更できません';
+  }
 
-        if (e.shiftKey && document.activeElement === firstElement) {
-          e.preventDefault();
-          lastElement?.focus();
-        } else if (!e.shiftKey && document.activeElement === lastElement) {
-          e.preventDefault();
-          firstElement?.focus();
-        }
-      }
-    };
+  // 対象がオーナー（自分はADMIN）
+  if (isOwner && currentRole !== 'OWNER') {
+    return 'オーナーのロールは変更できません';
+  }
 
-    // フォーカスをダイアログに移動
-    cancelButtonRef.current?.focus();
+  // MEMBER権限では他人を変更できない
+  if (currentRole === 'MEMBER') {
+    return 'メンバー管理には管理者権限が必要です';
+  }
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onCancel]);
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-modal flex items-center justify-center">
-      {/* オーバーレイ */}
-      <div
-        className="absolute inset-0 bg-black/50"
-        onClick={onCancel}
-      />
-      {/* ダイアログ */}
-      <div
-        ref={modalRef}
-        className="relative bg-background border border-border rounded-lg shadow-lg max-w-md w-full mx-4 p-6"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="confirm-dialog-title"
-      >
-        <div className="flex items-start gap-4">
-          <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-            isDanger ? 'bg-danger-subtle' : 'bg-warning-subtle'
-          }`}>
-            <AlertTriangle className={`w-5 h-5 ${isDanger ? 'text-danger' : 'text-warning'}`} />
-          </div>
-          <div className="flex-1">
-            <h3 id="confirm-dialog-title" className="text-lg font-semibold text-foreground">
-              {title}
-            </h3>
-            <p className="text-sm text-foreground-muted mt-1">{message}</p>
-          </div>
-          <button
-            onClick={onCancel}
-            className="flex-shrink-0 text-foreground-subtle hover:text-foreground"
-            disabled={isLoading}
-            aria-label="閉じる"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        <div className="flex justify-end gap-2 mt-6">
-          <button
-            ref={cancelButtonRef}
-            className="btn btn-ghost"
-            onClick={onCancel}
-            disabled={isLoading}
-          >
-            キャンセル
-          </button>
-          <button
-            className={isDanger ? 'btn btn-danger' : 'btn btn-primary'}
-            onClick={onConfirm}
-            disabled={isLoading}
-          >
-            {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-            {confirmLabel}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+  return null;
 }
 
 /**
@@ -176,7 +91,7 @@ function RoleDropdown({
   isUpdating,
 }: {
   member: OrganizationMember;
-  currentRole?: 'OWNER' | 'ADMIN' | 'MEMBER';
+  currentRole?: MemberRole;
   currentUserId?: string;
   onRoleChange: (userId: string, newRole: 'ADMIN' | 'MEMBER') => void;
   onRemove: (userId: string) => void;
@@ -191,6 +106,8 @@ function RoleDropdown({
   const isSelf = member.userId === currentUserId;
   // ADMINはオーナーの操作はできない（自分の変更もできない）
   const canManage = currentRole === 'OWNER' || (currentRole === 'ADMIN' && !isOwner && !isSelf);
+  // 操作不可理由
+  const disabledReason = getDisabledReason(member, currentRole, isSelf);
 
   // ドロップダウン外クリックで閉じる
   useEffect(() => {
@@ -220,6 +137,26 @@ function RoleDropdown({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
 
+  // 操作不可の場合はツールチップ付きの無効ボタンを表示
+  if (!canManage && disabledReason) {
+    return (
+      <div className="relative group">
+        <button
+          className="p-1.5 text-foreground-subtle cursor-not-allowed"
+          disabled
+          aria-label="操作できません"
+        >
+          <MoreVertical className="w-4 h-4" />
+        </button>
+        {/* ツールチップ */}
+        <div className="absolute right-0 top-full mt-1 w-48 p-2 bg-background-tertiary border border-border rounded text-xs text-foreground-muted opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-tooltip">
+          {disabledReason}
+        </div>
+      </div>
+    );
+  }
+
+  // 操作不可でツールチップも不要な場合（MEMBERロールなど）
   if (!canManage) {
     return null;
   }
@@ -322,8 +259,7 @@ export function MemberList({ organizationId, currentRole }: MemberListProps) {
       const response = await organizationsApi.getMembers(organizationId);
       // オーナーを先頭に、次にADMIN、最後にMEMBERでソート
       const sortedMembers = response.members.sort((a, b) => {
-        const roleOrder = { OWNER: 0, ADMIN: 1, MEMBER: 2 };
-        return roleOrder[a.role] - roleOrder[b.role];
+        return ROLE_ORDER[a.role] - ROLE_ORDER[b.role];
       });
       setMembers(sortedMembers);
     } catch (err) {
@@ -375,10 +311,7 @@ export function MemberList({ organizationId, currentRole }: MemberListProps) {
       setMembers((prev) =>
         prev.map((m) =>
           m.userId === userId ? { ...m, role: response.member.role } : m
-        ).sort((a, b) => {
-          const roleOrder = { OWNER: 0, ADMIN: 1, MEMBER: 2 };
-          return roleOrder[a.role] - roleOrder[b.role];
-        })
+        ).sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role])
       );
       toast.success('ロールを変更しました');
     } catch (err) {
@@ -548,26 +481,24 @@ export function MemberList({ organizationId, currentRole }: MemberListProps) {
       )}
 
       {/* 確認ダイアログ */}
-      <ConfirmDialog
-        isOpen={confirmDialog !== null}
-        title={
-          confirmDialog?.type === 'remove'
-            ? 'メンバーを削除'
-            : 'ロールを変更'
-        }
-        message={
-          confirmDialog?.type === 'remove'
-            ? `${confirmDialog.userName} を組織から削除しますか？この操作は取り消せません。`
-            : `${confirmDialog?.userName} のロールを${
-                confirmDialog?.newRole === 'ADMIN' ? '管理者' : 'メンバー'
-              }に変更しますか？`
-        }
-        confirmLabel={confirmDialog?.type === 'remove' ? '削除する' : '変更する'}
-        onConfirm={handleConfirm}
-        onCancel={() => setConfirmDialog(null)}
-        isLoading={updatingUserId !== null}
-        isDanger={confirmDialog?.type === 'remove'}
-      />
+      {confirmDialog && (
+        <ConfirmDialog
+          isOpen={true}
+          title={confirmDialog.type === 'remove' ? 'メンバーを削除' : 'ロールを変更'}
+          message={
+            confirmDialog.type === 'remove'
+              ? `${confirmDialog.userName} を組織から削除しますか？この操作は取り消せません。`
+              : `${confirmDialog.userName} のロールを${
+                  confirmDialog.newRole === 'ADMIN' ? '管理者' : 'メンバー'
+                }に変更しますか？`
+          }
+          confirmLabel={confirmDialog.type === 'remove' ? '削除する' : '変更する'}
+          onConfirm={handleConfirm}
+          onCancel={() => setConfirmDialog(null)}
+          isLoading={updatingUserId !== null}
+          isDanger={confirmDialog.type === 'remove'}
+        />
+      )}
     </div>
   );
 }
