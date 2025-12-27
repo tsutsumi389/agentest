@@ -97,7 +97,9 @@ export function OrganizationSettingsPage() {
   ];
 
   // OWNER/ADMINのみアクセス可能
-  if (!isLoading && currentRole && currentRole !== 'OWNER' && currentRole !== 'ADMIN') {
+  // currentRoleがundefined（組織に未所属）またはMEMBERの場合は権限エラー
+  const hasPermission = currentRole === 'OWNER' || currentRole === 'ADMIN';
+  if (!isLoading && !hasPermission) {
     return (
       <div className="space-y-6">
         <div className="card p-8 text-center">
@@ -128,7 +130,7 @@ export function OrganizationSettingsPage() {
     return (
       <div className="space-y-6">
         <div className="card p-8 text-center">
-          <AlertTriangle className="w-12 h-12 text-error mx-auto mb-4" />
+          <AlertTriangle className="w-12 h-12 text-danger mx-auto mb-4" />
           <h2 className="text-lg font-semibold text-foreground mb-2">
             {error || '組織が見つかりません'}
           </h2>
@@ -176,10 +178,10 @@ export function OrganizationSettingsPage() {
                       ? 'bg-accent-subtle text-accent'
                       : 'text-foreground-muted hover:text-foreground hover:bg-background-tertiary'
                     }
-                    ${tab.id === 'danger' ? 'text-error hover:text-error' : ''}
+                    ${tab.id === 'danger' ? 'text-danger hover:text-danger' : ''}
                   `}
                 >
-                  <tab.icon className={`w-4 h-4 ${tab.id === 'danger' && activeTab !== tab.id ? 'text-error' : ''}`} />
+                  <tab.icon className={`w-4 h-4 ${tab.id === 'danger' && activeTab !== tab.id ? 'text-danger' : ''}`} />
                   {tab.label}
                 </button>
               </li>
@@ -321,7 +323,7 @@ function GeneralSettings({
         {/* 組織名 */}
         <div>
           <label htmlFor="org-name" className="block text-sm font-medium text-foreground mb-1">
-            組織名 <span className="text-error">*</span>
+            組織名 <span className="text-danger">*</span>
           </label>
           <input
             id="org-name"
@@ -331,11 +333,11 @@ function GeneralSettings({
               setName(e.target.value);
               setErrors((prev) => ({ ...prev, name: '' }));
             }}
-            className={`input w-full max-w-md ${errors.name ? 'border-error focus:border-error' : ''}`}
+            className={`input w-full max-w-md ${errors.name ? 'border-danger focus:border-danger focus:ring-danger' : ''}`}
             disabled={isSaving}
           />
           {errors.name && (
-            <p className="text-xs text-error mt-1">{errors.name}</p>
+            <p className="text-xs text-danger mt-1">{errors.name}</p>
           )}
         </div>
 
@@ -368,12 +370,12 @@ function GeneralSettings({
               setErrors((prev) => ({ ...prev, description: '' }));
             }}
             rows={3}
-            className={`input w-full max-w-md resize-none ${errors.description ? 'border-error focus:border-error' : ''}`}
+            className={`input w-full max-w-md resize-none ${errors.description ? 'border-danger focus:border-danger focus:ring-danger' : ''}`}
             disabled={isSaving}
             placeholder="組織の説明（任意）"
           />
           {errors.description && (
-            <p className="text-xs text-error mt-1">{errors.description}</p>
+            <p className="text-xs text-danger mt-1">{errors.description}</p>
           )}
         </div>
 
@@ -390,12 +392,12 @@ function GeneralSettings({
               setBillingEmail(e.target.value);
               setErrors((prev) => ({ ...prev, billingEmail: '' }));
             }}
-            className={`input w-full max-w-md ${errors.billingEmail ? 'border-error focus:border-error' : ''}`}
+            className={`input w-full max-w-md ${errors.billingEmail ? 'border-danger focus:border-danger focus:ring-danger' : ''}`}
             disabled={isSaving}
             placeholder="billing@example.com"
           />
           {errors.billingEmail && (
-            <p className="text-xs text-error mt-1">{errors.billingEmail}</p>
+            <p className="text-xs text-danger mt-1">{errors.billingEmail}</p>
           )}
           <p className="text-xs text-foreground-subtle mt-1">
             請求関連の通知を受け取るメールアドレス
@@ -510,11 +512,11 @@ function DangerSettings({
       </div>
 
       {/* 組織削除 */}
-      <div className="card p-6 border-error">
-        <h3 className="text-lg font-semibold text-error mb-2">組織を削除</h3>
+      <div className="card p-6 border-danger">
+        <h3 className="text-lg font-semibold text-danger mb-2">組織を削除</h3>
         <p className="text-foreground-muted text-sm mb-4">
           組織を削除すると、すべてのプロジェクト、テスト、メンバー情報が削除されます。
-          この操作は取り消せません。
+          削除後30日間は復元可能ですが、30日経過後は完全に削除され復元できません。
         </p>
         <button
           className="btn btn-danger"
