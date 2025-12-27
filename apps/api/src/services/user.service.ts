@@ -37,10 +37,18 @@ export class UserService {
 
   /**
    * ユーザーの組織一覧を取得
+   * @param userId ユーザーID
+   * @param options オプション
+   * @param options.includeDeleted 削除済み組織も含めるか（デフォルト: false）
    */
-  async getOrganizations(userId: string) {
+  async getOrganizations(userId: string, options: { includeDeleted?: boolean } = {}) {
+    const { includeDeleted = false } = options;
+
     return prisma.organizationMember.findMany({
-      where: { userId },
+      where: {
+        userId,
+        organization: includeDeleted ? undefined : { deletedAt: null },
+      },
       include: {
         organization: {
           select: {
@@ -51,6 +59,7 @@ export class UserService {
             avatarUrl: true,
             plan: true,
             createdAt: true,
+            deletedAt: true,
             _count: {
               select: { members: true },
             },

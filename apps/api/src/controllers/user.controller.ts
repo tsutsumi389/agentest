@@ -9,6 +9,10 @@ const updateUserSchema = z.object({
   avatarUrl: z.string().url().optional().nullable(),
 });
 
+const getUserOrganizationsQuerySchema = z.object({
+  includeDeleted: z.coerce.boolean().optional().default(false),
+});
+
 /**
  * ユーザーコントローラー
  */
@@ -83,7 +87,10 @@ export class UserController {
         throw new AuthorizationError('自分の組織一覧のみ取得できます');
       }
 
-      const organizations = await this.userService.getOrganizations(userId);
+      const query = getUserOrganizationsQuerySchema.parse(req.query);
+      const organizations = await this.userService.getOrganizations(userId, {
+        includeDeleted: query.includeDeleted,
+      });
 
       res.json({ organizations });
     } catch (error) {

@@ -558,6 +558,33 @@ export class OrganizationService {
   }
 
   /**
+   * 組織を復元
+   */
+  async restore(organizationId: string, userId: string) {
+    // 削除済み組織を取得
+    const org = await this.orgRepo.findDeletedById(organizationId);
+    if (!org) {
+      throw new NotFoundError('Organization', organizationId);
+    }
+
+    // 復元実行
+    const restoredOrg = await this.orgRepo.restore(organizationId);
+
+    // 監査ログを記録
+    await auditLogService.log({
+      userId,
+      organizationId,
+      category: 'ORGANIZATION',
+      action: 'organization.restored',
+      targetType: 'Organization',
+      targetId: organizationId,
+      details: { name: org.name, slug: org.slug },
+    });
+
+    return restoredOrg;
+  }
+
+  /**
    * オーナー権限を移譲
    */
   async transferOwnership(organizationId: string, currentOwnerId: string, newOwnerId: string) {
