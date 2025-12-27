@@ -1,6 +1,7 @@
 import { prisma } from '@agentest/db';
 import { NotFoundError, ConflictError, AuthorizationError } from '@agentest/shared';
 import { OrganizationRepository } from '../repositories/organization.repository.js';
+import { auditLogService } from './audit-log.service.js';
 
 /**
  * 組織サービス
@@ -21,8 +22,8 @@ export class OrganizationService {
     }
 
     // トランザクションで組織とオーナーメンバーシップを作成
-    return prisma.$transaction(async (tx) => {
-      const organization = await tx.organization.create({
+    const organization = await prisma.$transaction(async (tx) => {
+      const org = await tx.organization.create({
         data: {
           name: data.name,
           slug: data.slug,
@@ -32,14 +33,27 @@ export class OrganizationService {
 
       await tx.organizationMember.create({
         data: {
-          organizationId: organization.id,
+          organizationId: org.id,
           userId,
           role: 'OWNER',
         },
       });
 
-      return organization;
+      return org;
     });
+
+    // 監査ログを記録
+    await auditLogService.log({
+      userId,
+      organizationId: organization.id,
+      category: 'ORGANIZATION',
+      action: 'organization.created',
+      targetType: 'Organization',
+      targetId: organization.id,
+      details: { name: data.name, slug: data.slug },
+    });
+
+    return organization;
   }
 
   /**
@@ -56,17 +70,47 @@ export class OrganizationService {
   /**
    * 組織を更新
    */
-  async update(organizationId: string, data: { name?: string; description?: string | null; billingEmail?: string | null }) {
+  async update(
+    organizationId: string,
+    data: { name?: string; description?: string | null; billingEmail?: string | null },
+    userId?: string
+  ) {
     await this.findById(organizationId);
-    return this.orgRepo.update(organizationId, data);
+    const organization = await this.orgRepo.update(organizationId, data);
+
+    // 監査ログを記録
+    await auditLogService.log({
+      userId,
+      organizationId,
+      category: 'ORGANIZATION',
+      action: 'organization.updated',
+      targetType: 'Organization',
+      targetId: organizationId,
+      details: data,
+    });
+
+    return organization;
   }
 
   /**
    * 組織を論理削除
    */
-  async softDelete(organizationId: string) {
-    await this.findById(organizationId);
-    return this.orgRepo.softDelete(organizationId);
+  async softDelete(organizationId: string, userId?: string) {
+    const org = await this.findById(organizationId);
+    const result = await this.orgRepo.softDelete(organizationId);
+
+    // 監査ログを記録
+    await auditLogService.log({
+      userId,
+      organizationId,
+      category: 'ORGANIZATION',
+      action: 'organization.deleted',
+      targetType: 'Organization',
+      targetId: organizationId,
+      details: { name: org.name, slug: org.slug },
+    });
+
+    return result;
   }
 
   /**
@@ -136,7 +180,7 @@ export class OrganizationService {
     const token = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7日
 
-    return prisma.organizationInvitation.create({
+    const invitation = await prisma.organizationInvitation.create({
       data: {
         organizationId,
         email: data.email,
@@ -146,6 +190,19 @@ export class OrganizationService {
         expiresAt,
       },
     });
+
+    // 監査ログを記録
+    await auditLogService.log({
+      userId: invitedByUserId,
+      organizationId,
+      category: 'MEMBER',
+      action: 'member.invited',
+      targetType: 'OrganizationInvitation',
+      targetId: invitation.id,
+      details: { email: data.email, role: data.role },
+    });
+
+    return invitation;
   }
 
   /**
@@ -176,7 +233,7 @@ export class OrganizationService {
     }
 
     // トランザクションで処理
-    return prisma.$transaction(async (tx) => {
+    const member = await prisma.$transaction(async (tx) => {
       await tx.organizationInvitation.update({
         where: { id: invitation.id },
         data: { acceptedAt: new Date() },
@@ -196,16 +253,34 @@ export class OrganizationService {
         },
       });
     });
+
+    // 監査ログを記録
+    await auditLogService.log({
+      userId,
+      organizationId: invitation.organizationId,
+      category: 'MEMBER',
+      action: 'member.invitation_accepted',
+      targetType: 'OrganizationMember',
+      targetId: member.id,
+      details: { email: invitation.email, role: invitation.role },
+    });
+
+    return member;
   }
 
   /**
    * メンバーのロールを更新
    * 注意: OWNERへの変更はtransferOwnershipを使用すること
    */
-  async updateMemberRole(organizationId: string, userId: string, role: 'ADMIN' | 'MEMBER') {
+  async updateMemberRole(
+    organizationId: string,
+    targetUserId: string,
+    role: 'ADMIN' | 'MEMBER',
+    performedByUserId?: string
+  ) {
     const member = await prisma.organizationMember.findUnique({
       where: {
-        organizationId_userId: { organizationId, userId },
+        organizationId_userId: { organizationId, userId: targetUserId },
       },
     });
 
@@ -213,14 +288,16 @@ export class OrganizationService {
       throw new NotFoundError('OrganizationMember');
     }
 
+    const previousRole = member.role;
+
     // OWNERのロール変更は不可（transferOwnershipを使用）
     if (member.role === 'OWNER') {
       throw new ConflictError('オーナーのロールは変更できません。オーナー権限移譲を使用してください');
     }
 
-    return prisma.organizationMember.update({
+    const updatedMember = await prisma.organizationMember.update({
       where: {
-        organizationId_userId: { organizationId, userId },
+        organizationId_userId: { organizationId, userId: targetUserId },
       },
       data: { role },
       include: {
@@ -229,15 +306,37 @@ export class OrganizationService {
         },
       },
     });
+
+    // 監査ログを記録
+    await auditLogService.log({
+      userId: performedByUserId,
+      organizationId,
+      category: 'MEMBER',
+      action: 'member.role_updated',
+      targetType: 'OrganizationMember',
+      targetId: member.id,
+      details: {
+        targetUserId,
+        previousRole,
+        newRole: role,
+      },
+    });
+
+    return updatedMember;
   }
 
   /**
    * メンバーを削除
    */
-  async removeMember(organizationId: string, userId: string) {
+  async removeMember(organizationId: string, targetUserId: string, performedByUserId?: string) {
     const member = await prisma.organizationMember.findUnique({
       where: {
-        organizationId_userId: { organizationId, userId },
+        organizationId_userId: { organizationId, userId: targetUserId },
+      },
+      include: {
+        user: {
+          select: { email: true, name: true },
+        },
       },
     });
 
@@ -249,11 +348,28 @@ export class OrganizationService {
       throw new ConflictError('オーナーは削除できません。先にオーナーを変更してください');
     }
 
-    return prisma.organizationMember.delete({
+    const result = await prisma.organizationMember.delete({
       where: {
-        organizationId_userId: { organizationId, userId },
+        organizationId_userId: { organizationId, userId: targetUserId },
       },
     });
+
+    // 監査ログを記録
+    await auditLogService.log({
+      userId: performedByUserId,
+      organizationId,
+      category: 'MEMBER',
+      action: 'member.removed',
+      targetType: 'OrganizationMember',
+      targetId: member.id,
+      details: {
+        targetUserId,
+        email: member.user.email,
+        role: member.role,
+      },
+    });
+
+    return result;
   }
 
   /**
@@ -306,7 +422,7 @@ export class OrganizationService {
   /**
    * 招待を取消
    */
-  async cancelInvitation(organizationId: string, invitationId: string) {
+  async cancelInvitation(organizationId: string, invitationId: string, userId?: string) {
     const invitation = await prisma.organizationInvitation.findUnique({
       where: { id: invitationId },
     });
@@ -324,9 +440,22 @@ export class OrganizationService {
     }
 
     // 招待を削除
-    return prisma.organizationInvitation.delete({
+    const result = await prisma.organizationInvitation.delete({
       where: { id: invitationId },
     });
+
+    // 監査ログを記録
+    await auditLogService.log({
+      userId,
+      organizationId,
+      category: 'MEMBER',
+      action: 'member.invitation_cancelled',
+      targetType: 'OrganizationInvitation',
+      targetId: invitationId,
+      details: { email: invitation.email, role: invitation.role },
+    });
+
+    return result;
   }
 
   /**
@@ -356,11 +485,24 @@ export class OrganizationService {
       throw new AuthorizationError('この招待はあなた宛てではありません');
     }
 
-    return prisma.organizationInvitation.update({
+    const result = await prisma.organizationInvitation.update({
       where: { id: invitation.id },
       data: { declinedAt: new Date() },
       include: { organization: true },
     });
+
+    // 監査ログを記録
+    await auditLogService.log({
+      userId,
+      organizationId: invitation.organizationId,
+      category: 'MEMBER',
+      action: 'member.invitation_declined',
+      targetType: 'OrganizationInvitation',
+      targetId: invitation.id,
+      details: { email: invitation.email },
+    });
+
+    return result;
   }
 
   /**
@@ -403,7 +545,7 @@ export class OrganizationService {
     }
 
     // トランザクションで権限を移譲
-    return prisma.$transaction(async (tx) => {
+    const updatedNewOwner = await prisma.$transaction(async (tx) => {
       // 現オーナーをADMINに変更
       await tx.organizationMember.update({
         where: {
@@ -425,5 +567,22 @@ export class OrganizationService {
         },
       });
     });
+
+    // 監査ログを記録
+    await auditLogService.log({
+      userId: currentOwnerId,
+      organizationId,
+      category: 'ORGANIZATION',
+      action: 'organization.ownership_transferred',
+      targetType: 'Organization',
+      targetId: organizationId,
+      details: {
+        previousOwnerId: currentOwnerId,
+        newOwnerId,
+        newOwnerEmail: updatedNewOwner.user.email,
+      },
+    });
+
+    return updatedNewOwner;
   }
 }
