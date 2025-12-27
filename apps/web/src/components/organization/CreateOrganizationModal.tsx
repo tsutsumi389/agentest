@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Building2, Loader2 } from 'lucide-react';
 import { organizationsApi, ApiError } from '../../lib/api';
 import { useOrganization } from '../../contexts/OrganizationContext';
@@ -37,6 +37,7 @@ export function CreateOrganizationModal({
   onSuccess,
 }: CreateOrganizationModalProps) {
   const { refreshOrganizations } = useOrganization();
+  const modalRef = useRef<HTMLDivElement>(null);
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   // フォーム状態
@@ -49,7 +50,7 @@ export function CreateOrganizationModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // モーダルが開いたらフォームをリセットしてフォーカス
+  // モーダルが開いたらフォームをリセットしてフォーカス、背景スクロールを無効化
   useEffect(() => {
     if (isOpen) {
       setName('');
@@ -57,12 +58,54 @@ export function CreateOrganizationModal({
       setDescription('');
       setIsSlugManuallyEdited(false);
       setErrors({});
-      // 少し遅延させてDOMが準備されてからフォーカス
-      setTimeout(() => {
+      // 背景スクロールを無効化
+      document.body.style.overflow = 'hidden';
+      // DOMが準備されてからフォーカス
+      requestAnimationFrame(() => {
         nameInputRef.current?.focus();
-      }, 100);
+      });
+      return () => {
+        document.body.style.overflow = '';
+      };
     }
   }, [isOpen]);
+
+  // フォーカストラップ: モーダル内でTabキーをトラップする
+  const handleTabKey = useCallback((e: KeyboardEvent) => {
+    if (!isOpen || !modalRef.current) return;
+
+    const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+
+    if (e.key === 'Tab') {
+      if (e.shiftKey) {
+        // Shift+Tab: 最初の要素から最後へ
+        if (document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement?.focus();
+        }
+      } else {
+        // Tab: 最後の要素から最初へ
+        if (document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement?.focus();
+        }
+      }
+    }
+  }, [isOpen]);
+
+  // フォーカストラップのイベントリスナー
+  useEffect(() => {
+    if (isOpen) {
+      document.addEventListener('keydown', handleTabKey);
+      return () => {
+        document.removeEventListener('keydown', handleTabKey);
+      };
+    }
+  }, [isOpen, handleTabKey]);
 
   // 組織名が変更されたらスラッグを自動生成
   useEffect(() => {
@@ -91,12 +134,12 @@ export function CreateOrganizationModal({
 
     if (!slug.trim()) {
       newErrors.slug = 'スラッグは必須です';
-    } else if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$|^[a-z0-9]$/.test(slug)) {
-      newErrors.slug = 'スラッグは英小文字、数字、ハイフンのみ使用できます（先頭と末尾はハイフン不可）';
     } else if (slug.length < 2) {
       newErrors.slug = 'スラッグは2文字以上必要です';
     } else if (slug.length > 50) {
       newErrors.slug = 'スラッグは50文字以内で入力してください';
+    } else if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(slug)) {
+      newErrors.slug = 'スラッグは英小文字、数字、ハイフンのみ使用できます（先頭と末尾はハイフン不可）';
     }
 
     if (description.length > 500) {
@@ -178,6 +221,7 @@ export function CreateOrganizationModal({
 
       {/* モーダル */}
       <div
+        ref={modalRef}
         className="relative w-full max-w-md bg-background-secondary border border-border rounded-xl shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
@@ -252,7 +296,7 @@ export function CreateOrganizationModal({
                   className={`input w-full pl-6 font-mono text-sm ${errors.slug ? 'border-error focus:border-error' : ''}`}
                   disabled={isSubmitting}
                   aria-invalid={!!errors.slug}
-                  aria-describedby="org-slug-hint org-slug-error"
+                  aria-describedby={errors.slug ? 'org-slug-hint org-slug-error' : 'org-slug-hint'}
                 />
               </div>
               <p id="org-slug-hint" className="mt-1 text-xs text-foreground-muted">
