@@ -55,9 +55,19 @@ export function ToastContainer() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-toast flex flex-col gap-2 max-w-sm">
+    <div
+      className="fixed bottom-4 right-4 z-toast flex flex-col gap-2 max-w-sm"
+      role="region"
+      aria-label="通知"
+    >
       {toasts.map((toast) => (
-        <ToastItem key={toast.id} toast={toast} />
+        <div
+          key={toast.id}
+          role={toast.type === 'error' ? 'alert' : 'status'}
+          aria-live={toast.type === 'error' ? 'assertive' : 'polite'}
+        >
+          <ToastItem toast={toast} />
+        </div>
       ))}
     </div>
   );

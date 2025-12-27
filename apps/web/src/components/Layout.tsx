@@ -135,6 +135,14 @@ export function Layout() {
 
   return (
     <div className="flex min-h-screen bg-background">
+      {/* Skip Link - キーボードナビゲーション用 */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-tooltip focus:px-4 focus:py-2 focus:bg-accent focus:text-background focus:rounded focus:font-medium"
+      >
+        コンテンツにスキップ
+      </a>
+
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div className="flex-1 flex flex-col lg:pl-0">
@@ -153,7 +161,7 @@ export function Layout() {
         </header>
 
         {/* メインコンテンツ */}
-        <main className="flex-1 p-6">
+        <main id="main-content" className="flex-1 p-6" tabIndex={-1}>
           <Outlet />
         </main>
       </div>
