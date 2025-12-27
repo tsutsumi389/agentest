@@ -15,6 +15,7 @@ import { useOrganization } from '../contexts/OrganizationContext';
 import { toast } from '../stores/toast';
 import { MemberList } from '../components/organization/MemberList';
 import { InvitationList } from '../components/organization/InvitationList';
+import { AuditLogList } from '../components/organization/AuditLogList';
 
 type SettingsTab = 'general' | 'members' | 'invitations' | 'audit-logs' | 'danger';
 
@@ -463,19 +464,10 @@ function InvitationsSettings({
 }
 
 /**
- * 監査ログタブ（プレースホルダー）
+ * 監査ログタブ
  */
-function AuditLogsSettings(_props: {
-  organizationId: string;
-}) {
-  return (
-    <div className="card p-6">
-      <h2 className="text-lg font-semibold text-foreground mb-4">監査ログ</h2>
-      <p className="text-foreground-muted">
-        監査ログ機能は次のステップで実装されます。
-      </p>
-    </div>
-  );
+function AuditLogsSettings({ organizationId }: { organizationId: string }) {
+  return <AuditLogList organizationId={organizationId} />;
 }
 
 /**
