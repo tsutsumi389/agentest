@@ -13,6 +13,15 @@ vi.mock('../../repositories/organization.repository.js', () => ({
   OrganizationRepository: vi.fn().mockImplementation(() => mockOrgRepo),
 }));
 
+// AuditLogService のモック
+const mockAuditLogService = vi.hoisted(() => ({
+  log: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../../services/audit-log.service.js', () => ({
+  auditLogService: mockAuditLogService,
+}));
+
 // Prisma のモック
 const mockPrisma = vi.hoisted(() => ({
   organization: {
@@ -532,6 +541,318 @@ describe('OrganizationService', () => {
 
       await expect(service.updateMemberRole('org-1', 'owner-1', 'ADMIN'))
         .rejects.toThrow(ConflictError);
+    });
+  });
+
+  // 監査ログのテスト
+  describe('Audit Logging', () => {
+    describe('create', () => {
+      it('組織作成時に監査ログを記録する', async () => {
+        const mockOrg = { id: 'org-1', name: 'Test Org', slug: 'test-org' };
+        mockPrisma.organization.findUnique.mockResolvedValue(null);
+        mockPrisma.organization.create.mockResolvedValue(mockOrg);
+        mockPrisma.organizationMember.create.mockResolvedValue({});
+
+        await service.create('user-1', { name: 'Test Org', slug: 'test-org' });
+
+        expect(mockAuditLogService.log).toHaveBeenCalledWith({
+          userId: 'user-1',
+          organizationId: 'org-1',
+          category: 'ORGANIZATION',
+          action: 'organization.created',
+          targetType: 'Organization',
+          targetId: 'org-1',
+          details: { name: 'Test Org', slug: 'test-org' },
+        });
+      });
+    });
+
+    describe('update', () => {
+      it('組織更新時に監査ログを記録する', async () => {
+        const mockOrg = { id: 'org-1', name: 'Old Name' };
+        mockOrgRepo.findById.mockResolvedValue(mockOrg);
+        mockOrgRepo.update.mockResolvedValue({ ...mockOrg, name: 'New Name' });
+
+        await service.update('org-1', { name: 'New Name' }, 'user-1');
+
+        expect(mockAuditLogService.log).toHaveBeenCalledWith({
+          userId: 'user-1',
+          organizationId: 'org-1',
+          category: 'ORGANIZATION',
+          action: 'organization.updated',
+          targetType: 'Organization',
+          targetId: 'org-1',
+          details: { name: 'New Name' },
+        });
+      });
+    });
+
+    describe('softDelete', () => {
+      it('組織削除時に監査ログを記録する', async () => {
+        const mockOrg = { id: 'org-1', name: 'Test Org', slug: 'test-org' };
+        mockOrgRepo.findById.mockResolvedValue(mockOrg);
+        mockOrgRepo.softDelete.mockResolvedValue(mockOrg);
+
+        await service.softDelete('org-1', 'user-1');
+
+        expect(mockAuditLogService.log).toHaveBeenCalledWith({
+          userId: 'user-1',
+          organizationId: 'org-1',
+          category: 'ORGANIZATION',
+          action: 'organization.deleted',
+          targetType: 'Organization',
+          targetId: 'org-1',
+          details: { name: 'Test Org', slug: 'test-org' },
+        });
+      });
+    });
+
+    describe('invite', () => {
+      it('招待送信時に監査ログを記録する', async () => {
+        const mockOrg = { id: 'org-1', name: 'Test Org' };
+        const mockInvitation = {
+          id: 'inv-1',
+          organizationId: 'org-1',
+          email: 'newuser@example.com',
+          role: 'MEMBER',
+        };
+        mockOrgRepo.findById.mockResolvedValue(mockOrg);
+        mockPrisma.user.findUnique.mockResolvedValue(null);
+        mockPrisma.organizationInvitation.findFirst.mockResolvedValue(null);
+        mockPrisma.organizationInvitation.create.mockResolvedValue(mockInvitation);
+
+        await service.invite('org-1', 'inviter-1', {
+          email: 'newuser@example.com',
+          role: 'MEMBER',
+        });
+
+        expect(mockAuditLogService.log).toHaveBeenCalledWith({
+          userId: 'inviter-1',
+          organizationId: 'org-1',
+          category: 'MEMBER',
+          action: 'member.invited',
+          targetType: 'OrganizationInvitation',
+          targetId: 'inv-1',
+          details: { email: 'newuser@example.com', role: 'MEMBER' },
+        });
+      });
+    });
+
+    describe('acceptInvitation', () => {
+      it('招待承認時に監査ログを記録する', async () => {
+        const mockUser = { id: 'user-1', email: 'user@example.com' };
+        const mockInvitation = {
+          id: 'inv-1',
+          organizationId: 'org-1',
+          email: 'user@example.com',
+          role: 'MEMBER',
+          token: 'token-1',
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          acceptedAt: null,
+          declinedAt: null,
+          organization: { id: 'org-1', name: 'Test Org' },
+        };
+        const mockMember = {
+          id: 'member-1',
+          organizationId: 'org-1',
+          userId: 'user-1',
+          role: 'MEMBER',
+          organization: { id: 'org-1', name: 'Test Org' },
+          user: { id: 'user-1', email: 'user@example.com', name: 'User', avatarUrl: null },
+        };
+        mockPrisma.organizationInvitation.findUnique.mockResolvedValue(mockInvitation);
+        mockPrisma.user.findUnique.mockResolvedValue(mockUser);
+        mockPrisma.organizationInvitation.update.mockResolvedValue({
+          ...mockInvitation,
+          acceptedAt: new Date(),
+        });
+        mockPrisma.organizationMember.create.mockResolvedValue(mockMember);
+
+        await service.acceptInvitation('token-1', 'user-1');
+
+        expect(mockAuditLogService.log).toHaveBeenCalledWith({
+          userId: 'user-1',
+          organizationId: 'org-1',
+          category: 'MEMBER',
+          action: 'member.invitation_accepted',
+          targetType: 'OrganizationMember',
+          targetId: 'member-1',
+          details: { email: 'user@example.com', role: 'MEMBER' },
+        });
+      });
+    });
+
+    describe('cancelInvitation', () => {
+      it('招待取消時に監査ログを記録する', async () => {
+        const mockInvitation = {
+          id: 'inv-1',
+          organizationId: 'org-1',
+          email: 'user@example.com',
+          role: 'MEMBER',
+          token: 'token-1',
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          acceptedAt: null,
+          declinedAt: null,
+        };
+        mockPrisma.organizationInvitation.findUnique.mockResolvedValue(mockInvitation);
+        mockPrisma.organizationInvitation.delete.mockResolvedValue(mockInvitation);
+
+        await service.cancelInvitation('org-1', 'inv-1', 'admin-1');
+
+        expect(mockAuditLogService.log).toHaveBeenCalledWith({
+          userId: 'admin-1',
+          organizationId: 'org-1',
+          category: 'MEMBER',
+          action: 'member.invitation_cancelled',
+          targetType: 'OrganizationInvitation',
+          targetId: 'inv-1',
+          details: { email: 'user@example.com', role: 'MEMBER' },
+        });
+      });
+    });
+
+    describe('declineInvitation', () => {
+      it('招待辞退時に監査ログを記録する', async () => {
+        const mockUser = { id: 'user-1', email: 'user@example.com' };
+        const mockInvitation = {
+          id: 'inv-1',
+          organizationId: 'org-1',
+          email: 'user@example.com',
+          role: 'MEMBER',
+          token: 'token-1',
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          acceptedAt: null,
+          declinedAt: null,
+          organization: { id: 'org-1', name: 'Test Org' },
+        };
+        mockPrisma.organizationInvitation.findUnique.mockResolvedValue(mockInvitation);
+        mockPrisma.user.findUnique.mockResolvedValue(mockUser);
+        mockPrisma.organizationInvitation.update.mockResolvedValue({
+          ...mockInvitation,
+          declinedAt: new Date(),
+        });
+
+        await service.declineInvitation('token-1', 'user-1');
+
+        expect(mockAuditLogService.log).toHaveBeenCalledWith({
+          userId: 'user-1',
+          organizationId: 'org-1',
+          category: 'MEMBER',
+          action: 'member.invitation_declined',
+          targetType: 'OrganizationInvitation',
+          targetId: 'inv-1',
+          details: { email: 'user@example.com' },
+        });
+      });
+    });
+
+    describe('updateMemberRole', () => {
+      it('ロール変更時に監査ログを記録する', async () => {
+        const mockMember = {
+          id: 'member-1',
+          organizationId: 'org-1',
+          userId: 'member-1',
+          role: 'MEMBER',
+        };
+        mockPrisma.organizationMember.findUnique.mockResolvedValue(mockMember);
+        mockPrisma.organizationMember.update.mockResolvedValue({
+          ...mockMember,
+          role: 'ADMIN',
+          user: { id: 'member-1', email: 'member@example.com', name: 'Member', avatarUrl: null },
+        });
+
+        await service.updateMemberRole('org-1', 'member-1', 'ADMIN', 'admin-1');
+
+        expect(mockAuditLogService.log).toHaveBeenCalledWith({
+          userId: 'admin-1',
+          organizationId: 'org-1',
+          category: 'MEMBER',
+          action: 'member.role_updated',
+          targetType: 'OrganizationMember',
+          targetId: 'member-1',
+          details: {
+            targetUserId: 'member-1',
+            previousRole: 'MEMBER',
+            newRole: 'ADMIN',
+          },
+        });
+      });
+    });
+
+    describe('removeMember', () => {
+      it('メンバー削除時に監査ログを記録する', async () => {
+        const mockMember = {
+          id: 'member-1',
+          organizationId: 'org-1',
+          userId: 'target-user',
+          role: 'MEMBER',
+          user: { email: 'member@example.com', name: 'Member' },
+        };
+        mockPrisma.organizationMember.findUnique.mockResolvedValue(mockMember);
+        mockPrisma.organizationMember.delete.mockResolvedValue(mockMember);
+
+        await service.removeMember('org-1', 'target-user', 'admin-1');
+
+        expect(mockAuditLogService.log).toHaveBeenCalledWith({
+          userId: 'admin-1',
+          organizationId: 'org-1',
+          category: 'MEMBER',
+          action: 'member.removed',
+          targetType: 'OrganizationMember',
+          targetId: 'member-1',
+          details: {
+            targetUserId: 'target-user',
+            email: 'member@example.com',
+            role: 'MEMBER',
+          },
+        });
+      });
+    });
+
+    describe('transferOwnership', () => {
+      it('オーナー権限移譲時に監査ログを記録する', async () => {
+        const mockOrg = { id: 'org-1', name: 'Test Org' };
+        const mockCurrentOwner = {
+          organizationId: 'org-1',
+          userId: 'owner-1',
+          role: 'OWNER',
+        };
+        const mockNewOwner = {
+          organizationId: 'org-1',
+          userId: 'admin-1',
+          role: 'ADMIN',
+          user: {
+            id: 'admin-1',
+            email: 'admin@example.com',
+            name: 'Admin User',
+            avatarUrl: null,
+          },
+        };
+        mockOrgRepo.findById.mockResolvedValue(mockOrg);
+        mockPrisma.organizationMember.findUnique
+          .mockResolvedValueOnce(mockCurrentOwner)
+          .mockResolvedValueOnce(mockNewOwner);
+        mockPrisma.organizationMember.update.mockResolvedValue({
+          ...mockNewOwner,
+          role: 'OWNER',
+        });
+
+        await service.transferOwnership('org-1', 'owner-1', 'admin-1');
+
+        expect(mockAuditLogService.log).toHaveBeenCalledWith({
+          userId: 'owner-1',
+          organizationId: 'org-1',
+          category: 'ORGANIZATION',
+          action: 'organization.ownership_transferred',
+          targetType: 'Organization',
+          targetId: 'org-1',
+          details: {
+            previousOwnerId: 'owner-1',
+            newOwnerId: 'admin-1',
+            newOwnerEmail: 'admin@example.com',
+          },
+        });
+      });
     });
   });
 });
