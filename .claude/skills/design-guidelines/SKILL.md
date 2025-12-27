@@ -1,6 +1,6 @@
 ---
 name: design-guidelines
-description: テスト管理ツールSaaSのデザインガイドライン。Terminal/CLI風のミニマルで直感的なUI/UXを実現する。UI/UXデザイン、画面設計、コンポーネント作成、スタイリング、フロントエンド実装時に使用。GitHub/Linear風の開発者向け美学を採用。
+description: テスト管理ツールSaaSのUI/UXデザインガイドライン。Terminal/CLI風のミニマルなデザインシステムを提供する。UIコンポーネント、画面レイアウト、スタイリング、フロントエンド実装について言及している場合、または「デザイン」「UI」「スタイル」「コンポーネント」に関する質問がある場合に使用する。
 ---
 
 # Design Guidelines - テスト管理ツール
