@@ -1,31 +1,12 @@
-import type { AuditLogCategory, AuditLog } from '@agentest/db';
-import { AuditLogRepository } from '../repositories/audit-log.repository.js';
+import type { AuditLog } from '@agentest/db';
+import {
+  AuditLogRepository,
+  type AuditLogQueryOptions,
+  type AuditLogCreateParams,
+} from '../repositories/audit-log.repository.js';
 
-/**
- * 監査ログのクエリオプション
- */
-export interface AuditLogQueryOptions {
-  page?: number;
-  limit?: number;
-  category?: AuditLogCategory;
-  startDate?: Date;
-  endDate?: Date;
-}
-
-/**
- * 監査ログの記録パラメータ
- */
-export interface AuditLogParams {
-  userId?: string;
-  organizationId?: string;
-  category: AuditLogCategory;
-  action: string;
-  targetType?: string;
-  targetId?: string;
-  details?: Record<string, unknown>;
-  ipAddress?: string;
-  userAgent?: string;
-}
+// 型をre-export（外部から利用しやすくする）
+export type { AuditLogQueryOptions, AuditLogCreateParams };
 
 /**
  * 監査ログサービス
@@ -33,15 +14,33 @@ export interface AuditLogParams {
  * 組織やユーザーの操作履歴を記録・取得する
  */
 export class AuditLogService {
-  private auditLogRepo = new AuditLogRepository();
+  /**
+   * @param auditLogRepo - 監査ログリポジトリ（テスト時にモック可能）
+   */
+  constructor(
+    private auditLogRepo: AuditLogRepository = new AuditLogRepository()
+  ) {}
 
   /**
    * 監査ログを記録
    *
+   * ログ記録の失敗はメイン処理に影響を与えないようエラーを握りつぶす
+   *
    * @param params - 監査ログのパラメータ
    */
-  async log(params: AuditLogParams): Promise<void> {
-    await this.auditLogRepo.create(params);
+  async log(params: AuditLogCreateParams): Promise<void> {
+    // バリデーション: actionは必須かつ空文字でない
+    if (!params.action || params.action.trim() === '') {
+      console.warn('監査ログ: actionが空のため記録をスキップ', params);
+      return;
+    }
+
+    try {
+      await this.auditLogRepo.create(params);
+    } catch (error) {
+      // ログ記録の失敗は警告としてログ出力し、呼び出し元に伝播させない
+      console.error('監査ログの記録に失敗:', error);
+    }
   }
 
   /**
@@ -71,5 +70,5 @@ export class AuditLogService {
   }
 }
 
-// シングルトンインスタンスをエクスポート（他サービスから容易に利用できるように）
+// デフォルトインスタンスをエクスポート（シンプルな利用ケース向け）
 export const auditLogService = new AuditLogService();
