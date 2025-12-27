@@ -61,6 +61,20 @@
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
     --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.5);
+
+    /* Layout */
+    --header-height: 3.5rem; /* 56px */
+    --sidebar-width: 15rem; /* 240px */
+
+    /* Z-Index Scale */
+    --z-dropdown: 10;
+    --z-sticky: 20;
+    --z-sidebar: 30;
+    --z-header: 40;
+    --z-overlay: 50;
+    --z-modal: 60;
+    --z-toast: 70;
+    --z-tooltip: 80;
   }
 
   /* ライトモード用（将来対応） */

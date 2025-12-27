@@ -72,6 +72,22 @@ export default {
         'card': '0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24)',
         'card-hover': '0 3px 6px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.12)',
       },
+      // z-indexスケール（レイヤー管理）
+      zIndex: {
+        'dropdown': '10',
+        'sticky': '20',
+        'sidebar': '30',
+        'header': '40',
+        'overlay': '50',
+        'modal': '60',
+        'toast': '70',
+        'tooltip': '80',
+      },
+      // レイアウトサイズ
+      spacing: {
+        'header': '3.5rem', // 56px
+        'sidebar': '15rem', // 240px
+      },
     },
   },
   plugins: [],

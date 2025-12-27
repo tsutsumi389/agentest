@@ -38,7 +38,7 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
       {/* モバイルオーバーレイ */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          className="fixed inset-0 bg-black/50 z-overlay lg:hidden"
           onClick={onClose}
         />
       )}
@@ -46,7 +46,7 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
       {/* サイドバー */}
       <aside
         className={`
-          fixed top-0 left-0 z-50 h-full w-64 bg-background-secondary border-r border-border
+          fixed top-0 left-0 z-modal h-full w-60 bg-background-secondary border-r border-border
           transform transition-transform duration-200 ease-in-out
           lg:translate-x-0 lg:static lg:z-auto
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
@@ -54,7 +54,7 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
       >
         <div className="flex flex-col h-full">
           {/* ヘッダー */}
-          <div className="flex items-center justify-between h-16 px-4 border-b border-border">
+          <div className="flex items-center justify-between h-14 px-4 border-b border-border">
             <div className="flex items-center gap-2">
               <FlaskConical className="w-6 h-6 text-accent" />
               <span className="font-semibold text-foreground">Agentest</span>
@@ -139,7 +139,7 @@ export function Layout() {
 
       <div className="flex-1 flex flex-col lg:pl-0">
         {/* モバイルヘッダー */}
-        <header className="sticky top-0 z-30 flex items-center h-16 px-4 bg-background-secondary border-b border-border lg:hidden">
+        <header className="sticky top-0 z-header flex items-center h-14 px-4 bg-background-secondary border-b border-border lg:hidden">
           <button
             onClick={() => setSidebarOpen(true)}
             className="p-2 text-foreground-muted hover:text-foreground"

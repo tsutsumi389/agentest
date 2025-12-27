@@ -157,7 +157,7 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+    <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/50">
       <div className="card w-full max-w-md p-6">
         <h2 className="text-lg font-semibold text-foreground mb-4">
           新規プロジェクト
