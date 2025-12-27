@@ -30,57 +30,47 @@ Terminal/CLI風のミニマルで機能的なデザインシステム。GitHub/L
 
 ### Color Philosophy
 
-ダークモードファースト。ターミナルの美学を継承しつつ、モダンな洗練さを加える。
+ダークモードファースト。ターミナルの美学を継承。
 
-```css
-/* Primary Palette */
---bg-primary: #0d1117;      /* GitHub Dark背景 */
---bg-secondary: #161b22;    /* カード/パネル */
---bg-tertiary: #21262d;     /* ホバー/選択 */
---border: #30363d;          /* ボーダー */
---text-primary: #e6edf3;    /* メインテキスト */
---text-secondary: #8b949e;  /* サブテキスト */
---text-muted: #6e7681;      /* 補助テキスト */
+| 種別 | 用途 | 詳細 |
+|-----|------|------|
+| Background | 背景色（Primary/Secondary/Tertiary） | [colors.md](references/colors.md) |
+| Text | テキスト色（Primary/Secondary/Muted） | [colors.md](references/colors.md) |
+| Semantic | テスト状態（Pass/Fail/Running等） | [colors.md](references/colors.md) |
 
-/* Accent Colors - テスト状態を表現 */
---accent-green: #3fb950;    /* Passed/Success */
---accent-red: #f85149;      /* Failed/Error */
---accent-yellow: #d29922;   /* Warning/Pending */
---accent-blue: #58a6ff;     /* Info/Link */
---accent-purple: #a371f7;   /* Running/Progress */
-```
+**テスト状態の色**:
+- ✅ Passed → `--success-*`（緑）
+- ❌ Failed → `--error-*`（赤）
+- 🔄 Running → `#a371f7`（紫）
+- ⏳ Pending → `--warning-*`（黄）
+- ⏭️ Skipped → `--text-muted`（グレー）
 
 ### Typography Philosophy
 
-モノスペースをアクセントに使用。可読性とコード感のバランス。
+モノスペースをアクセントに使用。可読性とコード感のバランス。詳細は [typography.md](references/typography.md) を参照。
 
-```css
-/* Font Stack */
---font-sans: 'Inter', -apple-system, sans-serif;
---font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+| フォント | 用途 |
+|---------|------|
+| `--font-sans` (Inter) | UI全般 |
+| `--font-mono` (JetBrains Mono) | コード、テスト名、パス |
 
-/* Scale */
---text-xs: 0.75rem;    /* 12px - ラベル、バッジ */
---text-sm: 0.875rem;   /* 14px - 本文、テーブル */
---text-base: 1rem;     /* 16px - 見出し */
---text-lg: 1.25rem;    /* 20px - ページタイトル */
---text-xl: 1.5rem;     /* 24px - セクションタイトル */
-```
+| サイズ | 用途 |
+|--------|------|
+| `--text-xs` (12px) | ラベル、バッジ |
+| `--text-sm` (14px) | 本文、テーブル |
+| `--text-base` (16px) | 見出し |
+| `--text-lg/xl` (20-24px) | ページ/セクションタイトル |
 
 ### Spacing System
 
-8pxベースのグリッドシステム。
+8pxベースのグリッドシステム。詳細は [layout.md](references/layout.md) を参照。
 
-```css
---space-1: 4px;
---space-2: 8px;
---space-3: 12px;
---space-4: 16px;
---space-6: 24px;
---space-8: 32px;
---space-12: 48px;
---space-16: 64px;
-```
+| 変数 | 値 | 用途 |
+|------|-----|------|
+| `--space-2` | 8px | 要素間の最小間隔 |
+| `--space-4` | 16px | 標準パディング |
+| `--space-6` | 24px | セクション間隔 |
+| `--space-8` | 32px | 大きなセクション間隔 |
 
 ## Layout Structure
 
@@ -215,6 +205,54 @@ animation: shimmer 1.5s infinite;
 2. **控えめに** - 派手なアニメーションは疲労を招く
 3. **高速で** - 200ms以下を基本とする
 4. **prefers-reduced-motion対応** - アクセシビリティ考慮
+
+## Design Workflows
+
+### 新規コンポーネント作成
+
+チェックリストをコピーして進行状況を追跡：
+
+```
+コンポーネント作成：
+- [ ] 1. 既存コンポーネントの確認
+- [ ] 2. デザイントークンの選定
+- [ ] 3. 基本構造の実装
+- [ ] 4. インタラクション状態の実装
+- [ ] 5. アクセシビリティ検証
+- [ ] 6. レスポンシブ対応確認
+```
+
+**Step 1: 既存コンポーネントの確認**
+- [components.md](references/components.md) で類似コンポーネントを確認
+- 存在する場合は拡張を検討
+
+**Step 2: デザイントークンの選定**
+- [colors.md](references/colors.md) から色を選択
+- [typography.md](references/typography.md) からフォントサイズを選択
+- カスタム値は使用しない
+
+**Step 3: 基本構造の実装**
+- CSS変数を使用（`--radius-md`, `--space-*` 等）
+- Tailwind ユーティリティクラスを活用
+
+**Step 4: インタラクション状態**
+- [interaction.md](references/interaction.md) を参照
+- Hover / Focus / Active / Disabled を実装
+
+**Step 5: アクセシビリティ検証**
+- [accessibility.md](references/accessibility.md) を参照
+- キーボード操作、aria属性、コントラスト比を確認
+
+**Step 6: レスポンシブ対応**
+- [layout.md](references/layout.md) のブレークポイントを参照
+- モバイル → デスクトップの順で確認
+
+### UI修正ワークフロー
+
+1. **現状確認** → 該当コンポーネントのコードを確認
+2. **ガイドライン照合** → 関連する参照ファイルを確認
+3. **修正実施** → デザイントークンを使用して修正
+4. **検証** → ホバー、フォーカス、レスポンシブを確認
 
 ## Implementation Notes
 
