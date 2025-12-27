@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router';
+import { useNavigate } from 'react-router';
 import { Building2, Plus, Search } from 'lucide-react';
 import { useOrganization } from '../contexts/OrganizationContext';
-import { OrganizationCard } from '../components/organization';
+import { OrganizationCard, CreateOrganizationModal } from '../components/organization';
 
 /**
  * 組織一覧ページ
@@ -10,6 +10,7 @@ import { OrganizationCard } from '../components/organization';
 export function OrganizationsPage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const { organizations, isLoading, selectOrganization } = useOrganization();
 
   // 検索フィルター
@@ -34,10 +35,13 @@ export function OrganizationsPage() {
             所属組織の管理
           </p>
         </div>
-        <Link to="/organizations/new" className="btn btn-primary">
+        <button
+          onClick={() => setIsCreateModalOpen(true)}
+          className="btn btn-primary"
+        >
           <Plus className="w-4 h-4" aria-hidden="true" />
           組織を作成
-        </Link>
+        </button>
       </div>
 
       {/* 検索 */}
@@ -65,10 +69,13 @@ export function OrganizationsPage() {
             {searchQuery ? '組織が見つかりません' : '所属している組織がありません'}
           </p>
           {!searchQuery && (
-            <Link to="/organizations/new" className="btn btn-primary">
+            <button
+              onClick={() => setIsCreateModalOpen(true)}
+              className="btn btn-primary"
+            >
               <Plus className="w-4 h-4" aria-hidden="true" />
               組織を作成
-            </Link>
+            </button>
           )}
         </div>
       ) : (
@@ -93,6 +100,17 @@ export function OrganizationsPage() {
           </p>
         </div>
       )}
+
+      {/* 組織作成モーダル */}
+      <CreateOrganizationModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSuccess={(organizationId) => {
+          // 作成した組織を選択してダッシュボードに移動
+          selectOrganization(organizationId);
+          navigate('/dashboard');
+        }}
+      />
     </div>
   );
 }
