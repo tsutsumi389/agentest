@@ -66,7 +66,7 @@ export function ProjectDetailPage() {
 
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-accent-muted flex items-center justify-center">
+            <div className="w-12 h-12 rounded-lg bg-accent-subtle flex items-center justify-center">
               <FolderKanban className="w-6 h-6 text-accent" />
             </div>
             <div>

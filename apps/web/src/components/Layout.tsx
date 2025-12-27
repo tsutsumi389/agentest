@@ -77,7 +77,7 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3 py-2 rounded text-sm font-medium transition-colors ${
                     isActive
-                      ? 'bg-accent-muted text-accent'
+                      ? 'bg-accent-subtle text-accent'
                       : 'text-foreground-muted hover:text-foreground hover:bg-background-tertiary'
                   }`
                 }
@@ -98,7 +98,7 @@ function Sidebar({ isOpen, onClose }: { isOpen: boolean; onClose: () => void }) 
                   className="w-8 h-8 rounded-full"
                 />
               ) : (
-                <div className="w-8 h-8 rounded-full bg-accent-muted flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full bg-accent-subtle flex items-center justify-center">
                   <span className="text-sm font-medium text-accent">
                     {user?.name?.charAt(0).toUpperCase()}
                   </span>

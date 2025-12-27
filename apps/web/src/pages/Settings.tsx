@@ -74,7 +74,7 @@ export function SettingsPage() {
                   className={`
                     w-full flex items-center gap-2 px-3 py-2 text-sm font-medium rounded transition-colors
                     ${activeTab === tab.id
-                      ? 'bg-accent-muted text-accent'
+                      ? 'bg-accent-subtle text-accent'
                       : 'text-foreground-muted hover:text-foreground hover:bg-background-tertiary'
                     }
                   `}
@@ -169,7 +169,7 @@ function ProfileSettings() {
               className="w-16 h-16 rounded-full"
             />
           ) : (
-            <div className="w-16 h-16 rounded-full bg-accent-muted flex items-center justify-center">
+            <div className="w-16 h-16 rounded-full bg-accent-subtle flex items-center justify-center">
               <span className="text-2xl font-medium text-accent">
                 {user?.name?.charAt(0).toUpperCase()}
               </span>
@@ -367,7 +367,7 @@ function ConfirmDialog({
       {/* ダイアログ */}
       <div className="relative bg-background border border-border rounded-lg shadow-lg max-w-md w-full mx-4 p-6">
         <div className="flex items-start gap-4">
-          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-warning-muted flex items-center justify-center">
+          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-warning-subtle flex items-center justify-center">
             <AlertTriangle className="w-5 h-5 text-warning" />
           </div>
           <div className="flex-1">
@@ -422,7 +422,7 @@ function SessionItem({
     <div
       className={`flex items-center justify-between p-4 rounded-lg border ${
         session.isCurrent
-          ? 'border-accent bg-accent-muted/30'
+          ? 'border-accent bg-accent-subtle'
           : 'border-border bg-background-secondary'
       }`}
     >
@@ -450,7 +450,7 @@ function SessionItem({
       </div>
       {!session.isCurrent && (
         <button
-          className="btn btn-ghost btn-sm text-danger hover:bg-danger-muted"
+          className="btn btn-ghost btn-sm text-danger hover:bg-danger-subtle"
           onClick={() => onRevoke(session.id)}
           disabled={isRevoking}
         >
@@ -684,7 +684,7 @@ function SecuritySettings() {
                         <span className="badge badge-success">接続済み</span>
                         {canUnlink && (
                           <button
-                            className="btn btn-ghost btn-sm text-danger hover:bg-danger-muted"
+                            className="btn btn-ghost btn-sm text-danger hover:bg-danger-subtle"
                             onClick={() => openConfirmDialog('unlink', { provider: provider.id })}
                             disabled={isUnlinking}
                             title="連携を解除"

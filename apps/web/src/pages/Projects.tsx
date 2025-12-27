@@ -105,7 +105,7 @@ function ProjectCard({ project }: { project: Project }) {
       className="card card-hover p-4 block"
     >
       <div className="flex items-start justify-between mb-3">
-        <div className="w-10 h-10 rounded bg-accent-muted flex items-center justify-center">
+        <div className="w-10 h-10 rounded bg-accent-subtle flex items-center justify-center">
           <FolderKanban className="w-5 h-5 text-accent" />
         </div>
         <button
