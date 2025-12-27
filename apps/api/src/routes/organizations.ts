@@ -43,10 +43,28 @@ router.get('/:organizationId/members', requireAuth(authConfig), orgController.ge
 router.post('/:organizationId/invitations', requireAuth(authConfig), requireOrgRole(['OWNER', 'ADMIN']), orgController.invite);
 
 /**
+ * 保留中の招待一覧取得
+ * GET /api/organizations/:organizationId/invitations
+ */
+router.get('/:organizationId/invitations', requireAuth(authConfig), requireOrgRole(['OWNER', 'ADMIN']), orgController.getInvitations);
+
+/**
+ * 招待を取消
+ * DELETE /api/organizations/:organizationId/invitations/:invitationId
+ */
+router.delete('/:organizationId/invitations/:invitationId', requireAuth(authConfig), requireOrgRole(['OWNER', 'ADMIN']), orgController.cancelInvitation);
+
+/**
  * 招待を承認
  * POST /api/organizations/invitations/:token/accept
  */
 router.post('/invitations/:token/accept', requireAuth(authConfig), orgController.acceptInvitation);
+
+/**
+ * 招待を辞退
+ * POST /api/organizations/invitations/:token/decline
+ */
+router.post('/invitations/:token/decline', requireAuth(authConfig), orgController.declineInvitation);
 
 /**
  * メンバーのロール更新

@@ -263,4 +263,87 @@ export class OrganizationService {
       orderBy: { createdAt: 'desc' },
     });
   }
+
+  /**
+   * 保留中の招待一覧を取得
+   */
+  async getPendingInvitations(organizationId: string) {
+    await this.findById(organizationId);
+
+    return prisma.organizationInvitation.findMany({
+      where: {
+        organizationId,
+        acceptedAt: null,
+        declinedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+      include: {
+        invitedBy: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  /**
+   * 招待を取消
+   */
+  async cancelInvitation(organizationId: string, invitationId: string) {
+    const invitation = await prisma.organizationInvitation.findUnique({
+      where: { id: invitationId },
+    });
+
+    if (!invitation) {
+      throw new NotFoundError('Invitation', invitationId);
+    }
+
+    if (invitation.organizationId !== organizationId) {
+      throw new AuthorizationError('この招待を取消す権限がありません');
+    }
+
+    if (invitation.acceptedAt || invitation.declinedAt) {
+      throw new ConflictError('この招待は既に処理されています');
+    }
+
+    // 招待を削除
+    return prisma.organizationInvitation.delete({
+      where: { id: invitationId },
+    });
+  }
+
+  /**
+   * 招待を辞退
+   */
+  async declineInvitation(token: string, userId: string) {
+    const invitation = await prisma.organizationInvitation.findUnique({
+      where: { token },
+      include: { organization: true },
+    });
+
+    if (!invitation) {
+      throw new NotFoundError('Invitation');
+    }
+
+    if (invitation.acceptedAt || invitation.declinedAt) {
+      throw new ConflictError('この招待は既に処理されています');
+    }
+
+    // ユーザーのメールアドレスを確認
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user || user.email !== invitation.email) {
+      throw new AuthorizationError('この招待はあなた宛てではありません');
+    }
+
+    return prisma.organizationInvitation.update({
+      where: { id: invitation.id },
+      data: { declinedAt: new Date() },
+      include: { organization: true },
+    });
+  }
 }
