@@ -143,6 +143,28 @@ export interface OrganizationInvitation {
   };
 }
 
+// 招待詳細取得用の型（トークンベース）
+export interface InvitationDetail {
+  id: string;
+  email: string;
+  role: 'ADMIN' | 'MEMBER';
+  expiresAt: string;
+  createdAt: string;
+  status: 'pending' | 'accepted' | 'declined' | 'expired';
+  organization: {
+    id: string;
+    name: string;
+    slug: string;
+    avatarUrl: string | null;
+  };
+  invitedBy: {
+    id: string;
+    email: string;
+    name: string;
+    avatarUrl: string | null;
+  };
+}
+
 export interface AuditLog {
   id: string;
   organizationId: string | null;
@@ -427,6 +449,10 @@ export const organizationsApi = {
   // 招待を取消
   cancelInvitation: (organizationId: string, invitationId: string) =>
     api.delete<void>(`/api/organizations/${organizationId}/invitations/${invitationId}`),
+
+  // 招待詳細を取得（トークンベース、認証不要）
+  getInvitationByToken: (token: string) =>
+    api.get<{ invitation: InvitationDetail }>(`/api/organizations/invitations/${token}`),
 
   // 招待を承諾
   acceptInvitation: (token: string) =>

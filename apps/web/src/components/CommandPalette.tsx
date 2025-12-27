@@ -6,9 +6,7 @@ import {
   FolderKanban,
   Settings,
   FileText,
-  Play,
   Command,
-  X,
 } from 'lucide-react';
 import { useShortcut, formatShortcut } from '../hooks/useKeyboardShortcuts';
 

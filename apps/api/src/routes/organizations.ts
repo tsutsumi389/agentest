@@ -55,6 +55,12 @@ router.get('/:organizationId/invitations', requireAuth(authConfig), requireOrgRo
 router.delete('/:organizationId/invitations/:invitationId', requireAuth(authConfig), requireOrgRole(['OWNER', 'ADMIN']), orgController.cancelInvitation);
 
 /**
+ * 招待詳細取得（認証不要）
+ * GET /api/organizations/invitations/:token
+ */
+router.get('/invitations/:token', orgController.getInvitationByToken);
+
+/**
  * 招待を承認
  * POST /api/organizations/invitations/:token/accept
  */

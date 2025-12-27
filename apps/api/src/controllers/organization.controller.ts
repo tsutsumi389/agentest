@@ -145,6 +145,20 @@ export class OrganizationController {
   };
 
   /**
+   * 招待詳細取得（認証不要）
+   */
+  getInvitationByToken = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { token } = req.params;
+      const invitation = await this.orgService.getInvitationByToken(token);
+
+      res.json({ invitation });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
    * 招待承認
    */
   acceptInvitation = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
