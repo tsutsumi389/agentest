@@ -365,4 +365,65 @@ export class OrganizationService {
       include: { organization: true },
     });
   }
+
+  /**
+   * オーナー権限を移譲
+   */
+  async transferOwnership(organizationId: string, currentOwnerId: string, newOwnerId: string) {
+    // 自分自身への移譲は不可
+    if (currentOwnerId === newOwnerId) {
+      throw new ConflictError('自分自身にオーナー権限を移譲することはできません');
+    }
+
+    // 現在のオーナーを確認
+    const currentOwner = await prisma.organizationMember.findUnique({
+      where: {
+        organizationId_userId: { organizationId, userId: currentOwnerId },
+      },
+    });
+
+    if (!currentOwner || currentOwner.role !== 'OWNER') {
+      throw new AuthorizationError('オーナー権限を移譲する権限がありません');
+    }
+
+    // 新オーナーがメンバーか確認
+    const newOwner = await prisma.organizationMember.findUnique({
+      where: {
+        organizationId_userId: { organizationId, userId: newOwnerId },
+      },
+      include: {
+        user: {
+          select: { id: true, email: true, name: true, avatarUrl: true },
+        },
+      },
+    });
+
+    if (!newOwner) {
+      throw new NotFoundError('OrganizationMember', newOwnerId);
+    }
+
+    // トランザクションで権限を移譲
+    return prisma.$transaction(async (tx) => {
+      // 現オーナーをADMINに変更
+      await tx.organizationMember.update({
+        where: {
+          organizationId_userId: { organizationId, userId: currentOwnerId },
+        },
+        data: { role: 'ADMIN' },
+      });
+
+      // 新オーナーをOWNERに変更
+      return tx.organizationMember.update({
+        where: {
+          organizationId_userId: { organizationId, userId: newOwnerId },
+        },
+        data: { role: 'OWNER' },
+        include: {
+          user: {
+            select: { id: true, email: true, name: true, avatarUrl: true },
+          },
+        },
+      });
+    });
+  }
 }

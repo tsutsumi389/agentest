@@ -23,6 +23,10 @@ const updateMemberRoleSchema = z.object({
   role: z.enum(['OWNER', 'ADMIN', 'MEMBER']),
 });
 
+const transferOwnershipSchema = z.object({
+  newOwnerId: z.string().uuid(),
+});
+
 /**
  * 組織コントローラー
  */
@@ -209,6 +213,25 @@ export class OrganizationController {
       const invitation = await this.orgService.declineInvitation(token, req.user!.id);
 
       res.json({ invitation });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * オーナー権限移譲
+   */
+  transferOwnership = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { organizationId } = req.params;
+      const data = transferOwnershipSchema.parse(req.body);
+      const member = await this.orgService.transferOwnership(
+        organizationId,
+        req.user!.id,
+        data.newOwnerId
+      );
+
+      res.json({ member });
     } catch (error) {
       next(error);
     }
