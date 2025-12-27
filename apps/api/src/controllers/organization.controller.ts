@@ -93,7 +93,7 @@ export class OrganizationController {
     try {
       const { organizationId } = req.params;
       const data = updateOrgSchema.parse(req.body);
-      const organization = await this.orgService.update(organizationId, data);
+      const organization = await this.orgService.update(organizationId, data, req.user!.id);
 
       res.json({ organization });
     } catch (error) {
@@ -107,7 +107,7 @@ export class OrganizationController {
   delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { organizationId } = req.params;
-      await this.orgService.softDelete(organizationId);
+      await this.orgService.softDelete(organizationId, req.user!.id);
 
       res.status(204).send();
     } catch (error) {
@@ -165,7 +165,12 @@ export class OrganizationController {
     try {
       const { organizationId, userId } = req.params;
       const data = updateMemberRoleSchema.parse(req.body);
-      const member = await this.orgService.updateMemberRole(organizationId, userId, data.role);
+      const member = await this.orgService.updateMemberRole(
+        organizationId,
+        userId,
+        data.role,
+        req.user!.id
+      );
 
       res.json({ member });
     } catch (error) {
@@ -179,7 +184,7 @@ export class OrganizationController {
   removeMember = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { organizationId, userId } = req.params;
-      await this.orgService.removeMember(organizationId, userId);
+      await this.orgService.removeMember(organizationId, userId, req.user!.id);
 
       res.status(204).send();
     } catch (error) {
@@ -221,7 +226,7 @@ export class OrganizationController {
   cancelInvitation = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { organizationId, invitationId } = req.params;
-      await this.orgService.cancelInvitation(organizationId, invitationId);
+      await this.orgService.cancelInvitation(organizationId, invitationId, req.user!.id);
 
       res.status(204).send();
     } catch (error) {

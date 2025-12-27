@@ -216,6 +216,21 @@ describe('Organization Invitations API Integration Tests', () => {
         where: { email: 'newuser@example.com' },
       });
       expect(invitation).not.toBeNull();
+
+      // 監査ログが記録されていることを確認
+      const auditLog = await prisma.auditLog.findFirst({
+        where: {
+          organizationId: organization.id,
+          action: 'member.invited',
+          targetId: invitation!.id,
+        },
+      });
+      expect(auditLog).not.toBeNull();
+      expect(auditLog?.category).toBe('MEMBER');
+      expect(auditLog?.userId).toBe(owner.id);
+      expect(auditLog?.details).toEqual(
+        expect.objectContaining({ email: 'newuser@example.com', role: 'MEMBER' })
+      );
     });
 
     it('ADMINとして招待できる', async () => {
@@ -314,6 +329,21 @@ describe('Organization Invitations API Integration Tests', () => {
         where: { id: invitation.id },
       });
       expect(deletedInvitation).toBeNull();
+
+      // 監査ログが記録されていることを確認
+      const auditLog = await prisma.auditLog.findFirst({
+        where: {
+          organizationId: organization.id,
+          action: 'member.invitation_cancelled',
+          targetId: invitation.id,
+        },
+      });
+      expect(auditLog).not.toBeNull();
+      expect(auditLog?.category).toBe('MEMBER');
+      expect(auditLog?.userId).toBe(owner.id);
+      expect(auditLog?.details).toEqual(
+        expect.objectContaining({ email: 'cancel@example.com' })
+      );
     });
 
     it('招待を取消できる（ADMIN）', async () => {
@@ -416,6 +446,21 @@ describe('Organization Invitations API Integration Tests', () => {
         where: { id: invitation.id },
       });
       expect(declinedInvitation?.declinedAt).not.toBeNull();
+
+      // 監査ログが記録されていることを確認
+      const auditLog = await prisma.auditLog.findFirst({
+        where: {
+          organizationId: organization.id,
+          action: 'member.invitation_declined',
+          targetId: invitation.id,
+        },
+      });
+      expect(auditLog).not.toBeNull();
+      expect(auditLog?.category).toBe('MEMBER');
+      expect(auditLog?.userId).toBe(invitedUser.id);
+      expect(auditLog?.details).toEqual(
+        expect.objectContaining({ email: 'invited@example.com' })
+      );
     });
 
     it('存在しない招待トークンは404エラー', async () => {
