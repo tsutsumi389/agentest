@@ -106,7 +106,11 @@ export interface Organization {
   billingEmail: string | null;
   plan: string;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
+  // 組織一覧取得時にメンバー数が含まれる
+  _count?: {
+    members: number;
+  };
 }
 
 export interface OrganizationMember {

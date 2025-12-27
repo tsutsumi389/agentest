@@ -49,7 +49,7 @@ export function OrganizationCard({ organization, role, onSelect }: OrganizationC
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-background-tertiary flex items-center justify-center">
-            <Building2 className="w-5 h-5 text-foreground-muted" />
+            <Building2 className="w-5 h-5 text-foreground-muted" aria-hidden="true" />
           </div>
           <div>
             <h3 className="font-medium text-foreground">{organization.name}</h3>
@@ -59,7 +59,7 @@ export function OrganizationCard({ organization, role, onSelect }: OrganizationC
 
         {/* ロールバッジ */}
         <div className="flex items-center gap-1 px-2 py-1 rounded text-xs bg-background-tertiary text-foreground-secondary">
-          <RoleIcon className="w-3 h-3" />
+          <RoleIcon className="w-3 h-3" aria-hidden="true" />
           <span>{getRoleLabel(role)}</span>
         </div>
       </div>
@@ -74,8 +74,8 @@ export function OrganizationCard({ organization, role, onSelect }: OrganizationC
       {/* フッター */}
       <div className="flex items-center justify-between pt-3 border-t border-border">
         <div className="flex items-center gap-1 text-sm text-foreground-muted">
-          <Users className="w-4 h-4" />
-          <span>{organization.plan}</span>
+          <Users className="w-4 h-4" aria-hidden="true" />
+          <span>{organization._count?.members ?? 0} メンバー</span>
         </div>
 
         <div className="flex items-center gap-2">
@@ -84,9 +84,9 @@ export function OrganizationCard({ organization, role, onSelect }: OrganizationC
             <Link
               to={`/organizations/${organization.id}/settings`}
               className="p-1.5 text-foreground-muted hover:text-foreground hover:bg-background-tertiary rounded transition-colors"
-              title="組織設定"
+              aria-label="組織設定"
             >
-              <Settings className="w-4 h-4" />
+              <Settings className="w-4 h-4" aria-hidden="true" />
             </Link>
           )}
 

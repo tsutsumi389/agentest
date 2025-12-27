@@ -35,37 +35,38 @@ export function OrganizationsPage() {
           </p>
         </div>
         <Link to="/organizations/new" className="btn btn-primary">
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4" aria-hidden="true" />
           組織を作成
         </Link>
       </div>
 
       {/* 検索 */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-subtle" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-subtle" aria-hidden="true" />
         <input
           type="text"
           placeholder="組織を検索..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="input pl-10"
+          aria-label="組織を検索"
         />
       </div>
 
       {/* 組織リスト */}
       {isLoading ? (
-        <div className="card p-8 text-center text-foreground-muted">
+        <div className="card p-8 text-center text-foreground-muted" role="status" aria-busy="true">
           読み込み中...
         </div>
       ) : filteredOrganizations.length === 0 ? (
         <div className="card p-8 text-center">
-          <Building2 className="w-12 h-12 text-foreground-subtle mx-auto mb-3" />
+          <Building2 className="w-12 h-12 text-foreground-subtle mx-auto mb-3" aria-hidden="true" />
           <p className="text-foreground-muted mb-4">
             {searchQuery ? '組織が見つかりません' : '所属している組織がありません'}
           </p>
           {!searchQuery && (
             <Link to="/organizations/new" className="btn btn-primary">
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4" aria-hidden="true" />
               組織を作成
             </Link>
           )}
