@@ -20,7 +20,7 @@ const inviteSchema = z.object({
 });
 
 const updateMemberRoleSchema = z.object({
-  role: z.enum(['OWNER', 'ADMIN', 'MEMBER']),
+  role: z.enum(['ADMIN', 'MEMBER']),
 });
 
 const transferOwnershipSchema = z.object({
