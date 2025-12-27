@@ -51,6 +51,9 @@ export class UserService {
             avatarUrl: true,
             plan: true,
             createdAt: true,
+            _count: {
+              select: { members: true },
+            },
           },
         },
       },

@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import { useAuthStore } from './stores/auth';
+import { OrganizationProvider } from './contexts/OrganizationContext';
 import { Layout } from './components/Layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoginPage } from './pages/Login';
@@ -11,6 +12,8 @@ import { TestSuiteDetailPage } from './pages/TestSuiteDetail';
 import { ExecutionPage } from './pages/Execution';
 import { SettingsPage } from './pages/Settings';
 import { AuthCallbackPage } from './pages/AuthCallback';
+import { OrganizationsPage } from './pages/Organizations';
+import { OrganizationSettingsPage } from './pages/OrganizationSettings';
 
 /**
  * 認証が必要なルートをラップするコンポーネント
@@ -57,7 +60,9 @@ export function App() {
             path="/"
             element={
               <ProtectedRoute>
-                <Layout />
+                <OrganizationProvider>
+                  <Layout />
+                </OrganizationProvider>
               </ProtectedRoute>
             }
           >
@@ -68,6 +73,8 @@ export function App() {
             <Route path="test-suites/:testSuiteId" element={<TestSuiteDetailPage />} />
             <Route path="executions/:executionId" element={<ExecutionPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="organizations" element={<OrganizationsPage />} />
+            <Route path="organizations/:organizationId/settings" element={<OrganizationSettingsPage />} />
           </Route>
 
           {/* 404 */}

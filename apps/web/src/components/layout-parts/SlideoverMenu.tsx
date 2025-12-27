@@ -6,8 +6,10 @@ import {
   Play,
   FileText,
   FlaskConical,
+  Building2,
 } from 'lucide-react';
 import { useEffect } from 'react';
+import { OrganizationSelector } from '../organization';
 
 interface SlideoverMenuProps {
   isOpen: boolean;
@@ -84,14 +86,41 @@ export function SlideoverMenu({ isOpen, onClose }: SlideoverMenuProps) {
           </div>
 
           {/* ナビゲーション */}
-          <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-            <p className="px-3 py-2 text-xs font-medium text-foreground-muted uppercase tracking-wider">
-              メインメニュー
-            </p>
-            {navLinks.map((link) => (
+          <nav className="flex-1 p-4 space-y-4 overflow-y-auto">
+            {/* 組織セレクター */}
+            <div>
+              <p className="px-3 py-2 text-xs font-medium text-foreground-muted uppercase tracking-wider">
+                ワークスペース
+              </p>
+              <OrganizationSelector onClose={onClose} />
+            </div>
+
+            {/* メインメニュー */}
+            <div className="space-y-1">
+              <p className="px-3 py-2 text-xs font-medium text-foreground-muted uppercase tracking-wider">
+                メインメニュー
+              </p>
+              {navLinks.map((link) => (
+                <NavLink
+                  key={link.to}
+                  to={link.to}
+                  onClick={onClose}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                      isActive
+                        ? 'bg-accent-subtle text-accent'
+                        : 'text-foreground-secondary hover:text-foreground hover:bg-background-tertiary'
+                    }`
+                  }
+                >
+                  <link.icon className="w-5 h-5" />
+                  {link.label}
+                </NavLink>
+              ))}
+
+              {/* 組織一覧へのリンク */}
               <NavLink
-                key={link.to}
-                to={link.to}
+                to="/organizations"
                 onClick={onClose}
                 className={({ isActive }) =>
                   `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
@@ -101,10 +130,10 @@ export function SlideoverMenu({ isOpen, onClose }: SlideoverMenuProps) {
                   }`
                 }
               >
-                <link.icon className="w-5 h-5" />
-                {link.label}
+                <Building2 className="w-5 h-5" />
+                組織
               </NavLink>
-            ))}
+            </div>
           </nav>
 
           {/* フッター */}

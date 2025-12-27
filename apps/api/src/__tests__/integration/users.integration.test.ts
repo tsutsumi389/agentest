@@ -6,6 +6,8 @@ import {
   createTestUser,
   createTestSession,
   createTestAccount,
+  createTestOrganization,
+  createTestOrgMember,
   cleanupTestData,
 } from './test-helpers.js';
 
@@ -310,6 +312,97 @@ describe('Users API Integration Tests', () => {
         .expect(403);
 
       expect(response.body.error.code).toBe('AUTHORIZATION_ERROR');
+    });
+  });
+
+  describe('GET /api/users/:userId/organizations', () => {
+    it('所属組織一覧を取得できる', async () => {
+      // 組織を作成
+      const org1 = await createTestOrganization(testUser.id, { name: 'Org 1', slug: 'org-1' });
+      const org2 = await createTestOrganization(testUser.id, { name: 'Org 2', slug: 'org-2' });
+
+      const response = await request(app)
+        .get(`/api/users/${testUser.id}/organizations`)
+        .expect(200);
+
+      expect(response.body.organizations).toHaveLength(2);
+      const orgNames = response.body.organizations.map((o: any) => o.organization.name);
+      expect(orgNames).toContain('Org 1');
+      expect(orgNames).toContain('Org 2');
+    });
+
+    it('組織にメンバー数が含まれる', async () => {
+      // 組織を作成（オーナーは自動追加される）
+      const org = await createTestOrganization(testUser.id, { name: 'Member Count Org' });
+
+      // 追加メンバーを作成
+      const member1 = await createTestUser({ email: 'member1@example.com' });
+      const member2 = await createTestUser({ email: 'member2@example.com' });
+      await createTestOrgMember(org.id, member1.id, 'MEMBER');
+      await createTestOrgMember(org.id, member2.id, 'ADMIN');
+
+      const response = await request(app)
+        .get(`/api/users/${testUser.id}/organizations`)
+        .expect(200);
+
+      expect(response.body.organizations).toHaveLength(1);
+      // オーナー1人 + メンバー2人 = 3人
+      expect(response.body.organizations[0].organization._count.members).toBe(3);
+    });
+
+    it('ロールが正しく返される', async () => {
+      // 自分がオーナーの組織
+      await createTestOrganization(testUser.id, { name: 'Owner Org', slug: 'owner-org' });
+
+      // 他のユーザーがオーナーで、自分がメンバーの組織
+      const otherUser = await createTestUser({ email: 'owner@example.com' });
+      const memberOrg = await createTestOrganization(otherUser.id, { name: 'Member Org', slug: 'member-org' });
+      await createTestOrgMember(memberOrg.id, testUser.id, 'MEMBER');
+
+      const response = await request(app)
+        .get(`/api/users/${testUser.id}/organizations`)
+        .expect(200);
+
+      expect(response.body.organizations).toHaveLength(2);
+
+      const ownerOrgData = response.body.organizations.find(
+        (o: any) => o.organization.name === 'Owner Org'
+      );
+      const memberOrgData = response.body.organizations.find(
+        (o: any) => o.organization.name === 'Member Org'
+      );
+
+      expect(ownerOrgData.role).toBe('OWNER');
+      expect(memberOrgData.role).toBe('MEMBER');
+    });
+
+    it('所属組織がない場合は空配列', async () => {
+      const response = await request(app)
+        .get(`/api/users/${testUser.id}/organizations`)
+        .expect(200);
+
+      expect(response.body.organizations).toHaveLength(0);
+    });
+
+    it('他のユーザーの組織一覧は取得できない', async () => {
+      const otherUser = await createTestUser({ email: 'other@example.com' });
+      await createTestOrganization(otherUser.id, { name: 'Other Org' });
+
+      const response = await request(app)
+        .get(`/api/users/${otherUser.id}/organizations`)
+        .expect(403);
+
+      expect(response.body.error.code).toBe('AUTHORIZATION_ERROR');
+    });
+
+    it('未認証の場合は401エラー', async () => {
+      clearTestAuth();
+
+      const response = await request(app)
+        .get(`/api/users/${testUser.id}/organizations`)
+        .expect(401);
+
+      expect(response.body.error.code).toBe('AUTHENTICATION_ERROR');
     });
   });
 });
