@@ -188,10 +188,11 @@ function SummaryCard({
   value: number;
   color: 'success' | 'danger' | 'warning' | 'muted';
 }) {
+  // ガイドライン準拠: subtle背景を使用
   const colorClasses = {
-    success: 'bg-success-muted text-success',
-    danger: 'bg-danger-muted text-danger',
-    warning: 'bg-warning-muted text-warning',
+    success: 'bg-success-subtle text-success',
+    danger: 'bg-danger-subtle text-danger',
+    warning: 'bg-warning-subtle text-warning',
     muted: 'bg-background-tertiary text-foreground-muted',
   };
 

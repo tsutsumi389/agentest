@@ -66,7 +66,7 @@ export function ProjectDetailPage() {
 
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-accent-muted flex items-center justify-center">
+            <div className="w-12 h-12 rounded-lg bg-accent-subtle flex items-center justify-center">
               <FolderKanban className="w-6 h-6 text-accent" />
             </div>
             <div>
@@ -230,7 +230,7 @@ function CreateTestSuiteModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+    <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/50">
       <div className="card w-full max-w-md p-6">
         <h2 className="text-lg font-semibold text-foreground mb-4">
           新規テストスイート

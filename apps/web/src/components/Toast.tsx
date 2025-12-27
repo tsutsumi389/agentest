@@ -8,11 +8,12 @@ const iconMap = {
   warning: AlertTriangle,
 };
 
+// ガイドライン準拠: subtle背景 + 左ボーダー強調
 const colorMap = {
-  success: 'bg-success/10 border-success text-success',
-  error: 'bg-danger/10 border-danger text-danger',
-  info: 'bg-accent/10 border-accent text-accent',
-  warning: 'bg-warning/10 border-warning text-warning',
+  success: 'bg-success-subtle border-l-4 border-l-success border-y border-r border-border',
+  error: 'bg-danger-subtle border-l-4 border-l-danger border-y border-r border-border',
+  info: 'bg-accent-subtle border-l-4 border-l-accent border-y border-r border-border',
+  warning: 'bg-warning-subtle border-l-4 border-l-warning border-y border-r border-border',
 };
 
 /**
@@ -25,7 +26,7 @@ function ToastItem({ toast }: { toast: ToastType }) {
   return (
     <div
       className={`
-        flex items-center gap-3 px-4 py-3 rounded border
+        flex items-center gap-3 px-4 py-3 rounded-lg
         shadow-lg backdrop-blur-sm animate-slide-in
         ${colorMap[toast.type]}
       `}
@@ -54,9 +55,19 @@ export function ToastContainer() {
   }
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm">
+    <div
+      className="fixed bottom-4 right-4 z-toast flex flex-col gap-2 max-w-sm"
+      role="region"
+      aria-label="通知"
+    >
       {toasts.map((toast) => (
-        <ToastItem key={toast.id} toast={toast} />
+        <div
+          key={toast.id}
+          role={toast.type === 'error' ? 'alert' : 'status'}
+          aria-live={toast.type === 'error' ? 'assertive' : 'polite'}
+        >
+          <ToastItem toast={toast} />
+        </div>
       ))}
     </div>
   );

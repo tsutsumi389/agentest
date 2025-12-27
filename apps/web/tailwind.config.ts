@@ -6,37 +6,49 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Terminal/CLI風のカラーパレット
+        // Terminal/CLI風のカラーパレット（GitHub Dark準拠）
         background: {
           DEFAULT: '#0d1117',
           secondary: '#161b22',
           tertiary: '#21262d',
+          canvas: '#010409', // 最背面用
         },
         foreground: {
-          DEFAULT: '#c9d1d9',
+          DEFAULT: '#e6edf3', // コントラスト向上（WCAG AA準拠）
           muted: '#8b949e',
           subtle: '#6e7681',
+          disabled: '#484f58', // 無効状態用
         },
         border: {
           DEFAULT: '#30363d',
           muted: '#21262d',
+          emphasis: '#8b949e', // 強調ボーダー
         },
         accent: {
           DEFAULT: '#58a6ff',
           hover: '#79c0ff',
           muted: '#388bfd',
+          subtle: '#121d2f', // 背景用
         },
         success: {
           DEFAULT: '#3fb950',
           muted: '#238636',
+          subtle: '#12261e', // 背景用
         },
         warning: {
           DEFAULT: '#d29922',
           muted: '#9e6a03',
+          subtle: '#2e2111', // 背景用
         },
         danger: {
           DEFAULT: '#f85149',
           muted: '#da3633',
+          subtle: '#2d1619', // 背景用
+        },
+        // テスト実行中状態
+        running: {
+          DEFAULT: '#a371f7',
+          subtle: '#271d3d',
         },
       },
       fontFamily: {
@@ -59,6 +71,22 @@ export default {
       boxShadow: {
         'card': '0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24)',
         'card-hover': '0 3px 6px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.12)',
+      },
+      // z-indexスケール（レイヤー管理）
+      zIndex: {
+        'dropdown': '10',
+        'sticky': '20',
+        'sidebar': '30',
+        'header': '40',
+        'overlay': '50',
+        'modal': '60',
+        'toast': '70',
+        'tooltip': '80',
+      },
+      // レイアウトサイズ
+      spacing: {
+        'header': '3.5rem', // 56px
+        'sidebar': '15rem', // 240px
       },
     },
   },

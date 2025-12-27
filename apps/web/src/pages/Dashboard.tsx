@@ -102,7 +102,7 @@ export function DashboardPage() {
                 className="flex items-center justify-between p-4 hover:bg-background-tertiary transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded bg-accent-muted flex items-center justify-center">
+                  <div className="w-10 h-10 rounded bg-accent-subtle flex items-center justify-center">
                     <FolderKanban className="w-5 h-5 text-accent" />
                   </div>
                   <div>
@@ -149,10 +149,11 @@ function StatCard({
   value: number | string;
   color: 'accent' | 'success' | 'danger';
 }) {
+  // ガイドライン準拠: subtle背景を使用
   const colorClasses = {
-    accent: 'bg-accent-muted text-accent',
-    success: 'bg-success-muted text-success',
-    danger: 'bg-danger-muted text-danger',
+    accent: 'bg-accent-subtle text-accent',
+    success: 'bg-success-subtle text-success',
+    danger: 'bg-danger-subtle text-danger',
   };
 
   return (

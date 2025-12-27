@@ -3,6 +3,99 @@
 @tailwind utilities;
 
 @layer base {
+  /* デザインシステムCSS変数 */
+  :root {
+    color-scheme: dark;
+
+    /* Backgrounds */
+    --bg-canvas: #010409;
+    --bg-primary: #0d1117;
+    --bg-secondary: #161b22;
+    --bg-tertiary: #21262d;
+
+    /* Borders */
+    --border-default: #30363d;
+    --border-muted: #21262d;
+    --border-emphasis: #8b949e;
+
+    /* Text */
+    --text-primary: #e6edf3;
+    --text-secondary: #8b949e;
+    --text-muted: #6e7681;
+    --text-disabled: #484f58;
+
+    /* Semantic Colors */
+    --success: #3fb950;
+    --success-muted: #238636;
+    --success-subtle: #12261e;
+    --error: #f85149;
+    --error-muted: #da3633;
+    --error-subtle: #2d1619;
+    --warning: #d29922;
+    --warning-muted: #9e6a03;
+    --warning-subtle: #2e2111;
+    --info: #58a6ff;
+    --info-muted: #388bfd;
+    --info-subtle: #121d2f;
+    --running: #a371f7;
+    --running-subtle: #271d3d;
+
+    /* Spacing */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --space-12: 48px;
+    --space-16: 64px;
+
+    /* Border Radius */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 12px;
+    --radius-full: 9999px;
+
+    /* Shadows */
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.5);
+
+    /* Layout */
+    --header-height: 3.5rem; /* 56px */
+    --sidebar-width: 15rem; /* 240px */
+
+    /* Z-Index Scale */
+    --z-dropdown: 10;
+    --z-sticky: 20;
+    --z-sidebar: 30;
+    --z-header: 40;
+    --z-overlay: 50;
+    --z-modal: 60;
+    --z-toast: 70;
+    --z-tooltip: 80;
+  }
+
+  /* ライトモード用（将来対応） */
+  [data-theme="light"] {
+    color-scheme: light;
+
+    --bg-canvas: #ffffff;
+    --bg-primary: #f6f8fa;
+    --bg-secondary: #ffffff;
+    --bg-tertiary: #f3f4f6;
+
+    --border-default: #d0d7de;
+    --border-muted: #d8dee4;
+    --border-emphasis: #57606a;
+
+    --text-primary: #1f2328;
+    --text-secondary: #57606a;
+    --text-muted: #6e7781;
+    --text-disabled: #8c959f;
+  }
+
   /* スクロールバーのスタイリング */
   ::-webkit-scrollbar {
     width: 8px;
@@ -22,15 +115,33 @@
     background: #484f58;
   }
 
-  /* フォーカススタイル */
+  /* フォーカススタイル - 改善版 */
   *:focus-visible {
-    outline: 2px solid #58a6ff;
-    outline-offset: 2px;
+    outline: none;
+    box-shadow: 0 0 0 2px var(--bg-primary), 0 0 0 4px var(--info);
+  }
+
+  /* マウス操作時はフォーカスリング非表示 */
+  *:focus:not(:focus-visible) {
+    outline: none;
+    box-shadow: none;
   }
 
   /* 選択テキストのスタイル */
   ::selection {
     background: rgba(88, 166, 255, 0.3);
+  }
+
+  /* prefers-reduced-motion対応 */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
@@ -70,25 +181,29 @@
     @apply transition-shadow hover:shadow-card-hover;
   }
 
-  /* バッジスタイル */
+  /* バッジスタイル（ガイドライン準拠: subtle背景 + 強調テキスト） */
   .badge {
-    @apply inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full;
+    @apply inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full;
   }
 
   .badge-success {
-    @apply bg-success-muted text-success;
+    @apply bg-success-subtle text-success;
   }
 
   .badge-warning {
-    @apply bg-warning-muted text-warning;
+    @apply bg-warning-subtle text-warning;
   }
 
   .badge-danger {
-    @apply bg-danger-muted text-danger;
+    @apply bg-danger-subtle text-danger;
   }
 
   .badge-accent {
-    @apply bg-accent-muted text-accent;
+    @apply bg-accent-subtle text-accent;
+  }
+
+  .badge-running {
+    @apply bg-running-subtle text-running;
   }
 
   /* ステータスドット */
@@ -106,6 +221,10 @@
 
   .status-dot-danger {
     @apply bg-danger;
+  }
+
+  .status-dot-running {
+    @apply bg-running animate-pulse;
   }
 
   .status-dot-muted {
@@ -147,6 +266,20 @@
     to {
       transform: translateX(0);
       opacity: 1;
+    }
+  }
+
+  /* スケルトンローディングアニメーション */
+  .animate-skeleton {
+    animation: skeleton-shimmer 1.5s infinite;
+  }
+
+  @keyframes skeleton-shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
     }
   }
 }

@@ -105,7 +105,7 @@ function ProjectCard({ project }: { project: Project }) {
       className="card card-hover p-4 block"
     >
       <div className="flex items-start justify-between mb-3">
-        <div className="w-10 h-10 rounded bg-accent-muted flex items-center justify-center">
+        <div className="w-10 h-10 rounded bg-accent-subtle flex items-center justify-center">
           <FolderKanban className="w-5 h-5 text-accent" />
         </div>
         <button
@@ -157,7 +157,7 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+    <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/50">
       <div className="card w-full max-w-md p-6">
         <h2 className="text-lg font-semibold text-foreground mb-4">
           新規プロジェクト
