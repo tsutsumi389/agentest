@@ -521,31 +521,31 @@ export function Breadcrumb({ items }: { items: BreadcrumbItem[] }) {
 ## 実装チェックリスト
 
 ### Phase 1: カラーシステム
-- [ ] `tailwind.config.ts` カラー定義更新
-- [ ] `globals.css` CSS変数追加
-- [ ] 既存コンポーネントの色クラス確認
+- [x] `tailwind.config.ts` カラー定義更新
+- [x] `globals.css` CSS変数追加
+- [x] 既存コンポーネントの色クラス確認
 
 ### Phase 2: レイアウト
-- [ ] ヘッダー高さ 64px → 56px
-- [ ] サイドバー幅 256px → 240px
-- [ ] Z-Index統一
+- [x] ヘッダー高さ 64px → 56px
+- [x] サイドバー幅 256px → 240px
+- [x] Z-Index統一
 
 ### Phase 3: アクセシビリティ
-- [ ] Skip Link実装
-- [ ] トーストaria-live対応
-- [ ] prefers-reduced-motion対応
-- [ ] フォーカスリング改善
+- [x] Skip Link実装
+- [x] トーストaria-live対応
+- [x] prefers-reduced-motion対応
+- [x] フォーカスリング改善
 
 ### Phase 4: コンポーネント
-- [ ] StatusBadge
-- [ ] Skeleton
-- [ ] ProgressBar
-- [ ] Breadcrumb
+- [x] StatusBadge
+- [x] Skeleton
+- [x] ProgressBar
+- [x] Breadcrumb
 
 ### Phase 5: インタラクション
-- [ ] フォント読み込み
-- [ ] コマンドパレット (オプション)
-- [ ] キーボードショートカット (オプション)
+- [x] フォント読み込み
+- [x] コマンドパレット
+- [x] キーボードショートカット
 
 ---
 

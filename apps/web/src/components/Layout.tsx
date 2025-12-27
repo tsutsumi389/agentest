@@ -11,6 +11,7 @@ import {
 import { useState } from 'react';
 import { useAuthStore } from '../stores/auth';
 import { ToastContainer } from './Toast';
+import { CommandPalette } from './CommandPalette';
 
 /**
  * ナビゲーションリンク
@@ -168,6 +169,9 @@ export function Layout() {
 
       {/* トースト通知 */}
       <ToastContainer />
+
+      {/* コマンドパレット (⌘+K) */}
+      <CommandPalette />
     </div>
   );
 }
