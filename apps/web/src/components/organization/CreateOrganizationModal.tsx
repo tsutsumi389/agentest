@@ -50,14 +50,19 @@ export function CreateOrganizationModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // フォームをリセットする
+  const resetForm = useCallback(() => {
+    setName('');
+    setSlug('');
+    setDescription('');
+    setIsSlugManuallyEdited(false);
+    setErrors({});
+  }, []);
+
   // モーダルが開いたらフォームをリセットしてフォーカス、背景スクロールを無効化
   useEffect(() => {
     if (isOpen) {
-      setName('');
-      setSlug('');
-      setDescription('');
-      setIsSlugManuallyEdited(false);
-      setErrors({});
+      resetForm();
       // 背景スクロールを無効化
       document.body.style.overflow = 'hidden';
       // DOMが準備されてからフォーカス
@@ -68,15 +73,22 @@ export function CreateOrganizationModal({
         document.body.style.overflow = '';
       };
     }
-  }, [isOpen]);
+  }, [isOpen, resetForm]);
 
   // フォーカストラップ: モーダル内でTabキーをトラップする
   const handleTabKey = useCallback((e: KeyboardEvent) => {
     if (!isOpen || !modalRef.current) return;
 
-    const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
-      'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-    );
+    // フォーカス可能な要素を網羅的に取得
+    const focusableSelector = [
+      'button:not([disabled])',
+      'input:not([disabled])',
+      'textarea:not([disabled])',
+      'select:not([disabled])',
+      'a[href]',
+      '[tabindex]:not([tabindex="-1"])',
+    ].join(', ');
+    const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(focusableSelector);
     const firstElement = focusableElements[0];
     const lastElement = focusableElements[focusableElements.length - 1];
 
@@ -97,15 +109,24 @@ export function CreateOrganizationModal({
     }
   }, [isOpen]);
 
-  // フォーカストラップのイベントリスナー
+  // ESCキーでモーダルを閉じる
+  const handleEscapeKey = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      onClose();
+    }
+  }, [onClose]);
+
+  // キーボードイベントリスナー（フォーカストラップ + ESCキー）
   useEffect(() => {
     if (isOpen) {
       document.addEventListener('keydown', handleTabKey);
+      document.addEventListener('keydown', handleEscapeKey);
       return () => {
         document.removeEventListener('keydown', handleTabKey);
+        document.removeEventListener('keydown', handleEscapeKey);
       };
     }
-  }, [isOpen, handleTabKey]);
+  }, [isOpen, handleTabKey, handleEscapeKey]);
 
   // 組織名が変更されたらスラッグを自動生成
   useEffect(() => {
@@ -138,7 +159,8 @@ export function CreateOrganizationModal({
       newErrors.slug = 'スラッグは2文字以上必要です';
     } else if (slug.length > 50) {
       newErrors.slug = 'スラッグは50文字以内で入力してください';
-    } else if (!/^[a-z0-9][a-z0-9-]*[a-z0-9]$/.test(slug)) {
+    } else if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(slug)) {
+      // 先頭と末尾は英数字、中間はハイフンも可。2文字以上の場合も正しくマッチ
       newErrors.slug = 'スラッグは英小文字、数字、ハイフンのみ使用できます（先頭と末尾はハイフン不可）';
     }
 
@@ -171,7 +193,8 @@ export function CreateOrganizationModal({
       // 組織一覧を再取得
       await refreshOrganizations();
 
-      // 成功コールバック
+      // フォームをリセットしてからモーダルを閉じる
+      resetForm();
       onSuccess?.(response.organization.id);
       onClose();
     } catch (err) {
@@ -196,13 +219,6 @@ export function CreateOrganizationModal({
     }
   };
 
-  // ESCキーでモーダルを閉じる
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onClose();
-    }
-  };
-
   if (!isOpen) {
     return null;
   }
@@ -211,7 +227,6 @@ export function CreateOrganizationModal({
     <div
       className="fixed inset-0 z-modal flex items-center justify-center p-4"
       onClick={onClose}
-      onKeyDown={handleKeyDown}
       role="dialog"
       aria-modal="true"
       aria-labelledby="create-org-title"
