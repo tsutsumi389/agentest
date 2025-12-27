@@ -64,9 +64,12 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
   const selectedOrganization = useSelectedOrganization();
   const currentRole = useCurrentOrganizationRole();
 
+  // ユーザーIDを取得（オブジェクト参照ではなくプリミティブ値で依存関係を管理）
+  const userId = user?.id;
+
   // 組織一覧を取得
   const refreshOrganizations = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       reset();
       return;
     }
@@ -75,7 +78,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     setError(null);
 
     try {
-      const response = await usersApi.getOrganizations(user.id);
+      const response = await usersApi.getOrganizations(userId);
       setOrganizations(
         response.organizations.map((o) => ({
           organization: o.organization,
@@ -88,16 +91,16 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [user, setOrganizations, setLoading, setError, reset]);
+  }, [userId, setOrganizations, setLoading, setError, reset]);
 
   // ユーザーがログインしたら組織一覧を取得
   useEffect(() => {
-    if (user) {
+    if (userId) {
       refreshOrganizations();
     } else {
       reset();
     }
-  }, [user, refreshOrganizations, reset]);
+  }, [userId, refreshOrganizations, reset]);
 
   const value: OrganizationContextValue = {
     organizations,

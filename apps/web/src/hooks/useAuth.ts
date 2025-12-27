@@ -1,16 +1,12 @@
-import { useEffect } from 'react';
 import { useAuthStore } from '../stores/auth';
 
 /**
  * 認証フック
- * コンポーネントマウント時に認証状態を初期化
+ * 認証状態を取得するためのシンプルなフック
+ * 注意: 初期化はApp.tsxで1回だけ行われる
  */
 export function useAuth() {
-  const { user, isAuthenticated, isLoading, initialize, logout, error, clearError } = useAuthStore();
-
-  useEffect(() => {
-    initialize();
-  }, [initialize]);
+  const { user, isAuthenticated, isLoading, logout, error, clearError } = useAuthStore();
 
   return {
     user,
