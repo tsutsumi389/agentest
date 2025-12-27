@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Loader2, ArrowRight, AlertTriangle, Crown } from 'lucide-react';
 import { organizationsApi, ApiError, type Organization, type OrganizationMember } from '../../lib/api';
 import { toast } from '../../stores/toast';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 interface TransferOwnershipModalProps {
   /** モーダルが開いているかどうか */
@@ -46,6 +47,9 @@ export function TransferOwnershipModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // 背景スクロールをロック
+  useBodyScrollLock(isOpen);
+
   // フォームをリセットする
   const resetForm = useCallback(() => {
     setSelectedMember(null);
@@ -79,10 +83,6 @@ export function TransferOwnershipModal({
     if (isOpen) {
       resetForm();
       fetchMembers();
-      document.body.style.overflow = 'hidden';
-      return () => {
-        document.body.style.overflow = '';
-      };
     }
   }, [isOpen, resetForm, fetchMembers]);
 
@@ -182,6 +182,12 @@ export function TransferOwnershipModal({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // フォーム送信（確認ステップ）
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleTransfer();
   };
 
   // 確認入力が一致するか
@@ -303,7 +309,7 @@ export function TransferOwnershipModal({
             </>
           ) : (
             // 確認画面
-            <>
+            <form id="transfer-ownership-form" onSubmit={handleSubmit}>
               <div className="mb-4 p-3 bg-warning/10 border border-warning/20 rounded-lg">
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
@@ -357,7 +363,7 @@ export function TransferOwnershipModal({
                   「<span className="font-mono text-foreground">{organization.name}</span>」と入力
                 </p>
               </div>
-            </>
+            </form>
           )}
         </div>
 
@@ -371,7 +377,7 @@ export function TransferOwnershipModal({
               <button
                 type="button"
                 onClick={handleProceedToConfirm}
-                className="btn btn-secondary"
+                className="btn btn-primary"
                 disabled={!selectedMember || isLoadingMembers}
               >
                 次へ
@@ -384,8 +390,8 @@ export function TransferOwnershipModal({
                 戻る
               </button>
               <button
-                type="button"
-                onClick={handleTransfer}
+                type="submit"
+                form="transfer-ownership-form"
                 className="btn btn-warning"
                 disabled={!isConfirmValid || isSubmitting}
               >

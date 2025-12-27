@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Loader2, AlertTriangle, Trash2 } from 'lucide-react';
 import { organizationsApi, ApiError, type Organization } from '../../lib/api';
 import { toast } from '../../stores/toast';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 interface DeleteOrganizationModalProps {
   /** モーダルが開いているかどうか */
@@ -36,6 +37,9 @@ export function DeleteOrganizationModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // 背景スクロールをロック
+  useBodyScrollLock(isOpen);
+
   // フォームをリセットする
   const resetForm = useCallback(() => {
     setConfirmInput('');
@@ -46,13 +50,9 @@ export function DeleteOrganizationModal({
   useEffect(() => {
     if (isOpen) {
       resetForm();
-      document.body.style.overflow = 'hidden';
       requestAnimationFrame(() => {
         confirmInputRef.current?.focus();
       });
-      return () => {
-        document.body.style.overflow = '';
-      };
     }
   }, [isOpen, resetForm]);
 
