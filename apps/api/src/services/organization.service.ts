@@ -117,6 +117,21 @@ export class OrganizationService {
       }
     }
 
+    // 保留中の招待が既にあるかチェック
+    const existingInvitation = await prisma.organizationInvitation.findFirst({
+      where: {
+        organizationId,
+        email: data.email,
+        acceptedAt: null,
+        declinedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+    });
+
+    if (existingInvitation) {
+      throw new ConflictError('このメールアドレスには既に保留中の招待があります');
+    }
+
     // トークン生成
     const token = crypto.randomUUID();
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7日
@@ -332,6 +347,10 @@ export class OrganizationService {
 
     if (invitation.acceptedAt || invitation.declinedAt) {
       throw new ConflictError('この招待は既に処理されています');
+    }
+
+    if (invitation.expiresAt < new Date()) {
+      throw new ConflictError('この招待は期限切れです');
     }
 
     // ユーザーのメールアドレスを確認
