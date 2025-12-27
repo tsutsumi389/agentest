@@ -90,4 +90,10 @@ router.post('/:organizationId/transfer-ownership', requireAuth(authConfig), requ
  */
 router.get('/:organizationId/projects', requireAuth(authConfig), orgController.getProjects);
 
+/**
+ * 監査ログ取得
+ * GET /api/organizations/:organizationId/audit-logs
+ */
+router.get('/:organizationId/audit-logs', requireAuth(authConfig), requireOrgRole(['OWNER', 'ADMIN']), orgController.getAuditLogs);
+
 export default router;

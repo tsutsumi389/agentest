@@ -1,6 +1,8 @@
 import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
+import type { AuditLogCategory } from '@agentest/db';
 import { OrganizationService } from '../services/organization.service.js';
+import { auditLogService } from '../services/audit-log.service.js';
 
 const createOrgSchema = z.object({
   name: z.string().min(1).max(100),
@@ -25,6 +27,14 @@ const updateMemberRoleSchema = z.object({
 
 const transferOwnershipSchema = z.object({
   newOwnerId: z.string().uuid(),
+});
+
+const auditLogQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(50),
+  category: z.enum(['AUTH', 'USER', 'ORGANIZATION', 'MEMBER', 'PROJECT', 'API_TOKEN', 'BILLING']).optional(),
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
 });
 
 /**
@@ -232,6 +242,34 @@ export class OrganizationController {
       );
 
       res.json({ member });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 監査ログ取得
+   */
+  getAuditLogs = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { organizationId } = req.params;
+      const query = auditLogQuerySchema.parse(req.query);
+
+      const result = await auditLogService.getByOrganization(organizationId, {
+        page: query.page,
+        limit: query.limit,
+        category: query.category as AuditLogCategory | undefined,
+        startDate: query.startDate,
+        endDate: query.endDate,
+      });
+
+      res.json({
+        logs: result.logs,
+        total: result.total,
+        page: query.page,
+        limit: query.limit,
+        totalPages: Math.ceil(result.total / query.limit),
+      });
     } catch (error) {
       next(error);
     }
