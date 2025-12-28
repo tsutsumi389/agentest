@@ -218,4 +218,34 @@ export class TestSuiteController {
       next(error);
     }
   };
+
+  /**
+   * 変更履歴一覧取得
+   */
+  getHistories = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { testSuiteId } = req.params;
+      const limit = parseInt(req.query.limit as string) || 20;
+      const offset = parseInt(req.query.offset as string) || 0;
+      const { histories, total } = await this.testSuiteService.getHistories(testSuiteId, { limit, offset });
+
+      res.json({ histories, total });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * テストスイート復元
+   */
+  restore = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { testSuiteId } = req.params;
+      const testSuite = await this.testSuiteService.restore(testSuiteId, req.user!.id);
+
+      res.json({ testSuite });
+    } catch (error) {
+      next(error);
+    }
+  };
 }

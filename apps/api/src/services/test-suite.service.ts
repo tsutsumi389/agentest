@@ -1,5 +1,5 @@
 import { prisma, type EntityStatus } from '@agentest/db';
-import { NotFoundError, BadRequestError } from '@agentest/shared';
+import { NotFoundError, BadRequestError, ConflictError } from '@agentest/shared';
 import { TestSuiteRepository } from '../repositories/test-suite.repository.js';
 
 /**
@@ -463,6 +463,73 @@ export class TestSuiteService {
       }
 
       return execution;
+    });
+  }
+
+  /**
+   * 変更履歴一覧を取得
+   */
+  async getHistories(testSuiteId: string, options: { limit: number; offset: number }) {
+    // 削除済みを含めてテストスイートの存在確認
+    const testSuite = await prisma.testSuite.findUnique({
+      where: { id: testSuiteId },
+    });
+    if (!testSuite) {
+      throw new NotFoundError('TestSuite', testSuiteId);
+    }
+
+    const [histories, total] = await Promise.all([
+      this.testSuiteRepo.getHistories(testSuiteId, options),
+      this.testSuiteRepo.countHistories(testSuiteId),
+    ]);
+
+    return { histories, total };
+  }
+
+  /**
+   * 削除済みテストスイートを復元
+   * 削除から30日以内のみ復元可能
+   */
+  async restore(testSuiteId: string, userId: string) {
+    // 削除済みテストスイートを取得
+    const testSuite = await this.testSuiteRepo.findDeletedById(testSuiteId);
+    if (!testSuite) {
+      // 削除されていないか、存在しない
+      const existingTestSuite = await prisma.testSuite.findUnique({
+        where: { id: testSuiteId },
+      });
+      if (existingTestSuite && !existingTestSuite.deletedAt) {
+        throw new ConflictError('Test suite is not deleted');
+      }
+      throw new NotFoundError('TestSuite', testSuiteId);
+    }
+
+    // 30日以内かチェック
+    const deletedAt = testSuite.deletedAt!;
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    if (deletedAt < thirtyDaysAgo) {
+      throw new BadRequestError('Test suite cannot be restored after 30 days');
+    }
+
+    // 復元と履歴保存をトランザクションで実行
+    return prisma.$transaction(async (tx) => {
+      // 履歴を保存
+      await tx.testSuiteHistory.create({
+        data: {
+          testSuiteId,
+          changedByUserId: userId,
+          changeType: 'RESTORE',
+          snapshot: testSuite as unknown as object,
+        },
+      });
+
+      // 復元
+      return tx.testSuite.update({
+        where: { id: testSuiteId },
+        data: { deletedAt: null },
+      });
     });
   }
 }

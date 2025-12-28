@@ -80,4 +80,18 @@ router.get('/:testSuiteId/executions', requireAuth(authConfig), requireTestSuite
  */
 router.post('/:testSuiteId/executions', requireAuth(authConfig), requireTestSuiteRole(['ADMIN', 'WRITE']), testSuiteController.startExecution);
 
+/**
+ * テストスイートの変更履歴取得
+ * GET /api/test-suites/:testSuiteId/histories
+ * 削除済みテストスイートからも履歴を取得可能
+ */
+router.get('/:testSuiteId/histories', requireAuth(authConfig), requireTestSuiteRole(['ADMIN', 'WRITE', 'READ'], { allowDeletedSuite: true }), testSuiteController.getHistories);
+
+/**
+ * テストスイート復元
+ * POST /api/test-suites/:testSuiteId/restore
+ * 削除済みテストスイートを復元（30日以内のみ）
+ */
+router.post('/:testSuiteId/restore', requireAuth(authConfig), requireTestSuiteRole(['ADMIN'], { allowDeletedSuite: true }), testSuiteController.restore);
+
 export default router;
