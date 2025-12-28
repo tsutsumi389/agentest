@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router';
+import { useParams, Link, useSearchParams } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   FileText,
@@ -10,20 +10,44 @@ import {
   AlertCircle,
   Clock,
   MoreHorizontal,
+  History,
+  Settings,
 } from 'lucide-react';
-import { testSuitesApi, testCasesApi, projectsApi, ApiError, type TestCase, type ProjectMemberRole } from '../lib/api';
+import { testSuitesApi, testCasesApi, projectsApi, ApiError, type TestCase, type TestSuite, type ProjectMemberRole } from '../lib/api';
 import { toast } from '../stores/toast';
 import { useAuth } from '../hooks/useAuth';
 import { PreconditionList } from '../components/test-suite/PreconditionList';
+import { TestSuiteHistoryList } from '../components/test-suite/TestSuiteHistoryList';
+import { DeleteTestSuiteSection } from '../components/test-suite/DeleteTestSuiteSection';
+
+/**
+ * タブ定義
+ */
+type TabType = 'overview' | 'history' | 'settings';
+
+const TABS: { id: TabType; label: string; icon: typeof FileText }[] = [
+  { id: 'overview', label: '概要', icon: FileText },
+  { id: 'history', label: '履歴', icon: History },
+  { id: 'settings', label: '設定', icon: Settings },
+];
 
 /**
  * テストスイート詳細ページ
  */
 export function TestSuiteDetailPage() {
   const { testSuiteId } = useParams<{ testSuiteId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  // 現在のタブ
+  const currentTab = (searchParams.get('tab') as TabType) || 'overview';
+
+  // タブ変更ハンドラ
+  const handleTabChange = (tab: TabType) => {
+    setSearchParams({ tab });
+  };
 
   // テストスイート情報を取得
   const { data: suiteData, isLoading: isLoadingSuite } = useQuery({
@@ -134,6 +158,95 @@ export function TestSuiteDetailPage() {
         </div>
       </div>
 
+      {/* タブナビゲーション */}
+      <div className="border-b border-border">
+        <nav className="-mb-px flex gap-4" aria-label="タブ">
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            const isActive = currentTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => handleTabChange(tab.id)}
+                className={`
+                  flex items-center gap-2 px-1 py-3 text-sm font-medium border-b-2 transition-colors
+                  ${
+                    isActive
+                      ? 'border-accent text-accent'
+                      : 'border-transparent text-foreground-muted hover:text-foreground hover:border-border'
+                  }
+                `}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                <Icon className="w-4 h-4" />
+                {tab.label}
+              </button>
+            );
+          })}
+        </nav>
+      </div>
+
+      {/* タブコンテンツ */}
+      {currentTab === 'overview' && (
+        <OverviewTab
+          testSuiteId={testSuiteId}
+          suite={suite}
+          currentRole={currentRole}
+          testCases={testCases}
+          isLoadingCases={isLoadingCases}
+          executions={executions}
+          onCreateClick={() => setIsCreateModalOpen(true)}
+        />
+      )}
+
+      {currentTab === 'history' && (
+        <TestSuiteHistoryList testSuite={suite} />
+      )}
+
+      {currentTab === 'settings' && (
+        <SettingsTab
+          testSuite={suite}
+          currentRole={currentRole}
+          onUpdated={(updated) => {
+            queryClient.setQueryData(['test-suite', testSuiteId], { testSuite: updated });
+          }}
+        />
+      )}
+
+      {/* 作成モーダル */}
+      {isCreateModalOpen && testSuiteId && (
+        <CreateTestCaseModal
+          testSuiteId={testSuiteId}
+          onClose={() => setIsCreateModalOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+/**
+ * 概要タブ
+ */
+interface OverviewTabProps {
+  testSuiteId: string;
+  suite: TestSuite;
+  currentRole: 'OWNER' | ProjectMemberRole | undefined;
+  testCases: TestCase[];
+  isLoadingCases: boolean;
+  executions: { id: string; status: string; startedAt: string }[];
+  onCreateClick: () => void;
+}
+
+function OverviewTab({
+  testSuiteId,
+  currentRole,
+  testCases,
+  isLoadingCases,
+  executions,
+  onCreateClick,
+}: OverviewTabProps) {
+  return (
+    <>
       {/* 前提条件セクション */}
       <PreconditionList testSuiteId={testSuiteId} currentRole={currentRole} />
 
@@ -158,7 +271,7 @@ export function TestSuiteDetailPage() {
                   テストケースがありません
                 </p>
                 <button
-                  onClick={() => setIsCreateModalOpen(true)}
+                  onClick={onCreateClick}
                   className="btn btn-primary"
                 >
                   <Plus className="w-4 h-4" />
@@ -220,15 +333,31 @@ export function TestSuiteDetailPage() {
           </div>
         </div>
       </div>
+    </>
+  );
+}
 
-      {/* 作成モーダル */}
-      {isCreateModalOpen && testSuiteId && (
-        <CreateTestCaseModal
-          testSuiteId={testSuiteId}
-          onClose={() => setIsCreateModalOpen(false)}
-        />
-      )}
-    </div>
+/**
+ * 設定タブ
+ */
+interface SettingsTabProps {
+  testSuite: TestSuite;
+  currentRole: 'OWNER' | ProjectMemberRole | undefined;
+  onUpdated?: (testSuite: TestSuite) => void;
+}
+
+function SettingsTab({ testSuite, currentRole, onUpdated }: SettingsTabProps) {
+  // ADMIN権限があるかどうか
+  const canEdit = currentRole === 'OWNER' || currentRole === 'ADMIN';
+
+  return (
+    <DeleteTestSuiteSection
+      testSuite={testSuite}
+      projectId={testSuite.projectId}
+      deletedAt={testSuite.deletedAt}
+      onUpdated={onUpdated}
+      canEdit={canEdit}
+    />
   );
 }
 
