@@ -193,6 +193,12 @@ export async function createTestAuditLog(
 export async function cleanupTestData() {
   // 外部キー制約を考慮した順序で削除
   await prisma.auditLog.deleteMany({});
+  await prisma.execution.deleteMany({});
+  await prisma.testSuite.deleteMany({});
+  await prisma.projectEnvironment.deleteMany({});
+  await prisma.projectHistory.deleteMany({});
+  await prisma.projectMember.deleteMany({});
+  await prisma.project.deleteMany({});
   await prisma.organizationInvitation.deleteMany({});
   await prisma.organizationMember.deleteMany({});
   await prisma.organization.deleteMany({});
@@ -207,4 +213,149 @@ export async function cleanupTestData() {
  */
 export function createAuthHeader(token: string): { Authorization: string } {
   return { Authorization: `Bearer ${token}` };
+}
+
+/**
+ * テスト用プロジェクトを作成
+ */
+export async function createTestProject(
+  ownerId: string,
+  overrides: Partial<{
+    id: string;
+    name: string;
+    description: string | null;
+    organizationId: string | null;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.project.create({
+    data: {
+      id,
+      name: overrides.name ?? `Test Project ${id.slice(0, 8)}`,
+      description: overrides.description ?? null,
+      ownerId,
+      organizationId: overrides.organizationId ?? null,
+    },
+  });
+}
+
+/**
+ * テスト用プロジェクトメンバーを作成
+ */
+export async function createTestProjectMember(
+  projectId: string,
+  userId: string,
+  role: 'ADMIN' | 'WRITE' | 'READ' = 'READ'
+) {
+  return prisma.projectMember.create({
+    data: {
+      projectId,
+      userId,
+      role,
+    },
+  });
+}
+
+/**
+ * テスト用プロジェクト環境を作成
+ */
+export async function createTestEnvironment(
+  projectId: string,
+  overrides: Partial<{
+    id: string;
+    name: string;
+    slug: string;
+    baseUrl: string | null;
+    description: string | null;
+    isDefault: boolean;
+    sortOrder: number;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.projectEnvironment.create({
+    data: {
+      id,
+      projectId,
+      name: overrides.name ?? `Environment ${id.slice(0, 8)}`,
+      slug: overrides.slug ?? `env-${id.slice(0, 8)}`,
+      baseUrl: overrides.baseUrl ?? null,
+      description: overrides.description ?? null,
+      isDefault: overrides.isDefault ?? false,
+      sortOrder: overrides.sortOrder ?? 0,
+    },
+  });
+}
+
+/**
+ * テスト用テストスイートを作成
+ */
+export async function createTestSuite(
+  projectId: string,
+  overrides: Partial<{
+    id: string;
+    name: string;
+    description: string | null;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.testSuite.create({
+    data: {
+      id,
+      projectId,
+      name: overrides.name ?? `Test Suite ${id.slice(0, 8)}`,
+      description: overrides.description ?? null,
+    },
+  });
+}
+
+/**
+ * テスト用実行記録を作成
+ */
+export async function createTestExecution(
+  environmentId: string,
+  testSuiteId: string,
+  overrides: Partial<{
+    id: string;
+    status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.execution.create({
+    data: {
+      id,
+      environmentId,
+      testSuiteId,
+      status: overrides.status ?? 'IN_PROGRESS',
+    },
+  });
+}
+
+/**
+ * テスト用プロジェクト履歴を作成
+ */
+export async function createTestProjectHistory(
+  projectId: string,
+  overrides: Partial<{
+    id: string;
+    changedByUserId: string | null;
+    changedByAgentSessionId: string | null;
+    changeType: 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE';
+    snapshot: Record<string, unknown>;
+    changeReason: string | null;
+    createdAt: Date;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.projectHistory.create({
+    data: {
+      id,
+      projectId,
+      changedByUserId: overrides.changedByUserId ?? null,
+      changedByAgentSessionId: overrides.changedByAgentSessionId ?? null,
+      changeType: overrides.changeType ?? 'CREATE',
+      snapshot: overrides.snapshot ?? { name: 'Test Project' },
+      changeReason: overrides.changeReason ?? null,
+      createdAt: overrides.createdAt ?? new Date(),
+    },
+  });
 }

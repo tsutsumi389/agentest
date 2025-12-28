@@ -1,31 +1,53 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
-import { FolderKanban, Plus, Search, MoreHorizontal } from 'lucide-react';
+import { FolderKanban, Plus, Search, MoreHorizontal, Filter, User, Building2, Trash2 } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
-import { usersApi, projectsApi, type Project } from '../lib/api';
+import { useOrganizationStore } from '../stores/organization';
+import { usersApi, type ProjectWithRole } from '../lib/api';
+import { CreateProjectModal } from '../components/project/CreateProjectModal';
+
+/** 組織フィルターの選択肢 */
+type OrganizationFilter = 'all' | 'personal' | string;
 
 /**
  * プロジェクト一覧ページ
  */
 export function ProjectsPage() {
   const { user } = useAuthStore();
+  const { organizations } = useOrganizationStore();
   const [searchQuery, setSearchQuery] = useState('');
+  const [organizationFilter, setOrganizationFilter] = useState<OrganizationFilter>('all');
+  const [includeDeleted, setIncludeDeleted] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  // APIに渡すorganizationIdを計算
+  const apiOrganizationId = useMemo(() => {
+    if (organizationFilter === 'all') return undefined;
+    if (organizationFilter === 'personal') return null;
+    return organizationFilter;
+  }, [organizationFilter]);
 
   // プロジェクト一覧を取得
   const { data, isLoading } = useQuery({
-    queryKey: ['user-projects', user?.id],
-    queryFn: () => usersApi.getProjects(user!.id),
+    queryKey: ['user-projects', user?.id, apiOrganizationId, includeDeleted],
+    queryFn: () => usersApi.getProjects(user!.id, {
+      organizationId: apiOrganizationId,
+      includeDeleted,
+    }),
     enabled: !!user?.id,
   });
 
-  const projects = data?.projects || [];
-
-  // 検索フィルター
-  const filteredProjects = projects.filter((project) =>
-    project.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // クライアントサイドで名前検索フィルターを適用
+  // 注: APIにはqパラメータがあるが、プロジェクト数が少ない想定のためクライアントサイドで即時フィルタリング。
+  // 大量プロジェクト対応が必要な場合はデバウンス付きAPI検索に変更を検討
+  const filteredProjects = useMemo(() => {
+    const projects = data?.projects || [];
+    if (!searchQuery) return projects;
+    return projects.filter((project) =>
+      project.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [data?.projects, searchQuery]);
 
   return (
     <div className="space-y-6">
@@ -46,16 +68,49 @@ export function ProjectsPage() {
         </button>
       </div>
 
-      {/* 検索 */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-subtle" />
-        <input
-          type="text"
-          placeholder="プロジェクトを検索..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="input pl-10"
-        />
+      {/* 検索・フィルター */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        {/* 検索 */}
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-subtle" />
+          <input
+            type="text"
+            placeholder="プロジェクトを検索..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="input pl-10"
+          />
+        </div>
+
+        {/* 組織フィルター */}
+        <div className="relative">
+          <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-subtle" />
+          <select
+            value={organizationFilter}
+            onChange={(e) => setOrganizationFilter(e.target.value)}
+            className="input pl-10 pr-8 min-w-[160px] appearance-none"
+          >
+            <option value="all">すべて</option>
+            <option value="personal">個人プロジェクト</option>
+            {organizations.map(({ organization }) => (
+              <option key={organization.id} value={organization.id}>
+                {organization.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* 削除済み表示切替 */}
+        <label className="flex items-center gap-2 px-3 cursor-pointer text-sm text-foreground-muted hover:text-foreground">
+          <input
+            type="checkbox"
+            checked={includeDeleted}
+            onChange={(e) => setIncludeDeleted(e.target.checked)}
+            className="w-4 h-4 rounded border-border-default"
+          />
+          <Trash2 className="w-4 h-4" />
+          <span className="whitespace-nowrap">削除済みを表示</span>
+        </label>
       </div>
 
       {/* プロジェクトリスト */}
@@ -88,9 +143,10 @@ export function ProjectsPage() {
       )}
 
       {/* 作成モーダル */}
-      {isCreateModalOpen && (
-        <CreateProjectModal onClose={() => setIsCreateModalOpen(false)} />
-      )}
+      <CreateProjectModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+      />
     </div>
   );
 }
@@ -98,25 +154,37 @@ export function ProjectsPage() {
 /**
  * プロジェクトカード
  */
-function ProjectCard({ project }: { project: Project }) {
+function ProjectCard({ project }: { project: ProjectWithRole }) {
+  const isDeleted = !!project.deletedAt;
+
   return (
     <Link
       to={`/projects/${project.id}`}
-      className="card card-hover p-4 block"
+      className={`card card-hover p-4 block relative ${isDeleted ? 'opacity-50 grayscale' : ''}`}
     >
-      <div className="flex items-start justify-between mb-3">
-        <div className="w-10 h-10 rounded bg-accent-subtle flex items-center justify-center">
-          <FolderKanban className="w-5 h-5 text-accent" />
+      {/* 削除済みバッジ */}
+      {isDeleted && (
+        <div className="absolute top-2 right-2 badge badge-danger flex items-center gap-1">
+          <Trash2 className="w-3 h-3" />
+          <span>削除済み</span>
         </div>
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            // メニューを表示
-          }}
-          className="p-1 text-foreground-subtle hover:text-foreground-muted"
-        >
-          <MoreHorizontal className="w-4 h-4" />
-        </button>
+      )}
+
+      <div className="flex items-start justify-between mb-3">
+        <div className={`w-10 h-10 rounded flex items-center justify-center ${isDeleted ? 'bg-background-muted' : 'bg-accent-subtle'}`}>
+          <FolderKanban className={`w-5 h-5 ${isDeleted ? 'text-foreground-subtle' : 'text-accent'}`} />
+        </div>
+        {!isDeleted && (
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              // メニューを表示
+            }}
+            className="p-1 text-foreground-subtle hover:text-foreground-muted"
+          >
+            <MoreHorizontal className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       <h3 className="font-semibold text-foreground mb-1">{project.name}</h3>
@@ -124,90 +192,20 @@ function ProjectCard({ project }: { project: Project }) {
         {project.description || '説明なし'}
       </p>
 
-      <div className="flex items-center gap-4 text-sm text-foreground-subtle">
+      <div className="flex items-center gap-4 text-sm text-foreground-subtle flex-wrap">
         <span>{project._count?.testSuites || 0} スイート</span>
-        {project.organization && (
-          <span className="badge badge-accent">{project.organization.name}</span>
+        {project.organization ? (
+          <span className="badge badge-accent flex items-center gap-1">
+            <Building2 className="w-3 h-3" />
+            {project.organization.name}
+          </span>
+        ) : (
+          <span className="badge badge-default flex items-center gap-1">
+            <User className="w-3 h-3" />
+            個人
+          </span>
         )}
       </div>
     </Link>
-  );
-}
-
-/**
- * プロジェクト作成モーダル
- */
-function CreateProjectModal({ onClose }: { onClose: () => void }) {
-  const queryClient = useQueryClient();
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-
-  const createMutation = useMutation({
-    mutationFn: (data: { name: string; description?: string }) =>
-      projectsApi.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-projects'] });
-      onClose();
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    createMutation.mutate({ name, description: description || undefined });
-  };
-
-  return (
-    <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/50">
-      <div className="card w-full max-w-md p-6">
-        <h2 className="text-lg font-semibold text-foreground mb-4">
-          新規プロジェクト
-        </h2>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              プロジェクト名 <span className="text-danger">*</span>
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="input"
-              placeholder="例: Webアプリテスト"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              説明
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="input min-h-[80px]"
-              placeholder="プロジェクトの説明を入力..."
-            />
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn btn-secondary"
-            >
-              キャンセル
-            </button>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={!name || createMutation.isPending}
-            >
-              {createMutation.isPending ? '作成中...' : '作成'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
   );
 }

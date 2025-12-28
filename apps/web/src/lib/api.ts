@@ -199,6 +199,23 @@ export interface Project {
   _count?: { testSuites: number };
 }
 
+/** プロジェクトメンバーのロール */
+export type ProjectMemberRole = 'ADMIN' | 'WRITE' | 'READ';
+
+export interface ProjectMember {
+  id: string;
+  projectId: string;
+  userId: string;
+  role: ProjectMemberRole;
+  addedAt: string;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    avatarUrl: string | null;
+  };
+}
+
 export interface TestSuite {
   id: string;
   projectId: string;
@@ -208,6 +225,57 @@ export interface TestSuite {
   createdAt: string;
   updatedAt: string;
   _count?: { testCases: number; preconditions: number };
+}
+
+/** プロジェクト履歴の変更タイプ */
+export type ProjectChangeType = 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE';
+
+/** プロジェクト履歴 */
+export interface ProjectHistory {
+  id: string;
+  projectId: string;
+  changeType: ProjectChangeType;
+  snapshot: Record<string, unknown>;
+  changeReason: string | null;
+  createdAt: string;
+  changedBy: {
+    id: string;
+    email: string;
+    name: string;
+    avatarUrl: string | null;
+  } | null;
+}
+
+/** プロジェクト環境 */
+export interface ProjectEnvironment {
+  id: string;
+  projectId: string;
+  name: string;
+  slug: string;
+  baseUrl: string | null;
+  description: string | null;
+  isDefault: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 環境作成リクエスト */
+export interface CreateEnvironmentRequest {
+  name: string;
+  slug: string;
+  baseUrl?: string | null;
+  description?: string | null;
+  isDefault?: boolean;
+}
+
+/** 環境更新リクエスト */
+export interface UpdateEnvironmentRequest {
+  name?: string;
+  slug?: string;
+  baseUrl?: string | null;
+  description?: string | null;
+  isDefault?: boolean;
 }
 
 export interface TestCase {
@@ -252,6 +320,21 @@ export interface UpdateUserRequest {
   avatarUrl?: string | null;
 }
 
+/** プロジェクト検索オプション */
+export interface GetProjectsOptions {
+  q?: string;
+  organizationId?: string | null;
+  includeDeleted?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+/** 拡張プロジェクト型（削除日時とロールを含む） */
+export interface ProjectWithRole extends Project {
+  deletedAt?: string | null;
+  role?: 'OWNER' | 'ADMIN' | 'WRITE' | 'READ';
+}
+
 export const usersApi = {
   getOrganizations: (userId: string, options?: { includeDeleted?: boolean }) => {
     const query = new URLSearchParams();
@@ -261,7 +344,21 @@ export const usersApi = {
       `/api/users/${userId}/organizations${queryString ? `?${queryString}` : ''}`
     );
   },
-  getProjects: (userId: string) => api.get<{ projects: Project[] }>(`/api/users/${userId}/projects`),
+  getProjects: (userId: string, options?: GetProjectsOptions) => {
+    const query = new URLSearchParams();
+    if (options?.q) query.set('q', options.q);
+    // organizationIdがnullの場合は個人プロジェクトのみ、undefinedの場合はフィルタなし
+    if (options?.organizationId !== undefined) {
+      query.set('organizationId', options.organizationId === null ? 'personal' : options.organizationId);
+    }
+    if (options?.includeDeleted) query.set('includeDeleted', 'true');
+    if (options?.limit) query.set('limit', String(options.limit));
+    if (options?.offset) query.set('offset', String(options.offset));
+    const queryString = query.toString();
+    return api.get<{ projects: ProjectWithRole[] }>(
+      `/api/users/${userId}/projects${queryString ? `?${queryString}` : ''}`
+    );
+  },
   update: (userId: string, data: UpdateUserRequest) =>
     api.patch<{ user: User }>(`/api/users/${userId}`, data),
 };
@@ -279,6 +376,43 @@ export const projectsApi = {
   delete: (projectId: string) => api.delete<void>(`/api/projects/${projectId}`),
   getTestSuites: (projectId: string) =>
     api.get<{ testSuites: TestSuite[] }>(`/api/projects/${projectId}/test-suites`),
+
+  // メンバー管理
+  getMembers: (projectId: string) =>
+    api.get<{ members: ProjectMember[] }>(`/api/projects/${projectId}/members`),
+  addMember: (projectId: string, data: { email: string; role: 'ADMIN' | 'WRITE' | 'READ' }) =>
+    api.post<{ member: ProjectMember }>(`/api/projects/${projectId}/members`, data),
+  updateMemberRole: (projectId: string, userId: string, role: 'ADMIN' | 'WRITE' | 'READ') =>
+    api.patch<{ member: ProjectMember }>(`/api/projects/${projectId}/members/${userId}`, { role }),
+  removeMember: (projectId: string, userId: string) =>
+    api.delete<void>(`/api/projects/${projectId}/members/${userId}`),
+
+  // 環境管理
+  getEnvironments: (projectId: string) =>
+    api.get<{ environments: ProjectEnvironment[] }>(`/api/projects/${projectId}/environments`),
+  createEnvironment: (projectId: string, data: CreateEnvironmentRequest) =>
+    api.post<{ environment: ProjectEnvironment }>(`/api/projects/${projectId}/environments`, data),
+  updateEnvironment: (projectId: string, environmentId: string, data: UpdateEnvironmentRequest) =>
+    api.patch<{ environment: ProjectEnvironment }>(`/api/projects/${projectId}/environments/${environmentId}`, data),
+  deleteEnvironment: (projectId: string, environmentId: string) =>
+    api.delete<void>(`/api/projects/${projectId}/environments/${environmentId}`),
+  reorderEnvironments: (projectId: string, environmentIds: string[]) =>
+    api.post<{ environments: ProjectEnvironment[] }>(`/api/projects/${projectId}/environments/reorder`, { environmentIds }),
+
+  // 履歴管理
+  getHistories: (projectId: string, params?: { limit?: number; offset?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.limit !== undefined) query.set('limit', String(params.limit));
+    if (params?.offset !== undefined) query.set('offset', String(params.offset));
+    const queryString = query.toString();
+    return api.get<{ histories: ProjectHistory[]; total: number }>(
+      `/api/projects/${projectId}/histories${queryString ? `?${queryString}` : ''}`
+    );
+  },
+
+  // 復元
+  restore: (projectId: string) =>
+    api.post<{ project: Project }>(`/api/projects/${projectId}/restore`),
 };
 
 // ============================================

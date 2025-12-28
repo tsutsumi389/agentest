@@ -136,6 +136,7 @@ enum ChangeType {
   CREATE
   UPDATE
   DELETE
+  RESTORE
 }
 
 enum NotificationType {

@@ -143,11 +143,21 @@ export function requireOrgRole(roles: string[], options: RequireOrgRoleOptions =
   };
 }
 
+export interface RequireProjectRoleOptions {
+  /**
+   * 削除済みプロジェクトへの操作を許可するか（デフォルト: false）
+   * trueの場合、deletedAtがnullでないプロジェクトでも権限チェックを通過する
+   */
+  allowDeletedProject?: boolean;
+}
+
 /**
  * 認可ミドルウェアファクトリ
  * ユーザーがプロジェクト内で必要なロールを持っているかチェック
  */
-export function requireProjectRole(roles: string[]) {
+export function requireProjectRole(roles: string[], options: RequireProjectRoleOptions = {}) {
+  const { allowDeletedProject = false } = options;
+
   return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!req.user) {
@@ -170,8 +180,13 @@ export function requireProjectRole(roles: string[]) {
         },
       });
 
-      if (!project || project.deletedAt) {
+      if (!project) {
         throw new AuthorizationError('Project not found');
+      }
+
+      // 削除済みプロジェクトのチェック
+      if (project.deletedAt && !allowDeletedProject) {
+        throw new AuthorizationError('Project has been deleted');
       }
 
       // オーナーは全権限を持つ

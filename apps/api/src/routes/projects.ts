@@ -67,9 +67,39 @@ router.get('/:projectId/environments', requireAuth(authConfig), requireProjectRo
 router.post('/:projectId/environments', requireAuth(authConfig), requireProjectRole(['ADMIN', 'WRITE']), projectController.createEnvironment);
 
 /**
+ * 環境更新
+ * PATCH /api/projects/:projectId/environments/:environmentId
+ */
+router.patch('/:projectId/environments/:environmentId', requireAuth(authConfig), requireProjectRole(['ADMIN', 'WRITE']), projectController.updateEnvironment);
+
+/**
+ * 環境削除
+ * DELETE /api/projects/:projectId/environments/:environmentId
+ */
+router.delete('/:projectId/environments/:environmentId', requireAuth(authConfig), requireProjectRole(['ADMIN']), projectController.deleteEnvironment);
+
+/**
+ * 環境並替
+ * POST /api/projects/:projectId/environments/reorder
+ */
+router.post('/:projectId/environments/reorder', requireAuth(authConfig), requireProjectRole(['ADMIN', 'WRITE']), projectController.reorderEnvironments);
+
+/**
  * プロジェクトのテストスイート一覧取得
  * GET /api/projects/:projectId/test-suites
  */
 router.get('/:projectId/test-suites', requireAuth(authConfig), requireProjectRole(['ADMIN', 'WRITE', 'READ']), projectController.getTestSuites);
+
+/**
+ * プロジェクトの履歴一覧取得
+ * GET /api/projects/:projectId/histories
+ */
+router.get('/:projectId/histories', requireAuth(authConfig), requireProjectRole(['ADMIN', 'WRITE', 'READ'], { allowDeletedProject: true }), projectController.getHistories);
+
+/**
+ * プロジェクト復元
+ * POST /api/projects/:projectId/restore
+ */
+router.post('/:projectId/restore', requireAuth(authConfig), requireProjectRole(['ADMIN'], { allowDeletedProject: true }), projectController.restore);
 
 export default router;

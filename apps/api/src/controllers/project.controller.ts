@@ -1,17 +1,13 @@
 import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
+import {
+  projectCreateSchema,
+  projectUpdateSchema,
+  projectEnvironmentCreateSchema,
+  projectEnvironmentUpdateSchema,
+  projectEnvironmentReorderSchema,
+} from '@agentest/shared';
 import { ProjectService } from '../services/project.service.js';
-
-const createProjectSchema = z.object({
-  name: z.string().min(1).max(100),
-  description: z.string().max(500).optional(),
-  organizationId: z.string().uuid().optional(),
-});
-
-const updateProjectSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  description: z.string().max(500).optional().nullable(),
-});
 
 const addMemberSchema = z.object({
   userId: z.string().uuid(),
@@ -20,14 +16,6 @@ const addMemberSchema = z.object({
 
 const updateMemberRoleSchema = z.object({
   role: z.enum(['ADMIN', 'WRITE', 'READ']),
-});
-
-const createEnvironmentSchema = z.object({
-  name: z.string().min(1).max(50),
-  slug: z.string().min(1).max(50).regex(/^[a-z0-9-]+$/),
-  baseUrl: z.string().url().optional(),
-  description: z.string().max(200).optional(),
-  isDefault: z.boolean().default(false),
 });
 
 /**
@@ -41,7 +29,7 @@ export class ProjectController {
    */
   create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const data = createProjectSchema.parse(req.body);
+      const data = projectCreateSchema.parse(req.body);
       const project = await this.projectService.create(req.user!.id, data);
 
       res.status(201).json({ project });
@@ -70,8 +58,8 @@ export class ProjectController {
   update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { projectId } = req.params;
-      const data = updateProjectSchema.parse(req.body);
-      const project = await this.projectService.update(projectId, data);
+      const data = projectUpdateSchema.parse(req.body);
+      const project = await this.projectService.update(projectId, data, req.user!.id);
 
       res.json({ project });
     } catch (error) {
@@ -85,7 +73,7 @@ export class ProjectController {
   delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { projectId } = req.params;
-      await this.projectService.softDelete(projectId);
+      await this.projectService.softDelete(projectId, req.user!.id);
 
       res.status(204).send();
     } catch (error) {
@@ -171,10 +159,54 @@ export class ProjectController {
   createEnvironment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { projectId } = req.params;
-      const data = createEnvironmentSchema.parse(req.body);
+      const data = projectEnvironmentCreateSchema.parse(req.body);
       const environment = await this.projectService.createEnvironment(projectId, data);
 
       res.status(201).json({ environment });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 環境更新
+   */
+  updateEnvironment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { projectId, environmentId } = req.params;
+      const data = projectEnvironmentUpdateSchema.parse(req.body);
+      const environment = await this.projectService.updateEnvironment(projectId, environmentId, data);
+
+      res.json({ environment });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 環境削除
+   */
+  deleteEnvironment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { projectId, environmentId } = req.params;
+      await this.projectService.deleteEnvironment(projectId, environmentId);
+
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 環境並替
+   */
+  reorderEnvironments = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { projectId } = req.params;
+      const data = projectEnvironmentReorderSchema.parse(req.body);
+      const environments = await this.projectService.reorderEnvironments(projectId, data.environmentIds);
+
+      res.json({ environments });
     } catch (error) {
       next(error);
     }
@@ -189,6 +221,59 @@ export class ProjectController {
       const testSuites = await this.projectService.getTestSuites(projectId);
 
       res.json({ testSuites });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 履歴一覧取得
+   */
+  getHistories = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { projectId } = req.params;
+
+      // クエリパラメータのバリデーション
+      const limitParam = req.query.limit;
+      const offsetParam = req.query.offset;
+      let limit: number | undefined;
+      let offset: number | undefined;
+
+      if (limitParam !== undefined) {
+        const parsed = Number(limitParam);
+        if (isNaN(parsed) || parsed < 1 || parsed > 100) {
+          res.status(400).json({ error: 'limit は 1〜100 の整数である必要があります' });
+          return;
+        }
+        limit = parsed;
+      }
+
+      if (offsetParam !== undefined) {
+        const parsed = Number(offsetParam);
+        if (isNaN(parsed) || parsed < 0) {
+          res.status(400).json({ error: 'offset は 0 以上の整数である必要があります' });
+          return;
+        }
+        offset = parsed;
+      }
+
+      const { histories, total } = await this.projectService.getHistories(projectId, { limit, offset });
+
+      res.json({ histories, total });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * プロジェクト復元
+   */
+  restore = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { projectId } = req.params;
+      const project = await this.projectService.restore(projectId, req.user!.id);
+
+      res.json({ project });
     } catch (error) {
       next(error);
     }
