@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useParams, Link } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -9,9 +9,11 @@ import {
   MoreHorizontal,
   ChevronLeft,
   Settings,
+  ChevronRight,
 } from 'lucide-react';
-import { projectsApi, testSuitesApi, type TestSuite, type TestSuiteSearchParams } from '../lib/api';
-import { TestSuiteSearchFilter } from '../components/test-suite/TestSuiteSearchFilter';
+import { projectsApi, testSuitesApi, type TestSuite, type TestSuiteSearchParams, type ProjectMemberRole } from '../lib/api';
+import { TestSuiteSearchFilter, type FilterMember } from '../components/test-suite/TestSuiteSearchFilter';
+import { useAuth } from '../hooks/useAuth';
 
 /**
  * プロジェクト詳細ページ
@@ -28,6 +30,7 @@ const DEFAULT_SEARCH_PARAMS: TestSuiteSearchParams = {
 
 export function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  const { user } = useAuth();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchParams, setSearchParams] = useState<TestSuiteSearchParams>(DEFAULT_SEARCH_PARAMS);
 
@@ -35,6 +38,13 @@ export function ProjectDetailPage() {
   const { data: projectData, isLoading: isLoadingProject } = useQuery({
     queryKey: ['project', projectId],
     queryFn: () => projectsApi.getById(projectId!),
+    enabled: !!projectId,
+  });
+
+  // プロジェクトメンバー一覧を取得
+  const { data: membersData } = useQuery({
+    queryKey: ['project-members', projectId],
+    queryFn: () => projectsApi.getMembers(projectId!),
     enabled: !!projectId,
   });
 
@@ -49,9 +59,46 @@ export function ProjectDetailPage() {
   const testSuites = suitesData?.testSuites || [];
   const totalCount = suitesData?.total;
 
+  // 現在のユーザーのロールを判定
+  const currentRole: 'OWNER' | ProjectMemberRole | undefined = useMemo(() => {
+    if (!user || !project) return undefined;
+    // オーナーチェック
+    if (project.ownerId === user.id) return 'OWNER';
+    // メンバーのロールを取得
+    const member = membersData?.members.find((m) => m.userId === user.id);
+    return member?.role;
+  }, [user, project, membersData]);
+
+  // 管理者権限があるか（削除済み表示可能）
+  const isAdmin = currentRole === 'OWNER' || currentRole === 'ADMIN';
+
+  // フィルタ用のメンバーリストを作成
+  const filterMembers: FilterMember[] = useMemo(() => {
+    if (!membersData?.members) return [];
+    return membersData.members.map((m) => ({
+      id: m.userId,
+      name: m.user.name,
+      email: m.user.email,
+    }));
+  }, [membersData]);
+
   // フィルタ変更ハンドラ
   const handleFiltersChange = useCallback((newFilters: TestSuiteSearchParams) => {
     setSearchParams(newFilters);
+  }, []);
+
+  // ページネーション計算
+  const limit = searchParams.limit || 20;
+  const offset = searchParams.offset || 0;
+  const currentPage = Math.floor(offset / limit) + 1;
+  const totalPages = totalCount ? Math.ceil(totalCount / limit) : 1;
+
+  // ページ変更ハンドラ
+  const handlePageChange = useCallback((page: number) => {
+    setSearchParams((prev) => ({
+      ...prev,
+      offset: (page - 1) * (prev.limit || 20),
+    }));
   }, []);
 
   if (isLoadingProject) {
@@ -122,7 +169,8 @@ export function ProjectDetailPage() {
             filters={searchParams}
             onFiltersChange={handleFiltersChange}
             totalCount={totalCount}
-            isAdmin={true}
+            isAdmin={isAdmin}
+            members={filterMembers}
           />
         </div>
 
@@ -149,11 +197,102 @@ export function ProjectDetailPage() {
             )}
           </div>
         ) : (
-          <div className="divide-y divide-border">
-            {testSuites.map((suite) => (
-              <TestSuiteRow key={suite.id} suite={suite} />
-            ))}
-          </div>
+          <>
+            <div className="divide-y divide-border">
+              {testSuites.map((suite) => (
+                <TestSuiteRow key={suite.id} suite={suite} />
+              ))}
+            </div>
+
+            {/* ページネーション */}
+            {totalPages > 1 && (
+              <div className="p-4 border-t border-border flex items-center justify-between">
+                <div className="text-sm text-foreground-muted">
+                  {totalCount}件中 {offset + 1}〜{Math.min(offset + limit, totalCount || 0)}件を表示
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage <= 1}
+                    className="btn btn-ghost p-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="前のページ"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+
+                  {/* ページ番号 */}
+                  {(() => {
+                    const pages: (number | 'ellipsis')[] = [];
+                    const showEllipsisStart = currentPage > 3;
+                    const showEllipsisEnd = currentPage < totalPages - 2;
+
+                    if (totalPages <= 5) {
+                      // 5ページ以下の場合は全て表示
+                      for (let i = 1; i <= totalPages; i++) {
+                        pages.push(i);
+                      }
+                    } else {
+                      // 最初のページ
+                      pages.push(1);
+
+                      if (showEllipsisStart) {
+                        pages.push('ellipsis');
+                      }
+
+                      // 現在のページ周辺
+                      const start = Math.max(2, currentPage - 1);
+                      const end = Math.min(totalPages - 1, currentPage + 1);
+                      for (let i = start; i <= end; i++) {
+                        if (!pages.includes(i)) {
+                          pages.push(i);
+                        }
+                      }
+
+                      if (showEllipsisEnd) {
+                        pages.push('ellipsis');
+                      }
+
+                      // 最後のページ
+                      if (!pages.includes(totalPages)) {
+                        pages.push(totalPages);
+                      }
+                    }
+
+                    return pages.map((page, index) =>
+                      page === 'ellipsis' ? (
+                        <span key={`ellipsis-${index}`} className="px-2 text-foreground-muted">
+                          ...
+                        </span>
+                      ) : (
+                        <button
+                          key={page}
+                          onClick={() => handlePageChange(page)}
+                          className={`px-3 py-1 rounded text-sm transition-colors ${
+                            currentPage === page
+                              ? 'bg-accent text-background'
+                              : 'text-foreground-muted hover:text-foreground hover:bg-background-tertiary'
+                          }`}
+                          aria-label={`${page}ページ目`}
+                          aria-current={currentPage === page ? 'page' : undefined}
+                        >
+                          {page}
+                        </button>
+                      )
+                    );
+                  })()}
+
+                  <button
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage >= totalPages}
+                    className="btn btn-ghost p-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    aria-label="次のページ"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
 

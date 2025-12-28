@@ -1,6 +1,15 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import { Search, SlidersHorizontal, X, ChevronDown } from 'lucide-react';
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import { Search, SlidersHorizontal, X, ChevronDown, Calendar } from 'lucide-react';
 import type { TestSuiteSearchParams } from '../../lib/api';
+
+/**
+ * プロジェクトメンバー情報（作成者フィルタ用）
+ */
+export interface FilterMember {
+  id: string;
+  name: string;
+  email: string;
+}
 
 /**
  * ステータスオプション
@@ -46,6 +55,10 @@ interface TestSuiteSearchFilterProps {
    * 管理者権限があるか（削除済み表示用）
    */
   isAdmin?: boolean;
+  /**
+   * プロジェクトメンバー一覧（作成者フィルタ用）
+   */
+  members?: FilterMember[];
 }
 
 /**
@@ -58,20 +71,27 @@ export function TestSuiteSearchFilter({
   onFiltersChange,
   totalCount,
   isAdmin = false,
+  members = [],
 }: TestSuiteSearchFilterProps) {
   const [searchInput, setSearchInput] = useState(filters.q || '');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
 
+  // 最新のfiltersをrefで保持（デバウンス処理で使用）
+  const filtersRef = useRef(filters);
+  filtersRef.current = filters;
+
   // 検索入力のデバウンス
+  // NOTE: filtersオブジェクト全体ではなくfilters.qのみを依存配列に含める
+  // 他のフィルタ変更時にタイマーがリセットされるのを防ぐ
   useEffect(() => {
     const timer = setTimeout(() => {
-      if (searchInput !== filters.q) {
-        onFiltersChange({ ...filters, q: searchInput || undefined, offset: 0 });
+      if (searchInput !== filtersRef.current.q) {
+        onFiltersChange({ ...filtersRef.current, q: searchInput || undefined, offset: 0 });
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchInput, filters, onFiltersChange]);
+  }, [searchInput, onFiltersChange]);
 
   // 外側クリックでフィルタを閉じる
   useEffect(() => {
@@ -135,6 +155,39 @@ export function TestSuiteSearchFilter({
     [filters, onFiltersChange]
   );
 
+  const handleCreatedByChange = useCallback(
+    (createdBy: string) => {
+      onFiltersChange({
+        ...filters,
+        createdBy: createdBy || undefined,
+        offset: 0,
+      });
+    },
+    [filters, onFiltersChange]
+  );
+
+  const handleFromChange = useCallback(
+    (from: string) => {
+      onFiltersChange({
+        ...filters,
+        from: from || undefined,
+        offset: 0,
+      });
+    },
+    [filters, onFiltersChange]
+  );
+
+  const handleToChange = useCallback(
+    (to: string) => {
+      onFiltersChange({
+        ...filters,
+        to: to || undefined,
+        offset: 0,
+      });
+    },
+    [filters, onFiltersChange]
+  );
+
   const clearFilters = useCallback(() => {
     setSearchInput('');
     onFiltersChange({
@@ -149,8 +202,18 @@ export function TestSuiteSearchFilter({
   const activeFilterCount = [
     filters.q,
     filters.status,
+    filters.createdBy,
+    filters.from,
+    filters.to,
     filters.includeDeleted,
   ].filter(Boolean).length;
+
+  // 選択された作成者の名前を取得
+  const selectedMemberName = useMemo(() => {
+    if (!filters.createdBy) return null;
+    const member = members.find((m) => m.id === filters.createdBy);
+    return member?.name || member?.email || filters.createdBy;
+  }, [filters.createdBy, members]);
 
   return (
     <div className="flex flex-col gap-3">
@@ -164,11 +227,13 @@ export function TestSuiteSearchFilter({
             onChange={(e) => setSearchInput(e.target.value)}
             placeholder="テストスイートを検索..."
             className="input pl-10 pr-8"
+            aria-label="テストスイートを検索"
           />
           {searchInput && (
             <button
               onClick={() => setSearchInput('')}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-muted hover:text-foreground"
+              aria-label="検索をクリア"
             >
               <X className="w-4 h-4" />
             </button>
@@ -180,6 +245,9 @@ export function TestSuiteSearchFilter({
           <button
             onClick={() => setIsFilterOpen(!isFilterOpen)}
             className={`btn btn-secondary ${activeFilterCount > 0 ? 'border-accent' : ''}`}
+            aria-expanded={isFilterOpen}
+            aria-haspopup="true"
+            aria-label="フィルタオプションを開く"
           >
             <SlidersHorizontal className="w-4 h-4" />
             フィルタ
@@ -214,6 +282,53 @@ export function TestSuiteSearchFilter({
                         {option.label}
                       </button>
                     ))}
+                  </div>
+                </div>
+
+                {/* 作成者フィルタ */}
+                {members.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      作成者
+                    </label>
+                    <select
+                      value={filters.createdBy || ''}
+                      onChange={(e) => handleCreatedByChange(e.target.value)}
+                      className="input w-full"
+                      aria-label="作成者でフィルタ"
+                    >
+                      <option value="">すべて</option>
+                      {members.map((member) => (
+                        <option key={member.id} value={member.id}>
+                          {member.name || member.email}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* 日付範囲フィルタ */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    <Calendar className="inline-block w-4 h-4 mr-1" />
+                    作成日
+                  </label>
+                  <div className="flex gap-2 items-center">
+                    <input
+                      type="date"
+                      value={filters.from?.split('T')[0] || ''}
+                      onChange={(e) => handleFromChange(e.target.value ? `${e.target.value}T00:00:00.000Z` : '')}
+                      className="input flex-1"
+                      aria-label="開始日"
+                    />
+                    <span className="text-foreground-muted">〜</span>
+                    <input
+                      type="date"
+                      value={filters.to?.split('T')[0] || ''}
+                      onChange={(e) => handleToChange(e.target.value ? `${e.target.value}T23:59:59.999Z` : '')}
+                      className="input flex-1"
+                      aria-label="終了日"
+                    />
                   </div>
                 </div>
 
@@ -291,6 +406,38 @@ export function TestSuiteSearchFilter({
               <button
                 onClick={() => handleStatusChange('')}
                 className="ml-1 hover:text-foreground"
+                aria-label="ステータスフィルタを解除"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          )}
+          {selectedMemberName && (
+            <span className="badge bg-background-tertiary text-foreground">
+              作成者: {selectedMemberName}
+              <button
+                onClick={() => handleCreatedByChange('')}
+                className="ml-1 hover:text-foreground"
+                aria-label="作成者フィルタを解除"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          )}
+          {(filters.from || filters.to) && (
+            <span className="badge bg-background-tertiary text-foreground">
+              {filters.from && filters.to
+                ? `${filters.from.split('T')[0]} 〜 ${filters.to.split('T')[0]}`
+                : filters.from
+                ? `${filters.from.split('T')[0]} 以降`
+                : `${filters.to?.split('T')[0]} まで`}
+              <button
+                onClick={() => {
+                  handleFromChange('');
+                  handleToChange('');
+                }}
+                className="ml-1 hover:text-foreground"
+                aria-label="日付フィルタを解除"
               >
                 <X className="w-3 h-3" />
               </button>
@@ -302,6 +449,7 @@ export function TestSuiteSearchFilter({
               <button
                 onClick={() => handleIncludeDeletedChange(false)}
                 className="ml-1 hover:text-foreground"
+                aria-label="削除済みフィルタを解除"
               >
                 <X className="w-3 h-3" />
               </button>
