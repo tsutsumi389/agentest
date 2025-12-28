@@ -117,7 +117,7 @@ export const projectEnvironmentSchema = z.object({
     .string()
     .min(1)
     .max(50)
-    .regex(/^[a-z0-9-]+$/),
+    .regex(/^[a-z0-9-]+$/, 'スラッグは小文字英数字とハイフンのみ使用可能です'),
   baseUrl: z.string().url().nullish(),
   description: z.string().max(200).nullish(),
   isDefault: z.boolean().default(false),
@@ -133,7 +133,7 @@ export const projectEnvironmentUpdateSchema = z.object({
     .string()
     .min(1)
     .max(50)
-    .regex(/^[a-z0-9-]+$/)
+    .regex(/^[a-z0-9-]+$/, 'スラッグは小文字英数字とハイフンのみ使用可能です')
     .optional(),
   baseUrl: z.string().url().nullish(),
   description: z.string().max(200).nullish(),

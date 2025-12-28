@@ -1,17 +1,13 @@
 import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
+import {
+  projectCreateSchema,
+  projectUpdateSchema,
+  projectEnvironmentCreateSchema,
+  projectEnvironmentUpdateSchema,
+  projectEnvironmentReorderSchema,
+} from '@agentest/shared';
 import { ProjectService } from '../services/project.service.js';
-
-const createProjectSchema = z.object({
-  name: z.string().min(1).max(100),
-  description: z.string().max(500).optional(),
-  organizationId: z.string().uuid().optional(),
-});
-
-const updateProjectSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  description: z.string().max(500).optional().nullable(),
-});
 
 const addMemberSchema = z.object({
   userId: z.string().uuid(),
@@ -20,26 +16,6 @@ const addMemberSchema = z.object({
 
 const updateMemberRoleSchema = z.object({
   role: z.enum(['ADMIN', 'WRITE', 'READ']),
-});
-
-const createEnvironmentSchema = z.object({
-  name: z.string().min(1).max(50),
-  slug: z.string().min(1).max(50).regex(/^[a-z0-9-]+$/),
-  baseUrl: z.string().url().optional(),
-  description: z.string().max(200).optional(),
-  isDefault: z.boolean().default(false),
-});
-
-const updateEnvironmentSchema = z.object({
-  name: z.string().min(1).max(50).optional(),
-  slug: z.string().min(1).max(50).regex(/^[a-z0-9-]+$/).optional(),
-  baseUrl: z.string().url().optional().nullable(),
-  description: z.string().max(200).optional().nullable(),
-  isDefault: z.boolean().optional(),
-});
-
-const reorderEnvironmentsSchema = z.object({
-  environmentIds: z.array(z.string().uuid()).min(1),
 });
 
 /**
@@ -53,7 +29,7 @@ export class ProjectController {
    */
   create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const data = createProjectSchema.parse(req.body);
+      const data = projectCreateSchema.parse(req.body);
       const project = await this.projectService.create(req.user!.id, data);
 
       res.status(201).json({ project });
@@ -82,7 +58,7 @@ export class ProjectController {
   update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { projectId } = req.params;
-      const data = updateProjectSchema.parse(req.body);
+      const data = projectUpdateSchema.parse(req.body);
       const project = await this.projectService.update(projectId, data);
 
       res.json({ project });
@@ -183,7 +159,7 @@ export class ProjectController {
   createEnvironment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { projectId } = req.params;
-      const data = createEnvironmentSchema.parse(req.body);
+      const data = projectEnvironmentCreateSchema.parse(req.body);
       const environment = await this.projectService.createEnvironment(projectId, data);
 
       res.status(201).json({ environment });
@@ -198,7 +174,7 @@ export class ProjectController {
   updateEnvironment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { projectId, environmentId } = req.params;
-      const data = updateEnvironmentSchema.parse(req.body);
+      const data = projectEnvironmentUpdateSchema.parse(req.body);
       const environment = await this.projectService.updateEnvironment(projectId, environmentId, data);
 
       res.json({ environment });
@@ -227,7 +203,7 @@ export class ProjectController {
   reorderEnvironments = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { projectId } = req.params;
-      const data = reorderEnvironmentsSchema.parse(req.body);
+      const data = projectEnvironmentReorderSchema.parse(req.body);
       const environments = await this.projectService.reorderEnvironments(projectId, data.environmentIds);
 
       res.json({ environments });

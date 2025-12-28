@@ -11,7 +11,7 @@ export class ProjectService {
   /**
    * プロジェクトを作成
    */
-  async create(userId: string, data: { name: string; description?: string; organizationId?: string }) {
+  async create(userId: string, data: { name: string; description?: string | null; organizationId?: string | null }) {
     return prisma.project.create({
       data: {
         name: data.name,
@@ -172,7 +172,7 @@ export class ProjectService {
    */
   async createEnvironment(
     projectId: string,
-    data: { name: string; slug: string; baseUrl?: string; description?: string; isDefault?: boolean }
+    data: { name: string; slug: string; baseUrl?: string | null; description?: string | null; isDefault?: boolean }
   ) {
     await this.findById(projectId);
 
@@ -246,17 +246,20 @@ export class ProjectService {
       }
     }
 
-    // デフォルト環境の場合、他のデフォルトを解除
-    if (data.isDefault && !environment.isDefault) {
-      await prisma.projectEnvironment.updateMany({
-        where: { projectId, isDefault: true },
-        data: { isDefault: false },
-      });
-    }
+    // トランザクションでデフォルト切替と更新を実行
+    return prisma.$transaction(async (tx) => {
+      // デフォルト環境の場合、他のデフォルトを解除
+      if (data.isDefault && !environment.isDefault) {
+        await tx.projectEnvironment.updateMany({
+          where: { projectId, isDefault: true },
+          data: { isDefault: false },
+        });
+      }
 
-    return prisma.projectEnvironment.update({
-      where: { id: environmentId },
-      data,
+      return tx.projectEnvironment.update({
+        where: { id: environmentId },
+        data,
+      });
     });
   }
 
@@ -287,8 +290,27 @@ export class ProjectService {
       throw new ConflictError('この環境は実行中のテストで使用されているため削除できません');
     }
 
-    return prisma.projectEnvironment.delete({
-      where: { id: environmentId },
+    // トランザクションで削除とデフォルト昇格を実行
+    return prisma.$transaction(async (tx) => {
+      // 環境を削除
+      await tx.projectEnvironment.delete({
+        where: { id: environmentId },
+      });
+
+      // デフォルト環境を削除した場合、最もsortOrderが若い環境を新デフォルトに昇格
+      if (environment.isDefault) {
+        const nextDefault = await tx.projectEnvironment.findFirst({
+          where: { projectId },
+          orderBy: { sortOrder: 'asc' },
+        });
+
+        if (nextDefault) {
+          await tx.projectEnvironment.update({
+            where: { id: nextDefault.id },
+            data: { isDefault: true },
+          });
+        }
+      }
     });
   }
 
