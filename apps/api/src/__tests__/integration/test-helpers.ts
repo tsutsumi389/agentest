@@ -194,6 +194,8 @@ export async function cleanupTestData() {
   // 外部キー制約を考慮した順序で削除
   await prisma.auditLog.deleteMany({});
   await prisma.execution.deleteMany({});
+  await prisma.testSuiteHistory.deleteMany({});
+  await prisma.testSuitePrecondition.deleteMany({});
   await prisma.testSuite.deleteMany({});
   await prisma.projectEnvironment.deleteMany({});
   await prisma.projectHistory.deleteMany({});
@@ -326,6 +328,58 @@ export async function createTestExecution(
       environmentId,
       testSuiteId,
       status: overrides.status ?? 'IN_PROGRESS',
+    },
+  });
+}
+
+/**
+ * テスト用テストスイート履歴を作成
+ */
+export async function createTestSuiteHistory(
+  testSuiteId: string,
+  overrides: Partial<{
+    id: string;
+    changedByUserId: string | null;
+    changedByAgentSessionId: string | null;
+    changeType: 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE';
+    snapshot: Record<string, unknown>;
+    changeReason: string | null;
+    createdAt: Date;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.testSuiteHistory.create({
+    data: {
+      id,
+      testSuiteId,
+      changedByUserId: overrides.changedByUserId ?? null,
+      changedByAgentSessionId: overrides.changedByAgentSessionId ?? null,
+      changeType: overrides.changeType ?? 'CREATE',
+      snapshot: overrides.snapshot ?? { name: 'Test Suite' },
+      changeReason: overrides.changeReason ?? null,
+      createdAt: overrides.createdAt ?? new Date(),
+    },
+  });
+}
+
+/**
+ * テスト用前提条件を作成
+ */
+export async function createTestPrecondition(
+  testSuiteId: string,
+  overrides: Partial<{
+    id: string;
+    content: string;
+    orderKey: string;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.testSuitePrecondition.create({
+    data: {
+      id,
+      testSuiteId,
+      content: overrides.content ?? `Precondition ${id.slice(0, 8)}`,
+      orderKey: overrides.orderKey ?? id.slice(0, 8),
     },
   });
 }

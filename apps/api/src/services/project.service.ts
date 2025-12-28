@@ -1,6 +1,7 @@
 import { prisma, type ProjectRole, type ChangeType, type Prisma } from '@agentest/db';
 import { NotFoundError, ConflictError, ValidationError } from '@agentest/shared';
 import { ProjectRepository } from '../repositories/project.repository.js';
+import { TestSuiteRepository, type TestSuiteSearchOptions } from '../repositories/test-suite.repository.js';
 
 // 復元可能な期間（30日）
 const RESTORE_LIMIT_DAYS = 30;
@@ -10,6 +11,7 @@ const RESTORE_LIMIT_DAYS = 30;
  */
 export class ProjectService {
   private projectRepo = new ProjectRepository();
+  private testSuiteRepo = new TestSuiteRepository();
 
   /**
    * プロジェクトを作成
@@ -405,6 +407,19 @@ export class ProjectService {
       },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  /**
+   * テストスイートを検索
+   */
+  async searchTestSuites(projectId: string, options: TestSuiteSearchOptions) {
+    // プロジェクトの存在確認（削除済みプロジェクトは検索対象外）
+    const project = await this.projectRepo.findById(projectId);
+    if (!project) {
+      throw new NotFoundError('Project', projectId);
+    }
+
+    return this.testSuiteRepo.search(projectId, options);
   }
 
   /**

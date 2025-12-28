@@ -20,8 +20,25 @@ const addPreconditionSchema = z.object({
   orderKey: z.string().optional(),
 });
 
+const updatePreconditionSchema = z.object({
+  content: z.string().min(1).max(2000),
+});
+
+const preconditionIdParamSchema = z.object({
+  preconditionId: z.string().uuid(),
+});
+
+const reorderPreconditionsSchema = z.object({
+  preconditionIds: z.array(z.string().uuid()),
+});
+
 const startExecutionSchema = z.object({
   environmentId: z.string().uuid().optional(),
+});
+
+const paginationQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
 });
 
 /**
@@ -122,9 +139,55 @@ export class TestSuiteController {
     try {
       const { testSuiteId } = req.params;
       const data = addPreconditionSchema.parse(req.body);
-      const precondition = await this.testSuiteService.addPrecondition(testSuiteId, data);
+      const precondition = await this.testSuiteService.addPrecondition(testSuiteId, req.user!.id, data);
 
       res.status(201).json({ precondition });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 前提条件更新
+   */
+  updatePrecondition = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { testSuiteId } = req.params;
+      const { preconditionId } = preconditionIdParamSchema.parse(req.params);
+      const data = updatePreconditionSchema.parse(req.body);
+      const precondition = await this.testSuiteService.updatePrecondition(testSuiteId, preconditionId, req.user!.id, data);
+
+      res.json({ precondition });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 前提条件削除
+   */
+  deletePrecondition = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { testSuiteId } = req.params;
+      const { preconditionId } = preconditionIdParamSchema.parse(req.params);
+      await this.testSuiteService.deletePrecondition(testSuiteId, preconditionId, req.user!.id);
+
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 前提条件並び替え
+   */
+  reorderPreconditions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { testSuiteId } = req.params;
+      const { preconditionIds } = reorderPreconditionsSchema.parse(req.body);
+      const preconditions = await this.testSuiteService.reorderPreconditions(testSuiteId, preconditionIds, req.user!.id);
+
+      res.json({ preconditions });
     } catch (error) {
       next(error);
     }
@@ -136,8 +199,7 @@ export class TestSuiteController {
   getExecutions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testSuiteId } = req.params;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const offset = parseInt(req.query.offset as string) || 0;
+      const { limit, offset } = paginationQuerySchema.parse(req.query);
       const executions = await this.testSuiteService.getExecutions(testSuiteId, { limit, offset });
 
       res.json({ executions });
@@ -156,6 +218,35 @@ export class TestSuiteController {
       const execution = await this.testSuiteService.startExecution(testSuiteId, req.user!.id, data);
 
       res.status(201).json({ execution });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 変更履歴一覧取得
+   */
+  getHistories = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { testSuiteId } = req.params;
+      const { limit, offset } = paginationQuerySchema.parse(req.query);
+      const { histories, total } = await this.testSuiteService.getHistories(testSuiteId, { limit, offset });
+
+      res.json({ histories, total });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * テストスイート復元
+   */
+  restore = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { testSuiteId } = req.params;
+      const testSuite = await this.testSuiteService.restore(testSuiteId, req.user!.id);
+
+      res.json({ testSuite });
     } catch (error) {
       next(error);
     }
