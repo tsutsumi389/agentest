@@ -1,6 +1,9 @@
-import { prisma, type ProjectRole } from '@agentest/db';
-import { NotFoundError, ConflictError } from '@agentest/shared';
+import { prisma, type ProjectRole, type ChangeType, type Prisma } from '@agentest/db';
+import { NotFoundError, ConflictError, ValidationError } from '@agentest/shared';
 import { ProjectRepository } from '../repositories/project.repository.js';
+
+// 復元可能な期間（30日）
+const RESTORE_LIMIT_DAYS = 30;
 
 /**
  * プロジェクトサービス
@@ -12,7 +15,7 @@ export class ProjectService {
    * プロジェクトを作成
    */
   async create(userId: string, data: { name: string; description?: string | null; organizationId?: string | null }) {
-    return prisma.project.create({
+    const project = await prisma.project.create({
       data: {
         name: data.name,
         description: data.description,
@@ -20,6 +23,16 @@ export class ProjectService {
         ownerId: data.organizationId ? null : userId,
       },
     });
+
+    // 履歴を作成
+    await this.createHistory(project.id, userId, 'CREATE', {
+      name: project.name,
+      description: project.description,
+      organizationId: project.organizationId,
+      ownerId: project.ownerId,
+    });
+
+    return project;
   }
 
   /**
@@ -36,17 +49,41 @@ export class ProjectService {
   /**
    * プロジェクトを更新
    */
-  async update(projectId: string, data: { name?: string; description?: string | null }) {
-    await this.findById(projectId);
-    return this.projectRepo.update(projectId, data);
+  async update(projectId: string, data: { name?: string; description?: string | null }, userId?: string) {
+    const project = await this.findById(projectId);
+    const updatedProject = await this.projectRepo.update(projectId, data);
+
+    // 履歴を作成
+    await this.createHistory(projectId, userId, 'UPDATE', {
+      before: {
+        name: project.name,
+        description: project.description,
+      },
+      after: {
+        name: updatedProject.name,
+        description: updatedProject.description,
+      },
+    });
+
+    return updatedProject;
   }
 
   /**
    * プロジェクトを論理削除
    */
-  async softDelete(projectId: string) {
-    await this.findById(projectId);
-    return this.projectRepo.softDelete(projectId);
+  async softDelete(projectId: string, userId?: string) {
+    const project = await this.findById(projectId);
+    const result = await this.projectRepo.softDelete(projectId);
+
+    // 履歴を作成
+    await this.createHistory(projectId, userId, 'DELETE', {
+      name: project.name,
+      description: project.description,
+      organizationId: project.organizationId,
+      ownerId: project.ownerId,
+    });
+
+    return result;
   }
 
   /**
@@ -368,5 +405,72 @@ export class ProjectService {
       },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  /**
+   * 履歴を作成
+   */
+  async createHistory(
+    projectId: string,
+    userId: string | undefined,
+    changeType: ChangeType,
+    snapshot: Prisma.InputJsonValue,
+    changeReason?: string
+  ) {
+    return this.projectRepo.createHistory({
+      projectId,
+      changedByUserId: userId,
+      changeType,
+      snapshot,
+      changeReason,
+    });
+  }
+
+  /**
+   * 履歴一覧を取得
+   */
+  async getHistories(projectId: string, options?: { limit?: number; offset?: number }) {
+    // 削除済みプロジェクトでも履歴は取得可能
+    const project = await this.projectRepo.findById(projectId);
+    const deletedProject = await this.projectRepo.findDeletedById(projectId);
+
+    if (!project && !deletedProject) {
+      throw new NotFoundError('Project', projectId);
+    }
+
+    return this.projectRepo.getHistories(projectId, options);
+  }
+
+  /**
+   * プロジェクトを復元
+   */
+  async restore(projectId: string, userId?: string) {
+    const project = await this.projectRepo.findDeletedById(projectId);
+
+    if (!project) {
+      throw new NotFoundError('Project', projectId);
+    }
+
+    // 30日以内かチェック
+    const deletedAt = project.deletedAt!;
+    const now = new Date();
+    const daysSinceDeleted = Math.floor((now.getTime() - deletedAt.getTime()) / (1000 * 60 * 60 * 24));
+
+    if (daysSinceDeleted > RESTORE_LIMIT_DAYS) {
+      throw new ValidationError(`削除から${RESTORE_LIMIT_DAYS}日以上経過しているため復元できません`);
+    }
+
+    const restoredProject = await this.projectRepo.restore(projectId);
+
+    // 復元履歴を作成（CREATEとして記録）
+    await this.createHistory(projectId, userId, 'CREATE', {
+      restored: true,
+      name: restoredProject.name,
+      description: restoredProject.description,
+      organizationId: restoredProject.organizationId,
+      ownerId: restoredProject.ownerId,
+    });
+
+    return restoredProject;
   }
 }

@@ -90,4 +90,16 @@ router.post('/:projectId/environments/reorder', requireAuth(authConfig), require
  */
 router.get('/:projectId/test-suites', requireAuth(authConfig), requireProjectRole(['ADMIN', 'WRITE', 'READ']), projectController.getTestSuites);
 
+/**
+ * プロジェクトの履歴一覧取得
+ * GET /api/projects/:projectId/histories
+ */
+router.get('/:projectId/histories', requireAuth(authConfig), requireProjectRole(['ADMIN', 'WRITE', 'READ']), projectController.getHistories);
+
+/**
+ * プロジェクト復元
+ * POST /api/projects/:projectId/restore
+ */
+router.post('/:projectId/restore', requireAuth(authConfig), requireProjectRole(['ADMIN']), projectController.restore);
+
 export default router;

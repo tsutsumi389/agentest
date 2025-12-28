@@ -59,7 +59,7 @@ export class ProjectController {
     try {
       const { projectId } = req.params;
       const data = projectUpdateSchema.parse(req.body);
-      const project = await this.projectService.update(projectId, data);
+      const project = await this.projectService.update(projectId, data, req.user!.id);
 
       res.json({ project });
     } catch (error) {
@@ -73,7 +73,7 @@ export class ProjectController {
   delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { projectId } = req.params;
-      await this.projectService.softDelete(projectId);
+      await this.projectService.softDelete(projectId, req.user!.id);
 
       res.status(204).send();
     } catch (error) {
@@ -221,6 +221,36 @@ export class ProjectController {
       const testSuites = await this.projectService.getTestSuites(projectId);
 
       res.json({ testSuites });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 履歴一覧取得
+   */
+  getHistories = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { projectId } = req.params;
+      const limit = req.query.limit ? Number(req.query.limit) : undefined;
+      const offset = req.query.offset ? Number(req.query.offset) : undefined;
+      const histories = await this.projectService.getHistories(projectId, { limit, offset });
+
+      res.json({ histories });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * プロジェクト復元
+   */
+  restore = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { projectId } = req.params;
+      const project = await this.projectService.restore(projectId, req.user!.id);
+
+      res.json({ project });
     } catch (error) {
       next(error);
     }
