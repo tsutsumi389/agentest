@@ -1,9 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { X, Loader2, Shield, Pencil, Eye } from 'lucide-react';
-import { projectsApi, ApiError, type ProjectMember } from '../../lib/api';
+import { projectsApi, ApiError, type ProjectMember, type ProjectMemberRole } from '../../lib/api';
 import { toast } from '../../stores/toast';
-
-type MemberRole = 'ADMIN' | 'WRITE' | 'READ';
 
 interface AddProjectMemberModalProps {
   isOpen: boolean;
@@ -22,9 +20,31 @@ export function AddProjectMemberModal({
   onMemberAdded,
 }: AddProjectMemberModalProps) {
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<MemberRole>('READ');
+  const [role, setRole] = useState<ProjectMemberRole>('READ');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // モーダルを閉じる
+  const handleClose = useCallback(() => {
+    setEmail('');
+    setRole('READ');
+    setErrors({});
+    onClose();
+  }, [onClose]);
+
+  // ESCキーでモーダルを閉じる
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isSubmitting) {
+        handleClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, isSubmitting, handleClose]);
 
   if (!isOpen) return null;
 
@@ -82,13 +102,6 @@ export function AddProjectMemberModal({
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleClose = () => {
-    setEmail('');
-    setRole('READ');
-    setErrors({});
-    onClose();
   };
 
   // 背景クリックでモーダルを閉じる

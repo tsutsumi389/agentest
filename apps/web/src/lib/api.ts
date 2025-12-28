@@ -199,11 +199,14 @@ export interface Project {
   _count?: { testSuites: number };
 }
 
+/** プロジェクトメンバーのロール */
+export type ProjectMemberRole = 'ADMIN' | 'WRITE' | 'READ';
+
 export interface ProjectMember {
   id: string;
   projectId: string;
   userId: string;
-  role: 'ADMIN' | 'WRITE' | 'READ';
+  role: ProjectMemberRole;
   addedAt: string;
   user: {
     id: string;

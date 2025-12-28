@@ -1,26 +1,23 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Loader2, MoreVertical, UserMinus, Shield, Pencil, Eye, UserPlus } from 'lucide-react';
-import { projectsApi, ApiError, type ProjectMember, type Project } from '../../lib/api';
+import { projectsApi, ApiError, type ProjectMember, type Project, type ProjectMemberRole } from '../../lib/api';
 import { useAuth } from '../../hooks/useAuth';
 import { toast } from '../../stores/toast';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { formatDate } from '../../lib/date';
 import { AddProjectMemberModal } from './AddProjectMemberModal';
 
-/** ロールの型定義 */
-type MemberRole = 'ADMIN' | 'WRITE' | 'READ';
-
 interface ProjectMemberListProps {
   /** プロジェクト */
   project: Project;
   /** 現在のユーザーのロール（オーナーの場合は 'OWNER'） */
-  currentRole?: 'OWNER' | MemberRole;
+  currentRole?: 'OWNER' | ProjectMemberRole;
 }
 
 /**
  * ロールの表示名
  */
-const ROLE_LABELS: Record<MemberRole, string> = {
+const ROLE_LABELS: Record<ProjectMemberRole, string> = {
   ADMIN: '管理者',
   WRITE: '編集者',
   READ: '閲覧者',
@@ -29,7 +26,7 @@ const ROLE_LABELS: Record<MemberRole, string> = {
 /**
  * ロールのアイコン
  */
-function RoleIcon({ role, className }: { role: MemberRole; className?: string }) {
+function RoleIcon({ role, className }: { role: ProjectMemberRole; className?: string }) {
   switch (role) {
     case 'ADMIN':
       return <Shield className={className} />;
@@ -41,7 +38,7 @@ function RoleIcon({ role, className }: { role: MemberRole; className?: string })
 }
 
 /** ロールの優先順位（ソート用） */
-const ROLE_ORDER: Record<MemberRole, number> = {
+const ROLE_ORDER: Record<ProjectMemberRole, number> = {
   ADMIN: 0,
   WRITE: 1,
   READ: 2,
@@ -59,9 +56,9 @@ function RoleDropdown({
   isUpdating,
 }: {
   member: ProjectMember;
-  currentRole?: 'OWNER' | MemberRole;
+  currentRole?: 'OWNER' | ProjectMemberRole;
   currentUserId?: string;
-  onRoleChange: (userId: string, newRole: MemberRole) => void;
+  onRoleChange: (userId: string, newRole: ProjectMemberRole) => void;
   onRemove: (userId: string) => void;
   isUpdating: boolean;
 }) {
@@ -208,7 +205,7 @@ export function ProjectMemberList({ project, currentRole }: ProjectMemberListPro
     type: 'remove' | 'role-change';
     userId: string;
     userName: string;
-    newRole?: MemberRole;
+    newRole?: ProjectMemberRole;
   } | null>(null);
 
   // メンバー一覧を取得
@@ -239,7 +236,7 @@ export function ProjectMemberList({ project, currentRole }: ProjectMemberListPro
   }, [fetchMembers]);
 
   // ロール変更のリクエスト
-  const requestRoleChange = (userId: string, newRole: MemberRole) => {
+  const requestRoleChange = (userId: string, newRole: ProjectMemberRole) => {
     const member = members.find((m) => m.userId === userId);
     if (!member) return;
 
@@ -264,7 +261,7 @@ export function ProjectMemberList({ project, currentRole }: ProjectMemberListPro
   };
 
   // ロール変更を実行
-  const handleRoleChange = async (userId: string, newRole: MemberRole) => {
+  const handleRoleChange = async (userId: string, newRole: ProjectMemberRole) => {
     setUpdatingUserId(userId);
 
     try {
@@ -504,9 +501,9 @@ export function ProjectMemberList({ project, currentRole }: ProjectMemberListPro
           message={
             confirmDialog.type === 'remove'
               ? `${confirmDialog.userName} をプロジェクトから削除しますか？この操作は取り消せません。`
-              : `${confirmDialog.userName} のロールを${
-                  ROLE_LABELS[confirmDialog.newRole!]
-                }に変更しますか？`
+              : confirmDialog.newRole
+                ? `${confirmDialog.userName} のロールを${ROLE_LABELS[confirmDialog.newRole]}に変更しますか？`
+                : ''
           }
           confirmLabel={confirmDialog.type === 'remove' ? '削除する' : '変更する'}
           onConfirm={handleConfirm}
