@@ -25,7 +25,11 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
   const [ownerType, setOwnerType] = useState<OwnerType>('personal');
   const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>('');
 
-  const hasOrganizations = organizations.length > 0;
+  // 削除済み組織を除外したアクティブな組織のみを表示
+  const activeOrganizations = organizations.filter(
+    ({ organization }) => !organization.deletedAt
+  );
+  const hasOrganizations = activeOrganizations.length > 0;
 
   const createMutation = useMutation({
     mutationFn: (data: { name: string; description?: string; organizationId?: string }) =>
@@ -155,7 +159,7 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
                   setOwnerType('organization');
                   // 組織が選択されていなければ最初の組織を選択
                   if (!selectedOrganizationId && hasOrganizations) {
-                    setSelectedOrganizationId(organizations[0].organization.id);
+                    setSelectedOrganizationId(activeOrganizations[0].organization.id);
                   }
                 }}
                 disabled={!hasOrganizations || createMutation.isPending}
@@ -194,7 +198,7 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
                   <option value="" disabled>
                     組織を選択してください
                   </option>
-                  {organizations.map(({ organization, role }) => (
+                  {activeOrganizations.map(({ organization, role }) => (
                     <option key={organization.id} value={organization.id}>
                       {organization.name} ({role === 'OWNER' ? 'オーナー' : role === 'ADMIN' ? '管理者' : 'メンバー'})
                     </option>

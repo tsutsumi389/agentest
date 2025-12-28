@@ -116,10 +116,15 @@ export class UserService {
       ...orgCondition,
     };
 
-    // 1クエリでオーナーとメンバーのプロジェクトを取得
+    // 1クエリでオーナー、メンバー、所属組織のプロジェクトを取得
     const projects = await prisma.project.findMany({
       where: {
-        OR: [{ ownerId: userId }, { members: { some: { userId } } }],
+        OR: [
+          { ownerId: userId },
+          { members: { some: { userId } } },
+          // ユーザーが所属する組織のプロジェクト
+          { organization: { members: { some: { userId } } } },
+        ],
         ...baseWhere,
       },
       include: {
@@ -174,7 +179,12 @@ export class UserService {
 
     return prisma.project.count({
       where: {
-        OR: [{ ownerId: userId }, { members: { some: { userId } } }],
+        OR: [
+          { ownerId: userId },
+          { members: { some: { userId } } },
+          // ユーザーが所属する組織のプロジェクト
+          { organization: { members: { some: { userId } } } },
+        ],
         ...deletedCondition,
         ...nameCondition,
         ...orgCondition,
