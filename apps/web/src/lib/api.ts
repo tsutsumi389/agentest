@@ -199,6 +199,20 @@ export interface Project {
   _count?: { testSuites: number };
 }
 
+export interface ProjectMember {
+  id: string;
+  projectId: string;
+  userId: string;
+  role: 'ADMIN' | 'WRITE' | 'READ';
+  addedAt: string;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    avatarUrl: string | null;
+  };
+}
+
 export interface TestSuite {
   id: string;
   projectId: string;
@@ -279,6 +293,16 @@ export const projectsApi = {
   delete: (projectId: string) => api.delete<void>(`/api/projects/${projectId}`),
   getTestSuites: (projectId: string) =>
     api.get<{ testSuites: TestSuite[] }>(`/api/projects/${projectId}/test-suites`),
+
+  // メンバー管理
+  getMembers: (projectId: string) =>
+    api.get<{ members: ProjectMember[] }>(`/api/projects/${projectId}/members`),
+  addMember: (projectId: string, data: { email: string; role: 'ADMIN' | 'WRITE' | 'READ' }) =>
+    api.post<{ member: ProjectMember }>(`/api/projects/${projectId}/members`, data),
+  updateMemberRole: (projectId: string, userId: string, role: 'ADMIN' | 'WRITE' | 'READ') =>
+    api.patch<{ member: ProjectMember }>(`/api/projects/${projectId}/members/${userId}`, { role }),
+  removeMember: (projectId: string, userId: string) =>
+    api.delete<void>(`/api/projects/${projectId}/members/${userId}`),
 };
 
 // ============================================

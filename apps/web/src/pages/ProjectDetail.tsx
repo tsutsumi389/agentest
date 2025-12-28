@@ -78,10 +78,13 @@ export function ProjectDetailPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <button className="btn btn-ghost">
+            <Link
+              to={`/projects/${projectId}/settings`}
+              className="btn btn-ghost"
+            >
               <Settings className="w-4 h-4" />
               設定
-            </button>
+            </Link>
             <button
               onClick={() => setIsCreateModalOpen(true)}
               className="btn btn-primary"
