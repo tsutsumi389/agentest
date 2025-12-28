@@ -4,7 +4,6 @@ import type { Express } from 'express';
 import { prisma } from '@agentest/db';
 import {
   createTestUser,
-  createTestSession,
   createTestAccount,
   createTestOrganization,
   createTestOrgMember,
@@ -203,7 +202,7 @@ describe('Users API Integration Tests', () => {
 
   describe('DELETE /api/users/:userId', () => {
     it('自分のアカウントを論理削除できる', async () => {
-      const response = await request(app)
+      await request(app)
         .delete(`/api/users/${testUser.id}`)
         .expect(204);
 
@@ -320,8 +319,8 @@ describe('Users API Integration Tests', () => {
   describe('GET /api/users/:userId/organizations', () => {
     it('所属組織一覧を取得できる', async () => {
       // 組織を作成
-      const org1 = await createTestOrganization(testUser.id, { name: 'Org 1', slug: 'org-1' });
-      const org2 = await createTestOrganization(testUser.id, { name: 'Org 2', slug: 'org-2' });
+      await createTestOrganization(testUser.id, { name: 'Org 1', slug: 'org-1' });
+      await createTestOrganization(testUser.id, { name: 'Org 2', slug: 'org-2' });
 
       const response = await request(app)
         .get(`/api/users/${testUser.id}/organizations`)

@@ -16,7 +16,7 @@ import { createApp } from '../../app.js';
 // グローバルな認証状態（モック用）
 let mockAuthUser: { id: string; email: string } | null = null;
 let mockProjectRole: string | null = null;
-let mockAllowDeletedProject: boolean = false;
+let _mockAllowDeletedProject: boolean = false;
 
 // 認証ミドルウェアをモック
 vi.mock('@agentest/auth', () => ({
@@ -30,7 +30,7 @@ vi.mock('@agentest/auth', () => ({
   optionalAuth: () => (_req: any, _res: any, next: any) => next(),
   requireOrgRole: () => (_req: any, _res: any, next: any) => next(),
   // allowDeletedProjectオプションを考慮したモック
-  requireProjectRole: (roles: string[], options?: { allowDeletedProject?: boolean }) => (req: any, _res: any, next: any) => {
+  requireProjectRole: (roles: string[], _options?: { allowDeletedProject?: boolean }) => (req: any, _res: any, next: any) => {
     // allowDeletedProjectオプションが設定されている場合は削除済みプロジェクトへのアクセスを許可
     if (!mockProjectRole || !roles.includes(mockProjectRole)) {
       return next(new AuthorizationError('権限がありません'));
@@ -57,13 +57,13 @@ function setTestAuth(
 ) {
   mockAuthUser = user;
   mockProjectRole = projectRole;
-  mockAllowDeletedProject = allowDeletedProject;
+  _mockAllowDeletedProject = allowDeletedProject;
 }
 
 function clearTestAuth() {
   mockAuthUser = null;
   mockProjectRole = null;
-  mockAllowDeletedProject = false;
+  _mockAllowDeletedProject = false;
 }
 
 describe('Project History & Restore API Integration Tests', () => {

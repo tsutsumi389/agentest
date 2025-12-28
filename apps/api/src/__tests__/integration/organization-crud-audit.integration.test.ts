@@ -51,7 +51,7 @@ function setTestAuth(user: { id: string; email: string } | null, orgRole: string
   mockOrgRole = orgRole;
 }
 
-function clearTestAuth() {
+function _clearTestAuth() {
   mockAuthUser = null;
   mockOrgRole = null;
 }
@@ -122,7 +122,7 @@ describe('Organization CRUD Audit Logs Integration Tests', () => {
     });
 
     it('組織更新時に監査ログが記録される', async () => {
-      const response = await request(app)
+      await request(app)
         .patch(`/api/organizations/${organization.id}`)
         .send({ name: 'Updated Organization', description: 'Updated description' })
         .expect(200);
@@ -192,7 +192,7 @@ describe('Organization CRUD Audit Logs Integration Tests', () => {
     });
 
     it('ロール変更時に監査ログが記録される', async () => {
-      const response = await request(app)
+      await request(app)
         .patch(`/api/organizations/${organization.id}/members/${member.id}`)
         .send({ role: 'ADMIN' })
         .expect(200);
@@ -271,7 +271,7 @@ describe('Organization CRUD Audit Logs Integration Tests', () => {
     });
 
     it('オーナー権限移譲時に監査ログが記録される', async () => {
-      const response = await request(app)
+      await request(app)
         .post(`/api/organizations/${organization.id}/transfer-ownership`)
         .send({ newOwnerId: admin.id })
         .expect(200);
@@ -313,7 +313,7 @@ describe('Organization CRUD Audit Logs Integration Tests', () => {
       const invitedUser = await createTestUser({ email: 'newmember@example.com' });
 
       // 招待を作成
-      const invitation = await prisma.organizationInvitation.create({
+      await prisma.organizationInvitation.create({
         data: {
           organizationId: organization.id,
           email: 'newmember@example.com',
@@ -326,7 +326,7 @@ describe('Organization CRUD Audit Logs Integration Tests', () => {
 
       setTestAuth({ id: invitedUser.id, email: invitedUser.email }, null);
 
-      const response = await request(app)
+      await request(app)
         .post('/api/organizations/invitations/accept-token/accept')
         .expect(200);
 

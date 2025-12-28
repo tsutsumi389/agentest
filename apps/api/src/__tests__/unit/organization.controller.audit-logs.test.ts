@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
 import { OrganizationController } from '../../controllers/organization.controller.js';
-import { ValidationError } from '@agentest/shared';
 
 // AuditLogService のモック
 const mockAuditLogService = vi.hoisted(() => ({

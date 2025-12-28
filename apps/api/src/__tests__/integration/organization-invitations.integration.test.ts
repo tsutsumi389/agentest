@@ -320,7 +320,7 @@ describe('Organization Invitations API Integration Tests', () => {
         email: 'cancel@example.com',
       });
 
-      const response = await request(app)
+      await request(app)
         .delete(`/api/organizations/${organization.id}/invitations/${invitation.id}`)
         .expect(204);
 

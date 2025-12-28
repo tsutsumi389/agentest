@@ -293,7 +293,7 @@ describe('ProjectService - Environment Management', () => {
         Promise.resolve({ id: where.id, sortOrder: 0 })
       );
 
-      const result = await service.reorderEnvironments('project-1', ['env-3', 'env-1', 'env-2']);
+      await service.reorderEnvironments('project-1', ['env-3', 'env-1', 'env-2']);
 
       expect(mockPrisma.$transaction).toHaveBeenCalled();
       expect(mockPrisma.projectEnvironment.findMany).toHaveBeenCalledTimes(2); // 検証用と結果取得用
@@ -312,7 +312,7 @@ describe('ProjectService - Environment Management', () => {
       mockProjectRepo.findById.mockResolvedValue(mockProject);
       mockPrisma.projectEnvironment.findMany.mockResolvedValue([]);
 
-      const result = await service.reorderEnvironments('project-1', []);
+      await service.reorderEnvironments('project-1', []);
 
       expect(mockPrisma.$transaction).toHaveBeenCalledWith([]);
     });
@@ -418,7 +418,7 @@ describe('ProjectService - Environment Management', () => {
         sortOrder: 0,
       });
 
-      const result = await service.createEnvironment('project-1', {
+      await service.createEnvironment('project-1', {
         name: 'First',
         slug: 'first',
       });

@@ -227,7 +227,11 @@ describe('UserService', () => {
 
       expect(prisma.project.findMany).toHaveBeenCalledWith({
         where: {
-          OR: [{ ownerId: 'user-1' }, { members: { some: { userId: 'user-1' } } }],
+          OR: [
+            { ownerId: 'user-1' },
+            { members: { some: { userId: 'user-1' } } },
+            { organization: { members: { some: { userId: 'user-1' } } } },
+          ],
           deletedAt: null,
         },
         include: {
@@ -337,7 +341,11 @@ describe('UserService', () => {
 
       expect(prisma.project.findMany).toHaveBeenCalledWith({
         where: {
-          OR: [{ ownerId: 'user-1' }, { members: { some: { userId: 'user-1' } } }],
+          OR: [
+            { ownerId: 'user-1' },
+            { members: { some: { userId: 'user-1' } } },
+            { organization: { members: { some: { userId: 'user-1' } } } },
+          ],
           name: { contains: 'search', mode: 'insensitive' },
           organizationId: 'org-1',
         },
@@ -415,7 +423,11 @@ describe('UserService', () => {
 
       expect(prisma.project.count).toHaveBeenCalledWith({
         where: {
-          OR: [{ ownerId: 'user-1' }, { members: { some: { userId: 'user-1' } } }],
+          OR: [
+            { ownerId: 'user-1' },
+            { members: { some: { userId: 'user-1' } } },
+            { organization: { members: { some: { userId: 'user-1' } } } },
+          ],
           deletedAt: null,
         },
       });
@@ -472,7 +484,11 @@ describe('UserService', () => {
       // deletedAt条件が含まれない
       expect(prisma.project.count).toHaveBeenCalledWith({
         where: {
-          OR: [{ ownerId: 'user-1' }, { members: { some: { userId: 'user-1' } } }],
+          OR: [
+            { ownerId: 'user-1' },
+            { members: { some: { userId: 'user-1' } } },
+            { organization: { members: { some: { userId: 'user-1' } } } },
+          ],
         },
       });
     });
@@ -488,7 +504,11 @@ describe('UserService', () => {
 
       expect(prisma.project.count).toHaveBeenCalledWith({
         where: {
-          OR: [{ ownerId: 'user-1' }, { members: { some: { userId: 'user-1' } } }],
+          OR: [
+            { ownerId: 'user-1' },
+            { members: { some: { userId: 'user-1' } } },
+            { organization: { members: { some: { userId: 'user-1' } } } },
+          ],
           deletedAt: null,
           name: { contains: 'search', mode: 'insensitive' },
           organizationId: 'org-1',

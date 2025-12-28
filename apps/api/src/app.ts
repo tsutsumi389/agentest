@@ -102,7 +102,7 @@ export function createApp(): Express {
       // OAuth プロバイダーからのプロフィール情報でユーザーを作成または取得
 
       // 既存のアカウント（OAuth連携）を検索
-      let account = await prisma.account.findUnique({
+      const account = await prisma.account.findUnique({
         where: {
           provider_providerAccountId: {
             provider: profile.provider,
