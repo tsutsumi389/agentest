@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import {
   projectsApi,
@@ -8,6 +8,18 @@ import {
   type UpdateEnvironmentRequest,
 } from '../../lib/api';
 import { toast } from '../../stores/toast';
+
+/**
+ * 名前からslugを自動生成（ケバブケースに変換）
+ */
+function generateSlug(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s-]/gu, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
 
 interface EnvironmentFormModalProps {
   isOpen: boolean;
@@ -30,9 +42,11 @@ export function EnvironmentFormModal({
   onSaved,
 }: EnvironmentFormModalProps) {
   const isEditing = !!environment;
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState('');
   const [slug, setSlug] = useState('');
+  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [baseUrl, setBaseUrl] = useState('');
   const [description, setDescription] = useState('');
   const [isDefault, setIsDefault] = useState(false);
@@ -44,16 +58,28 @@ export function EnvironmentFormModal({
     if (isOpen && environment) {
       setName(environment.name);
       setSlug(environment.slug);
+      setSlugManuallyEdited(true); // 編集時はslugの自動生成を無効化
       setBaseUrl(environment.baseUrl || '');
       setDescription(environment.description || '');
       setIsDefault(environment.isDefault);
     }
   }, [isOpen, environment]);
 
+  // モーダルオープン時にフォーカス設定
+  useEffect(() => {
+    if (isOpen) {
+      // 次のフレームでフォーカス（DOMの描画完了後）
+      requestAnimationFrame(() => {
+        nameInputRef.current?.focus();
+      });
+    }
+  }, [isOpen]);
+
   // モーダルを閉じる
   const handleClose = useCallback(() => {
     setName('');
     setSlug('');
+    setSlugManuallyEdited(false);
     setBaseUrl('');
     setDescription('');
     setIsDefault(false);
@@ -77,24 +103,21 @@ export function EnvironmentFormModal({
 
   if (!isOpen) return null;
 
-  // slugを自動生成（名前からケバブケースに変換）
-  const generateSlug = (value: string): string => {
-    return value
-      .toLowerCase()
-      .replace(/[^\p{L}\p{N}\s-]/gu, '')
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
-      .replace(/^-|-$/g, '');
-  };
-
   // 名前変更時にslugを自動生成（編集時は自動生成しない）
   const handleNameChange = (value: string) => {
     setName(value);
     setErrors((prev) => ({ ...prev, name: '' }));
     // 新規作成時のみ、かつslugがまだ手動編集されていない場合のみ自動生成
-    if (!isEditing && slug === generateSlug(name)) {
+    if (!isEditing && !slugManuallyEdited) {
       setSlug(generateSlug(value));
     }
+  };
+
+  // slugの手動編集を検知
+  const handleSlugChange = (value: string) => {
+    setSlug(value.toLowerCase());
+    setSlugManuallyEdited(true);
+    setErrors((prev) => ({ ...prev, slug: '' }));
   };
 
   // バリデーション
@@ -222,6 +245,7 @@ export function EnvironmentFormModal({
               環境名 <span className="text-danger">*</span>
             </label>
             <input
+              ref={nameInputRef}
               id="env-name"
               type="text"
               value={name}
@@ -242,10 +266,7 @@ export function EnvironmentFormModal({
               id="env-slug"
               type="text"
               value={slug}
-              onChange={(e) => {
-                setSlug(e.target.value.toLowerCase());
-                setErrors((prev) => ({ ...prev, slug: '' }));
-              }}
+              onChange={(e) => handleSlugChange(e.target.value)}
               className={`input w-full ${errors.slug ? 'border-danger focus:border-danger focus:ring-danger' : ''}`}
               placeholder="production"
               disabled={isSubmitting}

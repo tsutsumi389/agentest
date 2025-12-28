@@ -173,6 +173,7 @@ export function EnvironmentList({ project, currentRole }: EnvironmentListProps) 
   // ドラッグ状態
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
+  const [isReordering, setIsReordering] = useState(false);
 
   // 権限チェック
   const canEdit = currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'WRITE';
@@ -341,6 +342,7 @@ export function EnvironmentList({ project, currentRole }: EnvironmentListProps) 
     // UIを即座に更新
     setEnvironments(newEnvs);
     setDraggedId(null);
+    setIsReordering(true);
 
     // APIで永続化
     try {
@@ -354,6 +356,8 @@ export function EnvironmentList({ project, currentRole }: EnvironmentListProps) 
       } else {
         toast.error('並び順の更新に失敗しました');
       }
+    } finally {
+      setIsReordering(false);
     }
   };
 
@@ -392,13 +396,18 @@ export function EnvironmentList({ project, currentRole }: EnvironmentListProps) 
     <div className="card p-6">
       <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-lg font-semibold text-foreground">環境設定</h2>
+          <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+            環境設定
+            {isReordering && (
+              <Loader2 className="w-4 h-4 animate-spin text-foreground-muted" />
+            )}
+          </h2>
           <p className="text-sm text-foreground-muted mt-1">
             テスト実行環境を管理します
           </p>
         </div>
         {canEdit && (
-          <button className="btn btn-primary" onClick={handleOpenCreate}>
+          <button className="btn btn-primary" onClick={handleOpenCreate} disabled={isReordering}>
             <Plus className="w-4 h-4" />
             環境を追加
           </button>
@@ -484,7 +493,7 @@ export function EnvironmentList({ project, currentRole }: EnvironmentListProps) 
               <ActionDropdown
                 environment={env}
                 canEdit={canEdit}
-                canDelete={canDelete}
+                canDelete={canDelete && !env.isDefault}
                 onEdit={() => handleOpenEdit(env)}
                 onDelete={() => handleRequestDelete(env)}
                 onSetDefault={() => handleSetDefault(env)}
