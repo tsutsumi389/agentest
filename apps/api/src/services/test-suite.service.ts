@@ -1,5 +1,5 @@
 import { prisma, type EntityStatus } from '@agentest/db';
-import { NotFoundError } from '@agentest/shared';
+import { NotFoundError, BadRequestError } from '@agentest/shared';
 import { TestSuiteRepository } from '../repositories/test-suite.repository.js';
 
 /**
@@ -148,8 +148,8 @@ export class TestSuiteService {
   /**
    * 前提条件を更新
    */
-  async updatePrecondition(testSuiteId: string, preconditionId: string, data: { content: string }) {
-    await this.findById(testSuiteId);
+  async updatePrecondition(testSuiteId: string, preconditionId: string, userId: string, data: { content: string }) {
+    const testSuite = await this.findById(testSuiteId);
 
     // 前提条件の存在確認
     const precondition = await prisma.testSuitePrecondition.findFirst({
@@ -158,6 +158,25 @@ export class TestSuiteService {
     if (!precondition) {
       throw new NotFoundError('Precondition', preconditionId);
     }
+
+    // 履歴を保存
+    await prisma.testSuiteHistory.create({
+      data: {
+        testSuiteId,
+        changedByUserId: userId,
+        changeType: 'UPDATE',
+        snapshot: {
+          ...testSuite,
+          preconditions: [precondition],
+          changeDetail: {
+            type: 'PRECONDITION_UPDATE',
+            preconditionId,
+            before: { content: precondition.content },
+            after: { content: data.content },
+          },
+        } as unknown as object,
+      },
+    });
 
     return prisma.testSuitePrecondition.update({
       where: { id: preconditionId },
@@ -168,8 +187,8 @@ export class TestSuiteService {
   /**
    * 前提条件を削除
    */
-  async deletePrecondition(testSuiteId: string, preconditionId: string) {
-    await this.findById(testSuiteId);
+  async deletePrecondition(testSuiteId: string, preconditionId: string, userId: string) {
+    const testSuite = await this.findById(testSuiteId);
 
     // 前提条件の存在確認
     const precondition = await prisma.testSuitePrecondition.findFirst({
@@ -179,21 +198,68 @@ export class TestSuiteService {
       throw new NotFoundError('Precondition', preconditionId);
     }
 
-    return prisma.testSuitePrecondition.delete({
-      where: { id: preconditionId },
+    // トランザクションで削除と再整列を実行
+    await prisma.$transaction(async (tx) => {
+      // 履歴を保存
+      await tx.testSuiteHistory.create({
+        data: {
+          testSuiteId,
+          changedByUserId: userId,
+          changeType: 'UPDATE',
+          snapshot: {
+            ...testSuite,
+            preconditions: [precondition],
+            changeDetail: {
+              type: 'PRECONDITION_DELETE',
+              preconditionId,
+              deleted: { content: precondition.content, orderKey: precondition.orderKey },
+            },
+          } as unknown as object,
+        },
+      });
+
+      // 前提条件を削除
+      await tx.testSuitePrecondition.delete({
+        where: { id: preconditionId },
+      });
+
+      // 残りの前提条件のorderKeyを再整列
+      const remainingPreconditions = await tx.testSuitePrecondition.findMany({
+        where: { testSuiteId },
+        orderBy: { orderKey: 'asc' },
+      });
+
+      for (let i = 0; i < remainingPreconditions.length; i++) {
+        await tx.testSuitePrecondition.update({
+          where: { id: remainingPreconditions[i].id },
+          data: { orderKey: `${i + 1}`.padStart(5, '0') },
+        });
+      }
     });
   }
 
   /**
    * 前提条件を並び替え
    */
-  async reorderPreconditions(testSuiteId: string, preconditionIds: string[]) {
-    await this.findById(testSuiteId);
+  async reorderPreconditions(testSuiteId: string, preconditionIds: string[], userId: string) {
+    const testSuite = await this.findById(testSuiteId);
+
+    // 重複IDのチェック
+    const uniqueIds = new Set(preconditionIds);
+    if (uniqueIds.size !== preconditionIds.length) {
+      throw new BadRequestError('Duplicate precondition IDs are not allowed');
+    }
 
     // 全ての前提条件が存在するか確認
     const preconditions = await prisma.testSuitePrecondition.findMany({
       where: { testSuiteId },
+      orderBy: { orderKey: 'asc' },
     });
+
+    // 全件指定されているか確認
+    if (preconditionIds.length !== preconditions.length) {
+      throw new BadRequestError('All precondition IDs must be provided for reordering');
+    }
 
     const existingIds = new Set(preconditions.map((p) => p.id));
     for (const id of preconditionIds) {
@@ -201,6 +267,24 @@ export class TestSuiteService {
         throw new NotFoundError('Precondition', id);
       }
     }
+
+    // 履歴を保存（並び替え前の状態）
+    await prisma.testSuiteHistory.create({
+      data: {
+        testSuiteId,
+        changedByUserId: userId,
+        changeType: 'UPDATE',
+        snapshot: {
+          ...testSuite,
+          preconditions,
+          changeDetail: {
+            type: 'PRECONDITION_REORDER',
+            before: preconditions.map((p) => p.id),
+            after: preconditionIds,
+          },
+        } as unknown as object,
+      },
+    });
 
     // 各前提条件のorderKeyを更新
     await prisma.$transaction(

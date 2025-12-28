@@ -24,6 +24,10 @@ const updatePreconditionSchema = z.object({
   content: z.string().min(1).max(2000),
 });
 
+const preconditionIdParamSchema = z.object({
+  preconditionId: z.string().uuid(),
+});
+
 const reorderPreconditionsSchema = z.object({
   preconditionIds: z.array(z.string().uuid()),
 });
@@ -143,9 +147,10 @@ export class TestSuiteController {
    */
   updatePrecondition = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { testSuiteId, preconditionId } = req.params;
+      const { testSuiteId } = req.params;
+      const { preconditionId } = preconditionIdParamSchema.parse(req.params);
       const data = updatePreconditionSchema.parse(req.body);
-      const precondition = await this.testSuiteService.updatePrecondition(testSuiteId, preconditionId, data);
+      const precondition = await this.testSuiteService.updatePrecondition(testSuiteId, preconditionId, req.user!.id, data);
 
       res.json({ precondition });
     } catch (error) {
@@ -158,8 +163,9 @@ export class TestSuiteController {
    */
   deletePrecondition = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { testSuiteId, preconditionId } = req.params;
-      await this.testSuiteService.deletePrecondition(testSuiteId, preconditionId);
+      const { testSuiteId } = req.params;
+      const { preconditionId } = preconditionIdParamSchema.parse(req.params);
+      await this.testSuiteService.deletePrecondition(testSuiteId, preconditionId, req.user!.id);
 
       res.status(204).send();
     } catch (error) {
@@ -174,7 +180,7 @@ export class TestSuiteController {
     try {
       const { testSuiteId } = req.params;
       const { preconditionIds } = reorderPreconditionsSchema.parse(req.body);
-      const preconditions = await this.testSuiteService.reorderPreconditions(testSuiteId, preconditionIds);
+      const preconditions = await this.testSuiteService.reorderPreconditions(testSuiteId, preconditionIds, req.user!.id);
 
       res.json({ preconditions });
     } catch (error) {

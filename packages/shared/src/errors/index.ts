@@ -67,6 +67,12 @@ export class NotFoundError extends AppError {
   }
 }
 
+export class BadRequestError extends AppError {
+  constructor(message: string) {
+    super(400, 'BAD_REQUEST', message);
+  }
+}
+
 export class ConflictError extends AppError {
   constructor(message: string) {
     super(409, 'CONFLICT', message);
