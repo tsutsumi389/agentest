@@ -227,6 +227,38 @@ export interface TestSuite {
   _count?: { testCases: number; preconditions: number };
 }
 
+/** プロジェクト環境 */
+export interface ProjectEnvironment {
+  id: string;
+  projectId: string;
+  name: string;
+  slug: string;
+  baseUrl: string | null;
+  description: string | null;
+  isDefault: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 環境作成リクエスト */
+export interface CreateEnvironmentRequest {
+  name: string;
+  slug: string;
+  baseUrl?: string | null;
+  description?: string | null;
+  isDefault?: boolean;
+}
+
+/** 環境更新リクエスト */
+export interface UpdateEnvironmentRequest {
+  name?: string;
+  slug?: string;
+  baseUrl?: string | null;
+  description?: string | null;
+  isDefault?: boolean;
+}
+
 export interface TestCase {
   id: string;
   testSuiteId: string;
@@ -306,6 +338,18 @@ export const projectsApi = {
     api.patch<{ member: ProjectMember }>(`/api/projects/${projectId}/members/${userId}`, { role }),
   removeMember: (projectId: string, userId: string) =>
     api.delete<void>(`/api/projects/${projectId}/members/${userId}`),
+
+  // 環境管理
+  getEnvironments: (projectId: string) =>
+    api.get<{ environments: ProjectEnvironment[] }>(`/api/projects/${projectId}/environments`),
+  createEnvironment: (projectId: string, data: CreateEnvironmentRequest) =>
+    api.post<{ environment: ProjectEnvironment }>(`/api/projects/${projectId}/environments`, data),
+  updateEnvironment: (projectId: string, environmentId: string, data: UpdateEnvironmentRequest) =>
+    api.patch<{ environment: ProjectEnvironment }>(`/api/projects/${projectId}/environments/${environmentId}`, data),
+  deleteEnvironment: (projectId: string, environmentId: string) =>
+    api.delete<void>(`/api/projects/${projectId}/environments/${environmentId}`),
+  reorderEnvironments: (projectId: string, environmentIds: string[]) =>
+    api.post<{ environments: ProjectEnvironment[] }>(`/api/projects/${projectId}/environments/reorder`, { environmentIds }),
 };
 
 // ============================================

@@ -15,6 +15,7 @@ import { useAuth } from '../hooks/useAuth';
 import { toast } from '../stores/toast';
 import { ProjectGeneralSettings } from '../components/project/ProjectGeneralSettings';
 import { ProjectMemberList } from '../components/project/ProjectMemberList';
+import { EnvironmentList } from '../components/project/EnvironmentList';
 import { ConfirmDialog } from '../components/common/ConfirmDialog';
 
 type SettingsTab = 'general' | 'members' | 'environments' | 'history' | 'danger';
@@ -229,7 +230,10 @@ export function ProjectSettingsPage() {
             />
           )}
           {activeTab === 'environments' && (
-            <EnvironmentsPlaceholder />
+            <EnvironmentList
+              project={project}
+              currentRole={currentRole ?? undefined}
+            />
           )}
           {activeTab === 'history' && (
             <HistoryPlaceholder />
@@ -239,20 +243,6 @@ export function ProjectSettingsPage() {
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-/**
- * 環境タブのプレースホルダー（Step 2で実装）
- */
-function EnvironmentsPlaceholder() {
-  return (
-    <div className="card p-6">
-      <h2 className="text-lg font-semibold text-foreground mb-4">環境設定</h2>
-      <p className="text-foreground-muted">
-        環境設定機能は後続のステップで実装予定です。
-      </p>
     </div>
   );
 }
