@@ -1,5 +1,22 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
   Loader2,
   Plus,
   MoreVertical,
@@ -131,6 +148,87 @@ function ActionDropdown({
 }
 
 /**
+ * ソート可能な前提条件アイテム
+ */
+function SortablePreconditionItem({
+  precondition,
+  index,
+  canEdit,
+  canDelete,
+  onEdit,
+  onDelete,
+  isUpdating,
+}: {
+  precondition: Precondition;
+  index: number;
+  canEdit: boolean;
+  canDelete: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+  isUpdating: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: precondition.id, disabled: !canEdit });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`
+        flex items-center justify-between p-3 rounded-lg border bg-background-secondary
+        transition-colors
+        ${isDragging ? 'opacity-50 border-accent shadow-lg z-10' : 'border-border'}
+        hover:bg-background-tertiary
+      `}
+    >
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        {/* ドラッグハンドル */}
+        {canEdit && (
+          <button
+            {...attributes}
+            {...listeners}
+            className="cursor-grab active:cursor-grabbing touch-none p-1 -m-1 text-foreground-muted hover:text-foreground"
+            aria-label="ドラッグして並び替え"
+          >
+            <GripVertical className="w-4 h-4 flex-shrink-0" />
+          </button>
+        )}
+
+        {/* インデックス番号 */}
+        <span className="w-6 h-6 rounded-full bg-background-tertiary text-foreground-muted text-xs font-medium flex items-center justify-center flex-shrink-0">
+          {index + 1}
+        </span>
+
+        {/* 内容 */}
+        <p className="text-sm text-foreground truncate">
+          {precondition.content}
+        </p>
+      </div>
+
+      {/* アクションメニュー */}
+      <ActionDropdown
+        canEdit={canEdit}
+        canDelete={canDelete}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        isUpdating={isUpdating}
+      />
+    </div>
+  );
+}
+
+/**
  * 前提条件一覧コンポーネント
  */
 export function PreconditionList({ testSuiteId, currentRole }: PreconditionListProps) {
@@ -148,14 +246,24 @@ export function PreconditionList({ testSuiteId, currentRole }: PreconditionListP
     precondition: Precondition;
   } | null>(null);
 
-  // ドラッグ状態
-  const [draggedId, setDraggedId] = useState<string | null>(null);
-  const [dragOverId, setDragOverId] = useState<string | null>(null);
+  // 並び替え中状態
   const [isReordering, setIsReordering] = useState(false);
 
   // 権限チェック
   const canEdit = currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'WRITE';
   const canDelete = currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'WRITE';
+
+  // dnd-kit センサー設定
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 8px以上動かしたらドラッグ開始
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // 前提条件一覧を取得
   const fetchPreconditions = useCallback(async () => {
@@ -236,53 +344,24 @@ export function PreconditionList({ testSuiteId, currentRole }: PreconditionListP
     }
   };
 
-  // ドラッグ開始
-  const handleDragStart = (e: React.DragEvent, preconditionId: string) => {
-    e.dataTransfer.effectAllowed = 'move';
-    setDraggedId(preconditionId);
-  };
+  // ドラッグ終了時のハンドラー
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
 
-  // ドラッグオーバー
-  const handleDragOver = (e: React.DragEvent, preconditionId: string) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    if (draggedId && draggedId !== preconditionId) {
-      setDragOverId(preconditionId);
-    }
-  };
-
-  // ドラッグリーブ
-  const handleDragLeave = () => {
-    setDragOverId(null);
-  };
-
-  // ドロップ
-  const handleDrop = async (e: React.DragEvent, targetId: string) => {
-    e.preventDefault();
-    setDragOverId(null);
-
-    if (!draggedId || draggedId === targetId) {
-      setDraggedId(null);
+    if (!over || active.id === over.id) {
       return;
     }
 
-    // 新しい順序を計算
-    const oldIndex = preconditions.findIndex((p) => p.id === draggedId);
-    const newIndex = preconditions.findIndex((p) => p.id === targetId);
+    const oldIndex = preconditions.findIndex((p) => p.id === active.id);
+    const newIndex = preconditions.findIndex((p) => p.id === over.id);
 
     if (oldIndex === -1 || newIndex === -1) {
-      setDraggedId(null);
       return;
     }
 
-    // 配列を並び替え
-    const newPreconditions = [...preconditions];
-    const [removed] = newPreconditions.splice(oldIndex, 1);
-    newPreconditions.splice(newIndex, 0, removed);
-
-    // UIを即座に更新
+    // 配列を並び替え（オプティミスティック更新）
+    const newPreconditions = arrayMove(preconditions, oldIndex, newIndex);
     setPreconditions(newPreconditions);
-    setDraggedId(null);
     setIsReordering(true);
 
     // APIで永続化
@@ -302,12 +381,6 @@ export function PreconditionList({ testSuiteId, currentRole }: PreconditionListP
     } finally {
       setIsReordering(false);
     }
-  };
-
-  // ドラッグ終了
-  const handleDragEnd = () => {
-    setDraggedId(null);
-    setDragOverId(null);
   };
 
   if (isLoading) {
@@ -369,53 +442,31 @@ export function PreconditionList({ testSuiteId, currentRole }: PreconditionListP
           )}
         </div>
       ) : (
-        <div className="space-y-2">
-          {preconditions.map((precondition, index) => (
-            <div
-              key={precondition.id}
-              draggable={canEdit}
-              onDragStart={(e) => handleDragStart(e, precondition.id)}
-              onDragOver={(e) => handleDragOver(e, precondition.id)}
-              onDragLeave={handleDragLeave}
-              onDrop={(e) => handleDrop(e, precondition.id)}
-              onDragEnd={handleDragEnd}
-              className={`
-                flex items-center justify-between p-3 rounded-lg border bg-background-secondary
-                transition-all
-                ${draggedId === precondition.id ? 'opacity-50 border-accent' : 'border-border'}
-                ${dragOverId === precondition.id ? 'border-accent border-2' : ''}
-                ${canEdit ? 'cursor-grab active:cursor-grabbing' : ''}
-                hover:bg-background-tertiary
-              `}
-            >
-              <div className="flex items-center gap-3 min-w-0 flex-1">
-                {/* ドラッグハンドル */}
-                {canEdit && (
-                  <GripVertical className="w-4 h-4 text-foreground-muted flex-shrink-0" />
-                )}
-
-                {/* インデックス番号 */}
-                <span className="w-6 h-6 rounded-full bg-background-tertiary text-foreground-muted text-xs font-medium flex items-center justify-center flex-shrink-0">
-                  {index + 1}
-                </span>
-
-                {/* 内容 */}
-                <p className="text-sm text-foreground truncate">
-                  {precondition.content}
-                </p>
-              </div>
-
-              {/* アクションメニュー */}
-              <ActionDropdown
-                canEdit={canEdit}
-                canDelete={canDelete}
-                onEdit={() => handleOpenEdit(precondition)}
-                onDelete={() => handleRequestDelete(precondition)}
-                isUpdating={updatingId === precondition.id}
-              />
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={preconditions.map((p) => p.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-2">
+              {preconditions.map((precondition, index) => (
+                <SortablePreconditionItem
+                  key={precondition.id}
+                  precondition={precondition}
+                  index={index}
+                  canEdit={canEdit}
+                  canDelete={canDelete}
+                  onEdit={() => handleOpenEdit(precondition)}
+                  onDelete={() => handleRequestDelete(precondition)}
+                  isUpdating={updatingId === precondition.id}
+                />
+              ))}
             </div>
-          ))}
-        </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       {/* 前提条件フォームモーダル */}

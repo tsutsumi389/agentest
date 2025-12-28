@@ -12,6 +12,9 @@
   "dependencies": {
     "@agentest/shared": "workspace:*",
     "@agentest/ws-types": "workspace:*",
+    "@dnd-kit/core": "catalog:",
+    "@dnd-kit/sortable": "catalog:",
+    "@dnd-kit/utilities": "catalog:",
     "@tanstack/react-query": "catalog:",
     "lucide-react": "catalog:",
     "react": "catalog:",

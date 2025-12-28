@@ -80,7 +80,7 @@ export function TestSuiteDetailPage() {
     );
   }
 
-  if (!suite) {
+  if (!testSuiteId || !suite) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-foreground-muted">テストスイートが見つかりません</div>
@@ -134,7 +134,7 @@ export function TestSuiteDetailPage() {
       </div>
 
       {/* 前提条件セクション */}
-      <PreconditionList testSuiteId={testSuiteId!} currentRole={currentRole} />
+      <PreconditionList testSuiteId={testSuiteId} currentRole={currentRole} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* テストケース一覧 */}

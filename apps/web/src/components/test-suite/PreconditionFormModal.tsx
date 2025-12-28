@@ -30,10 +30,11 @@ export function PreconditionFormModal({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // 編集時は既存データをセット
+  // モーダルオープン時に初期値をセット
   useEffect(() => {
-    if (isOpen && precondition) {
-      setContent(precondition.content);
+    if (isOpen) {
+      // 編集時は既存データ、新規作成時は空文字をセット
+      setContent(precondition?.content ?? '');
     }
   }, [isOpen, precondition]);
 
