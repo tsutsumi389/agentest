@@ -190,7 +190,6 @@ export function TestSuiteDetailPage() {
       {currentTab === 'overview' && (
         <OverviewTab
           testSuiteId={testSuiteId}
-          suite={suite}
           currentRole={currentRole}
           testCases={testCases}
           isLoadingCases={isLoadingCases}
@@ -229,7 +228,6 @@ export function TestSuiteDetailPage() {
  */
 interface OverviewTabProps {
   testSuiteId: string;
-  suite: TestSuite;
   currentRole: 'OWNER' | ProjectMemberRole | undefined;
   testCases: TestCase[];
   isLoadingCases: boolean;
@@ -354,7 +352,6 @@ function SettingsTab({ testSuite, currentRole, onUpdated }: SettingsTabProps) {
     <DeleteTestSuiteSection
       testSuite={testSuite}
       projectId={testSuite.projectId}
-      deletedAt={testSuite.deletedAt}
       onUpdated={onUpdated}
       canEdit={canEdit}
     />
@@ -447,8 +444,18 @@ function CreateTestCaseModal({
     });
   };
 
+  // 背景クリックで閉じる
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/50">
+    <div
+      className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/50"
+      onClick={handleBackdropClick}
+    >
       <div className="card w-full max-w-md p-6">
         <h2 className="text-lg font-semibold text-foreground mb-4">
           新規テストケース

@@ -231,6 +231,25 @@ function formatSnapshot(snapshot: Record<string, unknown>, changeType: TestSuite
     changes.push(`ステータスを「${statusLabel}」に変更`);
   }
 
+  // 前提条件の変更
+  if (snapshot.preconditions !== undefined) {
+    const preconditions = snapshot.preconditions as unknown[];
+    if (Array.isArray(preconditions)) {
+      if (preconditions.length === 0) {
+        changes.push('前提条件をすべて削除');
+      } else {
+        changes.push(`前提条件を${preconditions.length}件に更新`);
+      }
+    } else {
+      changes.push('前提条件を更新');
+    }
+  }
+
+  // 前提条件の並び替え
+  if (snapshot.preconditionOrder !== undefined) {
+    changes.push('前提条件の順序を変更');
+  }
+
   return changes.length > 0 ? changes.join('、') : '設定を更新';
 }
 

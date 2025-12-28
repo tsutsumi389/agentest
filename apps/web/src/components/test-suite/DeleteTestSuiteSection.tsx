@@ -11,8 +11,6 @@ interface DeleteTestSuiteSectionProps {
   testSuite: TestSuite;
   /** プロジェクトID（削除後の遷移先） */
   projectId: string;
-  /** 削除日時（論理削除済みの場合） */
-  deletedAt?: string | null;
   /** テストスイート更新時のコールバック */
   onUpdated?: (testSuite: TestSuite) => void;
   /** 編集権限があるか */
@@ -38,7 +36,6 @@ function getRemainingDays(deletedAt: string): number {
 export function DeleteTestSuiteSection({
   testSuite,
   projectId,
-  deletedAt,
   onUpdated,
   canEdit = false,
 }: DeleteTestSuiteSectionProps) {
@@ -47,8 +44,8 @@ export function DeleteTestSuiteSection({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRestoring, setIsRestoring] = useState(false);
 
-  const isDeleted = !!deletedAt;
-  const remainingDays = deletedAt ? getRemainingDays(deletedAt) : null;
+  const isDeleted = !!testSuite.deletedAt;
+  const remainingDays = testSuite.deletedAt ? getRemainingDays(testSuite.deletedAt) : null;
 
   // テストスイート削除
   const handleDelete = async () => {
