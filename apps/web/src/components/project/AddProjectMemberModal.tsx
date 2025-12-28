@@ -91,9 +91,19 @@ export function AddProjectMemberModal({
     onClose();
   };
 
+  // 背景クリックでモーダルを閉じる
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget && !isSubmitting) {
+      handleClose();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/50">
-      <div className="card w-full max-w-md p-6">
+    <div
+      className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/50"
+      onClick={handleBackdropClick}
+    >
+      <div className="card w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-foreground">
             メンバーを追加

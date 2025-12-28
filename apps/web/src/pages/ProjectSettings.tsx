@@ -15,6 +15,7 @@ import { useAuth } from '../hooks/useAuth';
 import { toast } from '../stores/toast';
 import { ProjectGeneralSettings } from '../components/project/ProjectGeneralSettings';
 import { ProjectMemberList } from '../components/project/ProjectMemberList';
+import { ConfirmDialog } from '../components/common/ConfirmDialog';
 
 type SettingsTab = 'general' | 'members' | 'environments' | 'history' | 'danger';
 
@@ -42,6 +43,8 @@ export function ProjectSettingsPage() {
 
   // 現在のユーザーのロール（オーナーか、メンバーのロール）
   const [currentRole, setCurrentRole] = useState<'OWNER' | 'ADMIN' | 'WRITE' | 'READ' | null>(null);
+  // ロール確認中かどうか
+  const [isLoadingRole, setIsLoadingRole] = useState(false);
 
   // プロジェクトデータを取得
   const fetchProject = useCallback(async () => {
@@ -49,6 +52,7 @@ export function ProjectSettingsPage() {
 
     setIsLoading(true);
     setError(null);
+    setCurrentRole(null);
 
     try {
       const response = await projectsApi.getById(projectId);
@@ -60,6 +64,7 @@ export function ProjectSettingsPage() {
       } else {
         // メンバーのロールを取得（APIからロールが返ってくる場合）
         // 現時点ではメンバー一覧から自分のロールを取得
+        setIsLoadingRole(true);
         try {
           const membersResponse = await projectsApi.getMembers(projectId);
           const myMembership = membersResponse.members.find((m) => m.userId === user?.id);
@@ -67,7 +72,9 @@ export function ProjectSettingsPage() {
             setCurrentRole(myMembership.role);
           }
         } catch {
-          // メンバー取得に失敗しても続行
+          // メンバー取得に失敗しても続行（権限なしとして扱う）
+        } finally {
+          setIsLoadingRole(false);
         }
       }
     } catch (err) {
@@ -115,7 +122,8 @@ export function ProjectSettingsPage() {
   // 設定ページへのアクセス権限チェック（ADMIN以上）
   const hasPermission = currentRole === 'OWNER' || currentRole === 'ADMIN';
 
-  if (isLoading) {
+  // ローディング中（プロジェクト取得中 または ロール確認中）
+  if (isLoading || isLoadingRole) {
     return (
       <div className="flex items-center justify-center py-16">
         <Loader2 className="w-8 h-8 animate-spin text-foreground-muted" />
@@ -268,11 +276,11 @@ function HistoryPlaceholder() {
  */
 function DangerPlaceholder({ projectId }: { projectId: string }) {
   const navigate = useNavigate();
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async () => {
-    if (!confirm('本当にこのプロジェクトを削除しますか？この操作は取り消せません。')) {
-      return;
-    }
+    setIsDeleting(true);
 
     try {
       await projectsApi.delete(projectId);
@@ -284,6 +292,8 @@ function DangerPlaceholder({ projectId }: { projectId: string }) {
       } else {
         toast.error('プロジェクトの削除に失敗しました');
       }
+      setIsDeleting(false);
+      setIsConfirmOpen(false);
     }
   };
 
@@ -297,11 +307,22 @@ function DangerPlaceholder({ projectId }: { projectId: string }) {
         </p>
         <button
           className="btn btn-danger"
-          onClick={handleDelete}
+          onClick={() => setIsConfirmOpen(true)}
         >
           プロジェクトを削除
         </button>
       </div>
+
+      <ConfirmDialog
+        isOpen={isConfirmOpen}
+        title="プロジェクトを削除"
+        message="本当にこのプロジェクトを削除しますか？すべてのテストスイート、テストケース、実行履歴が削除されます。この操作は取り消せません。"
+        confirmLabel="削除する"
+        onConfirm={handleDelete}
+        onCancel={() => setIsConfirmOpen(false)}
+        isLoading={isDeleting}
+        isDanger
+      />
     </div>
   );
 }

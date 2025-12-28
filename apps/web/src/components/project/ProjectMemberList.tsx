@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Loader2, MoreVertical, UserMinus, Shield, Pencil, Eye, UserPlus } from 'lucide-react';
 import { projectsApi, ApiError, type ProjectMember, type Project } from '../../lib/api';
-import { useAuthStore } from '../../stores/auth';
+import { useAuth } from '../../hooks/useAuth';
 import { toast } from '../../stores/toast';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { formatDate } from '../../lib/date';
@@ -70,19 +70,14 @@ function RoleDropdown({
 
   // 自分自身は変更できない
   const isSelf = member.userId === currentUserId;
-  if (isSelf) {
-    return null;
-  }
-
   // ADMIN以上のみ操作可能
   const canManage = currentRole === 'OWNER' || currentRole === 'ADMIN';
-  if (!canManage) {
-    return null;
-  }
+  // 表示するかどうか
+  const shouldRender = !isSelf && canManage;
 
   // ドロップダウン外クリックで閉じる
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !shouldRender) return;
 
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -92,11 +87,11 @@ function RoleDropdown({
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
+  }, [isOpen, shouldRender]);
 
   // ESCキーで閉じる
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !shouldRender) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -106,7 +101,12 @@ function RoleDropdown({
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen]);
+  }, [isOpen, shouldRender]);
+
+  // レンダリング不要な場合は何も表示しない
+  if (!shouldRender) {
+    return null;
+  }
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -196,7 +196,7 @@ function RoleDropdown({
  * プロジェクトメンバー一覧コンポーネント
  */
 export function ProjectMemberList({ project, currentRole }: ProjectMemberListProps) {
-  const { user } = useAuthStore();
+  const { user } = useAuth();
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
