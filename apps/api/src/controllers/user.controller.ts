@@ -26,6 +26,8 @@ const getUserProjectsQuerySchema = z.object({
       return val;
     }),
   includeDeleted: z.coerce.boolean().optional().default(false),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(50),
+  offset: z.coerce.number().int().min(0).optional().default(0),
 });
 
 /**
@@ -118,6 +120,8 @@ export class UserController {
    * @query q 名前部分一致検索
    * @query organizationId 組織フィルタ（"null"で個人プロジェクトのみ）
    * @query includeDeleted 削除済みプロジェクトも含めるか
+   * @query limit 取得件数（デフォルト: 50、最大: 100）
+   * @query offset 取得開始位置（デフォルト: 0）
    */
   getUserProjects = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -129,13 +133,31 @@ export class UserController {
       }
 
       const query = getUserProjectsQuerySchema.parse(req.query);
-      const projects = await this.userService.getProjects(userId, {
+      const filterOptions = {
         q: query.q,
         organizationId: query.organizationId,
         includeDeleted: query.includeDeleted,
-      });
+      };
 
-      res.json({ projects });
+      // プロジェクト一覧と総数を並行取得
+      const [projects, total] = await Promise.all([
+        this.userService.getProjects(userId, {
+          ...filterOptions,
+          limit: query.limit,
+          offset: query.offset,
+        }),
+        this.userService.countProjects(userId, filterOptions),
+      ]);
+
+      res.json({
+        projects,
+        pagination: {
+          total,
+          limit: query.limit,
+          offset: query.offset,
+          hasMore: query.offset + projects.length < total,
+        },
+      });
     } catch (error) {
       next(error);
     }

@@ -77,6 +77,8 @@ export class UserService {
    * @param options.q 名前部分一致検索
    * @param options.organizationId 組織フィルタ（null指定で個人プロジェクトのみ）
    * @param options.includeDeleted 削除済みプロジェクトも含めるか（デフォルト: false）
+   * @param options.limit 取得件数（デフォルト: 50）
+   * @param options.offset 取得開始位置（デフォルト: 0）
    */
   async getProjects(
     userId: string,
@@ -84,9 +86,11 @@ export class UserService {
       q?: string;
       organizationId?: string | null;
       includeDeleted?: boolean;
+      limit?: number;
+      offset?: number;
     } = {}
   ) {
-    const { q, organizationId, includeDeleted = false } = options;
+    const { q, organizationId, includeDeleted = false, limit = 50, offset = 0 } = options;
 
     // 削除条件
     const deletedCondition = includeDeleted ? {} : { deletedAt: null };
@@ -105,61 +109,76 @@ export class UserService {
           ? { organizationId: null }
           : { organizationId };
 
-    // ユーザーがオーナーのプロジェクト
-    const ownedProjects = await prisma.project.findMany({
+    // 共通のwhere条件
+    const baseWhere = {
+      ...deletedCondition,
+      ...nameCondition,
+      ...orgCondition,
+    };
+
+    // 1クエリでオーナーとメンバーのプロジェクトを取得
+    const projects = await prisma.project.findMany({
       where: {
-        ownerId: userId,
-        ...deletedCondition,
-        ...nameCondition,
-        ...orgCondition,
+        OR: [{ ownerId: userId }, { members: { some: { userId } } }],
+        ...baseWhere,
       },
       include: {
         organization: {
           select: { id: true, name: true, slug: true },
         },
+        members: {
+          where: { userId },
+          select: { role: true },
+        },
         _count: {
           select: { testSuites: true },
         },
       },
+      orderBy: { updatedAt: 'desc' },
+      take: limit,
+      skip: offset,
     });
 
-    // ユーザーがメンバーのプロジェクト
-    const memberProjects = await prisma.projectMember.findMany({
+    // ロールを付与して返却
+    return projects.map((p) => {
+      const { members, ...project } = p;
+      // オーナーの場合は'OWNER'、それ以外はmembersから取得
+      const role = p.ownerId === userId ? 'OWNER' : members[0]?.role ?? 'READ';
+      return { ...project, role };
+    });
+  }
+
+  /**
+   * ユーザーのプロジェクト総数を取得
+   * @param userId ユーザーID
+   * @param options 検索オプション
+   */
+  async countProjects(
+    userId: string,
+    options: {
+      q?: string;
+      organizationId?: string | null;
+      includeDeleted?: boolean;
+    } = {}
+  ) {
+    const { q, organizationId, includeDeleted = false } = options;
+
+    const deletedCondition = includeDeleted ? {} : { deletedAt: null };
+    const nameCondition = q ? { name: { contains: q, mode: 'insensitive' as const } } : {};
+    const orgCondition =
+      organizationId === undefined
+        ? {}
+        : organizationId === null
+          ? { organizationId: null }
+          : { organizationId };
+
+    return prisma.project.count({
       where: {
-        userId,
-        project: {
-          ...deletedCondition,
-          ...nameCondition,
-          ...orgCondition,
-        },
-      },
-      include: {
-        project: {
-          include: {
-            organization: {
-              select: { id: true, name: true, slug: true },
-            },
-            _count: {
-              select: { testSuites: true },
-            },
-          },
-        },
+        OR: [{ ownerId: userId }, { members: { some: { userId } } }],
+        ...deletedCondition,
+        ...nameCondition,
+        ...orgCondition,
       },
     });
-
-    // 重複を排除してマージ
-    const projectMap = new Map();
-    for (const p of ownedProjects) {
-      projectMap.set(p.id, { ...p, role: 'OWNER' });
-    }
-    for (const m of memberProjects) {
-      // includeDeleted が true の場合は deletedAt チェックをスキップ
-      const shouldInclude = includeDeleted || !m.project.deletedAt;
-      if (!projectMap.has(m.project.id) && shouldInclude) {
-        projectMap.set(m.project.id, { ...m.project, role: m.role });
-      }
-    }
-
-    return Array.from(projectMap.values());
   }
 }

@@ -8,6 +8,8 @@ import {
   createTestAccount,
   createTestOrganization,
   createTestOrgMember,
+  createTestProject,
+  createTestProjectMember,
   cleanupTestData,
 } from './test-helpers.js';
 
@@ -400,6 +402,250 @@ describe('Users API Integration Tests', () => {
 
       const response = await request(app)
         .get(`/api/users/${testUser.id}/organizations`)
+        .expect(401);
+
+      expect(response.body.error.code).toBe('AUTHENTICATION_ERROR');
+    });
+  });
+
+  describe('GET /api/users/:userId/projects', () => {
+    it('所属プロジェクト一覧を取得できる', async () => {
+      // 個人プロジェクト
+      await createTestProject(testUser.id, { name: 'Personal Project' });
+
+      // 組織プロジェクト
+      const org = await createTestOrganization(testUser.id, { name: 'Test Org', slug: 'test-org' });
+      await createTestProject(testUser.id, { name: 'Org Project', organizationId: org.id });
+
+      const response = await request(app)
+        .get(`/api/users/${testUser.id}/projects`)
+        .expect(200);
+
+      expect(response.body.projects).toHaveLength(2);
+      expect(response.body.pagination).toBeDefined();
+      expect(response.body.pagination.total).toBe(2);
+
+      const projectNames = response.body.projects.map((p: any) => p.name);
+      expect(projectNames).toContain('Personal Project');
+      expect(projectNames).toContain('Org Project');
+    });
+
+    it('オーナーとメンバーのプロジェクトを両方取得できる', async () => {
+      // 自分がオーナーのプロジェクト
+      await createTestProject(testUser.id, { name: 'Owner Project' });
+
+      // 他のユーザーがオーナーで、自分がメンバーのプロジェクト
+      const otherUser = await createTestUser({ email: 'owner@example.com' });
+      const memberProject = await createTestProject(otherUser.id, { name: 'Member Project' });
+      await createTestProjectMember(memberProject.id, testUser.id, 'WRITE');
+
+      const response = await request(app)
+        .get(`/api/users/${testUser.id}/projects`)
+        .expect(200);
+
+      expect(response.body.projects).toHaveLength(2);
+
+      const ownerProjectData = response.body.projects.find((p: any) => p.name === 'Owner Project');
+      const memberProjectData = response.body.projects.find((p: any) => p.name === 'Member Project');
+
+      expect(ownerProjectData.role).toBe('OWNER');
+      expect(memberProjectData.role).toBe('WRITE');
+    });
+
+    it('名前で検索できる（qパラメータ）', async () => {
+      await createTestProject(testUser.id, { name: 'Alpha Project' });
+      await createTestProject(testUser.id, { name: 'Beta Project' });
+      await createTestProject(testUser.id, { name: 'Gamma Test' });
+
+      const response = await request(app)
+        .get(`/api/users/${testUser.id}/projects`)
+        .query({ q: 'project' })
+        .expect(200);
+
+      expect(response.body.projects).toHaveLength(2);
+      expect(response.body.pagination.total).toBe(2);
+      const projectNames = response.body.projects.map((p: any) => p.name);
+      expect(projectNames).toContain('Alpha Project');
+      expect(projectNames).toContain('Beta Project');
+    });
+
+    it('名前検索は大文字小文字を区別しない', async () => {
+      await createTestProject(testUser.id, { name: 'UPPERCASE Project' });
+
+      const response = await request(app)
+        .get(`/api/users/${testUser.id}/projects`)
+        .query({ q: 'uppercase' })
+        .expect(200);
+
+      expect(response.body.projects).toHaveLength(1);
+      expect(response.body.projects[0].name).toBe('UPPERCASE Project');
+    });
+
+    it('組織でフィルタできる（organizationIdパラメータ）', async () => {
+      // 個人プロジェクト
+      await createTestProject(testUser.id, { name: 'Personal' });
+
+      // 組織Aのプロジェクト
+      const orgA = await createTestOrganization(testUser.id, { name: 'Org A', slug: 'org-a' });
+      await createTestProject(testUser.id, { name: 'OrgA Project', organizationId: orgA.id });
+
+      // 組織Bのプロジェクト
+      const orgB = await createTestOrganization(testUser.id, { name: 'Org B', slug: 'org-b' });
+      await createTestProject(testUser.id, { name: 'OrgB Project', organizationId: orgB.id });
+
+      // 組織Aでフィルタ
+      const response = await request(app)
+        .get(`/api/users/${testUser.id}/projects`)
+        .query({ organizationId: orgA.id })
+        .expect(200);
+
+      expect(response.body.projects).toHaveLength(1);
+      expect(response.body.projects[0].name).toBe('OrgA Project');
+    });
+
+    it('個人プロジェクトのみフィルタできる（organizationId=null）', async () => {
+      // 個人プロジェクト
+      await createTestProject(testUser.id, { name: 'Personal' });
+
+      // 組織プロジェクト
+      const org = await createTestOrganization(testUser.id, { name: 'Org', slug: 'org' });
+      await createTestProject(testUser.id, { name: 'Org Project', organizationId: org.id });
+
+      const response = await request(app)
+        .get(`/api/users/${testUser.id}/projects`)
+        .query({ organizationId: 'null' })
+        .expect(200);
+
+      expect(response.body.projects).toHaveLength(1);
+      expect(response.body.projects[0].name).toBe('Personal');
+    });
+
+    it('削除済みプロジェクトはデフォルトで含まれない', async () => {
+      await createTestProject(testUser.id, { name: 'Active Project' });
+
+      // 削除済みプロジェクトを作成
+      const deletedProject = await createTestProject(testUser.id, { name: 'Deleted Project' });
+      await prisma.project.update({
+        where: { id: deletedProject.id },
+        data: { deletedAt: new Date() },
+      });
+
+      const response = await request(app)
+        .get(`/api/users/${testUser.id}/projects`)
+        .expect(200);
+
+      expect(response.body.projects).toHaveLength(1);
+      expect(response.body.projects[0].name).toBe('Active Project');
+    });
+
+    it('削除済みプロジェクトを含めて取得できる（includeDeleted=true）', async () => {
+      await createTestProject(testUser.id, { name: 'Active Project' });
+
+      // 削除済みプロジェクトを作成
+      const deletedProject = await createTestProject(testUser.id, { name: 'Deleted Project' });
+      await prisma.project.update({
+        where: { id: deletedProject.id },
+        data: { deletedAt: new Date() },
+      });
+
+      const response = await request(app)
+        .get(`/api/users/${testUser.id}/projects`)
+        .query({ includeDeleted: 'true' })
+        .expect(200);
+
+      expect(response.body.projects).toHaveLength(2);
+      const projectNames = response.body.projects.map((p: any) => p.name);
+      expect(projectNames).toContain('Active Project');
+      expect(projectNames).toContain('Deleted Project');
+    });
+
+    it('ページネーションが動作する', async () => {
+      // 5つのプロジェクトを作成
+      for (let i = 0; i < 5; i++) {
+        await createTestProject(testUser.id, { name: `Project ${i}` });
+      }
+
+      // limit=2で取得
+      const response1 = await request(app)
+        .get(`/api/users/${testUser.id}/projects`)
+        .query({ limit: '2', offset: '0' })
+        .expect(200);
+
+      expect(response1.body.projects).toHaveLength(2);
+      expect(response1.body.pagination.total).toBe(5);
+      expect(response1.body.pagination.limit).toBe(2);
+      expect(response1.body.pagination.offset).toBe(0);
+      expect(response1.body.pagination.hasMore).toBe(true);
+
+      // offset=2で次のページを取得
+      const response2 = await request(app)
+        .get(`/api/users/${testUser.id}/projects`)
+        .query({ limit: '2', offset: '2' })
+        .expect(200);
+
+      expect(response2.body.projects).toHaveLength(2);
+      expect(response2.body.pagination.offset).toBe(2);
+      expect(response2.body.pagination.hasMore).toBe(true);
+
+      // offset=4で最後のページを取得
+      const response3 = await request(app)
+        .get(`/api/users/${testUser.id}/projects`)
+        .query({ limit: '2', offset: '4' })
+        .expect(200);
+
+      expect(response3.body.projects).toHaveLength(1);
+      expect(response3.body.pagination.hasMore).toBe(false);
+    });
+
+    it('更新日時の降順でソートされる', async () => {
+      // プロジェクトを作成（順序を明示的に制御）
+      const project1 = await createTestProject(testUser.id, { name: 'Old Project' });
+      await prisma.project.update({
+        where: { id: project1.id },
+        data: { updatedAt: new Date('2024-01-01') },
+      });
+
+      const project2 = await createTestProject(testUser.id, { name: 'New Project' });
+      await prisma.project.update({
+        where: { id: project2.id },
+        data: { updatedAt: new Date('2024-06-01') },
+      });
+
+      const response = await request(app)
+        .get(`/api/users/${testUser.id}/projects`)
+        .expect(200);
+
+      expect(response.body.projects).toHaveLength(2);
+      // 新しいものが先
+      expect(response.body.projects[0].name).toBe('New Project');
+      expect(response.body.projects[1].name).toBe('Old Project');
+    });
+
+    it('プロジェクトがない場合は空配列', async () => {
+      const response = await request(app)
+        .get(`/api/users/${testUser.id}/projects`)
+        .expect(200);
+
+      expect(response.body.projects).toHaveLength(0);
+      expect(response.body.pagination.total).toBe(0);
+    });
+
+    it('他のユーザーのプロジェクト一覧は取得できない', async () => {
+      const otherUser = await createTestUser({ email: 'other@example.com' });
+      await createTestProject(otherUser.id, { name: 'Other Project' });
+
+      const response = await request(app)
+        .get(`/api/users/${otherUser.id}/projects`)
+        .expect(403);
+
+      expect(response.body.error.code).toBe('AUTHORIZATION_ERROR');
+    });
+
+    it('未認証の場合は401エラー', async () => {
+      clearTestAuth();
+
+      const response = await request(app)
+        .get(`/api/users/${testUser.id}/projects`)
         .expect(401);
 
       expect(response.body.error.code).toBe('AUTHENTICATION_ERROR');
