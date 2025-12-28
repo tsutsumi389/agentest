@@ -402,8 +402,8 @@ export const projectsApi = {
   // 履歴管理
   getHistories: (projectId: string, params?: { limit?: number; offset?: number }) => {
     const query = new URLSearchParams();
-    if (params?.limit) query.set('limit', String(params.limit));
-    if (params?.offset) query.set('offset', String(params.offset));
+    if (params?.limit !== undefined) query.set('limit', String(params.limit));
+    if (params?.offset !== undefined) query.set('offset', String(params.offset));
     const queryString = query.toString();
     return api.get<{ histories: ProjectHistory[]; total: number }>(
       `/api/projects/${projectId}/histories${queryString ? `?${queryString}` : ''}`

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Trash2, RotateCcw, AlertTriangle, Clock } from 'lucide-react';
+import { Trash2, RotateCcw, AlertTriangle, Clock, Loader2 } from 'lucide-react';
 import { DELETION_GRACE_PERIOD_DAYS } from '@agentest/shared';
 import { projectsApi, ApiError, type Project } from '../../lib/api';
 import { toast } from '../../stores/toast';
@@ -38,7 +38,7 @@ export function DeleteProjectSection({ project, deletedAt, onUpdated }: DeletePr
   const [isRestoring, setIsRestoring] = useState(false);
 
   const isDeleted = !!deletedAt;
-  const remainingDays = isDeleted ? getRemainingDays(deletedAt!) : null;
+  const remainingDays = deletedAt ? getRemainingDays(deletedAt) : null;
 
   // プロジェクト削除
   const handleDelete = async () => {
@@ -116,7 +116,11 @@ export function DeleteProjectSection({ project, deletedAt, onUpdated }: DeletePr
             onClick={handleRestore}
             disabled={isRestoring}
           >
-            <RotateCcw className={`w-4 h-4 ${isRestoring ? 'animate-spin' : ''}`} />
+            {isRestoring ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <RotateCcw className="w-4 h-4" />
+            )}
             {isRestoring ? '復元中...' : 'プロジェクトを復元'}
           </button>
         </div>

@@ -236,8 +236,10 @@ function HistoryItem({ history }: { history: ProjectHistory }) {
       {/* タイムラインドット */}
       <div
         className={`absolute left-0 w-8 h-8 rounded-full bg-background-secondary border-2 border-border flex items-center justify-center ${changeTypeDef.color}`}
+        role="img"
+        aria-label={changeTypeDef.label}
       >
-        <Icon className="w-4 h-4" />
+        <Icon className="w-4 h-4" aria-hidden="true" />
       </div>
 
       {/* コンテンツ */}
