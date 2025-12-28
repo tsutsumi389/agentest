@@ -11,7 +11,9 @@ import {
   Clock,
   MoreHorizontal,
 } from 'lucide-react';
-import { testSuitesApi, testCasesApi, type TestCase } from '../lib/api';
+import { testSuitesApi, testCasesApi, projectsApi, type TestCase, type ProjectMemberRole } from '../lib/api';
+import { useAuth } from '../hooks/useAuth';
+import { PreconditionList } from '../components/test-suite/PreconditionList';
 
 /**
  * テストスイート詳細ページ
@@ -19,6 +21,7 @@ import { testSuitesApi, testCasesApi, type TestCase } from '../lib/api';
 export function TestSuiteDetailPage() {
   const { testSuiteId } = useParams<{ testSuiteId: string }>();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // テストスイート情報を取得
@@ -27,6 +30,22 @@ export function TestSuiteDetailPage() {
     queryFn: () => testSuitesApi.getById(testSuiteId!),
     enabled: !!testSuiteId,
   });
+
+  const suite = suiteData?.testSuite;
+
+  // プロジェクトメンバー情報を取得して権限を判定
+  const { data: membersData } = useQuery({
+    queryKey: ['project-members', suite?.projectId],
+    queryFn: () => projectsApi.getMembers(suite!.projectId),
+    enabled: !!suite?.projectId,
+  });
+
+  // 現在のユーザーのロールを判定
+  const currentRole: 'OWNER' | ProjectMemberRole | undefined = (() => {
+    if (!user || !membersData) return undefined;
+    const member = membersData.members.find((m) => m.userId === user.id);
+    return member?.role;
+  })();
 
   // テストケース一覧を取得
   const { data: casesData, isLoading: isLoadingCases } = useQuery({
@@ -50,7 +69,6 @@ export function TestSuiteDetailPage() {
     },
   });
 
-  const suite = suiteData?.testSuite;
   const testCases = casesData?.testCases || [];
   const executions = executionsData?.executions || [];
 
@@ -114,6 +132,9 @@ export function TestSuiteDetailPage() {
           </div>
         </div>
       </div>
+
+      {/* 前提条件セクション */}
+      <PreconditionList testSuiteId={testSuiteId!} currentRole={currentRole} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* テストケース一覧 */}
