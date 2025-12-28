@@ -117,4 +117,13 @@ export class ProjectRepository {
       skip: options?.offset ?? 0,
     });
   }
+
+  /**
+   * 履歴の総件数を取得
+   */
+  async countHistories(projectId: string) {
+    return prisma.projectHistory.count({
+      where: { projectId },
+    });
+  }
 }

@@ -94,12 +94,12 @@ router.get('/:projectId/test-suites', requireAuth(authConfig), requireProjectRol
  * プロジェクトの履歴一覧取得
  * GET /api/projects/:projectId/histories
  */
-router.get('/:projectId/histories', requireAuth(authConfig), requireProjectRole(['ADMIN', 'WRITE', 'READ']), projectController.getHistories);
+router.get('/:projectId/histories', requireAuth(authConfig), requireProjectRole(['ADMIN', 'WRITE', 'READ'], { allowDeletedProject: true }), projectController.getHistories);
 
 /**
  * プロジェクト復元
  * POST /api/projects/:projectId/restore
  */
-router.post('/:projectId/restore', requireAuth(authConfig), requireProjectRole(['ADMIN']), projectController.restore);
+router.post('/:projectId/restore', requireAuth(authConfig), requireProjectRole(['ADMIN'], { allowDeletedProject: true }), projectController.restore);
 
 export default router;

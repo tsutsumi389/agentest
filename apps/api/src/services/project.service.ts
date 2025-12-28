@@ -438,7 +438,12 @@ export class ProjectService {
       throw new NotFoundError('Project', projectId);
     }
 
-    return this.projectRepo.getHistories(projectId, options);
+    const [histories, total] = await Promise.all([
+      this.projectRepo.getHistories(projectId, options),
+      this.projectRepo.countHistories(projectId),
+    ]);
+
+    return { histories, total };
   }
 
   /**
@@ -462,9 +467,8 @@ export class ProjectService {
 
     const restoredProject = await this.projectRepo.restore(projectId);
 
-    // 復元履歴を作成（CREATEとして記録）
-    await this.createHistory(projectId, userId, 'CREATE', {
-      restored: true,
+    // 復元履歴を作成
+    await this.createHistory(projectId, userId, 'RESTORE', {
       name: restoredProject.name,
       description: restoredProject.description,
       organizationId: restoredProject.organizationId,

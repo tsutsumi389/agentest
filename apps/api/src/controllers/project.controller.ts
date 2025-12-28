@@ -232,11 +232,34 @@ export class ProjectController {
   getHistories = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { projectId } = req.params;
-      const limit = req.query.limit ? Number(req.query.limit) : undefined;
-      const offset = req.query.offset ? Number(req.query.offset) : undefined;
-      const histories = await this.projectService.getHistories(projectId, { limit, offset });
 
-      res.json({ histories });
+      // クエリパラメータのバリデーション
+      const limitParam = req.query.limit;
+      const offsetParam = req.query.offset;
+      let limit: number | undefined;
+      let offset: number | undefined;
+
+      if (limitParam !== undefined) {
+        const parsed = Number(limitParam);
+        if (isNaN(parsed) || parsed < 1 || parsed > 100) {
+          res.status(400).json({ error: 'limit は 1〜100 の整数である必要があります' });
+          return;
+        }
+        limit = parsed;
+      }
+
+      if (offsetParam !== undefined) {
+        const parsed = Number(offsetParam);
+        if (isNaN(parsed) || parsed < 0) {
+          res.status(400).json({ error: 'offset は 0 以上の整数である必要があります' });
+          return;
+        }
+        offset = parsed;
+      }
+
+      const { histories, total } = await this.projectService.getHistories(projectId, { limit, offset });
+
+      res.json({ histories, total });
     } catch (error) {
       next(error);
     }
