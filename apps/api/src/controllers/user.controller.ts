@@ -13,6 +13,21 @@ const getUserOrganizationsQuerySchema = z.object({
   includeDeleted: z.coerce.boolean().optional().default(false),
 });
 
+const getUserProjectsQuerySchema = z.object({
+  q: z.string().optional(),
+  organizationId: z
+    .string()
+    .optional()
+    .transform((val) => {
+      // "null" 文字列を null に変換（個人プロジェクトのみフィルタ）
+      if (val === 'null') return null;
+      // 空文字列は undefined として扱う（フィルタなし）
+      if (val === '') return undefined;
+      return val;
+    }),
+  includeDeleted: z.coerce.boolean().optional().default(false),
+});
+
 /**
  * ユーザーコントローラー
  */
@@ -100,6 +115,9 @@ export class UserController {
 
   /**
    * ユーザーのプロジェクト一覧取得
+   * @query q 名前部分一致検索
+   * @query organizationId 組織フィルタ（"null"で個人プロジェクトのみ）
+   * @query includeDeleted 削除済みプロジェクトも含めるか
    */
   getUserProjects = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -110,7 +128,12 @@ export class UserController {
         throw new AuthorizationError('自分のプロジェクト一覧のみ取得できます');
       }
 
-      const projects = await this.userService.getProjects(userId);
+      const query = getUserProjectsQuerySchema.parse(req.query);
+      const projects = await this.userService.getProjects(userId, {
+        q: query.q,
+        organizationId: query.organizationId,
+        includeDeleted: query.includeDeleted,
+      });
 
       res.json({ projects });
     } catch (error) {

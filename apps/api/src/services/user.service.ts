@@ -72,13 +72,46 @@ export class UserService {
 
   /**
    * ユーザーのプロジェクト一覧を取得
+   * @param userId ユーザーID
+   * @param options 検索オプション
+   * @param options.q 名前部分一致検索
+   * @param options.organizationId 組織フィルタ（null指定で個人プロジェクトのみ）
+   * @param options.includeDeleted 削除済みプロジェクトも含めるか（デフォルト: false）
    */
-  async getProjects(userId: string) {
+  async getProjects(
+    userId: string,
+    options: {
+      q?: string;
+      organizationId?: string | null;
+      includeDeleted?: boolean;
+    } = {}
+  ) {
+    const { q, organizationId, includeDeleted = false } = options;
+
+    // 削除条件
+    const deletedCondition = includeDeleted ? {} : { deletedAt: null };
+
+    // 名前検索条件
+    const nameCondition = q ? { name: { contains: q, mode: 'insensitive' as const } } : {};
+
+    // 組織フィルタ条件
+    // organizationId が undefined の場合: フィルタなし（全組織 + 個人）
+    // organizationId が null の場合: 個人プロジェクトのみ
+    // organizationId が文字列の場合: その組織のプロジェクトのみ
+    const orgCondition =
+      organizationId === undefined
+        ? {}
+        : organizationId === null
+          ? { organizationId: null }
+          : { organizationId };
+
     // ユーザーがオーナーのプロジェクト
     const ownedProjects = await prisma.project.findMany({
       where: {
         ownerId: userId,
-        deletedAt: null,
+        ...deletedCondition,
+        ...nameCondition,
+        ...orgCondition,
       },
       include: {
         organization: {
@@ -92,7 +125,14 @@ export class UserService {
 
     // ユーザーがメンバーのプロジェクト
     const memberProjects = await prisma.projectMember.findMany({
-      where: { userId },
+      where: {
+        userId,
+        project: {
+          ...deletedCondition,
+          ...nameCondition,
+          ...orgCondition,
+        },
+      },
       include: {
         project: {
           include: {
@@ -113,7 +153,9 @@ export class UserService {
       projectMap.set(p.id, { ...p, role: 'OWNER' });
     }
     for (const m of memberProjects) {
-      if (!projectMap.has(m.project.id) && !m.project.deletedAt) {
+      // includeDeleted が true の場合は deletedAt チェックをスキップ
+      const shouldInclude = includeDeleted || !m.project.deletedAt;
+      if (!projectMap.has(m.project.id) && shouldInclude) {
         projectMap.set(m.project.id, { ...m.project, role: m.role });
       }
     }
