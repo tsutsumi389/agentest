@@ -215,6 +215,120 @@ export class ProjectService {
   }
 
   /**
+   * 環境を更新
+   */
+  async updateEnvironment(
+    projectId: string,
+    environmentId: string,
+    data: { name?: string; slug?: string; baseUrl?: string | null; description?: string | null; isDefault?: boolean }
+  ) {
+    await this.findById(projectId);
+
+    // 環境が存在するか確認
+    const environment = await prisma.projectEnvironment.findUnique({
+      where: { id: environmentId },
+    });
+
+    if (!environment || environment.projectId !== projectId) {
+      throw new NotFoundError('Environment', environmentId);
+    }
+
+    // スラッグの重複チェック（変更がある場合のみ）
+    if (data.slug && data.slug !== environment.slug) {
+      const existing = await prisma.projectEnvironment.findUnique({
+        where: {
+          projectId_slug: { projectId, slug: data.slug },
+        },
+      });
+
+      if (existing) {
+        throw new ConflictError('このスラッグは既に使用されています');
+      }
+    }
+
+    // デフォルト環境の場合、他のデフォルトを解除
+    if (data.isDefault && !environment.isDefault) {
+      await prisma.projectEnvironment.updateMany({
+        where: { projectId, isDefault: true },
+        data: { isDefault: false },
+      });
+    }
+
+    return prisma.projectEnvironment.update({
+      where: { id: environmentId },
+      data,
+    });
+  }
+
+  /**
+   * 環境を削除
+   */
+  async deleteEnvironment(projectId: string, environmentId: string) {
+    await this.findById(projectId);
+
+    // 環境が存在するか確認
+    const environment = await prisma.projectEnvironment.findUnique({
+      where: { id: environmentId },
+    });
+
+    if (!environment || environment.projectId !== projectId) {
+      throw new NotFoundError('Environment', environmentId);
+    }
+
+    // 実行中のテストで使用されていないかチェック
+    const inProgressExecution = await prisma.execution.findFirst({
+      where: {
+        environmentId,
+        status: 'IN_PROGRESS',
+      },
+    });
+
+    if (inProgressExecution) {
+      throw new ConflictError('この環境は実行中のテストで使用されているため削除できません');
+    }
+
+    return prisma.projectEnvironment.delete({
+      where: { id: environmentId },
+    });
+  }
+
+  /**
+   * 環境の並び順を更新
+   */
+  async reorderEnvironments(projectId: string, environmentIds: string[]) {
+    await this.findById(projectId);
+
+    // 指定されたすべての環境がこのプロジェクトに属しているか確認
+    const environments = await prisma.projectEnvironment.findMany({
+      where: { projectId },
+      select: { id: true },
+    });
+
+    const projectEnvIds = new Set(environments.map((e) => e.id));
+
+    for (const id of environmentIds) {
+      if (!projectEnvIds.has(id)) {
+        throw new NotFoundError('Environment', id);
+      }
+    }
+
+    // sortOrderを一括更新
+    await prisma.$transaction(
+      environmentIds.map((id, index) =>
+        prisma.projectEnvironment.update({
+          where: { id },
+          data: { sortOrder: index },
+        })
+      )
+    );
+
+    return prisma.projectEnvironment.findMany({
+      where: { projectId },
+      orderBy: { sortOrder: 'asc' },
+    });
+  }
+
+  /**
    * テストスイート一覧を取得
    */
   async getTestSuites(projectId: string) {

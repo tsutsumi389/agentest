@@ -123,6 +123,28 @@ export const projectEnvironmentSchema = z.object({
   isDefault: z.boolean().default(false),
 });
 
+// 環境作成スキーマ（projectEnvironmentSchemaと同じ）
+export const projectEnvironmentCreateSchema = projectEnvironmentSchema;
+
+// 環境更新スキーマ（全フィールドoptional）
+export const projectEnvironmentUpdateSchema = z.object({
+  name: z.string().min(1).max(50).optional(),
+  slug: z
+    .string()
+    .min(1)
+    .max(50)
+    .regex(/^[a-z0-9-]+$/)
+    .optional(),
+  baseUrl: z.string().url().nullish(),
+  description: z.string().max(200).nullish(),
+  isDefault: z.boolean().optional(),
+});
+
+// 環境並替スキーマ
+export const projectEnvironmentReorderSchema = z.object({
+  environmentIds: z.array(z.string().uuid()).min(1),
+});
+
 // テストスイートスキーマ
 export const testSuiteCreateSchema = z.object({
   name: z.string().min(1).max(200),
@@ -199,6 +221,9 @@ export type OrganizationInvite = z.infer<typeof organizationInviteSchema>;
 export type ProjectCreate = z.infer<typeof projectCreateSchema>;
 export type ProjectUpdate = z.infer<typeof projectUpdateSchema>;
 export type ProjectEnvironmentInput = z.infer<typeof projectEnvironmentSchema>;
+export type ProjectEnvironmentCreate = z.infer<typeof projectEnvironmentCreateSchema>;
+export type ProjectEnvironmentUpdate = z.infer<typeof projectEnvironmentUpdateSchema>;
+export type ProjectEnvironmentReorder = z.infer<typeof projectEnvironmentReorderSchema>;
 export type TestSuiteCreate = z.infer<typeof testSuiteCreateSchema>;
 export type TestSuiteUpdate = z.infer<typeof testSuiteUpdateSchema>;
 export type TestCaseCreate = z.infer<typeof testCaseCreateSchema>;

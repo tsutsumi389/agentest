@@ -30,6 +30,18 @@ const createEnvironmentSchema = z.object({
   isDefault: z.boolean().default(false),
 });
 
+const updateEnvironmentSchema = z.object({
+  name: z.string().min(1).max(50).optional(),
+  slug: z.string().min(1).max(50).regex(/^[a-z0-9-]+$/).optional(),
+  baseUrl: z.string().url().optional().nullable(),
+  description: z.string().max(200).optional().nullable(),
+  isDefault: z.boolean().optional(),
+});
+
+const reorderEnvironmentsSchema = z.object({
+  environmentIds: z.array(z.string().uuid()).min(1),
+});
+
 /**
  * プロジェクトコントローラー
  */
@@ -175,6 +187,50 @@ export class ProjectController {
       const environment = await this.projectService.createEnvironment(projectId, data);
 
       res.status(201).json({ environment });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 環境更新
+   */
+  updateEnvironment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { projectId, environmentId } = req.params;
+      const data = updateEnvironmentSchema.parse(req.body);
+      const environment = await this.projectService.updateEnvironment(projectId, environmentId, data);
+
+      res.json({ environment });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 環境削除
+   */
+  deleteEnvironment = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { projectId, environmentId } = req.params;
+      await this.projectService.deleteEnvironment(projectId, environmentId);
+
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 環境並替
+   */
+  reorderEnvironments = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { projectId } = req.params;
+      const data = reorderEnvironmentsSchema.parse(req.body);
+      const environments = await this.projectService.reorderEnvironments(projectId, data.environmentIds);
+
+      res.json({ environments });
     } catch (error) {
       next(error);
     }
