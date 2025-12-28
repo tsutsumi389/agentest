@@ -97,7 +97,7 @@ async countHistories(id)          // 履歴件数
 
 ```typescript
 async getHistories(testSuiteId, { limit, offset })
-async restore(testSuiteId, userId)  // 30日以内チェック
+async restore(testSuiteId, userId)  // 期限制限なし
 ```
 
 ---
