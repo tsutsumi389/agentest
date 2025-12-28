@@ -134,7 +134,7 @@ export class TestSuiteController {
     try {
       const { testSuiteId } = req.params;
       const data = addPreconditionSchema.parse(req.body);
-      const precondition = await this.testSuiteService.addPrecondition(testSuiteId, data);
+      const precondition = await this.testSuiteService.addPrecondition(testSuiteId, req.user!.id, data);
 
       res.status(201).json({ precondition });
     } catch (error) {

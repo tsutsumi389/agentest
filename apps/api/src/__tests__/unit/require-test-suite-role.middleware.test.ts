@@ -19,11 +19,18 @@ vi.mock('@agentest/db', () => ({
 // モック設定後にインポート
 import { requireTestSuiteRole } from '../../middleware/require-test-suite-role.js';
 
+// テスト用の固定UUID
+const TEST_USER_ID = '11111111-1111-1111-1111-111111111111';
+const TEST_SUITE_ID = '22222222-2222-2222-2222-222222222222';
+const TEST_PROJECT_ID = '33333333-3333-3333-3333-333333333333';
+const TEST_ORG_ID = '44444444-4444-4444-4444-444444444444';
+const OTHER_USER_ID = '55555555-5555-5555-5555-555555555555';
+
 // Express req, res, next のモック作成
 function createMockRequest(overrides: Partial<Request> = {}): Partial<Request> {
   return {
-    user: { id: 'user-1' },
-    params: { testSuiteId: 'test-suite-1' },
+    user: { id: TEST_USER_ID },
+    params: { testSuiteId: TEST_SUITE_ID },
     ...overrides,
   };
 }
@@ -83,11 +90,11 @@ describe('requireTestSuiteRole', () => {
 
     it('削除済みテストスイートはNotFoundErrorを投げる（allowDeletedSuite: false）', async () => {
       mockPrisma.testSuite.findUnique.mockResolvedValue({
-        id: 'test-suite-1',
+        id: TEST_SUITE_ID,
         deletedAt: new Date(),
         project: {
-          id: 'project-1',
-          ownerId: 'other-user',
+          id: TEST_PROJECT_ID,
+          ownerId: OTHER_USER_ID,
           deletedAt: null,
           organizationId: null,
           members: [],
@@ -105,11 +112,11 @@ describe('requireTestSuiteRole', () => {
 
     it('削除済みテストスイートでもallowDeletedSuite: trueなら通過する', async () => {
       mockPrisma.testSuite.findUnique.mockResolvedValue({
-        id: 'test-suite-1',
+        id: TEST_SUITE_ID,
         deletedAt: new Date(),
         project: {
-          id: 'project-1',
-          ownerId: 'user-1', // オーナー
+          id: TEST_PROJECT_ID,
+          ownerId: TEST_USER_ID, // オーナー
           deletedAt: null,
           organizationId: null,
           members: [],
@@ -129,11 +136,11 @@ describe('requireTestSuiteRole', () => {
   describe('プロジェクト削除チェック', () => {
     it('削除済みプロジェクトはAuthorizationErrorを投げる', async () => {
       mockPrisma.testSuite.findUnique.mockResolvedValue({
-        id: 'test-suite-1',
+        id: TEST_SUITE_ID,
         deletedAt: null,
         project: {
-          id: 'project-1',
-          ownerId: 'user-1',
+          id: TEST_PROJECT_ID,
+          ownerId: TEST_USER_ID,
           deletedAt: new Date(), // 削除済み
           organizationId: null,
           members: [],
@@ -155,11 +162,11 @@ describe('requireTestSuiteRole', () => {
   describe('プロジェクトオーナー権限', () => {
     it('プロジェクトオーナーは全権限を持つ', async () => {
       mockPrisma.testSuite.findUnique.mockResolvedValue({
-        id: 'test-suite-1',
+        id: TEST_SUITE_ID,
         deletedAt: null,
         project: {
-          id: 'project-1',
-          ownerId: 'user-1', // リクエストユーザーがオーナー
+          id: TEST_PROJECT_ID,
+          ownerId: TEST_USER_ID, // リクエストユーザーがオーナー
           deletedAt: null,
           organizationId: null,
           members: [],
@@ -173,21 +180,21 @@ describe('requireTestSuiteRole', () => {
       await middleware(req as Request, res as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(); // エラーなし
-      expect(req.params?.projectId).toBe('project-1');
+      expect(req.params?.projectId).toBe(TEST_PROJECT_ID);
     });
   });
 
   describe('プロジェクトメンバー権限', () => {
     it('必要なロールを持つメンバーは通過する', async () => {
       mockPrisma.testSuite.findUnique.mockResolvedValue({
-        id: 'test-suite-1',
+        id: TEST_SUITE_ID,
         deletedAt: null,
         project: {
-          id: 'project-1',
-          ownerId: 'other-user',
+          id: TEST_PROJECT_ID,
+          ownerId: OTHER_USER_ID,
           deletedAt: null,
           organizationId: null,
-          members: [{ userId: 'user-1', role: 'WRITE' }],
+          members: [{ userId: TEST_USER_ID, role: 'WRITE' }],
         },
       });
 
@@ -198,19 +205,19 @@ describe('requireTestSuiteRole', () => {
       await middleware(req as Request, res as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(); // エラーなし
-      expect(req.params?.projectId).toBe('project-1');
+      expect(req.params?.projectId).toBe(TEST_PROJECT_ID);
     });
 
     it('必要なロールを持たないメンバーはAuthorizationErrorを投げる', async () => {
       mockPrisma.testSuite.findUnique.mockResolvedValue({
-        id: 'test-suite-1',
+        id: TEST_SUITE_ID,
         deletedAt: null,
         project: {
-          id: 'project-1',
-          ownerId: 'other-user',
+          id: TEST_PROJECT_ID,
+          ownerId: OTHER_USER_ID,
           deletedAt: null,
           organizationId: null,
-          members: [{ userId: 'user-1', role: 'READ' }], // READのみ
+          members: [{ userId: TEST_USER_ID, role: 'READ' }], // READのみ
         },
       });
 
@@ -227,11 +234,11 @@ describe('requireTestSuiteRole', () => {
 
     it('メンバーでないユーザーはAuthorizationErrorを投げる', async () => {
       mockPrisma.testSuite.findUnique.mockResolvedValue({
-        id: 'test-suite-1',
+        id: TEST_SUITE_ID,
         deletedAt: null,
         project: {
-          id: 'project-1',
-          ownerId: 'other-user',
+          id: TEST_PROJECT_ID,
+          ownerId: OTHER_USER_ID,
           deletedAt: null,
           organizationId: null,
           members: [], // メンバーではない
@@ -251,19 +258,19 @@ describe('requireTestSuiteRole', () => {
   describe('組織メンバー権限フォールバック', () => {
     it('プロジェクトメンバーでなくても組織OWNER/ADMINなら通過する', async () => {
       mockPrisma.testSuite.findUnique.mockResolvedValue({
-        id: 'test-suite-1',
+        id: TEST_SUITE_ID,
         deletedAt: null,
         project: {
-          id: 'project-1',
-          ownerId: 'other-user',
+          id: TEST_PROJECT_ID,
+          ownerId: OTHER_USER_ID,
           deletedAt: null,
-          organizationId: 'org-1',
+          organizationId: TEST_ORG_ID,
           members: [], // プロジェクトメンバーではない
         },
       });
       mockPrisma.organizationMember.findUnique.mockResolvedValue({
-        userId: 'user-1',
-        organizationId: 'org-1',
+        userId: TEST_USER_ID,
+        organizationId: TEST_ORG_ID,
         role: 'ADMIN', // 組織ADMIN
       });
 
@@ -276,30 +283,30 @@ describe('requireTestSuiteRole', () => {
       expect(mockPrisma.organizationMember.findUnique).toHaveBeenCalledWith({
         where: {
           organizationId_userId: {
-            organizationId: 'org-1',
-            userId: 'user-1',
+            organizationId: TEST_ORG_ID,
+            userId: TEST_USER_ID,
           },
         },
       });
       expect(mockNext).toHaveBeenCalledWith(); // エラーなし
-      expect(req.params?.projectId).toBe('project-1');
+      expect(req.params?.projectId).toBe(TEST_PROJECT_ID);
     });
 
     it('組織OWNERも通過する', async () => {
       mockPrisma.testSuite.findUnique.mockResolvedValue({
-        id: 'test-suite-1',
+        id: TEST_SUITE_ID,
         deletedAt: null,
         project: {
-          id: 'project-1',
-          ownerId: 'other-user',
+          id: TEST_PROJECT_ID,
+          ownerId: OTHER_USER_ID,
           deletedAt: null,
-          organizationId: 'org-1',
+          organizationId: TEST_ORG_ID,
           members: [],
         },
       });
       mockPrisma.organizationMember.findUnique.mockResolvedValue({
-        userId: 'user-1',
-        organizationId: 'org-1',
+        userId: TEST_USER_ID,
+        organizationId: TEST_ORG_ID,
         role: 'OWNER', // 組織OWNER
       });
 
@@ -314,19 +321,19 @@ describe('requireTestSuiteRole', () => {
 
     it('組織MEMBERはフォールバックでは通過しない', async () => {
       mockPrisma.testSuite.findUnique.mockResolvedValue({
-        id: 'test-suite-1',
+        id: TEST_SUITE_ID,
         deletedAt: null,
         project: {
-          id: 'project-1',
-          ownerId: 'other-user',
+          id: TEST_PROJECT_ID,
+          ownerId: OTHER_USER_ID,
           deletedAt: null,
-          organizationId: 'org-1',
+          organizationId: TEST_ORG_ID,
           members: [],
         },
       });
       mockPrisma.organizationMember.findUnique.mockResolvedValue({
-        userId: 'user-1',
-        organizationId: 'org-1',
+        userId: TEST_USER_ID,
+        organizationId: TEST_ORG_ID,
         role: 'MEMBER', // 組織MEMBER（OWNER/ADMINではない）
       });
 
@@ -341,13 +348,13 @@ describe('requireTestSuiteRole', () => {
 
     it('組織メンバーでもない場合はAuthorizationErrorを投げる', async () => {
       mockPrisma.testSuite.findUnique.mockResolvedValue({
-        id: 'test-suite-1',
+        id: TEST_SUITE_ID,
         deletedAt: null,
         project: {
-          id: 'project-1',
-          ownerId: 'other-user',
+          id: TEST_PROJECT_ID,
+          ownerId: OTHER_USER_ID,
           deletedAt: null,
-          organizationId: 'org-1',
+          organizationId: TEST_ORG_ID,
           members: [],
         },
       });
@@ -372,14 +379,14 @@ describe('requireTestSuiteRole', () => {
       ['WRITE', ['WRITE']],
     ])('ロール %s は許可ロール %j に含まれる場合通過する', async (memberRole, allowedRoles) => {
       mockPrisma.testSuite.findUnique.mockResolvedValue({
-        id: 'test-suite-1',
+        id: TEST_SUITE_ID,
         deletedAt: null,
         project: {
-          id: 'project-1',
-          ownerId: 'other-user',
+          id: TEST_PROJECT_ID,
+          ownerId: OTHER_USER_ID,
           deletedAt: null,
           organizationId: null,
-          members: [{ userId: 'user-1', role: memberRole }],
+          members: [{ userId: TEST_USER_ID, role: memberRole }],
         },
       });
 

@@ -123,8 +123,8 @@ export class TestSuiteService {
   /**
    * 前提条件を追加
    */
-  async addPrecondition(testSuiteId: string, data: { content: string; orderKey?: string }) {
-    await this.findById(testSuiteId);
+  async addPrecondition(testSuiteId: string, userId: string, data: { content: string; orderKey?: string }) {
+    const testSuite = await this.findById(testSuiteId);
 
     // orderKeyが指定されていない場合は自動生成
     let orderKey = data.orderKey;
@@ -136,13 +136,33 @@ export class TestSuiteService {
       orderKey = lastPrecondition ? `${parseInt(lastPrecondition.orderKey) + 1}`.padStart(5, '0') : '00001';
     }
 
-    return prisma.testSuitePrecondition.create({
+    const precondition = await prisma.testSuitePrecondition.create({
       data: {
         testSuiteId,
         content: data.content,
         orderKey,
       },
     });
+
+    // 履歴を保存
+    await prisma.testSuiteHistory.create({
+      data: {
+        testSuiteId,
+        changedByUserId: userId,
+        changeType: 'UPDATE',
+        snapshot: {
+          ...testSuite,
+          preconditions: [precondition],
+          changeDetail: {
+            type: 'PRECONDITION_ADD',
+            preconditionId: precondition.id,
+            added: { content: precondition.content, orderKey: precondition.orderKey },
+          },
+        } as unknown as object,
+      },
+    });
+
+    return precondition;
   }
 
   /**
@@ -244,17 +264,22 @@ export class TestSuiteService {
   async reorderPreconditions(testSuiteId: string, preconditionIds: string[], userId: string) {
     const testSuite = await this.findById(testSuiteId);
 
+    // 全ての前提条件を取得
+    const preconditions = await prisma.testSuitePrecondition.findMany({
+      where: { testSuiteId },
+      orderBy: { orderKey: 'asc' },
+    });
+
+    // 空配列チェック（前提条件が0件の場合はそのまま返す）
+    if (preconditions.length === 0 && preconditionIds.length === 0) {
+      return [];
+    }
+
     // 重複IDのチェック
     const uniqueIds = new Set(preconditionIds);
     if (uniqueIds.size !== preconditionIds.length) {
       throw new BadRequestError('Duplicate precondition IDs are not allowed');
     }
-
-    // 全ての前提条件が存在するか確認
-    const preconditions = await prisma.testSuitePrecondition.findMany({
-      where: { testSuiteId },
-      orderBy: { orderKey: 'asc' },
-    });
 
     // 全件指定されているか確認
     if (preconditionIds.length !== preconditions.length) {

@@ -1,6 +1,9 @@
 import type { Request, Response, NextFunction } from 'express';
+import { z } from 'zod';
 import { prisma, type ProjectRole } from '@agentest/db';
-import { AuthenticationError, AuthorizationError, NotFoundError } from '@agentest/shared';
+import { AuthenticationError, AuthorizationError, NotFoundError, BadRequestError } from '@agentest/shared';
+
+const testSuiteIdSchema = z.string().uuid();
 
 export interface RequireTestSuiteRoleOptions {
   /**
@@ -31,6 +34,12 @@ export function requireTestSuiteRole(roles: ProjectRole[], options: RequireTestS
 
       if (!testSuiteId) {
         throw new AuthorizationError('Test suite ID required');
+      }
+
+      // UUID形式のバリデーション
+      const parseResult = testSuiteIdSchema.safeParse(testSuiteId);
+      if (!parseResult.success) {
+        throw new BadRequestError('Invalid test suite ID format');
       }
 
       // テストスイートとプロジェクト情報を取得
