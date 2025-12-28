@@ -301,6 +301,21 @@ export interface UpdateUserRequest {
   avatarUrl?: string | null;
 }
 
+/** プロジェクト検索オプション */
+export interface GetProjectsOptions {
+  q?: string;
+  organizationId?: string | null;
+  includeDeleted?: boolean;
+  limit?: number;
+  offset?: number;
+}
+
+/** 拡張プロジェクト型（削除日時とロールを含む） */
+export interface ProjectWithRole extends Project {
+  deletedAt?: string | null;
+  role?: 'OWNER' | 'ADMIN' | 'WRITE' | 'READ';
+}
+
 export const usersApi = {
   getOrganizations: (userId: string, options?: { includeDeleted?: boolean }) => {
     const query = new URLSearchParams();
@@ -310,7 +325,21 @@ export const usersApi = {
       `/api/users/${userId}/organizations${queryString ? `?${queryString}` : ''}`
     );
   },
-  getProjects: (userId: string) => api.get<{ projects: Project[] }>(`/api/users/${userId}/projects`),
+  getProjects: (userId: string, options?: GetProjectsOptions) => {
+    const query = new URLSearchParams();
+    if (options?.q) query.set('q', options.q);
+    // organizationIdがnullの場合は個人プロジェクトのみ、undefinedの場合はフィルタなし
+    if (options?.organizationId !== undefined) {
+      query.set('organizationId', options.organizationId === null ? 'personal' : options.organizationId);
+    }
+    if (options?.includeDeleted) query.set('includeDeleted', 'true');
+    if (options?.limit) query.set('limit', String(options.limit));
+    if (options?.offset) query.set('offset', String(options.offset));
+    const queryString = query.toString();
+    return api.get<{ projects: ProjectWithRole[] }>(
+      `/api/users/${userId}/projects${queryString ? `?${queryString}` : ''}`
+    );
+  },
   update: (userId: string, data: UpdateUserRequest) =>
     api.patch<{ user: User }>(`/api/users/${userId}`, data),
 };
