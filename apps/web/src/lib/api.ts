@@ -227,6 +227,25 @@ export interface TestSuite {
   _count?: { testCases: number; preconditions: number };
 }
 
+/** プロジェクト履歴の変更タイプ */
+export type ProjectChangeType = 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE';
+
+/** プロジェクト履歴 */
+export interface ProjectHistory {
+  id: string;
+  projectId: string;
+  changeType: ProjectChangeType;
+  snapshot: Record<string, unknown>;
+  changeReason: string | null;
+  createdAt: string;
+  changedBy: {
+    id: string;
+    email: string;
+    name: string;
+    avatarUrl: string | null;
+  } | null;
+}
+
 /** プロジェクト環境 */
 export interface ProjectEnvironment {
   id: string;
@@ -379,6 +398,21 @@ export const projectsApi = {
     api.delete<void>(`/api/projects/${projectId}/environments/${environmentId}`),
   reorderEnvironments: (projectId: string, environmentIds: string[]) =>
     api.post<{ environments: ProjectEnvironment[] }>(`/api/projects/${projectId}/environments/reorder`, { environmentIds }),
+
+  // 履歴管理
+  getHistories: (projectId: string, params?: { limit?: number; offset?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.limit) query.set('limit', String(params.limit));
+    if (params?.offset) query.set('offset', String(params.offset));
+    const queryString = query.toString();
+    return api.get<{ histories: ProjectHistory[]; total: number }>(
+      `/api/projects/${projectId}/histories${queryString ? `?${queryString}` : ''}`
+    );
+  },
+
+  // 復元
+  restore: (projectId: string) =>
+    api.post<{ project: Project }>(`/api/projects/${projectId}/restore`),
 };
 
 // ============================================

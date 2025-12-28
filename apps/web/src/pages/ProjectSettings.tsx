@@ -10,13 +10,13 @@ import {
   ArrowLeft,
   Loader2,
 } from 'lucide-react';
-import { projectsApi, ApiError, type Project } from '../lib/api';
+import { projectsApi, usersApi, ApiError, type Project, type ProjectWithRole } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
-import { toast } from '../stores/toast';
 import { ProjectGeneralSettings } from '../components/project/ProjectGeneralSettings';
 import { ProjectMemberList } from '../components/project/ProjectMemberList';
 import { EnvironmentList } from '../components/project/EnvironmentList';
-import { ConfirmDialog } from '../components/common/ConfirmDialog';
+import { HistoryList } from '../components/project/HistoryList';
+import { DeleteProjectSection } from '../components/project/DeleteProjectSection';
 
 type SettingsTab = 'general' | 'members' | 'environments' | 'history' | 'danger';
 
@@ -39,6 +39,7 @@ export function ProjectSettingsPage() {
 
   // プロジェクトデータ
   const [project, setProject] = useState<Project | null>(null);
+  const [deletedAt, setDeletedAt] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,33 +50,50 @@ export function ProjectSettingsPage() {
 
   // プロジェクトデータを取得
   const fetchProject = useCallback(async () => {
-    if (!projectId) return;
+    if (!projectId || !user?.id) return;
 
     setIsLoading(true);
     setError(null);
     setCurrentRole(null);
+    setDeletedAt(null);
 
     try {
-      const response = await projectsApi.getById(projectId);
-      setProject(response.project);
+      // プロジェクト一覧から取得（deletedAtとroleを含む）
+      const projectsResponse = await usersApi.getProjects(user.id, { includeDeleted: true });
+      const projectWithRole = projectsResponse.projects.find((p) => p.id === projectId);
 
-      // オーナー判定
-      if (response.project.ownerId === user?.id) {
-        setCurrentRole('OWNER');
+      if (projectWithRole) {
+        setProject(projectWithRole);
+        setDeletedAt(projectWithRole.deletedAt ?? null);
+
+        // ロールの設定
+        if (projectWithRole.role) {
+          setCurrentRole(projectWithRole.role);
+        } else if (projectWithRole.ownerId === user.id) {
+          setCurrentRole('OWNER');
+        }
       } else {
-        // メンバーのロールを取得（APIからロールが返ってくる場合）
-        // 現時点ではメンバー一覧から自分のロールを取得
-        setIsLoadingRole(true);
-        try {
-          const membersResponse = await projectsApi.getMembers(projectId);
-          const myMembership = membersResponse.members.find((m) => m.userId === user?.id);
-          if (myMembership) {
-            setCurrentRole(myMembership.role);
+        // 一覧にない場合は直接取得を試みる
+        const response = await projectsApi.getById(projectId);
+        setProject(response.project);
+
+        // オーナー判定
+        if (response.project.ownerId === user.id) {
+          setCurrentRole('OWNER');
+        } else {
+          // メンバーのロールを取得
+          setIsLoadingRole(true);
+          try {
+            const membersResponse = await projectsApi.getMembers(projectId);
+            const myMembership = membersResponse.members.find((m) => m.userId === user.id);
+            if (myMembership) {
+              setCurrentRole(myMembership.role);
+            }
+          } catch {
+            // メンバー取得に失敗しても続行（権限なしとして扱う）
+          } finally {
+            setIsLoadingRole(false);
           }
-        } catch {
-          // メンバー取得に失敗しても続行（権限なしとして扱う）
-        } finally {
-          setIsLoadingRole(false);
         }
       }
     } catch (err) {
@@ -109,6 +127,12 @@ export function ProjectSettingsPage() {
   // プロジェクト更新後のコールバック
   const handleProjectUpdated = (updated: Project) => {
     setProject(updated);
+    // 復元された場合はdeletedAtをリセット
+    if ('deletedAt' in updated) {
+      setDeletedAt((updated as ProjectWithRole).deletedAt ?? null);
+    } else {
+      setDeletedAt(null);
+    }
   };
 
   // タブ定義
@@ -236,83 +260,17 @@ export function ProjectSettingsPage() {
             />
           )}
           {activeTab === 'history' && (
-            <HistoryPlaceholder />
+            <HistoryList project={project} />
           )}
           {activeTab === 'danger' && (
-            <DangerPlaceholder projectId={project.id} />
+            <DeleteProjectSection
+              project={project}
+              deletedAt={deletedAt}
+              onUpdated={handleProjectUpdated}
+            />
           )}
         </div>
       </div>
-    </div>
-  );
-}
-
-/**
- * 履歴タブのプレースホルダー（Step 4で実装）
- */
-function HistoryPlaceholder() {
-  return (
-    <div className="card p-6">
-      <h2 className="text-lg font-semibold text-foreground mb-4">変更履歴</h2>
-      <p className="text-foreground-muted">
-        変更履歴機能は後続のステップで実装予定です。
-      </p>
-    </div>
-  );
-}
-
-/**
- * 危険な操作タブのプレースホルダー（Step 4で実装）
- */
-function DangerPlaceholder({ projectId }: { projectId: string }) {
-  const navigate = useNavigate();
-  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-
-  const handleDelete = async () => {
-    setIsDeleting(true);
-
-    try {
-      await projectsApi.delete(projectId);
-      toast.success('プロジェクトを削除しました');
-      navigate('/projects');
-    } catch (err) {
-      if (err instanceof ApiError) {
-        toast.error(err.message);
-      } else {
-        toast.error('プロジェクトの削除に失敗しました');
-      }
-      setIsDeleting(false);
-      setIsConfirmOpen(false);
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      <div className="card p-6 border-danger">
-        <h3 className="text-lg font-semibold text-danger mb-2">プロジェクトを削除</h3>
-        <p className="text-foreground-muted text-sm mb-4">
-          プロジェクトを削除すると、すべてのテストスイート、テストケース、実行履歴が削除されます。
-          この操作は取り消せません。
-        </p>
-        <button
-          className="btn btn-danger"
-          onClick={() => setIsConfirmOpen(true)}
-        >
-          プロジェクトを削除
-        </button>
-      </div>
-
-      <ConfirmDialog
-        isOpen={isConfirmOpen}
-        title="プロジェクトを削除"
-        message="本当にこのプロジェクトを削除しますか？すべてのテストスイート、テストケース、実行履歴が削除されます。この操作は取り消せません。"
-        confirmLabel="削除する"
-        onConfirm={handleDelete}
-        onCancel={() => setIsConfirmOpen(false)}
-        isLoading={isDeleting}
-        isDanger
-      />
     </div>
   );
 }
