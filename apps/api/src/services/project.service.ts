@@ -116,7 +116,18 @@ export class ProjectService {
         select: { id: true, email: true, name: true, avatarUrl: true },
       });
       if (owner) {
-        return [{ user: owner, role: 'OWNER', addedAt: project.createdAt }, ...members];
+        // ProjectMember型と互換性を持たせるためにid, projectId, userIdを追加
+        return [
+          {
+            id: `owner-${project.id}`,
+            projectId: project.id,
+            userId: owner.id,
+            user: owner,
+            role: 'OWNER' as const,
+            addedAt: project.createdAt,
+          },
+          ...members,
+        ];
       }
     }
 

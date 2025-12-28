@@ -206,7 +206,7 @@ export interface ProjectMember {
   id: string;
   projectId: string;
   userId: string;
-  role: ProjectMemberRole;
+  role: 'OWNER' | ProjectMemberRole;
   addedAt: string;
   user: {
     id: string;

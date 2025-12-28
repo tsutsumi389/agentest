@@ -17,7 +17,8 @@ interface ProjectMemberListProps {
 /**
  * ロールの表示名
  */
-const ROLE_LABELS: Record<ProjectMemberRole, string> = {
+const ROLE_LABELS: Record<'OWNER' | ProjectMemberRole, string> = {
+  OWNER: 'オーナー',
   ADMIN: '管理者',
   WRITE: '編集者',
   READ: '閲覧者',
@@ -26,8 +27,10 @@ const ROLE_LABELS: Record<ProjectMemberRole, string> = {
 /**
  * ロールのアイコン
  */
-function RoleIcon({ role, className }: { role: ProjectMemberRole; className?: string }) {
+function RoleIcon({ role, className }: { role: 'OWNER' | ProjectMemberRole; className?: string }) {
   switch (role) {
+    case 'OWNER':
+      return <Shield className={className} />;
     case 'ADMIN':
       return <Shield className={className} />;
     case 'WRITE':
@@ -38,7 +41,8 @@ function RoleIcon({ role, className }: { role: ProjectMemberRole; className?: st
 }
 
 /** ロールの優先順位（ソート用） */
-const ROLE_ORDER: Record<ProjectMemberRole, number> = {
+const ROLE_ORDER: Record<'OWNER' | ProjectMemberRole, number> = {
+  OWNER: -1,
   ADMIN: 0,
   WRITE: 1,
   READ: 2,
@@ -453,7 +457,7 @@ export function ProjectMemberList({ project, currentRole }: ProjectMemberListPro
                   <RoleIcon
                     role={member.role}
                     className={`w-4 h-4 ${
-                      member.role === 'ADMIN'
+                      member.role === 'OWNER' || member.role === 'ADMIN'
                         ? 'text-accent'
                         : member.role === 'WRITE'
                         ? 'text-success'
@@ -462,7 +466,7 @@ export function ProjectMemberList({ project, currentRole }: ProjectMemberListPro
                   />
                   <span
                     className={`text-sm font-medium ${
-                      member.role === 'ADMIN'
+                      member.role === 'OWNER' || member.role === 'ADMIN'
                         ? 'text-accent'
                         : member.role === 'WRITE'
                         ? 'text-success'
