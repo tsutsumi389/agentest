@@ -36,6 +36,11 @@ const startExecutionSchema = z.object({
   environmentId: z.string().uuid().optional(),
 });
 
+const paginationQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
 /**
  * テストスイートコントローラー
  */
@@ -194,8 +199,7 @@ export class TestSuiteController {
   getExecutions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testSuiteId } = req.params;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const offset = parseInt(req.query.offset as string) || 0;
+      const { limit, offset } = paginationQuerySchema.parse(req.query);
       const executions = await this.testSuiteService.getExecutions(testSuiteId, { limit, offset });
 
       res.json({ executions });
@@ -225,8 +229,7 @@ export class TestSuiteController {
   getHistories = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testSuiteId } = req.params;
-      const limit = parseInt(req.query.limit as string) || 20;
-      const offset = parseInt(req.query.offset as string) || 0;
+      const { limit, offset } = paginationQuerySchema.parse(req.query);
       const { histories, total } = await this.testSuiteService.getHistories(testSuiteId, { limit, offset });
 
       res.json({ histories, total });

@@ -1,6 +1,68 @@
-import { prisma, type EntityStatus } from '@agentest/db';
+import { prisma, type EntityStatus, type Prisma } from '@agentest/db';
 import { NotFoundError, BadRequestError, ConflictError } from '@agentest/shared';
 import { TestSuiteRepository } from '../repositories/test-suite.repository.js';
+
+/**
+ * テストスイートのスナップショット型（基本情報）
+ */
+type TestSuiteSnapshot = {
+  id: string;
+  projectId: string;
+  name: string;
+  description: string | null;
+  status: string;
+  deletedAt?: string | null;
+};
+
+/**
+ * 前提条件のスナップショット型
+ */
+type PreconditionSnapshot = {
+  id: string;
+  content: string;
+  orderKey: string;
+};
+
+/**
+ * 前提条件変更の詳細情報
+ */
+type PreconditionChangeDetail =
+  | {
+      type: 'PRECONDITION_ADD';
+      preconditionId: string;
+      added: { content: string; orderKey: string };
+    }
+  | {
+      type: 'PRECONDITION_UPDATE';
+      preconditionId: string;
+      before: { content: string };
+      after: { content: string };
+    }
+  | {
+      type: 'PRECONDITION_DELETE';
+      preconditionId: string;
+      deleted: { content: string; orderKey: string };
+    }
+  | {
+      type: 'PRECONDITION_REORDER';
+      before: string[];
+      after: string[];
+    };
+
+/**
+ * 履歴保存用のスナップショット型
+ */
+type HistorySnapshot = TestSuiteSnapshot & {
+  preconditions?: PreconditionSnapshot[];
+  changeDetail?: PreconditionChangeDetail;
+};
+
+/**
+ * スナップショットをPrismaのJSON型に変換
+ */
+function toJsonSnapshot(snapshot: TestSuiteSnapshot | HistorySnapshot): Prisma.InputJsonValue {
+  return snapshot as unknown as Prisma.InputJsonValue;
+}
 
 /**
  * テストスイートサービス
@@ -52,13 +114,21 @@ export class TestSuiteService {
   ) {
     const testSuite = await this.findById(testSuiteId);
 
+    const snapshot: TestSuiteSnapshot = {
+      id: testSuite.id,
+      projectId: testSuite.projectId,
+      name: testSuite.name,
+      description: testSuite.description,
+      status: testSuite.status,
+    };
+
     // 履歴を保存
     await prisma.testSuiteHistory.create({
       data: {
         testSuiteId,
         changedByUserId: userId,
         changeType: 'UPDATE',
-        snapshot: testSuite as unknown as object,
+        snapshot: toJsonSnapshot(snapshot),
       },
     });
 
@@ -71,13 +141,21 @@ export class TestSuiteService {
   async softDelete(testSuiteId: string, userId: string) {
     const testSuite = await this.findById(testSuiteId);
 
+    const snapshot: TestSuiteSnapshot = {
+      id: testSuite.id,
+      projectId: testSuite.projectId,
+      name: testSuite.name,
+      description: testSuite.description,
+      status: testSuite.status,
+    };
+
     // 履歴を保存
     await prisma.testSuiteHistory.create({
       data: {
         testSuiteId,
         changedByUserId: userId,
         changeType: 'DELETE',
-        snapshot: testSuite as unknown as object,
+        snapshot: toJsonSnapshot(snapshot),
       },
     });
 
@@ -144,21 +222,27 @@ export class TestSuiteService {
       },
     });
 
+    const snapshot: HistorySnapshot = {
+      id: testSuite.id,
+      projectId: testSuite.projectId,
+      name: testSuite.name,
+      description: testSuite.description,
+      status: testSuite.status,
+      preconditions: [{ id: precondition.id, content: precondition.content, orderKey: precondition.orderKey }],
+      changeDetail: {
+        type: 'PRECONDITION_ADD',
+        preconditionId: precondition.id,
+        added: { content: precondition.content, orderKey: precondition.orderKey },
+      },
+    };
+
     // 履歴を保存
     await prisma.testSuiteHistory.create({
       data: {
         testSuiteId,
         changedByUserId: userId,
         changeType: 'UPDATE',
-        snapshot: {
-          ...testSuite,
-          preconditions: [precondition],
-          changeDetail: {
-            type: 'PRECONDITION_ADD',
-            preconditionId: precondition.id,
-            added: { content: precondition.content, orderKey: precondition.orderKey },
-          },
-        } as unknown as object,
+        snapshot: toJsonSnapshot(snapshot),
       },
     });
 
@@ -179,22 +263,28 @@ export class TestSuiteService {
       throw new NotFoundError('Precondition', preconditionId);
     }
 
+    const snapshot: HistorySnapshot = {
+      id: testSuite.id,
+      projectId: testSuite.projectId,
+      name: testSuite.name,
+      description: testSuite.description,
+      status: testSuite.status,
+      preconditions: [{ id: precondition.id, content: precondition.content, orderKey: precondition.orderKey }],
+      changeDetail: {
+        type: 'PRECONDITION_UPDATE',
+        preconditionId,
+        before: { content: precondition.content },
+        after: { content: data.content },
+      },
+    };
+
     // 履歴を保存
     await prisma.testSuiteHistory.create({
       data: {
         testSuiteId,
         changedByUserId: userId,
         changeType: 'UPDATE',
-        snapshot: {
-          ...testSuite,
-          preconditions: [precondition],
-          changeDetail: {
-            type: 'PRECONDITION_UPDATE',
-            preconditionId,
-            before: { content: precondition.content },
-            after: { content: data.content },
-          },
-        } as unknown as object,
+        snapshot: toJsonSnapshot(snapshot),
       },
     });
 
@@ -218,6 +308,20 @@ export class TestSuiteService {
       throw new NotFoundError('Precondition', preconditionId);
     }
 
+    const snapshot: HistorySnapshot = {
+      id: testSuite.id,
+      projectId: testSuite.projectId,
+      name: testSuite.name,
+      description: testSuite.description,
+      status: testSuite.status,
+      preconditions: [{ id: precondition.id, content: precondition.content, orderKey: precondition.orderKey }],
+      changeDetail: {
+        type: 'PRECONDITION_DELETE',
+        preconditionId,
+        deleted: { content: precondition.content, orderKey: precondition.orderKey },
+      },
+    };
+
     // トランザクションで削除と再整列を実行
     await prisma.$transaction(async (tx) => {
       // 履歴を保存
@@ -226,15 +330,7 @@ export class TestSuiteService {
           testSuiteId,
           changedByUserId: userId,
           changeType: 'UPDATE',
-          snapshot: {
-            ...testSuite,
-            preconditions: [precondition],
-            changeDetail: {
-              type: 'PRECONDITION_DELETE',
-              preconditionId,
-              deleted: { content: precondition.content, orderKey: precondition.orderKey },
-            },
-          } as unknown as object,
+          snapshot: toJsonSnapshot(snapshot),
         },
       });
 
@@ -293,21 +389,27 @@ export class TestSuiteService {
       }
     }
 
+    const snapshot: HistorySnapshot = {
+      id: testSuite.id,
+      projectId: testSuite.projectId,
+      name: testSuite.name,
+      description: testSuite.description,
+      status: testSuite.status,
+      preconditions: preconditions.map((p) => ({ id: p.id, content: p.content, orderKey: p.orderKey })),
+      changeDetail: {
+        type: 'PRECONDITION_REORDER',
+        before: preconditions.map((p) => p.id),
+        after: preconditionIds,
+      },
+    };
+
     // 履歴を保存（並び替え前の状態）
     await prisma.testSuiteHistory.create({
       data: {
         testSuiteId,
         changedByUserId: userId,
         changeType: 'UPDATE',
-        snapshot: {
-          ...testSuite,
-          preconditions,
-          changeDetail: {
-            type: 'PRECONDITION_REORDER',
-            before: preconditions.map((p) => p.id),
-            after: preconditionIds,
-          },
-        } as unknown as object,
+        snapshot: toJsonSnapshot(snapshot),
       },
     });
 
@@ -488,7 +590,6 @@ export class TestSuiteService {
 
   /**
    * 削除済みテストスイートを復元
-   * 削除から30日以内のみ復元可能
    */
   async restore(testSuiteId: string, userId: string) {
     // 削除済みテストスイートを取得
@@ -504,14 +605,14 @@ export class TestSuiteService {
       throw new NotFoundError('TestSuite', testSuiteId);
     }
 
-    // 30日以内かチェック
-    const deletedAt = testSuite.deletedAt!;
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-    if (deletedAt < thirtyDaysAgo) {
-      throw new BadRequestError('Test suite cannot be restored after 30 days');
-    }
+    const snapshot: TestSuiteSnapshot = {
+      id: testSuite.id,
+      projectId: testSuite.projectId,
+      name: testSuite.name,
+      description: testSuite.description,
+      status: testSuite.status,
+      deletedAt: testSuite.deletedAt?.toISOString() ?? null,
+    };
 
     // 復元と履歴保存をトランザクションで実行
     return prisma.$transaction(async (tx) => {
@@ -521,15 +622,12 @@ export class TestSuiteService {
           testSuiteId,
           changedByUserId: userId,
           changeType: 'RESTORE',
-          snapshot: testSuite as unknown as object,
+          snapshot: toJsonSnapshot(snapshot),
         },
       });
 
-      // 復元
-      return tx.testSuite.update({
-        where: { id: testSuiteId },
-        data: { deletedAt: null },
-      });
+      // リポジトリを使用して復元
+      return this.testSuiteRepo.restore(testSuiteId);
     });
   }
 }
