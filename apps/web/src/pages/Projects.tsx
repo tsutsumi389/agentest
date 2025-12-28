@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
 import { FolderKanban, Plus, Search, MoreHorizontal, Filter, User, Building2, Trash2 } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { useOrganizationStore } from '../stores/organization';
-import { usersApi, projectsApi, type ProjectWithRole } from '../lib/api';
+import { usersApi, type ProjectWithRole } from '../lib/api';
+import { CreateProjectModal } from '../components/project/CreateProjectModal';
 
 /** 組織フィルターの選択肢 */
 type OrganizationFilter = 'all' | 'personal' | string;
@@ -38,6 +39,8 @@ export function ProjectsPage() {
   });
 
   // クライアントサイドで名前検索フィルターを適用
+  // 注: APIにはqパラメータがあるが、プロジェクト数が少ない想定のためクライアントサイドで即時フィルタリング。
+  // 大量プロジェクト対応が必要な場合はデバウンス付きAPI検索に変更を検討
   const filteredProjects = useMemo(() => {
     const projects = data?.projects || [];
     if (!searchQuery) return projects;
@@ -140,9 +143,10 @@ export function ProjectsPage() {
       )}
 
       {/* 作成モーダル */}
-      {isCreateModalOpen && (
-        <CreateProjectModal onClose={() => setIsCreateModalOpen(false)} />
-      )}
+      <CreateProjectModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+      />
     </div>
   );
 }
@@ -203,173 +207,5 @@ function ProjectCard({ project }: { project: ProjectWithRole }) {
         )}
       </div>
     </Link>
-  );
-}
-
-/** プロジェクトの所有者タイプ */
-type OwnerType = 'personal' | 'organization';
-
-/**
- * プロジェクト作成モーダル
- */
-function CreateProjectModal({ onClose }: { onClose: () => void }) {
-  const queryClient = useQueryClient();
-  const { organizations } = useOrganizationStore();
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-  const [ownerType, setOwnerType] = useState<OwnerType>('personal');
-  const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>('');
-
-  // 組織がある場合は最初の組織を選択
-  const hasOrganizations = organizations.length > 0;
-
-  const createMutation = useMutation({
-    mutationFn: (data: { name: string; description?: string; organizationId?: string }) =>
-      projectsApi.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['user-projects'] });
-      onClose();
-    },
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const organizationId = ownerType === 'organization' ? selectedOrganizationId : undefined;
-    createMutation.mutate({
-      name,
-      description: description || undefined,
-      organizationId,
-    });
-  };
-
-  return (
-    <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/50">
-      <div className="card w-full max-w-md p-6">
-        <h2 className="text-lg font-semibold text-foreground mb-4">
-          新規プロジェクト
-        </h2>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* 所有者選択 */}
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              所有者 <span className="text-danger">*</span>
-            </label>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setOwnerType('personal')}
-                className={`flex-1 p-3 rounded border flex items-center justify-center gap-2 transition-colors ${
-                  ownerType === 'personal'
-                    ? 'border-accent bg-accent-subtle text-accent'
-                    : 'border-border-default text-foreground-muted hover:border-foreground-subtle'
-                }`}
-              >
-                <User className="w-4 h-4" />
-                <span>個人</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setOwnerType('organization');
-                  // 組織が選択されていなければ最初の組織を選択
-                  if (!selectedOrganizationId && hasOrganizations) {
-                    setSelectedOrganizationId(organizations[0].organization.id);
-                  }
-                }}
-                disabled={!hasOrganizations}
-                className={`flex-1 p-3 rounded border flex items-center justify-center gap-2 transition-colors ${
-                  ownerType === 'organization'
-                    ? 'border-accent bg-accent-subtle text-accent'
-                    : 'border-border-default text-foreground-muted hover:border-foreground-subtle'
-                } ${!hasOrganizations ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                <Building2 className="w-4 h-4" />
-                <span>組織</span>
-              </button>
-            </div>
-            {!hasOrganizations && (
-              <p className="text-xs text-foreground-subtle mt-1">
-                組織に所属していません
-              </p>
-            )}
-          </div>
-
-          {/* 組織選択ドロップダウン */}
-          {ownerType === 'organization' && hasOrganizations && (
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
-                組織を選択 <span className="text-danger">*</span>
-              </label>
-              <div className="relative">
-                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-subtle" />
-                <select
-                  value={selectedOrganizationId}
-                  onChange={(e) => setSelectedOrganizationId(e.target.value)}
-                  className="input pl-10 pr-8 appearance-none"
-                  required
-                >
-                  <option value="" disabled>
-                    組織を選択してください
-                  </option>
-                  {organizations.map(({ organization, role }) => (
-                    <option key={organization.id} value={organization.id}>
-                      {organization.name} ({role === 'OWNER' ? 'オーナー' : role === 'ADMIN' ? '管理者' : 'メンバー'})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              プロジェクト名 <span className="text-danger">*</span>
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="input"
-              placeholder="例: Webアプリテスト"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              説明
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="input min-h-[80px]"
-              placeholder="プロジェクトの説明を入力..."
-            />
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn btn-secondary"
-            >
-              キャンセル
-            </button>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={
-                !name ||
-                (ownerType === 'organization' && !selectedOrganizationId) ||
-                createMutation.isPending
-              }
-            >
-              {createMutation.isPending ? '作成中...' : '作成'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
   );
 }
