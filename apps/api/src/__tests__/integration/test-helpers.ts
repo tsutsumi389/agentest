@@ -196,6 +196,7 @@ export async function cleanupTestData() {
   await prisma.execution.deleteMany({});
   await prisma.testSuite.deleteMany({});
   await prisma.projectEnvironment.deleteMany({});
+  await prisma.projectHistory.deleteMany({});
   await prisma.projectMember.deleteMany({});
   await prisma.project.deleteMany({});
   await prisma.organizationInvitation.deleteMany({});
@@ -325,6 +326,36 @@ export async function createTestExecution(
       environmentId,
       testSuiteId,
       status: overrides.status ?? 'IN_PROGRESS',
+    },
+  });
+}
+
+/**
+ * テスト用プロジェクト履歴を作成
+ */
+export async function createTestProjectHistory(
+  projectId: string,
+  overrides: Partial<{
+    id: string;
+    changedByUserId: string | null;
+    changedByAgentSessionId: string | null;
+    changeType: 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE';
+    snapshot: Record<string, unknown>;
+    changeReason: string | null;
+    createdAt: Date;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.projectHistory.create({
+    data: {
+      id,
+      projectId,
+      changedByUserId: overrides.changedByUserId ?? null,
+      changedByAgentSessionId: overrides.changedByAgentSessionId ?? null,
+      changeType: overrides.changeType ?? 'CREATE',
+      snapshot: overrides.snapshot ?? { name: 'Test Project' },
+      changeReason: overrides.changeReason ?? null,
+      createdAt: overrides.createdAt ?? new Date(),
     },
   });
 }
