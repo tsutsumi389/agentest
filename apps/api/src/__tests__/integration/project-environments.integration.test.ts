@@ -466,7 +466,7 @@ describe('Project Environments API Integration Tests', () => {
     });
 
     it('一部の環境のみ指定しても並替できる', async () => {
-      const response = await request(app)
+      await request(app)
         .post(`/api/projects/${project.id}/environments/reorder`)
         .send({
           environmentIds: [stagingEnv.id, devEnv.id],

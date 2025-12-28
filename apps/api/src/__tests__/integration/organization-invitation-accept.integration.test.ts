@@ -88,7 +88,7 @@ describe('Organization Invitation Accept/Token API Integration Tests', () => {
   // ============================================================
   describe('GET /api/organizations/invitations/:token', () => {
     it('認証なしで招待詳細を取得できる', async () => {
-      const invitation = await createTestInvitation(organization.id, owner.id, {
+      await createTestInvitation(organization.id, owner.id, {
         email: 'invited@example.com',
         role: 'MEMBER',
         token: 'test-token-123',
@@ -209,7 +209,7 @@ describe('Organization Invitation Accept/Token API Integration Tests', () => {
 
       setTestAuth({ id: invitedUser.id, email: invitedUser.email }, null);
 
-      const response = await request(app)
+      await request(app)
         .post('/api/organizations/invitations/admin-token/accept')
         .expect(200);
 

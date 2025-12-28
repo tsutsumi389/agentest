@@ -104,16 +104,10 @@ function RoleDropdown({
   const isOwner = member.role === 'OWNER';
   // 自分自身は変更できない
   const isSelf = member.userId === currentUserId;
-
-  // 自分自身の場合は3点リーダー自体を非表示
-  if (isSelf) {
-    return null;
-  }
-
   // ADMINはオーナーの操作はできない
   const canManage = currentRole === 'OWNER' || (currentRole === 'ADMIN' && !isOwner);
   // 操作不可理由（自分自身の判定は上で済んでいるので isSelf は常にfalse）
-  const disabledReason = getDisabledReason(member, currentRole, false);
+  const disabledReason = getDisabledReason(member, currentRole, isSelf);
 
   // ドロップダウン外クリックで閉じる
   useEffect(() => {
@@ -142,6 +136,11 @@ function RoleDropdown({
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
+
+  // 自分自身の場合は3点リーダー自体を非表示
+  if (isSelf) {
+    return null;
+  }
 
   // 操作不可の場合はツールチップ付きの無効ボタンを表示
   if (!canManage && disabledReason) {
