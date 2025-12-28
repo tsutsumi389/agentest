@@ -51,6 +51,24 @@ router.get('/:testSuiteId/preconditions', requireAuth(authConfig), requireTestSu
 router.post('/:testSuiteId/preconditions', requireAuth(authConfig), requireTestSuiteRole(['ADMIN', 'WRITE']), testSuiteController.addPrecondition);
 
 /**
+ * テストスイートの前提条件更新
+ * PATCH /api/test-suites/:testSuiteId/preconditions/:preconditionId
+ */
+router.patch('/:testSuiteId/preconditions/:preconditionId', requireAuth(authConfig), requireTestSuiteRole(['ADMIN', 'WRITE']), testSuiteController.updatePrecondition);
+
+/**
+ * テストスイートの前提条件削除
+ * DELETE /api/test-suites/:testSuiteId/preconditions/:preconditionId
+ */
+router.delete('/:testSuiteId/preconditions/:preconditionId', requireAuth(authConfig), requireTestSuiteRole(['ADMIN', 'WRITE']), testSuiteController.deletePrecondition);
+
+/**
+ * テストスイートの前提条件並び替え
+ * POST /api/test-suites/:testSuiteId/preconditions/reorder
+ */
+router.post('/:testSuiteId/preconditions/reorder', requireAuth(authConfig), requireTestSuiteRole(['ADMIN', 'WRITE']), testSuiteController.reorderPreconditions);
+
+/**
  * テストスイートの実行履歴取得
  * GET /api/test-suites/:testSuiteId/executions
  */

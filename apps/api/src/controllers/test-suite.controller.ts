@@ -20,6 +20,14 @@ const addPreconditionSchema = z.object({
   orderKey: z.string().optional(),
 });
 
+const updatePreconditionSchema = z.object({
+  content: z.string().min(1).max(2000),
+});
+
+const reorderPreconditionsSchema = z.object({
+  preconditionIds: z.array(z.string().uuid()),
+});
+
 const startExecutionSchema = z.object({
   environmentId: z.string().uuid().optional(),
 });
@@ -125,6 +133,50 @@ export class TestSuiteController {
       const precondition = await this.testSuiteService.addPrecondition(testSuiteId, data);
 
       res.status(201).json({ precondition });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 前提条件更新
+   */
+  updatePrecondition = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { testSuiteId, preconditionId } = req.params;
+      const data = updatePreconditionSchema.parse(req.body);
+      const precondition = await this.testSuiteService.updatePrecondition(testSuiteId, preconditionId, data);
+
+      res.json({ precondition });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 前提条件削除
+   */
+  deletePrecondition = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { testSuiteId, preconditionId } = req.params;
+      await this.testSuiteService.deletePrecondition(testSuiteId, preconditionId);
+
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 前提条件並び替え
+   */
+  reorderPreconditions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { testSuiteId } = req.params;
+      const { preconditionIds } = reorderPreconditionsSchema.parse(req.body);
+      const preconditions = await this.testSuiteService.reorderPreconditions(testSuiteId, preconditionIds);
+
+      res.json({ preconditions });
     } catch (error) {
       next(error);
     }

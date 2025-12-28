@@ -146,6 +146,80 @@ export class TestSuiteService {
   }
 
   /**
+   * 前提条件を更新
+   */
+  async updatePrecondition(testSuiteId: string, preconditionId: string, data: { content: string }) {
+    await this.findById(testSuiteId);
+
+    // 前提条件の存在確認
+    const precondition = await prisma.testSuitePrecondition.findFirst({
+      where: { id: preconditionId, testSuiteId },
+    });
+    if (!precondition) {
+      throw new NotFoundError('Precondition', preconditionId);
+    }
+
+    return prisma.testSuitePrecondition.update({
+      where: { id: preconditionId },
+      data: { content: data.content },
+    });
+  }
+
+  /**
+   * 前提条件を削除
+   */
+  async deletePrecondition(testSuiteId: string, preconditionId: string) {
+    await this.findById(testSuiteId);
+
+    // 前提条件の存在確認
+    const precondition = await prisma.testSuitePrecondition.findFirst({
+      where: { id: preconditionId, testSuiteId },
+    });
+    if (!precondition) {
+      throw new NotFoundError('Precondition', preconditionId);
+    }
+
+    return prisma.testSuitePrecondition.delete({
+      where: { id: preconditionId },
+    });
+  }
+
+  /**
+   * 前提条件を並び替え
+   */
+  async reorderPreconditions(testSuiteId: string, preconditionIds: string[]) {
+    await this.findById(testSuiteId);
+
+    // 全ての前提条件が存在するか確認
+    const preconditions = await prisma.testSuitePrecondition.findMany({
+      where: { testSuiteId },
+    });
+
+    const existingIds = new Set(preconditions.map((p) => p.id));
+    for (const id of preconditionIds) {
+      if (!existingIds.has(id)) {
+        throw new NotFoundError('Precondition', id);
+      }
+    }
+
+    // 各前提条件のorderKeyを更新
+    await prisma.$transaction(
+      preconditionIds.map((id, index) =>
+        prisma.testSuitePrecondition.update({
+          where: { id },
+          data: { orderKey: `${index + 1}`.padStart(5, '0') },
+        })
+      )
+    );
+
+    // 更新後の前提条件一覧を返す
+    return prisma.testSuitePrecondition.findMany({
+      where: { testSuiteId },
+      orderBy: { orderKey: 'asc' },
+    });
+  }
+
+  /**
    * 実行履歴を取得
    */
   async getExecutions(testSuiteId: string, options: { limit: number; offset: number }) {
