@@ -1,4 +1,20 @@
-import { prisma, type EntityStatus } from '@agentest/db';
+import { prisma, type EntityStatus, type Prisma } from '@agentest/db';
+
+/**
+ * テストスイート検索オプション
+ */
+export interface TestSuiteSearchOptions {
+  q?: string;
+  status?: EntityStatus;
+  createdBy?: string;
+  from?: string;
+  to?: string;
+  limit: number;
+  offset: number;
+  sortBy: 'name' | 'createdAt' | 'updatedAt';
+  sortOrder: 'asc' | 'desc';
+  includeDeleted: boolean;
+}
 
 /**
  * テストスイートリポジトリ
@@ -107,5 +123,80 @@ export class TestSuiteRepository {
     return prisma.testSuiteHistory.count({
       where: { testSuiteId: id },
     });
+  }
+
+  /**
+   * テストスイートを検索
+   */
+  async search(projectId: string, options: TestSuiteSearchOptions) {
+    const { q, status, createdBy, from, to, limit, offset, sortBy, sortOrder, includeDeleted } = options;
+
+    // 検索条件を構築
+    const where: Prisma.TestSuiteWhereInput = {
+      projectId,
+      // 削除済みを含めるかどうか
+      deletedAt: includeDeleted ? undefined : null,
+    };
+
+    // ステータスフィルタ
+    if (status) {
+      where.status = status;
+    }
+
+    // 作成者フィルタ
+    if (createdBy) {
+      where.createdByUserId = createdBy;
+    }
+
+    // 日付フィルタ
+    if (from || to) {
+      where.createdAt = {};
+      if (from) {
+        where.createdAt.gte = new Date(from);
+      }
+      if (to) {
+        where.createdAt.lte = new Date(to);
+      }
+    }
+
+    // キーワード検索（名前または前提条件内容）
+    if (q) {
+      where.OR = [
+        { name: { contains: q, mode: 'insensitive' } },
+        {
+          preconditions: {
+            some: {
+              content: { contains: q, mode: 'insensitive' },
+            },
+          },
+        },
+      ];
+    }
+
+    // ソート条件
+    const orderBy: Prisma.TestSuiteOrderByWithRelationInput = {
+      [sortBy]: sortOrder,
+    };
+
+    // 検索実行
+    const [items, total] = await Promise.all([
+      prisma.testSuite.findMany({
+        where,
+        include: {
+          createdByUser: {
+            select: { id: true, name: true, avatarUrl: true },
+          },
+          _count: {
+            select: { testCases: true, preconditions: true },
+          },
+        },
+        orderBy,
+        take: limit,
+        skip: offset,
+      }),
+      prisma.testSuite.count({ where }),
+    ]);
+
+    return { items, total };
   }
 }

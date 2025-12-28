@@ -212,6 +212,20 @@ export const executionResultUpdateSchema = z.object({
   note: z.string().max(1000).nullish(),
 });
 
+// テストスイート検索スキーマ
+export const testSuiteSearchSchema = z.object({
+  q: z.string().max(100).optional(),
+  status: entityStatusSchema.optional(),
+  createdBy: z.string().uuid().optional(),
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+  sortBy: z.enum(['name', 'createdAt', 'updatedAt']).default('createdAt'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+  includeDeleted: z.coerce.boolean().default(false),
+});
+
 // 型エクスポート
 export type UserCreate = z.infer<typeof userCreateSchema>;
 export type UserUpdate = z.infer<typeof userUpdateSchema>;
@@ -230,5 +244,6 @@ export type TestCaseCreate = z.infer<typeof testCaseCreateSchema>;
 export type TestCaseUpdate = z.infer<typeof testCaseUpdateSchema>;
 export type ExecutionCreate = z.infer<typeof executionCreateSchema>;
 export type ExecutionResultUpdate = z.infer<typeof executionResultUpdateSchema>;
+export type TestSuiteSearch = z.infer<typeof testSuiteSearchSchema>;
 export type Pagination = z.infer<typeof paginationSchema>;
 export type Sort = z.infer<typeof sortSchema>;

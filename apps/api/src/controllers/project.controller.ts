@@ -6,6 +6,7 @@ import {
   projectEnvironmentCreateSchema,
   projectEnvironmentUpdateSchema,
   projectEnvironmentReorderSchema,
+  testSuiteSearchSchema,
 } from '@agentest/shared';
 import { ProjectService } from '../services/project.service.js';
 
@@ -213,14 +214,24 @@ export class ProjectController {
   };
 
   /**
-   * テストスイート一覧取得
+   * テストスイート一覧取得・検索
    */
   getTestSuites = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { projectId } = req.params;
-      const testSuites = await this.projectService.getTestSuites(projectId);
 
-      res.json({ testSuites });
+      // クエリパラメータをパース
+      const searchParams = testSuiteSearchSchema.parse(req.query);
+
+      // 検索実行
+      const { items, total } = await this.projectService.searchTestSuites(projectId, searchParams);
+
+      res.json({
+        testSuites: items,
+        total,
+        limit: searchParams.limit,
+        offset: searchParams.offset,
+      });
     } catch (error) {
       next(error);
     }
