@@ -11,7 +11,8 @@ import {
   Clock,
   MoreHorizontal,
 } from 'lucide-react';
-import { testSuitesApi, testCasesApi, projectsApi, type TestCase, type ProjectMemberRole } from '../lib/api';
+import { testSuitesApi, testCasesApi, projectsApi, ApiError, type TestCase, type ProjectMemberRole } from '../lib/api';
+import { toast } from '../stores/toast';
 import { useAuth } from '../hooks/useAuth';
 import { PreconditionList } from '../components/test-suite/PreconditionList';
 
@@ -295,7 +296,15 @@ function CreateTestCaseModal({
       testCasesApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
+      toast.success('テストケースを作成しました');
       onClose();
+    },
+    onError: (err) => {
+      if (err instanceof ApiError) {
+        toast.error(err.message);
+      } else {
+        toast.error('テストケースの作成に失敗しました');
+      }
     },
   });
 

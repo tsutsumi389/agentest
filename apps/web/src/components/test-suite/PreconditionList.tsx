@@ -56,7 +56,7 @@ function ActionDropdown({
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // ドロップダウン外クリックで閉じる
+  // ドロップダウン外クリック・ESCキーで閉じる
   useEffect(() => {
     if (!isOpen) return;
 
@@ -66,22 +66,18 @@ function ActionDropdown({
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isOpen]);
-
-  // ESCキーで閉じる
-  useEffect(() => {
-    if (!isOpen) return;
-
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setIsOpen(false);
       }
     };
 
+    document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
   }, [isOpen]);
 
   // 表示できる操作がなければ何も表示しない
@@ -158,6 +154,7 @@ function SortablePreconditionItem({
   onEdit,
   onDelete,
   isUpdating,
+  isReordering,
 }: {
   precondition: Precondition;
   index: number;
@@ -166,6 +163,8 @@ function SortablePreconditionItem({
   onEdit: () => void;
   onDelete: () => void;
   isUpdating: boolean;
+  /** 並び替え中フラグ（競合状態防止のためドラッグを無効化） */
+  isReordering: boolean;
 }) {
   const {
     attributes,
@@ -174,7 +173,7 @@ function SortablePreconditionItem({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: precondition.id, disabled: !canEdit });
+  } = useSortable({ id: precondition.id, disabled: !canEdit || isReordering });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -462,6 +461,7 @@ export function PreconditionList({ testSuiteId, currentRole }: PreconditionListP
                   onEdit={() => handleOpenEdit(precondition)}
                   onDelete={() => handleRequestDelete(precondition)}
                   isUpdating={updatingId === precondition.id}
+                  isReordering={isReordering}
                 />
               ))}
             </div>
