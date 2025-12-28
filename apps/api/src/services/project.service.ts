@@ -413,7 +413,7 @@ export class ProjectService {
    * テストスイートを検索
    */
   async searchTestSuites(projectId: string, options: TestSuiteSearchOptions) {
-    // プロジェクトの存在確認（削除済みも許可）
+    // プロジェクトの存在確認（削除済みプロジェクトは検索対象外）
     const project = await this.projectRepo.findById(projectId);
     if (!project) {
       throw new NotFoundError('Project', projectId);
