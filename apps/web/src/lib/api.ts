@@ -787,7 +787,7 @@ export const testCasesApi = {
     api.post<{ testCase: TestCase }>(`/api/test-cases/${testCaseId}/restore`),
 
   // コピー
-  copy: (testCaseId: string, data?: { title?: string }) =>
+  copy: (testCaseId: string, data?: { title?: string; targetTestSuiteId?: string }) =>
     api.post<{ testCase: TestCase }>(`/api/test-cases/${testCaseId}/copy`, data),
 };
 

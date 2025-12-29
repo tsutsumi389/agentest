@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   Pencil,
   Check,
+  Copy,
 } from 'lucide-react';
 import {
   testCasesApi,
@@ -23,6 +24,7 @@ import { TestCaseStepList } from './TestCaseStepList';
 import { TestCaseExpectedResultList } from './TestCaseExpectedResultList';
 import { TestCaseHistoryList } from './TestCaseHistoryList';
 import { DeleteTestCaseSection } from './DeleteTestCaseSection';
+import { CopyTestCaseModal } from './CopyTestCaseModal';
 
 /**
  * タブ定義
@@ -101,6 +103,7 @@ export function TestCaseDetailPanel({
 }: TestCaseDetailPanelProps) {
   const queryClient = useQueryClient();
   const [currentTab, setCurrentTab] = useState<TabType>('overview');
+  const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
 
   // テストケース詳細を取得
   const {
@@ -214,13 +217,25 @@ export function TestCaseDetailPanel({
               )}
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 text-foreground-muted hover:text-foreground hover:bg-background-tertiary rounded transition-colors flex-shrink-0"
-            aria-label="閉じる"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1 flex-shrink-0">
+            {canEdit && (
+              <button
+                onClick={() => setIsCopyModalOpen(true)}
+                className="p-1.5 text-foreground-muted hover:text-foreground hover:bg-background-tertiary rounded transition-colors"
+                aria-label="テストケースをコピー"
+                title="テストケースをコピー"
+              >
+                <Copy className="w-5 h-5" />
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-1.5 text-foreground-muted hover:text-foreground hover:bg-background-tertiary rounded transition-colors"
+              aria-label="閉じる"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* タブナビゲーション */}
@@ -276,6 +291,19 @@ export function TestCaseDetailPanel({
           />
         )}
       </div>
+
+      {/* コピーモーダル */}
+      <CopyTestCaseModal
+        isOpen={isCopyModalOpen}
+        testCase={testCase}
+        testSuiteId={testSuiteId}
+        onClose={() => setIsCopyModalOpen(false)}
+        onCopied={() => {
+          queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
+          toast.success('テストケースをコピーしました');
+          setIsCopyModalOpen(false);
+        }}
+      />
     </div>
   );
 }
