@@ -50,6 +50,11 @@ const ROLE_ORDER: Record<'OWNER' | ProjectMemberRole, number> = {
 
 /**
  * ロール変更ドロップダウン
+ *
+ * OWNER保護について:
+ * - OWNERロールのメンバーに対してはメニュー自体を表示しない（shouldRender判定）
+ * - OWNERへの変更ボタンは存在しない（ADMIN/WRITE/READへの変更のみ）
+ * - サービス層でもOWNERの削除・ロール変更は禁止されている（多層防御）
  */
 function RoleDropdown({
   member,
@@ -73,8 +78,10 @@ function RoleDropdown({
   const isSelf = member.userId === currentUserId;
   // ADMIN以上のみ操作可能
   const canManage = currentRole === 'OWNER' || currentRole === 'ADMIN';
+  // OWNERロールのメンバーは操作対象外（削除・変更不可）
+  const isOwnerMember = member.role === 'OWNER';
   // 表示するかどうか
-  const shouldRender = !isSelf && canManage;
+  const shouldRender = !isSelf && canManage && !isOwnerMember;
 
   // ドロップダウン外クリックで閉じる
   useEffect(() => {
