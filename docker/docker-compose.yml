@@ -24,6 +24,7 @@ services:
       POSTGRES_DB: ${DB_NAME:-agentest}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d:ro
     ports:
       - "${DB_EXTERNAL_PORT:-5432}:5432"
     healthcheck:

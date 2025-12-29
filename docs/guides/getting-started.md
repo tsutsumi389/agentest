@@ -47,30 +47,25 @@ GOOGLE_CLIENT_SECRET=
 
 ```bash
 cd docker
-docker compose up --build
+docker compose up -d
 ```
 
 初回はイメージのビルドに数分かかります。
 
 ### 4. データベースをセットアップ
 
-別ターミナルで実行：
-
 ```bash
-cd docker
-
-# dev コンテナを起動
-docker compose --profile tools up -d dev
-
 # 依存関係をインストール
 docker compose exec dev pnpm install
 
 # Prisma クライアント生成
-docker compose exec dev pnpm --filter @agentest/db prisma generate
+docker compose exec dev pnpm --filter @agentest/db db:generate
 
-# マイグレーション実行
-docker compose exec dev pnpm --filter @agentest/db prisma migrate dev
+# データベーススキーマを同期
+docker compose exec dev pnpm --filter @agentest/db db:push
 ```
+
+> **Note:** テスト用データベース（agentest_test）は Docker 起動時に自動作成されます。テスト実行時にスキーマが自動同期されます。
 
 ### 5. 動作確認
 
@@ -105,7 +100,12 @@ docker system prune -a
 ```bash
 # ボリュームを削除して再起動
 docker compose down -v
-docker compose up --build
+docker compose up -d
+
+# 依存関係を再インストール
+docker compose exec dev pnpm install
+docker compose exec dev pnpm --filter @agentest/db db:generate
+docker compose exec dev pnpm --filter @agentest/db db:push
 ```
 
 ## 次のステップ
