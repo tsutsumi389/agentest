@@ -124,7 +124,7 @@ export function TestCaseHistoryList({ testCase }: TestCaseHistoryListProps) {
       {/* 履歴一覧 */}
       {histories.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-foreground-muted text-sm">変更履歴がありません</p>
+          <p className="text-foreground-muted text-sm">履歴の読み込みに失敗しました</p>
         </div>
       ) : (
         <>

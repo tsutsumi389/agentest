@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -12,22 +12,17 @@ import {
   arrayMove,
   SortableContext,
   sortableKeyboardCoordinates,
-  useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import {
   Loader2,
   Plus,
-  MoreVertical,
-  Pencil,
-  Trash2,
-  GripVertical,
   CheckCircle,
 } from 'lucide-react';
 import { testCasesApi, ApiError, type TestCaseExpectedResult, type ProjectMemberRole } from '../../lib/api';
 import { toast } from '../../stores/toast';
 import { ConfirmDialog } from '../common/ConfirmDialog';
+import { SortableListItem } from '../common/SortableListItem';
 import { TestCaseItemFormModal } from './TestCaseItemFormModal';
 
 interface TestCaseExpectedResultListProps {
@@ -39,189 +34,6 @@ interface TestCaseExpectedResultListProps {
   currentRole?: 'OWNER' | ProjectMemberRole;
   /** 更新時のコールバック */
   onUpdated?: () => void;
-}
-
-/**
- * アクションドロップダウン
- */
-function ActionDropdown({
-  canEdit,
-  canDelete,
-  onEdit,
-  onDelete,
-  isUpdating,
-}: {
-  canEdit: boolean;
-  canDelete: boolean;
-  onEdit: () => void;
-  onDelete: () => void;
-  isUpdating: boolean;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen]);
-
-  if (!canEdit && !canDelete) {
-    return null;
-  }
-
-  return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="p-1.5 text-foreground-muted hover:text-foreground hover:bg-background-tertiary rounded transition-colors"
-        disabled={isUpdating}
-        aria-label="期待結果操作メニュー"
-        aria-expanded={isOpen}
-        aria-haspopup="menu"
-      >
-        {isUpdating ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
-        ) : (
-          <MoreVertical className="w-4 h-4" />
-        )}
-      </button>
-
-      {isOpen && (
-        <div
-          className="absolute right-0 top-full mt-1 w-32 bg-background border border-border rounded-lg shadow-lg py-1 z-dropdown"
-          role="menu"
-        >
-          {canEdit && (
-            <button
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-background-tertiary transition-colors"
-              onClick={() => {
-                onEdit();
-                setIsOpen(false);
-              }}
-              role="menuitem"
-            >
-              <Pencil className="w-4 h-4" />
-              編集
-            </button>
-          )}
-
-          {canDelete && (
-            <>
-              {canEdit && <div className="border-t border-border my-1" />}
-              <button
-                className="w-full flex items-center gap-2 px-3 py-2 text-sm text-danger hover:bg-danger-subtle transition-colors"
-                onClick={() => {
-                  onDelete();
-                  setIsOpen(false);
-                }}
-                role="menuitem"
-              >
-                <Trash2 className="w-4 h-4" />
-                削除
-              </button>
-            </>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/**
- * ソート可能な期待結果アイテム
- */
-function SortableExpectedResultItem({
-  expectedResult,
-  index,
-  canEdit,
-  canDelete,
-  onEdit,
-  onDelete,
-  isUpdating,
-  isReordering,
-}: {
-  expectedResult: TestCaseExpectedResult;
-  index: number;
-  canEdit: boolean;
-  canDelete: boolean;
-  onEdit: () => void;
-  onDelete: () => void;
-  isUpdating: boolean;
-  isReordering: boolean;
-}) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: expectedResult.id, disabled: !canEdit || isReordering });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`
-        flex items-center justify-between p-3 rounded-lg border bg-background-secondary
-        transition-colors
-        ${isDragging ? 'opacity-50 border-accent shadow-lg z-10' : 'border-border'}
-        hover:bg-background-tertiary
-      `}
-    >
-      <div className="flex items-center gap-3 min-w-0 flex-1">
-        {canEdit && (
-          <button
-            {...attributes}
-            {...listeners}
-            className="cursor-grab active:cursor-grabbing touch-none p-1 -m-1 text-foreground-muted hover:text-foreground"
-            aria-label="ドラッグして並び替え"
-          >
-            <GripVertical className="w-4 h-4 flex-shrink-0" />
-          </button>
-        )}
-
-        <span className="w-6 h-6 rounded-full bg-success text-white text-xs font-medium flex items-center justify-center flex-shrink-0">
-          {index + 1}
-        </span>
-
-        <p className="text-sm text-foreground truncate">
-          {expectedResult.content}
-        </p>
-      </div>
-
-      <ActionDropdown
-        canEdit={canEdit}
-        canDelete={canDelete}
-        onEdit={onEdit}
-        onDelete={onDelete}
-        isUpdating={isUpdating}
-      />
-    </div>
-  );
 }
 
 /**
@@ -465,16 +277,19 @@ export function TestCaseExpectedResultList({
           >
             <div className="space-y-2">
               {expectedResults.map((expectedResult, index) => (
-                <SortableExpectedResultItem
+                <SortableListItem
                   key={expectedResult.id}
-                  expectedResult={expectedResult}
-                  index={index}
+                  id={expectedResult.id}
+                  index={index + 1}
+                  content={expectedResult.content}
+                  indexColor="success"
                   canEdit={canEdit}
                   canDelete={canDelete}
                   onEdit={() => handleOpenEdit(expectedResult)}
                   onDelete={() => handleRequestDelete(expectedResult)}
                   isUpdating={updatingId === expectedResult.id}
                   isReordering={isReordering}
+                  actionAriaLabel="期待結果操作メニュー"
                 />
               ))}
             </div>
