@@ -18,6 +18,7 @@ import { createApp } from '../../app.js';
 // グローバルな認証状態（モック用）
 let mockAuthUser: { id: string; email: string } | null = null;
 let mockProjectRole: string | null = null;
+let mockTestCaseRole: string | null = null;
 
 // 認証ミドルウェアをモック
 vi.mock('@agentest/auth', () => ({
@@ -48,15 +49,31 @@ vi.mock('@agentest/auth', () => ({
   defaultAuthConfig: {},
 }));
 
+// テストケース権限ミドルウェアをモック
+vi.mock('../../middleware/require-test-case-role.js', () => ({
+  requireTestCaseRole: (roles: string[], _options?: { allowDeletedTestCase?: boolean }) => (_req: any, _res: any, next: any) => {
+    if (!mockTestCaseRole || !roles.includes(mockTestCaseRole)) {
+      return next(new AuthorizationError('権限がありません'));
+    }
+    next();
+  },
+}));
+
 // テスト用認証設定関数
-function setTestAuth(user: { id: string; email: string } | null, projectRole: string | null = null) {
+function setTestAuth(
+  user: { id: string; email: string } | null,
+  projectRole: string | null = null,
+  testCaseRole: string | null = null
+) {
   mockAuthUser = user;
   mockProjectRole = projectRole;
+  mockTestCaseRole = testCaseRole ?? projectRole; // デフォルトでprojectRoleと同じ
 }
 
 function clearTestAuth() {
   mockAuthUser = null;
   mockProjectRole = null;
+  mockTestCaseRole = null;
 }
 
 describe('Test Case History & Restore API Integration Tests', () => {
@@ -483,7 +500,7 @@ describe('Test Case History & Restore API Integration Tests', () => {
       });
     });
 
-    describe('テストケース復元（認証ユーザー）', () => {
+    describe('テストケース復元（WRITE以上）', () => {
       beforeEach(async () => {
         // テストケースを削除状態にする
         await prisma.testCase.update({
@@ -508,12 +525,14 @@ describe('Test Case History & Restore API Integration Tests', () => {
           .expect(200);
       });
 
-      it('READはテストケースを復元できる', async () => {
+      it('READはテストケースを復元できない', async () => {
         setTestAuth({ id: reader.id, email: reader.email }, 'READ');
 
-        await request(app)
+        const response = await request(app)
           .post(`/api/test-cases/${testCase.id}/restore`)
-          .expect(200);
+          .expect(403);
+
+        expect(response.body.error.code).toBe('AUTHORIZATION_ERROR');
       });
     });
   });

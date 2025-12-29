@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '@agentest/auth';
 import { TestCaseController } from '../controllers/test-case.controller.js';
+import { requireTestCaseRole } from '../middleware/require-test-case-role.js';
 import { authConfig } from '../config/auth.js';
 
 const router: Router = Router();
@@ -135,7 +136,8 @@ router.get('/:testCaseId/histories', requireAuth(authConfig), testCaseController
 /**
  * テストケース復元
  * POST /api/test-cases/:testCaseId/restore
+ * 削除済みテストケースを復元（30日以内のみ）
  */
-router.post('/:testCaseId/restore', requireAuth(authConfig), testCaseController.restore);
+router.post('/:testCaseId/restore', requireAuth(authConfig), requireTestCaseRole(['ADMIN', 'WRITE'], { allowDeletedTestCase: true }), testCaseController.restore);
 
 export default router;
