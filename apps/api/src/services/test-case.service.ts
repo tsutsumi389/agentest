@@ -2,6 +2,31 @@ import { prisma, type TestCasePriority, type EntityStatus, type Prisma } from '@
 import { NotFoundError, BadRequestError } from '@agentest/shared';
 import { TestCaseRepository } from '../repositories/test-case.repository.js';
 
+// orderKey関連の定数
+const ORDER_KEY_INITIAL = '00001';
+const ORDER_KEY_PAD_LENGTH = 5;
+
+/**
+ * 次のorderKeyを計算する
+ * @param currentKey 現在の最大orderKey（nullの場合は初期値を返す）
+ * @returns 次のorderKey
+ */
+function getNextOrderKey(currentKey: string | null): string {
+  if (!currentKey) return ORDER_KEY_INITIAL;
+  const num = parseInt(currentKey, 10);
+  if (isNaN(num)) return ORDER_KEY_INITIAL;
+  return `${num + 1}`.padStart(ORDER_KEY_PAD_LENGTH, '0');
+}
+
+/**
+ * インデックスからorderKeyを生成する
+ * @param index 0始まりのインデックス
+ * @returns orderKey
+ */
+function indexToOrderKey(index: number): string {
+  return `${index + 1}`.padStart(ORDER_KEY_PAD_LENGTH, '0');
+}
+
 /**
  * テストケースのスナップショット型（基本情報）
  */
@@ -140,7 +165,7 @@ export class TestCaseService {
       where: { testSuiteId: data.testSuiteId },
       orderBy: { orderKey: 'desc' },
     });
-    const orderKey = lastTestCase ? `${parseInt(lastTestCase.orderKey) + 1}`.padStart(5, '0') : '00001';
+    const orderKey = getNextOrderKey(lastTestCase?.orderKey ?? null);
 
     return prisma.testCase.create({
       data: {
@@ -237,7 +262,7 @@ export class TestCaseService {
         where: { testCaseId },
         orderBy: { orderKey: 'desc' },
       });
-      orderKey = lastItem ? `${parseInt(lastItem.orderKey) + 1}`.padStart(5, '0') : '00001';
+      orderKey = getNextOrderKey(lastItem?.orderKey ?? null);
     }
 
     const precondition = await prisma.testCasePrecondition.create({
@@ -288,6 +313,11 @@ export class TestCaseService {
     });
     if (!precondition) {
       throw new NotFoundError('Precondition', preconditionId);
+    }
+
+    // 同値更新チェック：変更がなければそのまま返す
+    if (precondition.content === data.content) {
+      return precondition;
     }
 
     // 履歴を保存
@@ -368,18 +398,20 @@ export class TestCaseService {
         where: { id: preconditionId },
       });
 
-      // 残りの前提条件のorderKeyを再整列
+      // 残りの前提条件のorderKeyを再整列（並列実行）
       const remainingPreconditions = await tx.testCasePrecondition.findMany({
         where: { testCaseId },
         orderBy: { orderKey: 'asc' },
       });
 
-      for (let i = 0; i < remainingPreconditions.length; i++) {
-        await tx.testCasePrecondition.update({
-          where: { id: remainingPreconditions[i].id },
-          data: { orderKey: `${i + 1}`.padStart(5, '0') },
-        });
-      }
+      await Promise.all(
+        remainingPreconditions.map((item, i) =>
+          tx.testCasePrecondition.update({
+            where: { id: item.id },
+            data: { orderKey: indexToOrderKey(i) },
+          })
+        )
+      );
     });
   }
 
@@ -434,24 +466,27 @@ export class TestCaseService {
       },
     };
 
-    await prisma.testCaseHistory.create({
-      data: {
-        testCaseId,
-        changedByUserId: userId,
-        changeType: 'UPDATE',
-        snapshot: toJsonSnapshot(snapshot),
-      },
-    });
+    // 履歴保存とorderKey更新を同じトランザクションで実行
+    await prisma.$transaction(async (tx) => {
+      await tx.testCaseHistory.create({
+        data: {
+          testCaseId,
+          changedByUserId: userId,
+          changeType: 'UPDATE',
+          snapshot: toJsonSnapshot(snapshot),
+        },
+      });
 
-    // 各前提条件のorderKeyを更新
-    await prisma.$transaction(
-      preconditionIds.map((id, index) =>
-        prisma.testCasePrecondition.update({
-          where: { id },
-          data: { orderKey: `${index + 1}`.padStart(5, '0') },
-        })
-      )
-    );
+      // 各前提条件のorderKeyを更新（並列実行）
+      await Promise.all(
+        preconditionIds.map((id, index) =>
+          tx.testCasePrecondition.update({
+            where: { id },
+            data: { orderKey: indexToOrderKey(index) },
+          })
+        )
+      );
+    });
 
     // 更新後の前提条件一覧を返す
     return prisma.testCasePrecondition.findMany({
@@ -484,7 +519,7 @@ export class TestCaseService {
         where: { testCaseId },
         orderBy: { orderKey: 'desc' },
       });
-      orderKey = lastItem ? `${parseInt(lastItem.orderKey) + 1}`.padStart(5, '0') : '00001';
+      orderKey = getNextOrderKey(lastItem?.orderKey ?? null);
     }
 
     const step = await prisma.testCaseStep.create({
@@ -535,6 +570,11 @@ export class TestCaseService {
     });
     if (!step) {
       throw new NotFoundError('Step', stepId);
+    }
+
+    // 同値更新チェック：変更がなければそのまま返す
+    if (step.content === data.content) {
+      return step;
     }
 
     // 履歴を保存
@@ -615,18 +655,20 @@ export class TestCaseService {
         where: { id: stepId },
       });
 
-      // 残りのステップのorderKeyを再整列
+      // 残りのステップのorderKeyを再整列（並列実行）
       const remainingSteps = await tx.testCaseStep.findMany({
         where: { testCaseId },
         orderBy: { orderKey: 'asc' },
       });
 
-      for (let i = 0; i < remainingSteps.length; i++) {
-        await tx.testCaseStep.update({
-          where: { id: remainingSteps[i].id },
-          data: { orderKey: `${i + 1}`.padStart(5, '0') },
-        });
-      }
+      await Promise.all(
+        remainingSteps.map((item, i) =>
+          tx.testCaseStep.update({
+            where: { id: item.id },
+            data: { orderKey: indexToOrderKey(i) },
+          })
+        )
+      );
     });
   }
 
@@ -681,24 +723,27 @@ export class TestCaseService {
       },
     };
 
-    await prisma.testCaseHistory.create({
-      data: {
-        testCaseId,
-        changedByUserId: userId,
-        changeType: 'UPDATE',
-        snapshot: toJsonSnapshot(snapshot),
-      },
-    });
+    // 履歴保存とorderKey更新を同じトランザクションで実行
+    await prisma.$transaction(async (tx) => {
+      await tx.testCaseHistory.create({
+        data: {
+          testCaseId,
+          changedByUserId: userId,
+          changeType: 'UPDATE',
+          snapshot: toJsonSnapshot(snapshot),
+        },
+      });
 
-    // 各ステップのorderKeyを更新
-    await prisma.$transaction(
-      stepIds.map((id, index) =>
-        prisma.testCaseStep.update({
-          where: { id },
-          data: { orderKey: `${index + 1}`.padStart(5, '0') },
-        })
-      )
-    );
+      // 各ステップのorderKeyを更新（並列実行）
+      await Promise.all(
+        stepIds.map((id, index) =>
+          tx.testCaseStep.update({
+            where: { id },
+            data: { orderKey: indexToOrderKey(index) },
+          })
+        )
+      );
+    });
 
     // 更新後のステップ一覧を返す
     return prisma.testCaseStep.findMany({
@@ -731,7 +776,7 @@ export class TestCaseService {
         where: { testCaseId },
         orderBy: { orderKey: 'desc' },
       });
-      orderKey = lastItem ? `${parseInt(lastItem.orderKey) + 1}`.padStart(5, '0') : '00001';
+      orderKey = getNextOrderKey(lastItem?.orderKey ?? null);
     }
 
     const expectedResult = await prisma.testCaseExpectedResult.create({
@@ -782,6 +827,11 @@ export class TestCaseService {
     });
     if (!expectedResult) {
       throw new NotFoundError('ExpectedResult', expectedResultId);
+    }
+
+    // 同値更新チェック：変更がなければそのまま返す
+    if (expectedResult.content === data.content) {
+      return expectedResult;
     }
 
     // 履歴を保存
@@ -862,18 +912,20 @@ export class TestCaseService {
         where: { id: expectedResultId },
       });
 
-      // 残りの期待結果のorderKeyを再整列
+      // 残りの期待結果のorderKeyを再整列（並列実行）
       const remainingExpectedResults = await tx.testCaseExpectedResult.findMany({
         where: { testCaseId },
         orderBy: { orderKey: 'asc' },
       });
 
-      for (let i = 0; i < remainingExpectedResults.length; i++) {
-        await tx.testCaseExpectedResult.update({
-          where: { id: remainingExpectedResults[i].id },
-          data: { orderKey: `${i + 1}`.padStart(5, '0') },
-        });
-      }
+      await Promise.all(
+        remainingExpectedResults.map((item, i) =>
+          tx.testCaseExpectedResult.update({
+            where: { id: item.id },
+            data: { orderKey: indexToOrderKey(i) },
+          })
+        )
+      );
     });
   }
 
@@ -928,24 +980,27 @@ export class TestCaseService {
       },
     };
 
-    await prisma.testCaseHistory.create({
-      data: {
-        testCaseId,
-        changedByUserId: userId,
-        changeType: 'UPDATE',
-        snapshot: toJsonSnapshot(snapshot),
-      },
-    });
+    // 履歴保存とorderKey更新を同じトランザクションで実行
+    await prisma.$transaction(async (tx) => {
+      await tx.testCaseHistory.create({
+        data: {
+          testCaseId,
+          changedByUserId: userId,
+          changeType: 'UPDATE',
+          snapshot: toJsonSnapshot(snapshot),
+        },
+      });
 
-    // 各期待結果のorderKeyを更新
-    await prisma.$transaction(
-      expectedResultIds.map((id, index) =>
-        prisma.testCaseExpectedResult.update({
-          where: { id },
-          data: { orderKey: `${index + 1}`.padStart(5, '0') },
-        })
-      )
-    );
+      // 各期待結果のorderKeyを更新（並列実行）
+      await Promise.all(
+        expectedResultIds.map((id, index) =>
+          tx.testCaseExpectedResult.update({
+            where: { id },
+            data: { orderKey: indexToOrderKey(index) },
+          })
+        )
+      );
+    });
 
     // 更新後の期待結果一覧を返す
     return prisma.testCaseExpectedResult.findMany({
