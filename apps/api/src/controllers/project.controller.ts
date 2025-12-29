@@ -7,6 +7,7 @@ import {
   projectEnvironmentUpdateSchema,
   projectEnvironmentReorderSchema,
   testSuiteSearchSchema,
+  suggestionSearchSchema,
 } from '@agentest/shared';
 import { ProjectService } from '../services/project.service.js';
 
@@ -232,6 +233,21 @@ export class ProjectController {
         limit: searchParams.limit,
         offset: searchParams.offset,
       });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * テストスイートサジェスト取得（@メンション用）
+   */
+  suggestTestSuites = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { projectId } = req.params;
+      const searchParams = suggestionSearchSchema.parse(req.query);
+      const suggestions = await this.projectService.suggestTestSuites(projectId, searchParams);
+
+      res.json({ suggestions });
     } catch (error) {
       next(error);
     }

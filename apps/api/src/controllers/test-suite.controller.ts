@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { testCaseSearchSchema } from '@agentest/shared';
+import { testCaseSearchSchema, suggestionSearchSchema } from '@agentest/shared';
 import { TestSuiteService } from '../services/test-suite.service.js';
 
 const createTestSuiteSchema = z.object({
@@ -124,6 +124,21 @@ export class TestSuiteController {
         limit: searchParams.limit,
         offset: searchParams.offset,
       });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * テストケースサジェスト取得（@メンション用）
+   */
+  suggestTestCases = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { testSuiteId } = req.params;
+      const searchParams = suggestionSearchSchema.parse(req.query);
+      const suggestions = await this.testSuiteService.suggestTestCases(testSuiteId, searchParams);
+
+      res.json({ suggestions });
     } catch (error) {
       next(error);
     }

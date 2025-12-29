@@ -39,6 +39,12 @@ router.delete('/:testSuiteId', requireAuth(authConfig), requireTestSuiteRole(['A
 router.get('/:testSuiteId/test-cases', requireAuth(authConfig), requireTestSuiteRole(['ADMIN', 'WRITE', 'READ']), testSuiteController.getTestCases);
 
 /**
+ * テストスイートのテストケースサジェスト（@メンション用）
+ * GET /api/test-suites/:testSuiteId/suggestions/test-cases
+ */
+router.get('/:testSuiteId/suggestions/test-cases', requireAuth(authConfig), requireTestSuiteRole(['ADMIN', 'WRITE', 'READ']), testSuiteController.suggestTestCases);
+
+/**
  * テストスイートのテストケース並び替え
  * POST /api/test-suites/:testSuiteId/test-cases/reorder
  */

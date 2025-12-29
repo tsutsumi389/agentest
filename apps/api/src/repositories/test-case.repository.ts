@@ -76,6 +76,30 @@ export class TestCaseRepository {
   }
 
   /**
+   * サジェスト用テストケース検索
+   */
+  async suggest(testSuiteId: string, options: { q?: string; limit: number }) {
+    const where: Prisma.TestCaseWhereInput = {
+      testSuiteId,
+      deletedAt: null,
+    };
+
+    if (options.q) {
+      where.OR = [
+        { title: { contains: options.q, mode: 'insensitive' } },
+        { description: { contains: options.q, mode: 'insensitive' } },
+      ];
+    }
+
+    return prisma.testCase.findMany({
+      where,
+      select: { id: true, title: true, description: true, priority: true, status: true },
+      orderBy: [{ status: 'asc' }, { orderKey: 'asc' }],
+      take: options.limit,
+    });
+  }
+
+  /**
    * テストケースを検索
    */
   async search(testSuiteId: string, options: TestCaseSearchOptions) {

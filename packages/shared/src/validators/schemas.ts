@@ -252,6 +252,12 @@ export const testCaseSearchSchema = z.object({
   includeDeleted: z.coerce.boolean().default(false),
 });
 
+// サジェスト検索スキーマ（@メンション用）
+export const suggestionSearchSchema = z.object({
+  q: z.string().max(100).optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(10),
+});
+
 // 型エクスポート
 export type UserCreate = z.infer<typeof userCreateSchema>;
 export type UserUpdate = z.infer<typeof userUpdateSchema>;
@@ -273,5 +279,6 @@ export type ExecutionCreate = z.infer<typeof executionCreateSchema>;
 export type ExecutionResultUpdate = z.infer<typeof executionResultUpdateSchema>;
 export type TestSuiteSearch = z.infer<typeof testSuiteSearchSchema>;
 export type TestCaseSearch = z.infer<typeof testCaseSearchSchema>;
+export type SuggestionSearch = z.infer<typeof suggestionSearchSchema>;
 export type Pagination = z.infer<typeof paginationSchema>;
 export type Sort = z.infer<typeof sortSchema>;

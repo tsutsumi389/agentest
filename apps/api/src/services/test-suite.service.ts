@@ -217,6 +217,15 @@ export class TestSuiteService {
   }
 
   /**
+   * テストケースをサジェスト（@メンション用）
+   */
+  async suggestTestCases(testSuiteId: string, options: { q?: string; limit: number }) {
+    // テストスイート存在確認
+    await this.findById(testSuiteId);
+    return this.testCaseRepo.suggest(testSuiteId, options);
+  }
+
+  /**
    * 前提条件一覧を取得
    */
   async getPreconditions(testSuiteId: string) {

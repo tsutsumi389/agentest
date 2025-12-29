@@ -91,6 +91,12 @@ router.post('/:projectId/environments/reorder', requireAuth(authConfig), require
 router.get('/:projectId/test-suites', requireAuth(authConfig), requireProjectRole(['ADMIN', 'WRITE', 'READ']), projectController.getTestSuites);
 
 /**
+ * プロジェクトのテストスイートサジェスト（@メンション用）
+ * GET /api/projects/:projectId/suggestions/test-suites
+ */
+router.get('/:projectId/suggestions/test-suites', requireAuth(authConfig), requireProjectRole(['ADMIN', 'WRITE', 'READ']), projectController.suggestTestSuites);
+
+/**
  * プロジェクトの履歴一覧取得
  * GET /api/projects/:projectId/histories
  */
