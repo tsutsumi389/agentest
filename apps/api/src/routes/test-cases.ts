@@ -43,6 +43,24 @@ router.get('/:testCaseId/preconditions', requireAuth(authConfig), testCaseContro
 router.post('/:testCaseId/preconditions', requireAuth(authConfig), testCaseController.addPrecondition);
 
 /**
+ * 前提条件並び替え
+ * POST /api/test-cases/:testCaseId/preconditions/reorder
+ */
+router.post('/:testCaseId/preconditions/reorder', requireAuth(authConfig), testCaseController.reorderPreconditions);
+
+/**
+ * 前提条件更新
+ * PATCH /api/test-cases/:testCaseId/preconditions/:preconditionId
+ */
+router.patch('/:testCaseId/preconditions/:preconditionId', requireAuth(authConfig), testCaseController.updatePrecondition);
+
+/**
+ * 前提条件削除
+ * DELETE /api/test-cases/:testCaseId/preconditions/:preconditionId
+ */
+router.delete('/:testCaseId/preconditions/:preconditionId', requireAuth(authConfig), testCaseController.deletePrecondition);
+
+/**
  * テストケースのステップ一覧取得
  * GET /api/test-cases/:testCaseId/steps
  */
@@ -55,6 +73,24 @@ router.get('/:testCaseId/steps', requireAuth(authConfig), testCaseController.get
 router.post('/:testCaseId/steps', requireAuth(authConfig), testCaseController.addStep);
 
 /**
+ * ステップ並び替え
+ * POST /api/test-cases/:testCaseId/steps/reorder
+ */
+router.post('/:testCaseId/steps/reorder', requireAuth(authConfig), testCaseController.reorderSteps);
+
+/**
+ * ステップ更新
+ * PATCH /api/test-cases/:testCaseId/steps/:stepId
+ */
+router.patch('/:testCaseId/steps/:stepId', requireAuth(authConfig), testCaseController.updateStep);
+
+/**
+ * ステップ削除
+ * DELETE /api/test-cases/:testCaseId/steps/:stepId
+ */
+router.delete('/:testCaseId/steps/:stepId', requireAuth(authConfig), testCaseController.deleteStep);
+
+/**
  * テストケースの期待結果一覧取得
  * GET /api/test-cases/:testCaseId/expected-results
  */
@@ -65,5 +101,23 @@ router.get('/:testCaseId/expected-results', requireAuth(authConfig), testCaseCon
  * POST /api/test-cases/:testCaseId/expected-results
  */
 router.post('/:testCaseId/expected-results', requireAuth(authConfig), testCaseController.addExpectedResult);
+
+/**
+ * 期待結果並び替え
+ * POST /api/test-cases/:testCaseId/expected-results/reorder
+ */
+router.post('/:testCaseId/expected-results/reorder', requireAuth(authConfig), testCaseController.reorderExpectedResults);
+
+/**
+ * 期待結果更新
+ * PATCH /api/test-cases/:testCaseId/expected-results/:expectedResultId
+ */
+router.patch('/:testCaseId/expected-results/:expectedResultId', requireAuth(authConfig), testCaseController.updateExpectedResult);
+
+/**
+ * 期待結果削除
+ * DELETE /api/test-cases/:testCaseId/expected-results/:expectedResultId
+ */
+router.delete('/:testCaseId/expected-results/:expectedResultId', requireAuth(authConfig), testCaseController.deleteExpectedResult);
 
 export default router;
