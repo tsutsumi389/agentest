@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -101,9 +101,9 @@ export function TestSuiteDetailPage() {
   const executions = executionsData?.executions || [];
 
   // テストケース並び替え後の更新ハンドラ
-  const handleTestCasesReordered = (reorderedTestCases: TestCase[]) => {
+  const handleTestCasesReordered = useCallback((reorderedTestCases: TestCase[]) => {
     queryClient.setQueryData(['test-suite-cases', testSuiteId], { testCases: reorderedTestCases });
-  };
+  }, [queryClient, testSuiteId]);
 
   // サイドバーにテストケース一覧を表示
   useEffect(() => {
@@ -123,7 +123,7 @@ export function TestSuiteDetailPage() {
     );
 
     return () => setSidebarContent(null);
-  }, [testSuiteId, testCases, selectedTestCaseId, currentRole, isLoadingCases, setSidebarContent]);
+  }, [testSuiteId, testCases, selectedTestCaseId, currentRole, isLoadingCases, setSidebarContent, handleTestCasesReordered]);
 
   if (isLoadingSuite) {
     return (

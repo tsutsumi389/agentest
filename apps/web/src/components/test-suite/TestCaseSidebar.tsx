@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   DndContext,
   closestCenter,
@@ -217,13 +217,11 @@ export function TestCaseSidebar({
   };
 
   // propsのtestCasesが変更されたらローカル状態をリセット
-  if (
-    localTestCases.length > 0 &&
-    !isReordering &&
-    JSON.stringify(localTestCases.map((tc) => tc.id)) !== JSON.stringify(sortedTestCases.map((tc) => tc.id))
-  ) {
-    setLocalTestCases([]);
-  }
+  useEffect(() => {
+    if (!isReordering) {
+      setLocalTestCases([]);
+    }
+  }, [testCases, isReordering]);
 
   return (
     <div className="flex flex-col h-full">
