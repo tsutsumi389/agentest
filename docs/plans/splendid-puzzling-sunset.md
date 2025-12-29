@@ -20,6 +20,57 @@
 
 ---
 
+## UI設計方針（変更）
+
+### 2カラムレイアウト（サイドバー + メインコンテンツ）
+
+テストスイート詳細ページ（`TestSuiteDetail.tsx`）を以下の構成に変更:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ ヘッダー: テストスイート名、アクションボタン                      │
+├──────────────────┬──────────────────────────────────────────────┤
+│ サイドバー        │ メインコンテンツ                              │
+│ (w-64)           │                                              │
+│                  │                                              │
+│ [+ 新規作成]      │ ┌──────────────────────────────────────────┐ │
+│                  │ │ テストケース詳細                          │ │
+│ ┌──────────────┐ │ │                                          │ │
+│ │ ≡ ケース1    │ │ │ タイトル: ログイン正常系                  │ │
+│ ├──────────────┤ │ │ 優先度: HIGH  ステータス: ACTIVE          │ │
+│ │ ≡ ケース2 ◀─┼─┼─│                                          │ │
+│ ├──────────────┤ │ │ [前提条件]                               │ │
+│ │ ≡ ケース3    │ │ │  1. ユーザーが登録済み                    │ │
+│ └──────────────┘ │ │                                          │ │
+│                  │ │ [ステップ]                                │ │
+│ D&Dで並替可能    │ │  1. ログインページを開く                   │ │
+│                  │ │  2. 認証情報を入力                        │ │
+│                  │ │                                          │ │
+│                  │ │ [期待結果]                                │ │
+│                  │ │  1. ダッシュボードが表示される             │ │
+│                  │ └──────────────────────────────────────────┘ │
+└──────────────────┴──────────────────────────────────────────────┘
+```
+
+### 特徴
+
+1. **サイドバー（左）**: テストケース一覧
+   - D&D対応で順番入れ替え可能
+   - クリックで右側のメインコンテンツを切り替え
+   - 新規作成ボタン
+   - 既存の`PageSidebarContext`を活用
+
+2. **メインコンテンツ（右）**: 選択されたテストケースの詳細
+   - ページ遷移なし（同一ページ内で切り替え）
+   - 前提条件/ステップ/期待結果の管理UI
+   - 履歴タブ、設定タブ
+
+3. **テストケース未選択時**: テストスイートの概要を表示
+   - 前提条件リスト（既存）
+   - 実行履歴（既存）
+
+---
+
 ## 実装順序
 
 ### Step 1: バックエンドAPI拡充（前提条件/ステップ/期待結果の完全CRUD）
@@ -46,7 +97,7 @@ POST   /api/test-cases/:testCaseId/expected-results/reorder
 
 ---
 
-### Step 2: テストケース検索・フィルタ・ソートAPI
+### Step 2: テストケース並替API
 
 **対象ファイル:**
 - `apps/api/src/routes/test-suites.ts`
@@ -55,19 +106,32 @@ POST   /api/test-cases/:testCaseId/expected-results/reorder
 
 **エンドポイント:**
 ```
-GET /api/test-suites/:testSuiteId/test-cases
-  ?q=          # タイトル・手順・期待値でLIKE検索
-  &status=     # DRAFT | ACTIVE | ARCHIVED
-  &priority=   # CRITICAL | HIGH | MEDIUM | LOW
-  &sortBy=     # title | createdAt | updatedAt | priority
-  &sortOrder=  # asc | desc
-  &limit=      # default: 50
-  &offset=     # default: 0
+POST /api/test-suites/:testSuiteId/test-cases/reorder
+Request: { testCaseIds: string[] }
+Response: { testCases: TestCase[] }
 ```
 
 ---
 
-### Step 3: テストケースコピーAPI（TC-003）
+### Step 3: テストケース検索・フィルタ・ソートAPI
+
+**対象ファイル:**
+- `apps/api/src/routes/test-suites.ts`
+- `apps/api/src/services/test-suite.service.ts`
+
+**エンドポイント:**
+```
+GET /api/test-suites/:testSuiteId/test-cases
+  ?q=          # タイトル・手順・期待値でLIKE検索
+  &status=     # DRAFT | ACTIVE | ARCHIVED
+  &priority=   # CRITICAL | HIGH | MEDIUM | LOW
+  &sortBy=     # title | createdAt | updatedAt | priority | orderKey
+  &sortOrder=  # asc | desc
+```
+
+---
+
+### Step 4: テストケースコピーAPI（TC-003）
 
 **対象ファイル:**
 - `apps/api/src/routes/test-cases.ts`
@@ -76,25 +140,17 @@ GET /api/test-suites/:testSuiteId/test-cases
 **エンドポイント:**
 ```
 POST /api/test-cases/:testCaseId/copy
-
 Request: { testSuiteId?: string, title?: string }
 Response: { testCase: TestCaseWithDetails }
 ```
 
-**動作:**
-1. 元テストケース + 前提条件/ステップ/期待結果を取得
-2. 新しいテストケースとして複製（orderKey新規生成）
-3. タイトル省略時は「{元タイトル} (コピー)」
-
 ---
 
-### Step 4: @参照入力用検索API（TC-004）
+### Step 5: @参照入力用検索API（TC-004）
 
 **対象ファイル:**
 - `apps/api/src/routes/projects.ts`
 - `apps/api/src/routes/test-suites.ts`
-- `apps/api/src/controllers/project.controller.ts`
-- `apps/api/src/controllers/test-suite.controller.ts`
 
 **エンドポイント:**
 ```
@@ -104,7 +160,7 @@ GET /api/test-suites/:testSuiteId/suggestions/test-cases?q=&limit=10
 
 ---
 
-### Step 5: 履歴取得・復元API（TC-005）
+### Step 6: 履歴取得・復元API（TC-005）
 
 **対象ファイル:**
 - `apps/api/src/routes/test-cases.ts`
@@ -118,31 +174,44 @@ POST /api/test-cases/:testCaseId/restore
 
 ---
 
-### Step 6: フロントエンド - テストケース詳細ページ
+### Step 7: フロントエンド - サイドバーコンポーネント
 
 **新規作成ファイル:**
-- `apps/web/src/pages/TestCaseDetail.tsx`
+- `apps/web/src/components/test-suite/TestCaseSidebar.tsx`
 
-**修正ファイル:**
-- `apps/web/src/App.tsx` （ルート追加: `/test-cases/:testCaseId`）
+**機能:**
+- テストケース一覧表示
+- D&D対応（`dnd-kit`使用、`PreconditionList.tsx`を参考）
+- 選択状態のハイライト
+- 新規作成ボタン
+- 検索ボックス（オプション）
+
+**参照実装:** `apps/web/src/components/test-suite/PreconditionList.tsx`
+
+---
+
+### Step 8: フロントエンド - テストケース詳細パネル
+
+**新規作成ファイル:**
+- `apps/web/src/components/test-case/TestCaseDetailPanel.tsx`
 
 **コンポーネント構成:**
 ```
-TestCaseDetailPage
-├── ヘッダー（パンくず、タイトル、アクションボタン）
-├── タブ（概要 / 履歴 / 設定）
+TestCaseDetailPanel
+├── ヘッダー（タイトル編集、アクションメニュー）
+├── タブナビゲーション（概要 / 履歴 / 設定）
 ├── 概要タブ
 │   ├── 基本情報（優先度、ステータス、説明）
-│   ├── 前提条件リスト（ドラッグ&ドロップ対応）
-│   ├── ステップリスト（ドラッグ&ドロップ対応）
-│   └── 期待結果リスト（ドラッグ&ドロップ対応）
+│   ├── 前提条件リスト（D&D対応）
+│   ├── ステップリスト（D&D対応）
+│   └── 期待結果リスト（D&D対応）
 ├── 履歴タブ
 └── 設定タブ（削除セクション）
 ```
 
 ---
 
-### Step 7: フロントエンド - テストケース用コンポーネント群
+### Step 9: フロントエンド - テストケース用サブコンポーネント群
 
 **新規作成ファイル:**
 ```
@@ -162,47 +231,43 @@ apps/web/src/components/test-case/
 
 ---
 
-### Step 8: フロントエンド - 検索・フィルタ・ソートUI
-
-**新規作成ファイル:**
-- `apps/web/src/components/test-suite/TestCaseSearchFilter.tsx`
+### Step 10: フロントエンド - TestSuiteDetail.tsx 改修
 
 **修正ファイル:**
 - `apps/web/src/pages/TestSuiteDetail.tsx`
 - `apps/web/src/lib/api.ts`
 
-**機能:**
-- 検索ボックス（debounce 300ms）
-- ステータスフィルタ（ドロップダウン）
-- 優先度フィルタ（ドロップダウン）
-- ソートオプション
+**変更内容:**
+1. `usePageSidebar()` で `TestCaseSidebar` をセット
+2. 選択されたテストケースIDの状態管理（URLクエリパラメータ `?testCase=xxx`）
+3. テストケース選択時: `TestCaseDetailPanel` を表示
+4. テストケース未選択時: 既存の概要コンテンツを表示
+5. タブシステムはテストスイートレベルで維持（概要/履歴/設定）
+
+**状態管理:**
+```typescript
+// URLクエリパラメータで選択状態を管理
+const [searchParams, setSearchParams] = useSearchParams();
+const selectedTestCaseId = searchParams.get('testCase');
+
+const handleSelectTestCase = (testCaseId: string | null) => {
+  if (testCaseId) {
+    setSearchParams({ testCase: testCaseId });
+  } else {
+    setSearchParams({});
+  }
+};
+```
 
 ---
 
-### Step 9: フロントエンド - @参照入力UI（TC-004）
+### Step 11: フロントエンド - @参照入力UI（TC-004）
 
 **新規作成ファイル:**
 - `apps/web/src/components/common/MentionInput.tsx`
 
 **修正ファイル:**
-- `apps/web/src/pages/TestSuiteDetail.tsx`（CreateTestCaseModalに統合）
-
-**動作:**
-1. タイトル入力で `@` を入力 → テストスイート候補表示
-2. スイート選択後 `/` を入力 → テストケース候補表示
-3. テストケース選択 → 内容プレビュー表示
-4. 「コピーして作成」ボタン → 前提条件/ステップ/期待結果を複製
-
----
-
-### Step 10: フロントエンド - テストケース行の遷移・アクション
-
-**修正ファイル:**
-- `apps/web/src/pages/TestSuiteDetail.tsx`
-
-**変更点:**
-- TestCaseRowをクリックで詳細ページ（`/test-cases/:testCaseId`）へ遷移
-- アクションメニューにコピー機能を追加
+- `apps/web/src/components/test-suite/TestCaseSidebar.tsx`（作成モーダルに統合）
 
 ---
 
@@ -214,31 +279,39 @@ apps/web/src/components/test-case/
 | `apps/api/src/routes/test-cases.ts` | 更新/削除/並替/コピー/履歴/復元API追加 |
 | `apps/api/src/controllers/test-case.controller.ts` | 新規メソッド追加 |
 | `apps/api/src/services/test-case.service.ts` | ビジネスロジック追加 |
-| `apps/api/src/routes/test-suites.ts` | 検索パラメータ対応、suggestions API追加 |
-| `apps/api/src/controllers/test-suite.controller.ts` | 検索・suggestions メソッド追加 |
-| `apps/api/src/services/test-suite.service.ts` | 検索・suggestions ロジック追加 |
+| `apps/api/src/routes/test-suites.ts` | 並替API、検索パラメータ対応、suggestions API追加 |
+| `apps/api/src/controllers/test-suite.controller.ts` | 並替・検索・suggestions メソッド追加 |
+| `apps/api/src/services/test-suite.service.ts` | 並替・検索・suggestions ロジック追加 |
 | `apps/api/src/routes/projects.ts` | suggestions/test-suites API追加 |
 | `apps/api/src/controllers/project.controller.ts` | suggestions メソッド追加 |
 
 ### フロントエンド
 | ファイル | 変更内容 |
 |----------|----------|
-| `apps/web/src/App.tsx` | テストケース詳細ルート追加 |
-| `apps/web/src/pages/TestCaseDetail.tsx` | 新規作成 |
-| `apps/web/src/pages/TestSuiteDetail.tsx` | 検索・フィルタUI追加、行クリック遷移 |
+| `apps/web/src/pages/TestSuiteDetail.tsx` | 2カラムレイアウト化、サイドバー統合 |
 | `apps/web/src/lib/api.ts` | testCasesApi拡張、suggestionsApi追加 |
+| `apps/web/src/components/test-suite/TestCaseSidebar.tsx` | 新規作成 |
+| `apps/web/src/components/test-case/TestCaseDetailPanel.tsx` | 新規作成 |
 | `apps/web/src/components/test-case/*` | 新規コンポーネント群（9ファイル） |
-| `apps/web/src/components/test-suite/TestCaseSearchFilter.tsx` | 新規作成 |
 | `apps/web/src/components/common/MentionInput.tsx` | 新規作成 |
 
 ### 共通パッケージ
 | ファイル | 変更内容 |
 |----------|----------|
-| `packages/shared/src/validators/schemas.ts` | 検索・フィルタ・コピーのZodスキーマ追加 |
+| `packages/shared/src/validators/schemas.ts` | 検索・フィルタ・コピー・並替のZodスキーマ追加 |
 
 ---
 
 ## 技術的考慮事項
+
+### サイドバー実装
+- 既存の`PageSidebarContext`を使用（`Layout.tsx`で提供）
+- `usePageSidebar()`フックでコンテンツを注入
+
+### D&D実装
+- `dnd-kit`使用（セットアップ済み）
+- `PreconditionList.tsx`のパターンを踏襲
+- オプティミスティック更新 + エラー時ロールバック
 
 ### 検索方式
 - LIKE検索（`%keyword%`）を使用
@@ -248,10 +321,6 @@ apps/web/src/components/test-case/
 - OWNER, ADMIN: 全操作可能
 - WRITE: 作成・更新・削除可能
 - READ: 閲覧のみ
-
-### ドラッグ&ドロップ
-- dnd-kit使用（PreconditionListの実装パターン踏襲）
-- オプティミスティック更新 + エラー時ロールバック
 
 ### 履歴管理
 - 更新/削除時にスナップショット保存（既存実装）
