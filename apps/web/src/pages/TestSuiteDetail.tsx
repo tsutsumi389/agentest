@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -6,19 +6,24 @@ import {
   Plus,
   Play,
   ChevronLeft,
+  ChevronDown,
+  ChevronUp,
   CheckCircle2,
   AlertCircle,
   Clock,
-  MoreHorizontal,
   History,
   Settings,
 } from 'lucide-react';
-import { testSuitesApi, testCasesApi, projectsApi, ApiError, type TestCase, type TestSuite, type ProjectMemberRole } from '../lib/api';
+import { testSuitesApi, testCasesApi, projectsApi, ApiError, type TestCase, type TestSuite, type ProjectMemberRole, type TestCaseWithDetails } from '../lib/api';
 import { toast } from '../stores/toast';
 import { useAuth } from '../hooks/useAuth';
+import { usePageSidebar } from '../components/Layout';
 import { PreconditionList } from '../components/test-suite/PreconditionList';
+import { TestCaseSidebar } from '../components/test-suite/TestCaseSidebar';
 import { TestSuiteHistoryList } from '../components/test-suite/TestSuiteHistoryList';
 import { DeleteTestSuiteSection } from '../components/test-suite/DeleteTestSuiteSection';
+import { TestCaseDetailPanel } from '../components/test-case/TestCaseDetailPanel';
+import { MentionInput } from '../components/common/MentionInput';
 
 /**
  * タブ定義
@@ -39,14 +44,31 @@ export function TestSuiteDetailPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { setSidebarContent } = usePageSidebar();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+
+  // URLクエリパラメータから選択状態を取得
+  const selectedTestCaseId = searchParams.get('testCase');
 
   // 現在のタブ
   const currentTab = (searchParams.get('tab') as TabType) || 'overview';
 
+  // テストケース選択ハンドラ（URLを更新）
+  const handleSelectTestCase = useCallback((testCaseId: string | null) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (testCaseId) {
+      newParams.set('testCase', testCaseId);
+    } else {
+      newParams.delete('testCase');
+    }
+    setSearchParams(newParams);
+  }, [searchParams, setSearchParams]);
+
   // タブ変更ハンドラ
   const handleTabChange = (tab: TabType) => {
-    setSearchParams({ tab });
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('tab', tab);
+    setSearchParams(newParams);
   };
 
   // テストスイート情報を取得
@@ -96,6 +118,31 @@ export function TestSuiteDetailPage() {
 
   const testCases = casesData?.testCases || [];
   const executions = executionsData?.executions || [];
+
+  // テストケース並び替え後の更新ハンドラ
+  const handleTestCasesReordered = useCallback((reorderedTestCases: TestCase[]) => {
+    queryClient.setQueryData(['test-suite-cases', testSuiteId], { testCases: reorderedTestCases });
+  }, [queryClient, testSuiteId]);
+
+  // サイドバーにテストケース一覧を表示
+  useEffect(() => {
+    if (!testSuiteId) return;
+
+    setSidebarContent(
+      <TestCaseSidebar
+        testSuiteId={testSuiteId}
+        testCases={testCases}
+        selectedTestCaseId={selectedTestCaseId}
+        onSelect={handleSelectTestCase}
+        onCreateClick={() => setIsCreateModalOpen(true)}
+        currentRole={currentRole}
+        isLoading={isLoadingCases}
+        onTestCasesReordered={handleTestCasesReordered}
+      />
+    );
+
+    return () => setSidebarContent(null);
+  }, [testSuiteId, testCases, selectedTestCaseId, currentRole, isLoadingCases, setSidebarContent, handleTestCasesReordered, handleSelectTestCase]);
 
   if (isLoadingSuite) {
     return (
@@ -187,35 +234,55 @@ export function TestSuiteDetailPage() {
       </div>
 
       {/* タブコンテンツ */}
-      {currentTab === 'overview' && (
-        <OverviewTab
-          testSuiteId={testSuiteId}
-          currentRole={currentRole}
-          testCases={testCases}
-          isLoadingCases={isLoadingCases}
-          executions={executions}
-          onCreateClick={() => setIsCreateModalOpen(true)}
-        />
-      )}
+      {selectedTestCaseId ? (
+        // テストケース選択時: 詳細パネルを表示
+        <div className="card h-[calc(100vh-16rem)] overflow-hidden">
+          <TestCaseDetailPanel
+            testCaseId={selectedTestCaseId}
+            testSuiteId={testSuiteId}
+            currentRole={currentRole}
+            onClose={() => handleSelectTestCase(null)}
+            onUpdated={() => {
+              queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
+            }}
+            onDeleted={() => {
+              handleSelectTestCase(null);
+              queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
+            }}
+          />
+        </div>
+      ) : (
+        // テストケース未選択時: 既存のタブコンテンツを表示
+        <>
+          {currentTab === 'overview' && (
+            <OverviewTab
+              testSuiteId={testSuiteId}
+              currentRole={currentRole}
+              executions={executions}
+            />
+          )}
 
-      {currentTab === 'history' && (
-        <TestSuiteHistoryList testSuite={suite} />
-      )}
+          {currentTab === 'history' && (
+            <TestSuiteHistoryList testSuite={suite} />
+          )}
 
-      {currentTab === 'settings' && (
-        <SettingsTab
-          testSuite={suite}
-          currentRole={currentRole}
-          onUpdated={(updated) => {
-            queryClient.setQueryData(['test-suite', testSuiteId], { testSuite: updated });
-          }}
-        />
+          {currentTab === 'settings' && (
+            <SettingsTab
+              testSuite={suite}
+              currentRole={currentRole}
+              onUpdated={(updated) => {
+                queryClient.setQueryData(['test-suite', testSuiteId], { testSuite: updated });
+              }}
+            />
+          )}
+        </>
       )}
 
       {/* 作成モーダル */}
-      {isCreateModalOpen && testSuiteId && (
+      {isCreateModalOpen && testSuiteId && suite && (
         <CreateTestCaseModal
           testSuiteId={testSuiteId}
+          projectId={suite.projectId}
           onClose={() => setIsCreateModalOpen(false)}
         />
       )}
@@ -229,107 +296,60 @@ export function TestSuiteDetailPage() {
 interface OverviewTabProps {
   testSuiteId: string;
   currentRole: 'OWNER' | ProjectMemberRole | undefined;
-  testCases: TestCase[];
-  isLoadingCases: boolean;
   executions: { id: string; status: string; startedAt: string }[];
-  onCreateClick: () => void;
 }
 
 function OverviewTab({
   testSuiteId,
   currentRole,
-  testCases,
-  isLoadingCases,
   executions,
-  onCreateClick,
 }: OverviewTabProps) {
   return (
     <>
       {/* 前提条件セクション */}
       <PreconditionList testSuiteId={testSuiteId} currentRole={currentRole} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* テストケース一覧 */}
-        <div className="lg:col-span-2">
-          <div className="card">
-            <div className="p-4 border-b border-border">
-              <h2 className="font-semibold text-foreground">
-                テストケース ({testCases.length})
-              </h2>
-            </div>
+      {/* 実行履歴 */}
+      <div className="card">
+        <div className="p-4 border-b border-border">
+          <h2 className="font-semibold text-foreground">実行履歴</h2>
+        </div>
 
-            {isLoadingCases ? (
-              <div className="p-8 text-center text-foreground-muted">
-                読み込み中...
-              </div>
-            ) : testCases.length === 0 ? (
-              <div className="p-8 text-center">
-                <CheckCircle2 className="w-12 h-12 text-foreground-subtle mx-auto mb-3" />
-                <p className="text-foreground-muted mb-4">
-                  テストケースがありません
+        {executions.length === 0 ? (
+          <div className="p-6 text-center text-foreground-muted">
+            実行履歴がありません
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {executions.map((execution) => (
+              <Link
+                key={execution.id}
+                to={`/executions/${execution.id}`}
+                className="block p-4 hover:bg-background-tertiary transition-colors"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  {execution.status === 'COMPLETED' && (
+                    <CheckCircle2 className="w-4 h-4 text-success" />
+                  )}
+                  {execution.status === 'IN_PROGRESS' && (
+                    <Clock className="w-4 h-4 text-warning" />
+                  )}
+                  {execution.status === 'ABORTED' && (
+                    <AlertCircle className="w-4 h-4 text-danger" />
+                  )}
+                  <span className="text-sm font-medium text-foreground">
+                    {execution.status === 'COMPLETED' && '完了'}
+                    {execution.status === 'IN_PROGRESS' && '実行中'}
+                    {execution.status === 'ABORTED' && '中断'}
+                  </span>
+                </div>
+                <p className="text-xs text-foreground-muted">
+                  {new Date(execution.startedAt).toLocaleString('ja-JP')}
                 </p>
-                <button
-                  onClick={onCreateClick}
-                  className="btn btn-primary"
-                >
-                  <Plus className="w-4 h-4" />
-                  テストケースを作成
-                </button>
-              </div>
-            ) : (
-              <div className="divide-y divide-border">
-                {testCases.map((testCase) => (
-                  <TestCaseRow key={testCase.id} testCase={testCase} />
-                ))}
-              </div>
-            )}
+              </Link>
+            ))}
           </div>
-        </div>
-
-        {/* 実行履歴 */}
-        <div>
-          <div className="card">
-            <div className="p-4 border-b border-border">
-              <h2 className="font-semibold text-foreground">実行履歴</h2>
-            </div>
-
-            {executions.length === 0 ? (
-              <div className="p-6 text-center text-foreground-muted">
-                実行履歴がありません
-              </div>
-            ) : (
-              <div className="divide-y divide-border">
-                {executions.map((execution) => (
-                  <Link
-                    key={execution.id}
-                    to={`/executions/${execution.id}`}
-                    className="block p-4 hover:bg-background-tertiary transition-colors"
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      {execution.status === 'COMPLETED' && (
-                        <CheckCircle2 className="w-4 h-4 text-success" />
-                      )}
-                      {execution.status === 'IN_PROGRESS' && (
-                        <Clock className="w-4 h-4 text-warning" />
-                      )}
-                      {execution.status === 'ABORTED' && (
-                        <AlertCircle className="w-4 h-4 text-danger" />
-                      )}
-                      <span className="text-sm font-medium text-foreground">
-                        {execution.status === 'COMPLETED' && '完了'}
-                        {execution.status === 'IN_PROGRESS' && '実行中'}
-                        {execution.status === 'ABORTED' && '中断'}
-                      </span>
-                    </div>
-                    <p className="text-xs text-foreground-muted">
-                      {new Date(execution.startedAt).toLocaleString('ja-JP')}
-                    </p>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        )}
       </div>
     </>
   );
@@ -359,57 +379,15 @@ function SettingsTab({ testSuite, currentRole, onUpdated }: SettingsTabProps) {
 }
 
 /**
- * テストケース行
- */
-function TestCaseRow({ testCase }: { testCase: TestCase }) {
-  const priorityColors = {
-    CRITICAL: 'text-danger',
-    HIGH: 'text-warning',
-    MEDIUM: 'text-accent',
-    LOW: 'text-foreground-muted',
-  };
-
-  const priorityLabels = {
-    CRITICAL: '緊急',
-    HIGH: '高',
-    MEDIUM: '中',
-    LOW: '低',
-  };
-
-  return (
-    <div className="flex items-center justify-between p-4 hover:bg-background-tertiary transition-colors">
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded bg-background-tertiary flex items-center justify-center">
-          <CheckCircle2 className="w-4 h-4 text-foreground-subtle" />
-        </div>
-        <div>
-          <p className="font-medium text-foreground">{testCase.title}</p>
-          <p className="text-sm text-foreground-muted truncate max-w-md">
-            {testCase.description || '説明なし'}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <span className={`text-xs font-medium ${priorityColors[testCase.priority]}`}>
-          {priorityLabels[testCase.priority]}
-        </span>
-        <button className="btn btn-ghost p-2">
-          <MoreHorizontal className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/**
  * テストケース作成モーダル
  */
 function CreateTestCaseModal({
   testSuiteId,
+  projectId,
   onClose,
 }: {
   testSuiteId: string;
+  projectId: string;
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -417,6 +395,37 @@ function CreateTestCaseModal({
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'>('MEDIUM');
 
+  // コピー元テストケースID（コピー時に使用）
+  const [sourceTestCaseId, setSourceTestCaseId] = useState<string | null>(null);
+
+  // コピーされたテストケースの詳細（プレビュー表示用）
+  const [preconditions, setPreconditions] = useState<string[]>([]);
+  const [steps, setSteps] = useState<string[]>([]);
+  const [expectedResults, setExpectedResults] = useState<string[]>([]);
+
+  // コピー内容の展開状態
+  const [isCopiedContentExpanded, setIsCopiedContentExpanded] = useState(false);
+
+  // コピーされた内容があるかどうか
+  const hasCopiedContent = preconditions.length > 0 || steps.length > 0 || expectedResults.length > 0;
+
+  // テストケース選択ハンドラ
+  const handleTestCaseSelect = (testCase: TestCaseWithDetails) => {
+    // コピー元テストケースIDを保持
+    setSourceTestCaseId(testCase.id);
+    // タイトルを選択したケースのタイトルにセット
+    setTitle(testCase.title);
+    setDescription(testCase.description || '');
+    setPriority(testCase.priority);
+    // プレビュー表示用にコピー
+    setPreconditions(testCase.preconditions.map(p => p.content));
+    setSteps(testCase.steps.map(s => s.content));
+    setExpectedResults(testCase.expectedResults.map(e => e.content));
+    setIsCopiedContentExpanded(true);
+    toast.info(`「${testCase.title}」の内容をコピーしました`);
+  };
+
+  // 通常作成用mutation
   const createMutation = useMutation({
     mutationFn: (data: { testSuiteId: string; title: string; description?: string; priority: string }) =>
       testCasesApi.create(data),
@@ -434,14 +443,44 @@ function CreateTestCaseModal({
     },
   });
 
+  // コピー作成用mutation
+  const copyMutation = useMutation({
+    mutationFn: (data: { sourceTestCaseId: string; title: string; targetTestSuiteId: string }) =>
+      testCasesApi.copy(data.sourceTestCaseId, { title: data.title, targetTestSuiteId: data.targetTestSuiteId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
+      toast.success('テストケースをコピーしました');
+      onClose();
+    },
+    onError: (err) => {
+      if (err instanceof ApiError) {
+        toast.error(err.message);
+      } else {
+        toast.error('テストケースのコピーに失敗しました');
+      }
+    },
+  });
+
+  const isPending = createMutation.isPending || copyMutation.isPending;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createMutation.mutate({
-      testSuiteId,
-      title,
-      description: description || undefined,
-      priority,
-    });
+    if (sourceTestCaseId) {
+      // コピー元がある場合はcopy APIを使用
+      copyMutation.mutate({
+        sourceTestCaseId,
+        title,
+        targetTestSuiteId: testSuiteId,
+      });
+    } else {
+      // 通常作成
+      createMutation.mutate({
+        testSuiteId,
+        title,
+        description: description || undefined,
+        priority,
+      });
+    }
   };
 
   // 背景クリックで閉じる
@@ -456,7 +495,7 @@ function CreateTestCaseModal({
       className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/50"
       onClick={handleBackdropClick}
     >
-      <div className="card w-full max-w-md p-6">
+      <div className="card w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
         <h2 className="text-lg font-semibold text-foreground mb-4">
           新規テストケース
         </h2>
@@ -466,13 +505,12 @@ function CreateTestCaseModal({
             <label className="block text-sm font-medium text-foreground mb-1">
               タイトル <span className="text-danger">*</span>
             </label>
-            <input
-              type="text"
+            <MentionInput
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="input"
-              placeholder="例: ログインフォームの表示確認"
-              required
+              onChange={setTitle}
+              projectId={projectId}
+              onTestCaseSelect={handleTestCaseSelect}
+              placeholder="例: ログインフォームの表示確認（@でテストケース参照）"
             />
           </div>
 
@@ -504,6 +542,64 @@ function CreateTestCaseModal({
             </select>
           </div>
 
+          {/* コピーされた内容のプレビュー */}
+          {hasCopiedContent && (
+            <div className="border border-border rounded-lg overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setIsCopiedContentExpanded(!isCopiedContentExpanded)}
+                className="w-full flex items-center justify-between px-3 py-2 bg-background-tertiary hover:bg-background-secondary transition-colors text-sm font-medium text-foreground"
+              >
+                <span>コピーされた内容</span>
+                {isCopiedContentExpanded ? (
+                  <ChevronUp className="w-4 h-4" />
+                ) : (
+                  <ChevronDown className="w-4 h-4" />
+                )}
+              </button>
+              {isCopiedContentExpanded && (
+                <div className="px-3 py-3 space-y-3 bg-background-secondary/50">
+                  {preconditions.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-medium text-foreground-muted mb-1">
+                        前提条件 ({preconditions.length}件)
+                      </h4>
+                      <ol className="list-decimal list-inside space-y-0.5 text-sm text-foreground">
+                        {preconditions.map((item, i) => (
+                          <li key={i} className="truncate">{item}</li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+                  {steps.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-medium text-foreground-muted mb-1">
+                        ステップ ({steps.length}件)
+                      </h4>
+                      <ol className="list-decimal list-inside space-y-0.5 text-sm text-foreground">
+                        {steps.map((item, i) => (
+                          <li key={i} className="truncate">{item}</li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+                  {expectedResults.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-medium text-foreground-muted mb-1">
+                        期待結果 ({expectedResults.length}件)
+                      </h4>
+                      <ol className="list-decimal list-inside space-y-0.5 text-sm text-foreground">
+                        {expectedResults.map((item, i) => (
+                          <li key={i} className="truncate">{item}</li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex justify-end gap-3 pt-4">
             <button
               type="button"
@@ -515,9 +611,9 @@ function CreateTestCaseModal({
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={!title || createMutation.isPending}
+              disabled={!title || isPending}
             >
-              {createMutation.isPending ? '作成中...' : '作成'}
+              {isPending ? '作成中...' : (sourceTestCaseId ? 'コピーして作成' : '作成')}
             </button>
           </div>
         </form>
