@@ -6,13 +6,15 @@ import {
   Plus,
   Play,
   ChevronLeft,
+  ChevronDown,
+  ChevronUp,
   CheckCircle2,
   AlertCircle,
   Clock,
   History,
   Settings,
 } from 'lucide-react';
-import { testSuitesApi, testCasesApi, projectsApi, ApiError, type TestCase, type TestSuite, type ProjectMemberRole } from '../lib/api';
+import { testSuitesApi, testCasesApi, projectsApi, ApiError, type TestCase, type TestSuite, type ProjectMemberRole, type TestCaseWithDetails } from '../lib/api';
 import { toast } from '../stores/toast';
 import { useAuth } from '../hooks/useAuth';
 import { usePageSidebar } from '../components/Layout';
@@ -21,6 +23,7 @@ import { TestCaseSidebar } from '../components/test-suite/TestCaseSidebar';
 import { TestSuiteHistoryList } from '../components/test-suite/TestSuiteHistoryList';
 import { DeleteTestSuiteSection } from '../components/test-suite/DeleteTestSuiteSection';
 import { TestCaseDetailPanel } from '../components/test-case/TestCaseDetailPanel';
+import { MentionInput } from '../components/common/MentionInput';
 
 /**
  * タブ定義
@@ -276,9 +279,10 @@ export function TestSuiteDetailPage() {
       )}
 
       {/* 作成モーダル */}
-      {isCreateModalOpen && testSuiteId && (
+      {isCreateModalOpen && testSuiteId && suite && (
         <CreateTestCaseModal
           testSuiteId={testSuiteId}
+          projectId={suite.projectId}
           onClose={() => setIsCreateModalOpen(false)}
         />
       )}
@@ -379,9 +383,11 @@ function SettingsTab({ testSuite, currentRole, onUpdated }: SettingsTabProps) {
  */
 function CreateTestCaseModal({
   testSuiteId,
+  projectId,
   onClose,
 }: {
   testSuiteId: string;
+  projectId: string;
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
@@ -389,9 +395,40 @@ function CreateTestCaseModal({
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'>('MEDIUM');
 
+  // コピーされたテストケースの詳細
+  const [preconditions, setPreconditions] = useState<string[]>([]);
+  const [steps, setSteps] = useState<string[]>([]);
+  const [expectedResults, setExpectedResults] = useState<string[]>([]);
+
+  // コピー内容の展開状態
+  const [isCopiedContentExpanded, setIsCopiedContentExpanded] = useState(false);
+
+  // コピーされた内容があるかどうか
+  const hasCopiedContent = preconditions.length > 0 || steps.length > 0 || expectedResults.length > 0;
+
+  // テストケース選択ハンドラ
+  const handleTestCaseSelect = (testCase: TestCaseWithDetails) => {
+    // タイトルを選択したケースのタイトルにセット
+    setTitle(testCase.title);
+    setDescription(testCase.description || '');
+    setPriority(testCase.priority);
+    setPreconditions(testCase.preconditions.map(p => p.content));
+    setSteps(testCase.steps.map(s => s.content));
+    setExpectedResults(testCase.expectedResults.map(e => e.content));
+    setIsCopiedContentExpanded(true);
+    toast.info(`「${testCase.title}」の内容をコピーしました`);
+  };
+
   const createMutation = useMutation({
-    mutationFn: (data: { testSuiteId: string; title: string; description?: string; priority: string }) =>
-      testCasesApi.create(data),
+    mutationFn: (data: {
+      testSuiteId: string;
+      title: string;
+      description?: string;
+      priority: string;
+      preconditions?: string[];
+      steps?: string[];
+      expectedResults?: string[];
+    }) => testCasesApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
       toast.success('テストケースを作成しました');
@@ -413,6 +450,9 @@ function CreateTestCaseModal({
       title,
       description: description || undefined,
       priority,
+      preconditions: preconditions.length > 0 ? preconditions : undefined,
+      steps: steps.length > 0 ? steps : undefined,
+      expectedResults: expectedResults.length > 0 ? expectedResults : undefined,
     });
   };
 
@@ -428,7 +468,7 @@ function CreateTestCaseModal({
       className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/50"
       onClick={handleBackdropClick}
     >
-      <div className="card w-full max-w-md p-6">
+      <div className="card w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
         <h2 className="text-lg font-semibold text-foreground mb-4">
           新規テストケース
         </h2>
@@ -438,13 +478,12 @@ function CreateTestCaseModal({
             <label className="block text-sm font-medium text-foreground mb-1">
               タイトル <span className="text-danger">*</span>
             </label>
-            <input
-              type="text"
+            <MentionInput
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="input"
-              placeholder="例: ログインフォームの表示確認"
-              required
+              onChange={setTitle}
+              projectId={projectId}
+              onTestCaseSelect={handleTestCaseSelect}
+              placeholder="例: ログインフォームの表示確認（@でテストケース参照）"
             />
           </div>
 
@@ -475,6 +514,64 @@ function CreateTestCaseModal({
               <option value="LOW">低</option>
             </select>
           </div>
+
+          {/* コピーされた内容のプレビュー */}
+          {hasCopiedContent && (
+            <div className="border border-border rounded-lg overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setIsCopiedContentExpanded(!isCopiedContentExpanded)}
+                className="w-full flex items-center justify-between px-3 py-2 bg-background-tertiary hover:bg-background-secondary transition-colors text-sm font-medium text-foreground"
+              >
+                <span>コピーされた内容</span>
+                {isCopiedContentExpanded ? (
+                  <ChevronUp className="w-4 h-4" />
+                ) : (
+                  <ChevronDown className="w-4 h-4" />
+                )}
+              </button>
+              {isCopiedContentExpanded && (
+                <div className="px-3 py-3 space-y-3 bg-background-secondary/50">
+                  {preconditions.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-medium text-foreground-muted mb-1">
+                        前提条件 ({preconditions.length}件)
+                      </h4>
+                      <ol className="list-decimal list-inside space-y-0.5 text-sm text-foreground">
+                        {preconditions.map((item, i) => (
+                          <li key={i} className="truncate">{item}</li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+                  {steps.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-medium text-foreground-muted mb-1">
+                        ステップ ({steps.length}件)
+                      </h4>
+                      <ol className="list-decimal list-inside space-y-0.5 text-sm text-foreground">
+                        {steps.map((item, i) => (
+                          <li key={i} className="truncate">{item}</li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+                  {expectedResults.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-medium text-foreground-muted mb-1">
+                        期待結果 ({expectedResults.length}件)
+                      </h4>
+                      <ol className="list-decimal list-inside space-y-0.5 text-sm text-foreground">
+                        {expectedResults.map((item, i) => (
+                          <li key={i} className="truncate">{item}</li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="flex justify-end gap-3 pt-4">
             <button
