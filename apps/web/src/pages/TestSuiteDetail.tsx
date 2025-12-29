@@ -395,7 +395,10 @@ function CreateTestCaseModal({
   const [description, setDescription] = useState('');
   const [priority, setPriority] = useState<'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'>('MEDIUM');
 
-  // コピーされたテストケースの詳細
+  // コピー元テストケースID（コピー時に使用）
+  const [sourceTestCaseId, setSourceTestCaseId] = useState<string | null>(null);
+
+  // コピーされたテストケースの詳細（プレビュー表示用）
   const [preconditions, setPreconditions] = useState<string[]>([]);
   const [steps, setSteps] = useState<string[]>([]);
   const [expectedResults, setExpectedResults] = useState<string[]>([]);
@@ -408,10 +411,13 @@ function CreateTestCaseModal({
 
   // テストケース選択ハンドラ
   const handleTestCaseSelect = (testCase: TestCaseWithDetails) => {
+    // コピー元テストケースIDを保持
+    setSourceTestCaseId(testCase.id);
     // タイトルを選択したケースのタイトルにセット
     setTitle(testCase.title);
     setDescription(testCase.description || '');
     setPriority(testCase.priority);
+    // プレビュー表示用にコピー
     setPreconditions(testCase.preconditions.map(p => p.content));
     setSteps(testCase.steps.map(s => s.content));
     setExpectedResults(testCase.expectedResults.map(e => e.content));
@@ -419,16 +425,10 @@ function CreateTestCaseModal({
     toast.info(`「${testCase.title}」の内容をコピーしました`);
   };
 
+  // 通常作成用mutation
   const createMutation = useMutation({
-    mutationFn: (data: {
-      testSuiteId: string;
-      title: string;
-      description?: string;
-      priority: string;
-      preconditions?: string[];
-      steps?: string[];
-      expectedResults?: string[];
-    }) => testCasesApi.create(data),
+    mutationFn: (data: { testSuiteId: string; title: string; description?: string; priority: string }) =>
+      testCasesApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
       toast.success('テストケースを作成しました');
@@ -443,17 +443,44 @@ function CreateTestCaseModal({
     },
   });
 
+  // コピー作成用mutation
+  const copyMutation = useMutation({
+    mutationFn: (data: { sourceTestCaseId: string; title: string; targetTestSuiteId: string }) =>
+      testCasesApi.copy(data.sourceTestCaseId, { title: data.title, targetTestSuiteId: data.targetTestSuiteId }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
+      toast.success('テストケースをコピーしました');
+      onClose();
+    },
+    onError: (err) => {
+      if (err instanceof ApiError) {
+        toast.error(err.message);
+      } else {
+        toast.error('テストケースのコピーに失敗しました');
+      }
+    },
+  });
+
+  const isPending = createMutation.isPending || copyMutation.isPending;
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    createMutation.mutate({
-      testSuiteId,
-      title,
-      description: description || undefined,
-      priority,
-      preconditions: preconditions.length > 0 ? preconditions : undefined,
-      steps: steps.length > 0 ? steps : undefined,
-      expectedResults: expectedResults.length > 0 ? expectedResults : undefined,
-    });
+    if (sourceTestCaseId) {
+      // コピー元がある場合はcopy APIを使用
+      copyMutation.mutate({
+        sourceTestCaseId,
+        title,
+        targetTestSuiteId: testSuiteId,
+      });
+    } else {
+      // 通常作成
+      createMutation.mutate({
+        testSuiteId,
+        title,
+        description: description || undefined,
+        priority,
+      });
+    }
   };
 
   // 背景クリックで閉じる
@@ -584,9 +611,9 @@ function CreateTestCaseModal({
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={!title || createMutation.isPending}
+              disabled={!title || isPending}
             >
-              {createMutation.isPending ? '作成中...' : '作成'}
+              {isPending ? '作成中...' : (sourceTestCaseId ? 'コピーして作成' : '作成')}
             </button>
           </div>
         </form>
