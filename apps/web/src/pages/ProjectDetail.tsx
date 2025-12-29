@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useParams, Link } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -10,6 +10,8 @@ import {
   ChevronLeft,
   Settings,
   ChevronRight,
+  X,
+  Loader2,
 } from 'lucide-react';
 import { projectsApi, testSuitesApi, type TestSuite, type TestSuiteSearchParams, type ProjectMemberRole } from '../lib/api';
 import { TestSuiteSearchFilter, type FilterMember } from '../components/test-suite/TestSuiteSearchFilter';
@@ -390,6 +392,7 @@ function CreateTestSuiteModal({
   onClose: () => void;
 }) {
   const queryClient = useQueryClient();
+  const nameInputRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
 
@@ -398,9 +401,43 @@ function CreateTestSuiteModal({
       testSuitesApi.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-test-suites', projectId] });
-      onClose();
+      handleClose();
     },
   });
+
+  // フォームをリセットしてモーダルを閉じる
+  const handleClose = useCallback(() => {
+    setName('');
+    setDescription('');
+    createMutation.reset();
+    onClose();
+  }, [onClose, createMutation]);
+
+  // モーダルオープン時にフォーカス設定
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      nameInputRef.current?.focus();
+    });
+  }, []);
+
+  // ESCキーでモーダルを閉じる
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !createMutation.isPending) {
+        handleClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [createMutation.isPending, handleClose]);
+
+  // 背景クリックでモーダルを閉じる
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget && !createMutation.isPending) {
+      handleClose();
+    }
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -412,11 +449,27 @@ function CreateTestSuiteModal({
   };
 
   return (
-    <div className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/50">
-      <div className="card w-full max-w-md p-6">
-        <h2 className="text-lg font-semibold text-foreground mb-4">
-          新規テストスイート
-        </h2>
+    <div
+      className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/50"
+      onClick={handleBackdropClick}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="create-test-suite-modal-title"
+    >
+      <div className="card w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h2 id="create-test-suite-modal-title" className="text-lg font-semibold text-foreground">
+            新規テストスイート
+          </h2>
+          <button
+            onClick={handleClose}
+            className="p-1 text-foreground-muted hover:text-foreground hover:bg-background-tertiary rounded transition-colors"
+            aria-label="閉じる"
+            disabled={createMutation.isPending}
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -424,12 +477,14 @@ function CreateTestSuiteModal({
               スイート名 <span className="text-danger">*</span>
             </label>
             <input
+              ref={nameInputRef}
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
               className="input"
               placeholder="例: ログイン機能テスト"
               required
+              disabled={createMutation.isPending}
             />
           </div>
 
@@ -442,14 +497,16 @@ function CreateTestSuiteModal({
               onChange={(e) => setDescription(e.target.value)}
               className="input min-h-[80px]"
               placeholder="テストスイートの説明を入力..."
+              disabled={createMutation.isPending}
             />
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="btn btn-secondary"
+              disabled={createMutation.isPending}
             >
               キャンセル
             </button>
@@ -458,7 +515,14 @@ function CreateTestSuiteModal({
               className="btn btn-primary"
               disabled={!name || createMutation.isPending}
             >
-              {createMutation.isPending ? '作成中...' : '作成'}
+              {createMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  作成中...
+                </>
+              ) : (
+                '作成'
+              )}
             </button>
           </div>
         </form>
