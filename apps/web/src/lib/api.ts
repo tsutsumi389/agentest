@@ -730,7 +730,7 @@ export const testCasesApi = {
     api.post<{ testCase: TestCase }>('/api/test-cases', data),
   getById: (testCaseId: string) => api.get<{ testCase: TestCase }>(`/api/test-cases/${testCaseId}`),
   getByIdWithDetails: (testCaseId: string) =>
-    api.get<{ testCase: TestCaseWithDetails }>(`/api/test-cases/${testCaseId}/details`),
+    api.get<{ testCase: TestCaseWithDetails }>(`/api/test-cases/${testCaseId}`),
   update: (testCaseId: string, data: { title?: string; description?: string; priority?: string; status?: string }) =>
     api.patch<{ testCase: TestCase }>(`/api/test-cases/${testCaseId}`, data),
   delete: (testCaseId: string) => api.delete<void>(`/api/test-cases/${testCaseId}`),
