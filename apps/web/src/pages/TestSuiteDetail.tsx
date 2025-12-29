@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -9,14 +9,15 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
-  MoreHorizontal,
   History,
   Settings,
 } from 'lucide-react';
 import { testSuitesApi, testCasesApi, projectsApi, ApiError, type TestCase, type TestSuite, type ProjectMemberRole } from '../lib/api';
 import { toast } from '../stores/toast';
 import { useAuth } from '../hooks/useAuth';
+import { usePageSidebar } from '../components/Layout';
 import { PreconditionList } from '../components/test-suite/PreconditionList';
+import { TestCaseSidebar } from '../components/test-suite/TestCaseSidebar';
 import { TestSuiteHistoryList } from '../components/test-suite/TestSuiteHistoryList';
 import { DeleteTestSuiteSection } from '../components/test-suite/DeleteTestSuiteSection';
 
@@ -39,7 +40,9 @@ export function TestSuiteDetailPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { setSidebarContent } = usePageSidebar();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [selectedTestCaseId, setSelectedTestCaseId] = useState<string | null>(null);
 
   // 現在のタブ
   const currentTab = (searchParams.get('tab') as TabType) || 'overview';
@@ -96,6 +99,31 @@ export function TestSuiteDetailPage() {
 
   const testCases = casesData?.testCases || [];
   const executions = executionsData?.executions || [];
+
+  // テストケース並び替え後の更新ハンドラ
+  const handleTestCasesReordered = (reorderedTestCases: TestCase[]) => {
+    queryClient.setQueryData(['test-suite-cases', testSuiteId], { testCases: reorderedTestCases });
+  };
+
+  // サイドバーにテストケース一覧を表示
+  useEffect(() => {
+    if (!testSuiteId) return;
+
+    setSidebarContent(
+      <TestCaseSidebar
+        testSuiteId={testSuiteId}
+        testCases={testCases}
+        selectedTestCaseId={selectedTestCaseId}
+        onSelect={setSelectedTestCaseId}
+        onCreateClick={() => setIsCreateModalOpen(true)}
+        currentRole={currentRole}
+        isLoading={isLoadingCases}
+        onTestCasesReordered={handleTestCasesReordered}
+      />
+    );
+
+    return () => setSidebarContent(null);
+  }, [testSuiteId, testCases, selectedTestCaseId, currentRole, isLoadingCases, setSidebarContent]);
 
   if (isLoadingSuite) {
     return (
@@ -191,10 +219,7 @@ export function TestSuiteDetailPage() {
         <OverviewTab
           testSuiteId={testSuiteId}
           currentRole={currentRole}
-          testCases={testCases}
-          isLoadingCases={isLoadingCases}
           executions={executions}
-          onCreateClick={() => setIsCreateModalOpen(true)}
         />
       )}
 
@@ -229,107 +254,60 @@ export function TestSuiteDetailPage() {
 interface OverviewTabProps {
   testSuiteId: string;
   currentRole: 'OWNER' | ProjectMemberRole | undefined;
-  testCases: TestCase[];
-  isLoadingCases: boolean;
   executions: { id: string; status: string; startedAt: string }[];
-  onCreateClick: () => void;
 }
 
 function OverviewTab({
   testSuiteId,
   currentRole,
-  testCases,
-  isLoadingCases,
   executions,
-  onCreateClick,
 }: OverviewTabProps) {
   return (
     <>
       {/* 前提条件セクション */}
       <PreconditionList testSuiteId={testSuiteId} currentRole={currentRole} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* テストケース一覧 */}
-        <div className="lg:col-span-2">
-          <div className="card">
-            <div className="p-4 border-b border-border">
-              <h2 className="font-semibold text-foreground">
-                テストケース ({testCases.length})
-              </h2>
-            </div>
+      {/* 実行履歴 */}
+      <div className="card">
+        <div className="p-4 border-b border-border">
+          <h2 className="font-semibold text-foreground">実行履歴</h2>
+        </div>
 
-            {isLoadingCases ? (
-              <div className="p-8 text-center text-foreground-muted">
-                読み込み中...
-              </div>
-            ) : testCases.length === 0 ? (
-              <div className="p-8 text-center">
-                <CheckCircle2 className="w-12 h-12 text-foreground-subtle mx-auto mb-3" />
-                <p className="text-foreground-muted mb-4">
-                  テストケースがありません
+        {executions.length === 0 ? (
+          <div className="p-6 text-center text-foreground-muted">
+            実行履歴がありません
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {executions.map((execution) => (
+              <Link
+                key={execution.id}
+                to={`/executions/${execution.id}`}
+                className="block p-4 hover:bg-background-tertiary transition-colors"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  {execution.status === 'COMPLETED' && (
+                    <CheckCircle2 className="w-4 h-4 text-success" />
+                  )}
+                  {execution.status === 'IN_PROGRESS' && (
+                    <Clock className="w-4 h-4 text-warning" />
+                  )}
+                  {execution.status === 'ABORTED' && (
+                    <AlertCircle className="w-4 h-4 text-danger" />
+                  )}
+                  <span className="text-sm font-medium text-foreground">
+                    {execution.status === 'COMPLETED' && '完了'}
+                    {execution.status === 'IN_PROGRESS' && '実行中'}
+                    {execution.status === 'ABORTED' && '中断'}
+                  </span>
+                </div>
+                <p className="text-xs text-foreground-muted">
+                  {new Date(execution.startedAt).toLocaleString('ja-JP')}
                 </p>
-                <button
-                  onClick={onCreateClick}
-                  className="btn btn-primary"
-                >
-                  <Plus className="w-4 h-4" />
-                  テストケースを作成
-                </button>
-              </div>
-            ) : (
-              <div className="divide-y divide-border">
-                {testCases.map((testCase) => (
-                  <TestCaseRow key={testCase.id} testCase={testCase} />
-                ))}
-              </div>
-            )}
+              </Link>
+            ))}
           </div>
-        </div>
-
-        {/* 実行履歴 */}
-        <div>
-          <div className="card">
-            <div className="p-4 border-b border-border">
-              <h2 className="font-semibold text-foreground">実行履歴</h2>
-            </div>
-
-            {executions.length === 0 ? (
-              <div className="p-6 text-center text-foreground-muted">
-                実行履歴がありません
-              </div>
-            ) : (
-              <div className="divide-y divide-border">
-                {executions.map((execution) => (
-                  <Link
-                    key={execution.id}
-                    to={`/executions/${execution.id}`}
-                    className="block p-4 hover:bg-background-tertiary transition-colors"
-                  >
-                    <div className="flex items-center gap-2 mb-1">
-                      {execution.status === 'COMPLETED' && (
-                        <CheckCircle2 className="w-4 h-4 text-success" />
-                      )}
-                      {execution.status === 'IN_PROGRESS' && (
-                        <Clock className="w-4 h-4 text-warning" />
-                      )}
-                      {execution.status === 'ABORTED' && (
-                        <AlertCircle className="w-4 h-4 text-danger" />
-                      )}
-                      <span className="text-sm font-medium text-foreground">
-                        {execution.status === 'COMPLETED' && '完了'}
-                        {execution.status === 'IN_PROGRESS' && '実行中'}
-                        {execution.status === 'ABORTED' && '中断'}
-                      </span>
-                    </div>
-                    <p className="text-xs text-foreground-muted">
-                      {new Date(execution.startedAt).toLocaleString('ja-JP')}
-                    </p>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        )}
       </div>
     </>
   );
@@ -355,50 +333,6 @@ function SettingsTab({ testSuite, currentRole, onUpdated }: SettingsTabProps) {
       onUpdated={onUpdated}
       canEdit={canEdit}
     />
-  );
-}
-
-/**
- * テストケース行
- */
-function TestCaseRow({ testCase }: { testCase: TestCase }) {
-  const priorityColors = {
-    CRITICAL: 'text-danger',
-    HIGH: 'text-warning',
-    MEDIUM: 'text-accent',
-    LOW: 'text-foreground-muted',
-  };
-
-  const priorityLabels = {
-    CRITICAL: '緊急',
-    HIGH: '高',
-    MEDIUM: '中',
-    LOW: '低',
-  };
-
-  return (
-    <div className="flex items-center justify-between p-4 hover:bg-background-tertiary transition-colors">
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded bg-background-tertiary flex items-center justify-center">
-          <CheckCircle2 className="w-4 h-4 text-foreground-subtle" />
-        </div>
-        <div>
-          <p className="font-medium text-foreground">{testCase.title}</p>
-          <p className="text-sm text-foreground-muted truncate max-w-md">
-            {testCase.description || '説明なし'}
-          </p>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <span className={`text-xs font-medium ${priorityColors[testCase.priority]}`}>
-          {priorityLabels[testCase.priority]}
-        </span>
-        <button className="btn btn-ghost p-2">
-          <MoreHorizontal className="w-4 h-4" />
-        </button>
-      </div>
-    </div>
   );
 }
 

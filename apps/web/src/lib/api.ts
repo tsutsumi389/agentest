@@ -658,6 +658,10 @@ export const testSuitesApi = {
       `/api/test-suites/${testSuiteId}/suggestions/test-cases${queryString ? `?${queryString}` : ''}`
     );
   },
+
+  // テストケース並び替え
+  reorderTestCases: (testSuiteId: string, testCaseIds: string[]) =>
+    api.post<{ testCases: TestCase[] }>(`/api/test-suites/${testSuiteId}/test-cases/reorder`, { testCaseIds }),
 };
 
 // ============================================
