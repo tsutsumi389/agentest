@@ -20,6 +20,7 @@ import { PreconditionList } from '../components/test-suite/PreconditionList';
 import { TestCaseSidebar } from '../components/test-suite/TestCaseSidebar';
 import { TestSuiteHistoryList } from '../components/test-suite/TestSuiteHistoryList';
 import { DeleteTestSuiteSection } from '../components/test-suite/DeleteTestSuiteSection';
+import { TestCaseDetailPanel } from '../components/test-case/TestCaseDetailPanel';
 
 /**
  * タブ定義
@@ -215,26 +216,48 @@ export function TestSuiteDetailPage() {
       </div>
 
       {/* タブコンテンツ */}
-      {currentTab === 'overview' && (
-        <OverviewTab
-          testSuiteId={testSuiteId}
-          currentRole={currentRole}
-          executions={executions}
-        />
-      )}
+      {selectedTestCaseId ? (
+        // テストケース選択時: 詳細パネルを表示
+        <div className="card h-[calc(100vh-16rem)] overflow-hidden">
+          <TestCaseDetailPanel
+            testCaseId={selectedTestCaseId}
+            testSuiteId={testSuiteId}
+            currentRole={currentRole}
+            onClose={() => setSelectedTestCaseId(null)}
+            onUpdated={() => {
+              queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
+            }}
+            onDeleted={() => {
+              setSelectedTestCaseId(null);
+              queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
+            }}
+          />
+        </div>
+      ) : (
+        // テストケース未選択時: 既存のタブコンテンツを表示
+        <>
+          {currentTab === 'overview' && (
+            <OverviewTab
+              testSuiteId={testSuiteId}
+              currentRole={currentRole}
+              executions={executions}
+            />
+          )}
 
-      {currentTab === 'history' && (
-        <TestSuiteHistoryList testSuite={suite} />
-      )}
+          {currentTab === 'history' && (
+            <TestSuiteHistoryList testSuite={suite} />
+          )}
 
-      {currentTab === 'settings' && (
-        <SettingsTab
-          testSuite={suite}
-          currentRole={currentRole}
-          onUpdated={(updated) => {
-            queryClient.setQueryData(['test-suite', testSuiteId], { testSuite: updated });
-          }}
-        />
+          {currentTab === 'settings' && (
+            <SettingsTab
+              testSuite={suite}
+              currentRole={currentRole}
+              onUpdated={(updated) => {
+                queryClient.setQueryData(['test-suite', testSuiteId], { testSuite: updated });
+              }}
+            />
+          )}
+        </>
       )}
 
       {/* 作成モーダル */}

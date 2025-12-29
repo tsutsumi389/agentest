@@ -439,6 +439,63 @@ export interface TestCase {
   orderKey: string;
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string | null;
+}
+
+/** テストケース前提条件 */
+export interface TestCasePrecondition {
+  id: string;
+  testCaseId: string;
+  content: string;
+  orderKey: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** テストケースステップ */
+export interface TestCaseStep {
+  id: string;
+  testCaseId: string;
+  content: string;
+  orderKey: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** テストケース期待結果 */
+export interface TestCaseExpectedResult {
+  id: string;
+  testCaseId: string;
+  content: string;
+  orderKey: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** テストケース変更タイプ */
+export type TestCaseChangeType = 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE';
+
+/** テストケース履歴 */
+export interface TestCaseHistory {
+  id: string;
+  testCaseId: string;
+  changeType: TestCaseChangeType;
+  snapshot: Record<string, unknown>;
+  changeReason: string | null;
+  createdAt: string;
+  changedBy: {
+    id: string;
+    email: string;
+    name: string;
+    avatarUrl: string | null;
+  } | null;
+}
+
+/** テストケース詳細（前提条件・ステップ・期待結果含む） */
+export interface TestCaseWithDetails extends TestCase {
+  preconditions: TestCasePrecondition[];
+  steps: TestCaseStep[];
+  expectedResults: TestCaseExpectedResult[];
 }
 
 export interface Execution {
@@ -672,9 +729,66 @@ export const testCasesApi = {
   create: (data: { testSuiteId: string; title: string; description?: string; priority?: string }) =>
     api.post<{ testCase: TestCase }>('/api/test-cases', data),
   getById: (testCaseId: string) => api.get<{ testCase: TestCase }>(`/api/test-cases/${testCaseId}`),
+  getByIdWithDetails: (testCaseId: string) =>
+    api.get<{ testCase: TestCaseWithDetails }>(`/api/test-cases/${testCaseId}/details`),
   update: (testCaseId: string, data: { title?: string; description?: string; priority?: string; status?: string }) =>
     api.patch<{ testCase: TestCase }>(`/api/test-cases/${testCaseId}`, data),
   delete: (testCaseId: string) => api.delete<void>(`/api/test-cases/${testCaseId}`),
+
+  // 前提条件管理
+  getPreconditions: (testCaseId: string) =>
+    api.get<{ preconditions: TestCasePrecondition[] }>(`/api/test-cases/${testCaseId}/preconditions`),
+  addPrecondition: (testCaseId: string, data: { content: string; orderKey?: string }) =>
+    api.post<{ precondition: TestCasePrecondition }>(`/api/test-cases/${testCaseId}/preconditions`, data),
+  updatePrecondition: (testCaseId: string, preconditionId: string, data: { content: string }) =>
+    api.patch<{ precondition: TestCasePrecondition }>(`/api/test-cases/${testCaseId}/preconditions/${preconditionId}`, data),
+  deletePrecondition: (testCaseId: string, preconditionId: string) =>
+    api.delete<void>(`/api/test-cases/${testCaseId}/preconditions/${preconditionId}`),
+  reorderPreconditions: (testCaseId: string, preconditionIds: string[]) =>
+    api.post<{ preconditions: TestCasePrecondition[] }>(`/api/test-cases/${testCaseId}/preconditions/reorder`, { preconditionIds }),
+
+  // ステップ管理
+  getSteps: (testCaseId: string) =>
+    api.get<{ steps: TestCaseStep[] }>(`/api/test-cases/${testCaseId}/steps`),
+  addStep: (testCaseId: string, data: { content: string; orderKey?: string }) =>
+    api.post<{ step: TestCaseStep }>(`/api/test-cases/${testCaseId}/steps`, data),
+  updateStep: (testCaseId: string, stepId: string, data: { content: string }) =>
+    api.patch<{ step: TestCaseStep }>(`/api/test-cases/${testCaseId}/steps/${stepId}`, data),
+  deleteStep: (testCaseId: string, stepId: string) =>
+    api.delete<void>(`/api/test-cases/${testCaseId}/steps/${stepId}`),
+  reorderSteps: (testCaseId: string, stepIds: string[]) =>
+    api.post<{ steps: TestCaseStep[] }>(`/api/test-cases/${testCaseId}/steps/reorder`, { stepIds }),
+
+  // 期待結果管理
+  getExpectedResults: (testCaseId: string) =>
+    api.get<{ expectedResults: TestCaseExpectedResult[] }>(`/api/test-cases/${testCaseId}/expected-results`),
+  addExpectedResult: (testCaseId: string, data: { content: string; orderKey?: string }) =>
+    api.post<{ expectedResult: TestCaseExpectedResult }>(`/api/test-cases/${testCaseId}/expected-results`, data),
+  updateExpectedResult: (testCaseId: string, expectedResultId: string, data: { content: string }) =>
+    api.patch<{ expectedResult: TestCaseExpectedResult }>(`/api/test-cases/${testCaseId}/expected-results/${expectedResultId}`, data),
+  deleteExpectedResult: (testCaseId: string, expectedResultId: string) =>
+    api.delete<void>(`/api/test-cases/${testCaseId}/expected-results/${expectedResultId}`),
+  reorderExpectedResults: (testCaseId: string, expectedResultIds: string[]) =>
+    api.post<{ expectedResults: TestCaseExpectedResult[] }>(`/api/test-cases/${testCaseId}/expected-results/reorder`, { expectedResultIds }),
+
+  // 履歴管理
+  getHistories: (testCaseId: string, params?: { limit?: number; offset?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.limit !== undefined) query.set('limit', String(params.limit));
+    if (params?.offset !== undefined) query.set('offset', String(params.offset));
+    const queryString = query.toString();
+    return api.get<{ histories: TestCaseHistory[]; total: number }>(
+      `/api/test-cases/${testCaseId}/histories${queryString ? `?${queryString}` : ''}`
+    );
+  },
+
+  // 復元
+  restore: (testCaseId: string) =>
+    api.post<{ testCase: TestCase }>(`/api/test-cases/${testCaseId}/restore`),
+
+  // コピー
+  copy: (testCaseId: string, data?: { title?: string }) =>
+    api.post<{ testCase: TestCase }>(`/api/test-cases/${testCaseId}/copy`, data),
 };
 
 // ============================================
