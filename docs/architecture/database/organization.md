@@ -131,19 +131,17 @@ model OrganizationMember {
 | `id` | UUID | NO | gen_random_uuid() | 主キー |
 | `name` | VARCHAR(100) | NO | - | プロジェクト名 |
 | `description` | TEXT | YES | NULL | プロジェクトの説明 |
-| `organizationId` | UUID | YES | NULL | 組織 ID（外部キー）※1 |
-| `ownerId` | UUID | YES | NULL | オーナー ID（外部キー）※1 |
+| `organizationId` | UUID | YES | NULL | 組織 ID（外部キー） |
 | `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
 | `updatedAt` | TIMESTAMP | NO | now() | 更新日時 |
 | `deletedAt` | TIMESTAMP | YES | NULL | 削除日時（論理削除） |
 
-※1: `organizationId` と `ownerId` はどちらか一方のみ設定（排他制約）
+※ オーナーは `ProjectMember` テーブルで `OWNER` ロールとして管理
 
 ### 制約
 
-- `organizationId` か `ownerId` のどちらか一方が必ず設定される（排他制約）
 - 同一組織内でプロジェクト名は一意
-- 同一オーナー内でプロジェクト名は一意
+- 同一オーナー（OWNER メンバー）内でプロジェクト名は一意
 
 ### Prisma スキーマ
 
@@ -153,13 +151,11 @@ model Project {
   name           String    @db.VarChar(100)
   description    String?
   organizationId String?   @db.Uuid
-  ownerId        String?   @db.Uuid
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   deletedAt      DateTime?
 
   organization  Organization?    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  owner         User?            @relation("ProjectOwner", fields: [ownerId], references: [id], onDelete: Cascade)
   members       ProjectMember[]
   environments  ProjectEnvironment[]
   testSuites    TestSuite[]
@@ -167,19 +163,7 @@ model Project {
   agentSessions AgentSession[]
 
   @@index([organizationId])
-  @@index([ownerId])
 }
-```
-
-### 排他制約（SQL）
-
-```sql
--- organizationId か ownerId のどちらか一方のみ設定
-ALTER TABLE "Project" ADD CONSTRAINT "project_owner_check"
-  CHECK (
-    (organization_id IS NOT NULL AND owner_id IS NULL) OR
-    (organization_id IS NULL AND owner_id IS NOT NULL)
-  );
 ```
 
 ---
@@ -275,8 +259,7 @@ model ProjectEnvironment {
 {
   "name": "プロジェクト名",
   "description": "プロジェクトの説明",
-  "organizationId": "uuid",
-  "ownerId": null
+  "organizationId": "uuid"
 }
 ```
 
@@ -382,7 +365,7 @@ model OrganizationInvitation {
 | `id` | UUID | NO | gen_random_uuid() | 主キー |
 | `projectId` | UUID | NO | - | プロジェクト ID（外部キー） |
 | `userId` | UUID | NO | - | ユーザー ID（外部キー） |
-| `role` | ENUM | NO | READ | 権限（ADMIN, WRITE, READ） |
+| `role` | ENUM | NO | READ | 権限（OWNER, ADMIN, WRITE, READ） |
 | `addedAt` | TIMESTAMP | NO | now() | 追加日時 |
 
 ### 制約
@@ -393,6 +376,7 @@ model OrganizationInvitation {
 
 | ロール | 説明 | 権限 |
 |--------|------|------|
+| `OWNER` | プロジェクトオーナー | 全権限 + 削除・ロール変更不可 |
 | `ADMIN` | プロジェクト管理者 | プロジェクト設定 + メンバー管理 + 全編集権限 |
 | `WRITE` | 編集者 | テストスイート/ケースの作成・編集・削除 |
 | `READ` | 閲覧者 | 閲覧のみ（エクスポート可） |
@@ -401,6 +385,7 @@ model OrganizationInvitation {
 
 ```prisma
 enum ProjectRole {
+  OWNER
   ADMIN
   WRITE
   READ
@@ -443,7 +428,7 @@ model ProjectMember {
 | MBR-006 | 招待リンク発行 | 有効期限付き招待リンクの生成 |
 | MBR-007 | 保留中招待一覧 | 未承諾の招待一覧を表示・取り消し |
 | ROL-001 | 組織ロール | Owner / Admin / Member の3種類 |
-| ROL-002 | プロジェクトロール | Admin / Write / Read の3種類 |
+| ROL-002 | プロジェクトロール | Owner / Admin / Write / Read の4種類 |
 | ROL-003 | プロジェクトアクセス制御 | プロジェクト単位でメンバーのアクセス権を設定 |
 | ROL-004 | デフォルト権限設定 | 新規メンバーのデフォルト権限を設定 |
 | ROL-005 | 権限継承 | 組織 Admin は全プロジェクトに Admin 権限 |

@@ -293,7 +293,6 @@ erDiagram
     Project ||--o{ ProjectHistory : "logs"
     Project ||--o{ TestSuite : "contains"
     Organization ||--o{ Project : "owns"
-    User ||--o{ Project : "owns (personal)"
     User ||--o{ ProjectMember : "belongs to"
 
     Project {
@@ -301,7 +300,6 @@ erDiagram
         string name
         string description
         uuid organizationId FK "nullable"
-        uuid ownerId FK
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt "nullable"
@@ -311,7 +309,7 @@ erDiagram
         uuid id PK
         uuid projectId FK
         uuid userId FK
-        enum role "ADMIN, WRITE, READ"
+        enum role "OWNER, ADMIN, WRITE, READ"
         timestamp joinedAt
     }
 
@@ -342,12 +340,12 @@ erDiagram
 
 ### プロジェクト所有権
 
-プロジェクトは以下のいずれかの所有形態を持つ：
+プロジェクトの作成者は `ProjectMember` テーブルに `OWNER` ロールで自動登録される。
 
-| 形態 | organizationId | ownerId | 説明 |
-|------|----------------|---------|------|
-| 個人所有 | null | ユーザーID | 作成者が唯一のオーナー |
-| 組織所有 | 組織ID | ユーザーID | 組織に属する、作成者はオーナー |
+| 形態 | organizationId | 説明 |
+|------|----------------|------|
+| 個人所有 | null | 作成者が OWNER メンバーとして登録 |
+| 組織所有 | 組織ID | 組織に属し、作成者が OWNER メンバーとして登録 |
 
 ## ビジネスルール
 
@@ -391,8 +389,10 @@ erDiagram
 
 ### メンバー管理
 
-- オーナー（OWNER）は削除不可
-- オーナー（OWNER）のロールは変更不可
+- OWNER ロールのメンバーは削除不可
+- OWNER ロールからの変更不可
+- OWNER ロールへの変更不可（API経由）
+- OWNER は作成時に自動登録のみ
 - 同一ユーザーの重複追加は不可
 - ロール変更はADMIN以上
 
