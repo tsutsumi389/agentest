@@ -72,18 +72,19 @@ export function requireTestSuiteRole(roles: ProjectRole[], options: RequireTestS
         throw new AuthorizationError('Project has been deleted');
       }
 
-      // プロジェクトオーナーは全権限を持つ
-      if (project.ownerId === user.id) {
-        // リクエストにプロジェクトIDを設定（後続の処理で使用可能）
-        req.params.projectId = project.id;
-        return next();
-      }
-
       // プロジェクトメンバーシップをチェック
       const member = project.members[0];
-      if (member && roles.includes(member.role)) {
-        req.params.projectId = project.id;
-        return next();
+      if (member) {
+        // OWNERロールは全権限を持つ
+        if (member.role === 'OWNER') {
+          req.params.projectId = project.id;
+          return next();
+        }
+        // 指定されたロールを持っているか
+        if (roles.includes(member.role)) {
+          req.params.projectId = project.id;
+          return next();
+        }
       }
 
       // プロジェクトが組織に属する場合、組織メンバーシップをチェック

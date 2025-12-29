@@ -17,7 +17,8 @@ interface ProjectMemberListProps {
 /**
  * ロールの表示名
  */
-const ROLE_LABELS: Record<ProjectMemberRole, string> = {
+const ROLE_LABELS: Record<'OWNER' | ProjectMemberRole, string> = {
+  OWNER: 'オーナー',
   ADMIN: '管理者',
   WRITE: '編集者',
   READ: '閲覧者',
@@ -26,8 +27,10 @@ const ROLE_LABELS: Record<ProjectMemberRole, string> = {
 /**
  * ロールのアイコン
  */
-function RoleIcon({ role, className }: { role: ProjectMemberRole; className?: string }) {
+function RoleIcon({ role, className }: { role: 'OWNER' | ProjectMemberRole; className?: string }) {
   switch (role) {
+    case 'OWNER':
+      return <Shield className={className} />;
     case 'ADMIN':
       return <Shield className={className} />;
     case 'WRITE':
@@ -38,7 +41,8 @@ function RoleIcon({ role, className }: { role: ProjectMemberRole; className?: st
 }
 
 /** ロールの優先順位（ソート用） */
-const ROLE_ORDER: Record<ProjectMemberRole, number> = {
+const ROLE_ORDER: Record<'OWNER' | ProjectMemberRole, number> = {
+  OWNER: -1,
   ADMIN: 0,
   WRITE: 1,
   READ: 2,
@@ -46,6 +50,11 @@ const ROLE_ORDER: Record<ProjectMemberRole, number> = {
 
 /**
  * ロール変更ドロップダウン
+ *
+ * OWNER保護について:
+ * - OWNERロールのメンバーに対してはメニュー自体を表示しない（shouldRender判定）
+ * - OWNERへの変更ボタンは存在しない（ADMIN/WRITE/READへの変更のみ）
+ * - サービス層でもOWNERの削除・ロール変更は禁止されている（多層防御）
  */
 function RoleDropdown({
   member,
@@ -69,8 +78,10 @@ function RoleDropdown({
   const isSelf = member.userId === currentUserId;
   // ADMIN以上のみ操作可能
   const canManage = currentRole === 'OWNER' || currentRole === 'ADMIN';
+  // OWNERロールのメンバーは操作対象外（削除・変更不可）
+  const isOwnerMember = member.role === 'OWNER';
   // 表示するかどうか
-  const shouldRender = !isSelf && canManage;
+  const shouldRender = !isSelf && canManage && !isOwnerMember;
 
   // ドロップダウン外クリックで閉じる
   useEffect(() => {
@@ -368,42 +379,7 @@ export function ProjectMemberList({ project, currentRole }: ProjectMemberListPro
         )}
       </div>
 
-      {/* オーナー表示 */}
-      {project.owner && (
-        <div className="mb-4 p-3 rounded-lg border border-border bg-background-secondary">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {project.owner.avatarUrl ? (
-                <img
-                  src={project.owner.avatarUrl}
-                  alt={project.owner.name}
-                  className="w-10 h-10 rounded-full"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-warning-subtle flex items-center justify-center">
-                  <span className="text-sm font-medium text-warning">
-                    {project.owner.name.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-              )}
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-foreground truncate">
-                    {project.owner.name}
-                  </span>
-                  {project.owner.id === user?.id && (
-                    <span className="badge badge-accent text-xs">あなた</span>
-                  )}
-                </div>
-                <p className="text-sm text-foreground-muted">オーナー</p>
-              </div>
-            </div>
-            <span className="text-sm font-medium text-warning">オーナー</span>
-          </div>
-        </div>
-      )}
-
-      {/* メンバー一覧 */}
+      {/* メンバー一覧（OWNERも含む） */}
       {members.length === 0 ? (
         <p className="text-center text-foreground-muted py-8">
           メンバーがいません
@@ -453,7 +429,7 @@ export function ProjectMemberList({ project, currentRole }: ProjectMemberListPro
                   <RoleIcon
                     role={member.role}
                     className={`w-4 h-4 ${
-                      member.role === 'ADMIN'
+                      member.role === 'OWNER' || member.role === 'ADMIN'
                         ? 'text-accent'
                         : member.role === 'WRITE'
                         ? 'text-success'
@@ -462,7 +438,7 @@ export function ProjectMemberList({ project, currentRole }: ProjectMemberListPro
                   />
                   <span
                     className={`text-sm font-medium ${
-                      member.role === 'ADMIN'
+                      member.role === 'OWNER' || member.role === 'ADMIN'
                         ? 'text-accent'
                         : member.role === 'WRITE'
                         ? 'text-success'

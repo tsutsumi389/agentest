@@ -189,34 +189,36 @@ export function requireProjectRole(roles: string[], options: RequireProjectRoleO
         throw new AuthorizationError('Project has been deleted');
       }
 
-      // オーナーは全権限を持つ
-      if (project.ownerId === user.id) {
-        return next();
-      }
-
       // プロジェクトメンバーシップをチェック
       const member = project.members[0];
-      if (!member || !roles.includes(member.role)) {
-        // プロジェクトが組織に属する場合、組織メンバーシップをチェック
-        if (project.organizationId) {
-          const orgMember = await prisma.organizationMember.findUnique({
-            where: {
-              organizationId_userId: {
-                organizationId: project.organizationId,
-                userId: user.id,
-              },
-            },
-          });
-
-          if (orgMember && ['OWNER', 'ADMIN'].includes(orgMember.role)) {
-            return next();
-          }
+      if (member) {
+        // OWNERロールは全権限を持つ
+        if (member.role === 'OWNER') {
+          return next();
         }
-
-        throw new AuthorizationError('Insufficient permissions');
+        // 指定されたロールを持っているか
+        if (roles.includes(member.role)) {
+          return next();
+        }
       }
 
-      next();
+      // プロジェクトが組織に属する場合、組織メンバーシップをチェック
+      if (project.organizationId) {
+        const orgMember = await prisma.organizationMember.findUnique({
+          where: {
+            organizationId_userId: {
+              organizationId: project.organizationId,
+              userId: user.id,
+            },
+          },
+        });
+
+        if (orgMember && ['OWNER', 'ADMIN'].includes(orgMember.role)) {
+          return next();
+        }
+      }
+
+      throw new AuthorizationError('Insufficient permissions');
     } catch (error) {
       next(error);
     }

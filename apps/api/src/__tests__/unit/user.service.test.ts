@@ -195,13 +195,12 @@ describe('UserService', () => {
         name: 'Project 1',
         slug: 'project-1',
         description: 'Description 1',
-        ownerId: 'user-1',
         organizationId: null,
         deletedAt: null,
         createdAt: new Date('2024-01-01'),
         updatedAt: new Date('2024-01-15'),
         organization: null,
-        members: [],
+        members: [{ role: 'OWNER' }], // オーナーはmembersに含まれる
         _count: { testSuites: 2 },
       },
       {
@@ -209,7 +208,6 @@ describe('UserService', () => {
         name: 'Project 2',
         slug: 'project-2',
         description: 'Description 2',
-        ownerId: 'user-2',
         organizationId: 'org-1',
         deletedAt: null,
         createdAt: new Date('2024-02-01'),
@@ -228,7 +226,6 @@ describe('UserService', () => {
       expect(prisma.project.findMany).toHaveBeenCalledWith({
         where: {
           OR: [
-            { ownerId: 'user-1' },
             { members: { some: { userId: 'user-1' } } },
             { organization: { members: { some: { userId: 'user-1' } } } },
           ],
@@ -252,7 +249,7 @@ describe('UserService', () => {
       });
 
       expect(result).toHaveLength(2);
-      // オーナーの場合はOWNERロール
+      // オーナーはmembersにOWNERロールで含まれる
       expect(result[0].role).toBe('OWNER');
       // メンバーの場合はmembersから取得したロール
       expect(result[1].role).toBe('WRITE');
@@ -342,7 +339,6 @@ describe('UserService', () => {
       expect(prisma.project.findMany).toHaveBeenCalledWith({
         where: {
           OR: [
-            { ownerId: 'user-1' },
             { members: { some: { userId: 'user-1' } } },
             { organization: { members: { some: { userId: 'user-1' } } } },
           ],
@@ -371,7 +367,6 @@ describe('UserService', () => {
           name: 'Member Only Project',
           slug: 'member-only',
           description: null,
-          ownerId: 'other-user',
           organizationId: null,
           deletedAt: null,
           createdAt: new Date(),
@@ -396,7 +391,6 @@ describe('UserService', () => {
           name: 'No Member Info',
           slug: 'no-member',
           description: null,
-          ownerId: 'other-user',
           organizationId: null,
           deletedAt: null,
           createdAt: new Date(),
@@ -424,7 +418,6 @@ describe('UserService', () => {
       expect(prisma.project.count).toHaveBeenCalledWith({
         where: {
           OR: [
-            { ownerId: 'user-1' },
             { members: { some: { userId: 'user-1' } } },
             { organization: { members: { some: { userId: 'user-1' } } } },
           ],
@@ -485,7 +478,6 @@ describe('UserService', () => {
       expect(prisma.project.count).toHaveBeenCalledWith({
         where: {
           OR: [
-            { ownerId: 'user-1' },
             { members: { some: { userId: 'user-1' } } },
             { organization: { members: { some: { userId: 'user-1' } } } },
           ],
@@ -505,7 +497,6 @@ describe('UserService', () => {
       expect(prisma.project.count).toHaveBeenCalledWith({
         where: {
           OR: [
-            { ownerId: 'user-1' },
             { members: { some: { userId: 'user-1' } } },
             { organization: { members: { some: { userId: 'user-1' } } } },
           ],

@@ -191,11 +191,9 @@ export interface Project {
   name: string;
   description: string | null;
   organizationId: string | null;
-  ownerId: string | null;
   createdAt: string;
   updatedAt: string;
   organization?: { id: string; name: string; slug: string } | null;
-  owner?: { id: string; name: string; avatarUrl: string | null } | null;
   _count?: { testSuites: number };
 }
 
@@ -206,7 +204,7 @@ export interface ProjectMember {
   id: string;
   projectId: string;
   userId: string;
-  role: ProjectMemberRole;
+  role: 'OWNER' | ProjectMemberRole;
   addedAt: string;
   user: {
     id: string;
@@ -224,7 +222,51 @@ export interface TestSuite {
   status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string | null;
   _count?: { testCases: number; preconditions: number };
+}
+
+/** テストスイート前提条件 */
+export interface Precondition {
+  id: string;
+  testSuiteId: string;
+  content: string;
+  orderKey: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** テストスイート変更タイプ */
+export type TestSuiteChangeType = 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE';
+
+/** テストスイート履歴 */
+export interface TestSuiteHistory {
+  id: string;
+  testSuiteId: string;
+  changeType: TestSuiteChangeType;
+  snapshot: Record<string, unknown>;
+  changeReason: string | null;
+  createdAt: string;
+  changedBy: {
+    id: string;
+    email: string;
+    name: string;
+    avatarUrl: string | null;
+  } | null;
+}
+
+/** テストスイート検索パラメータ */
+export interface TestSuiteSearchParams {
+  q?: string;
+  status?: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
+  createdBy?: string;
+  from?: string;
+  to?: string;
+  limit?: number;
+  offset?: number;
+  sortBy?: 'name' | 'createdAt' | 'updatedAt';
+  sortOrder?: 'asc' | 'desc';
+  includeDeleted?: boolean;
 }
 
 /** プロジェクト履歴の変更タイプ */
@@ -413,6 +455,25 @@ export const projectsApi = {
   // 復元
   restore: (projectId: string) =>
     api.post<{ project: Project }>(`/api/projects/${projectId}/restore`),
+
+  // テストスイート検索
+  searchTestSuites: (projectId: string, params?: TestSuiteSearchParams) => {
+    const query = new URLSearchParams();
+    if (params?.q) query.set('q', params.q);
+    if (params?.status) query.set('status', params.status);
+    if (params?.createdBy) query.set('createdBy', params.createdBy);
+    if (params?.from) query.set('from', params.from);
+    if (params?.to) query.set('to', params.to);
+    if (params?.limit !== undefined) query.set('limit', String(params.limit));
+    if (params?.offset !== undefined) query.set('offset', String(params.offset));
+    if (params?.sortBy) query.set('sortBy', params.sortBy);
+    if (params?.sortOrder) query.set('sortOrder', params.sortOrder);
+    if (params?.includeDeleted) query.set('includeDeleted', 'true');
+    const queryString = query.toString();
+    return api.get<{ testSuites: TestSuite[]; total: number; limit: number; offset: number }>(
+      `/api/projects/${projectId}/test-suites${queryString ? `?${queryString}` : ''}`
+    );
+  },
 };
 
 // ============================================
@@ -439,6 +500,33 @@ export const testSuitesApi = {
   },
   startExecution: (testSuiteId: string, data?: { environmentId?: string }) =>
     api.post<{ execution: Execution }>(`/api/test-suites/${testSuiteId}/executions`, data),
+
+  // 前提条件管理
+  getPreconditions: (testSuiteId: string) =>
+    api.get<{ preconditions: Precondition[] }>(`/api/test-suites/${testSuiteId}/preconditions`),
+  addPrecondition: (testSuiteId: string, data: { content: string; orderKey?: string }) =>
+    api.post<{ precondition: Precondition }>(`/api/test-suites/${testSuiteId}/preconditions`, data),
+  updatePrecondition: (testSuiteId: string, preconditionId: string, data: { content: string }) =>
+    api.patch<{ precondition: Precondition }>(`/api/test-suites/${testSuiteId}/preconditions/${preconditionId}`, data),
+  deletePrecondition: (testSuiteId: string, preconditionId: string) =>
+    api.delete<void>(`/api/test-suites/${testSuiteId}/preconditions/${preconditionId}`),
+  reorderPreconditions: (testSuiteId: string, preconditionIds: string[]) =>
+    api.post<{ preconditions: Precondition[] }>(`/api/test-suites/${testSuiteId}/preconditions/reorder`, { preconditionIds }),
+
+  // 履歴管理
+  getHistories: (testSuiteId: string, params?: { limit?: number; offset?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.limit !== undefined) query.set('limit', String(params.limit));
+    if (params?.offset !== undefined) query.set('offset', String(params.offset));
+    const queryString = query.toString();
+    return api.get<{ histories: TestSuiteHistory[]; total: number }>(
+      `/api/test-suites/${testSuiteId}/histories${queryString ? `?${queryString}` : ''}`
+    );
+  },
+
+  // 復元
+  restore: (testSuiteId: string) =>
+    api.post<{ testSuite: TestSuite }>(`/api/test-suites/${testSuiteId}/restore`),
 };
 
 // ============================================

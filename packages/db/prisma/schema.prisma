@@ -28,6 +28,7 @@ enum OrganizationRole {
 }
 
 enum ProjectRole {
+  OWNER
   ADMIN
   WRITE
   READ
@@ -181,7 +182,6 @@ model User {
   sessions               Session[]
   organizationMembers    OrganizationMember[]
   sentInvitations        OrganizationInvitation[]
-  ownedProjects          Project[]                @relation("ProjectOwner")
   projectMembers         ProjectMember[]
   testSuites             TestSuite[]              @relation("TestSuiteCreator")
   testCases              TestCase[]               @relation("TestCaseCreator")
@@ -334,14 +334,12 @@ model Project {
   name           String    @db.VarChar(100)
   description    String?   @db.Text
   organizationId String?   @map("organization_id")
-  ownerId        String?   @map("owner_id")
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
   deletedAt      DateTime? @map("deleted_at")
 
   // リレーション
   organization  Organization?        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  owner         User?                @relation("ProjectOwner", fields: [ownerId], references: [id])
   members       ProjectMember[]
   environments  ProjectEnvironment[]
   testSuites    TestSuite[]
@@ -349,7 +347,6 @@ model Project {
   agentSessions AgentSession[]
 
   @@index([organizationId])
-  @@index([ownerId])
   @@index([deletedAt])
   @@map("projects")
 }

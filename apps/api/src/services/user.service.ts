@@ -116,11 +116,10 @@ export class UserService {
       ...orgCondition,
     };
 
-    // 1クエリでオーナー、メンバー、所属組織のプロジェクトを取得
+    // 1クエリでメンバー、所属組織のプロジェクトを取得（OWNERもProjectMemberに含まれる）
     const projects = await prisma.project.findMany({
       where: {
         OR: [
-          { ownerId: userId },
           { members: { some: { userId } } },
           // ユーザーが所属する組織のプロジェクト
           { organization: { members: { some: { userId } } } },
@@ -144,11 +143,10 @@ export class UserService {
       skip: offset,
     });
 
-    // ロールを付与して返却
+    // ロールを付与して返却（OWNERもProjectMemberから取得）
     return projects.map((p) => {
       const { members, ...project } = p;
-      // オーナーの場合は'OWNER'、それ以外はmembersから取得
-      const role = p.ownerId === userId ? 'OWNER' : members[0]?.role ?? 'READ';
+      const role = members[0]?.role ?? 'READ';
       return { ...project, role };
     });
   }
@@ -180,7 +178,6 @@ export class UserService {
     return prisma.project.count({
       where: {
         OR: [
-          { ownerId: userId },
           { members: { some: { userId } } },
           // ユーザーが所属する組織のプロジェクト
           { organization: { members: { some: { userId } } } },

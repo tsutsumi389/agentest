@@ -219,6 +219,7 @@ export function createAuthHeader(token: string): { Authorization: string } {
 
 /**
  * テスト用プロジェクトを作成
+ * プロジェクト作成時にオーナーをProjectMemberとしても登録する
  */
 export async function createTestProject(
   ownerId: string,
@@ -230,14 +231,24 @@ export async function createTestProject(
   }> = {}
 ) {
   const id = overrides.id ?? randomUUID();
-  return prisma.project.create({
-    data: {
-      id,
-      name: overrides.name ?? `Test Project ${id.slice(0, 8)}`,
-      description: overrides.description ?? null,
-      ownerId,
-      organizationId: overrides.organizationId ?? null,
-    },
+  return prisma.$transaction(async (tx) => {
+    const project = await tx.project.create({
+      data: {
+        id,
+        name: overrides.name ?? `Test Project ${id.slice(0, 8)}`,
+        description: overrides.description ?? null,
+        organizationId: overrides.organizationId ?? null,
+      },
+    });
+    // オーナーをProjectMemberとして登録
+    await tx.projectMember.create({
+      data: {
+        projectId: project.id,
+        userId: ownerId,
+        role: 'OWNER',
+      },
+    });
+    return project;
   });
 }
 
@@ -247,7 +258,7 @@ export async function createTestProject(
 export async function createTestProjectMember(
   projectId: string,
   userId: string,
-  role: 'ADMIN' | 'WRITE' | 'READ' = 'READ'
+  role: 'OWNER' | 'ADMIN' | 'WRITE' | 'READ' = 'READ'
 ) {
   return prisma.projectMember.create({
     data: {
