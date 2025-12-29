@@ -1,5 +1,5 @@
 import { prisma, type TestCasePriority, type EntityStatus, type Prisma } from '@agentest/db';
-import { NotFoundError, BadRequestError } from '@agentest/shared';
+import { NotFoundError, BadRequestError, ConflictError } from '@agentest/shared';
 import { TestCaseRepository } from '../repositories/test-case.repository.js';
 
 // orderKey関連の定数
@@ -37,6 +37,7 @@ type TestCaseSnapshot = {
   description: string | null;
   priority: string;
   status: string;
+  deletedAt?: string | null;
 };
 
 /**
@@ -1217,6 +1218,88 @@ export class TestCaseService {
           expectedResults: { orderBy: { orderKey: 'asc' } },
         },
       });
+    });
+  }
+
+  /**
+   * 変更履歴一覧を取得
+   */
+  async getHistories(testCaseId: string, options: { limit: number; offset: number }) {
+    // 削除済みを含めてテストケースの存在確認
+    const testCase = await prisma.testCase.findUnique({
+      where: { id: testCaseId },
+    });
+    if (!testCase) {
+      throw new NotFoundError('TestCase', testCaseId);
+    }
+
+    const [histories, total] = await Promise.all([
+      this.testCaseRepo.getHistories(testCaseId, options),
+      this.testCaseRepo.countHistories(testCaseId),
+    ]);
+
+    return { histories, total };
+  }
+
+  /**
+   * 削除済みテストケースを復元
+   */
+  async restore(testCaseId: string, userId: string) {
+    // 削除済みテストケースを取得
+    const testCase = await this.testCaseRepo.findDeletedById(testCaseId);
+    if (!testCase) {
+      // 削除されていないか、存在しない
+      const existingTestCase = await prisma.testCase.findUnique({
+        where: { id: testCaseId },
+      });
+      if (existingTestCase && !existingTestCase.deletedAt) {
+        throw new ConflictError('Test case is not deleted');
+      }
+      throw new NotFoundError('TestCase', testCaseId);
+    }
+
+    // 30日制限チェック
+    const deletedAt = testCase.deletedAt!;
+    const daysSinceDeleted = Math.floor((Date.now() - deletedAt.getTime()) / (1000 * 60 * 60 * 24));
+    if (daysSinceDeleted > 30) {
+      throw new BadRequestError('復元期限（30日）を過ぎています');
+    }
+
+    // テストスイート存在・未削除確認
+    const testSuite = await prisma.testSuite.findUnique({
+      where: { id: testCase.testSuiteId },
+    });
+    if (!testSuite) {
+      throw new BadRequestError('テストスイートが存在しません');
+    }
+    if (testSuite.deletedAt) {
+      throw new BadRequestError('削除済みテストスイートへの復元はできません');
+    }
+
+    const snapshot: TestCaseSnapshot = {
+      id: testCase.id,
+      testSuiteId: testCase.testSuiteId,
+      title: testCase.title,
+      description: testCase.description,
+      priority: testCase.priority,
+      status: testCase.status,
+      deletedAt: testCase.deletedAt?.toISOString() ?? null,
+    };
+
+    // 復元と履歴保存をトランザクションで実行
+    return prisma.$transaction(async (tx) => {
+      // 履歴を保存
+      await tx.testCaseHistory.create({
+        data: {
+          testCaseId,
+          changedByUserId: userId,
+          changeType: 'RESTORE',
+          snapshot: toJsonSnapshot(snapshot),
+        },
+      });
+
+      // リポジトリを使用して復元
+      return this.testCaseRepo.restore(testCaseId);
     });
   }
 }

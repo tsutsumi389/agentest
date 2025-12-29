@@ -141,4 +141,72 @@ export class TestCaseRepository {
 
     return { items, total };
   }
+
+  /**
+   * 削除済みテストケースをIDで検索
+   */
+  async findDeletedById(id: string) {
+    return prisma.testCase.findFirst({
+      where: {
+        id,
+        deletedAt: { not: null },
+      },
+      include: {
+        testSuite: {
+          select: { id: true, name: true, projectId: true },
+        },
+        createdByUser: {
+          select: { id: true, name: true, avatarUrl: true },
+        },
+        preconditions: {
+          orderBy: { orderKey: 'asc' },
+        },
+        steps: {
+          orderBy: { orderKey: 'asc' },
+        },
+        expectedResults: {
+          orderBy: { orderKey: 'asc' },
+        },
+      },
+    });
+  }
+
+  /**
+   * テストケースを復元（deletedAtをnullに設定）
+   */
+  async restore(id: string) {
+    return prisma.testCase.update({
+      where: { id },
+      data: { deletedAt: null },
+    });
+  }
+
+  /**
+   * 履歴一覧を取得
+   */
+  async getHistories(id: string, options: { limit: number; offset: number }) {
+    return prisma.testCaseHistory.findMany({
+      where: { testCaseId: id },
+      include: {
+        changedBy: {
+          select: { id: true, name: true, avatarUrl: true },
+        },
+        agentSession: {
+          select: { id: true, clientName: true },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: options.limit,
+      skip: options.offset,
+    });
+  }
+
+  /**
+   * 履歴件数を取得
+   */
+  async countHistories(id: string) {
+    return prisma.testCaseHistory.count({
+      where: { testCaseId: id },
+    });
+  }
 }

@@ -45,6 +45,11 @@ const copyTestCaseSchema = z.object({
   title: z.string().min(1).max(200).optional(),
 });
 
+const paginationQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
 /**
  * テストケースコントローラー
  */
@@ -337,6 +342,35 @@ export class TestCaseController {
       const testCase = await this.testCaseService.copy(testCaseId, req.user!.id, data);
 
       res.status(201).json({ testCase });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 履歴取得
+   */
+  getHistories = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { testCaseId } = req.params;
+      const { limit, offset } = paginationQuerySchema.parse(req.query);
+      const { histories, total } = await this.testCaseService.getHistories(testCaseId, { limit, offset });
+
+      res.json({ histories, total });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * テストケース復元
+   */
+  restore = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { testCaseId } = req.params;
+      const testCase = await this.testCaseService.restore(testCaseId, req.user!.id);
+
+      res.json({ testCase });
     } catch (error) {
       next(error);
     }

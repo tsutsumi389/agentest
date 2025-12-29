@@ -126,4 +126,16 @@ router.delete('/:testCaseId/expected-results/:expectedResultId', requireAuth(aut
  */
 router.post('/:testCaseId/copy', requireAuth(authConfig), testCaseController.copy);
 
+/**
+ * 履歴取得
+ * GET /api/test-cases/:testCaseId/histories
+ */
+router.get('/:testCaseId/histories', requireAuth(authConfig), testCaseController.getHistories);
+
+/**
+ * テストケース復元
+ * POST /api/test-cases/:testCaseId/restore
+ */
+router.post('/:testCaseId/restore', requireAuth(authConfig), testCaseController.restore);
+
 export default router;
