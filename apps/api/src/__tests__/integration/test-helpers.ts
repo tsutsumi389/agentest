@@ -502,3 +502,25 @@ export async function createTestCaseExpectedResult(
     },
   });
 }
+
+/**
+ * テスト用テストケース前提条件を作成
+ */
+export async function createTestCasePrecondition(
+  testCaseId: string,
+  overrides: Partial<{
+    id: string;
+    content: string;
+    orderKey: string;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.testCasePrecondition.create({
+    data: {
+      id,
+      testCaseId,
+      content: overrides.content ?? `Precondition ${id.slice(0, 8)}`,
+      orderKey: overrides.orderKey ?? id.slice(0, 5),
+    },
+  });
+}

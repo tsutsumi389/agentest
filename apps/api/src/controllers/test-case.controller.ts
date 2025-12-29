@@ -40,6 +40,11 @@ const reorderIdsSchema = z.object({
   ids: z.array(z.string().uuid()).min(0),
 });
 
+const copyTestCaseSchema = z.object({
+  targetTestSuiteId: z.string().uuid().optional(),
+  title: z.string().min(1).max(200).optional(),
+});
+
 /**
  * テストケースコントローラー
  */
@@ -317,6 +322,21 @@ export class TestCaseController {
       const expectedResults = await this.testCaseService.reorderExpectedResults(testCaseId, ids, req.user!.id);
 
       res.json({ expectedResults });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * テストケースコピー
+   */
+  copy = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { testCaseId } = req.params;
+      const data = copyTestCaseSchema.parse(req.body);
+      const testCase = await this.testCaseService.copy(testCaseId, req.user!.id, data);
+
+      res.status(201).json({ testCase });
     } catch (error) {
       next(error);
     }

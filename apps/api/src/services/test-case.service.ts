@@ -114,6 +114,12 @@ type ChildEntityChangeDetail =
       type: 'EXPECTED_RESULT_REORDER';
       before: string[];
       after: string[];
+    }
+  | {
+      type: 'COPY';
+      sourceTestCaseId: string;
+      sourceTitle: string;
+      targetTestSuiteId: string;
     };
 
 /**
@@ -1049,6 +1055,168 @@ export class TestCaseService {
     return prisma.testCaseExpectedResult.findMany({
       where: { testCaseId },
       orderBy: { orderKey: 'asc' },
+    });
+  }
+
+  /**
+   * テストケースをコピー
+   */
+  async copy(testCaseId: string, userId: string, data: { targetTestSuiteId?: string; title?: string }) {
+    // 1. コピー元テストケース取得（子エンティティ含む）
+    const sourceTestCase = await prisma.testCase.findFirst({
+      where: { id: testCaseId },
+      include: {
+        testSuite: { select: { id: true, projectId: true } },
+        preconditions: { orderBy: { orderKey: 'asc' } },
+        steps: { orderBy: { orderKey: 'asc' } },
+        expectedResults: { orderBy: { orderKey: 'asc' } },
+      },
+    });
+    if (!sourceTestCase) {
+      throw new NotFoundError('TestCase', testCaseId);
+    }
+
+    // 2. 削除済みチェック
+    if (sourceTestCase.deletedAt) {
+      throw new BadRequestError('削除済みテストケースはコピーできません');
+    }
+
+    // 3. コピー先テストスイート決定・検証
+    const targetTestSuiteId = data.targetTestSuiteId ?? sourceTestCase.testSuiteId;
+    const targetTestSuite = await prisma.testSuite.findFirst({
+      where: { id: targetTestSuiteId, deletedAt: null },
+      include: { project: { select: { id: true } } },
+    });
+    if (!targetTestSuite) {
+      throw new NotFoundError('TestSuite', targetTestSuiteId);
+    }
+
+    // 4. 同一プロジェクト内チェック
+    if (sourceTestCase.testSuite.projectId !== targetTestSuite.project.id) {
+      throw new BadRequestError('異なるプロジェクトへのコピーはできません');
+    }
+
+    // 5. タイトル生成
+    const newTitle = data.title ?? `${sourceTestCase.title} (コピー)`;
+
+    // 6. トランザクションでコピー実行
+    return prisma.$transaction(async (tx) => {
+      // orderKey取得
+      const lastTestCase = await tx.testCase.findFirst({
+        where: { testSuiteId: targetTestSuiteId },
+        orderBy: { orderKey: 'desc' },
+      });
+      const orderKey = getNextOrderKey(lastTestCase?.orderKey ?? null);
+
+      // テストケース作成（ステータスはDRAFT固定）
+      const newTestCase = await tx.testCase.create({
+        data: {
+          testSuiteId: targetTestSuiteId,
+          title: newTitle,
+          description: sourceTestCase.description,
+          priority: sourceTestCase.priority,
+          status: 'DRAFT',
+          orderKey,
+          createdByUserId: userId,
+        },
+      });
+
+      // 子エンティティをコピー
+      if (sourceTestCase.preconditions.length > 0) {
+        await tx.testCasePrecondition.createMany({
+          data: sourceTestCase.preconditions.map((p) => ({
+            testCaseId: newTestCase.id,
+            content: p.content,
+            orderKey: p.orderKey,
+          })),
+        });
+      }
+
+      if (sourceTestCase.steps.length > 0) {
+        await tx.testCaseStep.createMany({
+          data: sourceTestCase.steps.map((s) => ({
+            testCaseId: newTestCase.id,
+            content: s.content,
+            orderKey: s.orderKey,
+          })),
+        });
+      }
+
+      if (sourceTestCase.expectedResults.length > 0) {
+        await tx.testCaseExpectedResult.createMany({
+          data: sourceTestCase.expectedResults.map((e) => ({
+            testCaseId: newTestCase.id,
+            content: e.content,
+            orderKey: e.orderKey,
+          })),
+        });
+      }
+
+      // 新しく作成された子エンティティを取得
+      const newPreconditions = await tx.testCasePrecondition.findMany({
+        where: { testCaseId: newTestCase.id },
+        orderBy: { orderKey: 'asc' },
+      });
+      const newSteps = await tx.testCaseStep.findMany({
+        where: { testCaseId: newTestCase.id },
+        orderBy: { orderKey: 'asc' },
+      });
+      const newExpectedResults = await tx.testCaseExpectedResult.findMany({
+        where: { testCaseId: newTestCase.id },
+        orderBy: { orderKey: 'asc' },
+      });
+
+      // 履歴記録
+      const snapshot: HistorySnapshot = {
+        id: newTestCase.id,
+        testSuiteId: newTestCase.testSuiteId,
+        title: newTestCase.title,
+        description: newTestCase.description,
+        priority: newTestCase.priority,
+        status: newTestCase.status,
+        preconditions: newPreconditions.map((p) => ({
+          id: p.id,
+          content: p.content,
+          orderKey: p.orderKey,
+        })),
+        steps: newSteps.map((s) => ({
+          id: s.id,
+          content: s.content,
+          orderKey: s.orderKey,
+        })),
+        expectedResults: newExpectedResults.map((e) => ({
+          id: e.id,
+          content: e.content,
+          orderKey: e.orderKey,
+        })),
+        changeDetail: {
+          type: 'COPY',
+          sourceTestCaseId: testCaseId,
+          sourceTitle: sourceTestCase.title,
+          targetTestSuiteId,
+        },
+      };
+
+      await tx.testCaseHistory.create({
+        data: {
+          testCaseId: newTestCase.id,
+          changedByUserId: userId,
+          changeType: 'CREATE',
+          snapshot: toJsonSnapshot(snapshot),
+        },
+      });
+
+      // 詳細情報を含めて返却
+      return tx.testCase.findUnique({
+        where: { id: newTestCase.id },
+        include: {
+          testSuite: { select: { id: true, name: true, projectId: true } },
+          createdByUser: { select: { id: true, name: true, avatarUrl: true } },
+          preconditions: { orderBy: { orderKey: 'asc' } },
+          steps: { orderBy: { orderKey: 'asc' } },
+          expectedResults: { orderBy: { orderKey: 'asc' } },
+        },
+      });
     });
   }
 }

@@ -120,4 +120,10 @@ router.patch('/:testCaseId/expected-results/:expectedResultId', requireAuth(auth
  */
 router.delete('/:testCaseId/expected-results/:expectedResultId', requireAuth(authConfig), testCaseController.deleteExpectedResult);
 
+/**
+ * テストケースコピー
+ * POST /api/test-cases/:testCaseId/copy
+ */
+router.post('/:testCaseId/copy', requireAuth(authConfig), testCaseController.copy);
+
 export default router;
