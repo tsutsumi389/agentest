@@ -432,6 +432,18 @@ export class ProjectService {
   }
 
   /**
+   * テストスイートをサジェスト（@メンション用）
+   */
+  async suggestTestSuites(projectId: string, options: { q?: string; limit: number }) {
+    // プロジェクトの存在確認
+    const project = await this.projectRepo.findById(projectId);
+    if (!project) {
+      throw new NotFoundError('Project', projectId);
+    }
+    return this.testSuiteRepo.suggest(projectId, options);
+  }
+
+  /**
    * テストスイートを検索
    */
   async searchTestSuites(projectId: string, options: TestSuiteSearchOptions) {

@@ -361,6 +361,23 @@ export interface TestSuiteSearchParams {
   includeDeleted?: boolean;
 }
 
+/** テストスイートサジェスト結果 */
+export interface TestSuiteSuggestion {
+  id: string;
+  name: string;
+  description: string | null;
+  status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
+}
+
+/** テストケースサジェスト結果 */
+export interface TestCaseSuggestion {
+  id: string;
+  title: string;
+  description: string | null;
+  priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
+}
+
 /** プロジェクト履歴の変更タイプ */
 export type ProjectChangeType = 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE';
 
@@ -566,6 +583,17 @@ export const projectsApi = {
       `/api/projects/${projectId}/test-suites${queryString ? `?${queryString}` : ''}`
     );
   },
+
+  // テストスイートサジェスト（@メンション用）
+  suggestTestSuites: (projectId: string, params?: { q?: string; limit?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.q) query.set('q', params.q);
+    if (params?.limit !== undefined) query.set('limit', String(params.limit));
+    const queryString = query.toString();
+    return api.get<{ suggestions: TestSuiteSuggestion[] }>(
+      `/api/projects/${projectId}/suggestions/test-suites${queryString ? `?${queryString}` : ''}`
+    );
+  },
 };
 
 // ============================================
@@ -619,6 +647,17 @@ export const testSuitesApi = {
   // 復元
   restore: (testSuiteId: string) =>
     api.post<{ testSuite: TestSuite }>(`/api/test-suites/${testSuiteId}/restore`),
+
+  // テストケースサジェスト（@メンション用）
+  suggestTestCases: (testSuiteId: string, params?: { q?: string; limit?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.q) query.set('q', params.q);
+    if (params?.limit !== undefined) query.set('limit', String(params.limit));
+    const queryString = query.toString();
+    return api.get<{ suggestions: TestCaseSuggestion[] }>(
+      `/api/test-suites/${testSuiteId}/suggestions/test-cases${queryString ? `?${queryString}` : ''}`
+    );
+  },
 };
 
 // ============================================

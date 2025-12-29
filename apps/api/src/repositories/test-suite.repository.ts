@@ -126,6 +126,30 @@ export class TestSuiteRepository {
   }
 
   /**
+   * サジェスト用テストスイート検索
+   */
+  async suggest(projectId: string, options: { q?: string; limit: number }) {
+    const where: Prisma.TestSuiteWhereInput = {
+      projectId,
+      deletedAt: null,
+    };
+
+    if (options.q) {
+      where.OR = [
+        { name: { contains: options.q, mode: 'insensitive' } },
+        { description: { contains: options.q, mode: 'insensitive' } },
+      ];
+    }
+
+    return prisma.testSuite.findMany({
+      where,
+      select: { id: true, name: true, description: true, status: true },
+      orderBy: [{ status: 'asc' }, { name: 'asc' }],
+      take: options.limit,
+    });
+  }
+
+  /**
    * テストスイートを検索
    */
   async search(projectId: string, options: TestSuiteSearchOptions) {

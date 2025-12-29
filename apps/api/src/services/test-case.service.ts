@@ -1,6 +1,144 @@
-import { prisma, type TestCasePriority, type EntityStatus } from '@agentest/db';
-import { NotFoundError } from '@agentest/shared';
+import { prisma, type TestCasePriority, type EntityStatus, type Prisma } from '@agentest/db';
+import { NotFoundError, BadRequestError, ConflictError, AuthorizationError } from '@agentest/shared';
 import { TestCaseRepository } from '../repositories/test-case.repository.js';
+
+// orderKey関連の定数
+const ORDER_KEY_INITIAL = '00001';
+const ORDER_KEY_PAD_LENGTH = 5;
+
+/**
+ * 次のorderKeyを計算する
+ * @param currentKey 現在の最大orderKey（nullの場合は初期値を返す）
+ * @returns 次のorderKey
+ */
+function getNextOrderKey(currentKey: string | null): string {
+  if (!currentKey) return ORDER_KEY_INITIAL;
+  const num = parseInt(currentKey, 10);
+  if (isNaN(num)) return ORDER_KEY_INITIAL;
+  return `${num + 1}`.padStart(ORDER_KEY_PAD_LENGTH, '0');
+}
+
+/**
+ * インデックスからorderKeyを生成する
+ * @param index 0始まりのインデックス
+ * @returns orderKey
+ */
+function indexToOrderKey(index: number): string {
+  return `${index + 1}`.padStart(ORDER_KEY_PAD_LENGTH, '0');
+}
+
+/**
+ * テストケースのスナップショット型（基本情報）
+ */
+type TestCaseSnapshot = {
+  id: string;
+  testSuiteId: string;
+  title: string;
+  description: string | null;
+  priority: string;
+  status: string;
+  deletedAt?: string | null;
+};
+
+/**
+ * 子エンティティのスナップショット型
+ */
+type ChildEntitySnapshot = {
+  id: string;
+  content: string;
+  orderKey: string;
+};
+
+/**
+ * 子エンティティ変更の詳細情報
+ */
+type ChildEntityChangeDetail =
+  | {
+      type: 'PRECONDITION_ADD';
+      preconditionId: string;
+      added: { content: string; orderKey: string };
+    }
+  | {
+      type: 'PRECONDITION_UPDATE';
+      preconditionId: string;
+      before: { content: string };
+      after: { content: string };
+    }
+  | {
+      type: 'PRECONDITION_DELETE';
+      preconditionId: string;
+      deleted: { content: string; orderKey: string };
+    }
+  | {
+      type: 'PRECONDITION_REORDER';
+      before: string[];
+      after: string[];
+    }
+  | {
+      type: 'STEP_ADD';
+      stepId: string;
+      added: { content: string; orderKey: string };
+    }
+  | {
+      type: 'STEP_UPDATE';
+      stepId: string;
+      before: { content: string };
+      after: { content: string };
+    }
+  | {
+      type: 'STEP_DELETE';
+      stepId: string;
+      deleted: { content: string; orderKey: string };
+    }
+  | {
+      type: 'STEP_REORDER';
+      before: string[];
+      after: string[];
+    }
+  | {
+      type: 'EXPECTED_RESULT_ADD';
+      expectedResultId: string;
+      added: { content: string; orderKey: string };
+    }
+  | {
+      type: 'EXPECTED_RESULT_UPDATE';
+      expectedResultId: string;
+      before: { content: string };
+      after: { content: string };
+    }
+  | {
+      type: 'EXPECTED_RESULT_DELETE';
+      expectedResultId: string;
+      deleted: { content: string; orderKey: string };
+    }
+  | {
+      type: 'EXPECTED_RESULT_REORDER';
+      before: string[];
+      after: string[];
+    }
+  | {
+      type: 'COPY';
+      sourceTestCaseId: string;
+      sourceTitle: string;
+      targetTestSuiteId: string;
+    };
+
+/**
+ * 履歴保存用のスナップショット型
+ */
+type HistorySnapshot = TestCaseSnapshot & {
+  preconditions?: ChildEntitySnapshot[];
+  steps?: ChildEntitySnapshot[];
+  expectedResults?: ChildEntitySnapshot[];
+  changeDetail?: ChildEntityChangeDetail;
+};
+
+/**
+ * スナップショットをPrismaのJSON型に変換
+ */
+function toJsonSnapshot(snapshot: TestCaseSnapshot | HistorySnapshot): Prisma.InputJsonValue {
+  return snapshot as unknown as Prisma.InputJsonValue;
+}
 
 /**
  * テストケースサービス
@@ -21,12 +159,42 @@ export class TestCaseService {
       status?: EntityStatus;
     }
   ) {
-    // テストスイートの存在確認
+    // テストスイートの存在確認とプロジェクトメンバーシップ検証
     const testSuite = await prisma.testSuite.findUnique({
       where: { id: data.testSuiteId },
+      include: {
+        project: {
+          include: {
+            members: {
+              where: { userId },
+            },
+          },
+        },
+      },
     });
     if (!testSuite || testSuite.deletedAt) {
       throw new NotFoundError('TestSuite', data.testSuiteId);
+    }
+
+    // プロジェクトメンバーシップチェック（WRITE権限以上）
+    const member = testSuite.project.members[0];
+    if (!member || !['OWNER', 'ADMIN', 'WRITE'].includes(member.role)) {
+      // 組織メンバーシップもチェック
+      if (testSuite.project.organizationId) {
+        const orgMember = await prisma.organizationMember.findUnique({
+          where: {
+            organizationId_userId: {
+              organizationId: testSuite.project.organizationId,
+              userId,
+            },
+          },
+        });
+        if (!orgMember || !['OWNER', 'ADMIN'].includes(orgMember.role)) {
+          throw new AuthorizationError('Insufficient permissions');
+        }
+      } else {
+        throw new AuthorizationError('Insufficient permissions');
+      }
     }
 
     // 次のorderKeyを取得
@@ -34,7 +202,7 @@ export class TestCaseService {
       where: { testSuiteId: data.testSuiteId },
       orderBy: { orderKey: 'desc' },
     });
-    const orderKey = lastTestCase ? `${parseInt(lastTestCase.orderKey) + 1}`.padStart(5, '0') : '00001';
+    const orderKey = getNextOrderKey(lastTestCase?.orderKey ?? null);
 
     return prisma.testCase.create({
       data: {
@@ -75,17 +243,22 @@ export class TestCaseService {
   ) {
     const testCase = await this.findById(testCaseId);
 
-    // 履歴を保存
-    await prisma.testCaseHistory.create({
-      data: {
-        testCaseId,
-        changedByUserId: userId,
-        changeType: 'UPDATE',
-        snapshot: testCase as unknown as object,
-      },
-    });
+    // 履歴保存と更新を同じトランザクションで実行
+    return prisma.$transaction(async (tx) => {
+      await tx.testCaseHistory.create({
+        data: {
+          testCaseId,
+          changedByUserId: userId,
+          changeType: 'UPDATE',
+          snapshot: testCase as unknown as object,
+        },
+      });
 
-    return this.testCaseRepo.update(testCaseId, data);
+      return tx.testCase.update({
+        where: { id: testCaseId },
+        data,
+      });
+    });
   }
 
   /**
@@ -94,17 +267,22 @@ export class TestCaseService {
   async softDelete(testCaseId: string, userId: string) {
     const testCase = await this.findById(testCaseId);
 
-    // 履歴を保存
-    await prisma.testCaseHistory.create({
-      data: {
-        testCaseId,
-        changedByUserId: userId,
-        changeType: 'DELETE',
-        snapshot: testCase as unknown as object,
-      },
-    });
+    // 履歴保存と論理削除を同じトランザクションで実行
+    return prisma.$transaction(async (tx) => {
+      await tx.testCaseHistory.create({
+        data: {
+          testCaseId,
+          changedByUserId: userId,
+          changeType: 'DELETE',
+          snapshot: testCase as unknown as object,
+        },
+      });
 
-    return this.testCaseRepo.softDelete(testCaseId);
+      return tx.testCase.update({
+        where: { id: testCaseId },
+        data: { deletedAt: new Date() },
+      });
+    });
   }
 
   /**
@@ -122,24 +300,256 @@ export class TestCaseService {
   /**
    * 前提条件を追加
    */
-  async addPrecondition(testCaseId: string, data: { content: string; orderKey?: string }) {
-    await this.findById(testCaseId);
+  async addPrecondition(testCaseId: string, userId: string, data: { content: string; orderKey?: string }) {
+    const testCase = await this.findById(testCaseId);
 
-    let orderKey = data.orderKey;
-    if (!orderKey) {
-      const lastItem = await prisma.testCasePrecondition.findFirst({
-        where: { testCaseId },
-        orderBy: { orderKey: 'desc' },
+    return prisma.$transaction(async (tx) => {
+      let orderKey = data.orderKey;
+      if (!orderKey) {
+        const lastItem = await tx.testCasePrecondition.findFirst({
+          where: { testCaseId },
+          orderBy: { orderKey: 'desc' },
+        });
+        orderKey = getNextOrderKey(lastItem?.orderKey ?? null);
+      }
+
+      const precondition = await tx.testCasePrecondition.create({
+        data: {
+          testCaseId,
+          content: data.content,
+          orderKey,
+        },
       });
-      orderKey = lastItem ? `${parseInt(lastItem.orderKey) + 1}`.padStart(5, '0') : '00001';
+
+      // 履歴を保存
+      const snapshot: HistorySnapshot = {
+        id: testCase.id,
+        testSuiteId: testCase.testSuiteId,
+        title: testCase.title,
+        description: testCase.description,
+        priority: testCase.priority,
+        status: testCase.status,
+        preconditions: [{ id: precondition.id, content: precondition.content, orderKey: precondition.orderKey }],
+        changeDetail: {
+          type: 'PRECONDITION_ADD',
+          preconditionId: precondition.id,
+          added: { content: precondition.content, orderKey: precondition.orderKey },
+        },
+      };
+
+      await tx.testCaseHistory.create({
+        data: {
+          testCaseId,
+          changedByUserId: userId,
+          changeType: 'UPDATE',
+          snapshot: toJsonSnapshot(snapshot),
+        },
+      });
+
+      return precondition;
+    });
+  }
+
+  /**
+   * 前提条件を更新
+   */
+  async updatePrecondition(testCaseId: string, preconditionId: string, userId: string, data: { content: string }) {
+    const testCase = await this.findById(testCaseId);
+
+    // 前提条件の存在確認
+    const precondition = await prisma.testCasePrecondition.findFirst({
+      where: { id: preconditionId, testCaseId },
+    });
+    if (!precondition) {
+      throw new NotFoundError('Precondition', preconditionId);
     }
 
-    return prisma.testCasePrecondition.create({
-      data: {
-        testCaseId,
-        content: data.content,
-        orderKey,
+    // 同値更新チェック：変更がなければそのまま返す
+    if (precondition.content === data.content) {
+      return precondition;
+    }
+
+    // 履歴保存と更新を同じトランザクションで実行
+    return prisma.$transaction(async (tx) => {
+      const snapshot: HistorySnapshot = {
+        id: testCase.id,
+        testSuiteId: testCase.testSuiteId,
+        title: testCase.title,
+        description: testCase.description,
+        priority: testCase.priority,
+        status: testCase.status,
+        preconditions: [{ id: precondition.id, content: precondition.content, orderKey: precondition.orderKey }],
+        changeDetail: {
+          type: 'PRECONDITION_UPDATE',
+          preconditionId,
+          before: { content: precondition.content },
+          after: { content: data.content },
+        },
+      };
+
+      await tx.testCaseHistory.create({
+        data: {
+          testCaseId,
+          changedByUserId: userId,
+          changeType: 'UPDATE',
+          snapshot: toJsonSnapshot(snapshot),
+        },
+      });
+
+      return tx.testCasePrecondition.update({
+        where: { id: preconditionId },
+        data: { content: data.content },
+      });
+    });
+  }
+
+  /**
+   * 前提条件を削除
+   */
+  async deletePrecondition(testCaseId: string, preconditionId: string, userId: string) {
+    const testCase = await this.findById(testCaseId);
+
+    // 前提条件の存在確認
+    const precondition = await prisma.testCasePrecondition.findFirst({
+      where: { id: preconditionId, testCaseId },
+    });
+    if (!precondition) {
+      throw new NotFoundError('Precondition', preconditionId);
+    }
+
+    const snapshot: HistorySnapshot = {
+      id: testCase.id,
+      testSuiteId: testCase.testSuiteId,
+      title: testCase.title,
+      description: testCase.description,
+      priority: testCase.priority,
+      status: testCase.status,
+      preconditions: [{ id: precondition.id, content: precondition.content, orderKey: precondition.orderKey }],
+      changeDetail: {
+        type: 'PRECONDITION_DELETE',
+        preconditionId,
+        deleted: { content: precondition.content, orderKey: precondition.orderKey },
       },
+    };
+
+    // トランザクションで削除と再整列を実行
+    await prisma.$transaction(async (tx) => {
+      // 履歴を保存
+      await tx.testCaseHistory.create({
+        data: {
+          testCaseId,
+          changedByUserId: userId,
+          changeType: 'UPDATE',
+          snapshot: toJsonSnapshot(snapshot),
+        },
+      });
+
+      // 前提条件を削除
+      await tx.testCasePrecondition.delete({
+        where: { id: preconditionId },
+      });
+
+      // 残りの前提条件のorderKeyを再整列（並列実行）
+      const remainingPreconditions = await tx.testCasePrecondition.findMany({
+        where: { testCaseId },
+        orderBy: { orderKey: 'asc' },
+      });
+
+      await Promise.all(
+        remainingPreconditions.map((item, i) =>
+          tx.testCasePrecondition.update({
+            where: { id: item.id },
+            data: { orderKey: indexToOrderKey(i) },
+          })
+        )
+      );
+    });
+  }
+
+  /**
+   * 前提条件を並び替え
+   */
+  async reorderPreconditions(testCaseId: string, preconditionIds: string[], userId: string) {
+    const testCase = await this.findById(testCaseId);
+
+    // 全ての前提条件を取得
+    const preconditions = await prisma.testCasePrecondition.findMany({
+      where: { testCaseId },
+      orderBy: { orderKey: 'asc' },
+    });
+
+    // 空配列チェック（前提条件が0件の場合はそのまま返す）
+    if (preconditions.length === 0 && preconditionIds.length === 0) {
+      return [];
+    }
+
+    // 重複IDのチェック
+    const uniqueIds = new Set(preconditionIds);
+    if (uniqueIds.size !== preconditionIds.length) {
+      throw new BadRequestError('Duplicate precondition IDs are not allowed');
+    }
+
+    // 全件指定されているか確認
+    if (preconditionIds.length !== preconditions.length) {
+      throw new BadRequestError('All precondition IDs must be provided for reordering');
+    }
+
+    const existingIds = new Set(preconditions.map((p) => p.id));
+    for (const id of preconditionIds) {
+      if (!existingIds.has(id)) {
+        throw new NotFoundError('Precondition', id);
+      }
+    }
+
+    // 同値チェック：順序が変わっていなければそのまま返す
+    const currentOrder = preconditions.map((p) => p.id);
+    const isSameOrder = currentOrder.every((id, index) => id === preconditionIds[index]);
+    if (isSameOrder) {
+      return preconditions;
+    }
+
+    // 履歴を保存（並び替え前の状態）
+    const snapshot: HistorySnapshot = {
+      id: testCase.id,
+      testSuiteId: testCase.testSuiteId,
+      title: testCase.title,
+      description: testCase.description,
+      priority: testCase.priority,
+      status: testCase.status,
+      preconditions: preconditions.map((p) => ({ id: p.id, content: p.content, orderKey: p.orderKey })),
+      changeDetail: {
+        type: 'PRECONDITION_REORDER',
+        before: preconditions.map((p) => p.id),
+        after: preconditionIds,
+      },
+    };
+
+    // 履歴保存とorderKey更新を同じトランザクションで実行
+    await prisma.$transaction(async (tx) => {
+      await tx.testCaseHistory.create({
+        data: {
+          testCaseId,
+          changedByUserId: userId,
+          changeType: 'UPDATE',
+          snapshot: toJsonSnapshot(snapshot),
+        },
+      });
+
+      // 各前提条件のorderKeyを更新（並列実行）
+      await Promise.all(
+        preconditionIds.map((id, index) =>
+          tx.testCasePrecondition.update({
+            where: { id },
+            data: { orderKey: indexToOrderKey(index) },
+          })
+        )
+      );
+    });
+
+    // 更新後の前提条件一覧を返す
+    return prisma.testCasePrecondition.findMany({
+      where: { testCaseId },
+      orderBy: { orderKey: 'asc' },
     });
   }
 
@@ -158,24 +568,256 @@ export class TestCaseService {
   /**
    * ステップを追加
    */
-  async addStep(testCaseId: string, data: { content: string; orderKey?: string }) {
-    await this.findById(testCaseId);
+  async addStep(testCaseId: string, userId: string, data: { content: string; orderKey?: string }) {
+    const testCase = await this.findById(testCaseId);
 
-    let orderKey = data.orderKey;
-    if (!orderKey) {
-      const lastItem = await prisma.testCaseStep.findFirst({
-        where: { testCaseId },
-        orderBy: { orderKey: 'desc' },
+    return prisma.$transaction(async (tx) => {
+      let orderKey = data.orderKey;
+      if (!orderKey) {
+        const lastItem = await tx.testCaseStep.findFirst({
+          where: { testCaseId },
+          orderBy: { orderKey: 'desc' },
+        });
+        orderKey = getNextOrderKey(lastItem?.orderKey ?? null);
+      }
+
+      const step = await tx.testCaseStep.create({
+        data: {
+          testCaseId,
+          content: data.content,
+          orderKey,
+        },
       });
-      orderKey = lastItem ? `${parseInt(lastItem.orderKey) + 1}`.padStart(5, '0') : '00001';
+
+      // 履歴を保存
+      const snapshot: HistorySnapshot = {
+        id: testCase.id,
+        testSuiteId: testCase.testSuiteId,
+        title: testCase.title,
+        description: testCase.description,
+        priority: testCase.priority,
+        status: testCase.status,
+        steps: [{ id: step.id, content: step.content, orderKey: step.orderKey }],
+        changeDetail: {
+          type: 'STEP_ADD',
+          stepId: step.id,
+          added: { content: step.content, orderKey: step.orderKey },
+        },
+      };
+
+      await tx.testCaseHistory.create({
+        data: {
+          testCaseId,
+          changedByUserId: userId,
+          changeType: 'UPDATE',
+          snapshot: toJsonSnapshot(snapshot),
+        },
+      });
+
+      return step;
+    });
+  }
+
+  /**
+   * ステップを更新
+   */
+  async updateStep(testCaseId: string, stepId: string, userId: string, data: { content: string }) {
+    const testCase = await this.findById(testCaseId);
+
+    // ステップの存在確認
+    const step = await prisma.testCaseStep.findFirst({
+      where: { id: stepId, testCaseId },
+    });
+    if (!step) {
+      throw new NotFoundError('Step', stepId);
     }
 
-    return prisma.testCaseStep.create({
-      data: {
-        testCaseId,
-        content: data.content,
-        orderKey,
+    // 同値更新チェック：変更がなければそのまま返す
+    if (step.content === data.content) {
+      return step;
+    }
+
+    // 履歴保存と更新を同じトランザクションで実行
+    return prisma.$transaction(async (tx) => {
+      const snapshot: HistorySnapshot = {
+        id: testCase.id,
+        testSuiteId: testCase.testSuiteId,
+        title: testCase.title,
+        description: testCase.description,
+        priority: testCase.priority,
+        status: testCase.status,
+        steps: [{ id: step.id, content: step.content, orderKey: step.orderKey }],
+        changeDetail: {
+          type: 'STEP_UPDATE',
+          stepId,
+          before: { content: step.content },
+          after: { content: data.content },
+        },
+      };
+
+      await tx.testCaseHistory.create({
+        data: {
+          testCaseId,
+          changedByUserId: userId,
+          changeType: 'UPDATE',
+          snapshot: toJsonSnapshot(snapshot),
+        },
+      });
+
+      return tx.testCaseStep.update({
+        where: { id: stepId },
+        data: { content: data.content },
+      });
+    });
+  }
+
+  /**
+   * ステップを削除
+   */
+  async deleteStep(testCaseId: string, stepId: string, userId: string) {
+    const testCase = await this.findById(testCaseId);
+
+    // ステップの存在確認
+    const step = await prisma.testCaseStep.findFirst({
+      where: { id: stepId, testCaseId },
+    });
+    if (!step) {
+      throw new NotFoundError('Step', stepId);
+    }
+
+    const snapshot: HistorySnapshot = {
+      id: testCase.id,
+      testSuiteId: testCase.testSuiteId,
+      title: testCase.title,
+      description: testCase.description,
+      priority: testCase.priority,
+      status: testCase.status,
+      steps: [{ id: step.id, content: step.content, orderKey: step.orderKey }],
+      changeDetail: {
+        type: 'STEP_DELETE',
+        stepId,
+        deleted: { content: step.content, orderKey: step.orderKey },
       },
+    };
+
+    // トランザクションで削除と再整列を実行
+    await prisma.$transaction(async (tx) => {
+      // 履歴を保存
+      await tx.testCaseHistory.create({
+        data: {
+          testCaseId,
+          changedByUserId: userId,
+          changeType: 'UPDATE',
+          snapshot: toJsonSnapshot(snapshot),
+        },
+      });
+
+      // ステップを削除
+      await tx.testCaseStep.delete({
+        where: { id: stepId },
+      });
+
+      // 残りのステップのorderKeyを再整列（並列実行）
+      const remainingSteps = await tx.testCaseStep.findMany({
+        where: { testCaseId },
+        orderBy: { orderKey: 'asc' },
+      });
+
+      await Promise.all(
+        remainingSteps.map((item, i) =>
+          tx.testCaseStep.update({
+            where: { id: item.id },
+            data: { orderKey: indexToOrderKey(i) },
+          })
+        )
+      );
+    });
+  }
+
+  /**
+   * ステップを並び替え
+   */
+  async reorderSteps(testCaseId: string, stepIds: string[], userId: string) {
+    const testCase = await this.findById(testCaseId);
+
+    // 全てのステップを取得
+    const steps = await prisma.testCaseStep.findMany({
+      where: { testCaseId },
+      orderBy: { orderKey: 'asc' },
+    });
+
+    // 空配列チェック（ステップが0件の場合はそのまま返す）
+    if (steps.length === 0 && stepIds.length === 0) {
+      return [];
+    }
+
+    // 重複IDのチェック
+    const uniqueIds = new Set(stepIds);
+    if (uniqueIds.size !== stepIds.length) {
+      throw new BadRequestError('Duplicate step IDs are not allowed');
+    }
+
+    // 全件指定されているか確認
+    if (stepIds.length !== steps.length) {
+      throw new BadRequestError('All step IDs must be provided for reordering');
+    }
+
+    const existingIds = new Set(steps.map((s) => s.id));
+    for (const id of stepIds) {
+      if (!existingIds.has(id)) {
+        throw new NotFoundError('Step', id);
+      }
+    }
+
+    // 同値チェック：順序が変わっていなければそのまま返す
+    const currentOrder = steps.map((s) => s.id);
+    const isSameOrder = currentOrder.every((id, index) => id === stepIds[index]);
+    if (isSameOrder) {
+      return steps;
+    }
+
+    // 履歴を保存（並び替え前の状態）
+    const snapshot: HistorySnapshot = {
+      id: testCase.id,
+      testSuiteId: testCase.testSuiteId,
+      title: testCase.title,
+      description: testCase.description,
+      priority: testCase.priority,
+      status: testCase.status,
+      steps: steps.map((s) => ({ id: s.id, content: s.content, orderKey: s.orderKey })),
+      changeDetail: {
+        type: 'STEP_REORDER',
+        before: steps.map((s) => s.id),
+        after: stepIds,
+      },
+    };
+
+    // 履歴保存とorderKey更新を同じトランザクションで実行
+    await prisma.$transaction(async (tx) => {
+      await tx.testCaseHistory.create({
+        data: {
+          testCaseId,
+          changedByUserId: userId,
+          changeType: 'UPDATE',
+          snapshot: toJsonSnapshot(snapshot),
+        },
+      });
+
+      // 各ステップのorderKeyを更新（並列実行）
+      await Promise.all(
+        stepIds.map((id, index) =>
+          tx.testCaseStep.update({
+            where: { id },
+            data: { orderKey: indexToOrderKey(index) },
+          })
+        )
+      );
+    });
+
+    // 更新後のステップ一覧を返す
+    return prisma.testCaseStep.findMany({
+      where: { testCaseId },
+      orderBy: { orderKey: 'asc' },
     });
   }
 
@@ -194,24 +836,500 @@ export class TestCaseService {
   /**
    * 期待結果を追加
    */
-  async addExpectedResult(testCaseId: string, data: { content: string; orderKey?: string }) {
-    await this.findById(testCaseId);
+  async addExpectedResult(testCaseId: string, userId: string, data: { content: string; orderKey?: string }) {
+    const testCase = await this.findById(testCaseId);
 
-    let orderKey = data.orderKey;
-    if (!orderKey) {
-      const lastItem = await prisma.testCaseExpectedResult.findFirst({
-        where: { testCaseId },
-        orderBy: { orderKey: 'desc' },
+    return prisma.$transaction(async (tx) => {
+      let orderKey = data.orderKey;
+      if (!orderKey) {
+        const lastItem = await tx.testCaseExpectedResult.findFirst({
+          where: { testCaseId },
+          orderBy: { orderKey: 'desc' },
+        });
+        orderKey = getNextOrderKey(lastItem?.orderKey ?? null);
+      }
+
+      const expectedResult = await tx.testCaseExpectedResult.create({
+        data: {
+          testCaseId,
+          content: data.content,
+          orderKey,
+        },
       });
-      orderKey = lastItem ? `${parseInt(lastItem.orderKey) + 1}`.padStart(5, '0') : '00001';
+
+      // 履歴を保存
+      const snapshot: HistorySnapshot = {
+        id: testCase.id,
+        testSuiteId: testCase.testSuiteId,
+        title: testCase.title,
+        description: testCase.description,
+        priority: testCase.priority,
+        status: testCase.status,
+        expectedResults: [{ id: expectedResult.id, content: expectedResult.content, orderKey: expectedResult.orderKey }],
+        changeDetail: {
+          type: 'EXPECTED_RESULT_ADD',
+          expectedResultId: expectedResult.id,
+          added: { content: expectedResult.content, orderKey: expectedResult.orderKey },
+        },
+      };
+
+      await tx.testCaseHistory.create({
+        data: {
+          testCaseId,
+          changedByUserId: userId,
+          changeType: 'UPDATE',
+          snapshot: toJsonSnapshot(snapshot),
+        },
+      });
+
+      return expectedResult;
+    });
+  }
+
+  /**
+   * 期待結果を更新
+   */
+  async updateExpectedResult(testCaseId: string, expectedResultId: string, userId: string, data: { content: string }) {
+    const testCase = await this.findById(testCaseId);
+
+    // 期待結果の存在確認
+    const expectedResult = await prisma.testCaseExpectedResult.findFirst({
+      where: { id: expectedResultId, testCaseId },
+    });
+    if (!expectedResult) {
+      throw new NotFoundError('ExpectedResult', expectedResultId);
     }
 
-    return prisma.testCaseExpectedResult.create({
-      data: {
-        testCaseId,
-        content: data.content,
-        orderKey,
+    // 同値更新チェック：変更がなければそのまま返す
+    if (expectedResult.content === data.content) {
+      return expectedResult;
+    }
+
+    // 履歴保存と更新を同じトランザクションで実行
+    return prisma.$transaction(async (tx) => {
+      const snapshot: HistorySnapshot = {
+        id: testCase.id,
+        testSuiteId: testCase.testSuiteId,
+        title: testCase.title,
+        description: testCase.description,
+        priority: testCase.priority,
+        status: testCase.status,
+        expectedResults: [{ id: expectedResult.id, content: expectedResult.content, orderKey: expectedResult.orderKey }],
+        changeDetail: {
+          type: 'EXPECTED_RESULT_UPDATE',
+          expectedResultId,
+          before: { content: expectedResult.content },
+          after: { content: data.content },
+        },
+      };
+
+      await tx.testCaseHistory.create({
+        data: {
+          testCaseId,
+          changedByUserId: userId,
+          changeType: 'UPDATE',
+          snapshot: toJsonSnapshot(snapshot),
+        },
+      });
+
+      return tx.testCaseExpectedResult.update({
+        where: { id: expectedResultId },
+        data: { content: data.content },
+      });
+    });
+  }
+
+  /**
+   * 期待結果を削除
+   */
+  async deleteExpectedResult(testCaseId: string, expectedResultId: string, userId: string) {
+    const testCase = await this.findById(testCaseId);
+
+    // 期待結果の存在確認
+    const expectedResult = await prisma.testCaseExpectedResult.findFirst({
+      where: { id: expectedResultId, testCaseId },
+    });
+    if (!expectedResult) {
+      throw new NotFoundError('ExpectedResult', expectedResultId);
+    }
+
+    const snapshot: HistorySnapshot = {
+      id: testCase.id,
+      testSuiteId: testCase.testSuiteId,
+      title: testCase.title,
+      description: testCase.description,
+      priority: testCase.priority,
+      status: testCase.status,
+      expectedResults: [{ id: expectedResult.id, content: expectedResult.content, orderKey: expectedResult.orderKey }],
+      changeDetail: {
+        type: 'EXPECTED_RESULT_DELETE',
+        expectedResultId,
+        deleted: { content: expectedResult.content, orderKey: expectedResult.orderKey },
       },
+    };
+
+    // トランザクションで削除と再整列を実行
+    await prisma.$transaction(async (tx) => {
+      // 履歴を保存
+      await tx.testCaseHistory.create({
+        data: {
+          testCaseId,
+          changedByUserId: userId,
+          changeType: 'UPDATE',
+          snapshot: toJsonSnapshot(snapshot),
+        },
+      });
+
+      // 期待結果を削除
+      await tx.testCaseExpectedResult.delete({
+        where: { id: expectedResultId },
+      });
+
+      // 残りの期待結果のorderKeyを再整列（並列実行）
+      const remainingExpectedResults = await tx.testCaseExpectedResult.findMany({
+        where: { testCaseId },
+        orderBy: { orderKey: 'asc' },
+      });
+
+      await Promise.all(
+        remainingExpectedResults.map((item, i) =>
+          tx.testCaseExpectedResult.update({
+            where: { id: item.id },
+            data: { orderKey: indexToOrderKey(i) },
+          })
+        )
+      );
+    });
+  }
+
+  /**
+   * 期待結果を並び替え
+   */
+  async reorderExpectedResults(testCaseId: string, expectedResultIds: string[], userId: string) {
+    const testCase = await this.findById(testCaseId);
+
+    // 全ての期待結果を取得
+    const expectedResults = await prisma.testCaseExpectedResult.findMany({
+      where: { testCaseId },
+      orderBy: { orderKey: 'asc' },
+    });
+
+    // 空配列チェック（期待結果が0件の場合はそのまま返す）
+    if (expectedResults.length === 0 && expectedResultIds.length === 0) {
+      return [];
+    }
+
+    // 重複IDのチェック
+    const uniqueIds = new Set(expectedResultIds);
+    if (uniqueIds.size !== expectedResultIds.length) {
+      throw new BadRequestError('Duplicate expected result IDs are not allowed');
+    }
+
+    // 全件指定されているか確認
+    if (expectedResultIds.length !== expectedResults.length) {
+      throw new BadRequestError('All expected result IDs must be provided for reordering');
+    }
+
+    const existingIds = new Set(expectedResults.map((e) => e.id));
+    for (const id of expectedResultIds) {
+      if (!existingIds.has(id)) {
+        throw new NotFoundError('ExpectedResult', id);
+      }
+    }
+
+    // 同値チェック：順序が変わっていなければそのまま返す
+    const currentOrder = expectedResults.map((e) => e.id);
+    const isSameOrder = currentOrder.every((id, index) => id === expectedResultIds[index]);
+    if (isSameOrder) {
+      return expectedResults;
+    }
+
+    // 履歴を保存（並び替え前の状態）
+    const snapshot: HistorySnapshot = {
+      id: testCase.id,
+      testSuiteId: testCase.testSuiteId,
+      title: testCase.title,
+      description: testCase.description,
+      priority: testCase.priority,
+      status: testCase.status,
+      expectedResults: expectedResults.map((e) => ({ id: e.id, content: e.content, orderKey: e.orderKey })),
+      changeDetail: {
+        type: 'EXPECTED_RESULT_REORDER',
+        before: expectedResults.map((e) => e.id),
+        after: expectedResultIds,
+      },
+    };
+
+    // 履歴保存とorderKey更新を同じトランザクションで実行
+    await prisma.$transaction(async (tx) => {
+      await tx.testCaseHistory.create({
+        data: {
+          testCaseId,
+          changedByUserId: userId,
+          changeType: 'UPDATE',
+          snapshot: toJsonSnapshot(snapshot),
+        },
+      });
+
+      // 各期待結果のorderKeyを更新（並列実行）
+      await Promise.all(
+        expectedResultIds.map((id, index) =>
+          tx.testCaseExpectedResult.update({
+            where: { id },
+            data: { orderKey: indexToOrderKey(index) },
+          })
+        )
+      );
+    });
+
+    // 更新後の期待結果一覧を返す
+    return prisma.testCaseExpectedResult.findMany({
+      where: { testCaseId },
+      orderBy: { orderKey: 'asc' },
+    });
+  }
+
+  /**
+   * テストケースをコピー
+   */
+  async copy(testCaseId: string, userId: string, data: { targetTestSuiteId?: string; title?: string }) {
+    // 1. コピー元テストケース取得（子エンティティ含む）
+    const sourceTestCase = await prisma.testCase.findFirst({
+      where: { id: testCaseId },
+      include: {
+        testSuite: { select: { id: true, projectId: true } },
+        preconditions: { orderBy: { orderKey: 'asc' } },
+        steps: { orderBy: { orderKey: 'asc' } },
+        expectedResults: { orderBy: { orderKey: 'asc' } },
+      },
+    });
+    if (!sourceTestCase) {
+      throw new NotFoundError('TestCase', testCaseId);
+    }
+
+    // 2. 削除済みチェック
+    if (sourceTestCase.deletedAt) {
+      throw new BadRequestError('削除済みテストケースはコピーできません');
+    }
+
+    // 3. コピー先テストスイート決定・検証
+    const targetTestSuiteId = data.targetTestSuiteId ?? sourceTestCase.testSuiteId;
+    const targetTestSuite = await prisma.testSuite.findFirst({
+      where: { id: targetTestSuiteId, deletedAt: null },
+      include: { project: { select: { id: true } } },
+    });
+    if (!targetTestSuite) {
+      throw new NotFoundError('TestSuite', targetTestSuiteId);
+    }
+
+    // 4. 同一プロジェクト内チェック
+    if (sourceTestCase.testSuite.projectId !== targetTestSuite.project.id) {
+      throw new BadRequestError('異なるプロジェクトへのコピーはできません');
+    }
+
+    // 5. タイトル生成
+    const newTitle = data.title ?? `${sourceTestCase.title} (コピー)`;
+
+    // 6. トランザクションでコピー実行
+    return prisma.$transaction(async (tx) => {
+      // orderKey取得
+      const lastTestCase = await tx.testCase.findFirst({
+        where: { testSuiteId: targetTestSuiteId },
+        orderBy: { orderKey: 'desc' },
+      });
+      const orderKey = getNextOrderKey(lastTestCase?.orderKey ?? null);
+
+      // テストケース作成（ステータスはDRAFT固定）
+      const newTestCase = await tx.testCase.create({
+        data: {
+          testSuiteId: targetTestSuiteId,
+          title: newTitle,
+          description: sourceTestCase.description,
+          priority: sourceTestCase.priority,
+          status: 'DRAFT',
+          orderKey,
+          createdByUserId: userId,
+        },
+      });
+
+      // 子エンティティをコピー
+      if (sourceTestCase.preconditions.length > 0) {
+        await tx.testCasePrecondition.createMany({
+          data: sourceTestCase.preconditions.map((p) => ({
+            testCaseId: newTestCase.id,
+            content: p.content,
+            orderKey: p.orderKey,
+          })),
+        });
+      }
+
+      if (sourceTestCase.steps.length > 0) {
+        await tx.testCaseStep.createMany({
+          data: sourceTestCase.steps.map((s) => ({
+            testCaseId: newTestCase.id,
+            content: s.content,
+            orderKey: s.orderKey,
+          })),
+        });
+      }
+
+      if (sourceTestCase.expectedResults.length > 0) {
+        await tx.testCaseExpectedResult.createMany({
+          data: sourceTestCase.expectedResults.map((e) => ({
+            testCaseId: newTestCase.id,
+            content: e.content,
+            orderKey: e.orderKey,
+          })),
+        });
+      }
+
+      // 新しく作成された子エンティティを取得
+      const newPreconditions = await tx.testCasePrecondition.findMany({
+        where: { testCaseId: newTestCase.id },
+        orderBy: { orderKey: 'asc' },
+      });
+      const newSteps = await tx.testCaseStep.findMany({
+        where: { testCaseId: newTestCase.id },
+        orderBy: { orderKey: 'asc' },
+      });
+      const newExpectedResults = await tx.testCaseExpectedResult.findMany({
+        where: { testCaseId: newTestCase.id },
+        orderBy: { orderKey: 'asc' },
+      });
+
+      // 履歴記録
+      const snapshot: HistorySnapshot = {
+        id: newTestCase.id,
+        testSuiteId: newTestCase.testSuiteId,
+        title: newTestCase.title,
+        description: newTestCase.description,
+        priority: newTestCase.priority,
+        status: newTestCase.status,
+        preconditions: newPreconditions.map((p) => ({
+          id: p.id,
+          content: p.content,
+          orderKey: p.orderKey,
+        })),
+        steps: newSteps.map((s) => ({
+          id: s.id,
+          content: s.content,
+          orderKey: s.orderKey,
+        })),
+        expectedResults: newExpectedResults.map((e) => ({
+          id: e.id,
+          content: e.content,
+          orderKey: e.orderKey,
+        })),
+        changeDetail: {
+          type: 'COPY',
+          sourceTestCaseId: testCaseId,
+          sourceTitle: sourceTestCase.title,
+          targetTestSuiteId,
+        },
+      };
+
+      await tx.testCaseHistory.create({
+        data: {
+          testCaseId: newTestCase.id,
+          changedByUserId: userId,
+          changeType: 'CREATE',
+          snapshot: toJsonSnapshot(snapshot),
+        },
+      });
+
+      // 詳細情報を含めて返却
+      return tx.testCase.findUnique({
+        where: { id: newTestCase.id },
+        include: {
+          testSuite: { select: { id: true, name: true, projectId: true } },
+          createdByUser: { select: { id: true, name: true, avatarUrl: true } },
+          preconditions: { orderBy: { orderKey: 'asc' } },
+          steps: { orderBy: { orderKey: 'asc' } },
+          expectedResults: { orderBy: { orderKey: 'asc' } },
+        },
+      });
+    });
+  }
+
+  /**
+   * 変更履歴一覧を取得
+   */
+  async getHistories(testCaseId: string, options: { limit: number; offset: number }) {
+    // 削除済みを含めてテストケースの存在確認
+    const testCase = await prisma.testCase.findUnique({
+      where: { id: testCaseId },
+    });
+    if (!testCase) {
+      throw new NotFoundError('TestCase', testCaseId);
+    }
+
+    const [histories, total] = await Promise.all([
+      this.testCaseRepo.getHistories(testCaseId, options),
+      this.testCaseRepo.countHistories(testCaseId),
+    ]);
+
+    return { histories, total };
+  }
+
+  /**
+   * 削除済みテストケースを復元
+   */
+  async restore(testCaseId: string, userId: string) {
+    // 削除済みテストケースを取得
+    const testCase = await this.testCaseRepo.findDeletedById(testCaseId);
+    if (!testCase) {
+      // 削除されていないか、存在しない
+      const existingTestCase = await prisma.testCase.findUnique({
+        where: { id: testCaseId },
+      });
+      if (existingTestCase && !existingTestCase.deletedAt) {
+        throw new ConflictError('Test case is not deleted');
+      }
+      throw new NotFoundError('TestCase', testCaseId);
+    }
+
+    // 30日制限チェック
+    const deletedAt = testCase.deletedAt!;
+    const daysSinceDeleted = Math.floor((Date.now() - deletedAt.getTime()) / (1000 * 60 * 60 * 24));
+    if (daysSinceDeleted > 30) {
+      throw new BadRequestError('復元期限（30日）を過ぎています');
+    }
+
+    // テストスイート存在・未削除確認
+    const testSuite = await prisma.testSuite.findUnique({
+      where: { id: testCase.testSuiteId },
+    });
+    if (!testSuite) {
+      throw new BadRequestError('テストスイートが存在しません');
+    }
+    if (testSuite.deletedAt) {
+      throw new BadRequestError('削除済みテストスイートへの復元はできません');
+    }
+
+    const snapshot: TestCaseSnapshot = {
+      id: testCase.id,
+      testSuiteId: testCase.testSuiteId,
+      title: testCase.title,
+      description: testCase.description,
+      priority: testCase.priority,
+      status: testCase.status,
+      deletedAt: testCase.deletedAt?.toISOString() ?? null,
+    };
+
+    // 復元と履歴保存をトランザクションで実行
+    return prisma.$transaction(async (tx) => {
+      // 履歴を保存
+      await tx.testCaseHistory.create({
+        data: {
+          testCaseId,
+          changedByUserId: userId,
+          changeType: 'RESTORE',
+          snapshot: toJsonSnapshot(snapshot),
+        },
+      });
+
+      // リポジトリを使用して復元
+      return this.testCaseRepo.restore(testCaseId);
     });
   }
 }
