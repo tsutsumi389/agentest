@@ -144,6 +144,6 @@ router.get('/:testCaseId/histories', requireTestCaseRole([...readRoles]), testCa
  * POST /api/test-cases/:testCaseId/restore
  * 削除済みテストケースを復元（30日以内のみ）
  */
-router.post('/:testCaseId/restore', requireTestCaseRole(['ADMIN', 'WRITE'], { allowDeletedTestCase: true }), testCaseController.restore);
+router.post('/:testCaseId/restore', requireTestCaseRole(['OWNER', 'ADMIN', 'WRITE'], { allowDeletedTestCase: true }), testCaseController.restore);
 
 export default router;
