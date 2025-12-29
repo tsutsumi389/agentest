@@ -43,14 +43,29 @@ export function TestSuiteDetailPage() {
   const { user } = useAuth();
   const { setSidebarContent } = usePageSidebar();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [selectedTestCaseId, setSelectedTestCaseId] = useState<string | null>(null);
+
+  // URLクエリパラメータから選択状態を取得
+  const selectedTestCaseId = searchParams.get('testCase');
 
   // 現在のタブ
   const currentTab = (searchParams.get('tab') as TabType) || 'overview';
 
+  // テストケース選択ハンドラ（URLを更新）
+  const handleSelectTestCase = useCallback((testCaseId: string | null) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (testCaseId) {
+      newParams.set('testCase', testCaseId);
+    } else {
+      newParams.delete('testCase');
+    }
+    setSearchParams(newParams);
+  }, [searchParams, setSearchParams]);
+
   // タブ変更ハンドラ
   const handleTabChange = (tab: TabType) => {
-    setSearchParams({ tab });
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('tab', tab);
+    setSearchParams(newParams);
   };
 
   // テストスイート情報を取得
@@ -115,7 +130,7 @@ export function TestSuiteDetailPage() {
         testSuiteId={testSuiteId}
         testCases={testCases}
         selectedTestCaseId={selectedTestCaseId}
-        onSelect={setSelectedTestCaseId}
+        onSelect={handleSelectTestCase}
         onCreateClick={() => setIsCreateModalOpen(true)}
         currentRole={currentRole}
         isLoading={isLoadingCases}
@@ -124,7 +139,7 @@ export function TestSuiteDetailPage() {
     );
 
     return () => setSidebarContent(null);
-  }, [testSuiteId, testCases, selectedTestCaseId, currentRole, isLoadingCases, setSidebarContent, handleTestCasesReordered]);
+  }, [testSuiteId, testCases, selectedTestCaseId, currentRole, isLoadingCases, setSidebarContent, handleTestCasesReordered, handleSelectTestCase]);
 
   if (isLoadingSuite) {
     return (
@@ -223,12 +238,12 @@ export function TestSuiteDetailPage() {
             testCaseId={selectedTestCaseId}
             testSuiteId={testSuiteId}
             currentRole={currentRole}
-            onClose={() => setSelectedTestCaseId(null)}
+            onClose={() => handleSelectTestCase(null)}
             onUpdated={() => {
               queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
             }}
             onDeleted={() => {
-              setSelectedTestCaseId(null);
+              handleSelectTestCase(null);
               queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
             }}
           />
