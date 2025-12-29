@@ -66,34 +66,27 @@ export function ProjectSettingsPage() {
         setProject(projectWithRole);
         setDeletedAt(projectWithRole.deletedAt ?? null);
 
-        // ロールの設定
+        // ロールの設定（OWNERもprojectWithRole.roleから取得）
         if (projectWithRole.role) {
           setCurrentRole(projectWithRole.role);
-        } else if (projectWithRole.ownerId === user.id) {
-          setCurrentRole('OWNER');
         }
       } else {
         // 一覧にない場合は直接取得を試みる
         const response = await projectsApi.getById(projectId);
         setProject(response.project);
 
-        // オーナー判定
-        if (response.project.ownerId === user.id) {
-          setCurrentRole('OWNER');
-        } else {
-          // メンバーのロールを取得
-          setIsLoadingRole(true);
-          try {
-            const membersResponse = await projectsApi.getMembers(projectId);
-            const myMembership = membersResponse.members.find((m) => m.userId === user.id);
-            if (myMembership) {
-              setCurrentRole(myMembership.role);
-            }
-          } catch {
-            // メンバー取得に失敗しても続行（権限なしとして扱う）
-          } finally {
-            setIsLoadingRole(false);
+        // メンバーのロールを取得（OWNERも含む）
+        setIsLoadingRole(true);
+        try {
+          const membersResponse = await projectsApi.getMembers(projectId);
+          const myMembership = membersResponse.members.find((m) => m.userId === user.id);
+          if (myMembership) {
+            setCurrentRole(myMembership.role);
           }
+        } catch {
+          // メンバー取得に失敗しても続行（権限なしとして扱う）
+        } finally {
+          setIsLoadingRole(false);
         }
       }
     } catch (err) {

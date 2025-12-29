@@ -94,7 +94,6 @@ describe('requireTestSuiteRole', () => {
         deletedAt: new Date(),
         project: {
           id: TEST_PROJECT_ID,
-          ownerId: OTHER_USER_ID,
           deletedAt: null,
           organizationId: null,
           members: [],
@@ -116,10 +115,9 @@ describe('requireTestSuiteRole', () => {
         deletedAt: new Date(),
         project: {
           id: TEST_PROJECT_ID,
-          ownerId: TEST_USER_ID, // オーナー
           deletedAt: null,
           organizationId: null,
-          members: [],
+          members: [{ userId: TEST_USER_ID, role: 'OWNER' }], // オーナー
         },
       });
 
@@ -140,10 +138,9 @@ describe('requireTestSuiteRole', () => {
         deletedAt: null,
         project: {
           id: TEST_PROJECT_ID,
-          ownerId: TEST_USER_ID,
           deletedAt: new Date(), // 削除済み
           organizationId: null,
-          members: [],
+          members: [{ userId: TEST_USER_ID, role: 'OWNER' }],
         },
       });
 
@@ -166,10 +163,9 @@ describe('requireTestSuiteRole', () => {
         deletedAt: null,
         project: {
           id: TEST_PROJECT_ID,
-          ownerId: TEST_USER_ID, // リクエストユーザーがオーナー
           deletedAt: null,
           organizationId: null,
-          members: [],
+          members: [{ userId: TEST_USER_ID, role: 'OWNER' }], // リクエストユーザーがオーナー
         },
       });
 
@@ -191,7 +187,6 @@ describe('requireTestSuiteRole', () => {
         deletedAt: null,
         project: {
           id: TEST_PROJECT_ID,
-          ownerId: OTHER_USER_ID,
           deletedAt: null,
           organizationId: null,
           members: [{ userId: TEST_USER_ID, role: 'WRITE' }],
@@ -214,7 +209,6 @@ describe('requireTestSuiteRole', () => {
         deletedAt: null,
         project: {
           id: TEST_PROJECT_ID,
-          ownerId: OTHER_USER_ID,
           deletedAt: null,
           organizationId: null,
           members: [{ userId: TEST_USER_ID, role: 'READ' }], // READのみ
@@ -238,7 +232,6 @@ describe('requireTestSuiteRole', () => {
         deletedAt: null,
         project: {
           id: TEST_PROJECT_ID,
-          ownerId: OTHER_USER_ID,
           deletedAt: null,
           organizationId: null,
           members: [], // メンバーではない
@@ -262,7 +255,6 @@ describe('requireTestSuiteRole', () => {
         deletedAt: null,
         project: {
           id: TEST_PROJECT_ID,
-          ownerId: OTHER_USER_ID,
           deletedAt: null,
           organizationId: TEST_ORG_ID,
           members: [], // プロジェクトメンバーではない
@@ -298,7 +290,6 @@ describe('requireTestSuiteRole', () => {
         deletedAt: null,
         project: {
           id: TEST_PROJECT_ID,
-          ownerId: OTHER_USER_ID,
           deletedAt: null,
           organizationId: TEST_ORG_ID,
           members: [],
@@ -325,7 +316,6 @@ describe('requireTestSuiteRole', () => {
         deletedAt: null,
         project: {
           id: TEST_PROJECT_ID,
-          ownerId: OTHER_USER_ID,
           deletedAt: null,
           organizationId: TEST_ORG_ID,
           members: [],
@@ -352,7 +342,6 @@ describe('requireTestSuiteRole', () => {
         deletedAt: null,
         project: {
           id: TEST_PROJECT_ID,
-          ownerId: OTHER_USER_ID,
           deletedAt: null,
           organizationId: TEST_ORG_ID,
           members: [],
@@ -383,7 +372,6 @@ describe('requireTestSuiteRole', () => {
         deletedAt: null,
         project: {
           id: TEST_PROJECT_ID,
-          ownerId: OTHER_USER_ID,
           deletedAt: null,
           organizationId: null,
           members: [{ userId: TEST_USER_ID, role: memberRole }],

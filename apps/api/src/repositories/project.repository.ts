@@ -17,9 +17,6 @@ export class ProjectRepository {
         organization: {
           select: { id: true, name: true, slug: true },
         },
-        owner: {
-          select: { id: true, name: true, avatarUrl: true },
-        },
       },
     });
   }
@@ -36,9 +33,6 @@ export class ProjectRepository {
       include: {
         organization: {
           select: { id: true, name: true, slug: true },
-        },
-        owner: {
-          select: { id: true, name: true, avatarUrl: true },
         },
       },
     });
@@ -74,9 +68,6 @@ export class ProjectRepository {
       include: {
         organization: {
           select: { id: true, name: true, slug: true },
-        },
-        owner: {
-          select: { id: true, name: true, avatarUrl: true },
         },
       },
     });

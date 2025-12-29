@@ -191,11 +191,9 @@ export interface Project {
   name: string;
   description: string | null;
   organizationId: string | null;
-  ownerId: string | null;
   createdAt: string;
   updatedAt: string;
   organization?: { id: string; name: string; slug: string } | null;
-  owner?: { id: string; name: string; avatarUrl: string | null } | null;
   _count?: { testSuites: number };
 }
 

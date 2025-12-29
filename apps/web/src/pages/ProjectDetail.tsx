@@ -59,15 +59,12 @@ export function ProjectDetailPage() {
   const testSuites = suitesData?.testSuites || [];
   const totalCount = suitesData?.total;
 
-  // 現在のユーザーのロールを判定
+  // 現在のユーザーのロールを判定（OWNERもProjectMemberから取得）
   const currentRole: 'OWNER' | ProjectMemberRole | undefined = useMemo(() => {
-    if (!user || !project) return undefined;
-    // オーナーチェック
-    if (project.ownerId === user.id) return 'OWNER';
-    // メンバーのロールを取得
-    const member = membersData?.members.find((m) => m.userId === user.id);
+    if (!user || !membersData) return undefined;
+    const member = membersData.members.find((m) => m.userId === user.id);
     return member?.role;
-  }, [user, project, membersData]);
+  }, [user, membersData]);
 
   // 管理者権限があるか（削除済み表示可能）
   const isAdmin = currentRole === 'OWNER' || currentRole === 'ADMIN';

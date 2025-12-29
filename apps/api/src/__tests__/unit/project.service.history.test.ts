@@ -26,6 +26,9 @@ const mockPrisma = vi.hoisted(() => ({
     create: vi.fn(),
     update: vi.fn(),
   },
+  projectMember: {
+    create: vi.fn(),
+  },
   $transaction: vi.fn((operations) => {
     if (Array.isArray(operations)) {
       return Promise.all(operations);
@@ -47,7 +50,6 @@ describe('ProjectService - History & Restore', () => {
     id: 'project-1',
     name: 'Test Project',
     description: 'Test Description',
-    ownerId: 'user-1',
     organizationId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -239,7 +241,6 @@ describe('ProjectService - History & Restore', () => {
           name: restoredProject.name,
           description: restoredProject.description,
           organizationId: restoredProject.organizationId,
-          ownerId: restoredProject.ownerId,
         },
         changeReason: undefined,
       });
@@ -323,7 +324,6 @@ describe('ProjectService - History & Restore', () => {
           name: newProject.name,
           description: newProject.description,
           organizationId: newProject.organizationId,
-          ownerId: newProject.ownerId,
         },
         changeReason: undefined,
       });
@@ -380,7 +380,6 @@ describe('ProjectService - History & Restore', () => {
           name: mockProject.name,
           description: mockProject.description,
           organizationId: mockProject.organizationId,
-          ownerId: mockProject.ownerId,
         },
         changeReason: undefined,
       });

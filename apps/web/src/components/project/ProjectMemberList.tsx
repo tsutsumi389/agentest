@@ -372,42 +372,7 @@ export function ProjectMemberList({ project, currentRole }: ProjectMemberListPro
         )}
       </div>
 
-      {/* オーナー表示 */}
-      {project.owner && (
-        <div className="mb-4 p-3 rounded-lg border border-border bg-background-secondary">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {project.owner.avatarUrl ? (
-                <img
-                  src={project.owner.avatarUrl}
-                  alt={project.owner.name}
-                  className="w-10 h-10 rounded-full"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-warning-subtle flex items-center justify-center">
-                  <span className="text-sm font-medium text-warning">
-                    {project.owner.name.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-              )}
-              <div className="min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-foreground truncate">
-                    {project.owner.name}
-                  </span>
-                  {project.owner.id === user?.id && (
-                    <span className="badge badge-accent text-xs">あなた</span>
-                  )}
-                </div>
-                <p className="text-sm text-foreground-muted">オーナー</p>
-              </div>
-            </div>
-            <span className="text-sm font-medium text-warning">オーナー</span>
-          </div>
-        </div>
-      )}
-
-      {/* メンバー一覧 */}
+      {/* メンバー一覧（OWNERも含む） */}
       {members.length === 0 ? (
         <p className="text-center text-foreground-muted py-8">
           メンバーがいません

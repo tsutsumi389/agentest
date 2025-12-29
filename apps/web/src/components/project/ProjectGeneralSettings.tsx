@@ -156,31 +156,6 @@ export function ProjectGeneralSettings({ project, onUpdated }: ProjectGeneralSet
           </div>
         )}
 
-        {/* オーナー（読み取り専用） */}
-        {project.owner && (
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              オーナー
-            </label>
-            <div className="flex items-center gap-2 p-2 bg-background-tertiary rounded max-w-md">
-              {project.owner.avatarUrl ? (
-                <img
-                  src={project.owner.avatarUrl}
-                  alt={project.owner.name}
-                  className="w-6 h-6 rounded-full"
-                />
-              ) : (
-                <div className="w-6 h-6 rounded-full bg-accent-subtle flex items-center justify-center">
-                  <span className="text-xs font-medium text-accent">
-                    {project.owner.name.charAt(0).toUpperCase()}
-                  </span>
-                </div>
-              )}
-              <span className="text-sm text-foreground">{project.owner.name}</span>
-            </div>
-          </div>
-        )}
-
         {/* ボタン */}
         <div className="pt-4 flex gap-2">
           <button

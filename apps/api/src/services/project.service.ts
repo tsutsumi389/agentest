@@ -15,15 +15,28 @@ export class ProjectService {
 
   /**
    * プロジェクトを作成
+   * プロジェクト作成時に作成者をOWNERロールでProjectMemberに登録する
    */
   async create(userId: string, data: { name: string; description?: string | null; organizationId?: string | null }) {
-    const project = await prisma.project.create({
-      data: {
-        name: data.name,
-        description: data.description,
-        organizationId: data.organizationId,
-        ownerId: data.organizationId ? null : userId,
-      },
+    const project = await prisma.$transaction(async (tx) => {
+      const newProject = await tx.project.create({
+        data: {
+          name: data.name,
+          description: data.description,
+          organizationId: data.organizationId,
+        },
+      });
+
+      // 作成者をOWNERとしてProjectMemberに登録
+      await tx.projectMember.create({
+        data: {
+          projectId: newProject.id,
+          userId,
+          role: 'OWNER',
+        },
+      });
+
+      return newProject;
     });
 
     // 履歴を作成
@@ -31,7 +44,6 @@ export class ProjectService {
       name: project.name,
       description: project.description,
       organizationId: project.organizationId,
-      ownerId: project.ownerId,
     });
 
     return project;
@@ -82,7 +94,6 @@ export class ProjectService {
       name: project.name,
       description: project.description,
       organizationId: project.organizationId,
-      ownerId: project.ownerId,
     });
 
     return result;
@@ -90,10 +101,12 @@ export class ProjectService {
 
   /**
    * メンバー一覧を取得
+   * OWNERも含めて全メンバーをProjectMemberテーブルから取得
    */
   async getMembers(projectId: string) {
-    const project = await this.findById(projectId);
+    await this.findById(projectId);
 
+    // OWNERを先頭に、その後は追加日時順でソート
     const members = await prisma.projectMember.findMany({
       where: { projectId },
       include: {
@@ -106,30 +119,8 @@ export class ProjectService {
           },
         },
       },
-      orderBy: { addedAt: 'asc' },
+      orderBy: [{ role: 'asc' }, { addedAt: 'asc' }],
     });
-
-    // オーナーを追加
-    if (project.ownerId) {
-      const owner = await prisma.user.findUnique({
-        where: { id: project.ownerId },
-        select: { id: true, email: true, name: true, avatarUrl: true },
-      });
-      if (owner) {
-        // ProjectMember型と互換性を持たせるためにid, projectId, userIdを追加
-        return [
-          {
-            id: `owner-${project.id}`,
-            projectId: project.id,
-            userId: owner.id,
-            user: owner,
-            role: 'OWNER' as const,
-            addedAt: project.createdAt,
-          },
-          ...members,
-        ];
-      }
-    }
 
     return members;
   }
@@ -175,6 +166,16 @@ export class ProjectService {
       throw new NotFoundError('ProjectMember');
     }
 
+    // OWNERからの変更は禁止
+    if (member.role === 'OWNER') {
+      throw new ConflictError('オーナーのロールは変更できません');
+    }
+
+    // OWNERへの変更は禁止
+    if (role === 'OWNER') {
+      throw new ValidationError('OWNERロールへの変更はできません');
+    }
+
     return prisma.projectMember.update({
       where: {
         projectId_userId: { projectId, userId },
@@ -192,9 +193,19 @@ export class ProjectService {
    * メンバーを削除
    */
   async removeMember(projectId: string, userId: string) {
-    const project = await this.findById(projectId);
+    await this.findById(projectId);
 
-    if (project.ownerId === userId) {
+    // メンバーを取得してOWNERかチェック
+    const member = await prisma.projectMember.findUnique({
+      where: { projectId_userId: { projectId, userId } },
+    });
+
+    if (!member) {
+      throw new NotFoundError('ProjectMember');
+    }
+
+    // OWNERロールのメンバーは削除不可
+    if (member.role === 'OWNER') {
       throw new ConflictError('プロジェクトオーナーは削除できません');
     }
 
@@ -498,7 +509,6 @@ export class ProjectService {
       name: restoredProject.name,
       description: restoredProject.description,
       organizationId: restoredProject.organizationId,
-      ownerId: restoredProject.ownerId,
     });
 
     return restoredProject;

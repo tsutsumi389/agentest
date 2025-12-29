@@ -51,7 +51,6 @@ describe('ProjectService - Environment Management', () => {
     id: 'project-1',
     name: 'Test Project',
     description: 'Test Description',
-    ownerId: 'user-1',
     organizationId: null,
     createdAt: new Date(),
     updatedAt: new Date(),
