@@ -27,43 +27,62 @@ interface RequestOptions extends Omit<RequestInit, 'body'> {
 // ============================================
 
 // リフレッシュ処理の状態管理
-let isRefreshing = false;
-let refreshSubscribers: Array<() => void> = [];
+let refreshPromise: Promise<boolean> | null = null;
 
 /**
- * リフレッシュ完了を待つPromiseを返す
- */
-function subscribeToRefresh(): Promise<void> {
-  return new Promise((resolve) => {
-    refreshSubscribers.push(resolve);
-  });
-}
-
-/**
- * リフレッシュ完了時に全ての待機中リクエストを再開
- */
-function onRefreshComplete(): void {
-  refreshSubscribers.forEach((callback) => callback());
-  refreshSubscribers = [];
-}
-
-/**
- * トークンリフレッシュを実行
+ * トークンリフレッシュを実行（シングルトン）
+ * 複数のリクエストが同時に401を受けた場合、1つのリフレッシュ処理を共有する
  */
 async function refreshAccessToken(): Promise<boolean> {
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
-      method: 'POST',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    return response.ok;
-  } catch {
-    return false;
+  // 既にリフレッシュ中なら既存のPromiseを返す
+  if (refreshPromise) {
+    return refreshPromise;
   }
+
+  refreshPromise = (async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return response.ok;
+    } catch {
+      return false;
+    }
+  })();
+
+  try {
+    return await refreshPromise;
+  } finally {
+    // リフレッシュ完了後に状態をリセット
+    refreshPromise = null;
+  }
+}
+
+/**
+ * セッション期限切れ時のリダイレクト処理
+ */
+async function handleSessionExpired(): Promise<never> {
+  // ログアウト処理（クッキーのクリア）
+  await fetch(`${API_BASE_URL}/api/auth/logout`, {
+    method: 'POST',
+    credentials: 'include',
+  }).catch(() => {
+    // ログアウト失敗は無視
+  });
+
+  // ログインページにリダイレクト
+  window.location.href = '/login?expired=true';
+
+  // リダイレクト後は処理が続かないようにする
+  // （実際にはページ遷移で中断されるが、型安全性のため）
+  return new Promise(() => {
+    // 永遠に解決しないPromiseを返す
+  });
 }
 
 /**
@@ -96,49 +115,25 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
     if (endpoint.includes('/auth/refresh')) {
       throw new ApiError(
         401,
-        'SESSION_EXPIRED',
+        'AUTHENTICATION_ERROR',
         'セッションが期限切れです。再ログインしてください。'
       );
     }
 
-    // 既にリフレッシュ中なら完了を待つ
-    if (isRefreshing) {
-      await subscribeToRefresh();
-      // リフレッシュ完了後にリクエストを再試行
+    // リフレッシュを試みる（複数リクエストが同時に401を受けても1回だけ実行）
+    const refreshSuccess = await refreshAccessToken();
+
+    if (refreshSuccess) {
+      // リフレッシュ成功後にリクエストを再試行
       response = await fetch(url, config);
-    } else {
-      // リフレッシュを開始
-      isRefreshing = true;
 
-      try {
-        const refreshSuccess = await refreshAccessToken();
-
-        if (refreshSuccess) {
-          onRefreshComplete();
-          // リフレッシュ成功後にリクエストを再試行
-          response = await fetch(url, config);
-        } else {
-          // リフレッシュ失敗 - セッション期限切れ
-          onRefreshComplete();
-          // ログアウト処理（クッキーのクリア）
-          await fetch(`${API_BASE_URL}/api/auth/logout`, {
-            method: 'POST',
-            credentials: 'include',
-          }).catch(() => {
-            // ログアウト失敗は無視
-          });
-
-          // ログインページにリダイレクト
-          window.location.href = '/login?expired=true';
-          throw new ApiError(
-            401,
-            'SESSION_EXPIRED',
-            'セッションが期限切れです。再ログインしてください。'
-          );
-        }
-      } finally {
-        isRefreshing = false;
+      // 再試行後も401なら、セッション期限切れとして処理
+      if (response.status === 401) {
+        return handleSessionExpired();
       }
+    } else {
+      // リフレッシュ失敗 - セッション期限切れ
+      return handleSessionExpired();
     }
   }
 
