@@ -25,7 +25,7 @@
 |------|------|-------------|
 | プロジェクト管理 | プロジェクトの作成・設定・削除・環境管理 | [project-management.md](./project-management.md) |
 | テストスイート | テストスイートの管理 | [test-suite-management.md](./test-suite-management.md) |
-| テストケース | テストケースの作成・実行 | 未作成 |
+| テストケース | テストケースの作成・編集・コピー・履歴管理 | [test-case-management.md](./test-case-management.md) |
 | テスト実行 | テスト実行と結果管理 | 未作成 |
 
 ### その他（予定）
