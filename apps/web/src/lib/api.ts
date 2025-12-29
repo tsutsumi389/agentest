@@ -22,6 +22,69 @@ interface RequestOptions extends Omit<RequestInit, 'body'> {
   body?: unknown;
 }
 
+// ============================================
+// トークンリフレッシュ機構
+// ============================================
+
+// リフレッシュ処理の状態管理
+let refreshPromise: Promise<boolean> | null = null;
+
+/**
+ * トークンリフレッシュを実行（シングルトン）
+ * 複数のリクエストが同時に401を受けた場合、1つのリフレッシュ処理を共有する
+ */
+async function refreshAccessToken(): Promise<boolean> {
+  // 既にリフレッシュ中なら既存のPromiseを返す
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  refreshPromise = (async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      return response.ok;
+    } catch {
+      return false;
+    }
+  })();
+
+  try {
+    return await refreshPromise;
+  } finally {
+    // リフレッシュ完了後に状態をリセット
+    refreshPromise = null;
+  }
+}
+
+/**
+ * セッション期限切れ時のリダイレクト処理
+ */
+async function handleSessionExpired(): Promise<never> {
+  // ログアウト処理（クッキーのクリア）
+  await fetch(`${API_BASE_URL}/api/auth/logout`, {
+    method: 'POST',
+    credentials: 'include',
+  }).catch(() => {
+    // ログアウト失敗は無視
+  });
+
+  // ログインページにリダイレクト
+  window.location.href = '/login?expired=true';
+
+  // リダイレクト後は処理が続かないようにする
+  // （実際にはページ遷移で中断されるが、型安全性のため）
+  return new Promise(() => {
+    // 永遠に解決しないPromiseを返す
+  });
+}
+
 /**
  * APIクライアント
  */
@@ -43,7 +106,36 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
     config.body = JSON.stringify(body);
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+  const url = `${API_BASE_URL}${endpoint}`;
+  let response = await fetch(url, config);
+
+  // 401エラー時の自動リフレッシュ処理
+  if (response.status === 401) {
+    // リフレッシュエンドポイント自体の401は除外（無限ループ防止）
+    if (endpoint.includes('/auth/refresh')) {
+      throw new ApiError(
+        401,
+        'AUTHENTICATION_ERROR',
+        'セッションが期限切れです。再ログインしてください。'
+      );
+    }
+
+    // リフレッシュを試みる（複数リクエストが同時に401を受けても1回だけ実行）
+    const refreshSuccess = await refreshAccessToken();
+
+    if (refreshSuccess) {
+      // リフレッシュ成功後にリクエストを再試行
+      response = await fetch(url, config);
+
+      // 再試行後も401なら、セッション期限切れとして処理
+      if (response.status === 401) {
+        return handleSessionExpired();
+      }
+    } else {
+      // リフレッシュ失敗 - セッション期限切れ
+      return handleSessionExpired();
+    }
+  }
 
   // レスポンスボディを取得
   const contentType = response.headers.get('content-type');
