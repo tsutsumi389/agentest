@@ -36,8 +36,16 @@ const updateContentSchema = z.object({
   content: z.string().min(1).max(2000),
 });
 
-const reorderIdsSchema = z.object({
-  ids: z.array(z.string().uuid()).min(0),
+const reorderPreconditionsSchema = z.object({
+  preconditionIds: z.array(z.string().uuid()).min(0),
+});
+
+const reorderStepsSchema = z.object({
+  stepIds: z.array(z.string().uuid()).min(0),
+});
+
+const reorderExpectedResultsSchema = z.object({
+  expectedResultIds: z.array(z.string().uuid()).min(0),
 });
 
 const copyTestCaseSchema = z.object({
@@ -177,8 +185,8 @@ export class TestCaseController {
   reorderPreconditions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testCaseId } = req.params;
-      const { ids } = reorderIdsSchema.parse(req.body);
-      const preconditions = await this.testCaseService.reorderPreconditions(testCaseId, ids, req.user!.id);
+      const { preconditionIds } = reorderPreconditionsSchema.parse(req.body);
+      const preconditions = await this.testCaseService.reorderPreconditions(testCaseId, preconditionIds, req.user!.id);
 
       res.json({ preconditions });
     } catch (error) {
@@ -250,8 +258,8 @@ export class TestCaseController {
   reorderSteps = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testCaseId } = req.params;
-      const { ids } = reorderIdsSchema.parse(req.body);
-      const steps = await this.testCaseService.reorderSteps(testCaseId, ids, req.user!.id);
+      const { stepIds } = reorderStepsSchema.parse(req.body);
+      const steps = await this.testCaseService.reorderSteps(testCaseId, stepIds, req.user!.id);
 
       res.json({ steps });
     } catch (error) {
@@ -323,8 +331,8 @@ export class TestCaseController {
   reorderExpectedResults = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testCaseId } = req.params;
-      const { ids } = reorderIdsSchema.parse(req.body);
-      const expectedResults = await this.testCaseService.reorderExpectedResults(testCaseId, ids, req.user!.id);
+      const { expectedResultIds } = reorderExpectedResultsSchema.parse(req.body);
+      const expectedResults = await this.testCaseService.reorderExpectedResults(testCaseId, expectedResultIds, req.user!.id);
 
       res.json({ expectedResults });
     } catch (error) {
