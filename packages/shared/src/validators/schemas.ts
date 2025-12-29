@@ -145,6 +145,11 @@ export const projectEnvironmentReorderSchema = z.object({
   environmentIds: z.array(z.string().uuid()).min(1),
 });
 
+// テストケース並替スキーマ
+export const testCaseReorderSchema = z.object({
+  testCaseIds: z.array(z.string().uuid()).min(1),
+});
+
 // テストスイートスキーマ
 export const testSuiteCreateSchema = z.object({
   name: z.string().min(1).max(200),
@@ -238,6 +243,7 @@ export type ProjectEnvironmentInput = z.infer<typeof projectEnvironmentSchema>;
 export type ProjectEnvironmentCreate = z.infer<typeof projectEnvironmentCreateSchema>;
 export type ProjectEnvironmentUpdate = z.infer<typeof projectEnvironmentUpdateSchema>;
 export type ProjectEnvironmentReorder = z.infer<typeof projectEnvironmentReorderSchema>;
+export type TestCaseReorder = z.infer<typeof testCaseReorderSchema>;
 export type TestSuiteCreate = z.infer<typeof testSuiteCreateSchema>;
 export type TestSuiteUpdate = z.infer<typeof testSuiteUpdateSchema>;
 export type TestCaseCreate = z.infer<typeof testCaseCreateSchema>;

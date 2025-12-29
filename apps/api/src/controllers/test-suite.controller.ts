@@ -32,6 +32,10 @@ const reorderPreconditionsSchema = z.object({
   preconditionIds: z.array(z.string().uuid()),
 });
 
+const reorderTestCasesSchema = z.object({
+  testCaseIds: z.array(z.string().uuid()).min(1),
+});
+
 const startExecutionSchema = z.object({
   environmentId: z.string().uuid().optional(),
 });
@@ -111,6 +115,21 @@ export class TestSuiteController {
     try {
       const { testSuiteId } = req.params;
       const testCases = await this.testSuiteService.getTestCases(testSuiteId);
+
+      res.json({ testCases });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * テストケース並び替え
+   */
+  reorderTestCases = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { testSuiteId } = req.params;
+      const { testCaseIds } = reorderTestCasesSchema.parse(req.body);
+      const testCases = await this.testSuiteService.reorderTestCases(testSuiteId, testCaseIds, req.user!.id);
 
       res.json({ testCases });
     } catch (error) {

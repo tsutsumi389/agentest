@@ -24,6 +24,15 @@ type PreconditionSnapshot = {
 };
 
 /**
+ * テストケースのスナップショット型
+ */
+type TestCaseSnapshot = {
+  id: string;
+  title: string;
+  orderKey: string;
+};
+
+/**
  * 前提条件変更の詳細情報
  */
 type PreconditionChangeDetail =
@@ -50,11 +59,21 @@ type PreconditionChangeDetail =
     };
 
 /**
+ * テストケース変更の詳細情報
+ */
+type TestCaseChangeDetail = {
+  type: 'TEST_CASE_REORDER';
+  before: string[];
+  after: string[];
+};
+
+/**
  * 履歴保存用のスナップショット型
  */
 type HistorySnapshot = TestSuiteSnapshot & {
   preconditions?: PreconditionSnapshot[];
-  changeDetail?: PreconditionChangeDetail;
+  testCases?: TestCaseSnapshot[];
+  changeDetail?: PreconditionChangeDetail | TestCaseChangeDetail;
 };
 
 /**
@@ -628,6 +647,103 @@ export class TestSuiteService {
 
       // リポジトリを使用して復元
       return this.testSuiteRepo.restore(testSuiteId);
+    });
+  }
+
+  /**
+   * テストケースを並び替え
+   */
+  async reorderTestCases(testSuiteId: string, testCaseIds: string[], userId: string) {
+    const testSuite = await this.findById(testSuiteId);
+
+    // 現在のテストケース一覧取得
+    const testCases = await prisma.testCase.findMany({
+      where: {
+        testSuiteId,
+        deletedAt: null,
+      },
+      orderBy: { orderKey: 'asc' },
+    });
+
+    // 空配列チェック（テストケースが0件の場合はそのまま返す）
+    if (testCases.length === 0 && testCaseIds.length === 0) {
+      return [];
+    }
+
+    // 重複チェック
+    const uniqueIds = new Set(testCaseIds);
+    if (uniqueIds.size !== testCaseIds.length) {
+      throw new BadRequestError('重複したテストケースIDが含まれています');
+    }
+
+    // 全件指定確認
+    const existingIds = testCases.map((tc) => tc.id);
+    const existingIdSet = new Set(existingIds);
+    const missingIds = testCaseIds.filter((id) => !existingIdSet.has(id));
+    if (missingIds.length > 0) {
+      throw new BadRequestError('存在しないテストケースIDが含まれています');
+    }
+
+    const extraIds = existingIds.filter((id) => !uniqueIds.has(id));
+    if (extraIds.length > 0) {
+      throw new BadRequestError('すべてのテストケースを指定してください');
+    }
+
+    // 同値チェック（順序が変わっていない場合はそのまま返す）
+    const isSameOrder = testCaseIds.every((id, index) => id === existingIds[index]);
+    if (isSameOrder) {
+      return testCases;
+    }
+
+    // 履歴スナップショット作成
+    const snapshot: HistorySnapshot = {
+      id: testSuite.id,
+      projectId: testSuite.projectId,
+      name: testSuite.name,
+      description: testSuite.description,
+      status: testSuite.status,
+      testCases: testCases.map((tc) => ({
+        id: tc.id,
+        title: tc.title,
+        orderKey: tc.orderKey,
+      })),
+      changeDetail: {
+        type: 'TEST_CASE_REORDER',
+        before: existingIds,
+        after: testCaseIds,
+      },
+    };
+
+    // トランザクション実行
+    await prisma.$transaction(async (tx) => {
+      // 履歴保存
+      await tx.testSuiteHistory.create({
+        data: {
+          testSuiteId,
+          changedByUserId: userId,
+          changeType: 'UPDATE',
+          snapshot: toJsonSnapshot(snapshot),
+        },
+      });
+
+      // orderKey更新（並列実行）
+      await Promise.all(
+        testCaseIds.map((id, index) =>
+          tx.testCase.update({
+            where: { id },
+            data: { orderKey: `${index + 1}`.padStart(5, '0') },
+          })
+        )
+      );
+    });
+
+    // 更新後のテストケース一覧を返却
+    return prisma.testCase.findMany({
+      where: {
+        testSuiteId,
+        deletedAt: null,
+      },
+      orderBy: { orderKey: 'asc' },
     });
   }
 }
