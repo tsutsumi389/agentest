@@ -1,6 +1,7 @@
 import { prisma, type EntityStatus, type Prisma } from '@agentest/db';
 import { NotFoundError, BadRequestError, ConflictError } from '@agentest/shared';
 import { TestSuiteRepository } from '../repositories/test-suite.repository.js';
+import { TestCaseRepository, type TestCaseSearchOptions } from '../repositories/test-case.repository.js';
 
 /**
  * テストスイートのスナップショット型（基本情報）
@@ -88,6 +89,7 @@ function toJsonSnapshot(snapshot: TestSuiteSnapshot | HistorySnapshot): Prisma.I
  */
 export class TestSuiteService {
   private testSuiteRepo = new TestSuiteRepository();
+  private testCaseRepo = new TestCaseRepository();
 
   /**
    * テストスイートを作成
@@ -203,6 +205,15 @@ export class TestSuiteService {
       },
       orderBy: { orderKey: 'asc' },
     });
+  }
+
+  /**
+   * テストケースを検索
+   */
+  async searchTestCases(testSuiteId: string, options: TestCaseSearchOptions) {
+    // テストスイート存在確認
+    await this.findById(testSuiteId);
+    return this.testCaseRepo.search(testSuiteId, options);
   }
 
   /**

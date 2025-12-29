@@ -231,6 +231,27 @@ export const testSuiteSearchSchema = z.object({
   includeDeleted: z.coerce.boolean().default(false),
 });
 
+// テストケース検索スキーマ
+export const testCaseSearchSchema = z.object({
+  q: z.string().max(100).optional(),
+  // 複数選択対応: カンマ区切り → 配列変換
+  status: z
+    .string()
+    .optional()
+    .transform((val) => val?.split(',').map((s) => s.trim()))
+    .pipe(z.array(entityStatusSchema).optional()),
+  priority: z
+    .string()
+    .optional()
+    .transform((val) => val?.split(',').map((s) => s.trim()))
+    .pipe(z.array(testCasePrioritySchema).optional()),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+  sortBy: z.enum(['title', 'createdAt', 'updatedAt', 'priority', 'orderKey']).default('orderKey'),
+  sortOrder: z.enum(['asc', 'desc']).default('asc'),
+  includeDeleted: z.coerce.boolean().default(false),
+});
+
 // 型エクスポート
 export type UserCreate = z.infer<typeof userCreateSchema>;
 export type UserUpdate = z.infer<typeof userUpdateSchema>;
@@ -251,5 +272,6 @@ export type TestCaseUpdate = z.infer<typeof testCaseUpdateSchema>;
 export type ExecutionCreate = z.infer<typeof executionCreateSchema>;
 export type ExecutionResultUpdate = z.infer<typeof executionResultUpdateSchema>;
 export type TestSuiteSearch = z.infer<typeof testSuiteSearchSchema>;
+export type TestCaseSearch = z.infer<typeof testCaseSearchSchema>;
 export type Pagination = z.infer<typeof paginationSchema>;
 export type Sort = z.infer<typeof sortSchema>;

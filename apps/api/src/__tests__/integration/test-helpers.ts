@@ -196,6 +196,10 @@ export async function cleanupTestData() {
   await prisma.execution.deleteMany({});
   await prisma.testSuiteHistory.deleteMany({});
   await prisma.testSuitePrecondition.deleteMany({});
+  await prisma.testCaseExpectedResult.deleteMany({});
+  await prisma.testCaseStep.deleteMany({});
+  await prisma.testCasePrecondition.deleteMany({});
+  await prisma.testCase.deleteMany({});
   await prisma.testSuite.deleteMany({});
   await prisma.projectEnvironment.deleteMany({});
   await prisma.projectHistory.deleteMany({});
@@ -421,6 +425,80 @@ export async function createTestProjectHistory(
       snapshot: overrides.snapshot ?? { name: 'Test Project' },
       changeReason: overrides.changeReason ?? null,
       createdAt: overrides.createdAt ?? new Date(),
+    },
+  });
+}
+
+/**
+ * テスト用テストケースを作成
+ */
+export async function createTestCase(
+  testSuiteId: string,
+  overrides: Partial<{
+    id: string;
+    title: string;
+    description: string | null;
+    priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+    status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
+    orderKey: string;
+    createdByUserId: string | null;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.testCase.create({
+    data: {
+      id,
+      testSuiteId,
+      title: overrides.title ?? `Test Case ${id.slice(0, 8)}`,
+      description: overrides.description ?? null,
+      priority: overrides.priority ?? 'MEDIUM',
+      status: overrides.status ?? 'DRAFT',
+      orderKey: overrides.orderKey ?? id.slice(0, 5),
+      createdByUserId: overrides.createdByUserId ?? null,
+    },
+  });
+}
+
+/**
+ * テスト用テストケースステップを作成
+ */
+export async function createTestCaseStep(
+  testCaseId: string,
+  overrides: Partial<{
+    id: string;
+    content: string;
+    orderKey: string;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.testCaseStep.create({
+    data: {
+      id,
+      testCaseId,
+      content: overrides.content ?? `Step ${id.slice(0, 8)}`,
+      orderKey: overrides.orderKey ?? id.slice(0, 5),
+    },
+  });
+}
+
+/**
+ * テスト用テストケース期待結果を作成
+ */
+export async function createTestCaseExpectedResult(
+  testCaseId: string,
+  overrides: Partial<{
+    id: string;
+    content: string;
+    orderKey: string;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.testCaseExpectedResult.create({
+    data: {
+      id,
+      testCaseId,
+      content: overrides.content ?? `Expected Result ${id.slice(0, 8)}`,
+      orderKey: overrides.orderKey ?? id.slice(0, 5),
     },
   });
 }
