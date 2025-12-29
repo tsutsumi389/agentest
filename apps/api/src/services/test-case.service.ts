@@ -1,5 +1,5 @@
 import { prisma, type TestCasePriority, type EntityStatus, type Prisma } from '@agentest/db';
-import { NotFoundError, BadRequestError, ConflictError } from '@agentest/shared';
+import { NotFoundError, BadRequestError, ConflictError, AuthorizationError } from '@agentest/shared';
 import { TestCaseRepository } from '../repositories/test-case.repository.js';
 
 // orderKey関連の定数
@@ -159,12 +159,42 @@ export class TestCaseService {
       status?: EntityStatus;
     }
   ) {
-    // テストスイートの存在確認
+    // テストスイートの存在確認とプロジェクトメンバーシップ検証
     const testSuite = await prisma.testSuite.findUnique({
       where: { id: data.testSuiteId },
+      include: {
+        project: {
+          include: {
+            members: {
+              where: { userId },
+            },
+          },
+        },
+      },
     });
     if (!testSuite || testSuite.deletedAt) {
       throw new NotFoundError('TestSuite', data.testSuiteId);
+    }
+
+    // プロジェクトメンバーシップチェック（WRITE権限以上）
+    const member = testSuite.project.members[0];
+    if (!member || !['OWNER', 'ADMIN', 'WRITE'].includes(member.role)) {
+      // 組織メンバーシップもチェック
+      if (testSuite.project.organizationId) {
+        const orgMember = await prisma.organizationMember.findUnique({
+          where: {
+            organizationId_userId: {
+              organizationId: testSuite.project.organizationId,
+              userId,
+            },
+          },
+        });
+        if (!orgMember || !['OWNER', 'ADMIN'].includes(orgMember.role)) {
+          throw new AuthorizationError('Insufficient permissions');
+        }
+      } else {
+        throw new AuthorizationError('Insufficient permissions');
+      }
     }
 
     // 次のorderKeyを取得
