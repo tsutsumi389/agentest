@@ -18,7 +18,6 @@ import { createApp } from '../../app.js';
 let mockAuthUser: { id: string; email: string } | null = null;
 let mockProjectRole: string | null = null;
 let mockTestSuiteRole: string | null = null;
-let mockAllowDeletedSuite: boolean = false;
 
 // 認証ミドルウェアをモック
 vi.mock('@agentest/auth', () => ({
@@ -31,7 +30,7 @@ vi.mock('@agentest/auth', () => ({
   },
   optionalAuth: () => (_req: any, _res: any, next: any) => next(),
   requireOrgRole: () => (_req: any, _res: any, next: any) => next(),
-  requireProjectRole: (roles: string[], _options?: { allowDeletedProject?: boolean }) => (req: any, _res: any, next: any) => {
+  requireProjectRole: (roles: string[], _options?: { allowDeletedProject?: boolean }) => (_req: any, _res: any, next: any) => {
     if (!mockProjectRole || !roles.includes(mockProjectRole)) {
       return next(new AuthorizationError('権限がありません'));
     }
@@ -76,19 +75,17 @@ function setTestAuth(
   user: { id: string; email: string } | null,
   projectRole: string | null = null,
   testSuiteRole: string | null = null,
-  allowDeletedSuite: boolean = false
+  _allowDeletedSuite: boolean = false
 ) {
   mockAuthUser = user;
   mockProjectRole = projectRole;
   mockTestSuiteRole = testSuiteRole;
-  mockAllowDeletedSuite = allowDeletedSuite;
 }
 
 function clearTestAuth() {
   mockAuthUser = null;
   mockProjectRole = null;
   mockTestSuiteRole = null;
-  mockAllowDeletedSuite = false;
 }
 
 describe('Test Suite History & Restore API Integration Tests', () => {

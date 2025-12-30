@@ -154,7 +154,6 @@ describe('TestSuiteService - Precondition Management', () => {
     });
 
     it('異なるテストスイートの前提条件更新はNotFoundErrorを投げる', async () => {
-      const otherPrecondition = { ...mockPrecondition, testSuiteId: 'test-suite-2' };
       mockTestSuiteRepo.findById.mockResolvedValue(mockTestSuite);
       // testSuiteIdの条件で検索するため、nullが返る
       mockPrisma.testSuitePrecondition.findFirst.mockResolvedValue(null);

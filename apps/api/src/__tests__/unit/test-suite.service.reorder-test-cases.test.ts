@@ -318,7 +318,7 @@ describe('TestSuiteService - reorderTestCases', () => {
       mockPrisma.testCase.findMany.mockResolvedValue(activeTestCases);
 
       // 存在する2件のみで並び替え
-      const result = await service.reorderTestCases(
+      await service.reorderTestCases(
         'test-suite-1',
         ['test-case-2', 'test-case-1'],
         'user-1'

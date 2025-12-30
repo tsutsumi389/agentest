@@ -8,7 +8,6 @@ import {
   createTestProjectMember,
   createTestSuite,
   createTestCase,
-  createTestPrecondition,
   createTestReviewComment,
   createTestReviewReply,
   cleanupTestData,
@@ -35,7 +34,7 @@ vi.mock('@agentest/auth', () => ({
   },
   optionalAuth: () => (_req: any, _res: any, next: any) => next(),
   requireOrgRole: () => (_req: any, _res: any, next: any) => next(),
-  requireProjectRole: (roles: string[]) => (req: any, _res: any, next: any) => {
+  requireProjectRole: (roles: string[]) => (_req: any, _res: any, next: any) => {
     if (!mockProjectRole || !roles.includes(mockProjectRole)) {
       return next(new AuthorizationError('権限がありません'));
     }
