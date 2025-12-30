@@ -31,7 +31,18 @@ export class ExecutionService {
     if (!execution) {
       throw new NotFoundError('Execution', executionId);
     }
-    return execution;
+
+    // エビデンスのfileSizeをBigIntからnumberに変換（JSONシリアライズのため）
+    return {
+      ...execution,
+      expectedResults: execution.expectedResults.map((result) => ({
+        ...result,
+        evidences: result.evidences.map((evidence) => ({
+          ...evidence,
+          fileSize: Number(evidence.fileSize),
+        })),
+      })),
+    };
   }
 
   /**
