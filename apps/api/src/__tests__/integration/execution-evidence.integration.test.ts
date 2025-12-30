@@ -340,7 +340,7 @@ describe('Execution Evidence API Integration Tests', () => {
       const response = await request(app).get(`/api/executions/${execution.id}/evidences/${evidence.id}/download-url`);
 
       expect(response.status).toBe(200);
-      expect(response.body.url).toBe('https://minio.example.com/signed-url');
+      expect(response.body.downloadUrl).toBe('https://minio.example.com/signed-url');
       expect(mockStorageGetDownloadUrl).toHaveBeenCalledWith('evidences/test.png', { expiresIn: 3600 });
     });
 
@@ -350,7 +350,7 @@ describe('Execution Evidence API Integration Tests', () => {
       const response = await request(app).get(`/api/executions/${execution.id}/evidences/${evidence.id}/download-url`);
 
       expect(response.status).toBe(200);
-      expect(response.body.url).toBeDefined();
+      expect(response.body.downloadUrl).toBeDefined();
     });
 
     it('認証なしの場合は401エラー', async () => {
@@ -382,7 +382,7 @@ describe('Execution Evidence API Integration Tests', () => {
       const response = await request(app).get(`/api/executions/${execution.id}/evidences/${evidence.id}/download-url`);
 
       expect(response.status).toBe(200);
-      expect(response.body.url).toBeDefined();
+      expect(response.body.downloadUrl).toBeDefined();
     });
   });
 });
