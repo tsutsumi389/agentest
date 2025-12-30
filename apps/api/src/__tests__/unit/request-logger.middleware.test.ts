@@ -27,10 +27,10 @@ describe('requestLogger', () => {
     mockReq = {
       method: 'GET',
       originalUrl: '/api/users',
-      get: vi.fn((header: string) => {
+      get: vi.fn().mockImplementation((header: string) => {
         if (header === 'user-agent') return 'Mozilla/5.0';
         return undefined;
-      }),
+      }) as Request['get'],
       ip: '192.168.1.1',
     };
 
@@ -38,12 +38,12 @@ describe('requestLogger', () => {
     mockRes = {
       statusCode: 200,
       setHeader: vi.fn(),
-      on: vi.fn((event: string, callback: () => void) => {
+      on: vi.fn().mockImplementation((event: string, callback: () => void) => {
         if (event === 'finish') {
           finishCallback = callback;
         }
         return mockRes;
-      }),
+      }) as Response['on'],
     };
 
     mockNext = vi.fn();

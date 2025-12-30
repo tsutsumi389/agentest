@@ -72,7 +72,6 @@ import { AuthController } from '../../controllers/auth.controller.js';
 // テスト用の固定値
 const TEST_USER_ID = '11111111-1111-1111-1111-111111111111';
 const TEST_REFRESH_TOKEN = 'test-refresh-token';
-const TEST_ACCESS_TOKEN = 'test-access-token';
 const NEW_REFRESH_TOKEN = 'new-refresh-token';
 const NEW_ACCESS_TOKEN = 'new-access-token';
 

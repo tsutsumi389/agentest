@@ -37,7 +37,7 @@ describe('ReviewCommentRepository', () => {
     it('IDでコメントを取得できる', async () => {
       const mockComment = {
         id: 'comment-1',
-        targetType: 'TEST_SUITE',
+        targetType: 'SUITE',
         targetId: 'suite-1',
         targetField: 'TITLE',
         content: 'Test comment',
@@ -104,14 +104,14 @@ describe('ReviewCommentRepository', () => {
       mockPrismaReviewComment.findMany.mockResolvedValue(mockComments);
       mockPrismaReviewComment.count.mockResolvedValue(2);
 
-      const result = await repository.search('TEST_SUITE', 'suite-1', {
+      const result = await repository.search('SUITE', 'suite-1', {
         limit: 10,
         offset: 0,
       });
 
       expect(mockPrismaReviewComment.findMany).toHaveBeenCalledWith({
         where: {
-          targetType: 'TEST_SUITE',
+          targetType: 'SUITE',
           targetId: 'suite-1',
         },
         include: expect.any(Object),
@@ -127,7 +127,7 @@ describe('ReviewCommentRepository', () => {
       mockPrismaReviewComment.findMany.mockResolvedValue([]);
       mockPrismaReviewComment.count.mockResolvedValue(0);
 
-      await repository.search('TEST_SUITE', 'suite-1', {
+      await repository.search('SUITE', 'suite-1', {
         status: 'OPEN',
         limit: 10,
         offset: 0,
@@ -136,7 +136,7 @@ describe('ReviewCommentRepository', () => {
       expect(mockPrismaReviewComment.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
-            targetType: 'TEST_SUITE',
+            targetType: 'SUITE',
             targetId: 'suite-1',
             status: 'OPEN',
           },
@@ -148,7 +148,7 @@ describe('ReviewCommentRepository', () => {
       mockPrismaReviewComment.findMany.mockResolvedValue([]);
       mockPrismaReviewComment.count.mockResolvedValue(0);
 
-      await repository.search('TEST_CASE', 'case-1', {
+      await repository.search('CASE', 'case-1', {
         status: 'RESOLVED',
         limit: 10,
         offset: 0,
@@ -157,7 +157,7 @@ describe('ReviewCommentRepository', () => {
       expect(mockPrismaReviewComment.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
-            targetType: 'TEST_CASE',
+            targetType: 'CASE',
             targetId: 'case-1',
             status: 'RESOLVED',
           },
@@ -169,7 +169,7 @@ describe('ReviewCommentRepository', () => {
       mockPrismaReviewComment.findMany.mockResolvedValue([]);
       mockPrismaReviewComment.count.mockResolvedValue(0);
 
-      await repository.search('TEST_SUITE', 'suite-1', {
+      await repository.search('SUITE', 'suite-1', {
         status: 'ALL',
         limit: 10,
         offset: 0,
@@ -178,7 +178,7 @@ describe('ReviewCommentRepository', () => {
       expect(mockPrismaReviewComment.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
-            targetType: 'TEST_SUITE',
+            targetType: 'SUITE',
             targetId: 'suite-1',
           },
         })
@@ -189,7 +189,7 @@ describe('ReviewCommentRepository', () => {
       mockPrismaReviewComment.findMany.mockResolvedValue([]);
       mockPrismaReviewComment.count.mockResolvedValue(0);
 
-      await repository.search('TEST_CASE', 'case-1', {
+      await repository.search('CASE', 'case-1', {
         targetField: 'PRECONDITION',
         limit: 10,
         offset: 0,
@@ -198,7 +198,7 @@ describe('ReviewCommentRepository', () => {
       expect(mockPrismaReviewComment.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: {
-            targetType: 'TEST_CASE',
+            targetType: 'CASE',
             targetId: 'case-1',
             targetField: 'PRECONDITION',
           },
@@ -210,7 +210,7 @@ describe('ReviewCommentRepository', () => {
       mockPrismaReviewComment.findMany.mockResolvedValue([]);
       mockPrismaReviewComment.count.mockResolvedValue(50);
 
-      await repository.search('TEST_SUITE', 'suite-1', {
+      await repository.search('SUITE', 'suite-1', {
         limit: 20,
         offset: 40,
       });
@@ -227,7 +227,7 @@ describe('ReviewCommentRepository', () => {
       mockPrismaReviewComment.findMany.mockResolvedValue([{ id: '1' }]);
       mockPrismaReviewComment.count.mockResolvedValue(100);
 
-      const result = await repository.search('TEST_SUITE', 'suite-1', {
+      const result = await repository.search('SUITE', 'suite-1', {
         limit: 10,
         offset: 0,
       });
@@ -240,7 +240,7 @@ describe('ReviewCommentRepository', () => {
     it('コメントを作成できる', async () => {
       const mockComment = {
         id: 'comment-1',
-        targetType: 'TEST_SUITE',
+        targetType: 'SUITE',
         targetId: 'suite-1',
         targetField: 'TITLE',
         content: 'New comment',
@@ -250,7 +250,7 @@ describe('ReviewCommentRepository', () => {
       mockPrismaReviewComment.create.mockResolvedValue(mockComment);
 
       const result = await repository.create({
-        targetType: 'TEST_SUITE',
+        targetType: 'SUITE',
         targetId: 'suite-1',
         targetField: 'TITLE',
         authorUserId: 'user-1',
@@ -259,7 +259,7 @@ describe('ReviewCommentRepository', () => {
 
       expect(mockPrismaReviewComment.create).toHaveBeenCalledWith({
         data: {
-          targetType: 'TEST_SUITE',
+          targetType: 'SUITE',
           targetId: 'suite-1',
           targetField: 'TITLE',
           targetItemId: undefined,
@@ -277,7 +277,7 @@ describe('ReviewCommentRepository', () => {
       mockPrismaReviewComment.create.mockResolvedValue({ status: 'OPEN' });
 
       await repository.create({
-        targetType: 'TEST_CASE',
+        targetType: 'CASE',
         targetId: 'case-1',
         targetField: 'STEP',
         targetItemId: 'step-1',
@@ -298,7 +298,7 @@ describe('ReviewCommentRepository', () => {
       mockPrismaReviewComment.create.mockResolvedValue({ id: 'comment-1' });
 
       await repository.create({
-        targetType: 'TEST_SUITE',
+        targetType: 'SUITE',
         targetId: 'suite-1',
         targetField: 'DESCRIPTION',
         authorAgentSessionId: 'agent-session-1',
@@ -390,7 +390,7 @@ describe('ReviewCommentRepository', () => {
         id: 'reply-1',
         commentId: 'comment-1',
         content: 'Reply content',
-        comment: { id: 'comment-1', targetType: 'TEST_SUITE' },
+        comment: { id: 'comment-1', targetType: 'SUITE' },
         author: { id: 'user-1', name: 'User', avatarUrl: null },
         agentSession: null,
       };

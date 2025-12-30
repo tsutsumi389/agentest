@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
-import { ZodError, z } from 'zod';
+import { type ZodError, z } from 'zod';
 import multer from 'multer';
 import { NotFoundError, AuthenticationError, AuthorizationError, BadRequestError, ValidationError } from '@agentest/shared';
 
