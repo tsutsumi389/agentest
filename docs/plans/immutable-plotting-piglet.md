@@ -24,12 +24,12 @@
 
 | Method | Endpoint | 説明 | 認可 |
 |--------|----------|------|------|
-| POST | `/api/review-comments` | コメント作成 | 対象リソースREAD以上 |
+| POST | `/api/review-comments` | コメント作成 | 対象リソースWRITE以上 |
 | GET | `/api/review-comments/:commentId` | コメント詳細 | 対象リソースREAD以上 |
 | PATCH | `/api/review-comments/:commentId` | コメント編集 | 投稿者本人のみ |
 | DELETE | `/api/review-comments/:commentId` | コメント削除 | 投稿者本人のみ |
 | PATCH | `/api/review-comments/:commentId/status` | ステータス変更 | 対象リソースWRITE以上 |
-| POST | `/api/review-comments/:commentId/replies` | 返信作成 | 対象リソースREAD以上 |
+| POST | `/api/review-comments/:commentId/replies` | 返信作成 | 対象リソースWRITE以上 |
 | PATCH | `/api/review-comments/:commentId/replies/:replyId` | 返信編集 | 投稿者本人のみ |
 | DELETE | `/api/review-comments/:commentId/replies/:replyId` | 返信削除 | 投稿者本人のみ |
 
@@ -129,7 +129,7 @@ export const reviewCommentSearchSchema = z.object({
 ### 設計ポイント
 
 **認可ロジック**:
-- コメント/返信の作成: 対象リソース（スイート/ケース）のREAD以上
+- コメント/返信の作成: 対象リソース（スイート/ケース）のWRITE以上
 - 編集/削除: `authorUserId === currentUser.id`（投稿者本人のみ）
 - ステータス変更: 対象リソースのWRITE以上
 
