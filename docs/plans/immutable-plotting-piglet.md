@@ -192,25 +192,25 @@ export const reviewCommentsApi = {
 ## 5. 実装順序
 
 ### Step 1: 型定義・バリデーション
-- [ ] `/packages/shared/src/types/review.ts` 新規作成
-- [ ] `/packages/shared/src/types/index.ts` に export 追加
-- [ ] `/packages/shared/src/validators/schemas.ts` にスキーマ追加
+- [x] `/packages/shared/src/types/review.ts` 新規作成
+- [x] `/packages/shared/src/types/index.ts` に export 追加
+- [x] `/packages/shared/src/validators/schemas.ts` にスキーマ追加
 
 ### Step 2: リポジトリ層
-- [ ] `/apps/api/src/repositories/review-comment.repository.ts` 新規作成
+- [x] `/apps/api/src/repositories/review-comment.repository.ts` 新規作成
 
 ### Step 3: サービス層
-- [ ] `/apps/api/src/services/review-comment.service.ts` 新規作成
+- [x] `/apps/api/src/services/review-comment.service.ts` 新規作成
 
 ### Step 4: コントローラー・ルーティング
-- [ ] `/apps/api/src/controllers/review-comment.controller.ts` 新規作成
-- [ ] `/apps/api/src/routes/review-comments.ts` 新規作成
-- [ ] `/apps/api/src/routes/test-suites.ts` にコメント一覧追加
-- [ ] `/apps/api/src/routes/test-cases.ts` にコメント一覧追加
-- [ ] `/apps/api/src/routes/index.ts` にルート登録
+- [x] `/apps/api/src/controllers/review-comment.controller.ts` 新規作成
+- [x] `/apps/api/src/routes/review-comments.ts` 新規作成
+- [x] `/apps/api/src/routes/test-suites.ts` にコメント一覧追加
+- [x] `/apps/api/src/routes/test-cases.ts` にコメント一覧追加
+- [x] `/apps/api/src/routes/index.ts` にルート登録
 
 ### Step 5: ミドルウェア
-- [ ] `/apps/api/src/middleware/require-review-comment-role.ts` 新規作成
+- [x] `/apps/api/src/middleware/require-review-comment-role.ts` 新規作成
 
 ### Step 6: APIクライアント
 - [ ] `/apps/web/src/lib/api.ts` にAPI追加
@@ -227,7 +227,7 @@ export const reviewCommentsApi = {
 - [ ] `TestCaseDetailPanel.tsx` にレビュータブ追加
 
 ### Step 9: テスト
-- [ ] `/apps/api/src/__tests__/integration/review-comments.integration.test.ts` 新規作成
+- [x] `/apps/api/src/__tests__/integration/review-comments.integration.test.ts` 新規作成
 
 ---
 
