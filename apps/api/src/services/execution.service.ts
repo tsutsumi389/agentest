@@ -20,6 +20,17 @@ export class ExecutionService {
   }
 
   /**
+   * 実行をIDで詳細付きで検索（スナップショット、全結果データ含む）
+   */
+  async findByIdWithDetails(executionId: string) {
+    const execution = await this.executionRepo.findByIdWithDetails(executionId);
+    if (!execution) {
+      throw new NotFoundError('Execution', executionId);
+    }
+    return execution;
+  }
+
+  /**
    * 実行を中止
    */
   async abort(executionId: string) {
