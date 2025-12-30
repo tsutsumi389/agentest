@@ -1,11 +1,13 @@
 import { Router } from 'express';
 import { requireAuth, requireProjectRole } from '@agentest/auth';
 import { TestSuiteController } from '../controllers/test-suite.controller.js';
+import { ReviewCommentController } from '../controllers/review-comment.controller.js';
 import { requireTestSuiteRole } from '../middleware/require-test-suite-role.js';
 import { authConfig } from '../config/auth.js';
 
 const router: Router = Router();
 const testSuiteController = new TestSuiteController();
+const reviewCommentController = new ReviewCommentController();
 
 /**
  * テストスイート作成
@@ -105,5 +107,11 @@ router.get('/:testSuiteId/histories', requireAuth(authConfig), requireTestSuiteR
  * 削除済みテストスイートを復元（30日以内のみ）
  */
 router.post('/:testSuiteId/restore', requireAuth(authConfig), requireTestSuiteRole(['ADMIN'], { allowDeletedSuite: true }), testSuiteController.restore);
+
+/**
+ * テストスイートのレビューコメント一覧取得
+ * GET /api/test-suites/:testSuiteId/comments
+ */
+router.get('/:testSuiteId/comments', requireAuth(authConfig), requireTestSuiteRole(['ADMIN', 'WRITE', 'READ']), reviewCommentController.getTestSuiteComments);
 
 export default router;

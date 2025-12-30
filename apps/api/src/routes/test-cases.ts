@@ -1,11 +1,13 @@
 import { Router } from 'express';
 import { requireAuth } from '@agentest/auth';
 import { TestCaseController } from '../controllers/test-case.controller.js';
+import { ReviewCommentController } from '../controllers/review-comment.controller.js';
 import { requireTestCaseRole } from '../middleware/require-test-case-role.js';
 import { authConfig } from '../config/auth.js';
 
 const router: Router = Router();
 const testCaseController = new TestCaseController();
+const reviewCommentController = new ReviewCommentController();
 
 // 読み取り権限（READ以上）
 const readRoles = ['OWNER', 'ADMIN', 'WRITE', 'READ'] as const;
@@ -145,5 +147,11 @@ router.get('/:testCaseId/histories', requireAuth(authConfig), requireTestCaseRol
  * 削除済みテストケースを復元（30日以内のみ）
  */
 router.post('/:testCaseId/restore', requireAuth(authConfig), requireTestCaseRole(['OWNER', 'ADMIN', 'WRITE'], { allowDeletedTestCase: true }), testCaseController.restore);
+
+/**
+ * テストケースのレビューコメント一覧取得
+ * GET /api/test-cases/:testCaseId/comments
+ */
+router.get('/:testCaseId/comments', requireAuth(authConfig), requireTestCaseRole([...readRoles]), reviewCommentController.getTestCaseComments);
 
 export default router;

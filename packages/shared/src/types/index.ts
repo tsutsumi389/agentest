@@ -4,3 +4,4 @@ export * from './organization.js';
 export * from './test-suite.js';
 export * from './test-case.js';
 export * from './execution.js';
+export * from './review.js';

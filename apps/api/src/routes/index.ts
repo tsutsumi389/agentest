@@ -8,6 +8,7 @@ import projectRoutes from './projects.js';
 import testSuiteRoutes from './test-suites.js';
 import testCaseRoutes from './test-cases.js';
 import executionRoutes from './executions.js';
+import reviewCommentRoutes from './review-comments.js';
 
 const router: Router = Router();
 
@@ -23,6 +24,7 @@ router.use('/api/projects', projectRoutes);
 router.use('/api/test-suites', testSuiteRoutes);
 router.use('/api/test-cases', testCaseRoutes);
 router.use('/api/executions', executionRoutes);
+router.use('/api/review-comments', reviewCommentRoutes);
 
 // 404ハンドラー
 router.use((_req, res) => {
