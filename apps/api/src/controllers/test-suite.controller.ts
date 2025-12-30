@@ -1,6 +1,10 @@
 import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { testCaseSearchSchema, suggestionSearchSchema } from '@agentest/shared';
+import {
+  testCaseSearchSchema,
+  executionSearchSchema,
+  suggestionSearchSchema,
+} from '@agentest/shared';
 import { TestSuiteService } from '../services/test-suite.service.js';
 
 const createTestSuiteSchema = z.object({
@@ -240,10 +244,10 @@ export class TestSuiteController {
   getExecutions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testSuiteId } = req.params;
-      const { limit, offset } = paginationQuerySchema.parse(req.query);
-      const executions = await this.testSuiteService.getExecutions(testSuiteId, { limit, offset });
+      const params = executionSearchSchema.parse(req.query);
+      const { executions, total } = await this.testSuiteService.getExecutions(testSuiteId, params);
 
-      res.json({ executions });
+      res.json({ executions, total, limit: params.limit, offset: params.offset });
     } catch (error) {
       next(error);
     }
