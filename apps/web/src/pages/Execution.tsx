@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, Link } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -8,8 +9,18 @@ import {
   AlertCircle,
   Square,
   Play,
+  Ban,
 } from 'lucide-react';
-import { executionsApi } from '../lib/api';
+import {
+  executionsApi,
+  type ExecutionWithDetails,
+  type PreconditionResultStatus,
+  type StepResultStatus,
+  type ExpectedResultStatus,
+} from '../lib/api';
+import { toast } from '../stores/toast';
+import { ExecutionPreconditionList } from '../components/execution/ExecutionPreconditionList';
+import { ExecutionTestCaseList } from '../components/execution/ExecutionTestCaseList';
 
 /**
  * 実行ページ
@@ -18,15 +29,23 @@ export function ExecutionPage() {
   const { executionId } = useParams<{ executionId: string }>();
   const queryClient = useQueryClient();
 
-  // 実行詳細を取得
+  // 更新中の結果IDを管理
+  const [updatingPreconditionStatusId, setUpdatingPreconditionStatusId] = useState<string | null>(null);
+  const [updatingPreconditionNoteId, setUpdatingPreconditionNoteId] = useState<string | null>(null);
+  const [updatingStepStatusId, setUpdatingStepStatusId] = useState<string | null>(null);
+  const [updatingStepNoteId, setUpdatingStepNoteId] = useState<string | null>(null);
+  const [updatingExpectedStatusId, setUpdatingExpectedStatusId] = useState<string | null>(null);
+  const [updatingExpectedNoteId, setUpdatingExpectedNoteId] = useState<string | null>(null);
+
+  // 実行詳細を取得（スナップショット、全結果データ含む）
   const { data, isLoading } = useQuery({
-    queryKey: ['execution', executionId],
-    queryFn: () => executionsApi.getById(executionId!),
+    queryKey: ['execution', executionId, 'details'],
+    queryFn: () => executionsApi.getByIdWithDetails(executionId!),
     enabled: !!executionId,
     refetchInterval: (query) => {
-      // 実行中の場合は5秒ごとに更新
+      // 実行中の場合は10秒ごとに更新
       const data = query.state.data;
-      return data?.execution?.status === 'IN_PROGRESS' ? 5000 : false;
+      return data?.execution?.status === 'IN_PROGRESS' ? 10000 : false;
     },
   });
 
@@ -35,6 +54,10 @@ export function ExecutionPage() {
     mutationFn: () => executionsApi.abort(executionId!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['execution', executionId] });
+      toast.success('実行を中止しました');
+    },
+    onError: () => {
+      toast.error('実行の中止に失敗しました');
     },
   });
 
@@ -43,8 +66,171 @@ export function ExecutionPage() {
     mutationFn: () => executionsApi.complete(executionId!),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['execution', executionId] });
+      toast.success('実行を完了しました');
+    },
+    onError: () => {
+      toast.error('実行の完了に失敗しました');
     },
   });
+
+  // 前提条件結果更新（楽観的更新）
+  const updatePreconditionMutation = useMutation({
+    mutationFn: ({ resultId, status, note }: { resultId: string; status?: PreconditionResultStatus; note?: string | null }) =>
+      executionsApi.updatePreconditionResult(executionId!, resultId, {
+        status: status!,
+        note: note ?? undefined,
+      }),
+    onMutate: async ({ resultId, status, note }) => {
+      // 楽観的更新
+      await queryClient.cancelQueries({ queryKey: ['execution', executionId, 'details'] });
+      const previousData = queryClient.getQueryData<{ execution: ExecutionWithDetails }>(['execution', executionId, 'details']);
+
+      if (previousData) {
+        queryClient.setQueryData(['execution', executionId, 'details'], {
+          execution: {
+            ...previousData.execution,
+            preconditionResults: previousData.execution.preconditionResults.map((r) =>
+              r.id === resultId
+                ? { ...r, status: status ?? r.status, note: note !== undefined ? note : r.note }
+                : r
+            ),
+          },
+        });
+      }
+
+      return { previousData };
+    },
+    onError: (_error, _variables, context) => {
+      // ロールバック
+      if (context?.previousData) {
+        queryClient.setQueryData(['execution', executionId, 'details'], context.previousData);
+      }
+      toast.error('前提条件の更新に失敗しました');
+    },
+    onSettled: () => {
+      setUpdatingPreconditionStatusId(null);
+      setUpdatingPreconditionNoteId(null);
+    },
+  });
+
+  // ステップ結果更新（楽観的更新）
+  const updateStepMutation = useMutation({
+    mutationFn: ({ resultId, status, note }: { resultId: string; status?: StepResultStatus; note?: string | null }) =>
+      executionsApi.updateStepResult(executionId!, resultId, {
+        status: status!,
+        note: note ?? undefined,
+      }),
+    onMutate: async ({ resultId, status, note }) => {
+      await queryClient.cancelQueries({ queryKey: ['execution', executionId, 'details'] });
+      const previousData = queryClient.getQueryData<{ execution: ExecutionWithDetails }>(['execution', executionId, 'details']);
+
+      if (previousData) {
+        queryClient.setQueryData(['execution', executionId, 'details'], {
+          execution: {
+            ...previousData.execution,
+            stepResults: previousData.execution.stepResults.map((r) =>
+              r.id === resultId
+                ? { ...r, status: status ?? r.status, note: note !== undefined ? note : r.note }
+                : r
+            ),
+          },
+        });
+      }
+
+      return { previousData };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(['execution', executionId, 'details'], context.previousData);
+      }
+      toast.error('ステップの更新に失敗しました');
+    },
+    onSettled: () => {
+      setUpdatingStepStatusId(null);
+      setUpdatingStepNoteId(null);
+    },
+  });
+
+  // 期待結果更新（楽観的更新）
+  const updateExpectedMutation = useMutation({
+    mutationFn: ({ resultId, status, note }: { resultId: string; status?: ExpectedResultStatus; note?: string | null }) =>
+      executionsApi.updateExpectedResult(executionId!, resultId, {
+        status: status!,
+        note: note ?? undefined,
+      }),
+    onMutate: async ({ resultId, status, note }) => {
+      await queryClient.cancelQueries({ queryKey: ['execution', executionId, 'details'] });
+      const previousData = queryClient.getQueryData<{ execution: ExecutionWithDetails }>(['execution', executionId, 'details']);
+
+      if (previousData) {
+        queryClient.setQueryData(['execution', executionId, 'details'], {
+          execution: {
+            ...previousData.execution,
+            expectedResults: previousData.execution.expectedResults.map((r) =>
+              r.id === resultId
+                ? { ...r, status: status ?? r.status, note: note !== undefined ? note : r.note }
+                : r
+            ),
+          },
+        });
+      }
+
+      return { previousData };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(['execution', executionId, 'details'], context.previousData);
+      }
+      toast.error('期待結果の更新に失敗しました');
+    },
+    onSettled: () => {
+      setUpdatingExpectedStatusId(null);
+      setUpdatingExpectedNoteId(null);
+    },
+  });
+
+  // ハンドラー
+  const handlePreconditionStatusChange = (resultId: string, status: PreconditionResultStatus) => {
+    const current = execution?.preconditionResults.find((r) => r.id === resultId);
+    if (!current) return;
+    setUpdatingPreconditionStatusId(resultId);
+    updatePreconditionMutation.mutate({ resultId, status, note: current.note });
+  };
+
+  const handlePreconditionNoteChange = (resultId: string, note: string | null) => {
+    const current = execution?.preconditionResults.find((r) => r.id === resultId);
+    if (!current) return;
+    setUpdatingPreconditionNoteId(resultId);
+    updatePreconditionMutation.mutate({ resultId, status: current.status, note });
+  };
+
+  const handleStepStatusChange = (resultId: string, status: StepResultStatus) => {
+    const current = execution?.stepResults.find((r) => r.id === resultId);
+    if (!current) return;
+    setUpdatingStepStatusId(resultId);
+    updateStepMutation.mutate({ resultId, status, note: current.note });
+  };
+
+  const handleStepNoteChange = (resultId: string, note: string | null) => {
+    const current = execution?.stepResults.find((r) => r.id === resultId);
+    if (!current) return;
+    setUpdatingStepNoteId(resultId);
+    updateStepMutation.mutate({ resultId, status: current.status, note });
+  };
+
+  const handleExpectedStatusChange = (resultId: string, status: ExpectedResultStatus) => {
+    const current = execution?.expectedResults.find((r) => r.id === resultId);
+    if (!current) return;
+    setUpdatingExpectedStatusId(resultId);
+    updateExpectedMutation.mutate({ resultId, status, note: current.note });
+  };
+
+  const handleExpectedNoteChange = (resultId: string, note: string | null) => {
+    const current = execution?.expectedResults.find((r) => r.id === resultId);
+    if (!current) return;
+    setUpdatingExpectedNoteId(resultId);
+    updateExpectedMutation.mutate({ resultId, status: current.status, note });
+  };
 
   const execution = data?.execution;
 
@@ -63,6 +249,25 @@ export function ExecutionPage() {
       </div>
     );
   }
+
+  // 編集可否判定
+  const isEditable = execution.status === 'IN_PROGRESS';
+
+  // スナップショットデータ
+  const snapshot = execution.snapshot.snapshotData;
+
+  // スイートレベル前提条件（snapshotTestCaseId = null）
+  const suitePreconditionResults = execution.preconditionResults.filter(
+    (r) => r.snapshotTestCaseId === null
+  );
+
+  // サマリー計算（期待結果から集計）
+  const passCount = execution.expectedResults.filter((r) => r.status === 'PASS').length;
+  const failCount = execution.expectedResults.filter((r) => r.status === 'FAIL').length;
+  const skippedCount = execution.expectedResults.filter(
+    (r) => r.status === 'SKIPPED' || r.status === 'NOT_EXECUTABLE'
+  ).length;
+  const pendingCount = execution.expectedResults.filter((r) => r.status === 'PENDING').length;
 
   const statusIcon = {
     IN_PROGRESS: <Clock className="w-5 h-5 text-warning" />,
@@ -95,7 +300,7 @@ export function ExecutionPage() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-foreground">テスト実行</h1>
+                <h1 className="text-2xl font-bold text-foreground">{snapshot.testSuite.name}</h1>
                 <span className="flex items-center gap-1 badge">
                   {statusIcon[execution.status]}
                   {statusLabel[execution.status]}
@@ -105,6 +310,9 @@ export function ExecutionPage() {
                 開始: {new Date(execution.startedAt).toLocaleString('ja-JP')}
                 {execution.completedAt && (
                   <> / 終了: {new Date(execution.completedAt).toLocaleString('ja-JP')}</>
+                )}
+                {execution.environment && (
+                  <> / 環境: {execution.environment.name}</>
                 )}
               </p>
             </div>
@@ -138,36 +346,70 @@ export function ExecutionPage() {
         <SummaryCard
           icon={CheckCircle2}
           label="成功"
-          value={0}
+          value={passCount}
           color="success"
         />
         <SummaryCard
           icon={XCircle}
           label="失敗"
-          value={0}
+          value={failCount}
           color="danger"
         />
         <SummaryCard
-          icon={AlertCircle}
+          icon={Ban}
           label="スキップ"
-          value={0}
+          value={skippedCount}
           color="warning"
         />
         <SummaryCard
           icon={Clock}
           label="未実行"
-          value={0}
+          value={pendingCount}
           color="muted"
         />
       </div>
 
-      {/* テストケース実行状況 */}
+      {/* スイートレベル前提条件 */}
+      {snapshot.preconditions.length > 0 && (
+        <div className="card p-4">
+          <ExecutionPreconditionList
+            preconditions={snapshot.preconditions}
+            results={suitePreconditionResults}
+            isEditable={isEditable}
+            updatingStatusId={updatingPreconditionStatusId}
+            updatingNoteId={updatingPreconditionNoteId}
+            onStatusChange={handlePreconditionStatusChange}
+            onNoteChange={handlePreconditionNoteChange}
+            title="スイート前提条件"
+          />
+        </div>
+      )}
+
+      {/* テストケース一覧 */}
       <div className="card">
         <div className="p-4 border-b border-border">
           <h2 className="font-semibold text-foreground">テストケース</h2>
         </div>
-        <div className="p-8 text-center text-foreground-muted">
-          実行結果の詳細はWebSocket経由でリアルタイム更新されます
+        <div className="p-4">
+          <ExecutionTestCaseList
+            testCases={snapshot.testCases}
+            allPreconditionResults={execution.preconditionResults}
+            allStepResults={execution.stepResults}
+            allExpectedResults={execution.expectedResults}
+            isEditable={isEditable}
+            updatingPreconditionStatusId={updatingPreconditionStatusId}
+            updatingPreconditionNoteId={updatingPreconditionNoteId}
+            updatingStepStatusId={updatingStepStatusId}
+            updatingStepNoteId={updatingStepNoteId}
+            updatingExpectedStatusId={updatingExpectedStatusId}
+            updatingExpectedNoteId={updatingExpectedNoteId}
+            onPreconditionStatusChange={handlePreconditionStatusChange}
+            onPreconditionNoteChange={handlePreconditionNoteChange}
+            onStepStatusChange={handleStepStatusChange}
+            onStepNoteChange={handleStepNoteChange}
+            onExpectedStatusChange={handleExpectedStatusChange}
+            onExpectedNoteChange={handleExpectedNoteChange}
+          />
         </div>
       </div>
     </div>
