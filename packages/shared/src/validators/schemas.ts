@@ -252,6 +252,21 @@ export const testCaseSearchSchema = z.object({
   includeDeleted: z.coerce.boolean().default(false),
 });
 
+// 実行履歴検索スキーマ
+export const executionSearchSchema = z.object({
+  status: z
+    .string()
+    .optional()
+    .transform((val) => val?.split(',').map((s) => s.trim()))
+    .pipe(z.array(executionStatusSchema).optional()),
+  from: z.string().datetime().optional(),
+  to: z.string().datetime().optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+  sortBy: z.enum(['startedAt', 'completedAt', 'status']).default('startedAt'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+});
+
 // サジェスト検索スキーマ（@メンション用）
 export const suggestionSearchSchema = z.object({
   q: z.string().max(100).optional(),
@@ -279,6 +294,7 @@ export type ExecutionCreate = z.infer<typeof executionCreateSchema>;
 export type ExecutionResultUpdate = z.infer<typeof executionResultUpdateSchema>;
 export type TestSuiteSearch = z.infer<typeof testSuiteSearchSchema>;
 export type TestCaseSearch = z.infer<typeof testCaseSearchSchema>;
+export type ExecutionSearch = z.infer<typeof executionSearchSchema>;
 export type SuggestionSearch = z.infer<typeof suggestionSearchSchema>;
 export type Pagination = z.infer<typeof paginationSchema>;
 export type Sort = z.infer<typeof sortSchema>;

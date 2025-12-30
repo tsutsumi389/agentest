@@ -1,4 +1,4 @@
-import { prisma, type EntityStatus, type Prisma } from '@agentest/db';
+import { prisma, type EntityStatus, type ExecutionStatus, type Prisma } from '@agentest/db';
 import { NotFoundError, BadRequestError, ConflictError } from '@agentest/shared';
 import { TestSuiteRepository } from '../repositories/test-suite.repository.js';
 import { TestCaseRepository, type TestCaseSearchOptions } from '../repositories/test-case.repository.js';
@@ -472,23 +472,46 @@ export class TestSuiteService {
   /**
    * 実行履歴を取得
    */
-  async getExecutions(testSuiteId: string, options: { limit: number; offset: number }) {
+  async getExecutions(
+    testSuiteId: string,
+    options: {
+      status?: ExecutionStatus[];
+      from?: string;
+      to?: string;
+      limit: number;
+      offset: number;
+      sortBy?: 'startedAt' | 'completedAt' | 'status';
+      sortOrder?: 'asc' | 'desc';
+    }
+  ) {
     await this.findById(testSuiteId);
 
-    return prisma.execution.findMany({
-      where: { testSuiteId },
-      include: {
-        executedByUser: {
-          select: { id: true, name: true, avatarUrl: true },
+    const where: Prisma.ExecutionWhereInput = {
+      testSuiteId,
+      ...(options.status?.length && { status: { in: options.status } }),
+      ...(options.from && { startedAt: { gte: new Date(options.from) } }),
+      ...(options.to && { startedAt: { lte: new Date(options.to) } }),
+    };
+
+    const [executions, total] = await Promise.all([
+      prisma.execution.findMany({
+        where,
+        include: {
+          executedByUser: {
+            select: { id: true, name: true, avatarUrl: true },
+          },
+          environment: {
+            select: { id: true, name: true, slug: true },
+          },
         },
-        environment: {
-          select: { id: true, name: true, slug: true },
-        },
-      },
-      orderBy: { startedAt: 'desc' },
-      take: options.limit,
-      skip: options.offset,
-    });
+        orderBy: { [options.sortBy || 'startedAt']: options.sortOrder || 'desc' },
+        take: options.limit,
+        skip: options.offset,
+      }),
+      prisma.execution.count({ where }),
+    ]);
+
+    return { executions, total };
   }
 
   /**
