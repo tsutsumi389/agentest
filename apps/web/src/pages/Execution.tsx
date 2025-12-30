@@ -14,6 +14,7 @@ import {
 import {
   executionsApi,
   type ExecutionWithDetails,
+  type ExecutionEvidence,
   type PreconditionResultStatus,
   type StepResultStatus,
   type ExpectedResultStatus,
@@ -36,6 +37,10 @@ export function ExecutionPage() {
   const [updatingStepNoteId, setUpdatingStepNoteId] = useState<string | null>(null);
   const [updatingExpectedStatusId, setUpdatingExpectedStatusId] = useState<string | null>(null);
   const [updatingExpectedNoteId, setUpdatingExpectedNoteId] = useState<string | null>(null);
+  // エビデンス関連の状態
+  const [uploadingEvidenceResultId, setUploadingEvidenceResultId] = useState<string | null>(null);
+  const [deletingEvidenceId, setDeletingEvidenceId] = useState<string | null>(null);
+  const [downloadingEvidenceId, setDownloadingEvidenceId] = useState<string | null>(null);
 
   // 実行詳細を取得（スナップショット、全結果データ含む）
   const { data, isLoading } = useQuery({
@@ -189,6 +194,74 @@ export function ExecutionPage() {
     },
   });
 
+  // エビデンスアップロード（楽観的更新）
+  const uploadEvidenceMutation = useMutation({
+    mutationFn: ({ expectedResultId, file, description }: { expectedResultId: string; file: File; description?: string }) =>
+      executionsApi.uploadEvidence(executionId!, expectedResultId, file, description),
+    onMutate: async ({ expectedResultId }) => {
+      setUploadingEvidenceResultId(expectedResultId);
+    },
+    onSuccess: (data, { expectedResultId }) => {
+      // キャッシュを更新
+      const previousData = queryClient.getQueryData<{ execution: ExecutionWithDetails }>(['execution', executionId, 'details']);
+      if (previousData) {
+        queryClient.setQueryData(['execution', executionId, 'details'], {
+          execution: {
+            ...previousData.execution,
+            expectedResults: previousData.execution.expectedResults.map((r) =>
+              r.id === expectedResultId
+                ? { ...r, evidences: [...r.evidences, data.evidence] }
+                : r
+            ),
+          },
+        });
+      }
+      toast.success('エビデンスをアップロードしました');
+    },
+    onError: () => {
+      toast.error('エビデンスのアップロードに失敗しました');
+    },
+    onSettled: () => {
+      setUploadingEvidenceResultId(null);
+    },
+  });
+
+  // エビデンス削除（楽観的更新）
+  const deleteEvidenceMutation = useMutation({
+    mutationFn: (evidenceId: string) => executionsApi.deleteEvidence(executionId!, evidenceId),
+    onMutate: async (evidenceId) => {
+      setDeletingEvidenceId(evidenceId);
+      await queryClient.cancelQueries({ queryKey: ['execution', executionId, 'details'] });
+      const previousData = queryClient.getQueryData<{ execution: ExecutionWithDetails }>(['execution', executionId, 'details']);
+
+      if (previousData) {
+        queryClient.setQueryData(['execution', executionId, 'details'], {
+          execution: {
+            ...previousData.execution,
+            expectedResults: previousData.execution.expectedResults.map((r) => ({
+              ...r,
+              evidences: r.evidences.filter((e: ExecutionEvidence) => e.id !== evidenceId),
+            })),
+          },
+        });
+      }
+
+      return { previousData };
+    },
+    onSuccess: () => {
+      toast.success('エビデンスを削除しました');
+    },
+    onError: (_error, _evidenceId, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(['execution', executionId, 'details'], context.previousData);
+      }
+      toast.error('エビデンスの削除に失敗しました');
+    },
+    onSettled: () => {
+      setDeletingEvidenceId(null);
+    },
+  });
+
   // ハンドラー
   const handlePreconditionStatusChange = (resultId: string, status: PreconditionResultStatus) => {
     const current = execution?.preconditionResults.find((r) => r.id === resultId);
@@ -230,6 +303,28 @@ export function ExecutionPage() {
     if (!current) return;
     setUpdatingExpectedNoteId(resultId);
     updateExpectedMutation.mutate({ resultId, status: current.status, note });
+  };
+
+  // エビデンスハンドラー
+  const handleEvidenceUpload = (expectedResultId: string, file: File, description?: string) => {
+    uploadEvidenceMutation.mutate({ expectedResultId, file, description });
+  };
+
+  const handleEvidenceDelete = (evidenceId: string) => {
+    deleteEvidenceMutation.mutate(evidenceId);
+  };
+
+  const handleEvidenceDownload = async (evidenceId: string) => {
+    try {
+      setDownloadingEvidenceId(evidenceId);
+      const { downloadUrl } = await executionsApi.getEvidenceDownloadUrl(executionId!, evidenceId);
+      // 新しいタブでダウンロードURLを開く
+      window.open(downloadUrl, '_blank');
+    } catch {
+      toast.error('ダウンロードURLの取得に失敗しました');
+    } finally {
+      setDownloadingEvidenceId(null);
+    }
   };
 
   const execution = data?.execution;
@@ -409,6 +504,12 @@ export function ExecutionPage() {
             onStepNoteChange={handleStepNoteChange}
             onExpectedStatusChange={handleExpectedStatusChange}
             onExpectedNoteChange={handleExpectedNoteChange}
+            uploadingEvidenceResultId={uploadingEvidenceResultId}
+            deletingEvidenceId={deletingEvidenceId}
+            downloadingEvidenceId={downloadingEvidenceId}
+            onEvidenceUpload={handleEvidenceUpload}
+            onEvidenceDelete={handleEvidenceDelete}
+            onEvidenceDownload={handleEvidenceDownload}
           />
         </div>
       </div>
