@@ -9,6 +9,8 @@ import {
   getExpectedStatusConfig,
 } from '../../lib/execution-status';
 import { ExecutionResultItem } from './ExecutionResultItem';
+import { ExecutionEvidenceList } from './ExecutionEvidenceList';
+import { ExecutionEvidenceUpload } from './ExecutionEvidenceUpload';
 
 interface ExecutionExpectedResultListProps {
   /** スナップショットの期待結果一覧 */
@@ -25,6 +27,18 @@ interface ExecutionExpectedResultListProps {
   onStatusChange: (resultId: string, status: ExpectedResultStatus) => void;
   /** ノート変更ハンドラ */
   onNoteChange: (resultId: string, note: string | null) => void;
+  /** アップロード中の期待結果ID */
+  uploadingEvidenceResultId: string | null;
+  /** 削除中のエビデンスID */
+  deletingEvidenceId: string | null;
+  /** ダウンロード中のエビデンスID */
+  downloadingEvidenceId: string | null;
+  /** エビデンスアップロードハンドラ */
+  onEvidenceUpload: (expectedResultId: string, file: File, description?: string) => void;
+  /** エビデンス削除ハンドラ */
+  onEvidenceDelete: (evidenceId: string) => void;
+  /** エビデンスダウンロードハンドラ */
+  onEvidenceDownload: (evidenceId: string) => void;
 }
 
 /**
@@ -39,6 +53,12 @@ export function ExecutionExpectedResultList({
   updatingNoteId,
   onStatusChange,
   onNoteChange,
+  uploadingEvidenceResultId,
+  deletingEvidenceId,
+  downloadingEvidenceId,
+  onEvidenceUpload,
+  onEvidenceDelete,
+  onEvidenceDownload,
 }: ExecutionExpectedResultListProps) {
   // 期待結果がない場合は何も表示しない
   if (expectedResults.length === 0) {
@@ -80,22 +100,45 @@ export function ExecutionExpectedResultList({
           }
 
           const statusConfig = getExpectedStatusConfig(result.status);
+          const isUploading = uploadingEvidenceResultId === result.id;
 
           return (
-            <ExecutionResultItem
-              key={result.id}
-              index={index + 1}
-              content={expectedResult.content}
-              status={result.status}
-              statusConfig={statusConfig}
-              note={result.note}
-              statusOptions={expectedResultStatusOptions}
-              isEditable={isEditable}
-              isStatusUpdating={updatingStatusId === result.id}
-              isNoteUpdating={updatingNoteId === result.id}
-              onStatusChange={(status) => onStatusChange(result.id, status)}
-              onNoteChange={(note) => onNoteChange(result.id, note)}
-            />
+            <div key={result.id} className="py-3 border-b border-border last:border-b-0">
+              <ExecutionResultItem
+                index={index + 1}
+                content={expectedResult.content}
+                status={result.status}
+                statusConfig={statusConfig}
+                note={result.note}
+                statusOptions={expectedResultStatusOptions}
+                isEditable={isEditable}
+                isStatusUpdating={updatingStatusId === result.id}
+                isNoteUpdating={updatingNoteId === result.id}
+                onStatusChange={(status) => onStatusChange(result.id, status)}
+                onNoteChange={(note) => onNoteChange(result.id, note)}
+              />
+
+              {/* エビデンス一覧 */}
+              <div className="ml-9">
+                <ExecutionEvidenceList
+                  evidences={result.evidences}
+                  isEditable={isEditable}
+                  deletingId={deletingEvidenceId}
+                  downloadingId={downloadingEvidenceId}
+                  onDelete={onEvidenceDelete}
+                  onDownload={onEvidenceDownload}
+                />
+
+                {/* エビデンスアップロード（編集可能時のみ） */}
+                {isEditable && (
+                  <ExecutionEvidenceUpload
+                    currentCount={result.evidences.length}
+                    isUploading={isUploading}
+                    onUpload={(file, description) => onEvidenceUpload(result.id, file, description)}
+                  />
+                )}
+              </div>
+            </div>
           );
         })}
       </div>

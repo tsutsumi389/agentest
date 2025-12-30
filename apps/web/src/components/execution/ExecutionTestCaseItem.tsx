@@ -81,6 +81,18 @@ interface ExecutionTestCaseItemProps {
   onExpectedNoteChange: (resultId: string, note: string | null) => void;
   /** デフォルトで展開するか */
   defaultExpanded?: boolean;
+  /** アップロード中の期待結果ID */
+  uploadingEvidenceResultId: string | null;
+  /** 削除中のエビデンスID */
+  deletingEvidenceId: string | null;
+  /** ダウンロード中のエビデンスID */
+  downloadingEvidenceId: string | null;
+  /** エビデンスアップロードハンドラ */
+  onEvidenceUpload: (expectedResultId: string, file: File, description?: string) => void;
+  /** エビデンス削除ハンドラ */
+  onEvidenceDelete: (evidenceId: string) => void;
+  /** エビデンスダウンロードハンドラ */
+  onEvidenceDownload: (evidenceId: string) => void;
 }
 
 /**
@@ -106,6 +118,12 @@ export function ExecutionTestCaseItem({
   onExpectedStatusChange,
   onExpectedNoteChange,
   defaultExpanded = false,
+  uploadingEvidenceResultId,
+  deletingEvidenceId,
+  downloadingEvidenceId,
+  onEvidenceUpload,
+  onEvidenceDelete,
+  onEvidenceDownload,
 }: ExecutionTestCaseItemProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
@@ -205,6 +223,12 @@ export function ExecutionTestCaseItem({
             updatingNoteId={updatingExpectedNoteId}
             onStatusChange={onExpectedStatusChange}
             onNoteChange={onExpectedNoteChange}
+            uploadingEvidenceResultId={uploadingEvidenceResultId}
+            deletingEvidenceId={deletingEvidenceId}
+            downloadingEvidenceId={downloadingEvidenceId}
+            onEvidenceUpload={onEvidenceUpload}
+            onEvidenceDelete={onEvidenceDelete}
+            onEvidenceDownload={onEvidenceDownload}
           />
         </div>
       )}

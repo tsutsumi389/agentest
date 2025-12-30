@@ -58,6 +58,18 @@ interface ExecutionTestCaseListProps {
   onExpectedStatusChange: (resultId: string, status: ExpectedResultStatus) => void;
   /** 期待結果ノート変更ハンドラ */
   onExpectedNoteChange: (resultId: string, note: string | null) => void;
+  /** アップロード中の期待結果ID */
+  uploadingEvidenceResultId: string | null;
+  /** 削除中のエビデンスID */
+  deletingEvidenceId: string | null;
+  /** ダウンロード中のエビデンスID */
+  downloadingEvidenceId: string | null;
+  /** エビデンスアップロードハンドラ */
+  onEvidenceUpload: (expectedResultId: string, file: File, description?: string) => void;
+  /** エビデンス削除ハンドラ */
+  onEvidenceDelete: (evidenceId: string) => void;
+  /** エビデンスダウンロードハンドラ */
+  onEvidenceDownload: (evidenceId: string) => void;
 }
 
 /**
@@ -82,6 +94,12 @@ export function ExecutionTestCaseList({
   onStepNoteChange,
   onExpectedStatusChange,
   onExpectedNoteChange,
+  uploadingEvidenceResultId,
+  deletingEvidenceId,
+  downloadingEvidenceId,
+  onEvidenceUpload,
+  onEvidenceDelete,
+  onEvidenceDownload,
 }: ExecutionTestCaseListProps) {
   // テストケースがない場合
   if (testCases.length === 0) {
@@ -128,6 +146,12 @@ export function ExecutionTestCaseList({
             onStepNoteChange={onStepNoteChange}
             onExpectedStatusChange={onExpectedStatusChange}
             onExpectedNoteChange={onExpectedNoteChange}
+            uploadingEvidenceResultId={uploadingEvidenceResultId}
+            deletingEvidenceId={deletingEvidenceId}
+            downloadingEvidenceId={downloadingEvidenceId}
+            onEvidenceUpload={onEvidenceUpload}
+            onEvidenceDelete={onEvidenceDelete}
+            onEvidenceDownload={onEvidenceDownload}
           />
         );
       })}
