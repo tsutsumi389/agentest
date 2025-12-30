@@ -27,6 +27,7 @@
 | テストスイート | テストスイートの管理 | [test-suite-management.md](./test-suite-management.md) |
 | テストケース | テストケースの作成・編集・コピー・履歴管理 | [test-case-management.md](./test-case-management.md) |
 | テスト実行 | テスト実行と結果管理 | [test-execution.md](./test-execution.md) |
+| レビューコメント | テストスイート/ケースへのレビュー・返信・ステータス管理 | [review-comment.md](./review-comment.md) |
 
 ### その他（予定）
 
