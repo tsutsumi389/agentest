@@ -873,12 +873,56 @@ export const testCasesApi = {
 // 実行API
 // ============================================
 
+/** 前提条件結果ステータス */
+export type PreconditionResultStatus = 'UNCHECKED' | 'MET' | 'NOT_MET';
+
+/** ステップ結果ステータス */
+export type StepResultStatus = 'PENDING' | 'DONE' | 'SKIPPED';
+
+/** 期待結果ステータス */
+export type ExpectedResultStatus = 'PENDING' | 'PASS' | 'FAIL' | 'SKIPPED' | 'NOT_EXECUTABLE';
+
+/** 前提条件結果更新リクエスト */
+export interface UpdatePreconditionResultRequest {
+  status: PreconditionResultStatus;
+  note?: string;
+}
+
+/** ステップ結果更新リクエスト */
+export interface UpdateStepResultRequest {
+  status: StepResultStatus;
+  note?: string;
+}
+
+/** 期待結果更新リクエスト */
+export interface UpdateExpectedResultRequest {
+  status: ExpectedResultStatus;
+  note?: string;
+}
+
 export const executionsApi = {
   getById: (executionId: string) => api.get<{ execution: Execution }>(`/api/executions/${executionId}`),
   getByIdWithDetails: (executionId: string) =>
     api.get<{ execution: ExecutionWithDetails }>(`/api/executions/${executionId}/details`),
   abort: (executionId: string) => api.post<{ execution: Execution }>(`/api/executions/${executionId}/abort`),
   complete: (executionId: string) => api.post<{ execution: Execution }>(`/api/executions/${executionId}/complete`),
+
+  // 結果更新
+  updatePreconditionResult: (executionId: string, resultId: string, data: UpdatePreconditionResultRequest) =>
+    api.patch<{ result: ExecutionPreconditionResult }>(
+      `/api/executions/${executionId}/preconditions/${resultId}`,
+      data
+    ),
+  updateStepResult: (executionId: string, resultId: string, data: UpdateStepResultRequest) =>
+    api.patch<{ result: ExecutionStepResult }>(
+      `/api/executions/${executionId}/steps/${resultId}`,
+      data
+    ),
+  updateExpectedResult: (executionId: string, resultId: string, data: UpdateExpectedResultRequest) =>
+    api.patch<{ result: ExecutionExpectedResult }>(
+      `/api/executions/${executionId}/expected-results/${resultId}`,
+      data
+    ),
 };
 
 // ============================================
