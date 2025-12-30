@@ -1,6 +1,8 @@
-import type { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import { z } from 'zod';
+import { BadRequestError } from '@agentest/shared';
 import { ExecutionService } from '../services/execution.service.js';
+import { evidenceUpload } from '../config/upload.js';
 
 const updatePreconditionResultSchema = z.object({
   status: z.enum(['UNCHECKED', 'MET', 'NOT_MET']),
@@ -22,6 +24,11 @@ const updateExpectedResultSchema = z.object({
  */
 export class ExecutionController {
   private executionService = new ExecutionService();
+
+  /**
+   * エビデンスアップロード用multerミドルウェア
+   */
+  static evidenceUploadMiddleware: RequestHandler = evidenceUpload.single('file');
 
   /**
    * 実行詳細取得（軽量版）
@@ -142,14 +149,48 @@ export class ExecutionController {
   uploadEvidence = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { executionId, expectedResultId } = req.params;
+
+      if (!req.file) {
+        throw new BadRequestError('ファイルが指定されていません');
+      }
+
       const evidence = await this.executionService.uploadEvidence(
         executionId,
         expectedResultId,
         req.user!.id,
-        req.body
+        req.file,
+        req.body.description
       );
 
       res.status(201).json({ evidence });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * エビデンス削除
+   */
+  deleteEvidence = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { executionId, evidenceId } = req.params;
+      await this.executionService.deleteEvidence(executionId, evidenceId);
+
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * エビデンスダウンロードURL取得
+   */
+  getEvidenceDownloadUrl = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { executionId, evidenceId } = req.params;
+      const url = await this.executionService.getEvidenceDownloadUrl(executionId, evidenceId);
+
+      res.json({ url });
     } catch (error) {
       next(error);
     }

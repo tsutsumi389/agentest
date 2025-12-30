@@ -100,7 +100,32 @@ router.post(
   '/:executionId/expected-results/:expectedResultId/evidences',
   requireAuth(authConfig),
   requireExecutionRole(['WRITE', 'ADMIN'], { allowCompletedExecution: false }),
+  ExecutionController.evidenceUploadMiddleware,
   executionController.uploadEvidence
+);
+
+/**
+ * エビデンス削除
+ * DELETE /api/executions/:executionId/evidences/:evidenceId
+ * 権限: WRITE以上、進行中の実行のみ
+ */
+router.delete(
+  '/:executionId/evidences/:evidenceId',
+  requireAuth(authConfig),
+  requireExecutionRole(['WRITE', 'ADMIN'], { allowCompletedExecution: false }),
+  executionController.deleteEvidence
+);
+
+/**
+ * エビデンスダウンロードURL取得
+ * GET /api/executions/:executionId/evidences/:evidenceId/download-url
+ * 権限: READ以上
+ */
+router.get(
+  '/:executionId/evidences/:evidenceId/download-url',
+  requireAuth(authConfig),
+  requireExecutionRole(['READ', 'WRITE', 'ADMIN']),
+  executionController.getEvidenceDownloadUrl
 );
 
 export default router;
