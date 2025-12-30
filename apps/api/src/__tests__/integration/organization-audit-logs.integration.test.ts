@@ -27,7 +27,7 @@ vi.mock('@agentest/auth', () => ({
     next();
   },
   optionalAuth: () => (_req: any, _res: any, next: any) => next(),
-  requireOrgRole: (roles: string[]) => (req: any, _res: any, next: any) => {
+  requireOrgRole: (roles: string[]) => (_req: any, _res: any, next: any) => {
     if (!mockOrgRole || !roles.includes(mockOrgRole)) {
       return next(new AuthorizationError('権限がありません'));
     }

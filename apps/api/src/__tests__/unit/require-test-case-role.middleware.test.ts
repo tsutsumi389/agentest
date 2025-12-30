@@ -29,7 +29,7 @@ const TEST_ORG_ID = '55555555-5555-5555-5555-555555555555';
 // Express req, res, next のモック作成
 function createMockRequest(overrides: Partial<Request> = {}): Partial<Request> {
   return {
-    user: { id: TEST_USER_ID },
+    user: { id: TEST_USER_ID } as any,
     params: { testCaseId: TEST_CASE_ID },
     ...overrides,
   };

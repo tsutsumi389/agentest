@@ -26,7 +26,7 @@ vi.mock('@agentest/auth', () => ({
     next();
   },
   optionalAuth: () => (_req: any, _res: any, next: any) => next(),
-  requireOrgRole: (roles: string[]) => (req: any, _res: any, next: any) => {
+  requireOrgRole: (roles: string[]) => (_req: any, _res: any, next: any) => {
     if (!mockOrgRole || !roles.includes(mockOrgRole)) {
       return next(new AuthorizationError('権限がありません'));
     }
@@ -49,11 +49,6 @@ vi.mock('@agentest/auth', () => ({
 function setTestAuth(user: { id: string; email: string } | null, orgRole: string | null = null) {
   mockAuthUser = user;
   mockOrgRole = orgRole;
-}
-
-function _clearTestAuth() {
-  mockAuthUser = null;
-  mockOrgRole = null;
 }
 
 describe('Organization CRUD Audit Logs Integration Tests', () => {

@@ -27,7 +27,7 @@ vi.mock('@agentest/auth', () => ({
   },
   optionalAuth: () => (_req: any, _res: any, next: any) => next(),
   // allowDeletedOrgオプションを考慮したモック
-  requireOrgRole: (roles: string[], _options?: { allowDeletedOrg?: boolean }) => (req: any, _res: any, next: any) => {
+  requireOrgRole: (roles: string[], _options?: { allowDeletedOrg?: boolean }) => (_req: any, _res: any, next: any) => {
     if (!mockOrgRole || !roles.includes(mockOrgRole)) {
       return next(new AuthorizationError('権限がありません'));
     }

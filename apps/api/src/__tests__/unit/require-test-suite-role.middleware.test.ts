@@ -24,12 +24,10 @@ const TEST_USER_ID = '11111111-1111-1111-1111-111111111111';
 const TEST_SUITE_ID = '22222222-2222-2222-2222-222222222222';
 const TEST_PROJECT_ID = '33333333-3333-3333-3333-333333333333';
 const TEST_ORG_ID = '44444444-4444-4444-4444-444444444444';
-const OTHER_USER_ID = '55555555-5555-5555-5555-555555555555';
-
 // Express req, res, next のモック作成
 function createMockRequest(overrides: Partial<Request> = {}): Partial<Request> {
   return {
-    user: { id: TEST_USER_ID },
+    user: { id: TEST_USER_ID } as any,
     params: { testSuiteId: TEST_SUITE_ID },
     ...overrides,
   };

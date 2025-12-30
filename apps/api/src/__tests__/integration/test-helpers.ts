@@ -1,4 +1,4 @@
-import { prisma } from '@agentest/db';
+import { prisma, Prisma } from '@agentest/db';
 import { randomUUID } from 'crypto';
 
 /**
@@ -163,7 +163,7 @@ export async function createTestAuditLog(
     action: string;
     targetType: string | null;
     targetId: string | null;
-    details: Record<string, unknown> | null;
+    details: Prisma.InputJsonValue;
     ipAddress: string | null;
     userAgent: string | null;
     createdAt: Date;
@@ -179,7 +179,7 @@ export async function createTestAuditLog(
       action: overrides.action ?? 'test.action',
       targetType: overrides.targetType ?? null,
       targetId: overrides.targetId ?? null,
-      details: overrides.details ?? null,
+      details: overrides.details,
       ipAddress: overrides.ipAddress ?? null,
       userAgent: overrides.userAgent ?? null,
       createdAt: overrides.createdAt ?? new Date(),
@@ -336,7 +336,7 @@ export async function createTestExecution(
   testSuiteId: string,
   overrides: Partial<{
     id: string;
-    status: 'PENDING' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+    status: 'IN_PROGRESS' | 'COMPLETED' | 'ABORTED';
   }> = {}
 ) {
   const id = overrides.id ?? randomUUID();
@@ -360,7 +360,7 @@ export async function createTestSuiteHistory(
     changedByUserId: string | null;
     changedByAgentSessionId: string | null;
     changeType: 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE';
-    snapshot: Record<string, unknown>;
+    snapshot: Prisma.InputJsonValue;
     changeReason: string | null;
     createdAt: Date;
   }> = {}
@@ -412,7 +412,7 @@ export async function createTestProjectHistory(
     changedByUserId: string | null;
     changedByAgentSessionId: string | null;
     changeType: 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE';
-    snapshot: Record<string, unknown>;
+    snapshot: Prisma.InputJsonValue;
     changeReason: string | null;
     createdAt: Date;
   }> = {}
@@ -538,7 +538,7 @@ export async function createTestCaseHistory(
     changedByUserId: string | null;
     changedByAgentSessionId: string | null;
     changeType: 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE';
-    snapshot: { title: string; description?: string | null; [key: string]: unknown };
+    snapshot: Prisma.InputJsonValue;
     changeReason: string | null;
     createdAt: Date;
   }> = {}

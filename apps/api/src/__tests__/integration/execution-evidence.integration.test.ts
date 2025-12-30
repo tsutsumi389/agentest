@@ -60,7 +60,7 @@ vi.mock('@agentest/auth', () => ({
 
 // Execution Role ミドルウェアをモック
 vi.mock('../../middleware/require-execution-role.js', () => ({
-  requireExecutionRole: (roles: string[], _options?: any) => (req: any, _res: any, next: any) => {
+  requireExecutionRole: (roles: string[], _options?: any) => (_req: any, _res: any, next: any) => {
     if (!mockExecutionRole || !roles.includes(mockExecutionRole)) {
       return next(new AuthorizationError('権限がありません'));
     }
