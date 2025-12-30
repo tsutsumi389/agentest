@@ -162,7 +162,13 @@ export class ExecutionController {
         req.body.description
       );
 
-      res.status(201).json({ evidence });
+      // BigIntをnumberに変換してレスポンス
+      res.status(201).json({
+        evidence: {
+          ...evidence,
+          fileSize: Number(evidence.fileSize),
+        },
+      });
     } catch (error) {
       next(error);
     }
