@@ -213,18 +213,18 @@ export const reviewCommentsApi = {
 - [x] `/apps/api/src/middleware/require-review-comment-role.ts` 新規作成
 
 ### Step 6: APIクライアント
-- [ ] `/apps/web/src/lib/api.ts` にAPI追加
+- [x] `/apps/web/src/lib/api.ts` にAPI追加
 
 ### Step 7: UIコンポーネント
-- [ ] `ReviewStatusBadge.tsx`
-- [ ] `ReviewCommentForm.tsx`
-- [ ] `ReviewCommentEditor.tsx`
-- [ ] `ReviewCommentItem.tsx`
-- [ ] `ReviewCommentList.tsx`
+- [x] `ReviewStatusBadge.tsx`
+- [x] `ReviewCommentForm.tsx`
+- [x] `ReviewCommentEditor.tsx`
+- [x] `ReviewCommentItem.tsx`
+- [x] `ReviewCommentList.tsx`
 
 ### Step 8: 既存ページ統合
-- [ ] `TestSuiteDetail.tsx` にレビュータブ追加
-- [ ] `TestCaseDetailPanel.tsx` にレビュータブ追加
+- [x] `TestSuiteDetail.tsx` にレビュータブ追加
+- [x] `TestCaseDetailPanel.tsx` にレビュータブ追加
 
 ### Step 9: テスト
 - [x] `/apps/api/src/__tests__/integration/review-comments.integration.test.ts` 新規作成

@@ -1166,3 +1166,154 @@ export const organizationsApi = {
   restore: (organizationId: string) =>
     api.post<{ organization: Organization }>(`/api/organizations/${organizationId}/restore`),
 };
+
+// ============================================
+// レビューコメント関連型定義
+// ============================================
+
+/** レビュー対象タイプ */
+export type ReviewTargetType = 'SUITE' | 'CASE';
+
+/** レビュー対象フィールド */
+export type ReviewTargetField = 'TITLE' | 'DESCRIPTION' | 'PRECONDITION' | 'STEP' | 'EXPECTED_RESULT';
+
+/** レビューステータス */
+export type ReviewStatus = 'OPEN' | 'RESOLVED';
+
+/** レビューコメント著者情報 */
+export interface ReviewAuthor {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+}
+
+/** レビューコメント用エージェントセッション情報 */
+export interface ReviewAgentSession {
+  id: string;
+  clientName: string | null;
+}
+
+/** レビュー返信 */
+export interface ReviewReply {
+  id: string;
+  commentId: string;
+  authorUserId: string | null;
+  authorAgentSessionId: string | null;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
+  author: ReviewAuthor | null;
+  agentSession: ReviewAgentSession | null;
+}
+
+/** レビューコメント基本型 */
+export interface ReviewComment {
+  id: string;
+  targetType: ReviewTargetType;
+  targetId: string;
+  targetField: ReviewTargetField;
+  targetItemId: string | null;
+  authorUserId: string | null;
+  authorAgentSessionId: string | null;
+  content: string;
+  status: ReviewStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 返信を含むレビューコメント */
+export interface ReviewCommentWithReplies extends ReviewComment {
+  author: ReviewAuthor | null;
+  agentSession: ReviewAgentSession | null;
+  replies: ReviewReply[];
+  _count: { replies: number };
+}
+
+/** コメント一覧レスポンス */
+export interface ReviewCommentListResponse {
+  comments: ReviewCommentWithReplies[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+/** コメント作成リクエスト */
+export interface CreateReviewCommentRequest {
+  targetType: ReviewTargetType;
+  targetId: string;
+  targetField: ReviewTargetField;
+  targetItemId?: string;
+  content: string;
+}
+
+/** コメント検索パラメータ */
+export interface ReviewCommentSearchParams {
+  status?: 'OPEN' | 'RESOLVED' | 'ALL';
+  targetField?: ReviewTargetField;
+  limit?: number;
+  offset?: number;
+}
+
+// ============================================
+// レビューコメントAPI
+// ============================================
+
+export const reviewCommentsApi = {
+  // コメント作成
+  create: (data: CreateReviewCommentRequest) =>
+    api.post<{ comment: ReviewCommentWithReplies }>('/api/review-comments', data),
+
+  // コメント詳細取得
+  getById: (commentId: string) =>
+    api.get<{ comment: ReviewCommentWithReplies }>(`/api/review-comments/${commentId}`),
+
+  // コメント編集
+  update: (commentId: string, data: { content: string }) =>
+    api.patch<{ comment: ReviewCommentWithReplies }>(`/api/review-comments/${commentId}`, data),
+
+  // コメント削除
+  delete: (commentId: string) =>
+    api.delete<void>(`/api/review-comments/${commentId}`),
+
+  // ステータス変更
+  updateStatus: (commentId: string, status: ReviewStatus) =>
+    api.patch<{ comment: ReviewCommentWithReplies }>(`/api/review-comments/${commentId}/status`, { status }),
+
+  // 返信作成
+  createReply: (commentId: string, data: { content: string }) =>
+    api.post<{ reply: ReviewReply }>(`/api/review-comments/${commentId}/replies`, data),
+
+  // 返信編集
+  updateReply: (commentId: string, replyId: string, data: { content: string }) =>
+    api.patch<{ reply: ReviewReply }>(`/api/review-comments/${commentId}/replies/${replyId}`, data),
+
+  // 返信削除
+  deleteReply: (commentId: string, replyId: string) =>
+    api.delete<void>(`/api/review-comments/${commentId}/replies/${replyId}`),
+};
+
+// testSuitesApiにコメント一覧取得を追加するヘルパー関数
+export const getTestSuiteComments = (testSuiteId: string, params?: ReviewCommentSearchParams) => {
+  const query = new URLSearchParams();
+  if (params?.status) query.set('status', params.status);
+  if (params?.targetField) query.set('targetField', params.targetField);
+  if (params?.limit !== undefined) query.set('limit', String(params.limit));
+  if (params?.offset !== undefined) query.set('offset', String(params.offset));
+  const queryString = query.toString();
+  return api.get<ReviewCommentListResponse>(
+    `/api/test-suites/${testSuiteId}/comments${queryString ? `?${queryString}` : ''}`
+  );
+};
+
+// testCasesApiにコメント一覧取得を追加するヘルパー関数
+export const getTestCaseComments = (testCaseId: string, params?: ReviewCommentSearchParams) => {
+  const query = new URLSearchParams();
+  if (params?.status) query.set('status', params.status);
+  if (params?.targetField) query.set('targetField', params.targetField);
+  if (params?.limit !== undefined) query.set('limit', String(params.limit));
+  if (params?.offset !== undefined) query.set('offset', String(params.offset));
+  const queryString = query.toString();
+  return api.get<ReviewCommentListResponse>(
+    `/api/test-cases/${testCaseId}/comments${queryString ? `?${queryString}` : ''}`
+  );
+};
