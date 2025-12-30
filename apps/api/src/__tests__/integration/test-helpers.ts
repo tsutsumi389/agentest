@@ -1,4 +1,5 @@
-import { prisma, Prisma } from '@agentest/db';
+import { prisma } from '@agentest/db';
+import type { Prisma } from '@agentest/db';
 import { randomUUID } from 'crypto';
 
 /**

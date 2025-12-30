@@ -15,6 +15,8 @@ export default tseslint.config(
       '**/.turbo/**',
       '**/prisma/generated/**',
       '**/vite.config.ts',
+      '**/vite.config.js',
+      '**/vite.config.d.ts',
       '**/tailwind.config.ts',
       '**/postcss.config.js',
     ],
