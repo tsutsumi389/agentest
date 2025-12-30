@@ -58,6 +58,14 @@ export function StartExecutionModal({
     }
   }, [isOpen, environments, isInitialized]);
 
+  // モーダルが外部から閉じられた場合の状態リセット
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedEnvironmentId(null);
+      setIsInitialized(false);
+    }
+  }, [isOpen]);
+
   // モーダルを閉じる
   const handleClose = useCallback(() => {
     setSelectedEnvironmentId(null);
@@ -151,7 +159,7 @@ export function StartExecutionModal({
                 <span className="text-sm">読み込み中...</span>
               </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2" role="radiogroup" aria-label="環境選択">
                 {environments.map((env) => (
                   <label
                     key={env.id}
@@ -236,7 +244,7 @@ export function StartExecutionModal({
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={startMutation.isPending || testCaseCount === 0}
+              disabled={startMutation.isPending || testCaseCount === 0 || isLoadingEnvironments}
             >
               {startMutation.isPending ? (
                 <>
