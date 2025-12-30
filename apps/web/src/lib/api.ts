@@ -361,6 +361,25 @@ export interface TestSuiteSearchParams {
   includeDeleted?: boolean;
 }
 
+/** 実行履歴検索パラメータ */
+export interface ExecutionSearchParams {
+  status?: string[];
+  from?: string;
+  to?: string;
+  limit?: number;
+  offset?: number;
+  sortBy?: 'startedAt' | 'completedAt' | 'status';
+  sortOrder?: 'asc' | 'desc';
+}
+
+/** 実行履歴検索レスポンス */
+export interface ExecutionSearchResponse {
+  executions: Execution[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 /** テストスイートサジェスト結果 */
 export interface TestSuiteSuggestion {
   id: string;
@@ -744,12 +763,17 @@ export const testSuitesApi = {
   delete: (testSuiteId: string) => api.delete<void>(`/api/test-suites/${testSuiteId}`),
   getTestCases: (testSuiteId: string) =>
     api.get<{ testCases: TestCase[] }>(`/api/test-suites/${testSuiteId}/test-cases`),
-  getExecutions: (testSuiteId: string, params?: { limit?: number; offset?: number }) => {
+  getExecutions: (testSuiteId: string, params?: ExecutionSearchParams) => {
     const query = new URLSearchParams();
-    if (params?.limit) query.set('limit', String(params.limit));
-    if (params?.offset) query.set('offset', String(params.offset));
+    if (params?.status?.length) query.set('status', params.status.join(','));
+    if (params?.from) query.set('from', params.from);
+    if (params?.to) query.set('to', params.to);
+    if (params?.limit !== undefined) query.set('limit', String(params.limit));
+    if (params?.offset !== undefined) query.set('offset', String(params.offset));
+    if (params?.sortBy) query.set('sortBy', params.sortBy);
+    if (params?.sortOrder) query.set('sortOrder', params.sortOrder);
     const queryString = query.toString();
-    return api.get<{ executions: Execution[] }>(
+    return api.get<ExecutionSearchResponse>(
       `/api/test-suites/${testSuiteId}/executions${queryString ? `?${queryString}` : ''}`
     );
   },
