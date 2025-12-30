@@ -194,9 +194,9 @@ export class ExecutionController {
   getEvidenceDownloadUrl = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { executionId, evidenceId } = req.params;
-      const url = await this.executionService.getEvidenceDownloadUrl(executionId, evidenceId);
+      const downloadUrl = await this.executionService.getEvidenceDownloadUrl(executionId, evidenceId);
 
-      res.json({ url });
+      res.json({ downloadUrl });
     } catch (error) {
       next(error);
     }

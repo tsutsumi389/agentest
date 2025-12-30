@@ -71,7 +71,8 @@ export class StorageClient {
       Body: body,
       ContentType: options.contentType || 'application/octet-stream',
       Metadata: options.metadata,
-      ACL: options.acl || 'private',
+      // ACLはMinIOで無効な場合があるため、明示的に指定された場合のみ設定
+      ...(options.acl && { ACL: options.acl }),
     };
 
     await this.client.send(new PutObjectCommand(params));
