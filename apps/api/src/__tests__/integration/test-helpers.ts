@@ -196,6 +196,12 @@ export async function cleanupTestData() {
   await prisma.reviewCommentReply.deleteMany({});
   await prisma.reviewComment.deleteMany({});
   await prisma.auditLog.deleteMany({});
+  // 実行結果関連（Executionより前に削除）
+  await prisma.executionEvidence.deleteMany({});
+  await prisma.executionExpectedResult.deleteMany({});
+  await prisma.executionStepResult.deleteMany({});
+  await prisma.executionPreconditionResult.deleteMany({});
+  await prisma.executionSnapshot.deleteMany({});
   await prisma.execution.deleteMany({});
   await prisma.testSuiteHistory.deleteMany({});
   await prisma.testSuitePrecondition.deleteMany({});
@@ -631,6 +637,129 @@ export async function createTestReviewReply(
       agentSession: {
         select: { id: true, clientName: true },
       },
+    },
+  });
+}
+
+/**
+ * テスト用リフレッシュトークンを作成
+ */
+export async function createTestRefreshToken(
+  userId: string,
+  overrides: Partial<{
+    id: string;
+    token: string;
+    expiresAt: Date;
+    revokedAt: Date | null;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.refreshToken.create({
+    data: {
+      id,
+      userId,
+      token: overrides.token ?? `refresh-${id}`,
+      expiresAt: overrides.expiresAt ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      revokedAt: overrides.revokedAt ?? null,
+    },
+  });
+}
+
+/**
+ * テスト用実行スナップショットを作成
+ */
+export async function createTestExecutionSnapshot(
+  executionId: string,
+  snapshotData: Prisma.InputJsonValue = {}
+) {
+  return prisma.executionSnapshot.create({
+    data: {
+      executionId,
+      snapshotData,
+    },
+  });
+}
+
+/**
+ * テスト用実行前提条件結果を作成
+ */
+export async function createTestExecutionPreconditionResult(
+  executionId: string,
+  overrides: Partial<{
+    id: string;
+    snapshotTestCaseId: string | null;
+    snapshotPreconditionId: string;
+    status: 'UNCHECKED' | 'MET' | 'NOT_MET';
+    note: string | null;
+    checkedAt: Date | null;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.executionPreconditionResult.create({
+    data: {
+      id,
+      executionId,
+      snapshotTestCaseId: overrides.snapshotTestCaseId ?? null,
+      snapshotPreconditionId: overrides.snapshotPreconditionId ?? `precondition-${id.slice(0, 8)}`,
+      status: overrides.status ?? 'UNCHECKED',
+      note: overrides.note ?? null,
+      checkedAt: overrides.checkedAt ?? null,
+    },
+  });
+}
+
+/**
+ * テスト用実行ステップ結果を作成
+ */
+export async function createTestExecutionStepResult(
+  executionId: string,
+  overrides: Partial<{
+    id: string;
+    snapshotTestCaseId: string;
+    snapshotStepId: string;
+    status: 'PENDING' | 'DONE' | 'SKIPPED';
+    note: string | null;
+    executedAt: Date | null;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.executionStepResult.create({
+    data: {
+      id,
+      executionId,
+      snapshotTestCaseId: overrides.snapshotTestCaseId ?? `test-case-${id.slice(0, 8)}`,
+      snapshotStepId: overrides.snapshotStepId ?? `step-${id.slice(0, 8)}`,
+      status: overrides.status ?? 'PENDING',
+      note: overrides.note ?? null,
+      executedAt: overrides.executedAt ?? null,
+    },
+  });
+}
+
+/**
+ * テスト用実行期待結果を作成
+ */
+export async function createTestExecutionExpectedResult(
+  executionId: string,
+  overrides: Partial<{
+    id: string;
+    snapshotTestCaseId: string;
+    snapshotExpectedResultId: string;
+    status: 'PENDING' | 'PASS' | 'FAIL' | 'SKIPPED' | 'NOT_EXECUTABLE';
+    note: string | null;
+    judgedAt: Date | null;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.executionExpectedResult.create({
+    data: {
+      id,
+      executionId,
+      snapshotTestCaseId: overrides.snapshotTestCaseId ?? `test-case-${id.slice(0, 8)}`,
+      snapshotExpectedResultId: overrides.snapshotExpectedResultId ?? `expected-${id.slice(0, 8)}`,
+      status: overrides.status ?? 'PENDING',
+      note: overrides.note ?? null,
+      judgedAt: overrides.judgedAt ?? null,
     },
   });
 }

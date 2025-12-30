@@ -253,7 +253,7 @@ describe('Test Case Copy API Integration Tests', () => {
         expect(response.body.error.code).toBe('NOT_FOUND');
       });
 
-      it('400 - 削除済みテストケースからのコピー', async () => {
+      it('404 - 削除済みテストケースからのコピー', async () => {
         const testCase = await createTestCase(testSuite.id, {
           title: 'コピー元テストケース',
           createdByUserId: owner.id,
@@ -263,13 +263,13 @@ describe('Test Case Copy API Integration Tests', () => {
           data: { deletedAt: new Date() },
         });
 
+        // ミドルウェアが削除済みテストケースを404として処理する
         const response = await request(app)
           .post(`/api/test-cases/${testCase.id}/copy`)
           .send({})
-          .expect(400);
+          .expect(404);
 
-        expect(response.body.error.code).toBe('BAD_REQUEST');
-        expect(response.body.error.message).toBe('削除済みテストケースはコピーできません');
+        expect(response.body.error.code).toBe('NOT_FOUND');
       });
 
       it('400 - 別プロジェクトへのコピー', async () => {
