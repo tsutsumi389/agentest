@@ -25,15 +25,17 @@ import { DeleteTestSuiteSection } from '../components/test-suite/DeleteTestSuite
 import { TestCaseDetailPanel } from '../components/test-case/TestCaseDetailPanel';
 import { MentionInput } from '../components/common/MentionInput';
 import { StartExecutionModal } from '../components/execution/StartExecutionModal';
+import { ExecutionHistoryList } from '../components/execution/ExecutionHistoryList';
 
 /**
  * タブ定義
  */
-type TabType = 'overview' | 'history' | 'settings';
+type TabType = 'overview' | 'executions' | 'history' | 'settings';
 
 const TABS: { id: TabType; label: string; icon: typeof FileText }[] = [
   { id: 'overview', label: '概要', icon: FileText },
-  { id: 'history', label: '履歴', icon: History },
+  { id: 'executions', label: '実行履歴', icon: Play },
+  { id: 'history', label: '変更履歴', icon: History },
   { id: 'settings', label: '設定', icon: Settings },
 ];
 
@@ -284,6 +286,10 @@ export function TestSuiteDetailPage() {
               currentRole={currentRole}
               executions={executions}
             />
+          )}
+
+          {currentTab === 'executions' && (
+            <ExecutionHistoryList testSuiteId={testSuiteId!} />
           )}
 
           {currentTab === 'history' && (
