@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, Link, useSearchParams } from 'react-router';
+import { useParams, Link, useSearchParams, useNavigate } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   FileText,
@@ -24,6 +24,7 @@ import { TestSuiteHistoryList } from '../components/test-suite/TestSuiteHistoryL
 import { DeleteTestSuiteSection } from '../components/test-suite/DeleteTestSuiteSection';
 import { TestCaseDetailPanel } from '../components/test-case/TestCaseDetailPanel';
 import { MentionInput } from '../components/common/MentionInput';
+import { StartExecutionModal } from '../components/execution/StartExecutionModal';
 
 /**
  * タブ定義
@@ -45,7 +46,9 @@ export function TestSuiteDetailPage() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const { setSidebarContent } = usePageSidebar();
+  const navigate = useNavigate();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isStartExecutionModalOpen, setIsStartExecutionModalOpen] = useState(false);
 
   // URLクエリパラメータから選択状態を取得
   const selectedTestCaseId = searchParams.get('testCase');
@@ -108,15 +111,36 @@ export function TestSuiteDetailPage() {
     enabled: !!testSuiteId,
   });
 
-  // 実行開始
+  // 環境一覧を事前取得（モーダル表示判定用）
+  const { data: environmentsData } = useQuery({
+    queryKey: ['project-environments', suite?.projectId],
+    queryFn: () => projectsApi.getEnvironments(suite!.projectId),
+    enabled: !!suite?.projectId,
+  });
+
+  const environments = environmentsData?.environments || [];
+
+  // 実行開始（環境なしの直接実行用）
   const startExecutionMutation = useMutation({
     mutationFn: () => testSuitesApi.startExecution(testSuiteId!),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['test-suite-executions', testSuiteId] });
+      navigate(`/executions/${data.execution.id}`);
     },
   });
 
   const testCases = casesData?.testCases || [];
+
+  // 実行開始ボタンのクリックハンドラ
+  const handleStartExecution = useCallback(() => {
+    if (environments.length === 0) {
+      // 環境なし: 直接実行開始
+      startExecutionMutation.mutate();
+    } else {
+      // 環境あり: モーダル表示
+      setIsStartExecutionModalOpen(true);
+    }
+  }, [environments.length, startExecutionMutation]);
   const executions = executionsData?.executions || [];
 
   // テストケース並び替え後の更新ハンドラ
@@ -194,7 +218,7 @@ export function TestSuiteDetailPage() {
               テストケース
             </button>
             <button
-              onClick={() => startExecutionMutation.mutate()}
+              onClick={handleStartExecution}
               disabled={startExecutionMutation.isPending || testCases.length === 0}
               className="btn btn-primary"
             >
@@ -284,6 +308,23 @@ export function TestSuiteDetailPage() {
           testSuiteId={testSuiteId}
           projectId={suite.projectId}
           onClose={() => setIsCreateModalOpen(false)}
+        />
+      )}
+
+      {/* 実行開始モーダル */}
+      {isStartExecutionModalOpen && suite && (
+        <StartExecutionModal
+          isOpen={isStartExecutionModalOpen}
+          testSuiteId={testSuiteId!}
+          projectId={suite.projectId}
+          suiteName={suite.name}
+          testCaseCount={testCases.length}
+          preconditionCount={suite._count?.preconditions || 0}
+          onClose={() => setIsStartExecutionModalOpen(false)}
+          onStarted={(execution) => {
+            queryClient.invalidateQueries({ queryKey: ['test-suite-executions', testSuiteId] });
+            navigate(`/executions/${execution.id}`);
+          }}
         />
       )}
     </div>

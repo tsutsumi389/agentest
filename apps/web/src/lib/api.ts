@@ -509,6 +509,84 @@ export interface Execution {
   environment?: { id: string; name: string; slug: string };
 }
 
+/** スナップショットデータ型 */
+export interface ExecutionSnapshot {
+  testSuite: {
+    id: string;
+    name: string;
+    description: string | null;
+  };
+  preconditions: Array<{
+    id: string;
+    content: string;
+    orderKey: string;
+  }>;
+  testCases: Array<{
+    id: string;
+    title: string;
+    description: string | null;
+    priority: string;
+    preconditions: TestCasePrecondition[];
+    steps: TestCaseStep[];
+    expectedResults: TestCaseExpectedResult[];
+  }>;
+}
+
+/** 前提条件結果 */
+export interface ExecutionPreconditionResult {
+  id: string;
+  executionId: string;
+  snapshotPreconditionId: string;
+  snapshotTestCaseId: string | null;
+  status: 'UNCHECKED' | 'MET' | 'NOT_MET';
+  checkedAt: string | null;
+  note: string | null;
+}
+
+/** ステップ結果 */
+export interface ExecutionStepResult {
+  id: string;
+  executionId: string;
+  snapshotTestCaseId: string;
+  snapshotStepId: string;
+  status: 'PENDING' | 'DONE' | 'SKIPPED';
+  executedAt: string | null;
+  note: string | null;
+}
+
+/** エビデンス */
+export interface ExecutionEvidence {
+  id: string;
+  expectedResultId: string;
+  fileName: string;
+  fileUrl: string;
+  fileType: string;
+  fileSize: string; // BigIntはstringとして受け取る
+  description: string | null;
+  createdAt: string;
+}
+
+/** 期待結果 */
+export interface ExecutionExpectedResult {
+  id: string;
+  executionId: string;
+  snapshotTestCaseId: string;
+  snapshotExpectedResultId: string;
+  status: 'PENDING' | 'PASS' | 'FAIL' | 'SKIPPED' | 'NOT_EXECUTABLE';
+  judgedAt: string | null;
+  note: string | null;
+  evidences: ExecutionEvidence[];
+}
+
+/** 詳細付き実行 */
+export interface ExecutionWithDetails extends Execution {
+  testSuite: { id: string; name: string; projectId: string };
+  snapshot: { snapshotData: ExecutionSnapshot };
+  preconditionResults: ExecutionPreconditionResult[];
+  stepResults: ExecutionStepResult[];
+  expectedResults: ExecutionExpectedResult[];
+}
+
 // ============================================
 // 認証API
 // ============================================
@@ -797,6 +875,8 @@ export const testCasesApi = {
 
 export const executionsApi = {
   getById: (executionId: string) => api.get<{ execution: Execution }>(`/api/executions/${executionId}`),
+  getByIdWithDetails: (executionId: string) =>
+    api.get<{ execution: ExecutionWithDetails }>(`/api/executions/${executionId}/details`),
   abort: (executionId: string) => api.post<{ execution: Execution }>(`/api/executions/${executionId}/abort`),
   complete: (executionId: string) => api.post<{ execution: Execution }>(`/api/executions/${executionId}/complete`),
 };

@@ -5,9 +5,29 @@ import { prisma } from '@agentest/db';
  */
 export class ExecutionRepository {
   /**
-   * IDで実行を検索
+   * IDで実行を検索（軽量版：基本情報のみ）
    */
   async findById(id: string) {
+    return prisma.execution.findUnique({
+      where: { id },
+      include: {
+        testSuite: {
+          select: { id: true, name: true, projectId: true },
+        },
+        environment: {
+          select: { id: true, name: true, slug: true },
+        },
+        executedByUser: {
+          select: { id: true, name: true, avatarUrl: true },
+        },
+      },
+    });
+  }
+
+  /**
+   * IDで実行を詳細付きで検索（スナップショット、全結果データ含む）
+   */
+  async findByIdWithDetails(id: string) {
     return prisma.execution.findUnique({
       where: { id },
       include: {
