@@ -489,8 +489,12 @@ export class TestSuiteService {
     const where: Prisma.ExecutionWhereInput = {
       testSuiteId,
       ...(options.status?.length && { status: { in: options.status } }),
-      ...(options.from && { startedAt: { gte: new Date(options.from) } }),
-      ...(options.to && { startedAt: { lte: new Date(options.to) } }),
+      ...((options.from || options.to) && {
+        startedAt: {
+          ...(options.from && { gte: new Date(options.from) }),
+          ...(options.to && { lte: new Date(options.to) }),
+        },
+      }),
     };
 
     const [executions, total] = await Promise.all([
