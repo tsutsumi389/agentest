@@ -68,8 +68,8 @@ export function ReviewCommentList({
   // フィールドオプション
   const fieldOptions = targetType === 'SUITE' ? SUITE_FIELD_OPTIONS : CASE_FIELD_OPTIONS;
 
-  // クエリキー
-  const queryKey = ['review-comments', { targetType, targetId }];
+  // クエリキー（フィルタ条件を含める）
+  const queryKey = ['review-comments', { targetType, targetId, status: statusFilter, field: fieldFilter }];
 
   // コメント一覧取得
   const { data, isLoading, error } = useQuery({

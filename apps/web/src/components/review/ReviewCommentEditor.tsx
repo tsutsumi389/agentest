@@ -36,9 +36,11 @@ export function ReviewCommentEditor({
     if (textareaRef.current) {
       textareaRef.current.focus();
       // カーソルを末尾に移動
-      textareaRef.current.setSelectionRange(content.length, content.length);
+      const len = textareaRef.current.value.length;
+      textareaRef.current.setSelectionRange(len, len);
     }
-  }, [content.length]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSave = () => {
     const trimmedContent = content.trim();
