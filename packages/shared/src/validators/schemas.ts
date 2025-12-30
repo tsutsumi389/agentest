@@ -273,6 +273,38 @@ export const suggestionSearchSchema = z.object({
   limit: z.coerce.number().int().min(1).max(50).default(10),
 });
 
+// レビューコメントスキーマ
+export const reviewTargetTypeSchema = z.enum(['SUITE', 'CASE']);
+export const reviewTargetFieldSchema = z.enum(['TITLE', 'DESCRIPTION', 'PRECONDITION', 'STEP', 'EXPECTED_RESULT']);
+export const reviewStatusSchema = z.enum(['OPEN', 'RESOLVED']);
+
+export const reviewCommentCreateSchema = z.object({
+  targetType: reviewTargetTypeSchema,
+  targetId: z.string().uuid(),
+  targetField: reviewTargetFieldSchema,
+  targetItemId: z.string().uuid().optional(),
+  content: z.string().min(1).max(2000),
+});
+
+export const reviewCommentUpdateSchema = z.object({
+  content: z.string().min(1).max(2000),
+});
+
+export const reviewStatusUpdateSchema = z.object({
+  status: reviewStatusSchema,
+});
+
+export const reviewReplyCreateSchema = z.object({
+  content: z.string().min(1).max(2000),
+});
+
+export const reviewCommentSearchSchema = z.object({
+  status: z.enum(['OPEN', 'RESOLVED', 'ALL']).default('ALL'),
+  targetField: reviewTargetFieldSchema.optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
 // 型エクスポート
 export type UserCreate = z.infer<typeof userCreateSchema>;
 export type UserUpdate = z.infer<typeof userUpdateSchema>;
@@ -298,3 +330,8 @@ export type ExecutionSearch = z.infer<typeof executionSearchSchema>;
 export type SuggestionSearch = z.infer<typeof suggestionSearchSchema>;
 export type Pagination = z.infer<typeof paginationSchema>;
 export type Sort = z.infer<typeof sortSchema>;
+export type ReviewCommentCreate = z.infer<typeof reviewCommentCreateSchema>;
+export type ReviewCommentUpdate = z.infer<typeof reviewCommentUpdateSchema>;
+export type ReviewStatusUpdate = z.infer<typeof reviewStatusUpdateSchema>;
+export type ReviewReplyCreate = z.infer<typeof reviewReplyCreateSchema>;
+export type ReviewCommentSearch = z.infer<typeof reviewCommentSearchSchema>;

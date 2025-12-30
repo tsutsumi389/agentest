@@ -192,6 +192,8 @@ export async function createTestAuditLog(
  */
 export async function cleanupTestData() {
   // 外部キー制約を考慮した順序で削除
+  await prisma.reviewCommentReply.deleteMany({});
+  await prisma.reviewComment.deleteMany({});
   await prisma.auditLog.deleteMany({});
   await prisma.execution.deleteMany({});
   await prisma.testSuiteHistory.deleteMany({});
@@ -552,6 +554,82 @@ export async function createTestCaseHistory(
       snapshot: overrides.snapshot ?? { title: 'Test Case' },
       changeReason: overrides.changeReason ?? null,
       createdAt: overrides.createdAt ?? new Date(),
+    },
+  });
+}
+
+/**
+ * テスト用レビューコメントを作成
+ */
+export async function createTestReviewComment(
+  overrides: Partial<{
+    id: string;
+    targetType: 'SUITE' | 'CASE';
+    targetId: string;
+    targetField: 'TITLE' | 'DESCRIPTION' | 'PRECONDITION' | 'STEP' | 'EXPECTED_RESULT';
+    targetItemId: string | null;
+    authorUserId: string | null;
+    authorAgentSessionId: string | null;
+    content: string;
+    status: 'OPEN' | 'RESOLVED';
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.reviewComment.create({
+    data: {
+      id,
+      targetType: overrides.targetType ?? 'SUITE',
+      targetId: overrides.targetId ?? randomUUID(),
+      targetField: overrides.targetField ?? 'TITLE',
+      targetItemId: overrides.targetItemId ?? null,
+      authorUserId: overrides.authorUserId ?? null,
+      authorAgentSessionId: overrides.authorAgentSessionId ?? null,
+      content: overrides.content ?? `Review Comment ${id.slice(0, 8)}`,
+      status: overrides.status ?? 'OPEN',
+    },
+    include: {
+      author: {
+        select: { id: true, name: true, avatarUrl: true },
+      },
+      agentSession: {
+        select: { id: true, clientName: true },
+      },
+      replies: true,
+      _count: {
+        select: { replies: true },
+      },
+    },
+  });
+}
+
+/**
+ * テスト用レビューコメント返信を作成
+ */
+export async function createTestReviewReply(
+  commentId: string,
+  overrides: Partial<{
+    id: string;
+    authorUserId: string | null;
+    authorAgentSessionId: string | null;
+    content: string;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.reviewCommentReply.create({
+    data: {
+      id,
+      commentId,
+      authorUserId: overrides.authorUserId ?? null,
+      authorAgentSessionId: overrides.authorAgentSessionId ?? null,
+      content: overrides.content ?? `Reply ${id.slice(0, 8)}`,
+    },
+    include: {
+      author: {
+        select: { id: true, name: true, avatarUrl: true },
+      },
+      agentSession: {
+        select: { id: true, clientName: true },
+      },
     },
   });
 }

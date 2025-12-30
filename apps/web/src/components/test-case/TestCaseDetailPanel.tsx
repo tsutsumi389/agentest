@@ -10,6 +10,7 @@ import {
   Pencil,
   Check,
   Copy,
+  MessageSquare,
 } from 'lucide-react';
 import {
   testCasesApi,
@@ -19,20 +20,23 @@ import {
   type ProjectMemberRole,
 } from '../../lib/api';
 import { toast } from '../../stores/toast';
+import { useAuth } from '../../hooks/useAuth';
 import { TestCasePreconditionList } from './TestCasePreconditionList';
 import { TestCaseStepList } from './TestCaseStepList';
 import { TestCaseExpectedResultList } from './TestCaseExpectedResultList';
 import { TestCaseHistoryList } from './TestCaseHistoryList';
 import { DeleteTestCaseSection } from './DeleteTestCaseSection';
 import { CopyTestCaseModal } from './CopyTestCaseModal';
+import { ReviewCommentList } from '../review/ReviewCommentList';
 
 /**
  * タブ定義
  */
-type TabType = 'overview' | 'history' | 'settings';
+type TabType = 'overview' | 'review' | 'history' | 'settings';
 
 const TABS: { id: TabType; label: string; icon: typeof FileText }[] = [
   { id: 'overview', label: '概要', icon: FileText },
+  { id: 'review', label: 'レビュー', icon: MessageSquare },
   { id: 'history', label: '履歴', icon: History },
   { id: 'settings', label: '設定', icon: Settings },
 ];
@@ -102,6 +106,7 @@ export function TestCaseDetailPanel({
   onDeleted,
 }: TestCaseDetailPanelProps) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
   const [currentTab, setCurrentTab] = useState<TabType>('overview');
   const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
 
@@ -275,6 +280,15 @@ export function TestCaseDetailPanel({
             currentRole={currentRole}
             canEdit={canEdit}
             onUpdated={handleUpdated}
+          />
+        )}
+
+        {currentTab === 'review' && user && (
+          <ReviewCommentList
+            targetType="CASE"
+            targetId={testCaseId}
+            currentUserId={user.id}
+            currentRole={currentRole}
           />
         )}
 

@@ -13,6 +13,7 @@ import {
   Clock,
   History,
   Settings,
+  MessageSquare,
 } from 'lucide-react';
 import { testSuitesApi, testCasesApi, projectsApi, ApiError, type TestCase, type TestSuite, type ProjectMemberRole, type TestCaseWithDetails } from '../lib/api';
 import { toast } from '../stores/toast';
@@ -26,15 +27,17 @@ import { TestCaseDetailPanel } from '../components/test-case/TestCaseDetailPanel
 import { MentionInput } from '../components/common/MentionInput';
 import { StartExecutionModal } from '../components/execution/StartExecutionModal';
 import { ExecutionHistoryList } from '../components/execution/ExecutionHistoryList';
+import { ReviewCommentList } from '../components/review/ReviewCommentList';
 
 /**
  * タブ定義
  */
-type TabType = 'overview' | 'executions' | 'history' | 'settings';
+type TabType = 'overview' | 'executions' | 'review' | 'history' | 'settings';
 
 const TABS: { id: TabType; label: string; icon: typeof FileText }[] = [
   { id: 'overview', label: '概要', icon: FileText },
   { id: 'executions', label: '実行履歴', icon: Play },
+  { id: 'review', label: 'レビュー', icon: MessageSquare },
   { id: 'history', label: '変更履歴', icon: History },
   { id: 'settings', label: '設定', icon: Settings },
 ];
@@ -290,6 +293,17 @@ export function TestSuiteDetailPage() {
 
           {currentTab === 'executions' && (
             <ExecutionHistoryList testSuiteId={testSuiteId!} />
+          )}
+
+          {currentTab === 'review' && user && (
+            <div className="card p-4">
+              <ReviewCommentList
+                targetType="SUITE"
+                targetId={testSuiteId}
+                currentUserId={user.id}
+                currentRole={currentRole}
+              />
+            </div>
           )}
 
           {currentTab === 'history' && (
