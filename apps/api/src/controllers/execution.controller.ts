@@ -24,12 +24,26 @@ export class ExecutionController {
   private executionService = new ExecutionService();
 
   /**
-   * 実行詳細取得
+   * 実行詳細取得（軽量版）
    */
   getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { executionId } = req.params;
       const execution = await this.executionService.findById(executionId);
+
+      res.json({ execution });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 実行詳細取得（スナップショット、全結果データ含む）
+   */
+  getByIdWithDetails = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { executionId } = req.params;
+      const execution = await this.executionService.findByIdWithDetails(executionId);
 
       res.json({ execution });
     } catch (error) {

@@ -5,7 +5,7 @@ import { prisma } from '@agentest/db';
  */
 export class ExecutionRepository {
   /**
-   * IDで実行を検索
+   * IDで実行を検索（軽量版：基本情報のみ）
    */
   async findById(id: string) {
     return prisma.execution.findUnique({
@@ -19,19 +19,6 @@ export class ExecutionRepository {
         },
         executedByUser: {
           select: { id: true, name: true, avatarUrl: true },
-        },
-        snapshot: true,
-        preconditionResults: {
-          orderBy: { id: 'asc' },
-        },
-        stepResults: {
-          orderBy: { id: 'asc' },
-        },
-        expectedResults: {
-          include: {
-            evidences: true,
-          },
-          orderBy: { id: 'asc' },
         },
       },
     });

@@ -7,10 +7,16 @@ const router: Router = Router();
 const executionController = new ExecutionController();
 
 /**
- * 実行詳細取得
+ * 実行詳細取得（軽量版）
  * GET /api/executions/:executionId
  */
 router.get('/:executionId', requireAuth(authConfig), executionController.getById);
+
+/**
+ * 実行詳細取得（スナップショット、全結果データ含む）
+ * GET /api/executions/:executionId/details
+ */
+router.get('/:executionId/details', requireAuth(authConfig), executionController.getByIdWithDetails);
 
 /**
  * 実行中止
