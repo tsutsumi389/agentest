@@ -1,8 +1,8 @@
 import { Target } from 'lucide-react';
 import type {
+  ExecutionTestCaseExpectedResultSnapshot,
   ExecutionExpectedResult,
   ExpectedResultStatus,
-  TestCaseExpectedResult,
 } from '../../lib/api';
 import {
   expectedResultStatusOptions,
@@ -13,8 +13,8 @@ import { ExecutionEvidenceList } from './ExecutionEvidenceList';
 import { ExecutionEvidenceUpload } from './ExecutionEvidenceUpload';
 
 interface ExecutionExpectedResultListProps {
-  /** スナップショットの期待結果一覧 */
-  expectedResults: TestCaseExpectedResult[];
+  /** 実行時期待結果一覧 */
+  expectedResults: ExecutionTestCaseExpectedResultSnapshot[];
   /** 期待結果一覧 */
   results: ExecutionExpectedResult[];
   /** 編集可能か */
@@ -65,9 +65,9 @@ export function ExecutionExpectedResultList({
     return null;
   }
 
-  // スナップショットIDから結果をマップ
+  // 正規化テーブルIDから結果をマップ
   const resultMap = new Map(
-    results.map((r) => [r.snapshotExpectedResultId, r])
+    results.map((r) => [r.executionExpectedResultId, r])
   );
 
   return (

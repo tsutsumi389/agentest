@@ -348,12 +348,12 @@ export function ExecutionPage() {
   // 編集可否判定
   const isEditable = execution.status === 'IN_PROGRESS';
 
-  // スナップショットデータ
-  const snapshot = execution.snapshot.snapshotData;
+  // 正規化テストスイートデータ
+  const executionTestSuite = execution.executionTestSuite;
 
-  // スイートレベル前提条件（snapshotTestCaseId = null）
+  // スイートレベル前提条件（executionTestCaseId = null）
   const suitePreconditionResults = execution.preconditionResults.filter(
-    (r) => r.snapshotTestCaseId === null
+    (r) => r.executionTestCaseId === null
   );
 
   // サマリー計算（期待結果から集計）
@@ -395,7 +395,7 @@ export function ExecutionPage() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-foreground">{snapshot.testSuite.name}</h1>
+                <h1 className="text-2xl font-bold text-foreground">{executionTestSuite?.name ?? 'テスト実行'}</h1>
                 <span className="flex items-center gap-1 badge">
                   {statusIcon[execution.status]}
                   {statusLabel[execution.status]}
@@ -465,10 +465,10 @@ export function ExecutionPage() {
       </div>
 
       {/* スイートレベル前提条件 */}
-      {snapshot.preconditions.length > 0 && (
+      {executionTestSuite && executionTestSuite.preconditions.length > 0 && (
         <div className="card p-4">
           <ExecutionPreconditionList
-            preconditions={snapshot.preconditions}
+            preconditions={executionTestSuite.preconditions}
             results={suitePreconditionResults}
             isEditable={isEditable}
             updatingStatusId={updatingPreconditionStatusId}
@@ -487,7 +487,7 @@ export function ExecutionPage() {
         </div>
         <div className="p-4">
           <ExecutionTestCaseList
-            testCases={snapshot.testCases}
+            testCases={executionTestSuite?.testCases ?? []}
             allPreconditionResults={execution.preconditionResults}
             allStepResults={execution.stepResults}
             allExpectedResults={execution.expectedResults}

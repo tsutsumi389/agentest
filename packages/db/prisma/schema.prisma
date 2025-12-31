@@ -583,11 +583,11 @@ model Execution {
   createdAt               DateTime        @default(now()) @map("created_at")
   updatedAt               DateTime        @updatedAt @map("updated_at")
 
-  testSuite           TestSuite                    @relation(fields: [testSuiteId], references: [id], onDelete: Cascade)
-  environment         ProjectEnvironment?          @relation(fields: [environmentId], references: [id])
-  executedByUser      User?                        @relation("ExecutionUser", fields: [executedByUserId], references: [id])
-  agentSession        AgentSession?                @relation(fields: [executedByAgentSessionId], references: [id])
-  snapshot            ExecutionSnapshot?
+  testSuite           TestSuite                     @relation(fields: [testSuiteId], references: [id], onDelete: Cascade)
+  environment         ProjectEnvironment?           @relation(fields: [environmentId], references: [id])
+  executedByUser      User?                         @relation("ExecutionUser", fields: [executedByUserId], references: [id])
+  agentSession        AgentSession?                 @relation(fields: [executedByAgentSessionId], references: [id])
+  executionTestSuite  ExecutionTestSuite?
   preconditionResults ExecutionPreconditionResult[]
   stepResults         ExecutionStepResult[]
   expectedResults     ExecutionExpectedResult[]
@@ -598,68 +598,174 @@ model Execution {
   @@map("executions")
 }
 
-model ExecutionSnapshot {
-  id           String   @id @default(uuid())
-  executionId  String   @unique @map("execution_id")
-  snapshotData Json     @map("snapshot_data")
-  createdAt    DateTime @default(now()) @map("created_at")
+// 実行時スナップショット: テストスイート
+model ExecutionTestSuite {
+  id                  String   @id @default(uuid())
+  executionId         String   @unique @map("execution_id")
+  originalTestSuiteId String   @map("original_test_suite_id")
+  name                String   @db.VarChar(200)
+  description         String?  @db.Text
+  createdAt           DateTime @default(now()) @map("created_at")
 
-  execution Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  execution     Execution                        @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  preconditions ExecutionTestSuitePrecondition[]
+  testCases     ExecutionTestCase[]
 
-  @@map("execution_snapshots")
+  @@map("execution_test_suites")
+}
+
+// 実行時スナップショット: テストスイート事前条件
+model ExecutionTestSuitePrecondition {
+  id                     String   @id @default(uuid())
+  executionTestSuiteId   String   @map("execution_test_suite_id")
+  originalPreconditionId String   @map("original_precondition_id")
+  content                String   @db.Text
+  orderKey               String   @map("order_key") @db.VarChar(255)
+  createdAt              DateTime @default(now()) @map("created_at")
+
+  executionTestSuite  ExecutionTestSuite            @relation(fields: [executionTestSuiteId], references: [id], onDelete: Cascade)
+  preconditionResults ExecutionPreconditionResult[]
+
+  @@index([executionTestSuiteId])
+  @@index([executionTestSuiteId, orderKey])
+  @@map("execution_test_suite_preconditions")
+}
+
+// 実行時スナップショット: テストケース
+model ExecutionTestCase {
+  id                   String           @id @default(uuid())
+  executionTestSuiteId String           @map("execution_test_suite_id")
+  originalTestCaseId   String           @map("original_test_case_id")
+  title                String           @db.VarChar(200)
+  description          String?          @db.Text
+  priority             TestCasePriority
+  orderKey             String           @map("order_key") @db.VarChar(255)
+  createdAt            DateTime         @default(now()) @map("created_at")
+
+  executionTestSuite    ExecutionTestSuite                @relation(fields: [executionTestSuiteId], references: [id], onDelete: Cascade)
+  preconditions         ExecutionTestCasePrecondition[]
+  steps                 ExecutionTestCaseStep[]
+  expectedResults       ExecutionTestCaseExpectedResult[]
+  preconditionResults   ExecutionPreconditionResult[]
+  stepResults           ExecutionStepResult[]
+  expectedResultResults ExecutionExpectedResult[]
+
+  @@index([executionTestSuiteId])
+  @@index([executionTestSuiteId, orderKey])
+  @@map("execution_test_cases")
+}
+
+// 実行時スナップショット: テストケース事前条件
+model ExecutionTestCasePrecondition {
+  id                     String   @id @default(uuid())
+  executionTestCaseId    String   @map("execution_test_case_id")
+  originalPreconditionId String   @map("original_precondition_id")
+  content                String   @db.Text
+  orderKey               String   @map("order_key") @db.VarChar(255)
+  createdAt              DateTime @default(now()) @map("created_at")
+
+  executionTestCase   ExecutionTestCase             @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
+  preconditionResults ExecutionPreconditionResult[]
+
+  @@index([executionTestCaseId])
+  @@index([executionTestCaseId, orderKey])
+  @@map("execution_test_case_preconditions")
+}
+
+// 実行時スナップショット: テストケースステップ
+model ExecutionTestCaseStep {
+  id                  String   @id @default(uuid())
+  executionTestCaseId String   @map("execution_test_case_id")
+  originalStepId      String   @map("original_step_id")
+  content             String   @db.Text
+  orderKey            String   @map("order_key") @db.VarChar(255)
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  executionTestCase ExecutionTestCase     @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
+  stepResults       ExecutionStepResult[]
+
+  @@index([executionTestCaseId])
+  @@index([executionTestCaseId, orderKey])
+  @@map("execution_test_case_steps")
+}
+
+// 実行時スナップショット: テストケース期待結果
+model ExecutionTestCaseExpectedResult {
+  id                       String   @id @default(uuid())
+  executionTestCaseId      String   @map("execution_test_case_id")
+  originalExpectedResultId String   @map("original_expected_result_id")
+  content                  String   @db.Text
+  orderKey                 String   @map("order_key") @db.VarChar(255)
+  createdAt                DateTime @default(now()) @map("created_at")
+
+  executionTestCase ExecutionTestCase         @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
+  expectedResults   ExecutionExpectedResult[]
+
+  @@index([executionTestCaseId], map: "exec_tc_expected_results_test_case_id_idx")
+  @@index([executionTestCaseId, orderKey], map: "exec_tc_expected_results_test_case_id_order_key_idx")
+  @@map("execution_test_case_expected_results")
 }
 
 model ExecutionPreconditionResult {
-  id                     String             @id @default(uuid())
-  executionId            String             @map("execution_id")
-  snapshotTestCaseId     String?            @map("snapshot_test_case_id")
-  snapshotPreconditionId String             @map("snapshot_precondition_id")
-  status                 PreconditionStatus @default(UNCHECKED)
-  checkedAt              DateTime?          @map("checked_at")
-  note                   String?            @db.Text
-  createdAt              DateTime           @default(now()) @map("created_at")
-  updatedAt              DateTime           @updatedAt @map("updated_at")
+  id                           String             @id @default(uuid())
+  executionId                  String             @map("execution_id")
+  executionTestCaseId          String?            @map("execution_test_case_id")
+  executionSuitePreconditionId String?            @map("execution_suite_precondition_id")
+  executionCasePreconditionId  String?            @map("execution_case_precondition_id")
+  status                       PreconditionStatus @default(UNCHECKED)
+  checkedAt                    DateTime?          @map("checked_at")
+  note                         String?            @db.Text
+  createdAt                    DateTime           @default(now()) @map("created_at")
+  updatedAt                    DateTime           @updatedAt @map("updated_at")
 
-  execution Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  execution         Execution                       @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  executionTestCase ExecutionTestCase?              @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
+  suitePrecondition ExecutionTestSuitePrecondition? @relation(fields: [executionSuitePreconditionId], references: [id], onDelete: Cascade)
+  casePrecondition  ExecutionTestCasePrecondition?  @relation(fields: [executionCasePreconditionId], references: [id], onDelete: Cascade)
 
-  @@unique([executionId, snapshotPreconditionId])
+  @@unique([executionId, executionSuitePreconditionId])
+  @@unique([executionId, executionCasePreconditionId])
   @@index([executionId])
   @@map("execution_precondition_results")
 }
 
 model ExecutionStepResult {
-  id                 String     @id @default(uuid())
-  executionId        String     @map("execution_id")
-  snapshotTestCaseId String     @map("snapshot_test_case_id")
-  snapshotStepId     String     @map("snapshot_step_id")
-  status             StepStatus @default(PENDING)
-  executedAt         DateTime?  @map("executed_at")
-  note               String?    @db.Text
-  createdAt          DateTime   @default(now()) @map("created_at")
-  updatedAt          DateTime   @updatedAt @map("updated_at")
+  id                  String     @id @default(uuid())
+  executionId         String     @map("execution_id")
+  executionTestCaseId String     @map("execution_test_case_id")
+  executionStepId     String     @map("execution_step_id")
+  status              StepStatus @default(PENDING)
+  executedAt          DateTime?  @map("executed_at")
+  note                String?    @db.Text
+  createdAt           DateTime   @default(now()) @map("created_at")
+  updatedAt           DateTime   @updatedAt @map("updated_at")
 
-  execution Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  execution         Execution             @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  executionTestCase ExecutionTestCase     @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
+  executionStep     ExecutionTestCaseStep @relation(fields: [executionStepId], references: [id], onDelete: Cascade)
 
-  @@unique([executionId, snapshotStepId])
+  @@unique([executionId, executionStepId])
   @@index([executionId])
   @@map("execution_step_results")
 }
 
 model ExecutionExpectedResult {
-  id                       String         @id @default(uuid())
-  executionId              String         @map("execution_id")
-  snapshotTestCaseId       String         @map("snapshot_test_case_id")
-  snapshotExpectedResultId String         @map("snapshot_expected_result_id")
-  status                   JudgmentStatus @default(PENDING)
-  judgedAt                 DateTime?      @map("judged_at")
-  note                     String?        @db.Text
-  createdAt                DateTime       @default(now()) @map("created_at")
-  updatedAt                DateTime       @updatedAt @map("updated_at")
+  id                        String         @id @default(uuid())
+  executionId               String         @map("execution_id")
+  executionTestCaseId       String         @map("execution_test_case_id")
+  executionExpectedResultId String         @map("execution_expected_result_id")
+  status                    JudgmentStatus @default(PENDING)
+  judgedAt                  DateTime?      @map("judged_at")
+  note                      String?        @db.Text
+  createdAt                 DateTime       @default(now()) @map("created_at")
+  updatedAt                 DateTime       @updatedAt @map("updated_at")
 
-  execution Execution           @relation(fields: [executionId], references: [id], onDelete: Cascade)
-  evidences ExecutionEvidence[]
+  execution               Execution                       @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  executionTestCase       ExecutionTestCase               @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
+  executionExpectedResult ExecutionTestCaseExpectedResult @relation(fields: [executionExpectedResultId], references: [id], onDelete: Cascade)
+  evidences               ExecutionEvidence[]
 
-  @@unique([executionId, snapshotExpectedResultId])
+  @@unique([executionId, executionExpectedResultId])
   @@index([executionId])
   @@map("execution_expected_results")
 }

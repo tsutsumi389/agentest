@@ -531,38 +531,22 @@ export class TestSuiteService {
         deletedAt: null,
       },
       include: {
-        preconditions: true,
-        steps: true,
-        expectedResults: true,
+        preconditions: { orderBy: { orderKey: 'asc' } },
+        steps: { orderBy: { orderKey: 'asc' } },
+        expectedResults: { orderBy: { orderKey: 'asc' } },
       },
+      orderBy: { orderKey: 'asc' },
     });
 
     // スイートの前提条件を取得
     const suitePreconditions = await prisma.testSuitePrecondition.findMany({
       where: { testSuiteId },
+      orderBy: { orderKey: 'asc' },
     });
 
-    // スナップショットデータを作成
-    const snapshotData = {
-      testSuite: {
-        id: testSuite.id,
-        name: testSuite.name,
-        description: testSuite.description,
-      },
-      preconditions: suitePreconditions,
-      testCases: testCases.map((tc) => ({
-        id: tc.id,
-        title: tc.title,
-        description: tc.description,
-        priority: tc.priority,
-        preconditions: tc.preconditions,
-        steps: tc.steps,
-        expectedResults: tc.expectedResults,
-      })),
-    };
-
-    // トランザクションで実行と結果レコードを作成
+    // トランザクションで実行と正規化テーブルを作成
     return prisma.$transaction(async (tx) => {
+      // 1. Executionを作成
       const execution = await tx.execution.create({
         data: {
           testSuiteId,
@@ -572,62 +556,137 @@ export class TestSuiteService {
         },
       });
 
-      // スナップショットを保存
-      await tx.executionSnapshot.create({
+      // 2. ExecutionTestSuiteを作成（テストスイートのスナップショット）
+      const executionTestSuite = await tx.executionTestSuite.create({
         data: {
           executionId: execution.id,
-          snapshotData,
+          originalTestSuiteId: testSuite.id,
+          name: testSuite.name,
+          description: testSuite.description,
         },
       });
 
-      // スイートの前提条件結果を作成
-      for (const precondition of suitePreconditions) {
-        await tx.executionPreconditionResult.create({
+      // 3. ExecutionTestSuitePreconditionを作成（スイート前提条件のスナップショット）
+      const execSuitePreconditions = await Promise.all(
+        suitePreconditions.map((precondition) =>
+          tx.executionTestSuitePrecondition.create({
+            data: {
+              executionTestSuiteId: executionTestSuite.id,
+              originalPreconditionId: precondition.id,
+              content: precondition.content,
+              orderKey: precondition.orderKey,
+            },
+          })
+        )
+      );
+
+      // スイート前提条件のマッピング（元ID → 実行時ID）
+      const suitePreconditionMap = new Map(
+        suitePreconditions.map((orig, index) => [orig.id, execSuitePreconditions[index].id])
+      );
+
+      // 4. ExecutionTestCaseとその子要素を作成
+      for (const testCase of testCases) {
+        // ExecutionTestCaseを作成
+        const executionTestCase = await tx.executionTestCase.create({
           data: {
-            executionId: execution.id,
-            snapshotPreconditionId: precondition.id,
-            status: 'UNCHECKED',
+            executionTestSuiteId: executionTestSuite.id,
+            originalTestCaseId: testCase.id,
+            title: testCase.title,
+            description: testCase.description,
+            priority: testCase.priority,
+            orderKey: testCase.orderKey,
           },
         });
-      }
 
-      // 各テストケースの結果を作成
-      for (const testCase of testCases) {
-        // 前提条件結果
-        for (const precondition of testCase.preconditions) {
+        // ExecutionTestCasePreconditionを作成
+        const execCasePreconditions = await Promise.all(
+          testCase.preconditions.map((precondition) =>
+            tx.executionTestCasePrecondition.create({
+              data: {
+                executionTestCaseId: executionTestCase.id,
+                originalPreconditionId: precondition.id,
+                content: precondition.content,
+                orderKey: precondition.orderKey,
+              },
+            })
+          )
+        );
+
+        // ExecutionTestCaseStepを作成
+        const execSteps = await Promise.all(
+          testCase.steps.map((step) =>
+            tx.executionTestCaseStep.create({
+              data: {
+                executionTestCaseId: executionTestCase.id,
+                originalStepId: step.id,
+                content: step.content,
+                orderKey: step.orderKey,
+              },
+            })
+          )
+        );
+
+        // ExecutionTestCaseExpectedResultを作成
+        const execExpectedResults = await Promise.all(
+          testCase.expectedResults.map((expectedResult) =>
+            tx.executionTestCaseExpectedResult.create({
+              data: {
+                executionTestCaseId: executionTestCase.id,
+                originalExpectedResultId: expectedResult.id,
+                content: expectedResult.content,
+                orderKey: expectedResult.orderKey,
+              },
+            })
+          )
+        );
+
+        // 5. ExecutionPreconditionResult（テストケース前提条件の結果）を作成
+        for (let i = 0; i < testCase.preconditions.length; i++) {
           await tx.executionPreconditionResult.create({
             data: {
               executionId: execution.id,
-              snapshotTestCaseId: testCase.id,
-              snapshotPreconditionId: precondition.id,
+              executionTestCaseId: executionTestCase.id,
+              executionCasePreconditionId: execCasePreconditions[i].id,
               status: 'UNCHECKED',
             },
           });
         }
 
-        // ステップ結果
-        for (const step of testCase.steps) {
+        // 6. ExecutionStepResultを作成
+        for (let i = 0; i < testCase.steps.length; i++) {
           await tx.executionStepResult.create({
             data: {
               executionId: execution.id,
-              snapshotTestCaseId: testCase.id,
-              snapshotStepId: step.id,
+              executionTestCaseId: executionTestCase.id,
+              executionStepId: execSteps[i].id,
               status: 'PENDING',
             },
           });
         }
 
-        // 期待結果
-        for (const expectedResult of testCase.expectedResults) {
+        // 7. ExecutionExpectedResultを作成
+        for (let i = 0; i < testCase.expectedResults.length; i++) {
           await tx.executionExpectedResult.create({
             data: {
               executionId: execution.id,
-              snapshotTestCaseId: testCase.id,
-              snapshotExpectedResultId: expectedResult.id,
+              executionTestCaseId: executionTestCase.id,
+              executionExpectedResultId: execExpectedResults[i].id,
               status: 'PENDING',
             },
           });
         }
+      }
+
+      // 8. ExecutionPreconditionResult（スイート前提条件の結果）を作成
+      for (const precondition of suitePreconditions) {
+        await tx.executionPreconditionResult.create({
+          data: {
+            executionId: execution.id,
+            executionSuitePreconditionId: suitePreconditionMap.get(precondition.id),
+            status: 'UNCHECKED',
+          },
+        });
       }
 
       return execution;

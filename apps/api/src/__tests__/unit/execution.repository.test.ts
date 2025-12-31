@@ -123,10 +123,10 @@ describe('ExecutionRepository', () => {
           name: 'Test User',
           avatarUrl: null,
         },
-        snapshot: {
-          id: 'snapshot-1',
-          testCases: [],
+        executionTestSuite: {
+          id: 'exec-suite-1',
           preconditions: [],
+          testCases: [],
         },
         preconditionResults: [
           { id: 'precond-result-1', status: 'PASSED' },
@@ -160,15 +160,46 @@ describe('ExecutionRepository', () => {
           executedByUser: {
             select: { id: true, name: true, avatarUrl: true },
           },
-          snapshot: true,
+          executionTestSuite: {
+            include: {
+              preconditions: {
+                orderBy: { orderKey: 'asc' },
+              },
+              testCases: {
+                include: {
+                  preconditions: {
+                    orderBy: { orderKey: 'asc' },
+                  },
+                  steps: {
+                    orderBy: { orderKey: 'asc' },
+                  },
+                  expectedResults: {
+                    orderBy: { orderKey: 'asc' },
+                  },
+                },
+                orderBy: { orderKey: 'asc' },
+              },
+            },
+          },
           preconditionResults: {
+            include: {
+              suitePrecondition: true,
+              casePrecondition: true,
+              executionTestCase: true,
+            },
             orderBy: { id: 'asc' },
           },
           stepResults: {
+            include: {
+              executionStep: true,
+              executionTestCase: true,
+            },
             orderBy: { id: 'asc' },
           },
           expectedResults: {
             include: {
+              executionExpectedResult: true,
+              executionTestCase: true,
               evidences: true,
             },
             orderBy: { id: 'asc' },
@@ -178,10 +209,10 @@ describe('ExecutionRepository', () => {
       expect(result).toEqual(mockExecution);
     });
 
-    it('snapshot, preconditionResults, stepResults, expectedResultsがincludeされる', async () => {
+    it('executionTestSuite, preconditionResults, stepResults, expectedResultsがincludeされる', async () => {
       const mockExecution = {
         id: 'execution-1',
-        snapshot: { id: 'snapshot-1' },
+        executionTestSuite: { id: 'exec-suite-1', preconditions: [], testCases: [] },
         preconditionResults: [{ id: 'pr-1' }],
         stepResults: [{ id: 'sr-1' }],
         expectedResults: [{ id: 'er-1', evidences: [] }],
@@ -190,7 +221,7 @@ describe('ExecutionRepository', () => {
 
       const result = await repository.findByIdWithDetails('execution-1');
 
-      expect(result?.snapshot).toBeDefined();
+      expect(result?.executionTestSuite).toBeDefined();
       expect(result?.preconditionResults).toBeDefined();
       expect(result?.stepResults).toBeDefined();
       expect(result?.expectedResults).toBeDefined();

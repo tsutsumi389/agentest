@@ -136,7 +136,12 @@ sequenceDiagram
     B->>B: 権限確認（WRITE以上）
     B->>DB: テストスイート・テストケース取得
     B->>DB: Execution作成
-    B->>DB: ExecutionSnapshot作成（JSON）
+    B->>DB: ExecutionTestSuite作成（スナップショット）
+    B->>DB: ExecutionTestSuitePrecondition作成
+    B->>DB: ExecutionTestCase作成
+    B->>DB: ExecutionTestCasePrecondition作成
+    B->>DB: ExecutionTestCaseStep作成
+    B->>DB: ExecutionTestCaseExpectedResult作成
     B->>DB: ExecutionPreconditionResult作成
     B->>DB: ExecutionStepResult作成
     B->>DB: ExecutionExpectedResult作成
@@ -235,7 +240,12 @@ erDiagram
     ProjectEnvironment ||--o{ Execution : "uses"
     User ||--o{ Execution : "executes"
     AgentSession ||--o{ Execution : "executes"
-    Execution ||--|| ExecutionSnapshot : "has"
+    Execution ||--|| ExecutionTestSuite : "has"
+    ExecutionTestSuite ||--o{ ExecutionTestSuitePrecondition : "has"
+    ExecutionTestSuite ||--o{ ExecutionTestCase : "has"
+    ExecutionTestCase ||--o{ ExecutionTestCasePrecondition : "has"
+    ExecutionTestCase ||--o{ ExecutionTestCaseStep : "has"
+    ExecutionTestCase ||--o{ ExecutionTestCaseExpectedResult : "has"
     Execution ||--o{ ExecutionPreconditionResult : "has"
     Execution ||--o{ ExecutionStepResult : "has"
     Execution ||--o{ ExecutionExpectedResult : "has"
@@ -254,18 +264,68 @@ erDiagram
         timestamp updatedAt
     }
 
-    ExecutionSnapshot {
+    ExecutionTestSuite {
         uuid id PK
         uuid executionId FK "unique"
-        json snapshotData
+        uuid originalTestSuiteId
+        string name
+        text description "nullable"
+        timestamp createdAt
+    }
+
+    ExecutionTestSuitePrecondition {
+        uuid id PK
+        uuid executionTestSuiteId FK
+        uuid originalPreconditionId
+        text content
+        string orderKey
+        timestamp createdAt
+    }
+
+    ExecutionTestCase {
+        uuid id PK
+        uuid executionTestSuiteId FK
+        uuid originalTestCaseId
+        string title
+        text description "nullable"
+        enum priority
+        string orderKey
+        timestamp createdAt
+    }
+
+    ExecutionTestCasePrecondition {
+        uuid id PK
+        uuid executionTestCaseId FK
+        uuid originalPreconditionId
+        text content
+        string orderKey
+        timestamp createdAt
+    }
+
+    ExecutionTestCaseStep {
+        uuid id PK
+        uuid executionTestCaseId FK
+        uuid originalStepId
+        text content
+        string orderKey
+        timestamp createdAt
+    }
+
+    ExecutionTestCaseExpectedResult {
+        uuid id PK
+        uuid executionTestCaseId FK
+        uuid originalExpectedResultId
+        text content
+        string orderKey
         timestamp createdAt
     }
 
     ExecutionPreconditionResult {
         uuid id PK
         uuid executionId FK
-        string snapshotTestCaseId "nullable（スイートレベルはnull）"
-        string snapshotPreconditionId
+        uuid executionTestCaseId FK "nullable"
+        uuid executionSuitePreconditionId FK "nullable"
+        uuid executionCasePreconditionId FK "nullable"
         enum status "UNCHECKED, MET, NOT_MET"
         timestamp checkedAt "nullable"
         text note "nullable"
@@ -276,8 +336,8 @@ erDiagram
     ExecutionStepResult {
         uuid id PK
         uuid executionId FK
-        string snapshotTestCaseId
-        string snapshotStepId
+        uuid executionTestCaseId FK
+        uuid executionStepId FK
         enum status "PENDING, DONE, SKIPPED"
         timestamp executedAt "nullable"
         text note "nullable"
@@ -288,8 +348,8 @@ erDiagram
     ExecutionExpectedResult {
         uuid id PK
         uuid executionId FK
-        string snapshotTestCaseId
-        string snapshotExpectedResultId
+        uuid executionTestCaseId FK
+        uuid executionExpectedResultId FK
         enum status "PENDING, PASS, FAIL, SKIPPED, NOT_EXECUTABLE"
         timestamp judgedAt "nullable"
         text note "nullable"
@@ -311,53 +371,25 @@ erDiagram
     }
 ```
 
-### スナップショットデータ構造
+### 正規化テーブルによるスナップショット
 
-```json
-{
-  "testSuite": {
-    "id": "uuid",
-    "name": "テストスイート名",
-    "description": "説明"
-  },
-  "preconditions": [
-    {
-      "id": "snapshot-precondition-id",
-      "content": "前提条件内容",
-      "orderKey": "a0"
-    }
-  ],
-  "testCases": [
-    {
-      "id": "snapshot-test-case-id",
-      "title": "テストケース名",
-      "description": "説明",
-      "priority": "HIGH",
-      "preconditions": [
-        {
-          "id": "snapshot-precondition-id",
-          "content": "テストケース固有の前提条件",
-          "orderKey": "a0"
-        }
-      ],
-      "steps": [
-        {
-          "id": "snapshot-step-id",
-          "action": "操作手順",
-          "orderKey": "a0"
-        }
-      ],
-      "expectedResults": [
-        {
-          "id": "snapshot-expected-result-id",
-          "content": "期待結果",
-          "orderKey": "a0"
-        }
-      ]
-    }
-  ]
-}
+実行開始時に、テストスイートとテストケースの状態を正規化テーブル群に保存します。JSONBではなく正規化テーブルを使用することで、データの整合性とクエリ性能が向上します。
+
 ```
+Execution
+    │
+    └──1:1── ExecutionTestSuite
+                 │
+                 ├──1:N── ExecutionTestSuitePrecondition
+                 │
+                 └──1:N── ExecutionTestCase
+                              │
+                              ├──1:N── ExecutionTestCasePrecondition
+                              ├──1:N── ExecutionTestCaseStep
+                              └──1:N── ExecutionTestCaseExpectedResult
+```
+
+各スナップショットテーブルは元のテーブルのIDを`original*Id`として保持し、実行時点のデータをコピーします。
 
 ### ステータス定義
 
@@ -564,18 +596,60 @@ agentest/
       "id": "uuid",
       "name": "本番環境"
     },
-    "snapshot": {
-      "snapshotData": {
-        "testSuite": { ... },
-        "preconditions": [ ... ],
-        "testCases": [ ... ]
-      }
+    "executionTestSuite": {
+      "id": "uuid",
+      "originalTestSuiteId": "uuid",
+      "name": "テストスイート名",
+      "description": "説明",
+      "preconditions": [
+        {
+          "id": "uuid",
+          "originalPreconditionId": "uuid",
+          "content": "前提条件内容",
+          "orderKey": "00001"
+        }
+      ],
+      "testCases": [
+        {
+          "id": "uuid",
+          "originalTestCaseId": "uuid",
+          "title": "テストケース名",
+          "description": "説明",
+          "priority": "HIGH",
+          "orderKey": "00001",
+          "preconditions": [
+            {
+              "id": "uuid",
+              "originalPreconditionId": "uuid",
+              "content": "ケース前提条件",
+              "orderKey": "00001"
+            }
+          ],
+          "steps": [
+            {
+              "id": "uuid",
+              "originalStepId": "uuid",
+              "content": "操作手順",
+              "orderKey": "00001"
+            }
+          ],
+          "expectedResults": [
+            {
+              "id": "uuid",
+              "originalExpectedResultId": "uuid",
+              "content": "期待結果",
+              "orderKey": "00001"
+            }
+          ]
+        }
+      ]
     },
     "preconditionResults": [
       {
         "id": "uuid",
-        "snapshotTestCaseId": null,
-        "snapshotPreconditionId": "snapshot-id",
+        "executionTestCaseId": null,
+        "executionSuitePreconditionId": "uuid",
+        "executionCasePreconditionId": null,
         "status": "UNCHECKED",
         "checkedAt": null,
         "note": null
@@ -584,8 +658,8 @@ agentest/
     "stepResults": [
       {
         "id": "uuid",
-        "snapshotTestCaseId": "snapshot-test-case-id",
-        "snapshotStepId": "snapshot-step-id",
+        "executionTestCaseId": "uuid",
+        "executionStepId": "uuid",
         "status": "PENDING",
         "executedAt": null,
         "note": null
@@ -594,8 +668,8 @@ agentest/
     "expectedResults": [
       {
         "id": "uuid",
-        "snapshotTestCaseId": "snapshot-test-case-id",
-        "snapshotExpectedResultId": "snapshot-expected-result-id",
+        "executionTestCaseId": "uuid",
+        "executionExpectedResultId": "uuid",
         "status": "PENDING",
         "judgedAt": null,
         "note": null,

@@ -25,7 +25,7 @@ export class ExecutionRepository {
   }
 
   /**
-   * IDで実行を詳細付きで検索（スナップショット、全結果データ含む）
+   * IDで実行を詳細付きで検索（正規化テーブル、全結果データ含む）
    */
   async findByIdWithDetails(id: string) {
     return prisma.execution.findUnique({
@@ -40,15 +40,46 @@ export class ExecutionRepository {
         executedByUser: {
           select: { id: true, name: true, avatarUrl: true },
         },
-        snapshot: true,
+        executionTestSuite: {
+          include: {
+            preconditions: {
+              orderBy: { orderKey: 'asc' },
+            },
+            testCases: {
+              include: {
+                preconditions: {
+                  orderBy: { orderKey: 'asc' },
+                },
+                steps: {
+                  orderBy: { orderKey: 'asc' },
+                },
+                expectedResults: {
+                  orderBy: { orderKey: 'asc' },
+                },
+              },
+              orderBy: { orderKey: 'asc' },
+            },
+          },
+        },
         preconditionResults: {
+          include: {
+            suitePrecondition: true,
+            casePrecondition: true,
+            executionTestCase: true,
+          },
           orderBy: { id: 'asc' },
         },
         stepResults: {
+          include: {
+            executionStep: true,
+            executionTestCase: true,
+          },
           orderBy: { id: 'asc' },
         },
         expectedResults: {
           include: {
+            executionExpectedResult: true,
+            executionTestCase: true,
             evidences: true,
           },
           orderBy: { id: 'asc' },

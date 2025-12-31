@@ -89,7 +89,12 @@ PostgreSQL を使用。Prisma ORM でスキーマ管理。
 | テーブル | 説明 | 詳細 |
 |---------|------|------|
 | `Execution` | テスト実行 | [execution.md](./execution.md#execution) |
-| `ExecutionSnapshot` | 実行時のスナップショット | [execution.md](./execution.md#executionsnapshot) |
+| `ExecutionTestSuite` | 実行時のテストスイートスナップショット | [execution.md](./execution.md#executiontestsuite) |
+| `ExecutionTestSuitePrecondition` | 実行時のスイート前提条件スナップショット | [execution.md](./execution.md#executiontestsuiteprecondition) |
+| `ExecutionTestCase` | 実行時のテストケーススナップショット | [execution.md](./execution.md#executiontestcase) |
+| `ExecutionTestCasePrecondition` | 実行時のケース前提条件スナップショット | [execution.md](./execution.md#executiontestcaseprecondition) |
+| `ExecutionTestCaseStep` | 実行時の手順スナップショット | [execution.md](./execution.md#executiontestcasestep) |
+| `ExecutionTestCaseExpectedResult` | 実行時の期待結果スナップショット | [execution.md](./execution.md#executiontestcaseexpectedresult) |
 | `ExecutionPreconditionResult` | 前提条件の確認結果 | [execution.md](./execution.md#executionpreconditionresult) |
 | `ExecutionStepResult` | 手順の実施結果 | [execution.md](./execution.md#executionstepresult) |
 | `ExecutionExpectedResult` | 期待値の判定結果 | [execution.md](./execution.md#executionexpectedresult) |
@@ -135,13 +140,23 @@ createdByAgentSessionId String?  @db.Uuid
 AとBの間に挿入: A="a", X="aV", B="b", C="c"
 ```
 
-### スナップショットベースの実行結果
+### 正規化テーブルによるスナップショット
 
-テスト実行時にスナップショットを作成し、元データの ID で結果を紐づけ：
+テスト実行時に正規化テーブル群へスナップショットを作成し、各結果テーブルからスナップショットテーブルを参照：
 
 ```prisma
+// スナップショットテーブル
+model ExecutionTestCaseStep {
+  id                  String   @id @default(uuid())
+  executionTestCaseId String   // 実行テストケースへの参照
+  originalStepId      String   // 元の手順 ID
+  content             String   // スナップショットされた内容
+  orderKey            String
+}
+
+// 結果テーブル
 model ExecutionStepResult {
-  snapshotStepId  String  @db.Uuid  // スナップショット内の手順 ID
+  executionStepId     String   // スナップショットテーブルへの参照
   // ...
 }
 ```
@@ -223,12 +238,27 @@ CREATE INDEX idx_case_expected_case_id ON "TestCaseExpectedResult"("testCaseId")
 CREATE INDEX idx_case_history_case_id ON "TestCaseHistory"("testCaseId");
 
 -- テスト実行
-CREATE INDEX idx_executions_suite_id ON "Execution"("testSuiteId");
-CREATE INDEX idx_executions_status ON "Execution"("status");
-CREATE INDEX idx_exec_precond_execution_id ON "ExecutionPreconditionResult"("executionId");
-CREATE INDEX idx_exec_step_execution_id ON "ExecutionStepResult"("executionId");
-CREATE INDEX idx_exec_expected_execution_id ON "ExecutionExpectedResult"("executionId");
-CREATE INDEX idx_exec_evidence_expected_id ON "ExecutionEvidence"("expectedResultId");
+CREATE INDEX idx_executions_suite_id ON "executions"("test_suite_id");
+CREATE INDEX idx_executions_status ON "executions"("status");
+CREATE INDEX idx_executions_started_at ON "executions"("started_at");
+
+-- 実行時スナップショット（正規化テーブル）
+CREATE INDEX idx_exec_suite_precond_suite_id ON "execution_test_suite_preconditions"("execution_test_suite_id");
+CREATE INDEX idx_exec_suite_precond_order ON "execution_test_suite_preconditions"("execution_test_suite_id", "order_key");
+CREATE INDEX idx_exec_test_case_suite_id ON "execution_test_cases"("execution_test_suite_id");
+CREATE INDEX idx_exec_test_case_order ON "execution_test_cases"("execution_test_suite_id", "order_key");
+CREATE INDEX idx_exec_case_precond_case_id ON "execution_test_case_preconditions"("execution_test_case_id");
+CREATE INDEX idx_exec_case_precond_order ON "execution_test_case_preconditions"("execution_test_case_id", "order_key");
+CREATE INDEX idx_exec_case_step_case_id ON "execution_test_case_steps"("execution_test_case_id");
+CREATE INDEX idx_exec_case_step_order ON "execution_test_case_steps"("execution_test_case_id", "order_key");
+CREATE INDEX idx_exec_case_expected_case_id ON "execution_test_case_expected_results"("execution_test_case_id");
+CREATE INDEX idx_exec_case_expected_order ON "execution_test_case_expected_results"("execution_test_case_id", "order_key");
+
+-- 実行結果
+CREATE INDEX idx_exec_precond_execution_id ON "execution_precondition_results"("execution_id");
+CREATE INDEX idx_exec_step_execution_id ON "execution_step_results"("execution_id");
+CREATE INDEX idx_exec_expected_execution_id ON "execution_expected_results"("execution_id");
+CREATE INDEX idx_exec_evidence_expected_id ON "execution_evidences"("expected_result_id");
 
 -- レビュー
 CREATE INDEX idx_review_comments_target ON "ReviewComment"("targetType", "targetId");

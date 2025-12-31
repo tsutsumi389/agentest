@@ -105,7 +105,13 @@ export async function cleanupTestData() {
   await prisma.executionExpectedResult.deleteMany({});
   await prisma.executionStepResult.deleteMany({});
   await prisma.executionPreconditionResult.deleteMany({});
-  await prisma.executionSnapshot.deleteMany({});
+  // 実行時スナップショット（正規化テーブル）
+  await prisma.executionTestCaseExpectedResult.deleteMany({});
+  await prisma.executionTestCaseStep.deleteMany({});
+  await prisma.executionTestCasePrecondition.deleteMany({});
+  await prisma.executionTestCase.deleteMany({});
+  await prisma.executionTestSuitePrecondition.deleteMany({});
+  await prisma.executionTestSuite.deleteMany({});
   await prisma.execution.deleteMany({});
 
   // 4. テストスイート・テストケース関連
