@@ -2,7 +2,7 @@
 
 ## 概要
 
-テスト実行とその結果を管理するテーブル群。実行開始時にスナップショットを作成し、実行中にテストケースが編集されても結果に影響しない設計。
+テスト実行とその結果を管理するテーブル群。実行開始時に正規化テーブル群へスナップショットを作成し、実行中にテストケースが編集されても結果に影響しない設計。
 
 ## Execution
 
@@ -14,15 +14,16 @@
 |--------|------|------|------------|------|
 | `id` | UUID | NO | gen_random_uuid() | 主キー |
 | `testSuiteId` | UUID | NO | - | テストスイート ID（外部キー） |
-| `environmentId` | UUID | NO | - | 実行対象環境 ID（外部キー） |
+| `environmentId` | UUID | YES | NULL | 実行対象環境 ID（外部キー） |
 | `executedByUserId` | UUID | YES | NULL | 実行者ユーザー ID（外部キー）※1 |
 | `executedByAgentSessionId` | UUID | YES | NULL | 実行者 Agent セッション ID（外部キー）※1 |
 | `status` | ENUM | NO | IN_PROGRESS | 実行ステータス |
 | `startedAt` | TIMESTAMP | NO | now() | 開始日時 |
 | `completedAt` | TIMESTAMP | YES | NULL | 完了日時 |
 | `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
+| `updatedAt` | TIMESTAMP | NO | - | 更新日時 |
 
-※1: `executedByUserId` と `executedByAgentSessionId` はどちらか一方のみ設定（排他制約）
+※1: `executedByUserId` と `executedByAgentSessionId` は両方 NULL または一方のみ設定可
 
 ### 実行ステータス
 
@@ -42,47 +43,38 @@ enum ExecutionStatus {
 }
 
 model Execution {
-  id                       String          @id @default(uuid()) @db.Uuid
-  testSuiteId              String          @db.Uuid
-  environmentId            String          @db.Uuid
-  executedByUserId         String?         @db.Uuid
-  executedByAgentSessionId String?         @db.Uuid
+  id                       String          @id @default(uuid())
+  testSuiteId              String          @map("test_suite_id")
+  environmentId            String?         @map("environment_id")
+  executedByUserId         String?         @map("executed_by_user_id")
+  executedByAgentSessionId String?         @map("executed_by_agent_session_id")
   status                   ExecutionStatus @default(IN_PROGRESS)
-  startedAt                DateTime        @default(now())
-  completedAt              DateTime?
-  createdAt                DateTime        @default(now())
+  startedAt                DateTime        @default(now()) @map("started_at")
+  completedAt              DateTime?       @map("completed_at")
+  createdAt                DateTime        @default(now()) @map("created_at")
+  updatedAt                DateTime        @updatedAt @map("updated_at")
 
-  testSuite               TestSuite                     @relation(fields: [testSuiteId], references: [id], onDelete: Cascade)
-  environment             ProjectEnvironment            @relation(fields: [environmentId], references: [id])
-  executedByUser          User?                         @relation(fields: [executedByUserId], references: [id])
-  executedByAgentSession  AgentSession?                 @relation(fields: [executedByAgentSessionId], references: [id])
-  snapshot                ExecutionSnapshot?
-  preconditionResults     ExecutionPreconditionResult[]
-  stepResults             ExecutionStepResult[]
-  expectedResults         ExecutionExpectedResult[]
+  testSuite           TestSuite                     @relation(fields: [testSuiteId], references: [id], onDelete: Cascade)
+  environment         ProjectEnvironment?           @relation(fields: [environmentId], references: [id])
+  executedByUser      User?                         @relation("ExecutionUser", fields: [executedByUserId], references: [id])
+  agentSession        AgentSession?                 @relation(fields: [executedByAgentSessionId], references: [id])
+  executionTestSuite  ExecutionTestSuite?
+  preconditionResults ExecutionPreconditionResult[]
+  stepResults         ExecutionStepResult[]
+  expectedResults     ExecutionExpectedResult[]
 
   @@index([testSuiteId])
-  @@index([environmentId])
   @@index([status])
+  @@index([startedAt])
+  @@map("executions")
 }
-```
-
-### 排他制約（SQL）
-
-```sql
--- executedByUserId か executedByAgentSessionId のどちらか一方のみ設定
-ALTER TABLE "Execution" ADD CONSTRAINT "execution_executor_check"
-  CHECK (
-    (executed_by_user_id IS NOT NULL AND executed_by_agent_session_id IS NULL) OR
-    (executed_by_user_id IS NULL AND executed_by_agent_session_id IS NOT NULL)
-  );
 ```
 
 ---
 
-## ExecutionSnapshot
+## ExecutionTestSuite
 
-実行開始時のテストスイート・テストケースのスナップショットを保持するテーブル。
+実行開始時のテストスイートのスナップショットを保持するテーブル。
 
 ### カラム定義
 
@@ -90,68 +82,221 @@ ALTER TABLE "Execution" ADD CONSTRAINT "execution_executor_check"
 |--------|------|------|------------|------|
 | `id` | UUID | NO | gen_random_uuid() | 主キー |
 | `executionId` | UUID | NO | - | 実行 ID（外部キー、一意） |
-| `snapshotData` | JSONB | NO | - | スナップショットデータ |
+| `originalTestSuiteId` | UUID | NO | - | 元のテストスイート ID |
+| `name` | VARCHAR(200) | NO | - | テストスイート名（スナップショット） |
+| `description` | TEXT | YES | NULL | 説明（スナップショット） |
 | `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
-
-### スナップショット構造
-
-```json
-{
-  "testSuite": {
-    "id": "uuid",
-    "name": "テストスイート名",
-    "description": "説明",
-    "preconditions": [
-      {
-        "id": "precond-uuid-1",
-        "content": "スイートの前提条件",
-        "orderKey": "a"
-      }
-    ]
-  },
-  "testCases": [
-    {
-      "id": "case-uuid-1",
-      "title": "テストケース1",
-      "description": "説明",
-      "priority": "HIGH",
-      "orderKey": "a",
-      "preconditions": [
-        {
-          "id": "case-precond-uuid-1",
-          "content": "前提条件",
-          "orderKey": "a"
-        }
-      ],
-      "steps": [
-        {
-          "id": "step-uuid-1",
-          "content": "手順1",
-          "orderKey": "a"
-        }
-      ],
-      "expectedResults": [
-        {
-          "id": "expected-uuid-1",
-          "content": "期待値1",
-          "orderKey": "a"
-        }
-      ]
-    }
-  ]
-}
-```
 
 ### Prisma スキーマ
 
 ```prisma
-model ExecutionSnapshot {
-  id           String   @id @default(uuid()) @db.Uuid
-  executionId  String   @unique @db.Uuid
-  snapshotData Json
-  createdAt    DateTime @default(now())
+model ExecutionTestSuite {
+  id                  String   @id @default(uuid())
+  executionId         String   @unique @map("execution_id")
+  originalTestSuiteId String   @map("original_test_suite_id")
+  name                String   @db.VarChar(200)
+  description         String?  @db.Text
+  createdAt           DateTime @default(now()) @map("created_at")
 
-  execution Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  execution     Execution                        @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  preconditions ExecutionTestSuitePrecondition[]
+  testCases     ExecutionTestCase[]
+
+  @@map("execution_test_suites")
+}
+```
+
+---
+
+## ExecutionTestSuitePrecondition
+
+テストスイート前提条件のスナップショットを保持するテーブル。
+
+### カラム定義
+
+| カラム | 型 | NULL | デフォルト | 説明 |
+|--------|------|------|------------|------|
+| `id` | UUID | NO | gen_random_uuid() | 主キー |
+| `executionTestSuiteId` | UUID | NO | - | 実行テストスイート ID（外部キー） |
+| `originalPreconditionId` | UUID | NO | - | 元の前提条件 ID |
+| `content` | TEXT | NO | - | 前提条件の内容（スナップショット） |
+| `orderKey` | VARCHAR(255) | NO | - | 並び順キー |
+| `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
+
+### Prisma スキーマ
+
+```prisma
+model ExecutionTestSuitePrecondition {
+  id                     String   @id @default(uuid())
+  executionTestSuiteId   String   @map("execution_test_suite_id")
+  originalPreconditionId String   @map("original_precondition_id")
+  content                String   @db.Text
+  orderKey               String   @map("order_key") @db.VarChar(255)
+  createdAt              DateTime @default(now()) @map("created_at")
+
+  executionTestSuite  ExecutionTestSuite            @relation(fields: [executionTestSuiteId], references: [id], onDelete: Cascade)
+  preconditionResults ExecutionPreconditionResult[]
+
+  @@index([executionTestSuiteId])
+  @@index([executionTestSuiteId, orderKey])
+  @@map("execution_test_suite_preconditions")
+}
+```
+
+---
+
+## ExecutionTestCase
+
+テストケースのスナップショットを保持するテーブル。
+
+### カラム定義
+
+| カラム | 型 | NULL | デフォルト | 説明 |
+|--------|------|------|------------|------|
+| `id` | UUID | NO | gen_random_uuid() | 主キー |
+| `executionTestSuiteId` | UUID | NO | - | 実行テストスイート ID（外部キー） |
+| `originalTestCaseId` | UUID | NO | - | 元のテストケース ID |
+| `title` | VARCHAR(200) | NO | - | タイトル（スナップショット） |
+| `description` | TEXT | YES | NULL | 説明（スナップショット） |
+| `priority` | ENUM | NO | - | 優先度（スナップショット） |
+| `orderKey` | VARCHAR(255) | NO | - | 並び順キー |
+| `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
+
+### Prisma スキーマ
+
+```prisma
+model ExecutionTestCase {
+  id                   String           @id @default(uuid())
+  executionTestSuiteId String           @map("execution_test_suite_id")
+  originalTestCaseId   String           @map("original_test_case_id")
+  title                String           @db.VarChar(200)
+  description          String?          @db.Text
+  priority             TestCasePriority
+  orderKey             String           @map("order_key") @db.VarChar(255)
+  createdAt            DateTime         @default(now()) @map("created_at")
+
+  executionTestSuite    ExecutionTestSuite                @relation(fields: [executionTestSuiteId], references: [id], onDelete: Cascade)
+  preconditions         ExecutionTestCasePrecondition[]
+  steps                 ExecutionTestCaseStep[]
+  expectedResults       ExecutionTestCaseExpectedResult[]
+  preconditionResults   ExecutionPreconditionResult[]
+  stepResults           ExecutionStepResult[]
+  expectedResultResults ExecutionExpectedResult[]
+
+  @@index([executionTestSuiteId])
+  @@index([executionTestSuiteId, orderKey])
+  @@map("execution_test_cases")
+}
+```
+
+---
+
+## ExecutionTestCasePrecondition
+
+テストケース前提条件のスナップショットを保持するテーブル。
+
+### カラム定義
+
+| カラム | 型 | NULL | デフォルト | 説明 |
+|--------|------|------|------------|------|
+| `id` | UUID | NO | gen_random_uuid() | 主キー |
+| `executionTestCaseId` | UUID | NO | - | 実行テストケース ID（外部キー） |
+| `originalPreconditionId` | UUID | NO | - | 元の前提条件 ID |
+| `content` | TEXT | NO | - | 前提条件の内容（スナップショット） |
+| `orderKey` | VARCHAR(255) | NO | - | 並び順キー |
+| `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
+
+### Prisma スキーマ
+
+```prisma
+model ExecutionTestCasePrecondition {
+  id                     String   @id @default(uuid())
+  executionTestCaseId    String   @map("execution_test_case_id")
+  originalPreconditionId String   @map("original_precondition_id")
+  content                String   @db.Text
+  orderKey               String   @map("order_key") @db.VarChar(255)
+  createdAt              DateTime @default(now()) @map("created_at")
+
+  executionTestCase   ExecutionTestCase             @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
+  preconditionResults ExecutionPreconditionResult[]
+
+  @@index([executionTestCaseId])
+  @@index([executionTestCaseId, orderKey])
+  @@map("execution_test_case_preconditions")
+}
+```
+
+---
+
+## ExecutionTestCaseStep
+
+テストケース手順のスナップショットを保持するテーブル。
+
+### カラム定義
+
+| カラム | 型 | NULL | デフォルト | 説明 |
+|--------|------|------|------------|------|
+| `id` | UUID | NO | gen_random_uuid() | 主キー |
+| `executionTestCaseId` | UUID | NO | - | 実行テストケース ID（外部キー） |
+| `originalStepId` | UUID | NO | - | 元の手順 ID |
+| `content` | TEXT | NO | - | 手順の内容（スナップショット） |
+| `orderKey` | VARCHAR(255) | NO | - | 並び順キー |
+| `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
+
+### Prisma スキーマ
+
+```prisma
+model ExecutionTestCaseStep {
+  id                  String   @id @default(uuid())
+  executionTestCaseId String   @map("execution_test_case_id")
+  originalStepId      String   @map("original_step_id")
+  content             String   @db.Text
+  orderKey            String   @map("order_key") @db.VarChar(255)
+  createdAt           DateTime @default(now()) @map("created_at")
+
+  executionTestCase ExecutionTestCase     @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
+  stepResults       ExecutionStepResult[]
+
+  @@index([executionTestCaseId])
+  @@index([executionTestCaseId, orderKey])
+  @@map("execution_test_case_steps")
+}
+```
+
+---
+
+## ExecutionTestCaseExpectedResult
+
+テストケース期待結果のスナップショットを保持するテーブル。
+
+### カラム定義
+
+| カラム | 型 | NULL | デフォルト | 説明 |
+|--------|------|------|------------|------|
+| `id` | UUID | NO | gen_random_uuid() | 主キー |
+| `executionTestCaseId` | UUID | NO | - | 実行テストケース ID（外部キー） |
+| `originalExpectedResultId` | UUID | NO | - | 元の期待結果 ID |
+| `content` | TEXT | NO | - | 期待結果の内容（スナップショット） |
+| `orderKey` | VARCHAR(255) | NO | - | 並び順キー |
+| `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
+
+### Prisma スキーマ
+
+```prisma
+model ExecutionTestCaseExpectedResult {
+  id                       String   @id @default(uuid())
+  executionTestCaseId      String   @map("execution_test_case_id")
+  originalExpectedResultId String   @map("original_expected_result_id")
+  content                  String   @db.Text
+  orderKey                 String   @map("order_key") @db.VarChar(255)
+  createdAt                DateTime @default(now()) @map("created_at")
+
+  executionTestCase ExecutionTestCase         @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
+  expectedResults   ExecutionExpectedResult[]
+
+  @@index([executionTestCaseId])
+  @@index([executionTestCaseId, orderKey])
+  @@map("execution_test_case_expected_results")
 }
 ```
 
@@ -159,7 +304,7 @@ model ExecutionSnapshot {
 
 ## ExecutionPreconditionResult
 
-各前提条件の実施結果を管理するテーブル。スナップショット内の ID で紐づけ。
+各前提条件の実施結果を管理するテーブル。スイート前提条件とテストケース前提条件の両方に対応。
 
 ### カラム定義
 
@@ -167,12 +312,16 @@ model ExecutionSnapshot {
 |--------|------|------|------------|------|
 | `id` | UUID | NO | gen_random_uuid() | 主キー |
 | `executionId` | UUID | NO | - | 実行 ID（外部キー） |
-| `snapshotTestCaseId` | UUID | YES | NULL | スナップショット内のテストケース ID（NULL=スイート前提条件） |
-| `snapshotPreconditionId` | UUID | NO | - | スナップショット内の前提条件 ID |
+| `executionTestCaseId` | UUID | YES | NULL | 実行テストケース ID（テストケース前提条件の場合） |
+| `executionSuitePreconditionId` | UUID | YES | NULL | 実行スイート前提条件 ID（スイート前提条件の場合） |
+| `executionCasePreconditionId` | UUID | YES | NULL | 実行ケース前提条件 ID（テストケース前提条件の場合） |
 | `status` | ENUM | NO | UNCHECKED | 確認ステータス |
 | `checkedAt` | TIMESTAMP | YES | NULL | 確認日時 |
 | `note` | TEXT | YES | NULL | メモ |
 | `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
+| `updatedAt` | TIMESTAMP | NO | - | 更新日時 |
+
+※ `executionSuitePreconditionId` と `executionCasePreconditionId` はどちらか一方のみ設定
 
 ### 確認ステータス（前提条件用）
 
@@ -192,19 +341,26 @@ enum PreconditionStatus {
 }
 
 model ExecutionPreconditionResult {
-  id                      String              @id @default(uuid()) @db.Uuid
-  executionId             String              @db.Uuid
-  snapshotTestCaseId      String?             @db.Uuid
-  snapshotPreconditionId  String              @db.Uuid
-  status                  PreconditionStatus  @default(UNCHECKED)
-  checkedAt               DateTime?
-  note                    String?
-  createdAt               DateTime            @default(now())
+  id                           String             @id @default(uuid())
+  executionId                  String             @map("execution_id")
+  executionTestCaseId          String?            @map("execution_test_case_id")
+  executionSuitePreconditionId String?            @map("execution_suite_precondition_id")
+  executionCasePreconditionId  String?            @map("execution_case_precondition_id")
+  status                       PreconditionStatus @default(UNCHECKED)
+  checkedAt                    DateTime?          @map("checked_at")
+  note                         String?            @db.Text
+  createdAt                    DateTime           @default(now()) @map("created_at")
+  updatedAt                    DateTime           @updatedAt @map("updated_at")
 
-  execution Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  execution         Execution                       @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  executionTestCase ExecutionTestCase?              @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
+  suitePrecondition ExecutionTestSuitePrecondition? @relation(fields: [executionSuitePreconditionId], references: [id], onDelete: Cascade)
+  casePrecondition  ExecutionTestCasePrecondition?  @relation(fields: [executionCasePreconditionId], references: [id], onDelete: Cascade)
 
-  @@unique([executionId, snapshotPreconditionId])
+  @@unique([executionId, executionSuitePreconditionId])
+  @@unique([executionId, executionCasePreconditionId])
   @@index([executionId])
+  @@map("execution_precondition_results")
 }
 ```
 
@@ -212,7 +368,7 @@ model ExecutionPreconditionResult {
 
 ## ExecutionStepResult
 
-各手順の実施結果を管理するテーブル。スナップショット内の ID で紐づけ。
+各手順の実施結果を管理するテーブル。
 
 ### カラム定義
 
@@ -220,12 +376,13 @@ model ExecutionPreconditionResult {
 |--------|------|------|------------|------|
 | `id` | UUID | NO | gen_random_uuid() | 主キー |
 | `executionId` | UUID | NO | - | 実行 ID（外部キー） |
-| `snapshotTestCaseId` | UUID | NO | - | スナップショット内のテストケース ID |
-| `snapshotStepId` | UUID | NO | - | スナップショット内の手順 ID |
+| `executionTestCaseId` | UUID | NO | - | 実行テストケース ID（外部キー） |
+| `executionStepId` | UUID | NO | - | 実行ステップ ID（外部キー） |
 | `status` | ENUM | NO | PENDING | 実施ステータス |
 | `executedAt` | TIMESTAMP | YES | NULL | 実施日時 |
 | `note` | TEXT | YES | NULL | メモ |
 | `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
+| `updatedAt` | TIMESTAMP | NO | - | 更新日時 |
 
 ### 実施ステータス（手順用）
 
@@ -245,19 +402,23 @@ enum StepStatus {
 }
 
 model ExecutionStepResult {
-  id                 String     @id @default(uuid()) @db.Uuid
-  executionId        String     @db.Uuid
-  snapshotTestCaseId String     @db.Uuid
-  snapshotStepId     String     @db.Uuid
-  status             StepStatus @default(PENDING)
-  executedAt         DateTime?
-  note               String?
-  createdAt          DateTime   @default(now())
+  id                  String     @id @default(uuid())
+  executionId         String     @map("execution_id")
+  executionTestCaseId String     @map("execution_test_case_id")
+  executionStepId     String     @map("execution_step_id")
+  status              StepStatus @default(PENDING)
+  executedAt          DateTime?  @map("executed_at")
+  note                String?    @db.Text
+  createdAt           DateTime   @default(now()) @map("created_at")
+  updatedAt           DateTime   @updatedAt @map("updated_at")
 
-  execution Execution @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  execution         Execution             @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  executionTestCase ExecutionTestCase     @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
+  executionStep     ExecutionTestCaseStep @relation(fields: [executionStepId], references: [id], onDelete: Cascade)
 
-  @@unique([executionId, snapshotStepId])
+  @@unique([executionId, executionStepId])
   @@index([executionId])
+  @@map("execution_step_results")
 }
 ```
 
@@ -265,7 +426,7 @@ model ExecutionStepResult {
 
 ## ExecutionExpectedResult
 
-各期待値の判定結果を管理するテーブル。スナップショット内の ID で紐づけ。
+各期待値の判定結果を管理するテーブル。
 
 ### カラム定義
 
@@ -273,12 +434,13 @@ model ExecutionStepResult {
 |--------|------|------|------------|------|
 | `id` | UUID | NO | gen_random_uuid() | 主キー |
 | `executionId` | UUID | NO | - | 実行 ID（外部キー） |
-| `snapshotTestCaseId` | UUID | NO | - | スナップショット内のテストケース ID |
-| `snapshotExpectedResultId` | UUID | NO | - | スナップショット内の期待値 ID |
+| `executionTestCaseId` | UUID | NO | - | 実行テストケース ID（外部キー） |
+| `executionExpectedResultId` | UUID | NO | - | 実行期待結果 ID（外部キー） |
 | `status` | ENUM | NO | PENDING | 判定ステータス |
 | `judgedAt` | TIMESTAMP | YES | NULL | 判定日時 |
 | `note` | TEXT | YES | NULL | メモ |
 | `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
+| `updatedAt` | TIMESTAMP | NO | - | 更新日時 |
 
 ### 判定ステータス（期待値用）
 
@@ -302,20 +464,24 @@ enum JudgmentStatus {
 }
 
 model ExecutionExpectedResult {
-  id                        String         @id @default(uuid()) @db.Uuid
-  executionId               String         @db.Uuid
-  snapshotTestCaseId        String         @db.Uuid
-  snapshotExpectedResultId  String         @db.Uuid
+  id                        String         @id @default(uuid())
+  executionId               String         @map("execution_id")
+  executionTestCaseId       String         @map("execution_test_case_id")
+  executionExpectedResultId String         @map("execution_expected_result_id")
   status                    JudgmentStatus @default(PENDING)
-  judgedAt                  DateTime?
-  note                      String?
-  createdAt                 DateTime       @default(now())
+  judgedAt                  DateTime?      @map("judged_at")
+  note                      String?        @db.Text
+  createdAt                 DateTime       @default(now()) @map("created_at")
+  updatedAt                 DateTime       @updatedAt @map("updated_at")
 
-  execution Execution           @relation(fields: [executionId], references: [id], onDelete: Cascade)
-  evidences ExecutionEvidence[]
+  execution               Execution                       @relation(fields: [executionId], references: [id], onDelete: Cascade)
+  executionTestCase       ExecutionTestCase               @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
+  executionExpectedResult ExecutionTestCaseExpectedResult @relation(fields: [executionExpectedResultId], references: [id], onDelete: Cascade)
+  evidences               ExecutionEvidence[]
 
-  @@unique([executionId, snapshotExpectedResultId])
+  @@unique([executionId, executionExpectedResultId])
   @@index([executionId])
+  @@map("execution_expected_results")
 }
 ```
 
@@ -340,40 +506,56 @@ model ExecutionExpectedResult {
 | `uploadedByAgentSessionId` | UUID | YES | NULL | アップロード者 Agent セッション ID（外部キー）※1 |
 | `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
 
-※1: `uploadedByUserId` と `uploadedByAgentSessionId` はどちらか一方のみ設定（排他制約）
+※1: `uploadedByUserId` と `uploadedByAgentSessionId` はどちらか一方のみ設定可
 
 ### Prisma スキーマ
 
 ```prisma
 model ExecutionEvidence {
-  id                        String    @id @default(uuid()) @db.Uuid
-  expectedResultId          String    @db.Uuid
-  fileName                  String    @db.VarChar(255)
-  fileUrl                   String
-  fileType                  String    @db.VarChar(100)
-  fileSize                  BigInt
-  description               String?
-  uploadedByUserId          String?   @db.Uuid
-  uploadedByAgentSessionId  String?   @db.Uuid
-  createdAt                 DateTime  @default(now())
+  id                        String    @id @default(uuid())
+  expectedResultId          String    @map("expected_result_id")
+  fileName                  String    @map("file_name") @db.VarChar(255)
+  fileUrl                   String    @map("file_url")
+  fileType                  String    @map("file_type") @db.VarChar(100)
+  fileSize                  BigInt    @map("file_size")
+  description               String?   @db.Text
+  uploadedByUserId          String?   @map("uploaded_by_user_id")
+  uploadedByAgentSessionId  String?   @map("uploaded_by_agent_session_id")
+  createdAt                 DateTime  @default(now()) @map("created_at")
 
-  expectedResult         ExecutionExpectedResult @relation(fields: [expectedResultId], references: [id], onDelete: Cascade)
-  uploadedByUser         User?                   @relation(fields: [uploadedByUserId], references: [id])
-  uploadedByAgentSession AgentSession?           @relation(fields: [uploadedByAgentSessionId], references: [id])
+  expectedResult ExecutionExpectedResult @relation(fields: [expectedResultId], references: [id], onDelete: Cascade)
+  uploadedBy     User?                   @relation("EvidenceUploader", fields: [uploadedByUserId], references: [id])
+  agentSession   AgentSession?           @relation(fields: [uploadedByAgentSessionId], references: [id])
 
   @@index([expectedResultId])
+  @@map("execution_evidences")
 }
 ```
 
-### 排他制約（SQL）
+---
 
-```sql
--- uploadedByUserId か uploadedByAgentSessionId のどちらか一方のみ設定
-ALTER TABLE "ExecutionEvidence" ADD CONSTRAINT "execution_evidence_uploader_check"
-  CHECK (
-    (uploaded_by_user_id IS NOT NULL AND uploaded_by_agent_session_id IS NULL) OR
-    (uploaded_by_user_id IS NULL AND uploaded_by_agent_session_id IS NOT NULL)
-  );
+## ER 図
+
+```
+Execution
+    │
+    ├──1:1── ExecutionTestSuite
+    │            │
+    │            ├──1:N── ExecutionTestSuitePrecondition ──1:N── ExecutionPreconditionResult
+    │            │
+    │            └──1:N── ExecutionTestCase
+    │                         │
+    │                         ├──1:N── ExecutionTestCasePrecondition ──1:N── ExecutionPreconditionResult
+    │                         │
+    │                         ├──1:N── ExecutionTestCaseStep ──1:N── ExecutionStepResult
+    │                         │
+    │                         └──1:N── ExecutionTestCaseExpectedResult ──1:N── ExecutionExpectedResult
+    │                                                                              │
+    │                                                                              └──1:N── ExecutionEvidence
+    │
+    ├──1:N── ExecutionPreconditionResult
+    ├──1:N── ExecutionStepResult
+    └──1:N── ExecutionExpectedResult
 ```
 
 ---
@@ -383,10 +565,15 @@ ALTER TABLE "ExecutionEvidence" ADD CONSTRAINT "execution_evidence_uploader_chec
 ```
 1. テスト実行開始
    └─▶ Execution レコード作成（status: IN_PROGRESS）
-   └─▶ ExecutionSnapshot 作成（テストスイート・ケースのスナップショット）
-   └─▶ ExecutionPreconditionResult 作成（全前提条件分、スナップショット内IDで紐づけ）
-   └─▶ ExecutionStepResult 作成（全手順分、スナップショット内IDで紐づけ）
-   └─▶ ExecutionExpectedResult 作成（全期待値分、スナップショット内IDで紐づけ）
+   └─▶ ExecutionTestSuite 作成（テストスイートのスナップショット）
+   └─▶ ExecutionTestSuitePrecondition 作成（スイート前提条件のスナップショット）
+   └─▶ ExecutionTestCase 作成（各テストケースのスナップショット）
+       └─▶ ExecutionTestCasePrecondition 作成（ケース前提条件のスナップショット）
+       └─▶ ExecutionTestCaseStep 作成（手順のスナップショット）
+       └─▶ ExecutionTestCaseExpectedResult 作成（期待結果のスナップショット）
+   └─▶ ExecutionPreconditionResult 作成（全前提条件分、スナップショットテーブルのIDで紐づけ）
+   └─▶ ExecutionStepResult 作成（全手順分、スナップショットテーブルのIDで紐づけ）
+   └─▶ ExecutionExpectedResult 作成（全期待値分、スナップショットテーブルのIDで紐づけ）
 
 2. テスト実施中
    └─▶ 前提条件確認 → ExecutionPreconditionResult.status 更新
@@ -414,7 +601,7 @@ ALTER TABLE "ExecutionEvidence" ADD CONSTRAINT "execution_evidence_uploader_chec
 | 機能 ID | 機能 | 説明 |
 |---------|------|------|
 | EX-001 | テスト実行開始 | テストスイート単位でテストを実行（対象環境を選択） |
-| EX-002 | スナップショット作成 | 実行開始時にテストスイート・テストケースをスナップショット |
+| EX-002 | スナップショット作成 | 実行開始時にテストスイート・テストケースを正規化テーブルへスナップショット |
 | EX-003 | 繰り返し実行 | 同じテストスイートを何度でも実行可能 |
 | EX-004 | 手順実施記録 | 各前提条件・手順の実施状況を記録 |
 | EX-005 | 期待値判定記録 | 各期待値の合否を記録 |
