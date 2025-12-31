@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { env } from './config/env.js';
 import { errorHandler } from './middleware/error-handler.js';
+import { mcpAuthenticate } from './middleware/mcp-auth.middleware.js';
 import { createMcpHandler } from './transport/streamable-http.js';
 import { createMcpServer } from './server.js';
 
@@ -27,6 +28,7 @@ export function createApp(): Express {
       'Content-Type',
       'Authorization',
       'X-MCP-Client-Id',
+      'X-MCP-Client-Name',
       'X-MCP-Session-Id',
       'Mcp-Session-Id',
     ],
@@ -50,14 +52,15 @@ export function createApp(): Express {
   // MCPハンドラーを作成
   const mcpHandler = createMcpHandler(mcpServer);
 
-  // MCPエンドポイント（POST /mcp）
-  app.post('/mcp', mcpHandler);
+  // MCPエンドポイント（認証必須）
+  // POST /mcp: メインのMCPリクエスト
+  app.post('/mcp', mcpAuthenticate(), mcpHandler);
 
-  // MCPセッション用GETエンドポイント（SSE用）
-  app.get('/mcp', mcpHandler);
+  // GET /mcp: MCPセッション用SSEエンドポイント
+  app.get('/mcp', mcpAuthenticate(), mcpHandler);
 
-  // MCPセッション終了用DELETEエンドポイント
-  app.delete('/mcp', mcpHandler);
+  // DELETE /mcp: MCPセッション終了
+  app.delete('/mcp', mcpAuthenticate(), mcpHandler);
 
   // エラーハンドリング
   app.use(errorHandler);

@@ -2,6 +2,7 @@ import { createApp } from './app.js';
 import { env } from './config/env.js';
 import { prisma } from '@agentest/db';
 import { cleanupAllSessions } from './transport/streamable-http.js';
+import { heartbeatService } from './services/heartbeat.service.js';
 
 /**
  * MCPサーバー起動
@@ -18,6 +19,9 @@ async function main() {
 
   const app = createApp();
 
+  // ハートビートサービス起動
+  heartbeatService.start();
+
   // サーバー起動
   const server = app.listen(env.PORT, env.HOST, () => {
     console.log(`🚀 MCPサーバーが起動しました: http://${env.HOST}:${env.PORT}`);
@@ -28,6 +32,9 @@ async function main() {
   // グレースフルシャットダウン
   const shutdown = async (signal: string) => {
     console.log(`\n${signal} を受信しました。シャットダウンを開始します...`);
+
+    // ハートビートサービス停止
+    heartbeatService.stop();
 
     // MCPセッションをクリーンアップ
     cleanupAllSessions();
