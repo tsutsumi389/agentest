@@ -1,9 +1,10 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
+import { registerTools } from './tools/index.js';
 
 /**
  * MCPサーバーインスタンスを作成
  *
- * ツールの登録は別タスク（Phase 2以降）で実装
+ * ツールの登録はtoolRegistryに登録されたツールを自動的に登録
  */
 export function createMcpServer(): McpServer {
   const server = new McpServer({
@@ -11,8 +12,8 @@ export function createMcpServer(): McpServer {
     version: '0.0.1',
   });
 
-  // ツール登録は src/tools/index.ts で別途実装予定
-  // registerTools(server);
+  // 登録されたツールをMCPサーバーに追加
+  registerTools(server);
 
   return server;
 }
