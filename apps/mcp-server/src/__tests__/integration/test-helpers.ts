@@ -89,18 +89,26 @@ export async function createTestAgentSession(
 
 /**
  * テストデータをクリーンアップ
+ * 外部キー制約を考慮した順序で削除する
+ * 削除順序: 子テーブル → 親テーブル
  */
 export async function cleanupTestData() {
-  // 外部キー制約を考慮した順序で削除
+  // 1. レビューコメント関連（最も深い子）
   await prisma.reviewCommentReply.deleteMany({});
   await prisma.reviewComment.deleteMany({});
+
+  // 2. 監査ログ
   await prisma.auditLog.deleteMany({});
+
+  // 3. 実行結果関連（Executionの子テーブル）
   await prisma.executionEvidence.deleteMany({});
   await prisma.executionExpectedResult.deleteMany({});
   await prisma.executionStepResult.deleteMany({});
   await prisma.executionPreconditionResult.deleteMany({});
   await prisma.executionSnapshot.deleteMany({});
   await prisma.execution.deleteMany({});
+
+  // 4. テストスイート・テストケース関連
   await prisma.testSuiteHistory.deleteMany({});
   await prisma.testSuitePrecondition.deleteMany({});
   await prisma.testCaseHistory.deleteMany({});
@@ -109,16 +117,24 @@ export async function cleanupTestData() {
   await prisma.testCasePrecondition.deleteMany({});
   await prisma.testCase.deleteMany({});
   await prisma.testSuite.deleteMany({});
+
+  // 5. プロジェクト関連
   await prisma.projectEnvironment.deleteMany({});
   await prisma.projectHistory.deleteMany({});
   await prisma.projectMember.deleteMany({});
   await prisma.agentSession.deleteMany({});
   await prisma.project.deleteMany({});
+
+  // 6. 組織関連
   await prisma.organizationInvitation.deleteMany({});
   await prisma.organizationMember.deleteMany({});
   await prisma.organization.deleteMany({});
+
+  // 7. 認証関連（Userの子テーブル）
   await prisma.session.deleteMany({});
   await prisma.refreshToken.deleteMany({});
   await prisma.account.deleteMany({});
+
+  // 8. ユーザー（最上位の親テーブル）
   await prisma.user.deleteMany({});
 }
