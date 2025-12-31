@@ -52,10 +52,8 @@ class HeartbeatService {
    * タイムアウトチェックを実行
    */
   private async checkTimeouts(): Promise<void> {
-    const count = await agentSessionService.processTimedOutSessions();
-    if (count > 0) {
-      console.log(`${count}件のセッションをタイムアウトとしてマークしました`);
-    }
+    // ログ出力はagentSessionService.processTimedOutSessions()内で行われる
+    await agentSessionService.processTimedOutSessions();
   }
 
   /**

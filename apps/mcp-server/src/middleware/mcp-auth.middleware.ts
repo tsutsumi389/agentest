@@ -2,8 +2,8 @@ import type { Request, Response, NextFunction } from 'express';
 import { prisma } from '@agentest/db';
 import {
   verifyAccessToken,
-  createAuthConfig,
   type JwtPayload,
+  type AuthConfig,
 } from '@agentest/auth';
 import { AuthenticationError } from '@agentest/shared';
 import { env } from '../config/env.js';
@@ -11,12 +11,22 @@ import { env } from '../config/env.js';
 /**
  * MCP用の認証設定を作成
  */
-function getMcpAuthConfig() {
-  return createAuthConfig({
-    JWT_ACCESS_SECRET: env.JWT_ACCESS_SECRET,
-    JWT_REFRESH_SECRET: env.JWT_REFRESH_SECRET,
-    NODE_ENV: env.NODE_ENV,
-  } as NodeJS.ProcessEnv);
+function getMcpAuthConfig(): AuthConfig {
+  return {
+    jwt: {
+      accessSecret: env.JWT_ACCESS_SECRET,
+      refreshSecret: env.JWT_REFRESH_SECRET,
+      accessExpiry: '15m',
+      refreshExpiry: '7d',
+    },
+    cookie: {
+      httpOnly: true,
+      secure: env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+    },
+    oauth: {},
+  };
 }
 
 /**
@@ -79,42 +89,3 @@ export function mcpAuthenticate() {
   };
 }
 
-/**
- * MCP認証（オプショナル）
- * トークンがなくても処理を継続するが、あれば検証する
- */
-export function mcpOptionalAuth() {
-  const config = getMcpAuthConfig();
-
-  return async (
-    req: Request,
-    _res: Response,
-    next: NextFunction
-  ): Promise<void> => {
-    try {
-      const token = extractTokenFromCookie(req);
-
-      if (!token) {
-        return next();
-      }
-
-      try {
-        const payload = verifyAccessToken(token, config);
-        const user = await prisma.user.findUnique({
-          where: { id: payload.sub },
-        });
-
-        if (user && !user.deletedAt) {
-          req.user = user;
-          req.token = payload;
-        }
-      } catch {
-        // トークン検証失敗時は無視して続行
-      }
-
-      next();
-    } catch (error) {
-      next(error);
-    }
-  };
-}

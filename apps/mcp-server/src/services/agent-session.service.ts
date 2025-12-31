@@ -9,11 +9,9 @@ import {
  * セッション管理の設定
  */
 export const SESSION_CONFIG = {
-  // ハートビート間隔（秒）
+  // ハートビート間隔（秒）- クライアントがハートビートを送信する推奨間隔
   HEARTBEAT_INTERVAL: 30,
-  // セッションタイムアウト（秒）- 無操作30分
-  SESSION_TIMEOUT: 30 * 60,
-  // ハートビートタイムアウト（秒）- 途絶60秒後
+  // ハートビートタイムアウト（秒）- ハートビート途絶後にTIMEOUTとする時間
   HEARTBEAT_TIMEOUT: 60,
 } as const;
 

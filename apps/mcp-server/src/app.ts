@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import { env } from './config/env.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { mcpAuthenticate } from './middleware/mcp-auth.middleware.js';
+import { agentSession, recordHeartbeat } from './middleware/agent-session.middleware.js';
 import { createMcpHandler } from './transport/streamable-http.js';
 import { createMcpServer } from './server.js';
 
@@ -29,6 +30,7 @@ export function createApp(): Express {
       'Authorization',
       'X-MCP-Client-Id',
       'X-MCP-Client-Name',
+      'X-MCP-Project-Id',
       'X-MCP-Session-Id',
       'Mcp-Session-Id',
     ],
@@ -52,15 +54,22 @@ export function createApp(): Express {
   // MCPハンドラーを作成
   const mcpHandler = createMcpHandler(mcpServer);
 
-  // MCPエンドポイント（認証必須）
+  // Agentセッションミドルウェア
+  // プロジェクトIDはヘッダーから取得（initializeリクエストでは不要なためrequired: false）
+  const agentSessionMiddleware = agentSession({
+    getProjectId: (req) => req.headers['x-mcp-project-id'] as string | null,
+    required: false,
+  });
+
+  // MCPエンドポイント（認証 → セッション管理 → ハートビート → ハンドラー）
   // POST /mcp: メインのMCPリクエスト
-  app.post('/mcp', mcpAuthenticate(), mcpHandler);
+  app.post('/mcp', mcpAuthenticate(), agentSessionMiddleware, recordHeartbeat(), mcpHandler);
 
   // GET /mcp: MCPセッション用SSEエンドポイント
-  app.get('/mcp', mcpAuthenticate(), mcpHandler);
+  app.get('/mcp', mcpAuthenticate(), agentSessionMiddleware, recordHeartbeat(), mcpHandler);
 
   // DELETE /mcp: MCPセッション終了
-  app.delete('/mcp', mcpAuthenticate(), mcpHandler);
+  app.delete('/mcp', mcpAuthenticate(), agentSessionMiddleware, mcpHandler);
 
   // エラーハンドリング
   app.use(errorHandler);
