@@ -9,7 +9,10 @@ import {
   createTestEnvironment,
   createTestExecution,
   createTestSuite,
-  createTestExecutionSnapshot,
+  createTestExecutionTestSuite,
+  createTestExecutionTestCase,
+  createTestExecutionTestCaseStep,
+  createTestExecutionTestCaseExpectedResult,
   createTestExecutionPreconditionResult,
   createTestExecutionStepResult,
   createTestExecutionExpectedResult,
@@ -195,30 +198,31 @@ describe('Execution Operations API Integration Tests', () => {
   });
 
   describe('GET /api/executions/:executionId/details', () => {
-    it('スナップショットを含む全詳細データを取得できる', async () => {
-      // スナップショットを作成
-      await createTestExecutionSnapshot(execution.id, {
-        testSuite: { name: 'Test Suite' },
-        testCases: [{ id: 'tc-1', title: 'Test Case 1' }],
+    it('正規化テーブルを含む全詳細データを取得できる', async () => {
+      // 正規化テーブルを作成
+      const execTestSuite = await createTestExecutionTestSuite(execution.id, testSuite.id, {
+        name: 'Test Suite',
+      });
+      const execTestCase = await createTestExecutionTestCase(execTestSuite.id, 'tc-1', {
+        title: 'Test Case 1',
+      });
+      const execStep = await createTestExecutionTestCaseStep(execTestCase.id, 'step-1', {
+        content: 'Step 1',
+      });
+      const execExpectedResult = await createTestExecutionTestCaseExpectedResult(execTestCase.id, 'expected-1', {
+        content: 'Expected 1',
       });
 
       // 前提条件結果を作成
-      await createTestExecutionPreconditionResult(execution.id, {
-        snapshotPreconditionId: 'precondition-1',
-        status: 'UNCHECKED',
-      });
+      await createTestExecutionPreconditionResult(execution.id, {});
 
       // ステップ結果を作成
-      await createTestExecutionStepResult(execution.id, {
-        snapshotTestCaseId: 'tc-1',
-        snapshotStepId: 'step-1',
+      await createTestExecutionStepResult(execution.id, execTestCase.id, execStep.id, {
         status: 'PENDING',
       });
 
       // 期待結果を作成
-      await createTestExecutionExpectedResult(execution.id, {
-        snapshotTestCaseId: 'tc-1',
-        snapshotExpectedResultId: 'expected-1',
+      await createTestExecutionExpectedResult(execution.id, execTestCase.id, execExpectedResult.id, {
         status: 'PENDING',
       });
 
@@ -229,7 +233,7 @@ describe('Execution Operations API Integration Tests', () => {
       expect(response.status).toBe(200);
       expect(response.body.execution).toBeDefined();
       expect(response.body.execution.id).toBe(execution.id);
-      expect(response.body.execution.snapshot).toBeDefined();
+      expect(response.body.execution.executionTestSuite).toBeDefined();
       expect(response.body.execution.preconditionResults).toBeDefined();
       expect(response.body.execution.stepResults).toBeDefined();
       expect(response.body.execution.expectedResults).toBeDefined();
@@ -399,7 +403,6 @@ describe('Execution Operations API Integration Tests', () => {
 
     beforeEach(async () => {
       preconditionResult = await createTestExecutionPreconditionResult(execution.id, {
-        snapshotPreconditionId: 'precondition-1',
         status: 'UNCHECKED',
       });
     });
@@ -501,9 +504,17 @@ describe('Execution Operations API Integration Tests', () => {
     let stepResult: Awaited<ReturnType<typeof createTestExecutionStepResult>>;
 
     beforeEach(async () => {
-      stepResult = await createTestExecutionStepResult(execution.id, {
-        snapshotTestCaseId: 'tc-1',
-        snapshotStepId: 'step-1',
+      // 正規化テーブルを作成
+      const execTestSuite = await createTestExecutionTestSuite(execution.id, testSuite.id, {
+        name: 'Test Suite',
+      });
+      const execTestCase = await createTestExecutionTestCase(execTestSuite.id, 'tc-1', {
+        title: 'Test Case 1',
+      });
+      const execStep = await createTestExecutionTestCaseStep(execTestCase.id, 'step-1', {
+        content: 'Step 1',
+      });
+      stepResult = await createTestExecutionStepResult(execution.id, execTestCase.id, execStep.id, {
         status: 'PENDING',
       });
     });
@@ -615,9 +626,17 @@ describe('Execution Operations API Integration Tests', () => {
     let expectedResult: Awaited<ReturnType<typeof createTestExecutionExpectedResult>>;
 
     beforeEach(async () => {
-      expectedResult = await createTestExecutionExpectedResult(execution.id, {
-        snapshotTestCaseId: 'tc-1',
-        snapshotExpectedResultId: 'expected-1',
+      // 正規化テーブルを作成
+      const execTestSuite = await createTestExecutionTestSuite(execution.id, testSuite.id, {
+        name: 'Test Suite',
+      });
+      const execTestCase = await createTestExecutionTestCase(execTestSuite.id, 'tc-1', {
+        title: 'Test Case 1',
+      });
+      const execExpectedResultSnapshot = await createTestExecutionTestCaseExpectedResult(execTestCase.id, 'expected-1', {
+        content: 'Expected 1',
+      });
+      expectedResult = await createTestExecutionExpectedResult(execution.id, execTestCase.id, execExpectedResultSnapshot.id, {
         status: 'PENDING',
       });
     });

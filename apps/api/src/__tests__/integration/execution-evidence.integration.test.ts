@@ -9,6 +9,10 @@ import {
   createTestEnvironment,
   createTestExecution,
   createTestSuite,
+  createTestExecutionTestSuite,
+  createTestExecutionTestCase,
+  createTestExecutionTestCaseExpectedResult,
+  createTestExecutionExpectedResult,
   cleanupTestData,
 } from './test-helpers.js';
 
@@ -135,15 +139,26 @@ describe('Execution Evidence API Integration Tests', () => {
       status: 'IN_PROGRESS',
     });
 
-    // 期待結果を作成
-    expectedResult = await prisma.executionExpectedResult.create({
-      data: {
-        executionId: execution.id,
-        snapshotTestCaseId: 'test-case-1',
-        snapshotExpectedResultId: 'expected-result-1',
-        status: 'PENDING',
-      },
+    // 正規化テーブルを作成
+    const execTestSuite = await createTestExecutionTestSuite(execution.id, testSuite.id, {
+      name: testSuite.name,
     });
+    const execTestCase = await createTestExecutionTestCase(execTestSuite.id, 'original-test-case-1', {
+      title: 'Test Case 1',
+    });
+    const execExpectedResultSnapshot = await createTestExecutionTestCaseExpectedResult(
+      execTestCase.id,
+      'original-expected-result-1',
+      { content: 'Expected Result 1' }
+    );
+
+    // 期待結果を作成
+    expectedResult = await createTestExecutionExpectedResult(
+      execution.id,
+      execTestCase.id,
+      execExpectedResultSnapshot.id,
+      { status: 'PENDING' }
+    );
   });
 
   describe('POST /api/executions/:executionId/expected-results/:expectedResultId/evidences', () => {

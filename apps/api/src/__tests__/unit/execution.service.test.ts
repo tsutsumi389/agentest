@@ -67,46 +67,84 @@ function createMockExecution(overrides: Record<string, unknown> = {}) {
 function createMockExecutionWithDetails(overrides: Record<string, unknown> = {}) {
   return {
     ...createMockExecution(),
-    snapshot: {
-      id: 'snapshot-1',
-      snapshotData: {
-        testSuite: { id: TEST_SUITE_ID, name: 'Test Suite', description: null },
-        preconditions: [],
-        testCases: [],
-      },
+    executionTestSuite: {
+      id: 'exec-suite-1',
+      executionId: TEST_EXECUTION_ID,
+      originalTestSuiteId: TEST_SUITE_ID,
+      name: 'Test Suite',
+      description: null,
+      preconditions: [],
+      testCases: [
+        {
+          id: 'exec-tc-1',
+          executionTestSuiteId: 'exec-suite-1',
+          originalTestCaseId: 'tc-1',
+          title: 'Test Case 1',
+          description: null,
+          priority: 'MEDIUM',
+          orderKey: '00001',
+          preconditions: [],
+          steps: [
+            {
+              id: 'exec-step-1',
+              executionTestCaseId: 'exec-tc-1',
+              originalStepId: 'step-1',
+              content: 'Step 1',
+              orderKey: '00001',
+            },
+          ],
+          expectedResults: [
+            {
+              id: 'exec-expected-1',
+              executionTestCaseId: 'exec-tc-1',
+              originalExpectedResultId: 'expected-1',
+              content: 'Expected 1',
+              orderKey: '00001',
+            },
+          ],
+        },
+      ],
     },
     preconditionResults: [
       {
         id: 'precond-result-1',
         executionId: TEST_EXECUTION_ID,
-        snapshotPreconditionId: 'precond-1',
-        snapshotTestCaseId: null,
+        executionTestCaseId: null,
+        executionSuitePreconditionId: null,
+        executionCasePreconditionId: null,
         status: 'UNCHECKED',
         checkedAt: null,
         note: null,
+        suitePrecondition: null,
+        casePrecondition: null,
+        executionTestCase: null,
       },
     ],
     stepResults: [
       {
         id: 'step-result-1',
         executionId: TEST_EXECUTION_ID,
-        snapshotTestCaseId: 'tc-1',
-        snapshotStepId: 'step-1',
+        executionTestCaseId: 'exec-tc-1',
+        executionStepId: 'exec-step-1',
         status: 'PENDING',
         executedAt: null,
         note: null,
+        executionStep: { id: 'exec-step-1', content: 'Step 1' },
+        executionTestCase: { id: 'exec-tc-1', title: 'Test Case 1' },
       },
     ],
     expectedResults: [
       {
         id: 'expected-result-1',
         executionId: TEST_EXECUTION_ID,
-        snapshotTestCaseId: 'tc-1',
-        snapshotExpectedResultId: 'expected-1',
+        executionTestCaseId: 'exec-tc-1',
+        executionExpectedResultId: 'exec-expected-1',
         status: 'PENDING',
         judgedAt: null,
         note: null,
         evidences: [],
+        executionExpectedResult: { id: 'exec-expected-1', content: 'Expected 1' },
+        executionTestCase: { id: 'exec-tc-1', title: 'Test Case 1' },
       },
     ],
     ...overrides,
@@ -171,14 +209,14 @@ describe('ExecutionService', () => {
       await expect(service.findByIdWithDetails(TEST_EXECUTION_ID)).rejects.toThrow('Execution');
     });
 
-    it('スナップショットを含む', async () => {
+    it('正規化されたテストスイートを含む', async () => {
       const mockExecution = createMockExecutionWithDetails();
       mockExecutionRepo.findByIdWithDetails.mockResolvedValue(mockExecution);
 
       const result = await service.findByIdWithDetails(TEST_EXECUTION_ID);
 
-      expect(result.snapshot).toBeDefined();
-      expect(result.snapshot?.snapshotData).toBeDefined();
+      expect(result.executionTestSuite).toBeDefined();
+      expect(result.executionTestSuite?.name).toBe('Test Suite');
     });
 
     it('前提条件結果を含む', async () => {
@@ -209,8 +247,8 @@ describe('ExecutionService', () => {
           {
             id: 'expected-result-1',
             executionId: TEST_EXECUTION_ID,
-            snapshotTestCaseId: 'tc-1',
-            snapshotExpectedResultId: 'expected-1',
+            executionTestCaseId: 'exec-tc-1',
+            executionExpectedResultId: 'exec-expected-1',
             status: 'PASS',
             judgedAt: new Date(),
             note: 'OK',
@@ -226,6 +264,8 @@ describe('ExecutionService', () => {
                 createdAt: new Date(),
               },
             ],
+            executionExpectedResult: { id: 'exec-expected-1', content: 'Expected 1' },
+            executionTestCase: { id: 'exec-tc-1', title: 'Test Case 1' },
           },
         ],
       });

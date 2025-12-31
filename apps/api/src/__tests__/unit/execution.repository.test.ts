@@ -178,10 +178,10 @@ describe('ExecutionRepository', () => {
       expect(result).toEqual(mockExecution);
     });
 
-    it('snapshot, preconditionResults, stepResults, expectedResultsがincludeされる', async () => {
+    it('executionTestSuite, preconditionResults, stepResults, expectedResultsがincludeされる', async () => {
       const mockExecution = {
         id: 'execution-1',
-        snapshot: { id: 'snapshot-1' },
+        executionTestSuite: { id: 'exec-suite-1', preconditions: [], testCases: [] },
         preconditionResults: [{ id: 'pr-1' }],
         stepResults: [{ id: 'sr-1' }],
         expectedResults: [{ id: 'er-1', evidences: [] }],
@@ -190,7 +190,7 @@ describe('ExecutionRepository', () => {
 
       const result = await repository.findByIdWithDetails('execution-1');
 
-      expect(result?.snapshot).toBeDefined();
+      expect(result?.executionTestSuite).toBeDefined();
       expect(result?.preconditionResults).toBeDefined();
       expect(result?.stepResults).toBeDefined();
       expect(result?.expectedResults).toBeDefined();

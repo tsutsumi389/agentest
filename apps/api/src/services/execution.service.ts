@@ -24,7 +24,7 @@ export class ExecutionService {
   }
 
   /**
-   * 実行をIDで詳細付きで検索（スナップショット、全結果データ含む）
+   * 実行をIDで詳細付きで検索（正規化テーブル、全結果データ含む）
    */
   async findByIdWithDetails(executionId: string) {
     const execution = await this.executionRepo.findByIdWithDetails(executionId);
@@ -33,15 +33,17 @@ export class ExecutionService {
     }
 
     // エビデンスのfileSizeをBigIntからnumberに変換（JSONシリアライズのため）
+    const expectedResults = execution.expectedResults.map((result) => ({
+      ...result,
+      evidences: result.evidences.map((evidence) => ({
+        ...evidence,
+        fileSize: Number(evidence.fileSize),
+      })),
+    }));
+
     return {
       ...execution,
-      expectedResults: execution.expectedResults.map((result) => ({
-        ...result,
-        evidences: result.evidences.map((evidence) => ({
-          ...evidence,
-          fileSize: Number(evidence.fileSize),
-        })),
-      })),
+      expectedResults,
     };
   }
 

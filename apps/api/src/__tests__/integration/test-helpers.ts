@@ -201,7 +201,13 @@ export async function cleanupTestData() {
   await prisma.executionExpectedResult.deleteMany({});
   await prisma.executionStepResult.deleteMany({});
   await prisma.executionPreconditionResult.deleteMany({});
-  await prisma.executionSnapshot.deleteMany({});
+  // 実行時スナップショット（正規化テーブル）
+  await prisma.executionTestCaseExpectedResult.deleteMany({});
+  await prisma.executionTestCaseStep.deleteMany({});
+  await prisma.executionTestCasePrecondition.deleteMany({});
+  await prisma.executionTestCase.deleteMany({});
+  await prisma.executionTestSuitePrecondition.deleteMany({});
+  await prisma.executionTestSuite.deleteMany({});
   await prisma.execution.deleteMany({});
   await prisma.testSuiteHistory.deleteMany({});
   await prisma.testSuitePrecondition.deleteMany({});
@@ -666,16 +672,101 @@ export async function createTestRefreshToken(
 }
 
 /**
- * テスト用実行スナップショットを作成
+ * テスト用実行テストスイート（スナップショット）を作成
  */
-export async function createTestExecutionSnapshot(
+export async function createTestExecutionTestSuite(
   executionId: string,
-  snapshotData: Prisma.InputJsonValue = {}
+  originalTestSuiteId: string,
+  overrides: Partial<{
+    id: string;
+    name: string;
+    description: string | null;
+  }> = {}
 ) {
-  return prisma.executionSnapshot.create({
+  const id = overrides.id ?? randomUUID();
+  return prisma.executionTestSuite.create({
     data: {
+      id,
       executionId,
-      snapshotData,
+      originalTestSuiteId,
+      name: overrides.name ?? `Execution Test Suite ${id.slice(0, 8)}`,
+      description: overrides.description ?? null,
+    },
+  });
+}
+
+/**
+ * テスト用実行テストケース（スナップショット）を作成
+ */
+export async function createTestExecutionTestCase(
+  executionTestSuiteId: string,
+  originalTestCaseId: string,
+  overrides: Partial<{
+    id: string;
+    title: string;
+    description: string | null;
+    priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+    orderKey: string;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.executionTestCase.create({
+    data: {
+      id,
+      executionTestSuiteId,
+      originalTestCaseId,
+      title: overrides.title ?? `Execution Test Case ${id.slice(0, 8)}`,
+      description: overrides.description ?? null,
+      priority: overrides.priority ?? 'MEDIUM',
+      orderKey: overrides.orderKey ?? id.slice(0, 5),
+    },
+  });
+}
+
+/**
+ * テスト用実行テストケースステップ（スナップショット）を作成
+ */
+export async function createTestExecutionTestCaseStep(
+  executionTestCaseId: string,
+  originalStepId: string,
+  overrides: Partial<{
+    id: string;
+    content: string;
+    orderKey: string;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.executionTestCaseStep.create({
+    data: {
+      id,
+      executionTestCaseId,
+      originalStepId,
+      content: overrides.content ?? `Execution Step ${id.slice(0, 8)}`,
+      orderKey: overrides.orderKey ?? id.slice(0, 5),
+    },
+  });
+}
+
+/**
+ * テスト用実行テストケース期待結果（スナップショット）を作成
+ */
+export async function createTestExecutionTestCaseExpectedResult(
+  executionTestCaseId: string,
+  originalExpectedResultId: string,
+  overrides: Partial<{
+    id: string;
+    content: string;
+    orderKey: string;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.executionTestCaseExpectedResult.create({
+    data: {
+      id,
+      executionTestCaseId,
+      originalExpectedResultId,
+      content: overrides.content ?? `Execution Expected Result ${id.slice(0, 8)}`,
+      orderKey: overrides.orderKey ?? id.slice(0, 5),
     },
   });
 }
@@ -687,8 +778,9 @@ export async function createTestExecutionPreconditionResult(
   executionId: string,
   overrides: Partial<{
     id: string;
-    snapshotTestCaseId: string | null;
-    snapshotPreconditionId: string;
+    executionTestCaseId: string | null;
+    executionSuitePreconditionId: string | null;
+    executionCasePreconditionId: string | null;
     status: 'UNCHECKED' | 'MET' | 'NOT_MET';
     note: string | null;
     checkedAt: Date | null;
@@ -699,8 +791,9 @@ export async function createTestExecutionPreconditionResult(
     data: {
       id,
       executionId,
-      snapshotTestCaseId: overrides.snapshotTestCaseId ?? null,
-      snapshotPreconditionId: overrides.snapshotPreconditionId ?? `precondition-${id.slice(0, 8)}`,
+      executionTestCaseId: overrides.executionTestCaseId ?? null,
+      executionSuitePreconditionId: overrides.executionSuitePreconditionId ?? null,
+      executionCasePreconditionId: overrides.executionCasePreconditionId ?? null,
       status: overrides.status ?? 'UNCHECKED',
       note: overrides.note ?? null,
       checkedAt: overrides.checkedAt ?? null,
@@ -713,10 +806,10 @@ export async function createTestExecutionPreconditionResult(
  */
 export async function createTestExecutionStepResult(
   executionId: string,
+  executionTestCaseId: string,
+  executionStepId: string,
   overrides: Partial<{
     id: string;
-    snapshotTestCaseId: string;
-    snapshotStepId: string;
     status: 'PENDING' | 'DONE' | 'SKIPPED';
     note: string | null;
     executedAt: Date | null;
@@ -727,8 +820,8 @@ export async function createTestExecutionStepResult(
     data: {
       id,
       executionId,
-      snapshotTestCaseId: overrides.snapshotTestCaseId ?? `test-case-${id.slice(0, 8)}`,
-      snapshotStepId: overrides.snapshotStepId ?? `step-${id.slice(0, 8)}`,
+      executionTestCaseId,
+      executionStepId,
       status: overrides.status ?? 'PENDING',
       note: overrides.note ?? null,
       executedAt: overrides.executedAt ?? null,
@@ -741,10 +834,10 @@ export async function createTestExecutionStepResult(
  */
 export async function createTestExecutionExpectedResult(
   executionId: string,
+  executionTestCaseId: string,
+  executionExpectedResultId: string,
   overrides: Partial<{
     id: string;
-    snapshotTestCaseId: string;
-    snapshotExpectedResultId: string;
     status: 'PENDING' | 'PASS' | 'FAIL' | 'SKIPPED' | 'NOT_EXECUTABLE';
     note: string | null;
     judgedAt: Date | null;
@@ -755,8 +848,8 @@ export async function createTestExecutionExpectedResult(
     data: {
       id,
       executionId,
-      snapshotTestCaseId: overrides.snapshotTestCaseId ?? `test-case-${id.slice(0, 8)}`,
-      snapshotExpectedResultId: overrides.snapshotExpectedResultId ?? `expected-${id.slice(0, 8)}`,
+      executionTestCaseId,
+      executionExpectedResultId,
       status: overrides.status ?? 'PENDING',
       note: overrides.note ?? null,
       judgedAt: overrides.judgedAt ?? null,
