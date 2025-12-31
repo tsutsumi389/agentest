@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import type {
-  TestCasePrecondition,
-  TestCaseStep,
-  TestCaseExpectedResult,
+  ExecutionTestCaseSnapshot,
   ExecutionPreconditionResult,
   ExecutionStepResult,
   ExecutionExpectedResult,
@@ -31,20 +29,9 @@ const PRIORITY_LABELS: Record<string, string> = {
   LOW: '低',
 };
 
-/** スナップショットのテストケース型 */
-interface SnapshotTestCase {
-  id: string;
-  title: string;
-  description: string | null;
-  priority: string;
-  preconditions: TestCasePrecondition[];
-  steps: TestCaseStep[];
-  expectedResults: TestCaseExpectedResult[];
-}
-
 interface ExecutionTestCaseItemProps {
-  /** スナップショットのテストケース */
-  testCase: SnapshotTestCase;
+  /** 実行時テストケース */
+  testCase: ExecutionTestCaseSnapshot;
   /** テストケースインデックス（表示用） */
   index: number;
   /** 前提条件結果一覧（このテストケースに紐づくもの） */

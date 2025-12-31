@@ -1,8 +1,8 @@
 import { ListChecks } from 'lucide-react';
 import type {
+  ExecutionTestCaseStepSnapshot,
   ExecutionStepResult,
   StepResultStatus,
-  TestCaseStep,
 } from '../../lib/api';
 import {
   stepResultStatusOptions,
@@ -11,8 +11,8 @@ import {
 import { ExecutionResultItem } from './ExecutionResultItem';
 
 interface ExecutionStepListProps {
-  /** スナップショットのステップ一覧 */
-  steps: TestCaseStep[];
+  /** 実行時ステップ一覧 */
+  steps: ExecutionTestCaseStepSnapshot[];
   /** ステップ結果一覧 */
   results: ExecutionStepResult[];
   /** 編集可能か */
@@ -45,9 +45,9 @@ export function ExecutionStepList({
     return null;
   }
 
-  // スナップショットIDから結果をマップ
+  // 正規化テーブルIDから結果をマップ
   const resultMap = new Map(
-    results.map((r) => [r.snapshotStepId, r])
+    results.map((r) => [r.executionStepId, r])
   );
 
   return (

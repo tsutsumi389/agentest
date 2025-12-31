@@ -1,5 +1,7 @@
 import { ClipboardCheck } from 'lucide-react';
 import type {
+  ExecutionTestSuitePrecondition,
+  ExecutionTestCasePrecondition,
   ExecutionPreconditionResult,
   PreconditionResultStatus,
 } from '../../lib/api';
@@ -9,16 +11,12 @@ import {
 } from '../../lib/execution-status';
 import { ExecutionResultItem } from './ExecutionResultItem';
 
-/** スナップショットの前提条件型 */
-interface SnapshotPrecondition {
-  id: string;
-  content: string;
-  orderKey: string;
-}
+/** スイート/ケースの両方の前提条件型を受け入れる */
+type PreconditionSnapshot = ExecutionTestSuitePrecondition | ExecutionTestCasePrecondition;
 
 interface ExecutionPreconditionListProps {
-  /** スナップショットの前提条件一覧 */
-  preconditions: SnapshotPrecondition[];
+  /** 実行時前提条件一覧（スイートレベルまたはケースレベル） */
+  preconditions: PreconditionSnapshot[];
   /** 前提条件結果一覧 */
   results: ExecutionPreconditionResult[];
   /** 編集可能か */
@@ -54,9 +52,9 @@ export function ExecutionPreconditionList({
     return null;
   }
 
-  // スナップショットIDから結果をマップ
+  // 正規化テーブルIDから結果をマップ（スイート/ケースの両方に対応）
   const resultMap = new Map(
-    results.map((r) => [r.snapshotPreconditionId, r])
+    results.map((r) => [r.executionSuitePreconditionId ?? r.executionCasePreconditionId, r])
   );
 
   return (

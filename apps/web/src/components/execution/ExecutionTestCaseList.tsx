@@ -1,8 +1,6 @@
 import { FileText } from 'lucide-react';
 import type {
-  TestCasePrecondition,
-  TestCaseStep,
-  TestCaseExpectedResult,
+  ExecutionTestCaseSnapshot,
   ExecutionPreconditionResult,
   ExecutionStepResult,
   ExecutionExpectedResult,
@@ -12,20 +10,9 @@ import type {
 } from '../../lib/api';
 import { ExecutionTestCaseItem } from './ExecutionTestCaseItem';
 
-/** スナップショットのテストケース型 */
-interface SnapshotTestCase {
-  id: string;
-  title: string;
-  description: string | null;
-  priority: string;
-  preconditions: TestCasePrecondition[];
-  steps: TestCaseStep[];
-  expectedResults: TestCaseExpectedResult[];
-}
-
 interface ExecutionTestCaseListProps {
-  /** スナップショットのテストケース一覧 */
-  testCases: SnapshotTestCase[];
+  /** 実行時テストケース一覧 */
+  testCases: ExecutionTestCaseSnapshot[];
   /** 全前提条件結果一覧 */
   allPreconditionResults: ExecutionPreconditionResult[];
   /** 全ステップ結果一覧 */
@@ -116,13 +103,13 @@ export function ExecutionTestCaseList({
       {testCases.map((testCase, index) => {
         // このテストケースに紐づく結果をフィルタリング
         const preconditionResults = allPreconditionResults.filter(
-          (r) => r.snapshotTestCaseId === testCase.id
+          (r) => r.executionTestCaseId === testCase.id
         );
         const stepResults = allStepResults.filter(
-          (r) => r.snapshotTestCaseId === testCase.id
+          (r) => r.executionTestCaseId === testCase.id
         );
         const expectedResults = allExpectedResults.filter(
-          (r) => r.snapshotTestCaseId === testCase.id
+          (r) => r.executionTestCaseId === testCase.id
         );
 
         return (

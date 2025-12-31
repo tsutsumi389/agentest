@@ -3,6 +3,7 @@ import type {
   PreconditionStatus,
   StepStatus,
   JudgmentStatus,
+  TestCasePriority,
 } from './enums.js';
 
 export interface Execution {
@@ -18,18 +19,87 @@ export interface Execution {
   updatedAt: Date;
 }
 
-export interface ExecutionSnapshot {
+// 実行時スナップショット: テストスイート
+export interface ExecutionTestSuite {
   id: string;
   executionId: string;
-  snapshotData: Record<string, unknown>;
+  originalTestSuiteId: string;
+  name: string;
+  description: string | null;
   createdAt: Date;
+}
+
+// 実行時スナップショット: テストスイート事前条件
+export interface ExecutionTestSuitePrecondition {
+  id: string;
+  executionTestSuiteId: string;
+  originalPreconditionId: string;
+  content: string;
+  orderKey: string;
+  createdAt: Date;
+}
+
+// 実行時スナップショット: テストケース
+export interface ExecutionTestCase {
+  id: string;
+  executionTestSuiteId: string;
+  originalTestCaseId: string;
+  title: string;
+  description: string | null;
+  priority: TestCasePriority;
+  orderKey: string;
+  createdAt: Date;
+}
+
+// 実行時スナップショット: テストケース事前条件
+export interface ExecutionTestCasePrecondition {
+  id: string;
+  executionTestCaseId: string;
+  originalPreconditionId: string;
+  content: string;
+  orderKey: string;
+  createdAt: Date;
+}
+
+// 実行時スナップショット: テストケースステップ
+export interface ExecutionTestCaseStep {
+  id: string;
+  executionTestCaseId: string;
+  originalStepId: string;
+  content: string;
+  orderKey: string;
+  createdAt: Date;
+}
+
+// 実行時スナップショット: テストケース期待結果
+export interface ExecutionTestCaseExpectedResult {
+  id: string;
+  executionTestCaseId: string;
+  originalExpectedResultId: string;
+  content: string;
+  orderKey: string;
+  createdAt: Date;
+}
+
+// ネストされた実行時テストケース（詳細含む）
+export interface ExecutionTestCaseWithDetails extends ExecutionTestCase {
+  preconditions: ExecutionTestCasePrecondition[];
+  steps: ExecutionTestCaseStep[];
+  expectedResults: ExecutionTestCaseExpectedResult[];
+}
+
+// ネストされた実行時テストスイート（詳細含む）
+export interface ExecutionTestSuiteWithDetails extends ExecutionTestSuite {
+  preconditions: ExecutionTestSuitePrecondition[];
+  testCases: ExecutionTestCaseWithDetails[];
 }
 
 export interface ExecutionPreconditionResult {
   id: string;
   executionId: string;
-  snapshotTestCaseId: string | null;
-  snapshotPreconditionId: string;
+  executionTestCaseId: string | null;
+  executionSuitePreconditionId: string | null;
+  executionCasePreconditionId: string | null;
   status: PreconditionStatus;
   checkedAt: Date | null;
   note: string | null;
@@ -40,8 +110,8 @@ export interface ExecutionPreconditionResult {
 export interface ExecutionStepResult {
   id: string;
   executionId: string;
-  snapshotTestCaseId: string;
-  snapshotStepId: string;
+  executionTestCaseId: string;
+  executionStepId: string;
   status: StepStatus;
   executedAt: Date | null;
   note: string | null;
@@ -52,8 +122,8 @@ export interface ExecutionStepResult {
 export interface ExecutionExpectedResult {
   id: string;
   executionId: string;
-  snapshotTestCaseId: string;
-  snapshotExpectedResultId: string;
+  executionTestCaseId: string;
+  executionExpectedResultId: string;
   status: JudgmentStatus;
   judgedAt: Date | null;
   note: string | null;
@@ -90,6 +160,7 @@ export interface ExecutionPublic {
 }
 
 export interface ExecutionWithResults extends ExecutionPublic {
+  executionTestSuite: ExecutionTestSuiteWithDetails | null;
   preconditionResults: ExecutionPreconditionResult[];
   stepResults: ExecutionStepResult[];
   expectedResults: ExecutionExpectedResult[];

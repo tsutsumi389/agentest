@@ -12,7 +12,7 @@ export async function setup() {
 
   try {
     // スキーマを同期（db:pushはマイグレーションファイルが不要）
-    execSync('pnpm --filter @agentest/db db:push --skip-generate', {
+    execSync('pnpm --filter @agentest/db db:push --skip-generate --accept-data-loss', {
       stdio: 'inherit',
       env: {
         ...process.env,

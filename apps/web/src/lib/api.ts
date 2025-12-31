@@ -528,49 +528,99 @@ export interface Execution {
   environment?: { id: string; name: string; slug: string };
 }
 
-/** スナップショットデータ型 */
-export interface ExecutionSnapshot {
-  testSuite: {
-    id: string;
-    name: string;
-    description: string | null;
-  };
-  preconditions: Array<{
-    id: string;
-    content: string;
-    orderKey: string;
-  }>;
-  testCases: Array<{
-    id: string;
-    title: string;
-    description: string | null;
-    priority: string;
-    preconditions: TestCasePrecondition[];
-    steps: TestCaseStep[];
-    expectedResults: TestCaseExpectedResult[];
-  }>;
+/** 実行時テストスイート事前条件 */
+export interface ExecutionTestSuitePrecondition {
+  id: string;
+  executionTestSuiteId: string;
+  originalPreconditionId: string;
+  content: string;
+  orderKey: string;
+  createdAt: string;
+}
+
+/** 実行時テストケース事前条件 */
+export interface ExecutionTestCasePrecondition {
+  id: string;
+  executionTestCaseId: string;
+  originalPreconditionId: string;
+  content: string;
+  orderKey: string;
+  createdAt: string;
+}
+
+/** 実行時テストケースステップ */
+export interface ExecutionTestCaseStepSnapshot {
+  id: string;
+  executionTestCaseId: string;
+  originalStepId: string;
+  content: string;
+  orderKey: string;
+  createdAt: string;
+}
+
+/** 実行時テストケース期待結果 */
+export interface ExecutionTestCaseExpectedResultSnapshot {
+  id: string;
+  executionTestCaseId: string;
+  originalExpectedResultId: string;
+  content: string;
+  orderKey: string;
+  createdAt: string;
+}
+
+/** 実行時テストケース（詳細含む） */
+export interface ExecutionTestCaseSnapshot {
+  id: string;
+  executionTestSuiteId: string;
+  originalTestCaseId: string;
+  title: string;
+  description: string | null;
+  priority: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+  orderKey: string;
+  createdAt: string;
+  preconditions: ExecutionTestCasePrecondition[];
+  steps: ExecutionTestCaseStepSnapshot[];
+  expectedResults: ExecutionTestCaseExpectedResultSnapshot[];
+}
+
+/** 実行時テストスイート（正規化テーブル） */
+export interface ExecutionTestSuite {
+  id: string;
+  executionId: string;
+  originalTestSuiteId: string;
+  name: string;
+  description: string | null;
+  createdAt: string;
+  preconditions: ExecutionTestSuitePrecondition[];
+  testCases: ExecutionTestCaseSnapshot[];
 }
 
 /** 前提条件結果 */
 export interface ExecutionPreconditionResult {
   id: string;
   executionId: string;
-  snapshotPreconditionId: string;
-  snapshotTestCaseId: string | null;
+  executionTestCaseId: string | null;
+  executionSuitePreconditionId: string | null;
+  executionCasePreconditionId: string | null;
   status: 'UNCHECKED' | 'MET' | 'NOT_MET';
   checkedAt: string | null;
   note: string | null;
+  suitePrecondition?: ExecutionTestSuitePrecondition | null;
+  casePrecondition?: ExecutionTestCasePrecondition | null;
+  executionTestCase?: { id: string; title: string } | null;
 }
 
 /** ステップ結果 */
 export interface ExecutionStepResult {
   id: string;
   executionId: string;
-  snapshotTestCaseId: string;
-  snapshotStepId: string;
+  executionTestCaseId: string;
+  executionStepId: string;
   status: 'PENDING' | 'DONE' | 'SKIPPED';
   executedAt: string | null;
   note: string | null;
+  executionStep?: ExecutionTestCaseStepSnapshot;
+  executionTestCase?: { id: string; title: string };
 }
 
 /** エビデンス */
@@ -589,18 +639,20 @@ export interface ExecutionEvidence {
 export interface ExecutionExpectedResult {
   id: string;
   executionId: string;
-  snapshotTestCaseId: string;
-  snapshotExpectedResultId: string;
+  executionTestCaseId: string;
+  executionExpectedResultId: string;
   status: 'PENDING' | 'PASS' | 'FAIL' | 'SKIPPED' | 'NOT_EXECUTABLE';
   judgedAt: string | null;
   note: string | null;
   evidences: ExecutionEvidence[];
+  executionExpectedResult?: ExecutionTestCaseExpectedResultSnapshot;
+  executionTestCase?: { id: string; title: string };
 }
 
 /** 詳細付き実行 */
 export interface ExecutionWithDetails extends Execution {
   testSuite: { id: string; name: string; projectId: string };
-  snapshot: { snapshotData: ExecutionSnapshot };
+  executionTestSuite: ExecutionTestSuite | null;
   preconditionResults: ExecutionPreconditionResult[];
   stepResults: ExecutionStepResult[];
   expectedResults: ExecutionExpectedResult[];
