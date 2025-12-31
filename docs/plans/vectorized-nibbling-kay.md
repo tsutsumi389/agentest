@@ -1,0 +1,295 @@
+# MCP サーバー基盤 実装計画
+
+## 概要
+
+Agentest の MCPサーバー基盤を実装し、Coding Agent（Claude Code等）からテスト管理ツールを利用可能にする。
+
+## 技術仕様
+
+| 項目 | 仕様 |
+|------|------|
+| トランスポート | Streamable HTTP + SSE |
+| エンドポイント | `POST /mcp` |
+| 認証 | OAuth認証共有（HttpOnly Cookie） |
+| 認可 | プロジェクト権限を継承 |
+| SDK | `@modelcontextprotocol/sdk` |
+
+## ディレクトリ構造
+
+```
+apps/mcp-server/
+├── package.json
+├── tsconfig.json
+├── vitest.config.ts
+├── src/
+│   ├── index.ts                      # エントリーポイント
+│   ├── app.ts                        # Express アプリ設定
+│   ├── server.ts                     # MCP サーバー定義
+│   ├── config/
+│   │   └── env.ts                    # 環境変数設定
+│   ├── transport/
+│   │   └── streamable-http.ts        # Streamable HTTP トランスポート
+│   ├── middleware/
+│   │   ├── mcp-auth.middleware.ts    # MCP 用認証
+│   │   ├── agent-session.middleware.ts # Agent セッション管理
+│   │   └── error-handler.ts          # エラーハンドリング
+│   ├── tools/                        # MCP ツール定義
+│   │   ├── index.ts
+│   │   ├── project/
+│   │   │   ├── list-projects.ts
+│   │   │   └── get-project.ts
+│   │   ├── test-suite/
+│   │   │   ├── create-test-suite.ts
+│   │   │   ├── update-test-suite.ts
+│   │   │   ├── list-test-suites.ts
+│   │   │   └── get-test-suite.ts
+│   │   ├── test-case/
+│   │   │   ├── create-test-case.ts
+│   │   │   ├── update-test-case.ts
+│   │   │   ├── list-test-cases.ts
+│   │   │   └── get-test-case.ts
+│   │   └── execution/
+│   │       ├── start-execution.ts
+│   │       ├── record-result.ts
+│   │       └── complete-execution.ts
+│   ├── services/
+│   │   ├── agent-session.service.ts
+│   │   └── heartbeat.service.ts
+│   ├── repositories/
+│   │   └── agent-session.repository.ts
+│   ├── types/
+│   │   └── mcp.d.ts
+│   └── __tests__/
+│       ├── unit/
+│       └── integration/
+```
+
+---
+
+## 実装フェーズ
+
+### Phase 1: 基盤構築
+
+**目標**: MCP サーバーの基本構造を作成し、POST /mcp でリクエストを受け付けられる状態にする
+
+| # | タスク | ファイル |
+|---|--------|----------|
+| 1.1 | package.json 作成 | `apps/mcp-server/package.json` |
+| 1.2 | tsconfig.json 作成 | `apps/mcp-server/tsconfig.json` |
+| 1.3 | 環境変数設定 | `src/config/env.ts` |
+| 1.4 | Express アプリ設定 | `src/app.ts` |
+| 1.5 | MCP サーバー初期化 | `src/server.ts` |
+| 1.6 | Streamable HTTP トランスポート | `src/transport/streamable-http.ts` |
+| 1.7 | エントリーポイント | `src/index.ts` |
+
+**依存パッケージ**:
+```json
+{
+  "dependencies": {
+    "@agentest/auth": "workspace:*",
+    "@agentest/db": "workspace:*",
+    "@agentest/shared": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.10.0",
+    "cookie-parser": "catalog:",
+    "cors": "catalog:",
+    "express": "catalog:",
+    "helmet": "catalog:",
+    "zod": "catalog:"
+  }
+}
+```
+
+### Phase 2: 認証・セッション管理
+
+**目標**: Cookie ベースの認証と AgentSession によるセッション管理を実装
+
+| # | タスク | ファイル |
+|---|--------|----------|
+| 2.1 | MCP 認証ミドルウェア | `src/middleware/mcp-auth.middleware.ts` |
+| 2.2 | Agent セッションミドルウェア | `src/middleware/agent-session.middleware.ts` |
+| 2.3 | AgentSession リポジトリ | `src/repositories/agent-session.repository.ts` |
+| 2.4 | AgentSession サービス | `src/services/agent-session.service.ts` |
+| 2.5 | ハートビートサービス | `src/services/heartbeat.service.ts` |
+| 2.6 | エラーハンドラー | `src/middleware/error-handler.ts` |
+
+**認証フロー**:
+1. Cookie から access_token を抽出
+2. `@agentest/auth` の `verifyAccessToken` で JWT 検証
+3. X-MCP-Client-Id ヘッダーから Agent 識別情報取得
+4. AgentSession 作成/更新
+5. req.agentSession にセッション情報を設定
+
+**セッション管理**:
+- ハートビート間隔: 30秒
+- セッションタイムアウト: 無操作30分
+- ハートビートタイムアウト: 途絶60秒後に TIMEOUT
+
+### Phase 3: プロジェクト/テストスイートツール
+
+**目標**: プロジェクトとテストスイートの CRUD ツールを実装
+
+| # | タスク | ファイル |
+|---|--------|----------|
+| 3.1 | ツール登録基盤 | `src/tools/index.ts` |
+| 3.2 | list_projects ツール | `src/tools/project/list-projects.ts` |
+| 3.3 | get_project ツール | `src/tools/project/get-project.ts` |
+| 3.4 | create_test_suite ツール | `src/tools/test-suite/create-test-suite.ts` |
+| 3.5 | update_test_suite ツール | `src/tools/test-suite/update-test-suite.ts` |
+| 3.6 | list_test_suites ツール | `src/tools/test-suite/list-test-suites.ts` |
+| 3.7 | get_test_suite ツール | `src/tools/test-suite/get-test-suite.ts` |
+
+**ツール実装パターン**:
+```typescript
+server.tool(
+  "create_test_suite",
+  "新しいテストスイートを作成します",
+  zodSchema.shape,
+  async (args, context) => {
+    const agentSessionId = context.meta?.agentSessionId;
+    const result = await service.createByAgent(agentSessionId, args);
+    return { content: [{ type: "text", text: JSON.stringify(result) }] };
+  }
+);
+```
+
+### Phase 4: テストケース/実行ツール
+
+**目標**: テストケースの CRUD とテスト実行ツールを実装
+
+| # | タスク | ファイル |
+|---|--------|----------|
+| 4.1 | create_test_case ツール | `src/tools/test-case/create-test-case.ts` |
+| 4.2 | update_test_case ツール | `src/tools/test-case/update-test-case.ts` |
+| 4.3 | list_test_cases ツール | `src/tools/test-case/list-test-cases.ts` |
+| 4.4 | get_test_case ツール | `src/tools/test-case/get-test-case.ts` |
+| 4.5 | start_execution ツール | `src/tools/execution/start-execution.ts` |
+| 4.6 | record_result ツール | `src/tools/execution/record-result.ts` |
+| 4.7 | complete_execution ツール | `src/tools/execution/complete-execution.ts` |
+
+**履歴追跡**: 全ての作成/更新で `createdByAgentSessionId` / `changedByAgentSessionId` を設定
+
+### Phase 5: テスト・統合
+
+**目標**: ユニットテストと結合テストを作成し、Docker 設定を更新
+
+| # | タスク | ファイル |
+|---|--------|----------|
+| 5.1 | vitest 設定 | `vitest.config.ts` |
+| 5.2 | ツールユニットテスト | `src/__tests__/unit/tools/` |
+| 5.3 | サービスユニットテスト | `src/__tests__/unit/services/` |
+| 5.4 | 結合テスト | `src/__tests__/integration/` |
+| 5.5 | Docker Compose 更新 | `docker/docker-compose.yml` |
+
+---
+
+## MCPツール一覧
+
+| ツール名 | 説明 | 権限 |
+|----------|------|------|
+| `list_projects` | プロジェクト一覧取得 | READ |
+| `get_project` | プロジェクト詳細取得 | READ |
+| `create_test_suite` | テストスイート作成 | WRITE |
+| `update_test_suite` | テストスイート更新 | WRITE |
+| `list_test_suites` | テストスイート一覧 | READ |
+| `get_test_suite` | テストスイート詳細 | READ |
+| `create_test_case` | テストケース作成 | WRITE |
+| `update_test_case` | テストケース更新 | WRITE |
+| `list_test_cases` | テストケース一覧 | READ |
+| `get_test_case` | テストケース詳細 | READ |
+| `start_execution` | テスト実行開始 | WRITE |
+| `record_result` | 結果記録 | WRITE |
+| `complete_execution` | 実行完了 | WRITE |
+
+---
+
+## 重要な実装ポイント
+
+### 認証ミドルウェア（参照: `packages/auth/src/middleware.ts`）
+
+```typescript
+// MCP 用に拡張
+export function mcpAuthenticate() {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    // 1. Cookie から access_token 抽出
+    const token = req.cookies?.access_token;
+
+    // 2. JWT 検証（既存の verifyAccessToken を使用）
+    const payload = verifyAccessToken(token, config);
+
+    // 3. Agent 識別ヘッダー取得
+    const clientId = req.headers['x-mcp-client-id'];
+    const sessionId = req.headers['x-mcp-session-id'];
+
+    // 4. AgentSession 処理
+    // ...
+  };
+}
+```
+
+### Express アプリ設定（参照: `apps/api/src/app.ts`）
+
+```typescript
+export function createApp() {
+  const app = express();
+
+  app.use(helmet());
+  app.use(cors({ origin: env.CORS_ORIGIN, credentials: true }));
+  app.use(cookieParser());
+
+  // MCP エンドポイント
+  app.post('/mcp', mcpAuthenticate(), mcpHandler);
+
+  app.use(errorHandler);
+  return app;
+}
+```
+
+### AgentSession モデル（参照: `packages/db/prisma/schema.prisma:752-780`）
+
+```prisma
+model AgentSession {
+  id            String             @id @default(uuid())
+  projectId     String             @map("project_id")
+  clientId      String             @map("client_id")
+  clientName    String?            @map("client_name")
+  status        AgentSessionStatus @default(ACTIVE)
+  startedAt     DateTime           @default(now())
+  lastHeartbeat DateTime           @default(now())
+  endedAt       DateTime?
+  // ... リレーション
+}
+```
+
+---
+
+## クリティカルファイル
+
+| ファイル | 参照目的 |
+|----------|----------|
+| `packages/auth/src/middleware.ts` | 認証ミドルウェアパターン |
+| `apps/api/src/app.ts` | Express アプリ設定パターン |
+| `apps/api/src/services/test-suite.service.ts` | サービス層パターン |
+| `packages/db/prisma/schema.prisma` | AgentSession モデル定義 |
+| `packages/shared/src/errors/index.ts` | エラークラス |
+
+---
+
+## Docker 設定
+
+```yaml
+# docker/docker-compose.yml に追加
+mcp-server:
+  build:
+    context: ..
+    dockerfile: docker/Dockerfile.dev
+  command: pnpm --filter @agentest/mcp-server dev
+  ports:
+    - "3002:3002"
+  environment:
+    - DATABASE_URL=postgresql://postgres:postgres@db:5432/agentest
+    - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+    - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+    - CORS_ORIGIN=http://localhost:5173
+  depends_on:
+    - db
+```
