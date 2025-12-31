@@ -696,6 +696,30 @@ export async function createTestExecutionTestSuite(
 }
 
 /**
+ * テスト用実行スイート前提条件（スナップショット）を作成
+ */
+export async function createTestExecutionTestSuitePrecondition(
+  executionTestSuiteId: string,
+  originalPreconditionId: string,
+  overrides: Partial<{
+    id: string;
+    content: string;
+    orderKey: string;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.executionTestSuitePrecondition.create({
+    data: {
+      id,
+      executionTestSuiteId,
+      originalPreconditionId,
+      content: overrides.content ?? `Execution Suite Precondition ${id.slice(0, 8)}`,
+      orderKey: overrides.orderKey ?? id.slice(0, 5),
+    },
+  });
+}
+
+/**
  * テスト用実行テストケース（スナップショット）を作成
  */
 export async function createTestExecutionTestCase(
@@ -718,6 +742,30 @@ export async function createTestExecutionTestCase(
       title: overrides.title ?? `Execution Test Case ${id.slice(0, 8)}`,
       description: overrides.description ?? null,
       priority: overrides.priority ?? 'MEDIUM',
+      orderKey: overrides.orderKey ?? id.slice(0, 5),
+    },
+  });
+}
+
+/**
+ * テスト用実行ケース前提条件（スナップショット）を作成
+ */
+export async function createTestExecutionTestCasePrecondition(
+  executionTestCaseId: string,
+  originalPreconditionId: string,
+  overrides: Partial<{
+    id: string;
+    content: string;
+    orderKey: string;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.executionTestCasePrecondition.create({
+    data: {
+      id,
+      executionTestCaseId,
+      originalPreconditionId,
+      content: overrides.content ?? `Execution Case Precondition ${id.slice(0, 8)}`,
       orderKey: overrides.orderKey ?? id.slice(0, 5),
     },
   });

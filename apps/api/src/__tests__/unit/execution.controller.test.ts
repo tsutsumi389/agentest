@@ -96,7 +96,7 @@ describe('ExecutionController', () => {
       const mockExecution = {
         id: TEST_EXECUTION_ID,
         status: 'IN_PROGRESS',
-        snapshot: {},
+        executionTestSuite: {},
         preconditionResults: [],
         stepResults: [],
         expectedResults: [],
