@@ -136,6 +136,35 @@ services:
       timeout: 10s
       retries: 3
 
+  # MCP サーバー (AI Agent連携)
+  mcp:
+    <<: *env-file
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.mcp
+    container_name: agentest-mcp
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${DB_USER:-agentest}:${DB_PASSWORD:-agentest}@db:5432/${DB_NAME:-agentest}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-agentest}@redis:6379
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      PORT: 3004
+    ports:
+      - "3004:3004"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   # Web フロントエンド
   # 本番: nginx (port 80)、開発: vite dev server (port 5173)
   web:
