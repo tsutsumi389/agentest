@@ -4,6 +4,8 @@
 
 Agentest の MCPサーバー基盤を実装し、Coding Agent（Claude Code等）からテスト管理ツールを利用可能にする。
 
+**注意**: 本計画ではMCPサーバーの基盤部分のみを実装する。MCPツールは別タスクで作成する。
+
 ## 技術仕様
 
 | 項目 | 仕様 |
@@ -33,25 +35,8 @@ apps/mcp-server/
 │   │   ├── mcp-auth.middleware.ts    # MCP 用認証
 │   │   ├── agent-session.middleware.ts # Agent セッション管理
 │   │   └── error-handler.ts          # エラーハンドリング
-│   ├── tools/                        # MCP ツール定義
-│   │   ├── index.ts
-│   │   ├── project/
-│   │   │   ├── list-projects.ts
-│   │   │   └── get-project.ts
-│   │   ├── test-suite/
-│   │   │   ├── create-test-suite.ts
-│   │   │   ├── update-test-suite.ts
-│   │   │   ├── list-test-suites.ts
-│   │   │   └── get-test-suite.ts
-│   │   ├── test-case/
-│   │   │   ├── create-test-case.ts
-│   │   │   ├── update-test-case.ts
-│   │   │   ├── list-test-cases.ts
-│   │   │   └── get-test-case.ts
-│   │   └── execution/
-│   │       ├── start-execution.ts
-│   │       ├── record-result.ts
-│   │       └── complete-execution.ts
+│   ├── tools/                        # MCP ツール定義（別タスクで実装）
+│   │   └── index.ts                  # ツール登録基盤のみ
 │   ├── services/
 │   │   ├── agent-session.service.ts
 │   │   └── heartbeat.service.ts
@@ -124,81 +109,18 @@ apps/mcp-server/
 - セッションタイムアウト: 無操作30分
 - ハートビートタイムアウト: 途絶60秒後に TIMEOUT
 
-### Phase 3: プロジェクト/テストスイートツール
-
-**目標**: プロジェクトとテストスイートの CRUD ツールを実装
-
-| # | タスク | ファイル |
-|---|--------|----------|
-| 3.1 | ツール登録基盤 | `src/tools/index.ts` |
-| 3.2 | list_projects ツール | `src/tools/project/list-projects.ts` |
-| 3.3 | get_project ツール | `src/tools/project/get-project.ts` |
-| 3.4 | create_test_suite ツール | `src/tools/test-suite/create-test-suite.ts` |
-| 3.5 | update_test_suite ツール | `src/tools/test-suite/update-test-suite.ts` |
-| 3.6 | list_test_suites ツール | `src/tools/test-suite/list-test-suites.ts` |
-| 3.7 | get_test_suite ツール | `src/tools/test-suite/get-test-suite.ts` |
-
-**ツール実装パターン**:
-```typescript
-server.tool(
-  "create_test_suite",
-  "新しいテストスイートを作成します",
-  zodSchema.shape,
-  async (args, context) => {
-    const agentSessionId = context.meta?.agentSessionId;
-    const result = await service.createByAgent(agentSessionId, args);
-    return { content: [{ type: "text", text: JSON.stringify(result) }] };
-  }
-);
-```
-
-### Phase 4: テストケース/実行ツール
-
-**目標**: テストケースの CRUD とテスト実行ツールを実装
-
-| # | タスク | ファイル |
-|---|--------|----------|
-| 4.1 | create_test_case ツール | `src/tools/test-case/create-test-case.ts` |
-| 4.2 | update_test_case ツール | `src/tools/test-case/update-test-case.ts` |
-| 4.3 | list_test_cases ツール | `src/tools/test-case/list-test-cases.ts` |
-| 4.4 | get_test_case ツール | `src/tools/test-case/get-test-case.ts` |
-| 4.5 | start_execution ツール | `src/tools/execution/start-execution.ts` |
-| 4.6 | record_result ツール | `src/tools/execution/record-result.ts` |
-| 4.7 | complete_execution ツール | `src/tools/execution/complete-execution.ts` |
-
-**履歴追跡**: 全ての作成/更新で `createdByAgentSessionId` / `changedByAgentSessionId` を設定
-
-### Phase 5: テスト・統合
+### Phase 3: テスト・統合
 
 **目標**: ユニットテストと結合テストを作成し、Docker 設定を更新
 
 | # | タスク | ファイル |
 |---|--------|----------|
-| 5.1 | vitest 設定 | `vitest.config.ts` |
-| 5.2 | ツールユニットテスト | `src/__tests__/unit/tools/` |
-| 5.3 | サービスユニットテスト | `src/__tests__/unit/services/` |
-| 5.4 | 結合テスト | `src/__tests__/integration/` |
-| 5.5 | Docker Compose 更新 | `docker/docker-compose.yml` |
-
----
-
-## MCPツール一覧
-
-| ツール名 | 説明 | 権限 |
-|----------|------|------|
-| `list_projects` | プロジェクト一覧取得 | READ |
-| `get_project` | プロジェクト詳細取得 | READ |
-| `create_test_suite` | テストスイート作成 | WRITE |
-| `update_test_suite` | テストスイート更新 | WRITE |
-| `list_test_suites` | テストスイート一覧 | READ |
-| `get_test_suite` | テストスイート詳細 | READ |
-| `create_test_case` | テストケース作成 | WRITE |
-| `update_test_case` | テストケース更新 | WRITE |
-| `list_test_cases` | テストケース一覧 | READ |
-| `get_test_case` | テストケース詳細 | READ |
-| `start_execution` | テスト実行開始 | WRITE |
-| `record_result` | 結果記録 | WRITE |
-| `complete_execution` | 実行完了 | WRITE |
+| 3.1 | vitest 設定 | `vitest.config.ts` |
+| 3.2 | ミドルウェアユニットテスト | `src/__tests__/unit/middleware/` |
+| 3.3 | サービスユニットテスト | `src/__tests__/unit/services/` |
+| 3.4 | 結合テスト（認証・セッション） | `src/__tests__/integration/` |
+| 3.5 | Docker Compose 更新 | `docker/docker-compose.yml` |
+| 3.6 | ツール登録基盤 | `src/tools/index.ts` |
 
 ---
 
