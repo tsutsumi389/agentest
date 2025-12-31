@@ -20,7 +20,7 @@ export function createApp(): Express {
 
   // CORS設定
   app.use(cors({
-    origin: env.CORS_ORIGIN.split(','),
+    origin: env.CORS_ORIGIN.split(',').filter(Boolean),
     credentials: true,
     methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: [
@@ -33,8 +33,8 @@ export function createApp(): Express {
     exposedHeaders: ['Mcp-Session-Id'],
   }));
 
-  // ボディパーサー（MCP用にJSONを許可）
-  app.use(express.json({ limit: '10mb' }));
+  // ボディパーサー（MCP用途では1MBで十分）
+  app.use(express.json({ limit: '1mb' }));
 
   // クッキーパーサー
   app.use(cookieParser());

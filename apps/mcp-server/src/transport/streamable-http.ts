@@ -3,7 +3,19 @@ import { randomUUID } from 'crypto';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { McpServer } from '../server.js';
 
+/**
+ * JSON-RPCリクエストの型定義
+ */
+interface JsonRpcRequest {
+  jsonrpc?: string;
+  method?: string;
+  params?: unknown;
+  id?: string | number | null;
+}
+
 // セッションIDをキーとしたトランスポートの管理
+// TODO: Phase 2でハートビートベースのセッションタイムアウトを実装
+// TODO: 複数インスタンス対応時はRedis/DBベースのセッションストアへ移行
 const transports = new Map<string, StreamableHTTPServerTransport>();
 
 /**
@@ -61,8 +73,7 @@ async function handlePost(
   }
 
   // 新しいセッションを作成（初期化リクエストの場合）
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const body = req.body as any;
+  const body = req.body as JsonRpcRequest;
   if (body?.method === 'initialize') {
     const newSessionId = randomUUID();
     const transport = new StreamableHTTPServerTransport({

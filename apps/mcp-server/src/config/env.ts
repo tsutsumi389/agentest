@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+// 本番環境かどうかを判定
+const isProduction = process.env.NODE_ENV === 'production';
+
 // 環境変数スキーマ
 const envSchema = z.object({
   // サーバー設定
@@ -11,8 +14,13 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url(),
 
   // JWT（認証用）
-  JWT_ACCESS_SECRET: z.string().min(32).default('development-access-secret-key-32ch'),
-  JWT_REFRESH_SECRET: z.string().min(32).default('development-refresh-secret-key-32ch'),
+  // 本番環境ではデフォルト値なし（必須）、開発環境ではデフォルト値あり
+  JWT_ACCESS_SECRET: isProduction
+    ? z.string().min(32)
+    : z.string().min(32).default('development-access-secret-key-32ch'),
+  JWT_REFRESH_SECRET: isProduction
+    ? z.string().min(32)
+    : z.string().min(32).default('development-refresh-secret-key-32ch'),
 
   // CORS
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
