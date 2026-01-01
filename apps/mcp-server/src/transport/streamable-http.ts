@@ -1,7 +1,15 @@
 import type { Request, Response, RequestHandler } from 'express';
 import { randomUUID } from 'crypto';
+import { AsyncLocalStorage } from 'async_hooks';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { McpServer } from '../server.js';
+import type { RequestContext } from '../types/context.js';
+
+/**
+ * リクエストコンテキストを保持するAsyncLocalStorage
+ * ツールハンドラーからユーザー情報等を取得するために使用
+ */
+export const requestContext = new AsyncLocalStorage<RequestContext>();
 
 /**
  * JSON-RPCリクエストの型定義
@@ -17,6 +25,18 @@ interface JsonRpcRequest {
 // TODO: Phase 2でハートビートベースのセッションタイムアウトを実装
 // TODO: 複数インスタンス対応時はRedis/DBベースのセッションストアへ移行
 const transports = new Map<string, StreamableHTTPServerTransport>();
+
+/**
+ * MCPセッションデータ
+ * セッションIDに紐づくユーザー情報等を保持
+ */
+export interface McpSessionData {
+  userId: string;
+  agentSession?: RequestContext['agentSession'];
+}
+
+// セッションIDをキーとしたセッションデータの管理
+const sessionData = new Map<string, McpSessionData>();
 
 /**
  * MCPリクエストを処理するExpressハンドラーを作成
@@ -68,7 +88,18 @@ async function handlePost(
   // 既存セッションがある場合は再利用
   if (sessionId && transports.has(sessionId)) {
     const transport = transports.get(sessionId)!;
-    await transport.handleRequest(req, res, req.body);
+    const data = sessionData.get(sessionId);
+
+    // AsyncLocalStorageでコンテキストを設定してリクエストを処理
+    const context: RequestContext = {
+      sessionId,
+      userId: data?.userId || req.user?.id || '',
+      agentSession: data?.agentSession || req.agentSession,
+    };
+
+    await requestContext.run(context, async () => {
+      await transport.handleRequest(req, res, req.body);
+    });
     return;
   }
 
@@ -83,17 +114,32 @@ async function handlePost(
     // トランスポートを登録
     transports.set(newSessionId, transport);
 
+    // セッションデータを保存（ユーザー情報を保持）
+    sessionData.set(newSessionId, {
+      userId: req.user?.id || '',
+      agentSession: req.agentSession,
+    });
+
     // セッション終了時にクリーンアップ
     transport.onclose = () => {
       transports.delete(newSessionId);
+      sessionData.delete(newSessionId);
       console.log(`MCPセッション終了: ${newSessionId}`);
     };
 
     // MCPサーバーに接続
     await mcpServer.connect(transport);
 
-    // リクエストを処理
-    await transport.handleRequest(req, res, req.body);
+    // AsyncLocalStorageでコンテキストを設定してリクエストを処理
+    const context: RequestContext = {
+      sessionId: newSessionId,
+      userId: req.user?.id || '',
+      agentSession: req.agentSession,
+    };
+
+    await requestContext.run(context, async () => {
+      await transport.handleRequest(req, res, req.body);
+    });
     return;
   }
 
@@ -158,6 +204,32 @@ export function getActiveSessionCount(): number {
 }
 
 /**
+ * セッションデータを取得
+ * @param sessionId セッションID
+ * @returns セッションデータ（存在しない場合はundefined）
+ */
+export function getSessionData(sessionId: string): McpSessionData | undefined {
+  return sessionData.get(sessionId);
+}
+
+/**
+ * セッションを削除（クリーンアップ用）
+ * @param sessionId 削除するセッションID
+ */
+export function deleteSession(sessionId: string): void {
+  const transport = transports.get(sessionId);
+  if (transport) {
+    try {
+      transport.close();
+    } catch (error) {
+      console.error(`セッション ${sessionId} のクローズエラー:`, error);
+    }
+  }
+  transports.delete(sessionId);
+  sessionData.delete(sessionId);
+}
+
+/**
  * すべてのセッションをクリーンアップ
  */
 export function cleanupAllSessions(): void {
@@ -169,4 +241,5 @@ export function cleanupAllSessions(): void {
     }
   }
   transports.clear();
+  sessionData.clear();
 }

@@ -1,6 +1,8 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { z } from 'zod';
 import type { AgentSession } from '@agentest/db';
+import { requestContext } from '../transport/streamable-http.js';
+import { searchProjectTool } from './search-project.js';
 
 /**
  * ツール実行コンテキスト
@@ -86,6 +88,9 @@ export const toolRegistry = new ToolRegistry();
  * すべての登録済みツールをMCPサーバーに追加する
  */
 export function registerTools(server: McpServer): void {
+  // ツールを登録
+  toolRegistry.register(searchProjectTool);
+
   const tools = toolRegistry.getAll();
 
   for (const tool of tools) {
@@ -96,10 +101,11 @@ export function registerTools(server: McpServer): void {
       tool.description,
       zodToJsonSchema(tool.inputSchema),
       async (args) => {
-        // コンテキストはリクエストごとに設定される必要がある
-        // 現時点では空のコンテキストを渡す（実装時に修正）
+        // AsyncLocalStorageからコンテキストを取得
+        const ctx = requestContext.getStore();
         const context: ToolContext = {
-          userId: '', // TODO: リクエストコンテキストから取得
+          userId: ctx?.userId || '',
+          agentSession: ctx?.agentSession,
         };
 
         try {
@@ -208,6 +214,19 @@ function zodToJsonSchema(schema: z.ZodType): Record<string, unknown> {
     return {
       ...innerSchema,
       nullable: true,
+    };
+  }
+
+  // ZodDefaultの場合
+  if (typeName === 'ZodDefault' && 'innerType' in def) {
+    const innerSchema = zodToJsonSchema(def.innerType as z.ZodType);
+    const defaultValue =
+      typeof def.defaultValue === 'function'
+        ? (def.defaultValue as () => unknown)()
+        : def.defaultValue;
+    return {
+      ...innerSchema,
+      default: defaultValue,
     };
   }
 
