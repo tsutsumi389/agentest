@@ -213,6 +213,19 @@ function zodToJsonSchema(schema: z.ZodType): Record<string, unknown> {
     };
   }
 
+  // ZodDefaultの場合
+  if (typeName === 'ZodDefault' && 'innerType' in def) {
+    const innerSchema = zodToJsonSchema(def.innerType as z.ZodType);
+    const defaultValue =
+      typeof def.defaultValue === 'function'
+        ? (def.defaultValue as () => unknown)()
+        : def.defaultValue;
+    return {
+      ...innerSchema,
+      default: defaultValue,
+    };
+  }
+
   // デフォルト
   return { type: 'object' };
 }

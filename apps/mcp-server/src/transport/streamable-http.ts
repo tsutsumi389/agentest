@@ -215,4 +215,5 @@ export function cleanupAllSessions(): void {
     }
   }
   transports.clear();
+  sessionData.clear();
 }
