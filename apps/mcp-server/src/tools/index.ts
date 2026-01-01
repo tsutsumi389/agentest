@@ -1,6 +1,7 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { z } from 'zod';
 import type { AgentSession } from '@agentest/db';
+import { requestContext } from '../transport/streamable-http.js';
 
 /**
  * ツール実行コンテキスト
@@ -96,10 +97,11 @@ export function registerTools(server: McpServer): void {
       tool.description,
       zodToJsonSchema(tool.inputSchema),
       async (args) => {
-        // コンテキストはリクエストごとに設定される必要がある
-        // 現時点では空のコンテキストを渡す（実装時に修正）
+        // AsyncLocalStorageからコンテキストを取得
+        const ctx = requestContext.getStore();
         const context: ToolContext = {
-          userId: '', // TODO: リクエストコンテキストから取得
+          userId: ctx?.userId || '',
+          agentSession: ctx?.agentSession,
         };
 
         try {
