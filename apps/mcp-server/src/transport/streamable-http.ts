@@ -30,7 +30,7 @@ const transports = new Map<string, StreamableHTTPServerTransport>();
  * MCPセッションデータ
  * セッションIDに紐づくユーザー情報等を保持
  */
-interface McpSessionData {
+export interface McpSessionData {
   userId: string;
   agentSession?: RequestContext['agentSession'];
 }
@@ -201,6 +201,32 @@ async function handleDelete(
  */
 export function getActiveSessionCount(): number {
   return transports.size;
+}
+
+/**
+ * セッションデータを取得
+ * @param sessionId セッションID
+ * @returns セッションデータ（存在しない場合はundefined）
+ */
+export function getSessionData(sessionId: string): McpSessionData | undefined {
+  return sessionData.get(sessionId);
+}
+
+/**
+ * セッションを削除（クリーンアップ用）
+ * @param sessionId 削除するセッションID
+ */
+export function deleteSession(sessionId: string): void {
+  const transport = transports.get(sessionId);
+  if (transport) {
+    try {
+      transport.close();
+    } catch (error) {
+      console.error(`セッション ${sessionId} のクローズエラー:`, error);
+    }
+  }
+  transports.delete(sessionId);
+  sessionData.delete(sessionId);
 }
 
 /**
