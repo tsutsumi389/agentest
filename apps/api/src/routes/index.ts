@@ -9,6 +9,7 @@ import testSuiteRoutes from './test-suites.js';
 import testCaseRoutes from './test-cases.js';
 import executionRoutes from './executions.js';
 import reviewCommentRoutes from './review-comments.js';
+import internalRoutes from './internal.js';
 
 const router: Router = Router();
 
@@ -25,6 +26,9 @@ router.use('/api/test-suites', testSuiteRoutes);
 router.use('/api/test-cases', testCaseRoutes);
 router.use('/api/executions', executionRoutes);
 router.use('/api/review-comments', reviewCommentRoutes);
+
+// 内部API（MCPサーバーからの呼び出し用）
+router.use('/internal/api', internalRoutes);
 
 // 404ハンドラー
 router.use((_req, res) => {
