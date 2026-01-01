@@ -15,6 +15,7 @@ type SearchProjectInput = z.infer<typeof searchProjectInputSchema>;
 
 /**
  * レスポンス型
+ * API側（user.service.ts:129-151）のレスポンスと整合
  */
 interface SearchProjectResponse {
   projects: Array<{
@@ -22,7 +23,17 @@ interface SearchProjectResponse {
     name: string;
     description: string | null;
     organizationId: string | null;
+    organization: {
+      id: string;
+      name: string;
+      slug: string;
+    } | null;
     role: string;
+    _count: {
+      testSuites: number;
+    };
+    createdAt: string;
+    updatedAt: string;
   }>;
   pagination: {
     total: number;
