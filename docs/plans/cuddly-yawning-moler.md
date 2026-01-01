@@ -42,6 +42,8 @@ apps/mcp-server/src/
 │   └── env.ts                       # 環境変数追加（修正）
 ├── clients/
 │   └── api-client.ts                # 内部APIクライアント（新規）
+├── types/
+│   └── context.ts                   # リクエストコンテキスト型定義（新規）
 ├── transport/
 │   └── streamable-http.ts           # AsyncLocalStorage追加（修正）
 └── tools/
@@ -92,6 +94,7 @@ export function requireInternalApiAuth() {
 
 ```bash
 # .env.example, docker-compose.yml
+# シークレットの生成: openssl rand -hex 32
 INTERNAL_API_SECRET=<ランダムな32文字以上の文字列>
 ```
 
@@ -108,7 +111,7 @@ INTERNAL_API_SECRET: z.string().min(32),
 
 ```typescript
 import { Router } from 'express';
-import type { Request, Response } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { requireInternalApiAuth } from '../middleware/internal-api.middleware.js';
 import { userService } from '../services/user.service.js';
@@ -131,22 +134,36 @@ const getUserProjectsQuerySchema = z.object({
  * GET /internal/api/users/:userId/projects
  * ユーザーがアクセス可能なプロジェクト一覧を取得
  */
-router.get('/users/:userId/projects', async (req: Request, res: Response) => {
-  const { userId } = req.params;
-  const query = getUserProjectsQuerySchema.parse(req.query);
+router.get('/users/:userId/projects', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { userId } = req.params;
+    const parseResult = getUserProjectsQuerySchema.safeParse(req.query);
 
-  const projects = await userService.getProjects(userId, query);
-  const total = await userService.countProjects(userId, query);
+    if (!parseResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid query parameters',
+        details: parseResult.error.flatten(),
+      });
+      return;
+    }
 
-  res.json({
-    projects,
-    pagination: {
-      total,
-      limit: query.limit,
-      offset: query.offset,
-      hasMore: query.offset + projects.length < total,
-    },
-  });
+    const query = parseResult.data;
+    const projects = await userService.getProjects(userId, query);
+    const total = await userService.countProjects(userId, query);
+
+    res.json({
+      projects,
+      pagination: {
+        total,
+        limit: query.limit,
+        offset: query.offset,
+        hasMore: query.offset + projects.length < total,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 export default router;
@@ -181,8 +198,8 @@ export class InternalApiClient {
   private apiKey: string;
 
   constructor() {
-    // Docker内部ネットワーク経由
-    this.baseUrl = env.API_INTERNAL_URL || 'http://api:3000';
+    // Docker内部ネットワーク経由（デフォルト値はZodスキーマで設定）
+    this.baseUrl = env.API_INTERNAL_URL;
     this.apiKey = env.INTERNAL_API_SECRET;
   }
 
@@ -369,6 +386,18 @@ if (body?.method === 'initialize') {
 export function getSessionData(sessionId: string): McpSessionData | undefined {
   return sessions.get(sessionId);
 }
+
+/**
+ * セッションを削除（クリーンアップ用）
+ */
+export function deleteSession(sessionId: string): void {
+  sessions.delete(sessionId);
+}
+
+// transportのcloseイベントでセッションを削除
+transport.on('close', () => {
+  deleteSession(sessionId);
+});
 ```
 
 ### 6.2 ツールハンドラーへのコンテキスト伝達
@@ -382,15 +411,29 @@ export function getSessionData(sessionId: string): McpSessionData | undefined {
 ```
 
 **解決策B**: AsyncLocalStorageを使用
-```typescript
-import { AsyncLocalStorage } from 'async_hooks';
 
-// リクエストコンテキストを保持
-export const requestContext = new AsyncLocalStorage<{
+**型定義ファイル**: `apps/mcp-server/src/types/context.ts`（新規）
+```typescript
+import type { AgentSession } from '@agentest/db';
+
+/**
+ * リクエストコンテキストの型定義
+ * AsyncLocalStorageとToolContextで共有
+ */
+export interface RequestContext {
   sessionId: string;
   userId: string;
   agentSession?: AgentSession;
-}>();
+}
+```
+
+**実装**: `apps/mcp-server/src/transport/streamable-http.ts`
+```typescript
+import { AsyncLocalStorage } from 'async_hooks';
+import type { RequestContext } from '../types/context.js';
+
+// リクエストコンテキストを保持
+export const requestContext = new AsyncLocalStorage<RequestContext>();
 
 // handlePost内でコンテキストを設定
 await requestContext.run(
@@ -427,22 +470,26 @@ server.tool(tool.name, tool.description, schema, async (args) => {
 | `apps/api/src/config/env.ts` | 環境変数に`INTERNAL_API_SECRET`追加 | 修正 |
 | `apps/mcp-server/src/clients/api-client.ts` | 内部APIクライアント | 新規 |
 | `apps/mcp-server/src/config/env.ts` | 環境変数追加 | 修正 |
+| `apps/mcp-server/src/types/context.ts` | リクエストコンテキスト型定義 | 新規 |
 | `apps/mcp-server/src/tools/search-project.ts` | MCPツール実装 | 新規 |
 | `apps/mcp-server/src/tools/index.ts` | ツール登録・Context修正 | 修正 |
 | `apps/mcp-server/src/transport/streamable-http.ts` | セッション管理・AsyncLocalStorage | 修正 |
-| `apps/api/src/services/user.service.ts:83-151` | 既存プロジェクト検索ロジック | 再利用 |
+| `apps/api/src/services/user.service.ts:83-151` | 既存プロジェクト検索ロジック | 再利用（※countProjectsの確認要） |
 | `docker/docker-compose.yml` | 環境変数追加 | 修正 |
 
 ---
 
 ## 実装順序
 
+0. **事前確認**: `userService.getProjects`と`countProjects`のインターフェース確認
+   - `countProjects`メソッドが存在しない場合は新規実装が必要
 1. **環境変数**: `INTERNAL_API_SECRET`をdocker-compose.ymlと各env.tsに追加
 2. **API側**: 内部API認証ミドルウェアとルート作成
 3. **MCP側**: APIクライアント作成
 4. **MCP側**: AsyncLocalStorageによるContext伝達修正
 5. **MCP側**: search_projectツール実装・登録
-6. **テスト**: 単体テスト・結合テスト
+6. **MCP側**: セッションクリーンアップ処理の追加（メモリリーク防止）
+7. **テスト**: 単体テスト・結合テスト
 
 ---
 
