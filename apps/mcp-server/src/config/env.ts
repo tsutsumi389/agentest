@@ -24,6 +24,10 @@ const envSchema = z.object({
 
   // CORS
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
+
+  // 内部API（API サーバーとの通信）
+  API_INTERNAL_URL: z.string().url().default('http://api:3001'),
+  INTERNAL_API_SECRET: z.string().min(32).default('development-internal-api-secret-32ch'),
 });
 
 // 環境変数を検証

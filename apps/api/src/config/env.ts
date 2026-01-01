@@ -30,6 +30,9 @@ const envSchema = z.object({
   // CORS
   CORS_ORIGIN: z.string().default('http://localhost:3000'),
 
+  // 内部API認証（MCP↔API間通信）
+  INTERNAL_API_SECRET: z.string().min(32).default('development-internal-api-secret-32ch'),
+
   // MinIO/S3
   S3_ENDPOINT: z.string().optional(),
   S3_ACCESS_KEY: z.string().optional(),
