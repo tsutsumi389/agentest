@@ -18,6 +18,8 @@ import { updateTestCaseTool } from './update-test-case.js';
 import { updateExecutionPreconditionResultTool } from './update-execution-precondition-result.js';
 import { updateExecutionStepResultTool } from './update-execution-step-result.js';
 import { updateExecutionExpectedResultTool } from './update-execution-expected-result.js';
+import { deleteTestSuiteTool } from './delete-test-suite.js';
+import { deleteTestCaseTool } from './delete-test-case.js';
 
 /**
  * ツール実行コンテキスト
@@ -126,6 +128,10 @@ export function registerTools(server: McpServer): void {
   toolRegistry.register(updateExecutionPreconditionResultTool);
   toolRegistry.register(updateExecutionStepResultTool);
   toolRegistry.register(updateExecutionExpectedResultTool);
+
+  // 削除ツールを登録
+  toolRegistry.register(deleteTestSuiteTool);
+  toolRegistry.register(deleteTestCaseTool);
 
   const tools = toolRegistry.getAll();
 
