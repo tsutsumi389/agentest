@@ -12,6 +12,14 @@
 | [Account](./database/auth.md#account) | OAuth アカウント（GitHub, Google） |
 | [RefreshToken](./database/auth.md#refreshtoken) | JWT リフレッシュトークン |
 
+### OAuth 2.1（MCP クライアント向け）
+
+| テーブル | 説明 |
+|---------|------|
+| [OAuthClient](./database/oauth.md#oauthclient) | 動的登録クライアント（RFC 7591） |
+| [OAuthAuthorizationCode](./database/oauth.md#oauthauthorizationcode) | 認可コード（PKCE 対応） |
+| [OAuthAccessToken](./database/oauth.md#oauthaccesstoken) | アクセストークン |
+
 ### 組織・プロジェクト
 
 | テーブル | 説明 |
