@@ -457,6 +457,16 @@ Execution
 - ダウンロード: READ以上のロール、どのステータスでも可能
 - 1期待結果あたり最大10ファイル
 
+#### アップロード方法
+
+| 方法 | エンドポイント | 形式 | 用途 |
+|------|----------------|------|------|
+| Web API | POST /api/executions/:id/expected-results/:resultId/evidences | multipart/form-data | Webフロントエンド |
+| MCP ツール | upload_execution_evidence | Base64 JSON | AIエージェント |
+| 内部API | POST /internal/api/executions/:id/expected-results/:resultId/evidences | Base64 JSON | MCP↔API間連携 |
+
+MCPツール経由でのアップロードでは、ファイルをBase64エンコードして送信する。express.jsonの50MB制限により、実質約37MBまでのファイルが送信可能。
+
 ### ファイルアップロード制限
 
 | 項目 | 制限値 |

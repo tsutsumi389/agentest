@@ -43,8 +43,8 @@ export function createApp(): Express {
     allowedHeaders: ['Content-Type', 'Authorization'],
   }));
 
-  // ボディパーサー
-  app.use(express.json({ limit: '10mb' }));
+  // ボディパーサー（Base64エンコードされたファイルアップロードのため50MBに設定）
+  app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ extended: true }));
 
   // クッキーパーサー
