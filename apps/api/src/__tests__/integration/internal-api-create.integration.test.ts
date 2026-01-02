@@ -423,11 +423,9 @@ describe('Internal API Create Endpoints Integration Tests', () => {
   });
 
   describe('POST /internal/api/test-suites/:testSuiteId/executions', () => {
-    let testCaseWithSteps: { id: string };
-
     beforeEach(async () => {
       // ステップ付きのテストケースを作成
-      testCaseWithSteps = await prisma.testCase.create({
+      await prisma.testCase.create({
         data: {
           testSuiteId: testSuite.id,
           title: 'Test Case with Steps',

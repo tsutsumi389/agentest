@@ -222,7 +222,7 @@ describe('searchExecutionTool', () => {
       const context: ToolContext = { userId: TEST_USER_ID };
       const input = {
         testSuiteId: TEST_SUITE_ID,
-        status: ['IN_PROGRESS', 'COMPLETED'] as const,
+        status: ['IN_PROGRESS', 'COMPLETED'] as ('IN_PROGRESS' | 'COMPLETED' | 'ABORTED')[],
         from: '2024-01-01T00:00:00.000Z',
         to: '2024-01-31T23:59:59.999Z',
         limit: 10,
@@ -318,7 +318,7 @@ describe('searchExecutionTool', () => {
       mockApiClient.get.mockResolvedValueOnce(mockResponse);
 
       const context: ToolContext = { userId: TEST_USER_ID };
-      const input = { testSuiteId: TEST_SUITE_ID, status: ['IN_PROGRESS'] as const, limit: 20, offset: 0, sortBy: 'startedAt' as const, sortOrder: 'desc' as const };
+      const input = { testSuiteId: TEST_SUITE_ID, status: ['IN_PROGRESS'] as ('IN_PROGRESS' | 'COMPLETED' | 'ABORTED')[], limit: 20, offset: 0, sortBy: 'startedAt' as const, sortOrder: 'desc' as const };
 
       const result = (await searchExecutionTool.handler(input, context)) as SearchExecutionResponse;
 

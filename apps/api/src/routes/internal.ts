@@ -664,6 +664,53 @@ const startExecutionBodySchema = z.object({
 });
 
 /**
+ * テストスイート更新リクエストボディのスキーマ
+ */
+const updateTestSuiteBodySchema = z.object({
+  name: z.string().min(1).max(200).optional(),
+  description: z.string().max(2000).nullable().optional(),
+  status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).optional(),
+}).refine((data) => Object.keys(data).length > 0, {
+  message: 'At least one field must be provided',
+});
+
+/**
+ * テストケース更新リクエストボディのスキーマ
+ */
+const updateTestCaseBodySchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  description: z.string().max(2000).nullable().optional(),
+  priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
+  status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).optional(),
+}).refine((data) => Object.keys(data).length > 0, {
+  message: 'At least one field must be provided',
+});
+
+/**
+ * 事前条件結果更新リクエストボディのスキーマ
+ */
+const updatePreconditionResultBodySchema = z.object({
+  status: z.enum(['MET', 'NOT_MET']),
+  note: z.string().max(2000).optional(),
+});
+
+/**
+ * ステップ結果更新リクエストボディのスキーマ
+ */
+const updateStepResultBodySchema = z.object({
+  status: z.enum(['DONE', 'SKIPPED']),
+  note: z.string().max(2000).optional(),
+});
+
+/**
+ * 期待結果更新リクエストボディのスキーマ
+ */
+const updateExpectedResultBodySchema = z.object({
+  status: z.enum(['PASS', 'FAIL', 'SKIPPED', 'NOT_EXECUTABLE']),
+  note: z.string().max(2000).optional(),
+});
+
+/**
  * POST /internal/api/test-suites/:testSuiteId/executions
  * テスト実行を開始
  */
@@ -713,6 +760,297 @@ router.post('/test-suites/:testSuiteId/executions', async (req: Request, res: Re
     });
 
     res.status(201).json({ execution });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * PATCH /internal/api/test-suites/:testSuiteId
+ * テストスイートを更新
+ */
+router.patch('/test-suites/:testSuiteId', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { testSuiteId } = req.params;
+
+    // userIdクエリ検証
+    const userIdResult = userIdQuerySchema.safeParse(req.query);
+    if (!userIdResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid query parameters',
+        details: userIdResult.error.flatten(),
+      });
+      return;
+    }
+
+    const { userId } = userIdResult.data;
+
+    // ボディ検証
+    const bodyResult = updateTestSuiteBodySchema.safeParse(req.body);
+    if (!bodyResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid request body',
+        details: bodyResult.error.flatten(),
+      });
+      return;
+    }
+
+    const updateData = bodyResult.data;
+
+    // 書き込み権限チェック
+    const canWrite = await authService.canWriteToTestSuite(userId, testSuiteId);
+    if (!canWrite) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access denied to this test suite',
+      });
+      return;
+    }
+
+    // テストスイート更新
+    const testSuite = await testSuiteService.update(testSuiteId, userId, updateData);
+
+    res.json({ testSuite });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * PATCH /internal/api/test-cases/:testCaseId
+ * テストケースを更新
+ */
+router.patch('/test-cases/:testCaseId', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { testCaseId } = req.params;
+
+    // userIdクエリ検証
+    const userIdResult = userIdQuerySchema.safeParse(req.query);
+    if (!userIdResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid query parameters',
+        details: userIdResult.error.flatten(),
+      });
+      return;
+    }
+
+    const { userId } = userIdResult.data;
+
+    // ボディ検証
+    const bodyResult = updateTestCaseBodySchema.safeParse(req.body);
+    if (!bodyResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid request body',
+        details: bodyResult.error.flatten(),
+      });
+      return;
+    }
+
+    const updateData = bodyResult.data;
+
+    // テストケース取得（テストスイートIDを取得するため）
+    const existingTestCase = await prisma.testCase.findUnique({
+      where: { id: testCaseId },
+      select: { testSuiteId: true, deletedAt: true },
+    });
+
+    if (!existingTestCase || existingTestCase.deletedAt) {
+      res.status(404).json({
+        error: 'Not Found',
+        message: 'Test case not found',
+      });
+      return;
+    }
+
+    // 書き込み権限チェック（テストスイート経由）
+    const canWrite = await authService.canWriteToTestSuite(userId, existingTestCase.testSuiteId);
+    if (!canWrite) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access denied to this test case',
+      });
+      return;
+    }
+
+    // テストケース更新
+    const testCase = await testCaseService.update(testCaseId, userId, updateData);
+
+    res.json({ testCase });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * PATCH /internal/api/executions/:executionId/precondition-results/:preconditionResultId
+ * 事前条件結果を更新
+ */
+router.patch('/executions/:executionId/precondition-results/:preconditionResultId', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { executionId, preconditionResultId } = req.params;
+
+    // userIdクエリ検証
+    const userIdResult = userIdQuerySchema.safeParse(req.query);
+    if (!userIdResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid query parameters',
+        details: userIdResult.error.flatten(),
+      });
+      return;
+    }
+
+    const { userId } = userIdResult.data;
+
+    // ボディ検証
+    const bodyResult = updatePreconditionResultBodySchema.safeParse(req.body);
+    if (!bodyResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid request body',
+        details: bodyResult.error.flatten(),
+      });
+      return;
+    }
+
+    const { status, note } = bodyResult.data;
+
+    // 書き込み権限チェック（実行がIN_PROGRESSかつテストスイートへの書き込み権限）
+    const canWrite = await authService.canWriteToExecution(userId, executionId);
+    if (!canWrite) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access denied or execution is not in progress',
+      });
+      return;
+    }
+
+    // 事前条件結果更新
+    const preconditionResult = await executionService.updatePreconditionResult(
+      executionId,
+      preconditionResultId,
+      { status, note }
+    );
+
+    res.json({ preconditionResult });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * PATCH /internal/api/executions/:executionId/step-results/:stepResultId
+ * ステップ結果を更新
+ */
+router.patch('/executions/:executionId/step-results/:stepResultId', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { executionId, stepResultId } = req.params;
+
+    // userIdクエリ検証
+    const userIdResult = userIdQuerySchema.safeParse(req.query);
+    if (!userIdResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid query parameters',
+        details: userIdResult.error.flatten(),
+      });
+      return;
+    }
+
+    const { userId } = userIdResult.data;
+
+    // ボディ検証
+    const bodyResult = updateStepResultBodySchema.safeParse(req.body);
+    if (!bodyResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid request body',
+        details: bodyResult.error.flatten(),
+      });
+      return;
+    }
+
+    const { status, note } = bodyResult.data;
+
+    // 書き込み権限チェック（実行がIN_PROGRESSかつテストスイートへの書き込み権限）
+    const canWrite = await authService.canWriteToExecution(userId, executionId);
+    if (!canWrite) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access denied or execution is not in progress',
+      });
+      return;
+    }
+
+    // ステップ結果更新
+    const stepResult = await executionService.updateStepResult(
+      executionId,
+      stepResultId,
+      { status, note }
+    );
+
+    res.json({ stepResult });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * PATCH /internal/api/executions/:executionId/expected-results/:expectedResultId
+ * 期待結果を更新
+ */
+router.patch('/executions/:executionId/expected-results/:expectedResultId', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { executionId, expectedResultId } = req.params;
+
+    // userIdクエリ検証
+    const userIdResult = userIdQuerySchema.safeParse(req.query);
+    if (!userIdResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid query parameters',
+        details: userIdResult.error.flatten(),
+      });
+      return;
+    }
+
+    const { userId } = userIdResult.data;
+
+    // ボディ検証
+    const bodyResult = updateExpectedResultBodySchema.safeParse(req.body);
+    if (!bodyResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid request body',
+        details: bodyResult.error.flatten(),
+      });
+      return;
+    }
+
+    const { status, note } = bodyResult.data;
+
+    // 書き込み権限チェック（実行がIN_PROGRESSかつテストスイートへの書き込み権限）
+    const canWrite = await authService.canWriteToExecution(userId, executionId);
+    if (!canWrite) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access denied or execution is not in progress',
+      });
+      return;
+    }
+
+    // 期待結果更新
+    const expectedResult = await executionService.updateExpectedResult(
+      executionId,
+      expectedResultId,
+      { status, note }
+    );
+
+    res.json({ expectedResult });
   } catch (error) {
     next(error);
   }

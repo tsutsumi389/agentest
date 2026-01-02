@@ -64,6 +64,6 @@ const createTestCaseHandler: ToolHandler<CreateTestCaseInput, CreateTestCaseResp
 export const createTestCaseTool: ToolDefinition<CreateTestCaseInput> = {
   name: 'create_test_case',
   description: 'テストケースを作成します。テストスイートIDとタイトルを指定してください。',
-  inputSchema: createTestCaseInputSchema,
+  inputSchema: createTestCaseInputSchema as z.ZodType<CreateTestCaseInput>,
   handler: createTestCaseHandler,
 };
