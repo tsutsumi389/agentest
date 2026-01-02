@@ -344,6 +344,58 @@ describe('Internal API Create Endpoints Integration Tests', () => {
         expect(response2.status).toBe(201);
         expect(response2.body.testCase.orderKey).toBe('00002');
       });
+
+      it('子エンティティを含めてテストケースを作成できる', async () => {
+        const response = await request(app)
+          .post('/internal/api/test-cases')
+          .query({ userId: testUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
+          .send({
+            testSuiteId: testSuite.id,
+            title: 'Test Case with Children',
+            preconditions: [
+              { content: 'Precondition 1' },
+              { content: 'Precondition 2' },
+            ],
+            steps: [
+              { content: 'Step 1' },
+              { content: 'Step 2' },
+              { content: 'Step 3' },
+            ],
+            expectedResults: [
+              { content: 'Expected Result 1' },
+            ],
+          });
+
+        expect(response.status).toBe(201);
+        expect(response.body.testCase.title).toBe('Test Case with Children');
+        expect(response.body.testCase.preconditions).toHaveLength(2);
+        expect(response.body.testCase.preconditions[0].content).toBe('Precondition 1');
+        expect(response.body.testCase.preconditions[0].orderKey).toBe('00001');
+        expect(response.body.testCase.preconditions[1].orderKey).toBe('00002');
+        expect(response.body.testCase.steps).toHaveLength(3);
+        expect(response.body.testCase.steps[0].content).toBe('Step 1');
+        expect(response.body.testCase.steps[2].content).toBe('Step 3');
+        expect(response.body.testCase.expectedResults).toHaveLength(1);
+      });
+
+      it('空の子エンティティ配列を指定して作成できる', async () => {
+        const response = await request(app)
+          .post('/internal/api/test-cases')
+          .query({ userId: testUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
+          .send({
+            testSuiteId: testSuite.id,
+            title: 'Test Case with Empty Children',
+            preconditions: [],
+            steps: [],
+            expectedResults: [],
+          });
+
+        expect(response.status).toBe(201);
+        // 空配列を指定しても、子エンティティなしで作成される
+        expect(response.body.testCase.title).toBe('Test Case with Empty Children');
+      });
     });
 
     describe('認可失敗', () => {

@@ -105,6 +105,53 @@ describe('updateTestCaseTool', () => {
       });
       expect(result.status).toBe('ARCHIVED');
     });
+
+    it('子エンティティを受け付ける（新規作成用: idなし）', () => {
+      const result = updateTestCaseInputSchema.parse({
+        testCaseId: TEST_CASE_ID,
+        preconditions: [{ content: 'New precondition' }],
+        steps: [{ content: 'New step' }],
+        expectedResults: [{ content: 'New expected result' }],
+      });
+      expect(result.preconditions).toHaveLength(1);
+      expect(result.preconditions![0].id).toBeUndefined();
+      expect(result.preconditions![0].content).toBe('New precondition');
+    });
+
+    it('子エンティティを受け付ける（更新用: idあり）', () => {
+      const result = updateTestCaseInputSchema.parse({
+        testCaseId: TEST_CASE_ID,
+        steps: [
+          { id: '11111111-1111-1111-1111-111111111111', content: 'Updated step' },
+          { content: 'New step' },
+        ],
+      });
+      expect(result.steps).toHaveLength(2);
+      expect(result.steps![0].id).toBe('11111111-1111-1111-1111-111111111111');
+      expect(result.steps![1].id).toBeUndefined();
+    });
+
+    it('空の子エンティティ配列を受け付ける（全削除を意味する）', () => {
+      const result = updateTestCaseInputSchema.parse({
+        testCaseId: TEST_CASE_ID,
+        steps: [],
+      });
+      expect(result.steps).toHaveLength(0);
+    });
+
+    it('子エンティティのcontentが空の場合はエラー', () => {
+      expect(() => updateTestCaseInputSchema.parse({
+        testCaseId: TEST_CASE_ID,
+        steps: [{ content: '' }],
+      })).toThrow();
+    });
+
+    it('子エンティティのidが不正なUUIDの場合はエラー', () => {
+      expect(() => updateTestCaseInputSchema.parse({
+        testCaseId: TEST_CASE_ID,
+        steps: [{ id: 'invalid-uuid', content: 'Step' }],
+      })).toThrow();
+    });
   });
 
   describe('ハンドラー', () => {
@@ -213,6 +260,88 @@ describe('updateTestCaseTool', () => {
       await expect(updateTestCaseTool.handler(input, context)).rejects.toThrow(
         'Internal API error: 404 - Test case not found'
       );
+    });
+
+    it('子エンティティの差分更新を内部APIに渡す', async () => {
+      const stepId = '55555555-5555-5555-5555-555555555555';
+      const mockResponse = {
+        testCase: {
+          id: TEST_CASE_ID,
+          testSuiteId: TEST_SUITE_ID,
+          title: 'Updated Case',
+          description: null,
+          priority: 'MEDIUM',
+          status: 'DRAFT',
+          createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-02T00:00:00.000Z',
+          preconditions: [],
+          steps: [
+            { id: stepId, content: 'Updated step', orderKey: '00001' },
+            { id: '66666666-6666-6666-6666-666666666666', content: 'New step', orderKey: '00002' },
+          ],
+          expectedResults: [],
+        },
+      };
+      mockApiClient.patch.mockResolvedValueOnce(mockResponse);
+
+      const context: ToolContext = { userId: TEST_USER_ID };
+      const input = {
+        testCaseId: TEST_CASE_ID,
+        steps: [
+          { id: stepId, content: 'Updated step' },
+          { content: 'New step' },
+        ],
+      };
+
+      const result = await updateTestCaseTool.handler(input, context) as typeof mockResponse;
+
+      expect(mockApiClient.patch).toHaveBeenCalledWith(
+        `/internal/api/test-cases/${TEST_CASE_ID}`,
+        {
+          steps: [
+            { id: stepId, content: 'Updated step' },
+            { content: 'New step' },
+          ],
+        },
+        { userId: TEST_USER_ID }
+      );
+      expect(result.testCase.steps).toHaveLength(2);
+    });
+
+    it('空配列で全ての子エンティティを削除できる', async () => {
+      const mockResponse = {
+        testCase: {
+          id: TEST_CASE_ID,
+          testSuiteId: TEST_SUITE_ID,
+          title: 'Case',
+          description: null,
+          priority: 'MEDIUM',
+          status: 'DRAFT',
+          createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-02T00:00:00.000Z',
+          preconditions: [],
+          steps: [],
+          expectedResults: [],
+        },
+      };
+      mockApiClient.patch.mockResolvedValueOnce(mockResponse);
+
+      const context: ToolContext = { userId: TEST_USER_ID };
+      const input = {
+        testCaseId: TEST_CASE_ID,
+        steps: [],
+        expectedResults: [],
+      };
+
+      const result = await updateTestCaseTool.handler(input, context) as typeof mockResponse;
+
+      expect(mockApiClient.patch).toHaveBeenCalledWith(
+        `/internal/api/test-cases/${TEST_CASE_ID}`,
+        { steps: [], expectedResults: [] },
+        { userId: TEST_USER_ID }
+      );
+      expect(result.testCase.steps).toHaveLength(0);
+      expect(result.testCase.expectedResults).toHaveLength(0);
     });
   });
 });

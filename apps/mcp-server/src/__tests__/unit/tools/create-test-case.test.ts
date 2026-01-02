@@ -26,9 +26,10 @@ describe('createTestCaseTool', () => {
   describe('ツール定義', () => {
     it('正しい名前と説明を持つ', () => {
       expect(createTestCaseTool.name).toBe('create_test_case');
-      expect(createTestCaseTool.description).toBe(
-        'テストケースを作成します。テストスイートIDとタイトルを指定してください。'
-      );
+      expect(createTestCaseTool.description).toContain('テストケースを作成します');
+      expect(createTestCaseTool.description).toContain('前提条件');
+      expect(createTestCaseTool.description).toContain('テスト手順');
+      expect(createTestCaseTool.description).toContain('期待結果');
     });
 
     it('入力スキーマが定義されている', () => {
@@ -102,6 +103,38 @@ describe('createTestCaseTool', () => {
         testSuiteId: TEST_SUITE_ID,
         title: 'Test Case',
         status: 'INVALID',
+      })).toThrow();
+    });
+
+    it('子エンティティを受け付ける', () => {
+      const result = createTestCaseInputSchema.parse({
+        testSuiteId: TEST_SUITE_ID,
+        title: 'Test Case',
+        preconditions: [{ content: 'Precondition 1' }],
+        steps: [{ content: 'Step 1' }, { content: 'Step 2' }],
+        expectedResults: [{ content: 'Expected 1' }],
+      });
+      expect(result.preconditions).toHaveLength(1);
+      expect(result.steps).toHaveLength(2);
+      expect(result.expectedResults).toHaveLength(1);
+    });
+
+    it('空の子エンティティ配列を受け付ける', () => {
+      const result = createTestCaseInputSchema.parse({
+        testSuiteId: TEST_SUITE_ID,
+        title: 'Test Case',
+        preconditions: [],
+        steps: [],
+        expectedResults: [],
+      });
+      expect(result.preconditions).toHaveLength(0);
+    });
+
+    it('子エンティティのcontentが空の場合はエラー', () => {
+      expect(() => createTestCaseInputSchema.parse({
+        testSuiteId: TEST_SUITE_ID,
+        title: 'Test Case',
+        steps: [{ content: '' }],
       })).toThrow();
     });
   });
@@ -236,6 +269,57 @@ describe('createTestCaseTool', () => {
       await expect(createTestCaseTool.handler(input, context)).rejects.toThrow(
         'Internal API error: 404 - Test suite not found'
       );
+    });
+
+    it('子エンティティを含めて内部APIを呼び出す', async () => {
+      const mockResponse = {
+        testCase: {
+          id: TEST_CASE_ID,
+          testSuiteId: TEST_SUITE_ID,
+          title: 'Test Case',
+          description: null,
+          priority: 'MEDIUM',
+          status: 'DRAFT',
+          orderKey: '00001',
+          createdAt: '2024-01-01T00:00:00.000Z',
+          updatedAt: '2024-01-01T00:00:00.000Z',
+          preconditions: [{ id: 'p1', content: 'Precondition 1', orderKey: '00001' }],
+          steps: [{ id: 's1', content: 'Step 1', orderKey: '00001' }],
+          expectedResults: [{ id: 'e1', content: 'Expected 1', orderKey: '00001' }],
+        },
+      };
+      mockApiClient.post.mockResolvedValueOnce(mockResponse);
+
+      const context: ToolContext = { userId: TEST_USER_ID };
+      const input = {
+        testSuiteId: TEST_SUITE_ID,
+        title: 'Test Case',
+        priority: 'MEDIUM' as const,
+        status: 'DRAFT' as const,
+        preconditions: [{ content: 'Precondition 1' }],
+        steps: [{ content: 'Step 1' }],
+        expectedResults: [{ content: 'Expected 1' }],
+      };
+
+      const result = await createTestCaseTool.handler(input, context) as typeof mockResponse;
+
+      expect(mockApiClient.post).toHaveBeenCalledWith(
+        '/internal/api/test-cases',
+        {
+          testSuiteId: TEST_SUITE_ID,
+          title: 'Test Case',
+          description: undefined,
+          priority: 'MEDIUM',
+          status: 'DRAFT',
+          preconditions: [{ content: 'Precondition 1' }],
+          steps: [{ content: 'Step 1' }],
+          expectedResults: [{ content: 'Expected 1' }],
+        },
+        { userId: TEST_USER_ID }
+      );
+      expect(result.testCase.preconditions).toHaveLength(1);
+      expect(result.testCase.steps).toHaveLength(1);
+      expect(result.testCase.expectedResults).toHaveLength(1);
     });
   });
 });
