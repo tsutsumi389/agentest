@@ -77,6 +77,36 @@ export class InternalApiClient {
 
     return res.json() as T;
   }
+
+  /**
+   * PATCHリクエストを送信
+   */
+  async patch<T>(path: string, body: Record<string, unknown>, params?: Record<string, string>): Promise<T> {
+    const url = new URL(path, this.baseUrl);
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined) {
+          url.searchParams.set(k, v);
+        }
+      });
+    }
+
+    const res = await fetch(url.toString(), {
+      method: 'PATCH',
+      headers: {
+        'X-Internal-API-Key': this.apiKey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const error = (await res.json().catch(() => ({}))) as { message?: string };
+      throw new Error(`Internal API error: ${res.status} - ${error.message || 'Unknown error'}`);
+    }
+
+    return res.json() as T;
+  }
 }
 
 export const apiClient = new InternalApiClient();

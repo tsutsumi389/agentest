@@ -60,6 +60,6 @@ const createTestSuiteHandler: ToolHandler<CreateTestSuiteInput, CreateTestSuiteR
 export const createTestSuiteTool: ToolDefinition<CreateTestSuiteInput> = {
   name: 'create_test_suite',
   description: 'テストスイートを作成します。プロジェクトIDとテストスイート名を指定してください。',
-  inputSchema: createTestSuiteInputSchema,
+  inputSchema: createTestSuiteInputSchema as z.ZodType<CreateTestSuiteInput>,
   handler: createTestSuiteHandler,
 };

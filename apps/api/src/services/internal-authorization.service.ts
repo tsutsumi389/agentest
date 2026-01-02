@@ -217,4 +217,39 @@ export class InternalAuthorizationService {
     // プロジェクトへの書き込み権限を確認
     return this.canWriteToProject(userId, testSuite.projectId);
   }
+
+  /**
+   * ユーザーが実行に書き込みできるか確認
+   * 書き込み可能条件:
+   * 1. 実行が存在しIN_PROGRESSステータスである
+   * 2. 実行のテストスイートへの書き込み権限を持つ
+   *
+   * @param userId ユーザーID
+   * @param executionId 実行ID
+   * @returns 書き込み可能な場合true
+   */
+  async canWriteToExecution(userId: string, executionId: string): Promise<boolean> {
+    // 実行の存在確認とステータス・テストスイートID取得
+    const execution = await prisma.execution.findUnique({
+      where: { id: executionId },
+      select: {
+        id: true,
+        status: true,
+        testSuiteId: true,
+      },
+    });
+
+    // 実行が存在しない場合は書き込み不可
+    if (!execution) {
+      return false;
+    }
+
+    // IN_PROGRESS以外のステータスの場合は書き込み不可
+    if (execution.status !== 'IN_PROGRESS') {
+      return false;
+    }
+
+    // テストスイートへの書き込み権限を確認
+    return this.canWriteToTestSuite(userId, execution.testSuiteId);
+  }
 }

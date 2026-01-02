@@ -226,8 +226,8 @@ describe('searchTestCaseTool', () => {
       const input = {
         testSuiteId: TEST_SUITE_ID,
         q: 'search-term',
-        status: ['ACTIVE'] as const,
-        priority: ['HIGH', 'CRITICAL'] as const,
+        status: ['ACTIVE'] as ('DRAFT' | 'ACTIVE' | 'ARCHIVED')[],
+        priority: ['HIGH', 'CRITICAL'] as ('LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL')[],
         limit: 10,
         offset: 5,
         sortBy: 'priority' as const,
@@ -303,7 +303,7 @@ describe('searchTestCaseTool', () => {
       mockApiClient.get.mockResolvedValueOnce(mockResponse);
 
       const context: ToolContext = { userId: TEST_USER_ID };
-      const input = { testSuiteId: TEST_SUITE_ID, priority: ['CRITICAL'] as const, limit: 20, offset: 0, sortBy: 'orderKey' as const, sortOrder: 'asc' as const };
+      const input = { testSuiteId: TEST_SUITE_ID, priority: ['CRITICAL'] as ('LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL')[], limit: 20, offset: 0, sortBy: 'orderKey' as const, sortOrder: 'asc' as const };
 
       const result = (await searchTestCaseTool.handler(input, context)) as SearchTestCaseResponse;
 

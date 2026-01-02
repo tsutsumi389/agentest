@@ -13,6 +13,11 @@ import { getExecutionTool } from './get-execution.js';
 import { createTestSuiteTool } from './create-test-suite.js';
 import { createTestCaseTool } from './create-test-case.js';
 import { createExecutionTool } from './create-execution.js';
+import { updateTestSuiteTool } from './update-test-suite.js';
+import { updateTestCaseTool } from './update-test-case.js';
+import { updateExecutionPreconditionResultTool } from './update-execution-precondition-result.js';
+import { updateExecutionStepResultTool } from './update-execution-step-result.js';
+import { updateExecutionExpectedResultTool } from './update-execution-expected-result.js';
 
 /**
  * ツール実行コンテキスト
@@ -114,6 +119,13 @@ export function registerTools(server: McpServer): void {
   toolRegistry.register(createTestSuiteTool);
   toolRegistry.register(createTestCaseTool);
   toolRegistry.register(createExecutionTool);
+
+  // 更新ツールを登録
+  toolRegistry.register(updateTestSuiteTool);
+  toolRegistry.register(updateTestCaseTool);
+  toolRegistry.register(updateExecutionPreconditionResultTool);
+  toolRegistry.register(updateExecutionStepResultTool);
+  toolRegistry.register(updateExecutionExpectedResultTool);
 
   const tools = toolRegistry.getAll();
 
