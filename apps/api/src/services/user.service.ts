@@ -190,6 +190,55 @@ export class UserService {
   }
 
   /**
+   * テストスイート検索用のwhere条件を構築（共通ロジック）
+   * @param userId ユーザーID
+   * @param options 検索オプション
+   */
+  private buildTestSuiteWhereCondition(
+    userId: string,
+    options: {
+      projectId?: string;
+      q?: string;
+      status?: EntityStatus;
+    }
+  ) {
+    const { projectId, q, status } = options;
+
+    // 名前検索条件
+    const nameCondition = q ? { name: { contains: q, mode: 'insensitive' as const } } : {};
+
+    // ステータス条件
+    const statusCondition = status ? { status } : {};
+
+    // プロジェクトアクセス条件（共通）
+    // projectId指定時も認可チェックを行う
+    const accessCondition = {
+      OR: [
+        { members: { some: { userId } } },
+        { organization: { members: { some: { userId } } } },
+      ],
+      deletedAt: null,
+    };
+
+    // プロジェクト条件
+    const projectCondition = projectId
+      ? {
+          projectId,
+          project: accessCondition,
+        }
+      : {
+          project: accessCondition,
+        };
+
+    return {
+      deletedAt: null,
+      ...nameCondition,
+      ...statusCondition,
+      ...projectCondition,
+    };
+  }
+
+  /**
    * ユーザーがアクセス可能なテストスイート一覧を取得
    * @param userId ユーザーID
    * @param options 検索オプション
@@ -209,36 +258,11 @@ export class UserService {
       offset?: number;
     } = {}
   ) {
-    const { projectId, q, status, limit = 20, offset = 0 } = options;
-
-    // 名前検索条件
-    const nameCondition = q ? { name: { contains: q, mode: 'insensitive' as const } } : {};
-
-    // ステータス条件
-    const statusCondition = status ? { status } : {};
-
-    // プロジェクト条件
-    // projectId が指定されている場合はそのプロジェクトのみ
-    // 指定されていない場合はアクセス可能な全プロジェクト
-    const projectCondition = projectId
-      ? { projectId }
-      : {
-          project: {
-            OR: [
-              { members: { some: { userId } } },
-              { organization: { members: { some: { userId } } } },
-            ],
-            deletedAt: null,
-          },
-        };
+    const { limit = 20, offset = 0 } = options;
+    const where = this.buildTestSuiteWhereCondition(userId, options);
 
     const testSuites = await prisma.testSuite.findMany({
-      where: {
-        deletedAt: null,
-        ...nameCondition,
-        ...statusCondition,
-        ...projectCondition,
-      },
+      where,
       include: {
         project: {
           select: { id: true, name: true },
@@ -271,29 +295,7 @@ export class UserService {
       status?: EntityStatus;
     } = {}
   ) {
-    const { projectId, q, status } = options;
-
-    const nameCondition = q ? { name: { contains: q, mode: 'insensitive' as const } } : {};
-    const statusCondition = status ? { status } : {};
-    const projectCondition = projectId
-      ? { projectId }
-      : {
-          project: {
-            OR: [
-              { members: { some: { userId } } },
-              { organization: { members: { some: { userId } } } },
-            ],
-            deletedAt: null,
-          },
-        };
-
-    return prisma.testSuite.count({
-      where: {
-        deletedAt: null,
-        ...nameCondition,
-        ...statusCondition,
-        ...projectCondition,
-      },
-    });
+    const where = this.buildTestSuiteWhereCondition(userId, options);
+    return prisma.testSuite.count({ where });
   }
 }

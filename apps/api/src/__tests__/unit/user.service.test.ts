@@ -18,6 +18,10 @@ vi.mock('@agentest/db', () => ({
     projectMember: {
       findMany: vi.fn(),
     },
+    testSuite: {
+      findMany: vi.fn(),
+      count: vi.fn(),
+    },
   },
 }));
 
@@ -511,6 +515,274 @@ describe('UserService', () => {
       vi.mocked(prisma.project.count).mockResolvedValue(0);
 
       const result = await userService.countProjects('user-1', { q: 'nonexistent' });
+
+      expect(result).toBe(0);
+    });
+  });
+
+  describe('getTestSuites', () => {
+    const mockTestSuites = [
+      {
+        id: 'suite-1',
+        name: 'Test Suite 1',
+        description: 'Description 1',
+        status: 'ACTIVE',
+        projectId: 'project-1',
+        deletedAt: null,
+        createdAt: new Date('2024-01-01'),
+        updatedAt: new Date('2024-01-15'),
+        project: { id: 'project-1', name: 'Project 1' },
+        createdByUser: { id: 'user-1', name: 'User 1', avatarUrl: null },
+        _count: { testCases: 5, preconditions: 2 },
+      },
+      {
+        id: 'suite-2',
+        name: 'Test Suite 2',
+        description: null,
+        status: 'DRAFT',
+        projectId: 'project-2',
+        deletedAt: null,
+        createdAt: new Date('2024-02-01'),
+        updatedAt: new Date('2024-02-15'),
+        project: { id: 'project-2', name: 'Project 2' },
+        createdByUser: null,
+        _count: { testCases: 0, preconditions: 0 },
+      },
+    ];
+
+    it('アクセス可能なテストスイート一覧を取得する（デフォルトオプション）', async () => {
+      vi.mocked(prisma.testSuite.findMany).mockResolvedValue(mockTestSuites as any);
+
+      const result = await userService.getTestSuites('user-1');
+
+      expect(prisma.testSuite.findMany).toHaveBeenCalledWith({
+        where: {
+          deletedAt: null,
+          project: {
+            OR: [
+              { members: { some: { userId: 'user-1' } } },
+              { organization: { members: { some: { userId: 'user-1' } } } },
+            ],
+            deletedAt: null,
+          },
+        },
+        include: {
+          project: { select: { id: true, name: true } },
+          createdByUser: { select: { id: true, name: true, avatarUrl: true } },
+          _count: { select: { testCases: true, preconditions: true } },
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: 20,
+        skip: 0,
+      });
+
+      expect(result).toHaveLength(2);
+      expect(result[0]._count.testCases).toBe(5);
+    });
+
+    it('プロジェクトIDで絞り込める（認可チェック付き）', async () => {
+      vi.mocked(prisma.testSuite.findMany).mockResolvedValue([]);
+
+      await userService.getTestSuites('user-1', { projectId: 'project-1' });
+
+      expect(prisma.testSuite.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            projectId: 'project-1',
+            project: {
+              OR: [
+                { members: { some: { userId: 'user-1' } } },
+                { organization: { members: { some: { userId: 'user-1' } } } },
+              ],
+              deletedAt: null,
+            },
+          }),
+        })
+      );
+    });
+
+    it('名前で部分一致検索できる（qオプション）', async () => {
+      vi.mocked(prisma.testSuite.findMany).mockResolvedValue([]);
+
+      await userService.getTestSuites('user-1', { q: 'search' });
+
+      expect(prisma.testSuite.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            name: { contains: 'search', mode: 'insensitive' },
+          }),
+        })
+      );
+    });
+
+    it('ステータスでフィルタできる', async () => {
+      vi.mocked(prisma.testSuite.findMany).mockResolvedValue([]);
+
+      await userService.getTestSuites('user-1', { status: 'ACTIVE' });
+
+      expect(prisma.testSuite.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            status: 'ACTIVE',
+          }),
+        })
+      );
+    });
+
+    it('ページネーションが動作する（limit/offsetオプション）', async () => {
+      vi.mocked(prisma.testSuite.findMany).mockResolvedValue([]);
+
+      await userService.getTestSuites('user-1', { limit: 10, offset: 20 });
+
+      expect(prisma.testSuite.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          take: 10,
+          skip: 20,
+        })
+      );
+    });
+
+    it('複数条件を組み合わせて検索できる', async () => {
+      vi.mocked(prisma.testSuite.findMany).mockResolvedValue([]);
+
+      await userService.getTestSuites('user-1', {
+        projectId: 'project-1',
+        q: 'search',
+        status: 'DRAFT',
+        limit: 15,
+        offset: 5,
+      });
+
+      expect(prisma.testSuite.findMany).toHaveBeenCalledWith({
+        where: {
+          deletedAt: null,
+          name: { contains: 'search', mode: 'insensitive' },
+          status: 'DRAFT',
+          projectId: 'project-1',
+          project: {
+            OR: [
+              { members: { some: { userId: 'user-1' } } },
+              { organization: { members: { some: { userId: 'user-1' } } } },
+            ],
+            deletedAt: null,
+          },
+        },
+        include: expect.any(Object),
+        orderBy: { updatedAt: 'desc' },
+        take: 15,
+        skip: 5,
+      });
+    });
+
+    it('テストスイートがない場合は空配列を返す', async () => {
+      vi.mocked(prisma.testSuite.findMany).mockResolvedValue([]);
+
+      const result = await userService.getTestSuites('user-1');
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('countTestSuites', () => {
+    it('デフォルトオプションでテストスイート数を取得する', async () => {
+      vi.mocked(prisma.testSuite.count).mockResolvedValue(10);
+
+      const result = await userService.countTestSuites('user-1');
+
+      expect(prisma.testSuite.count).toHaveBeenCalledWith({
+        where: {
+          deletedAt: null,
+          project: {
+            OR: [
+              { members: { some: { userId: 'user-1' } } },
+              { organization: { members: { some: { userId: 'user-1' } } } },
+            ],
+            deletedAt: null,
+          },
+        },
+      });
+      expect(result).toBe(10);
+    });
+
+    it('プロジェクトIDで絞り込んでカウントする（認可チェック付き）', async () => {
+      vi.mocked(prisma.testSuite.count).mockResolvedValue(3);
+
+      await userService.countTestSuites('user-1', { projectId: 'project-1' });
+
+      expect(prisma.testSuite.count).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            projectId: 'project-1',
+            project: {
+              OR: [
+                { members: { some: { userId: 'user-1' } } },
+                { organization: { members: { some: { userId: 'user-1' } } } },
+              ],
+              deletedAt: null,
+            },
+          }),
+        })
+      );
+    });
+
+    it('名前で部分一致検索してカウントする', async () => {
+      vi.mocked(prisma.testSuite.count).mockResolvedValue(2);
+
+      await userService.countTestSuites('user-1', { q: 'test' });
+
+      expect(prisma.testSuite.count).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            name: { contains: 'test', mode: 'insensitive' },
+          }),
+        })
+      );
+    });
+
+    it('ステータスでフィルタしてカウントする', async () => {
+      vi.mocked(prisma.testSuite.count).mockResolvedValue(5);
+
+      await userService.countTestSuites('user-1', { status: 'ACTIVE' });
+
+      expect(prisma.testSuite.count).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            status: 'ACTIVE',
+          }),
+        })
+      );
+    });
+
+    it('複数条件を組み合わせてカウントする', async () => {
+      vi.mocked(prisma.testSuite.count).mockResolvedValue(4);
+
+      await userService.countTestSuites('user-1', {
+        projectId: 'project-1',
+        q: 'search',
+        status: 'ARCHIVED',
+      });
+
+      expect(prisma.testSuite.count).toHaveBeenCalledWith({
+        where: {
+          deletedAt: null,
+          name: { contains: 'search', mode: 'insensitive' },
+          status: 'ARCHIVED',
+          projectId: 'project-1',
+          project: {
+            OR: [
+              { members: { some: { userId: 'user-1' } } },
+              { organization: { members: { some: { userId: 'user-1' } } } },
+            ],
+            deletedAt: null,
+          },
+        },
+      });
+    });
+
+    it('該当なしの場合は0を返す', async () => {
+      vi.mocked(prisma.testSuite.count).mockResolvedValue(0);
+
+      const result = await userService.countTestSuites('user-1', { q: 'nonexistent' });
 
       expect(result).toBe(0);
     });

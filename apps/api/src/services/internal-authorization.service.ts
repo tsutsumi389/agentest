@@ -100,13 +100,16 @@ export class InternalAuthorizationService {
    * @returns アクセス可能なプロジェクトIDの配列
    */
   async getAccessibleProjectIds(userId: string): Promise<string[]> {
-    // ProjectMemberとして直接参加しているプロジェクト
+    // ProjectMemberとして直接参加しているプロジェクト（削除済みを除外）
     const directProjects = await prisma.projectMember.findMany({
-      where: { userId },
+      where: {
+        userId,
+        project: { deletedAt: null },
+      },
       select: { projectId: true },
     });
 
-    // ユーザーが所属する組織のプロジェクト
+    // ユーザーが所属する組織のプロジェクト（削除済みを除外）
     const orgProjects = await prisma.project.findMany({
       where: {
         organization: {
