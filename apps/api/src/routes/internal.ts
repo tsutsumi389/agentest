@@ -8,6 +8,7 @@ import { InternalAuthorizationService } from '../services/internal-authorization
 import { TestSuiteService } from '../services/test-suite.service.js';
 import { TestCaseService } from '../services/test-case.service.js';
 import { ExecutionService } from '../services/execution.service.js';
+import { isAllowedMimeType, MAX_FILE_SIZE } from '../config/upload.js';
 
 const router: RouterType = Router();
 const userService = new UserService();
@@ -1145,6 +1146,131 @@ router.delete('/test-cases/:testCaseId', async (req: Request, res: Response, nex
     await testCaseService.softDelete(testCaseId, userId);
 
     res.json({ success: true, deletedId: testCaseId });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * エビデンスアップロードリクエストボディのスキーマ（Base64形式）
+ */
+const uploadEvidenceBodySchema = z.object({
+  fileName: z.string().min(1).max(255),
+  fileData: z.string().min(1), // Base64エンコードされたデータ
+  fileType: z.string().min(1),
+  description: z.string().max(2000).optional(),
+});
+
+/**
+ * POST /internal/api/executions/:executionId/expected-results/:expectedResultId/evidences
+ * エビデンスをアップロード（Base64形式）
+ */
+router.post('/executions/:executionId/expected-results/:expectedResultId/evidences', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { executionId, expectedResultId } = req.params;
+
+    // userIdクエリ検証
+    const userIdResult = userIdQuerySchema.safeParse(req.query);
+    if (!userIdResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid query parameters',
+        details: userIdResult.error.flatten(),
+      });
+      return;
+    }
+
+    const { userId } = userIdResult.data;
+
+    // ボディ検証
+    const bodyResult = uploadEvidenceBodySchema.safeParse(req.body);
+    if (!bodyResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid request body',
+        details: bodyResult.error.flatten(),
+      });
+      return;
+    }
+
+    const { fileName, fileData, fileType, description } = bodyResult.data;
+
+    // 書き込み権限チェック（実行がIN_PROGRESSかつテストスイートへの書き込み権限）
+    const canWrite = await authService.canWriteToExecution(userId, executionId);
+    if (!canWrite) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access denied or execution is not in progress',
+      });
+      return;
+    }
+
+    // MIMEタイプ検証
+    if (!isAllowedMimeType(fileType)) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: '許可されていないファイル形式です',
+      });
+      return;
+    }
+
+    // Base64デコード
+    let buffer: Buffer;
+    try {
+      buffer = Buffer.from(fileData, 'base64');
+    } catch {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: '不正なBase64データです',
+      });
+      return;
+    }
+
+    // ファイルサイズ検証
+    if (buffer.length > MAX_FILE_SIZE) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: `ファイルサイズが上限（${MAX_FILE_SIZE / 1024 / 1024}MB）を超えています`,
+      });
+      return;
+    }
+
+    // Express.Multer.File形式に変換
+    const file: Express.Multer.File = {
+      fieldname: 'file',
+      originalname: fileName,
+      encoding: 'base64',
+      mimetype: fileType,
+      buffer,
+      size: buffer.length,
+      stream: undefined as never,
+      destination: '',
+      filename: '',
+      path: '',
+    };
+
+    // エビデンスアップロード
+    const evidence = await executionService.uploadEvidence(
+      executionId,
+      expectedResultId,
+      userId,
+      file,
+      description
+    );
+
+    res.status(201).json({
+      evidence: {
+        id: evidence.id,
+        expectedResultId: evidence.expectedResultId,
+        fileName: evidence.fileName,
+        fileUrl: evidence.fileUrl,
+        fileType: evidence.fileType,
+        fileSize: Number(evidence.fileSize),
+        description: evidence.description,
+        uploadedByUserId: evidence.uploadedByUserId,
+        createdAt: evidence.createdAt.toISOString(),
+      },
+    });
   } catch (error) {
     next(error);
   }

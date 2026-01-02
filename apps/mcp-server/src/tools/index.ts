@@ -20,6 +20,7 @@ import { updateExecutionStepResultTool } from './update-execution-step-result.js
 import { updateExecutionExpectedResultTool } from './update-execution-expected-result.js';
 import { deleteTestSuiteTool } from './delete-test-suite.js';
 import { deleteTestCaseTool } from './delete-test-case.js';
+import { uploadExecutionEvidenceTool } from './upload-execution-evidence.js';
 
 /**
  * ツール実行コンテキスト
@@ -132,6 +133,9 @@ export function registerTools(server: McpServer): void {
   // 削除ツールを登録
   toolRegistry.register(deleteTestSuiteTool);
   toolRegistry.register(deleteTestCaseTool);
+
+  // エビデンスアップロードツールを登録
+  toolRegistry.register(uploadExecutionEvidenceTool);
 
   const tools = toolRegistry.getAll();
 
