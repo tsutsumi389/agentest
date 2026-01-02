@@ -595,4 +595,419 @@ describe('Internal API Integration Tests', () => {
       });
     });
   });
+
+  describe('GET /internal/api/projects/:projectId', () => {
+    describe('認証・認可成功', () => {
+      it('プロジェクト詳細を取得できる', async () => {
+        const response = await request(app)
+          .get(`/internal/api/projects/${testProject.id}`)
+          .query({ userId: testUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET);
+
+        expect(response.status).toBe(200);
+        expect(response.body).toHaveProperty('project');
+        expect(response.body.project.id).toBe(testProject.id);
+        expect(response.body.project.name).toBe(testProject.name);
+        expect(response.body.project.role).toBe('OWNER');
+      });
+
+      it('環境設定を含むプロジェクトを返す', async () => {
+        // 環境を作成
+        await prisma.projectEnvironment.create({
+          data: {
+            projectId: testProject.id,
+            name: 'Development',
+            slug: 'dev',
+            isDefault: true,
+            sortOrder: 0,
+          },
+        });
+
+        const response = await request(app)
+          .get(`/internal/api/projects/${testProject.id}`)
+          .query({ userId: testUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET);
+
+        expect(response.status).toBe(200);
+        expect(response.body.project.environments).toBeInstanceOf(Array);
+        expect(response.body.project.environments.length).toBe(1);
+        expect(response.body.project.environments[0].name).toBe('Development');
+      });
+
+      it('テストスイート数を返す', async () => {
+        const response = await request(app)
+          .get(`/internal/api/projects/${testProject.id}`)
+          .query({ userId: testUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET);
+
+        expect(response.status).toBe(200);
+        expect(response.body.project._count).toBeDefined();
+        expect(response.body.project._count.testSuites).toBeGreaterThanOrEqual(1);
+      });
+    });
+
+    describe('認可失敗', () => {
+      it('アクセス権のないユーザーは403を返す', async () => {
+        // 別のユーザーを作成
+        const anotherUser = await prisma.user.create({
+          data: {
+            email: `test-internal-another-proj-${Date.now()}@example.com`,
+            name: 'Another User',
+          },
+        });
+
+        const response = await request(app)
+          .get(`/internal/api/projects/${testProject.id}`)
+          .query({ userId: anotherUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET);
+
+        expect(response.status).toBe(403);
+        expect(response.body).toEqual({
+          error: 'Forbidden',
+          message: 'Access denied to this project',
+        });
+      });
+    });
+
+    describe('バリデーション', () => {
+      it('userIdがない場合は400を返す', async () => {
+        const response = await request(app)
+          .get(`/internal/api/projects/${testProject.id}`)
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Bad Request');
+      });
+
+      it('不正なuserIdは400を返す', async () => {
+        const response = await request(app)
+          .get(`/internal/api/projects/${testProject.id}`)
+          .query({ userId: 'invalid-uuid' })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Bad Request');
+      });
+    });
+
+    describe('プロジェクト不存在', () => {
+      it('存在しないプロジェクトは404を返す', async () => {
+        const nonExistentId = '00000000-0000-0000-0000-000000000000';
+        const response = await request(app)
+          .get(`/internal/api/projects/${nonExistentId}`)
+          .query({ userId: testUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET);
+
+        expect(response.status).toBe(403);
+      });
+    });
+  });
+
+  describe('GET /internal/api/test-suites/:testSuiteId', () => {
+    describe('認証・認可成功', () => {
+      it('テストスイート詳細を取得できる', async () => {
+        const response = await request(app)
+          .get(`/internal/api/test-suites/${testSuite.id}`)
+          .query({ userId: testUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET);
+
+        expect(response.status).toBe(200);
+        expect(response.body).toHaveProperty('testSuite');
+        expect(response.body.testSuite.id).toBe(testSuite.id);
+        expect(response.body.testSuite.name).toBe(testSuite.name);
+      });
+
+      it('前提条件を含むテストスイートを返す', async () => {
+        // 前提条件を作成
+        await prisma.testSuitePrecondition.create({
+          data: {
+            testSuiteId: testSuite.id,
+            content: 'Test precondition',
+            orderKey: '00001',
+          },
+        });
+
+        const response = await request(app)
+          .get(`/internal/api/test-suites/${testSuite.id}`)
+          .query({ userId: testUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET);
+
+        expect(response.status).toBe(200);
+        expect(response.body.testSuite.preconditions).toBeInstanceOf(Array);
+        expect(response.body.testSuite.preconditions.length).toBe(1);
+        expect(response.body.testSuite.preconditions[0].content).toBe('Test precondition');
+      });
+
+      it('テストケース一覧を含むテストスイートを返す', async () => {
+        // テストケースを作成
+        await prisma.testCase.create({
+          data: {
+            testSuiteId: testSuite.id,
+            title: 'Test Case in Suite',
+            status: 'ACTIVE',
+            priority: 'HIGH',
+            orderKey: '00001',
+            createdByUserId: testUser.id,
+          },
+        });
+
+        const response = await request(app)
+          .get(`/internal/api/test-suites/${testSuite.id}`)
+          .query({ userId: testUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET);
+
+        expect(response.status).toBe(200);
+        expect(response.body.testSuite.testCases).toBeInstanceOf(Array);
+        expect(response.body.testSuite.testCases.length).toBe(1);
+        expect(response.body.testSuite.testCases[0].title).toBe('Test Case in Suite');
+      });
+    });
+
+    describe('認可失敗', () => {
+      it('アクセス権のないユーザーは403を返す', async () => {
+        const anotherUser = await prisma.user.create({
+          data: {
+            email: `test-internal-another-suite-${Date.now()}@example.com`,
+            name: 'Another User',
+          },
+        });
+
+        const response = await request(app)
+          .get(`/internal/api/test-suites/${testSuite.id}`)
+          .query({ userId: anotherUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET);
+
+        expect(response.status).toBe(403);
+        expect(response.body).toEqual({
+          error: 'Forbidden',
+          message: 'Access denied to this test suite',
+        });
+      });
+    });
+
+    describe('バリデーション', () => {
+      it('userIdがない場合は400を返す', async () => {
+        const response = await request(app)
+          .get(`/internal/api/test-suites/${testSuite.id}`)
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Bad Request');
+      });
+    });
+
+    describe('テストスイート不存在', () => {
+      it('存在しないテストスイートは404を返す', async () => {
+        const nonExistentId = '00000000-0000-0000-0000-000000000000';
+        const response = await request(app)
+          .get(`/internal/api/test-suites/${nonExistentId}`)
+          .query({ userId: testUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET);
+
+        expect(response.status).toBe(403);
+      });
+    });
+  });
+
+  describe('GET /internal/api/test-cases/:testCaseId', () => {
+    let testCase: { id: string; title: string };
+
+    beforeEach(async () => {
+      // テストケースを作成
+      testCase = await prisma.testCase.create({
+        data: {
+          testSuiteId: testSuite.id,
+          title: `test-internal-case-${Date.now()}`,
+          status: 'ACTIVE',
+          priority: 'HIGH',
+          orderKey: '00001',
+          createdByUserId: testUser.id,
+        },
+      });
+    });
+
+    describe('認証・認可成功', () => {
+      it('テストケース詳細を取得できる', async () => {
+        const response = await request(app)
+          .get(`/internal/api/test-cases/${testCase.id}`)
+          .query({ userId: testUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET);
+
+        expect(response.status).toBe(200);
+        expect(response.body).toHaveProperty('testCase');
+        expect(response.body.testCase.id).toBe(testCase.id);
+        expect(response.body.testCase.title).toBe(testCase.title);
+      });
+
+      it('前提条件、ステップ、期待結果を含むテストケースを返す', async () => {
+        // 子エンティティを作成
+        await prisma.testCasePrecondition.create({
+          data: {
+            testCaseId: testCase.id,
+            content: 'Test precondition',
+            orderKey: '00001',
+          },
+        });
+        await prisma.testCaseStep.create({
+          data: {
+            testCaseId: testCase.id,
+            content: 'Test step',
+            orderKey: '00001',
+          },
+        });
+        await prisma.testCaseExpectedResult.create({
+          data: {
+            testCaseId: testCase.id,
+            content: 'Expected result',
+            orderKey: '00001',
+          },
+        });
+
+        const response = await request(app)
+          .get(`/internal/api/test-cases/${testCase.id}`)
+          .query({ userId: testUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET);
+
+        expect(response.status).toBe(200);
+        expect(response.body.testCase.preconditions).toHaveLength(1);
+        expect(response.body.testCase.steps).toHaveLength(1);
+        expect(response.body.testCase.expectedResults).toHaveLength(1);
+      });
+    });
+
+    describe('認可失敗', () => {
+      it('アクセス権のないユーザーは403を返す', async () => {
+        const anotherUser = await prisma.user.create({
+          data: {
+            email: `test-internal-another-case-${Date.now()}@example.com`,
+            name: 'Another User',
+          },
+        });
+
+        const response = await request(app)
+          .get(`/internal/api/test-cases/${testCase.id}`)
+          .query({ userId: anotherUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET);
+
+        expect(response.status).toBe(403);
+        expect(response.body).toEqual({
+          error: 'Forbidden',
+          message: 'Access denied to this test case',
+        });
+      });
+    });
+
+    describe('バリデーション', () => {
+      it('userIdがない場合は400を返す', async () => {
+        const response = await request(app)
+          .get(`/internal/api/test-cases/${testCase.id}`)
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Bad Request');
+      });
+    });
+
+    describe('テストケース不存在', () => {
+      it('存在しないテストケースは404を返す', async () => {
+        const nonExistentId = '00000000-0000-0000-0000-000000000000';
+        const response = await request(app)
+          .get(`/internal/api/test-cases/${nonExistentId}`)
+          .query({ userId: testUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET);
+
+        expect(response.status).toBe(404);
+        expect(response.body).toEqual({
+          error: 'Not Found',
+          message: 'Test case not found',
+        });
+      });
+    });
+  });
+
+  describe('GET /internal/api/executions/:executionId', () => {
+    let testExecution: { id: string };
+
+    beforeEach(async () => {
+      // 実行を作成
+      testExecution = await prisma.execution.create({
+        data: {
+          testSuiteId: testSuite.id,
+          executedByUserId: testUser.id,
+          status: 'IN_PROGRESS',
+          startedAt: new Date(),
+        },
+      });
+    });
+
+    describe('認証・認可成功', () => {
+      it('実行詳細を取得できる', async () => {
+        const response = await request(app)
+          .get(`/internal/api/executions/${testExecution.id}`)
+          .query({ userId: testUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET);
+
+        expect(response.status).toBe(200);
+        expect(response.body).toHaveProperty('execution');
+        expect(response.body.execution.id).toBe(testExecution.id);
+        expect(response.body.execution.status).toBe('IN_PROGRESS');
+      });
+
+      it('テストスイート情報を含む実行を返す', async () => {
+        const response = await request(app)
+          .get(`/internal/api/executions/${testExecution.id}`)
+          .query({ userId: testUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET);
+
+        expect(response.status).toBe(200);
+        expect(response.body.execution.testSuite).toBeDefined();
+        expect(response.body.execution.testSuite.id).toBe(testSuite.id);
+      });
+    });
+
+    describe('認可失敗', () => {
+      it('アクセス権のないユーザーは403を返す', async () => {
+        const anotherUser = await prisma.user.create({
+          data: {
+            email: `test-internal-another-exec-detail-${Date.now()}@example.com`,
+            name: 'Another User',
+          },
+        });
+
+        const response = await request(app)
+          .get(`/internal/api/executions/${testExecution.id}`)
+          .query({ userId: anotherUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET);
+
+        expect(response.status).toBe(403);
+        expect(response.body).toEqual({
+          error: 'Forbidden',
+          message: 'Access denied to this execution',
+        });
+      });
+    });
+
+    describe('バリデーション', () => {
+      it('userIdがない場合は400を返す', async () => {
+        const response = await request(app)
+          .get(`/internal/api/executions/${testExecution.id}`)
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET);
+
+        expect(response.status).toBe(400);
+        expect(response.body.error).toBe('Bad Request');
+      });
+    });
+
+    describe('実行不存在', () => {
+      it('存在しない実行は404を返す', async () => {
+        const nonExistentId = '00000000-0000-0000-0000-000000000000';
+        const response = await request(app)
+          .get(`/internal/api/executions/${nonExistentId}`)
+          .query({ userId: testUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET);
+
+        expect(response.status).toBe(404);
+      });
+    });
+  });
 });

@@ -27,6 +27,59 @@ interface ExecutionEvidence {
 }
 
 /**
+ * 前提条件スナップショット型（スイート/ケース共通）
+ */
+interface ExecutionPreconditionSnapshot {
+  id: string;
+  content: string;
+  orderKey: string;
+  originalPreconditionId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * ステップスナップショット型
+ */
+interface ExecutionStepSnapshot {
+  id: string;
+  executionTestCaseId: string;
+  originalStepId: string;
+  content: string;
+  orderKey: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * 期待結果スナップショット型
+ */
+interface ExecutionExpectedResultSnapshot {
+  id: string;
+  executionTestCaseId: string;
+  originalExpectedResultId: string;
+  content: string;
+  orderKey: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * テストケーススナップショット型
+ */
+interface ExecutionTestCaseSnapshot {
+  id: string;
+  executionTestSuiteId: string;
+  originalTestCaseId: string;
+  title: string;
+  description: string | null;
+  priority: string;
+  orderKey: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
  * 前提条件結果型
  */
 interface ExecutionPreconditionResult {
@@ -38,9 +91,9 @@ interface ExecutionPreconditionResult {
   status: string;
   note: string | null;
   checkedAt: string | null;
-  suitePrecondition: object | null;
-  casePrecondition: object | null;
-  executionTestCase: object | null;
+  suitePrecondition: ExecutionPreconditionSnapshot | null;
+  casePrecondition: ExecutionPreconditionSnapshot | null;
+  executionTestCase: ExecutionTestCaseSnapshot | null;
 }
 
 /**
@@ -54,8 +107,8 @@ interface ExecutionStepResult {
   status: string;
   note: string | null;
   executedAt: string | null;
-  executionStep: object;
-  executionTestCase: object;
+  executionStep: ExecutionStepSnapshot;
+  executionTestCase: ExecutionTestCaseSnapshot;
 }
 
 /**
@@ -69,9 +122,30 @@ interface ExecutionExpectedResultData {
   status: string;
   note: string | null;
   judgedAt: string | null;
-  executionExpectedResult: object;
-  executionTestCase: object;
+  executionExpectedResult: ExecutionExpectedResultSnapshot;
+  executionTestCase: ExecutionTestCaseSnapshot;
   evidences: ExecutionEvidence[];
+}
+
+/**
+ * テストスイートスナップショット型
+ */
+interface ExecutionTestSuiteSnapshot {
+  id: string;
+  executionId: string;
+  originalTestSuiteId: string;
+  name: string;
+  description: string | null;
+  createdAt: string;
+  updatedAt: string;
+  preconditions: ExecutionPreconditionSnapshot[];
+  testCases: Array<
+    ExecutionTestCaseSnapshot & {
+      preconditions: ExecutionPreconditionSnapshot[];
+      steps: ExecutionStepSnapshot[];
+      expectedResults: ExecutionExpectedResultSnapshot[];
+    }
+  >;
 }
 
 /**
@@ -99,7 +173,7 @@ interface GetExecutionResponse {
       name: string;
       slug: string;
     } | null;
-    executionTestSuite: object | null;
+    executionTestSuite: ExecutionTestSuiteSnapshot | null;
     preconditionResults: ExecutionPreconditionResult[];
     stepResults: ExecutionStepResult[];
     expectedResults: ExecutionExpectedResultData[];
