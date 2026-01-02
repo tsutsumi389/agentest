@@ -5,6 +5,7 @@ import { requestContext } from '../transport/streamable-http.js';
 import { searchProjectTool } from './search-project.js';
 import { searchTestSuiteTool } from './search-test-suite.js';
 import { searchTestCaseTool } from './search-test-case.js';
+import { searchExecutionTool } from './search-execution.js';
 
 /**
  * ツール実行コンテキスト
@@ -94,6 +95,7 @@ export function registerTools(server: McpServer): void {
   toolRegistry.register(searchProjectTool);
   toolRegistry.register(searchTestSuiteTool);
   toolRegistry.register(searchTestCaseTool);
+  toolRegistry.register(searchExecutionTool);
 
   const tools = toolRegistry.getAll();
 
