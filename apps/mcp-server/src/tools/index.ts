@@ -4,6 +4,7 @@ import type { AgentSession } from '@agentest/db';
 import { requestContext } from '../transport/streamable-http.js';
 import { searchProjectTool } from './search-project.js';
 import { searchTestSuiteTool } from './search-test-suite.js';
+import { searchTestCaseTool } from './search-test-case.js';
 
 /**
  * ツール実行コンテキスト
@@ -92,6 +93,7 @@ export function registerTools(server: McpServer): void {
   // ツールを登録
   toolRegistry.register(searchProjectTool);
   toolRegistry.register(searchTestSuiteTool);
+  toolRegistry.register(searchTestCaseTool);
 
   const tools = toolRegistry.getAll();
 

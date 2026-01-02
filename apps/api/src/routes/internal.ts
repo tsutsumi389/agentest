@@ -3,9 +3,13 @@ import type { Request, Response, NextFunction, Router as RouterType } from 'expr
 import { z } from 'zod';
 import { requireInternalApiAuth } from '../middleware/internal-api.middleware.js';
 import { UserService } from '../services/user.service.js';
+import { InternalAuthorizationService } from '../services/internal-authorization.service.js';
+import { TestSuiteService } from '../services/test-suite.service.js';
 
 const router: RouterType = Router();
 const userService = new UserService();
+const authService = new InternalAuthorizationService();
+const testSuiteService = new TestSuiteService();
 
 // 全エンドポイントに内部API認証を適用
 router.use(requireInternalApiAuth());
@@ -28,6 +32,20 @@ const getUserTestSuitesQuerySchema = z.object({
   status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20),
   offset: z.coerce.number().int().min(0).default(0),
+});
+
+/**
+ * テストケース検索クエリパラメータのスキーマ
+ */
+const getTestCasesQuerySchema = z.object({
+  userId: z.string().uuid(),
+  q: z.string().max(100).optional(),
+  status: z.array(z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED'])).optional(),
+  priority: z.array(z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'])).optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+  sortBy: z.enum(['title', 'createdAt', 'updatedAt', 'priority', 'orderKey']).default('orderKey'),
+  sortOrder: z.enum(['asc', 'desc']).default('asc'),
 });
 
 /**
@@ -99,6 +117,62 @@ router.get('/users/:userId/test-suites', async (req: Request, res: Response, nex
         limit: query.limit,
         offset: query.offset,
         hasMore: query.offset + testSuites.length < total,
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /internal/api/test-suites/:testSuiteId/test-cases
+ * テストスイート内のテストケース一覧を検索
+ */
+router.get('/test-suites/:testSuiteId/test-cases', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { testSuiteId } = req.params;
+    const parseResult = getTestCasesQuerySchema.safeParse(req.query);
+
+    if (!parseResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid query parameters',
+        details: parseResult.error.flatten(),
+      });
+      return;
+    }
+
+    const query = parseResult.data;
+
+    // 認可チェック
+    const canAccess = await authService.canAccessTestSuite(query.userId, testSuiteId);
+    if (!canAccess) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access denied to this test suite',
+      });
+      return;
+    }
+
+    // テストケース検索
+    const result = await testSuiteService.searchTestCases(testSuiteId, {
+      q: query.q,
+      status: query.status,
+      priority: query.priority,
+      limit: query.limit,
+      offset: query.offset,
+      sortBy: query.sortBy,
+      sortOrder: query.sortOrder,
+      includeDeleted: false,
+    });
+
+    res.json({
+      testCases: result.items,
+      pagination: {
+        total: result.total,
+        limit: query.limit,
+        offset: query.offset,
+        hasMore: query.offset + result.items.length < result.total,
       },
     });
   } catch (error) {
