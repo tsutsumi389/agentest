@@ -58,7 +58,7 @@ POST /internal/api/executions/:executionId/expected-results/:expectedResultId/ev
 | 項目 | 値 |
 |------|-----|
 | 1期待結果あたりの上限 | 10件 |
-| ファイルサイズ上限 | 50MB（内部API用に引き上げ） |
+| ファイルサイズ上限 | 100MB（既存のMAX_FILE_SIZEを流用） |
 | 許可MIMEタイプ | 画像、動画、音声、ドキュメント |
 | 対象実行状態 | IN_PROGRESSのみ |
 
@@ -73,7 +73,8 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.json({ limit: '50mb' }));
 ```
 
-Base64エンコード後を考慮すると、実質約37MBまでのファイルをアップロード可能。
+Base64エンコード後を考慮すると、express.jsonの50MB制限により実質約37MBまでのファイルをアップロード可能。
+（デコード後のMAX_FILE_SIZE=100MBチェックよりexpress.json制限が先に適用される）
 
 ## テストコード
 

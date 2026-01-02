@@ -1214,17 +1214,18 @@ router.post('/executions/:executionId/expected-results/:expectedResultId/evidenc
       return;
     }
 
-    // Base64デコード
-    let buffer: Buffer;
-    try {
-      buffer = Buffer.from(fileData, 'base64');
-    } catch {
+    // Base64形式の事前検証（Buffer.fromは不正な文字を無視するため明示的にチェック）
+    const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+    if (!base64Regex.test(fileData)) {
       res.status(400).json({
         error: 'Bad Request',
         message: '不正なBase64データです',
       });
       return;
     }
+
+    // Base64デコード
+    const buffer = Buffer.from(fileData, 'base64');
 
     // ファイルサイズ検証
     if (buffer.length > MAX_FILE_SIZE) {
@@ -1265,6 +1266,7 @@ router.post('/executions/:executionId/expected-results/:expectedResultId/evidenc
         fileName: evidence.fileName,
         fileUrl: evidence.fileUrl,
         fileType: evidence.fileType,
+        // BigIntはJSON.stringify()で直接シリアライズできないため、Numberに変換
         fileSize: Number(evidence.fileSize),
         description: evidence.description,
         uploadedByUserId: evidence.uploadedByUserId,

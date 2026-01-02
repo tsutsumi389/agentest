@@ -279,10 +279,9 @@ describe('Internal API Evidence Upload Integration Tests', () => {
             fileType: 'image/png',
           });
 
-        // Node.jsのBuffer.fromは無効なBase64でもエラーにならないため、
-        // このテストは実際には成功する可能性があります
-        // 厳密なBase64検証が必要な場合は別途実装が必要です
-        expect([201, 400]).toContain(response.status);
+        // 正規表現でBase64形式を事前検証するため400エラーを返す
+        expect(response.status).toBe(400);
+        expect(response.body.message).toContain('Base64');
       });
 
       it('fileNameが空の場合は400を返す', async () => {
