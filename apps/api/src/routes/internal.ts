@@ -1056,4 +1056,98 @@ router.patch('/executions/:executionId/expected-results/:expectedResultId', asyn
   }
 });
 
+/**
+ * DELETE /internal/api/test-suites/:testSuiteId
+ * テストスイートを削除（論理削除）
+ */
+router.delete('/test-suites/:testSuiteId', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { testSuiteId } = req.params;
+
+    // userIdクエリ検証
+    const userIdResult = userIdQuerySchema.safeParse(req.query);
+    if (!userIdResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid query parameters',
+        details: userIdResult.error.flatten(),
+      });
+      return;
+    }
+
+    const { userId } = userIdResult.data;
+
+    // 書き込み権限チェック
+    const canWrite = await authService.canWriteToTestSuite(userId, testSuiteId);
+    if (!canWrite) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access denied to this test suite',
+      });
+      return;
+    }
+
+    // テストスイート削除
+    await testSuiteService.softDelete(testSuiteId, userId);
+
+    res.json({ success: true, deletedId: testSuiteId });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * DELETE /internal/api/test-cases/:testCaseId
+ * テストケースを削除（論理削除）
+ */
+router.delete('/test-cases/:testCaseId', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { testCaseId } = req.params;
+
+    // userIdクエリ検証
+    const userIdResult = userIdQuerySchema.safeParse(req.query);
+    if (!userIdResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid query parameters',
+        details: userIdResult.error.flatten(),
+      });
+      return;
+    }
+
+    const { userId } = userIdResult.data;
+
+    // テストケース取得（テストスイートIDを取得するため）
+    const existingTestCase = await prisma.testCase.findUnique({
+      where: { id: testCaseId },
+      select: { testSuiteId: true, deletedAt: true },
+    });
+
+    if (!existingTestCase || existingTestCase.deletedAt) {
+      res.status(404).json({
+        error: 'Not Found',
+        message: 'Test case not found',
+      });
+      return;
+    }
+
+    // 書き込み権限チェック（テストスイート経由）
+    const canWrite = await authService.canWriteToTestSuite(userId, existingTestCase.testSuiteId);
+    if (!canWrite) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access denied to this test case',
+      });
+      return;
+    }
+
+    // テストケース削除
+    await testCaseService.softDelete(testCaseId, userId);
+
+    res.json({ success: true, deletedId: testCaseId });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;
