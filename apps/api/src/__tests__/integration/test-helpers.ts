@@ -224,6 +224,10 @@ export async function cleanupTestData() {
   await prisma.organizationInvitation.deleteMany({});
   await prisma.organizationMember.deleteMany({});
   await prisma.organization.deleteMany({});
+  // OAuth関連
+  await prisma.oAuthAccessToken.deleteMany({});
+  await prisma.oAuthAuthorizationCode.deleteMany({});
+  await prisma.oAuthClient.deleteMany({});
   await prisma.session.deleteMany({});
   await prisma.refreshToken.deleteMany({});
   await prisma.account.deleteMany({});
@@ -901,6 +905,105 @@ export async function createTestExecutionExpectedResult(
       status: overrides.status ?? 'PENDING',
       note: overrides.note ?? null,
       judgedAt: overrides.judgedAt ?? null,
+    },
+  });
+}
+
+/**
+ * テスト用OAuthクライアントを作成
+ */
+export async function createTestOAuthClient(
+  overrides: Partial<{
+    id: string;
+    clientId: string;
+    clientName: string;
+    redirectUris: string[];
+    grantTypes: string[];
+    responseTypes: string[];
+    tokenEndpointAuthMethod: string;
+    scopes: string[];
+    isActive: boolean;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  const clientId = overrides.clientId ?? randomUUID();
+  return prisma.oAuthClient.create({
+    data: {
+      id,
+      clientId,
+      clientName: overrides.clientName ?? `Test OAuth Client ${id.slice(0, 8)}`,
+      redirectUris: overrides.redirectUris ?? ['http://localhost:8080/callback'],
+      grantTypes: overrides.grantTypes ?? ['authorization_code'],
+      responseTypes: overrides.responseTypes ?? ['code'],
+      tokenEndpointAuthMethod: overrides.tokenEndpointAuthMethod ?? 'none',
+      scopes: overrides.scopes ?? ['mcp:read', 'mcp:write'],
+      isActive: overrides.isActive ?? true,
+    },
+  });
+}
+
+/**
+ * テスト用OAuth認可コードを作成
+ */
+export async function createTestOAuthAuthorizationCode(
+  clientId: string,
+  userId: string,
+  overrides: Partial<{
+    id: string;
+    code: string;
+    redirectUri: string;
+    scopes: string[];
+    codeChallenge: string;
+    codeChallengeMethod: string;
+    resource: string;
+    expiresAt: Date;
+    usedAt: Date | null;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.oAuthAuthorizationCode.create({
+    data: {
+      id,
+      code: overrides.code ?? `code-${id}`,
+      clientId,
+      userId,
+      redirectUri: overrides.redirectUri ?? 'http://localhost:8080/callback',
+      scopes: overrides.scopes ?? ['mcp:read'],
+      codeChallenge: overrides.codeChallenge ?? 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM',
+      codeChallengeMethod: overrides.codeChallengeMethod ?? 'S256',
+      resource: overrides.resource ?? 'http://localhost:3002',
+      expiresAt: overrides.expiresAt ?? new Date(Date.now() + 10 * 60 * 1000),
+      usedAt: overrides.usedAt ?? null,
+    },
+  });
+}
+
+/**
+ * テスト用OAuthアクセストークンを作成
+ */
+export async function createTestOAuthAccessToken(
+  clientId: string,
+  userId: string,
+  overrides: Partial<{
+    id: string;
+    tokenHash: string;
+    scopes: string[];
+    audience: string;
+    expiresAt: Date;
+    revokedAt: Date | null;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.oAuthAccessToken.create({
+    data: {
+      id,
+      tokenHash: overrides.tokenHash ?? `hash-${id}`,
+      clientId,
+      userId,
+      scopes: overrides.scopes ?? ['mcp:read'],
+      audience: overrides.audience ?? 'http://localhost:3002',
+      expiresAt: overrides.expiresAt ?? new Date(Date.now() + 60 * 60 * 1000),
+      revokedAt: overrides.revokedAt ?? null,
     },
   });
 }

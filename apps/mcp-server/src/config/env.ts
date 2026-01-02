@@ -28,6 +28,10 @@ const envSchema = z.object({
   // 内部API（API サーバーとの通信）
   API_INTERNAL_URL: z.string().url().default('http://api:3001'),
   INTERNAL_API_SECRET: z.string().min(32).default('development-internal-api-secret-32ch'),
+
+  // OAuth 2.1 Resource Server (RFC 9728)
+  MCP_SERVER_URL: z.string().url().default('http://localhost:3002'),
+  AUTH_SERVER_URL: z.string().url().default('http://localhost:3001'),
 });
 
 // 環境変数を検証

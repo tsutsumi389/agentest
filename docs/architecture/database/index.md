@@ -15,6 +15,14 @@ PostgreSQL を使用。Prisma ORM でスキーマ管理。
 | `RefreshToken` | JWT リフレッシュトークン | [auth.md](./auth.md#refreshtoken) |
 | `Session` | ユーザーセッション | [auth.md](./auth.md#session) |
 
+### OAuth 2.1（MCP クライアント向け）
+
+| テーブル | 説明 | 詳細 |
+|---------|------|------|
+| `OAuthClient` | 動的登録クライアント | [oauth.md](./oauth.md#oauthclient) |
+| `OAuthAuthorizationCode` | 認可コード | [oauth.md](./oauth.md#oauthauthorizationcode) |
+| `OAuthAccessToken` | アクセストークン | [oauth.md](./oauth.md#oauthaccesstoken) |
+
 ### 組織・プロジェクト
 
 | テーブル | 説明 | 詳細 |
@@ -352,6 +360,7 @@ docker compose exec api pnpm --filter @agentest/db prisma migrate deploy
 ## 関連ドキュメント
 
 - [認証関連テーブル](./auth.md)
+- [OAuth 2.1（MCP クライアント向け）](./oauth.md)
 - [組織・プロジェクト](./organization.md)
 - [Agent セッション](./agent-session.md)
 - [テストスイート](./test-suite.md)

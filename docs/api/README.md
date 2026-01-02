@@ -34,6 +34,20 @@ Authorization: Bearer <access_token>
 
 → [認証 API 詳細](./auth.md)
 
+### OAuth 2.1（MCP クライアント向け）
+
+| メソッド | パス | 説明 |
+|---------|------|------|
+| GET | `/.well-known/oauth-authorization-server` | Authorization Server Metadata |
+| POST | `/oauth/register` | 動的クライアント登録（RFC 7591） |
+| GET | `/oauth/authorize` | 認可エンドポイント |
+| POST | `/oauth/authorize/consent` | 同意承認エンドポイント |
+| POST | `/oauth/token` | トークンエンドポイント |
+| POST | `/oauth/introspect` | トークンイントロスペクション |
+| POST | `/oauth/revoke` | トークン失効 |
+
+→ [OAuth 2.1 API 詳細](./oauth.md)
+
 ### ユーザー
 
 | メソッド | パス | 説明 |

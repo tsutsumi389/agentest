@@ -14,6 +14,9 @@
 | AUTH-004 | セッション一覧 | 有効なセッションを確認 | 実装済 |
 | AUTH-005 | セッション無効化 | 特定のセッションを終了 | 実装済 |
 | AUTH-006 | 全セッション無効化 | 現在以外の全セッションを終了 | 実装済 |
+| AUTH-007 | MCP OAuth 2.1認証 | MCPクライアント向けOAuth 2.1認証フロー | 実装済 |
+| AUTH-008 | 動的クライアント登録 | MCPクライアントの動的登録（RFC 7591） | 実装済 |
+| AUTH-009 | トークンイントロスペクション | アクセストークンの検証 | 実装済 |
 
 ## 画面仕様
 
@@ -237,7 +240,123 @@ erDiagram
 - **トークン署名**
   - アクセストークンとリフレッシュトークンで異なる秘密鍵を使用
 
+## MCP OAuth 2.1 認証
+
+MCPクライアント（Claude Code等）向けのOAuth 2.1認証フロー。
+
+### 概要
+
+- **APIサーバー**: Authorization Server（OAuth 2.1準拠）
+- **MCPサーバー**: Resource Server（RFC 9728準拠）
+- **クライアント登録**: Dynamic Client Registration（RFC 7591準拠）
+- **PKCE**: S256のみサポート（plain禁止）
+- **リソースインジケーター**: RFC 8707準拠
+
+### MCP OAuth 2.1 認証フロー
+
+```mermaid
+sequenceDiagram
+    participant C as Claude Code
+    participant M as MCP Server
+    participant A as API Server
+    participant B as Browser
+    participant U as User
+
+    C->>M: POST /mcp (initialize)
+    M->>C: 401 Unauthorized + WWW-Authenticate
+    C->>M: GET /.well-known/oauth-protected-resource
+    M->>C: Protected Resource Metadata
+    C->>A: GET /.well-known/oauth-authorization-server
+    A->>C: Authorization Server Metadata
+    C->>A: POST /oauth/register
+    A->>C: client_id
+    C->>B: Open authorize URL
+    B->>A: GET /oauth/authorize
+    A->>B: Login/Consent screen
+    U->>B: Approve
+    B->>A: POST /oauth/authorize/consent
+    A->>B: Redirect with code
+    B->>C: code (via localhost callback)
+    C->>A: POST /oauth/token (code + code_verifier)
+    A->>C: access_token
+    C->>M: POST /mcp (Authorization: Bearer token)
+    M->>A: POST /oauth/introspect
+    A->>M: Token info (active: true)
+    M->>C: MCP response
+```
+
+### エンドポイント
+
+| エンドポイント | メソッド | 説明 |
+|---------------|---------|------|
+| `/.well-known/oauth-authorization-server` | GET | Authorization Server Metadata |
+| `/oauth/register` | POST | 動的クライアント登録 |
+| `/oauth/authorize` | GET | 認可エンドポイント |
+| `/oauth/authorize/consent` | POST | 同意承認 |
+| `/oauth/token` | POST | トークン発行 |
+| `/oauth/introspect` | POST | トークン検証 |
+| `/oauth/revoke` | POST | トークン失効 |
+
+### トークン仕様（MCP OAuth 2.1）
+
+| 種類 | 有効期限 | 保存方法 |
+|-----|---------|---------|
+| アクセストークン | 1時間 | SHA256ハッシュ化してDB保存 |
+| 認可コード | 10分 | DB保存（使い捨て） |
+
+### セキュリティ要件
+
+- PKCE必須（S256のみ）
+- リソースインジケーター（RFC 8707）でAudience検証
+- redirect_uriはlocalhost/127.0.0.1のみ許可
+- HTTPS必須（本番環境）
+
+### データモデル（MCP OAuth 2.1）
+
+```mermaid
+erDiagram
+    User ||--o{ OAuthAuthorizationCode : "has"
+    User ||--o{ OAuthAccessToken : "has"
+    OAuthClient ||--o{ OAuthAuthorizationCode : "issues"
+    OAuthClient ||--o{ OAuthAccessToken : "issues"
+
+    OAuthClient {
+        uuid id PK
+        string clientId UK
+        string clientName
+        array redirectUris
+        array scopes
+        boolean isActive
+        timestamp createdAt
+    }
+
+    OAuthAuthorizationCode {
+        uuid id PK
+        string code UK
+        string clientId FK
+        uuid userId FK
+        string codeChallenge
+        string resource
+        timestamp expiresAt
+        timestamp usedAt
+    }
+
+    OAuthAccessToken {
+        uuid id PK
+        string tokenHash UK
+        string clientId FK
+        uuid userId FK
+        array scopes
+        string audience
+        timestamp expiresAt
+        timestamp revokedAt
+    }
+```
+
 ## 関連機能
 
 - [ユーザー管理](./user-management.md) - OAuth連携の追加・解除
 - [監査ログ](./audit-log.md) - ログイン履歴の記録
+- [MCP連携](./mcp-integration.md) - MCP認証フローの詳細
+- [OAuth 2.1 API](../../api/oauth.md) - APIリファレンス
+- [OAuth 2.1データベース設計](../database/oauth.md) - テーブル定義
