@@ -64,11 +64,25 @@ export interface TestCaseCreateInput {
   expectedResults?: { content: string }[];
 }
 
+// 子エンティティ作成用入力型
+export interface ChildEntityCreateInput {
+  content: string;
+}
+
+// 子エンティティ更新用入力型（idあり→更新、idなし→追加）
+export interface ChildEntityUpdateInput {
+  id?: string;
+  content: string;
+}
+
 export interface TestCaseUpdateInput {
   title?: string;
   description?: string | null;
   priority?: TestCasePriority;
   status?: EntityStatus;
+  preconditions?: ChildEntityUpdateInput[];
+  steps?: ChildEntityUpdateInput[];
+  expectedResults?: ChildEntityUpdateInput[];
 }
 
 export interface TestCasePublic {

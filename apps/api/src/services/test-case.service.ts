@@ -147,7 +147,7 @@ export class TestCaseService {
   private testCaseRepo = new TestCaseRepository();
 
   /**
-   * テストケースを作成
+   * テストケースを作成（子エンティティ含む）
    */
   async create(
     userId: string,
@@ -157,6 +157,9 @@ export class TestCaseService {
       description?: string;
       priority?: TestCasePriority;
       status?: EntityStatus;
+      preconditions?: { content: string }[];
+      steps?: { content: string }[];
+      expectedResults?: { content: string }[];
     }
   ) {
     // テストスイートの存在確認とプロジェクトメンバーシップ検証
@@ -203,6 +206,64 @@ export class TestCaseService {
       orderBy: { orderKey: 'desc' },
     });
     const orderKey = getNextOrderKey(lastTestCase?.orderKey ?? null);
+
+    // 子エンティティがある場合はトランザクションで一括作成
+    if (data.preconditions?.length || data.steps?.length || data.expectedResults?.length) {
+      return prisma.$transaction(async (tx) => {
+        const testCase = await tx.testCase.create({
+          data: {
+            testSuiteId: data.testSuiteId,
+            title: data.title,
+            description: data.description,
+            priority: data.priority ?? 'MEDIUM',
+            status: data.status ?? 'DRAFT',
+            orderKey,
+            createdByUserId: userId,
+          },
+        });
+
+        // 子エンティティを一括登録
+        if (data.preconditions?.length) {
+          await tx.testCasePrecondition.createMany({
+            data: data.preconditions.map((p, i) => ({
+              testCaseId: testCase.id,
+              content: p.content,
+              orderKey: indexToOrderKey(i),
+            })),
+          });
+        }
+
+        if (data.steps?.length) {
+          await tx.testCaseStep.createMany({
+            data: data.steps.map((s, i) => ({
+              testCaseId: testCase.id,
+              content: s.content,
+              orderKey: indexToOrderKey(i),
+            })),
+          });
+        }
+
+        if (data.expectedResults?.length) {
+          await tx.testCaseExpectedResult.createMany({
+            data: data.expectedResults.map((e, i) => ({
+              testCaseId: testCase.id,
+              content: e.content,
+              orderKey: indexToOrderKey(i),
+            })),
+          });
+        }
+
+        // 作成したテストケースを子エンティティ含めて返却
+        return tx.testCase.findUnique({
+          where: { id: testCase.id },
+          include: {
+            preconditions: { orderBy: { orderKey: 'asc' } },
+            steps: { orderBy: { orderKey: 'asc' } },
+            expectedResults: { orderBy: { orderKey: 'asc' } },
+          },
+        });
+      });
+    }
 
     return prisma.testCase.create({
       data: {
@@ -1331,5 +1392,196 @@ export class TestCaseService {
       // リポジトリを使用して復元
       return this.testCaseRepo.restore(testCaseId);
     });
+  }
+
+  /**
+   * 子エンティティを含めてテストケースを更新（差分更新）
+   * - idあり: 更新
+   * - idなし: 新規作成
+   * - リクエストにないid: 削除
+   */
+  async updateWithChildren(
+    testCaseId: string,
+    userId: string,
+    data: {
+      title?: string;
+      description?: string | null;
+      priority?: TestCasePriority;
+      status?: EntityStatus;
+      preconditions?: { id?: string; content: string }[];
+      steps?: { id?: string; content: string }[];
+      expectedResults?: { id?: string; content: string }[];
+    }
+  ) {
+    const testCase = await this.findById(testCaseId);
+
+    // 履歴保存と更新を同じトランザクションで実行
+    return prisma.$transaction(async (tx) => {
+      // 更新前のスナップショットを取得
+      const beforePreconditions = await tx.testCasePrecondition.findMany({
+        where: { testCaseId },
+        orderBy: { orderKey: 'asc' },
+      });
+      const beforeSteps = await tx.testCaseStep.findMany({
+        where: { testCaseId },
+        orderBy: { orderKey: 'asc' },
+      });
+      const beforeExpectedResults = await tx.testCaseExpectedResult.findMany({
+        where: { testCaseId },
+        orderBy: { orderKey: 'asc' },
+      });
+
+      const snapshot: HistorySnapshot = {
+        id: testCase.id,
+        testSuiteId: testCase.testSuiteId,
+        title: testCase.title,
+        description: testCase.description,
+        priority: testCase.priority,
+        status: testCase.status,
+        preconditions: beforePreconditions.map((p) => ({
+          id: p.id,
+          content: p.content,
+          orderKey: p.orderKey,
+        })),
+        steps: beforeSteps.map((s) => ({
+          id: s.id,
+          content: s.content,
+          orderKey: s.orderKey,
+        })),
+        expectedResults: beforeExpectedResults.map((e) => ({
+          id: e.id,
+          content: e.content,
+          orderKey: e.orderKey,
+        })),
+      };
+
+      await tx.testCaseHistory.create({
+        data: {
+          testCaseId,
+          changedByUserId: userId,
+          changeType: 'UPDATE',
+          snapshot: toJsonSnapshot(snapshot),
+        },
+      });
+
+      // テストケース本体の更新
+      const { preconditions, steps, expectedResults, ...testCaseData } = data;
+      if (Object.keys(testCaseData).length > 0) {
+        await tx.testCase.update({
+          where: { id: testCaseId },
+          data: testCaseData,
+        });
+      }
+
+      // 子エンティティの差分同期
+      if (preconditions !== undefined) {
+        await this.syncChildEntities(
+          tx,
+          testCaseId,
+          'precondition',
+          preconditions,
+          beforePreconditions
+        );
+      }
+
+      if (steps !== undefined) {
+        await this.syncChildEntities(tx, testCaseId, 'step', steps, beforeSteps);
+      }
+
+      if (expectedResults !== undefined) {
+        await this.syncChildEntities(
+          tx,
+          testCaseId,
+          'expectedResult',
+          expectedResults,
+          beforeExpectedResults
+        );
+      }
+
+      // 更新後のテストケースを子エンティティ含めて返却
+      return tx.testCase.findUnique({
+        where: { id: testCaseId },
+        include: {
+          preconditions: { orderBy: { orderKey: 'asc' } },
+          steps: { orderBy: { orderKey: 'asc' } },
+          expectedResults: { orderBy: { orderKey: 'asc' } },
+        },
+      });
+    });
+  }
+
+  /**
+   * 子エンティティの差分同期処理
+   * - idあり & 既存に存在: 更新
+   * - idなし: 新規作成
+   * - 既存にあるがリクエストにない: 削除
+   */
+  private async syncChildEntities(
+    tx: Prisma.TransactionClient,
+    testCaseId: string,
+    entityType: 'precondition' | 'step' | 'expectedResult',
+    items: { id?: string; content: string }[],
+    existingItems: { id: string; content: string; orderKey: string }[]
+  ): Promise<void> {
+    const existingIds = new Set(existingItems.map((e) => e.id));
+    const requestIds = new Set(items.filter((i) => i.id).map((i) => i.id));
+
+    // 削除対象: 既存にあるがリクエストにない
+    const toDelete = [...existingIds].filter((id) => !requestIds.has(id));
+
+    // 削除
+    if (toDelete.length > 0) {
+      if (entityType === 'precondition') {
+        await tx.testCasePrecondition.deleteMany({ where: { id: { in: toDelete } } });
+      } else if (entityType === 'step') {
+        await tx.testCaseStep.deleteMany({ where: { id: { in: toDelete } } });
+      } else {
+        await tx.testCaseExpectedResult.deleteMany({ where: { id: { in: toDelete } } });
+      }
+    }
+
+    // 更新/作成
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const orderKey = indexToOrderKey(i);
+
+      if (item.id && existingIds.has(item.id)) {
+        // 既存エンティティの更新
+        if (entityType === 'precondition') {
+          await tx.testCasePrecondition.update({
+            where: { id: item.id },
+            data: { content: item.content, orderKey },
+          });
+        } else if (entityType === 'step') {
+          await tx.testCaseStep.update({
+            where: { id: item.id },
+            data: { content: item.content, orderKey },
+          });
+        } else {
+          await tx.testCaseExpectedResult.update({
+            where: { id: item.id },
+            data: { content: item.content, orderKey },
+          });
+        }
+      } else if (item.id && !existingIds.has(item.id)) {
+        // 他のテストケースのIDを指定した場合はエラー
+        throw new BadRequestError(`Invalid ${entityType} ID: ${item.id}`);
+      } else {
+        // 新規作成
+        if (entityType === 'precondition') {
+          await tx.testCasePrecondition.create({
+            data: { testCaseId, content: item.content, orderKey },
+          });
+        } else if (entityType === 'step') {
+          await tx.testCaseStep.create({
+            data: { testCaseId, content: item.content, orderKey },
+          });
+        } else {
+          await tx.testCaseExpectedResult.create({
+            data: { testCaseId, content: item.content, orderKey },
+          });
+        }
+      }
+    }
   }
 }

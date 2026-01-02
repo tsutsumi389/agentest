@@ -590,6 +590,21 @@ router.post('/test-suites', async (req: Request, res: Response, next: NextFuncti
 });
 
 /**
+ * 子エンティティ作成用スキーマ
+ */
+const childEntityCreateSchema = z.object({
+  content: z.string().min(1).max(10000),
+});
+
+/**
+ * 子エンティティ更新用スキーマ（idあり→更新、idなし→追加）
+ */
+const childEntityUpdateSchema = z.object({
+  id: z.string().uuid().optional(),
+  content: z.string().min(1).max(10000),
+});
+
+/**
  * テストケース作成リクエストボディのスキーマ
  */
 const createTestCaseBodySchema = z.object({
@@ -598,11 +613,14 @@ const createTestCaseBodySchema = z.object({
   description: z.string().max(2000).optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).default('MEDIUM'),
   status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).default('DRAFT'),
+  preconditions: z.array(childEntityCreateSchema).optional(),
+  steps: z.array(childEntityCreateSchema).optional(),
+  expectedResults: z.array(childEntityCreateSchema).optional(),
 });
 
 /**
  * POST /internal/api/test-cases
- * テストケースを作成
+ * テストケースを作成（子エンティティ含む）
  */
 router.post('/test-cases', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -630,7 +648,7 @@ router.post('/test-cases', async (req: Request, res: Response, next: NextFunctio
       return;
     }
 
-    const { testSuiteId, title, description, priority, status } = bodyResult.data;
+    const { testSuiteId, title, description, priority, status, preconditions, steps, expectedResults } = bodyResult.data;
 
     // 書き込み権限チェック
     const canWrite = await authService.canWriteToTestSuite(userId, testSuiteId);
@@ -642,13 +660,16 @@ router.post('/test-cases', async (req: Request, res: Response, next: NextFunctio
       return;
     }
 
-    // テストケース作成
+    // テストケース作成（子エンティティ含む）
     const testCase = await testCaseService.create(userId, {
       testSuiteId,
       title,
       description,
       priority,
       status,
+      preconditions,
+      steps,
+      expectedResults,
     });
 
     res.status(201).json({ testCase });
@@ -683,6 +704,9 @@ const updateTestCaseBodySchema = z.object({
   description: z.string().max(2000).nullable().optional(),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
   status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).optional(),
+  preconditions: z.array(childEntityUpdateSchema).optional(),
+  steps: z.array(childEntityUpdateSchema).optional(),
+  expectedResults: z.array(childEntityUpdateSchema).optional(),
 }).refine((data) => Object.keys(data).length > 0, {
   message: 'At least one field must be provided',
 });
@@ -821,7 +845,7 @@ router.patch('/test-suites/:testSuiteId', async (req: Request, res: Response, ne
 
 /**
  * PATCH /internal/api/test-cases/:testCaseId
- * テストケースを更新
+ * テストケースを更新（子エンティティ含む差分更新）
  */
 router.patch('/test-cases/:testCaseId', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -877,8 +901,15 @@ router.patch('/test-cases/:testCaseId', async (req: Request, res: Response, next
       return;
     }
 
-    // テストケース更新
-    const testCase = await testCaseService.update(testCaseId, userId, updateData);
+    // 子エンティティが含まれる場合は updateWithChildren を使用
+    const hasChildEntities =
+      updateData.preconditions !== undefined ||
+      updateData.steps !== undefined ||
+      updateData.expectedResults !== undefined;
+
+    const testCase = hasChildEntities
+      ? await testCaseService.updateWithChildren(testCaseId, userId, updateData)
+      : await testCaseService.update(testCaseId, userId, updateData);
 
     res.json({ testCase });
   } catch (error) {

@@ -244,6 +244,151 @@ describe('Internal API Update Endpoints Integration Tests', () => {
         expect(response.status).toBe(404);
       });
     });
+
+    describe('子エンティティの差分更新', () => {
+      it('新しい子エンティティを追加できる', async () => {
+        const response = await request(app)
+          .patch(`/internal/api/test-cases/${testCase.id}`)
+          .query({ userId: testUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
+          .send({
+            steps: [
+              { content: 'New Step 1' },
+              { content: 'New Step 2' },
+            ],
+          });
+
+        expect(response.status).toBe(200);
+        expect(response.body.testCase.steps).toHaveLength(2);
+        expect(response.body.testCase.steps[0].content).toBe('New Step 1');
+        expect(response.body.testCase.steps[0].orderKey).toBe('00001');
+        expect(response.body.testCase.steps[1].content).toBe('New Step 2');
+        expect(response.body.testCase.steps[1].orderKey).toBe('00002');
+      });
+
+      it('既存の子エンティティを更新できる', async () => {
+        // 先にステップを追加
+        const createResponse = await request(app)
+          .patch(`/internal/api/test-cases/${testCase.id}`)
+          .query({ userId: testUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
+          .send({
+            steps: [{ content: 'Original Step' }],
+          });
+
+        const stepId = createResponse.body.testCase.steps[0].id;
+
+        // 更新
+        const updateResponse = await request(app)
+          .patch(`/internal/api/test-cases/${testCase.id}`)
+          .query({ userId: testUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
+          .send({
+            steps: [{ id: stepId, content: 'Updated Step' }],
+          });
+
+        expect(updateResponse.status).toBe(200);
+        expect(updateResponse.body.testCase.steps).toHaveLength(1);
+        expect(updateResponse.body.testCase.steps[0].id).toBe(stepId);
+        expect(updateResponse.body.testCase.steps[0].content).toBe('Updated Step');
+      });
+
+      it('リクエストにないidの子エンティティは削除される', async () => {
+        // 先にステップを2つ追加
+        const createResponse = await request(app)
+          .patch(`/internal/api/test-cases/${testCase.id}`)
+          .query({ userId: testUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
+          .send({
+            steps: [{ content: 'Step 1' }, { content: 'Step 2' }],
+          });
+
+        const step1Id = createResponse.body.testCase.steps[0].id;
+
+        // step1Idのみを残す（step2は削除される）
+        const updateResponse = await request(app)
+          .patch(`/internal/api/test-cases/${testCase.id}`)
+          .query({ userId: testUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
+          .send({
+            steps: [{ id: step1Id, content: 'Step 1 Updated' }],
+          });
+
+        expect(updateResponse.status).toBe(200);
+        expect(updateResponse.body.testCase.steps).toHaveLength(1);
+        expect(updateResponse.body.testCase.steps[0].id).toBe(step1Id);
+      });
+
+      it('空配列で全ての子エンティティを削除できる', async () => {
+        // 先にステップを追加
+        await request(app)
+          .patch(`/internal/api/test-cases/${testCase.id}`)
+          .query({ userId: testUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
+          .send({
+            steps: [{ content: 'Step 1' }, { content: 'Step 2' }],
+          });
+
+        // 空配列で全削除
+        const deleteResponse = await request(app)
+          .patch(`/internal/api/test-cases/${testCase.id}`)
+          .query({ userId: testUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
+          .send({
+            steps: [],
+          });
+
+        expect(deleteResponse.status).toBe(200);
+        expect(deleteResponse.body.testCase.steps).toHaveLength(0);
+      });
+
+      it('複数種類の子エンティティを同時に更新できる', async () => {
+        const response = await request(app)
+          .patch(`/internal/api/test-cases/${testCase.id}`)
+          .query({ userId: testUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
+          .send({
+            title: 'Updated Title',
+            preconditions: [{ content: 'Precondition 1' }],
+            steps: [{ content: 'Step 1' }, { content: 'Step 2' }],
+            expectedResults: [{ content: 'Expected 1' }],
+          });
+
+        expect(response.status).toBe(200);
+        expect(response.body.testCase.title).toBe('Updated Title');
+        expect(response.body.testCase.preconditions).toHaveLength(1);
+        expect(response.body.testCase.steps).toHaveLength(2);
+        expect(response.body.testCase.expectedResults).toHaveLength(1);
+      });
+
+      it('他のテストケースのIDを指定するとエラーになる', async () => {
+        // 別のテストケースを作成
+        const otherTestCase = await prisma.testCase.create({
+          data: {
+            testSuiteId: testSuite.id,
+            title: 'Other Test Case',
+            priority: 'MEDIUM',
+            status: 'DRAFT',
+            orderKey: '00099',
+            steps: {
+              create: [{ content: 'Other Step', orderKey: '00001' }],
+            },
+          },
+          include: { steps: true },
+        });
+
+        // 他のテストケースのステップIDを使おうとする
+        const response = await request(app)
+          .patch(`/internal/api/test-cases/${testCase.id}`)
+          .query({ userId: testUser.id })
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
+          .send({
+            steps: [{ id: otherTestCase.steps[0].id, content: 'Hijacked Step' }],
+          });
+
+        expect(response.status).toBe(400);
+      });
+    });
   });
 
   describe('PATCH /internal/api/executions/:executionId/precondition-results/:preconditionResultId', () => {
