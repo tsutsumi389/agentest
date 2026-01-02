@@ -70,16 +70,16 @@ export class OAuthController {
       // ユーザーが未認証の場合はログインページへリダイレクト
       if (!req.user) {
         // 元のリクエストパラメータを保持してログインページへ
-        const loginUrl = new URL('/login', env.API_BASE_URL);
+        const loginUrl = new URL('/login', env.FRONTEND_URL);
         const returnUrl = new URL(req.originalUrl, env.API_BASE_URL);
-        loginUrl.searchParams.set('return_to', returnUrl.toString());
+        loginUrl.searchParams.set('redirect', returnUrl.toString());
         res.redirect(loginUrl.toString());
         return;
       }
 
       // 同意画面へリダイレクト（フロントエンド実装）
       // フロントエンドで同意後に /oauth/authorize/consent へPOSTする
-      const consentUrl = new URL('/oauth/consent', env.API_BASE_URL);
+      const consentUrl = new URL('/oauth/consent', env.FRONTEND_URL);
       consentUrl.searchParams.set('client_id', input.client_id);
       consentUrl.searchParams.set('client_name', client.clientName);
       consentUrl.searchParams.set('scope', scopes.join(' '));

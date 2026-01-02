@@ -16,6 +16,7 @@ import { OrganizationsPage } from './pages/Organizations';
 import { OrganizationSettingsPage } from './pages/OrganizationSettings';
 import { ProjectSettingsPage } from './pages/ProjectSettings';
 import { InvitationAcceptPage } from './pages/InvitationAccept';
+import { OAuthConsentPage } from './pages/OAuthConsent';
 
 /**
  * 認証が必要なルートをラップするコンポーネント
@@ -57,6 +58,7 @@ export function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route path="/invitations/:token" element={<InvitationAcceptPage />} />
+          <Route path="/oauth/consent" element={<OAuthConsentPage />} />
 
           {/* 保護されたルート */}
           <Route

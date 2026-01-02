@@ -217,8 +217,11 @@ export class OAuthService {
       throw new OAuthError('invalid_grant', 'Authorization code expired', 400);
     }
 
-    // 使用済み検証
+    // 使用済み検証 (RFC 6749 Section 4.1.2)
+    // 認可コードが再利用された場合、セキュリティ侵害の可能性があるため
+    // このコードで発行された全てのトークンを無効化する
     if (authCode.usedAt) {
+      await this.repository.revokeAllAccessTokensByUserId(authCode.userId, authCode.clientId);
       throw new OAuthError('invalid_grant', 'Authorization code already used', 400);
     }
 

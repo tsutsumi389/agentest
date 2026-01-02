@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { oauthController } from '../controllers/oauth.controller.js';
 import { authenticate } from '@agentest/auth';
 import { authLimiter } from '../middleware/rate-limiter.js';
+import { requireInternalApiAuth } from '../middleware/internal-api.middleware.js';
 
 const router: Router = Router();
 
@@ -41,9 +42,9 @@ router.post('/token', authLimiter, oauthController.token);
 // ============================================
 // トークンイントロスペクション (RFC 7662)
 // POST /oauth/introspect
-// 内部API用 (MCPサーバーから呼び出し)
+// 内部API用 (MCPサーバーから呼び出し、INTERNAL_API_SECRETで認証)
 // ============================================
-router.post('/introspect', oauthController.introspect);
+router.post('/introspect', requireInternalApiAuth(), oauthController.introspect);
 
 // ============================================
 // トークン失効 (RFC 7009)

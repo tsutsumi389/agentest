@@ -26,6 +26,7 @@ export class TokenIntrospectionService {
 
   /**
    * トークンをイントロスペクト
+   * 内部API認証 (INTERNAL_API_SECRET) を使用
    */
   async introspect(token: string): Promise<IntrospectionResult> {
     try {
@@ -33,6 +34,7 @@ export class TokenIntrospectionService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'X-Internal-Api-Key': env.INTERNAL_API_SECRET,
         },
         body: JSON.stringify({ token }),
       });
