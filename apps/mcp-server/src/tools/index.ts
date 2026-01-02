@@ -3,6 +3,7 @@ import type { z } from 'zod';
 import type { AgentSession } from '@agentest/db';
 import { requestContext } from '../transport/streamable-http.js';
 import { searchProjectTool } from './search-project.js';
+import { searchTestSuiteTool } from './search-test-suite.js';
 
 /**
  * ツール実行コンテキスト
@@ -90,6 +91,7 @@ export const toolRegistry = new ToolRegistry();
 export function registerTools(server: McpServer): void {
   // ツールを登録
   toolRegistry.register(searchProjectTool);
+  toolRegistry.register(searchTestSuiteTool);
 
   const tools = toolRegistry.getAll();
 
