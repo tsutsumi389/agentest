@@ -1,4 +1,4 @@
-import { prisma } from '@agentest/db';
+import { prisma, type EntityStatus } from '@agentest/db';
 import { NotFoundError } from '@agentest/shared';
 import { UserRepository } from '../repositories/user.repository.js';
 
@@ -187,5 +187,115 @@ export class UserService {
         ...orgCondition,
       },
     });
+  }
+
+  /**
+   * テストスイート検索用のwhere条件を構築（共通ロジック）
+   * @param userId ユーザーID
+   * @param options 検索オプション
+   */
+  private buildTestSuiteWhereCondition(
+    userId: string,
+    options: {
+      projectId?: string;
+      q?: string;
+      status?: EntityStatus;
+    }
+  ) {
+    const { projectId, q, status } = options;
+
+    // 名前検索条件
+    const nameCondition = q ? { name: { contains: q, mode: 'insensitive' as const } } : {};
+
+    // ステータス条件
+    const statusCondition = status ? { status } : {};
+
+    // プロジェクトアクセス条件（共通）
+    // projectId指定時も認可チェックを行う
+    const accessCondition = {
+      OR: [
+        { members: { some: { userId } } },
+        { organization: { members: { some: { userId } } } },
+      ],
+      deletedAt: null,
+    };
+
+    // プロジェクト条件
+    const projectCondition = projectId
+      ? {
+          projectId,
+          project: accessCondition,
+        }
+      : {
+          project: accessCondition,
+        };
+
+    return {
+      deletedAt: null,
+      ...nameCondition,
+      ...statusCondition,
+      ...projectCondition,
+    };
+  }
+
+  /**
+   * ユーザーがアクセス可能なテストスイート一覧を取得
+   * @param userId ユーザーID
+   * @param options 検索オプション
+   * @param options.projectId プロジェクトIDで絞り込み（省略時は全アクセス可能プロジェクト）
+   * @param options.q テストスイート名で部分一致検索
+   * @param options.status ステータスで絞り込み
+   * @param options.limit 取得件数（デフォルト: 20）
+   * @param options.offset 取得開始位置（デフォルト: 0）
+   */
+  async getTestSuites(
+    userId: string,
+    options: {
+      projectId?: string;
+      q?: string;
+      status?: EntityStatus;
+      limit?: number;
+      offset?: number;
+    } = {}
+  ) {
+    const { limit = 20, offset = 0 } = options;
+    const where = this.buildTestSuiteWhereCondition(userId, options);
+
+    const testSuites = await prisma.testSuite.findMany({
+      where,
+      include: {
+        project: {
+          select: { id: true, name: true },
+        },
+        createdByUser: {
+          select: { id: true, name: true, avatarUrl: true },
+        },
+        _count: {
+          select: { testCases: true, preconditions: true },
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: limit,
+      skip: offset,
+    });
+
+    return testSuites;
+  }
+
+  /**
+   * ユーザーがアクセス可能なテストスイートの総数を取得
+   * @param userId ユーザーID
+   * @param options 検索オプション
+   */
+  async countTestSuites(
+    userId: string,
+    options: {
+      projectId?: string;
+      q?: string;
+      status?: EntityStatus;
+    } = {}
+  ) {
+    const where = this.buildTestSuiteWhereCondition(userId, options);
+    return prisma.testSuite.count({ where });
   }
 }

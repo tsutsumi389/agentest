@@ -17,11 +17,18 @@ export class InternalApiClient {
   /**
    * GETリクエストを送信
    */
-  async get<T>(path: string, params?: Record<string, string | number | undefined>): Promise<T> {
+  async get<T>(path: string, params?: Record<string, string | number | string[] | undefined>): Promise<T> {
     const url = new URL(path, this.baseUrl);
     if (params) {
       Object.entries(params).forEach(([k, v]) => {
-        if (v !== undefined) url.searchParams.set(k, String(v));
+        if (v !== undefined) {
+          if (Array.isArray(v)) {
+            // 配列の場合は複数のパラメータとして追加（例: ?status=DRAFT&status=ACTIVE）
+            v.forEach((item) => url.searchParams.append(k, String(item)));
+          } else {
+            url.searchParams.set(k, String(v));
+          }
+        }
       });
     }
 

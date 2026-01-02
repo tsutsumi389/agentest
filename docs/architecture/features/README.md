@@ -33,7 +33,7 @@
 
 | 機能 | 説明 | ドキュメント |
 |------|------|-------------|
-| MCP連携 | AIエージェント連携（MCPサーバー） | [mcp-integration.md](./mcp-integration.md) |
+| MCP連携 | AIエージェント連携（MCPサーバー）- プロジェクト/テストスイート/テストケース/実行履歴検索ツール実装済 | [mcp-integration.md](./mcp-integration.md) |
 
 ### その他（予定）
 
