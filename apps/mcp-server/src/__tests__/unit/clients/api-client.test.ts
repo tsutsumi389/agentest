@@ -82,6 +82,58 @@ describe('InternalApiClient', () => {
       expect(calledUrl).toContain('limit=10');
     });
 
+    it('配列パラメータを複数のクエリパラメータとして追加する', async () => {
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({}),
+      } as Response);
+
+      const client = new InternalApiClient();
+      await client.get('/test', { status: ['DRAFT', 'ACTIVE'] });
+
+      const calledUrl = fetchSpy.mock.calls[0][0] as string;
+      // ?status=DRAFT&status=ACTIVE 形式になっていることを確認
+      expect(calledUrl).toContain('status=DRAFT');
+      expect(calledUrl).toContain('status=ACTIVE');
+    });
+
+    it('配列パラメータと通常パラメータを混在させられる', async () => {
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({}),
+      } as Response);
+
+      const client = new InternalApiClient();
+      await client.get('/test', {
+        q: 'search',
+        status: ['DRAFT', 'ACTIVE'],
+        priority: ['HIGH', 'CRITICAL'],
+        limit: 20,
+      });
+
+      const calledUrl = fetchSpy.mock.calls[0][0] as string;
+      expect(calledUrl).toContain('q=search');
+      expect(calledUrl).toContain('status=DRAFT');
+      expect(calledUrl).toContain('status=ACTIVE');
+      expect(calledUrl).toContain('priority=HIGH');
+      expect(calledUrl).toContain('priority=CRITICAL');
+      expect(calledUrl).toContain('limit=20');
+    });
+
+    it('空の配列パラメータはパラメータを追加しない', async () => {
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({}),
+      } as Response);
+
+      const client = new InternalApiClient();
+      await client.get('/test', { status: [], limit: 10 });
+
+      const calledUrl = fetchSpy.mock.calls[0][0] as string;
+      expect(calledUrl).not.toContain('status=');
+      expect(calledUrl).toContain('limit=10');
+    });
+
     it('APIエラー時はエラーをスローする', async () => {
       fetchSpy.mockResolvedValueOnce({
         ok: false,
