@@ -1,15 +1,18 @@
 import { Router } from 'express';
 import type { Request, Response, NextFunction, Router as RouterType } from 'express';
 import { z } from 'zod';
+import { prisma } from '@agentest/db';
 import { requireInternalApiAuth } from '../middleware/internal-api.middleware.js';
 import { UserService } from '../services/user.service.js';
 import { InternalAuthorizationService } from '../services/internal-authorization.service.js';
 import { TestSuiteService } from '../services/test-suite.service.js';
+import { ExecutionService } from '../services/execution.service.js';
 
 const router: RouterType = Router();
 const userService = new UserService();
 const authService = new InternalAuthorizationService();
 const testSuiteService = new TestSuiteService();
+const executionService = new ExecutionService();
 
 // 全エンドポイントに内部API認証を適用
 router.use(requireInternalApiAuth());
@@ -244,6 +247,274 @@ router.get('/test-suites/:testSuiteId/executions', async (req: Request, res: Res
         hasMore: query.offset + result.executions.length < result.total,
       },
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * 単一取得APIのuserIdクエリパラメータスキーマ
+ */
+const userIdQuerySchema = z.object({
+  userId: z.string().uuid(),
+});
+
+/**
+ * GET /internal/api/projects/:projectId
+ * プロジェクト詳細を取得
+ */
+router.get('/projects/:projectId', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { projectId } = req.params;
+    const parseResult = userIdQuerySchema.safeParse(req.query);
+
+    if (!parseResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid query parameters',
+        details: parseResult.error.flatten(),
+      });
+      return;
+    }
+
+    const { userId } = parseResult.data;
+
+    // 認可チェック
+    const canAccess = await authService.canAccessProject(userId, projectId);
+    if (!canAccess) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access denied to this project',
+      });
+      return;
+    }
+
+    // プロジェクト詳細を取得（環境、ロール含む）
+    const project = await prisma.project.findFirst({
+      where: {
+        id: projectId,
+        deletedAt: null,
+      },
+      include: {
+        organization: {
+          select: { id: true, name: true, slug: true },
+        },
+        environments: {
+          orderBy: { sortOrder: 'asc' },
+        },
+        _count: {
+          select: { testSuites: { where: { deletedAt: null } } },
+        },
+      },
+    });
+
+    if (!project) {
+      res.status(404).json({
+        error: 'Not Found',
+        message: 'Project not found',
+      });
+      return;
+    }
+
+    // ユーザーのロールを取得
+    const projectMember = await prisma.projectMember.findUnique({
+      where: {
+        projectId_userId: { projectId, userId },
+      },
+    });
+
+    res.json({
+      project: {
+        ...project,
+        role: projectMember?.role ?? 'VIEWER',
+      },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /internal/api/test-suites/:testSuiteId
+ * テストスイート詳細を取得（テストケース一覧含む）
+ */
+router.get('/test-suites/:testSuiteId', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { testSuiteId } = req.params;
+    const parseResult = userIdQuerySchema.safeParse(req.query);
+
+    if (!parseResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid query parameters',
+        details: parseResult.error.flatten(),
+      });
+      return;
+    }
+
+    const { userId } = parseResult.data;
+
+    // 認可チェック
+    const canAccess = await authService.canAccessTestSuite(userId, testSuiteId);
+    if (!canAccess) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access denied to this test suite',
+      });
+      return;
+    }
+
+    // テストスイート詳細を取得
+    const testSuite = await prisma.testSuite.findFirst({
+      where: {
+        id: testSuiteId,
+        deletedAt: null,
+      },
+      include: {
+        project: {
+          select: { id: true, name: true },
+        },
+        createdByUser: {
+          select: { id: true, name: true, avatarUrl: true },
+        },
+        preconditions: {
+          orderBy: { orderKey: 'asc' },
+        },
+        testCases: {
+          where: { deletedAt: null },
+          include: {
+            _count: {
+              select: { preconditions: true, steps: true, expectedResults: true },
+            },
+          },
+          orderBy: { orderKey: 'asc' },
+        },
+        _count: {
+          select: {
+            testCases: { where: { deletedAt: null } },
+            preconditions: true,
+          },
+        },
+      },
+    });
+
+    if (!testSuite) {
+      res.status(404).json({
+        error: 'Not Found',
+        message: 'Test suite not found',
+      });
+      return;
+    }
+
+    res.json({ testSuite });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /internal/api/test-cases/:testCaseId
+ * テストケース詳細を取得（ステップ、期待結果含む）
+ */
+router.get('/test-cases/:testCaseId', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { testCaseId } = req.params;
+    const parseResult = userIdQuerySchema.safeParse(req.query);
+
+    if (!parseResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid query parameters',
+        details: parseResult.error.flatten(),
+      });
+      return;
+    }
+
+    const { userId } = parseResult.data;
+
+    // テストケースを取得してテストスイートIDを確認
+    const testCase = await prisma.testCase.findFirst({
+      where: {
+        id: testCaseId,
+        deletedAt: null,
+      },
+      include: {
+        testSuite: {
+          select: { id: true, name: true, projectId: true },
+        },
+        createdByUser: {
+          select: { id: true, name: true, avatarUrl: true },
+        },
+        preconditions: {
+          orderBy: { orderKey: 'asc' },
+        },
+        steps: {
+          orderBy: { orderKey: 'asc' },
+        },
+        expectedResults: {
+          orderBy: { orderKey: 'asc' },
+        },
+      },
+    });
+
+    if (!testCase) {
+      res.status(404).json({
+        error: 'Not Found',
+        message: 'Test case not found',
+      });
+      return;
+    }
+
+    // 認可チェック（テストスイート経由）
+    const canAccess = await authService.canAccessTestSuite(userId, testCase.testSuiteId);
+    if (!canAccess) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access denied to this test case',
+      });
+      return;
+    }
+
+    res.json({ testCase });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * GET /internal/api/executions/:executionId
+ * 実行詳細を取得（全結果データ含む）
+ */
+router.get('/executions/:executionId', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { executionId } = req.params;
+    const parseResult = userIdQuerySchema.safeParse(req.query);
+
+    if (!parseResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid query parameters',
+        details: parseResult.error.flatten(),
+      });
+      return;
+    }
+
+    const { userId } = parseResult.data;
+
+    // 実行詳細を取得
+    const execution = await executionService.findByIdWithDetails(executionId);
+
+    // 認可チェック（テストスイート経由）
+    const canAccess = await authService.canAccessTestSuite(userId, execution.testSuiteId);
+    if (!canAccess) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access denied to this execution',
+      });
+      return;
+    }
+
+    res.json({ execution });
   } catch (error) {
     next(error);
   }

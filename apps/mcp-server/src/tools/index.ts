@@ -6,6 +6,10 @@ import { searchProjectTool } from './search-project.js';
 import { searchTestSuiteTool } from './search-test-suite.js';
 import { searchTestCaseTool } from './search-test-case.js';
 import { searchExecutionTool } from './search-execution.js';
+import { getProjectTool } from './get-project.js';
+import { getTestSuiteTool } from './get-test-suite.js';
+import { getTestCaseTool } from './get-test-case.js';
+import { getExecutionTool } from './get-execution.js';
 
 /**
  * ツール実行コンテキスト
@@ -91,11 +95,17 @@ export const toolRegistry = new ToolRegistry();
  * すべての登録済みツールをMCPサーバーに追加する
  */
 export function registerTools(server: McpServer): void {
-  // ツールを登録
+  // 検索ツールを登録
   toolRegistry.register(searchProjectTool);
   toolRegistry.register(searchTestSuiteTool);
   toolRegistry.register(searchTestCaseTool);
   toolRegistry.register(searchExecutionTool);
+
+  // 単一取得ツールを登録
+  toolRegistry.register(getProjectTool);
+  toolRegistry.register(getTestSuiteTool);
+  toolRegistry.register(getTestCaseTool);
+  toolRegistry.register(getExecutionTool);
 
   const tools = toolRegistry.getAll();
 
