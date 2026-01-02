@@ -200,6 +200,8 @@ model User {
   notificationPreferences NotificationPreference[]
   auditLogs              AuditLog[]
   usageRecords           UsageRecord[]            @relation("UserUsageRecords")
+  oauthAuthorizationCodes OAuthAuthorizationCode[]
+  oauthAccessTokens       OAuthAccessToken[]
 
   @@index([email])
   @@index([deletedAt])
@@ -1079,4 +1081,76 @@ model UsageRecord {
   @@index([organizationId])
   @@index([periodStart])
   @@map("usage_records")
+}
+
+// ============================================
+// OAuth 2.1 認証モデル (RFC 9728, RFC 7591, RFC 8707)
+// ============================================
+
+// OAuthクライアント (動的クライアント登録: RFC 7591)
+model OAuthClient {
+  id                      String    @id @default(uuid())
+  clientId                String    @unique @map("client_id") @db.VarChar(255)
+  clientSecret            String?   @map("client_secret") @db.VarChar(255)
+  clientSecretExpiresAt   DateTime? @map("client_secret_expires_at")
+  clientIdIssuedAt        DateTime  @default(now()) @map("client_id_issued_at")
+  clientName              String    @map("client_name") @db.VarChar(100)
+  clientUri               String?   @map("client_uri")
+  logoUri                 String?   @map("logo_uri")
+  redirectUris            String[]  @map("redirect_uris")
+  grantTypes              String[]  @default(["authorization_code"]) @map("grant_types")
+  responseTypes           String[]  @default(["code"]) @map("response_types")
+  tokenEndpointAuthMethod String    @default("none") @map("token_endpoint_auth_method")
+  scopes                  String[]  @default([])
+  softwareId              String?   @map("software_id") @db.VarChar(255)
+  softwareVersion         String?   @map("software_version") @db.VarChar(50)
+  isActive                Boolean   @default(true) @map("is_active")
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  authorizationCodes OAuthAuthorizationCode[]
+  accessTokens       OAuthAccessToken[]
+
+  @@map("oauth_clients")
+}
+
+// OAuth認可コード
+model OAuthAuthorizationCode {
+  id                  String    @id @default(uuid())
+  code                String    @unique @db.VarChar(255)
+  clientId            String    @map("client_id")
+  userId              String    @map("user_id")
+  redirectUri         String    @map("redirect_uri")
+  scopes              String[]
+  codeChallenge       String    @map("code_challenge") @db.VarChar(128)
+  codeChallengeMethod String    @default("S256") @map("code_challenge_method")
+  resource            String    @db.VarChar(500) // RFC 8707
+  expiresAt           DateTime  @map("expires_at")
+  usedAt              DateTime? @map("used_at")
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  client OAuthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([code])
+  @@map("oauth_authorization_codes")
+}
+
+// OAuthアクセストークン
+model OAuthAccessToken {
+  id        String    @id @default(uuid())
+  tokenHash String    @unique @map("token_hash") @db.VarChar(64)
+  clientId  String    @map("client_id")
+  userId    String    @map("user_id")
+  scopes    String[]
+  audience  String    @db.VarChar(500) // RFC 8707
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  client OAuthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("oauth_access_tokens")
 }

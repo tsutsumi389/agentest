@@ -10,11 +10,16 @@ import testCaseRoutes from './test-cases.js';
 import executionRoutes from './executions.js';
 import reviewCommentRoutes from './review-comments.js';
 import internalRoutes from './internal.js';
+import oauthRoutes from './oauth.js';
+import { oauthController } from '../controllers/oauth.controller.js';
 
 const router: Router = Router();
 
 // ヘルスチェック（認証不要）
 router.use('/', healthRoutes);
+
+// OAuth 2.1 Authorization Server Metadata (RFC 8414)
+router.get('/.well-known/oauth-authorization-server', oauthController.getMetadata);
 
 // API ルート
 router.use('/api/auth', authRoutes);
@@ -26,6 +31,9 @@ router.use('/api/test-suites', testSuiteRoutes);
 router.use('/api/test-cases', testCaseRoutes);
 router.use('/api/executions', executionRoutes);
 router.use('/api/review-comments', reviewCommentRoutes);
+
+// OAuth 2.1 エンドポイント (RFC 9728)
+router.use('/oauth', oauthRoutes);
 
 // 内部API（MCPサーバーからの呼び出し用）
 router.use('/internal/api', internalRoutes);

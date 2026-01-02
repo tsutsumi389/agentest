@@ -7,6 +7,9 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(3001),
   HOST: z.string().default('0.0.0.0'),
 
+  // OAuth 2.1 Authorization Server
+  API_BASE_URL: z.string().url().default('http://localhost:3001'),
+
   // データベース
   DATABASE_URL: z.string().url(),
 
