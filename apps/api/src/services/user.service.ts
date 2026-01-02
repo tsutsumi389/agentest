@@ -1,4 +1,4 @@
-import { prisma } from '@agentest/db';
+import { prisma, type EntityStatus } from '@agentest/db';
 import { NotFoundError } from '@agentest/shared';
 import { UserRepository } from '../repositories/user.repository.js';
 
@@ -185,6 +185,114 @@ export class UserService {
         ...deletedCondition,
         ...nameCondition,
         ...orgCondition,
+      },
+    });
+  }
+
+  /**
+   * ユーザーがアクセス可能なテストスイート一覧を取得
+   * @param userId ユーザーID
+   * @param options 検索オプション
+   * @param options.projectId プロジェクトIDで絞り込み（省略時は全アクセス可能プロジェクト）
+   * @param options.q テストスイート名で部分一致検索
+   * @param options.status ステータスで絞り込み
+   * @param options.limit 取得件数（デフォルト: 20）
+   * @param options.offset 取得開始位置（デフォルト: 0）
+   */
+  async getTestSuites(
+    userId: string,
+    options: {
+      projectId?: string;
+      q?: string;
+      status?: EntityStatus;
+      limit?: number;
+      offset?: number;
+    } = {}
+  ) {
+    const { projectId, q, status, limit = 20, offset = 0 } = options;
+
+    // 名前検索条件
+    const nameCondition = q ? { name: { contains: q, mode: 'insensitive' as const } } : {};
+
+    // ステータス条件
+    const statusCondition = status ? { status } : {};
+
+    // プロジェクト条件
+    // projectId が指定されている場合はそのプロジェクトのみ
+    // 指定されていない場合はアクセス可能な全プロジェクト
+    const projectCondition = projectId
+      ? { projectId }
+      : {
+          project: {
+            OR: [
+              { members: { some: { userId } } },
+              { organization: { members: { some: { userId } } } },
+            ],
+            deletedAt: null,
+          },
+        };
+
+    const testSuites = await prisma.testSuite.findMany({
+      where: {
+        deletedAt: null,
+        ...nameCondition,
+        ...statusCondition,
+        ...projectCondition,
+      },
+      include: {
+        project: {
+          select: { id: true, name: true },
+        },
+        createdByUser: {
+          select: { id: true, name: true, avatarUrl: true },
+        },
+        _count: {
+          select: { testCases: true, preconditions: true },
+        },
+      },
+      orderBy: { updatedAt: 'desc' },
+      take: limit,
+      skip: offset,
+    });
+
+    return testSuites;
+  }
+
+  /**
+   * ユーザーがアクセス可能なテストスイートの総数を取得
+   * @param userId ユーザーID
+   * @param options 検索オプション
+   */
+  async countTestSuites(
+    userId: string,
+    options: {
+      projectId?: string;
+      q?: string;
+      status?: EntityStatus;
+    } = {}
+  ) {
+    const { projectId, q, status } = options;
+
+    const nameCondition = q ? { name: { contains: q, mode: 'insensitive' as const } } : {};
+    const statusCondition = status ? { status } : {};
+    const projectCondition = projectId
+      ? { projectId }
+      : {
+          project: {
+            OR: [
+              { members: { some: { userId } } },
+              { organization: { members: { some: { userId } } } },
+            ],
+            deletedAt: null,
+          },
+        };
+
+    return prisma.testSuite.count({
+      where: {
+        deletedAt: null,
+        ...nameCondition,
+        ...statusCondition,
+        ...projectCondition,
       },
     });
   }
