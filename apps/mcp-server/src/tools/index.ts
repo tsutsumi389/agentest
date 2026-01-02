@@ -10,6 +10,9 @@ import { getProjectTool } from './get-project.js';
 import { getTestSuiteTool } from './get-test-suite.js';
 import { getTestCaseTool } from './get-test-case.js';
 import { getExecutionTool } from './get-execution.js';
+import { createTestSuiteTool } from './create-test-suite.js';
+import { createTestCaseTool } from './create-test-case.js';
+import { createExecutionTool } from './create-execution.js';
 
 /**
  * ツール実行コンテキスト
@@ -106,6 +109,11 @@ export function registerTools(server: McpServer): void {
   toolRegistry.register(getTestSuiteTool);
   toolRegistry.register(getTestCaseTool);
   toolRegistry.register(getExecutionTool);
+
+  // 作成ツールを登録
+  toolRegistry.register(createTestSuiteTool);
+  toolRegistry.register(createTestCaseTool);
+  toolRegistry.register(createExecutionTool);
 
   const tools = toolRegistry.getAll();
 
