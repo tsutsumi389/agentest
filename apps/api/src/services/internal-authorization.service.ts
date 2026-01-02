@@ -130,4 +130,91 @@ export class InternalAuthorizationService {
 
     return Array.from(projectIds);
   }
+
+  /**
+   * ユーザーがプロジェクトに書き込みできるか確認
+   * 書き込み可能条件:
+   * 1. ProjectMemberとしてOWNER, ADMIN, WRITEロールを持つ
+   * 2. プロジェクトが所属する組織でOWNER, ADMINロールを持つ
+   *
+   * @param userId ユーザーID
+   * @param projectId プロジェクトID
+   * @returns 書き込み可能な場合true
+   */
+  async canWriteToProject(userId: string, projectId: string): Promise<boolean> {
+    // プロジェクトの存在確認と情報取得
+    const project = await prisma.project.findUnique({
+      where: { id: projectId },
+      select: {
+        id: true,
+        organizationId: true,
+        deletedAt: true,
+      },
+    });
+
+    // プロジェクトが存在しないか削除済みの場合は書き込み不可
+    if (!project || project.deletedAt) {
+      return false;
+    }
+
+    // 1. ProjectMemberとしてOWNER, ADMIN, WRITEロールを持つかチェック
+    const projectMember = await prisma.projectMember.findUnique({
+      where: {
+        projectId_userId: {
+          projectId,
+          userId,
+        },
+      },
+    });
+
+    if (projectMember && ['OWNER', 'ADMIN', 'WRITE'].includes(projectMember.role)) {
+      return true;
+    }
+
+    // 2. 組織経由の書き込み権限確認（プロジェクトが組織に属している場合）
+    if (project.organizationId) {
+      const orgMember = await prisma.organizationMember.findUnique({
+        where: {
+          organizationId_userId: {
+            organizationId: project.organizationId,
+            userId,
+          },
+        },
+      });
+
+      if (orgMember && ['OWNER', 'ADMIN'].includes(orgMember.role)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * ユーザーがテストスイートに書き込みできるか確認
+   * テストスイートのプロジェクトへの書き込み権限を確認する
+   *
+   * @param userId ユーザーID
+   * @param testSuiteId テストスイートID
+   * @returns 書き込み可能な場合true
+   */
+  async canWriteToTestSuite(userId: string, testSuiteId: string): Promise<boolean> {
+    // テストスイートの存在確認とプロジェクトID取得
+    const testSuite = await prisma.testSuite.findUnique({
+      where: { id: testSuiteId },
+      select: {
+        id: true,
+        projectId: true,
+        deletedAt: true,
+      },
+    });
+
+    // テストスイートが存在しないか削除済みの場合は書き込み不可
+    if (!testSuite || testSuite.deletedAt) {
+      return false;
+    }
+
+    // プロジェクトへの書き込み権限を確認
+    return this.canWriteToProject(userId, testSuite.projectId);
+  }
 }

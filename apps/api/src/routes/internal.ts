@@ -6,12 +6,14 @@ import { requireInternalApiAuth } from '../middleware/internal-api.middleware.js
 import { UserService } from '../services/user.service.js';
 import { InternalAuthorizationService } from '../services/internal-authorization.service.js';
 import { TestSuiteService } from '../services/test-suite.service.js';
+import { TestCaseService } from '../services/test-case.service.js';
 import { ExecutionService } from '../services/execution.service.js';
 
 const router: RouterType = Router();
 const userService = new UserService();
 const authService = new InternalAuthorizationService();
 const testSuiteService = new TestSuiteService();
+const testCaseService = new TestCaseService();
 const executionService = new ExecutionService();
 
 // 全エンドポイントに内部API認証を適用
@@ -515,6 +517,202 @@ router.get('/executions/:executionId', async (req: Request, res: Response, next:
     }
 
     res.json({ execution });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * テストスイート作成リクエストボディのスキーマ
+ */
+const createTestSuiteBodySchema = z.object({
+  projectId: z.string().uuid(),
+  name: z.string().min(1).max(200),
+  description: z.string().max(2000).optional(),
+  status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).default('DRAFT'),
+});
+
+/**
+ * POST /internal/api/test-suites
+ * テストスイートを作成
+ */
+router.post('/test-suites', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // userIdクエリ検証
+    const userIdResult = userIdQuerySchema.safeParse(req.query);
+    if (!userIdResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid query parameters',
+        details: userIdResult.error.flatten(),
+      });
+      return;
+    }
+
+    const { userId } = userIdResult.data;
+
+    // ボディ検証
+    const bodyResult = createTestSuiteBodySchema.safeParse(req.body);
+    if (!bodyResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid request body',
+        details: bodyResult.error.flatten(),
+      });
+      return;
+    }
+
+    const { projectId, name, description, status } = bodyResult.data;
+
+    // 書き込み権限チェック
+    const canWrite = await authService.canWriteToProject(userId, projectId);
+    if (!canWrite) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access denied to this project',
+      });
+      return;
+    }
+
+    // テストスイート作成
+    const testSuite = await testSuiteService.create(userId, {
+      projectId,
+      name,
+      description,
+      status,
+    });
+
+    res.status(201).json({ testSuite });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * テストケース作成リクエストボディのスキーマ
+ */
+const createTestCaseBodySchema = z.object({
+  testSuiteId: z.string().uuid(),
+  title: z.string().min(1).max(200),
+  description: z.string().max(2000).optional(),
+  priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).default('MEDIUM'),
+  status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).default('DRAFT'),
+});
+
+/**
+ * POST /internal/api/test-cases
+ * テストケースを作成
+ */
+router.post('/test-cases', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // userIdクエリ検証
+    const userIdResult = userIdQuerySchema.safeParse(req.query);
+    if (!userIdResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid query parameters',
+        details: userIdResult.error.flatten(),
+      });
+      return;
+    }
+
+    const { userId } = userIdResult.data;
+
+    // ボディ検証
+    const bodyResult = createTestCaseBodySchema.safeParse(req.body);
+    if (!bodyResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid request body',
+        details: bodyResult.error.flatten(),
+      });
+      return;
+    }
+
+    const { testSuiteId, title, description, priority, status } = bodyResult.data;
+
+    // 書き込み権限チェック
+    const canWrite = await authService.canWriteToTestSuite(userId, testSuiteId);
+    if (!canWrite) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access denied to this test suite',
+      });
+      return;
+    }
+
+    // テストケース作成
+    const testCase = await testCaseService.create(userId, {
+      testSuiteId,
+      title,
+      description,
+      priority,
+      status,
+    });
+
+    res.status(201).json({ testCase });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * 実行開始リクエストボディのスキーマ
+ */
+const startExecutionBodySchema = z.object({
+  environmentId: z.string().uuid().optional(),
+});
+
+/**
+ * POST /internal/api/test-suites/:testSuiteId/executions
+ * テスト実行を開始
+ */
+router.post('/test-suites/:testSuiteId/executions', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { testSuiteId } = req.params;
+
+    // userIdクエリ検証
+    const userIdResult = userIdQuerySchema.safeParse(req.query);
+    if (!userIdResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid query parameters',
+        details: userIdResult.error.flatten(),
+      });
+      return;
+    }
+
+    const { userId } = userIdResult.data;
+
+    // ボディ検証
+    const bodyResult = startExecutionBodySchema.safeParse(req.body);
+    if (!bodyResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid request body',
+        details: bodyResult.error.flatten(),
+      });
+      return;
+    }
+
+    const { environmentId } = bodyResult.data;
+
+    // 書き込み権限チェック
+    const canWrite = await authService.canWriteToTestSuite(userId, testSuiteId);
+    if (!canWrite) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access denied to this test suite',
+      });
+      return;
+    }
+
+    // テスト実行開始
+    const execution = await testSuiteService.startExecution(testSuiteId, userId, {
+      environmentId,
+    });
+
+    res.status(201).json({ execution });
   } catch (error) {
     next(error);
   }
