@@ -1542,6 +1542,19 @@ interface CreateTestSuiteResponse {
 | description | string | 任意 | - | 説明（最大2000文字） |
 | priority | enum | 任意 | MEDIUM | 優先度（LOW/MEDIUM/HIGH/CRITICAL） |
 | status | enum | 任意 | DRAFT | ステータス（DRAFT/ACTIVE/ARCHIVED） |
+| preconditions | array | 任意 | - | 前提条件の配列 |
+| steps | array | 任意 | - | テスト手順の配列 |
+| expectedResults | array | 任意 | - | 期待結果の配列 |
+
+#### 子エンティティの構造
+
+preconditions, steps, expectedResults の各要素は以下の構造を持つ：
+
+```typescript
+interface ChildEntityCreateInput {
+  content: string;  // テキスト内容（1〜10000文字）
+}
+```
 
 ### レスポンス
 
@@ -1557,11 +1570,28 @@ interface CreateTestCaseResponse {
     orderKey: string;            // 並び順キー（自動生成）
     createdAt: string;
     updatedAt: string;
+    preconditions?: Array<{      // 前提条件（指定した場合のみ）
+      id: string;
+      content: string;
+      orderKey: string;
+    }>;
+    steps?: Array<{              // テスト手順（指定した場合のみ）
+      id: string;
+      content: string;
+      orderKey: string;
+    }>;
+    expectedResults?: Array<{    // 期待結果（指定した場合のみ）
+      id: string;
+      content: string;
+      orderKey: string;
+    }>;
   };
 }
 ```
 
 ### 使用例
+
+#### 基本的な作成
 
 ```json
 // リクエスト
@@ -1588,6 +1618,63 @@ interface CreateTestCaseResponse {
     "orderKey": "00001",
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-01T00:00:00.000Z"
+  }
+}
+```
+
+#### 子エンティティを含む作成
+
+```json
+// リクエスト
+{
+  "name": "create_test_case",
+  "arguments": {
+    "testSuiteId": "suite_xxx",
+    "title": "正常系：メールとパスワードでログイン",
+    "priority": "CRITICAL",
+    "preconditions": [
+      { "content": "ユーザーアカウントが登録済みであること" },
+      { "content": "アカウントがアクティブ状態であること" }
+    ],
+    "steps": [
+      { "content": "ログインページを開く" },
+      { "content": "メールアドレスを入力する" },
+      { "content": "パスワードを入力する" },
+      { "content": "ログインボタンをクリックする" }
+    ],
+    "expectedResults": [
+      { "content": "ダッシュボード画面に遷移すること" },
+      { "content": "ユーザー名が画面右上に表示されること" }
+    ]
+  }
+}
+
+// レスポンス
+{
+  "testCase": {
+    "id": "case_xxx",
+    "testSuiteId": "suite_xxx",
+    "title": "正常系：メールとパスワードでログイン",
+    "description": null,
+    "priority": "CRITICAL",
+    "status": "DRAFT",
+    "orderKey": "00001",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "preconditions": [
+      { "id": "pre_1", "content": "ユーザーアカウントが登録済みであること", "orderKey": "00001" },
+      { "id": "pre_2", "content": "アカウントがアクティブ状態であること", "orderKey": "00002" }
+    ],
+    "steps": [
+      { "id": "step_1", "content": "ログインページを開く", "orderKey": "00001" },
+      { "id": "step_2", "content": "メールアドレスを入力する", "orderKey": "00002" },
+      { "id": "step_3", "content": "パスワードを入力する", "orderKey": "00003" },
+      { "id": "step_4", "content": "ログインボタンをクリックする", "orderKey": "00004" }
+    ],
+    "expectedResults": [
+      { "id": "exp_1", "content": "ダッシュボード画面に遷移すること", "orderKey": "00001" },
+      { "id": "exp_2", "content": "ユーザー名が画面右上に表示されること", "orderKey": "00002" }
+    ]
   }
 }
 ```
@@ -1775,8 +1862,28 @@ interface UpdateTestSuiteResponse {
 | description | string \| null | 任意 | 説明（最大2000文字、nullで削除） |
 | priority | enum | 任意 | 優先度（LOW/MEDIUM/HIGH/CRITICAL） |
 | status | enum | 任意 | ステータス（DRAFT/ACTIVE/ARCHIVED） |
+| preconditions | array | 任意 | 前提条件の配列（差分更新） |
+| steps | array | 任意 | テスト手順の配列（差分更新） |
+| expectedResults | array | 任意 | 期待結果の配列（差分更新） |
 
-※ title, description, priority, status のうち少なくとも1つの指定が必要
+※ title, description, priority, status, preconditions, steps, expectedResults のうち少なくとも1つの指定が必要
+
+#### 子エンティティの差分更新
+
+preconditions, steps, expectedResults の各要素は以下の構造を持つ：
+
+```typescript
+interface ChildEntityUpdateInput {
+  id?: string;    // 既存エンティティのID（省略時は新規作成）
+  content: string; // テキスト内容（1〜10000文字）
+}
+```
+
+**差分更新のルール：**
+- `id`あり → 既存エンティティを更新
+- `id`なし → 新規エンティティを作成
+- リクエストに含まれないID → 該当エンティティを削除
+- 空配列 `[]` → 全ての子エンティティを削除
 
 ### レスポンス
 
@@ -1792,11 +1899,28 @@ interface UpdateTestCaseResponse {
     orderKey: string;
     createdAt: string;
     updatedAt: string;
+    preconditions?: Array<{      // 子エンティティ更新時のみ
+      id: string;
+      content: string;
+      orderKey: string;
+    }>;
+    steps?: Array<{              // 子エンティティ更新時のみ
+      id: string;
+      content: string;
+      orderKey: string;
+    }>;
+    expectedResults?: Array<{    // 子エンティティ更新時のみ
+      id: string;
+      content: string;
+      orderKey: string;
+    }>;
   };
 }
 ```
 
 ### 使用例
+
+#### 基本的な更新
 
 ```json
 // リクエスト
@@ -1825,6 +1949,74 @@ interface UpdateTestCaseResponse {
 }
 ```
 
+#### 子エンティティの差分更新
+
+```json
+// リクエスト
+// 既存: step_1, step_2, step_3 の3つのステップがある状態から
+// step_1を更新、step_2を削除、新規step_4を追加
+{
+  "name": "update_test_case",
+  "arguments": {
+    "testCaseId": "case_xxx",
+    "steps": [
+      { "id": "step_1", "content": "ログインページを開く（更新後）" },
+      { "id": "step_3", "content": "ログインボタンをクリックする" },
+      { "content": "成功メッセージを確認する" }
+    ]
+  }
+}
+
+// レスポンス
+{
+  "testCase": {
+    "id": "case_xxx",
+    "testSuiteId": "suite_xxx",
+    "title": "正常系：メールとパスワードでログイン",
+    "description": null,
+    "priority": "CRITICAL",
+    "status": "ACTIVE",
+    "orderKey": "00001",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-20T00:00:00.000Z",
+    "steps": [
+      { "id": "step_1", "content": "ログインページを開く（更新後）", "orderKey": "00001" },
+      { "id": "step_3", "content": "ログインボタンをクリックする", "orderKey": "00002" },
+      { "id": "step_4", "content": "成功メッセージを確認する", "orderKey": "00003" }
+    ]
+  }
+}
+```
+
+#### 全ての子エンティティを削除
+
+```json
+// リクエスト
+{
+  "name": "update_test_case",
+  "arguments": {
+    "testCaseId": "case_xxx",
+    "steps": []
+  }
+}
+
+// レスポンス
+{
+  "testCase": {
+    "id": "case_xxx",
+    "testSuiteId": "suite_xxx",
+    "title": "正常系：メールとパスワードでログイン",
+    "description": null,
+    "priority": "CRITICAL",
+    "status": "ACTIVE",
+    "orderKey": "00001",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-20T00:00:00.000Z",
+    "steps": []
+  }
+}
+```
+
 ### 認可
 
 テストケースを取得後、`canWriteToTestSuite(userId, testCase.testSuiteId)` で認可チェック。
@@ -1836,7 +2028,7 @@ interface UpdateTestCaseResponse {
 | `apps/mcp-server/src/tools/update-test-case.ts` | ツール定義・ハンドラー |
 | `apps/api/src/routes/internal.ts` | 内部APIエンドポイント（PATCH /internal/api/test-cases/:testCaseId） |
 | `apps/api/src/services/internal-authorization.service.ts` | 書き込み権限チェック |
-| `apps/api/src/services/test-case.service.ts` | updateメソッド |
+| `apps/api/src/services/test-case.service.ts` | updateWithChildrenメソッド |
 
 ## update_execution_precondition_result ツール（MCP-020）
 
