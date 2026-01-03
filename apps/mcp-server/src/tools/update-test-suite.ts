@@ -6,10 +6,10 @@ import { apiClient } from '../clients/api-client.js';
  * 入力スキーマ
  */
 export const updateTestSuiteInputSchema = z.object({
-  testSuiteId: z.string().uuid().describe('更新対象のテストスイートID'),
-  name: z.string().min(1).max(200).optional().describe('テストスイート名'),
-  description: z.string().max(2000).nullable().optional().describe('説明（nullで削除）'),
-  status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).optional().describe('ステータス'),
+  testSuiteId: z.string().uuid().describe('更新するテストスイートのID。search_test_suiteで取得したIDを指定'),
+  name: z.string().min(1).max(200).optional().describe('新しいテストスイート名（1-200文字）'),
+  description: z.string().max(2000).nullable().optional().describe('新しい説明（最大2000文字）。nullを指定すると説明を削除'),
+  status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).optional().describe('新しいステータス: DRAFT（下書き）, ACTIVE（有効）, ARCHIVED（アーカイブ済み）'),
 });
 
 type UpdateTestSuiteInput = z.infer<typeof updateTestSuiteInputSchema>;
@@ -61,7 +61,15 @@ const updateTestSuiteHandler: ToolHandler<UpdateTestSuiteInput, UpdateTestSuiteR
  */
 export const updateTestSuiteTool: ToolDefinition<UpdateTestSuiteInput> = {
   name: 'update_test_suite',
-  description: 'テストスイートを更新します。テストスイートIDと更新するフィールド（name, description, status）を指定してください。',
+  description: `テストスイートの情報を更新します。
+
+必須: testSuiteId
+更新可能: name, description, status（少なくとも1つ指定）
+
+返却情報: 更新後のテストスイート情報。
+
+使用場面: テストスイートの名前変更、説明の追加・更新・削除、ステータス変更を行う際に使用します。
+注意: 前提条件の編集はこのツールでは行えません。テストケースレベルの前提条件はupdate_test_caseで編集できます。`,
   inputSchema: updateTestSuiteInputSchema,
   handler: updateTestSuiteHandler,
 };

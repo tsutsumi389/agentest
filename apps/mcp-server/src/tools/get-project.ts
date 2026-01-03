@@ -6,7 +6,7 @@ import { apiClient } from '../clients/api-client.js';
  * 入力スキーマ
  */
 export const getProjectInputSchema = z.object({
-  projectId: z.string().uuid().describe('プロジェクトID（必須）'),
+  projectId: z.string().uuid().describe('取得するプロジェクトのID。search_projectで取得したIDを指定'),
 });
 
 type GetProjectInput = z.infer<typeof getProjectInputSchema>;
@@ -74,7 +74,12 @@ const getProjectHandler: ToolHandler<GetProjectInput, GetProjectResponse> = asyn
  */
 export const getProjectTool: ToolDefinition<GetProjectInput> = {
   name: 'get_project',
-  description: 'プロジェクトの詳細情報を取得します。環境設定やテストスイート数も含まれます。',
+  description: `プロジェクトの詳細情報を取得します。
+
+返却情報: プロジェクトID・名前・説明、所属組織、ユーザー権限、テストスイート数、環境設定一覧（環境ID・名前・baseURL等）。
+
+使用場面: テスト実行時に使用する環境IDを取得したり、プロジェクトの詳細設定を確認する際に使用します。
+関連ツール: search_projectで一覧検索、search_test_suiteでプロジェクト内のテストスイートを検索。`,
   inputSchema: getProjectInputSchema,
   handler: getProjectHandler,
 };

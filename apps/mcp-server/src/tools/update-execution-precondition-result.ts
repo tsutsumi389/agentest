@@ -6,10 +6,10 @@ import { apiClient } from '../clients/api-client.js';
  * 入力スキーマ
  */
 export const updateExecutionPreconditionResultInputSchema = z.object({
-  executionId: z.string().uuid().describe('実行ID'),
-  preconditionResultId: z.string().uuid().describe('事前条件結果ID'),
-  status: z.enum(['MET', 'NOT_MET']).describe('ステータス（MET: 満たした, NOT_MET: 満たさなかった）'),
-  note: z.string().max(2000).optional().describe('メモ'),
+  executionId: z.string().uuid().describe('テスト実行のID。create_executionで取得したIDを指定'),
+  preconditionResultId: z.string().uuid().describe('前提条件結果のID。get_executionのpreconditionResultsから取得'),
+  status: z.enum(['MET', 'NOT_MET']).describe('判定結果: MET（条件を満たしている）, NOT_MET（条件を満たしていない）'),
+  note: z.string().max(2000).optional().describe('補足メモ（最大2000文字）。条件の確認方法や問題点を記録'),
 });
 
 type UpdateExecutionPreconditionResultInput = z.infer<typeof updateExecutionPreconditionResultInputSchema>;
@@ -54,7 +54,15 @@ const updateExecutionPreconditionResultHandler: ToolHandler<UpdateExecutionPreco
  */
 export const updateExecutionPreconditionResultTool: ToolDefinition<UpdateExecutionPreconditionResultInput> = {
   name: 'update_execution_precondition_result',
-  description: '実行中のテストの事前条件結果を更新します。実行ID、事前条件結果ID、ステータス（MET/NOT_MET）を指定してください。',
+  description: `テスト実行中の前提条件チェック結果を記録します。
+
+必須: executionId, preconditionResultId, status
+オプション: note
+
+返却情報: 更新後の前提条件結果（ID・ステータス・メモ・確認日時）。
+
+使用場面: テスト実行開始後、テストステップを実行する前に前提条件が満たされているかを確認・記録する際に使用します。
+ワークフロー: create_execution → get_execution（結果IDを取得）→ このツールで前提条件を確認 → update_execution_step_resultでステップ実行。`,
   inputSchema: updateExecutionPreconditionResultInputSchema,
   handler: updateExecutionPreconditionResultHandler,
 };

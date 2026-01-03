@@ -6,7 +6,7 @@ import { apiClient } from '../clients/api-client.js';
  * 入力スキーマ
  */
 export const deleteTestCaseInputSchema = z.object({
-  testCaseId: z.string().uuid().describe('削除対象のテストケースID'),
+  testCaseId: z.string().uuid().describe('削除するテストケースのID。search_test_caseまたはget_test_suiteで取得したIDを指定'),
 });
 
 type DeleteTestCaseInput = z.infer<typeof deleteTestCaseInputSchema>;
@@ -45,7 +45,15 @@ const deleteTestCaseHandler: ToolHandler<DeleteTestCaseInput, DeleteTestCaseResp
  */
 export const deleteTestCaseTool: ToolDefinition<DeleteTestCaseInput> = {
   name: 'delete_test_case',
-  description: 'テストケースを削除します。削除対象のテストケースIDを指定してください。削除は論理削除で、復元可能です。',
+  description: `テストケースを削除します。
+
+必須: testCaseId
+
+返却情報: 削除成功フラグと削除されたID。
+
+動作: 論理削除（ソフトデリート）のため、データベースから完全には削除されず、復元可能です。
+
+注意: テストケースに含まれる前提条件・ステップ・期待結果も同時に論理削除されます。過去の実行履歴は保持されます。`,
   inputSchema: deleteTestCaseInputSchema,
   handler: deleteTestCaseHandler,
 };

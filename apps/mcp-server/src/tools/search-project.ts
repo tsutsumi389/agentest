@@ -6,9 +6,9 @@ import { apiClient } from '../clients/api-client.js';
  * 入力スキーマ
  */
 export const searchProjectInputSchema = z.object({
-  q: z.string().max(100).optional().describe('プロジェクト名で検索'),
-  limit: z.number().int().min(1).max(50).default(50).describe('取得件数'),
-  offset: z.number().int().min(0).default(0).describe('オフセット'),
+  q: z.string().max(100).optional().describe('プロジェクト名で部分一致検索。省略時は全プロジェクトを取得'),
+  limit: z.number().int().min(1).max(50).default(50).describe('取得件数（1-50、デフォルト: 50）'),
+  offset: z.number().int().min(0).default(0).describe('ページネーション用オフセット（デフォルト: 0）'),
 });
 
 type SearchProjectInput = z.infer<typeof searchProjectInputSchema>;
@@ -74,7 +74,11 @@ const searchProjectHandler: ToolHandler<SearchProjectInput, SearchProjectRespons
  */
 export const searchProjectTool: ToolDefinition<SearchProjectInput> = {
   name: 'search_project',
-  description: 'アクセス可能なプロジェクト一覧を検索します。',
+  description: `ユーザーがアクセス可能なプロジェクト一覧を検索します。
+
+返却情報: プロジェクトID・名前・説明、所属組織、ユーザー権限(OWNER/ADMIN/MEMBER/VIEWER)、テストスイート数。
+
+使用場面: テストスイートやテストケースを操作する前に、対象プロジェクトのIDを取得する最初のステップとして使用します。`,
   // ZodDefaultを使用しているため、出力型でキャストが必要
   inputSchema: searchProjectInputSchema as unknown as z.ZodType<SearchProjectInput>,
   handler: searchProjectHandler,

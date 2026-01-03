@@ -6,7 +6,7 @@ import { apiClient } from '../clients/api-client.js';
  * 入力スキーマ
  */
 export const getTestSuiteInputSchema = z.object({
-  testSuiteId: z.string().uuid().describe('テストスイートID（必須）'),
+  testSuiteId: z.string().uuid().describe('取得するテストスイートのID。search_test_suiteで取得したIDを指定'),
 });
 
 type GetTestSuiteInput = z.infer<typeof getTestSuiteInputSchema>;
@@ -96,7 +96,12 @@ const getTestSuiteHandler: ToolHandler<GetTestSuiteInput, GetTestSuiteResponse> 
  */
 export const getTestSuiteTool: ToolDefinition<GetTestSuiteInput> = {
   name: 'get_test_suite',
-  description: 'テストスイートの詳細情報を取得します。前提条件とテストケース一覧も含まれます。',
+  description: `テストスイートの詳細情報を取得します。
+
+返却情報: テストスイートID・名前・説明・ステータス、所属プロジェクト、作成者、スイートレベルの前提条件一覧、テストケース一覧（ID・タイトル・優先度・各要素数）。
+
+使用場面: テストスイートの内容を確認したり、テスト実行前に前提条件を確認する際に使用します。
+関連ツール: search_test_caseでテストケースを検索、get_test_caseで個別テストケースの詳細を取得。`,
   inputSchema: getTestSuiteInputSchema,
   handler: getTestSuiteHandler,
 };
