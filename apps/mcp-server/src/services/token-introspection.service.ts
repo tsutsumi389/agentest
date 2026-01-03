@@ -21,7 +21,8 @@ export class TokenIntrospectionService {
   private introspectionUrl: string;
 
   constructor() {
-    this.introspectionUrl = `${env.AUTH_SERVER_URL}/oauth/introspect`;
+    // Docker内部通信ではAPI_INTERNAL_URLを使用（localhost:3001ではなくapi:3001）
+    this.introspectionUrl = `${env.API_INTERNAL_URL}/oauth/introspect`;
   }
 
   /**
@@ -67,9 +68,14 @@ export class TokenIntrospectionService {
     }
 
     // Audience検証 (RFC 8707)
-    if (expectedAudience && result.aud !== expectedAudience) {
-      console.warn(`Token audience mismatch: expected ${expectedAudience}, got ${result.aud}`);
-      return { valid: false };
+    // 末尾スラッシュを正規化して比較
+    if (expectedAudience && result.aud) {
+      const normalizedExpected = expectedAudience.replace(/\/$/, '');
+      const normalizedActual = result.aud.replace(/\/$/, '');
+      if (normalizedExpected !== normalizedActual) {
+        console.warn(`Token audience mismatch: expected ${expectedAudience}, got ${result.aud}`);
+        return { valid: false };
+      }
     }
 
     return {
