@@ -991,6 +991,7 @@ export async function createTestOAuthAccessToken(
     audience: string;
     expiresAt: Date;
     revokedAt: Date | null;
+    refreshTokenId: string | null;
   }> = {}
 ) {
   const id = overrides.id ?? randomUUID();
@@ -1003,6 +1004,37 @@ export async function createTestOAuthAccessToken(
       scopes: overrides.scopes ?? ['mcp:read'],
       audience: overrides.audience ?? 'http://localhost:3002',
       expiresAt: overrides.expiresAt ?? new Date(Date.now() + 60 * 60 * 1000),
+      revokedAt: overrides.revokedAt ?? null,
+      refreshTokenId: overrides.refreshTokenId ?? null,
+    },
+  });
+}
+
+/**
+ * テスト用OAuthリフレッシュトークンを作成
+ */
+export async function createTestOAuthRefreshToken(
+  clientId: string,
+  userId: string,
+  overrides: Partial<{
+    id: string;
+    tokenHash: string;
+    scopes: string[];
+    audience: string;
+    expiresAt: Date;
+    revokedAt: Date | null;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.oAuthRefreshToken.create({
+    data: {
+      id,
+      tokenHash: overrides.tokenHash ?? `refresh-hash-${id}`,
+      clientId,
+      userId,
+      scopes: overrides.scopes ?? ['mcp:read'],
+      audience: overrides.audience ?? 'http://localhost:3002',
+      expiresAt: overrides.expiresAt ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30日
       revokedAt: overrides.revokedAt ?? null,
     },
   });

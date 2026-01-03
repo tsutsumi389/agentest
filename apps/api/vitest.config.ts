@@ -13,6 +13,7 @@ export default defineConfig({
     globalSetup: ['./src/__tests__/setup/globalSetup.ts'],
     setupFiles: ['./src/__tests__/setup/setup.ts'],
     env: {
+      NODE_ENV: 'test',
       DATABASE_URL: 'postgresql://agentest:agentest@db:5432/agentest_test',
     },
     coverage: {
