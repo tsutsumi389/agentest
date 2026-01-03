@@ -35,12 +35,12 @@ export function createApp(): Express {
     },
   }));
 
-  // CORS
+  // CORS（/.well-knownエンドポイント含む全てのルートに適用）
   app.use(cors({
     origin: env.CORS_ORIGIN.split(','),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'mcp-protocol-version'],
   }));
 
   // ボディパーサー（Base64エンコードされたファイルアップロードのため50MBに設定）
