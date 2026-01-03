@@ -3,7 +3,8 @@
 ## 概要
 
 MCP クライアント（Claude Code 等）向けの OAuth 2.1 認証をサポートするためのテーブル群。
-RFC 7591（動的クライアント登録）、RFC 8707（リソースインジケーター）、PKCE（S256）に対応。
+RFC 7591（動的クライアント登録）、RFC 7009（トークン失効）、RFC 8707（リソースインジケーター）、PKCE（S256）に対応。
+リフレッシュトークンによるトークン更新もサポート。
 
 ## OAuthClient
 
@@ -51,7 +52,7 @@ model OAuthClient {
   clientUri               String?   @map("client_uri")
   logoUri                 String?   @map("logo_uri")
   redirectUris            String[]  @map("redirect_uris")
-  grantTypes              String[]  @default(["authorization_code"]) @map("grant_types")
+  grantTypes              String[]  @default(["authorization_code", "refresh_token"]) @map("grant_types")
   responseTypes           String[]  @default(["code"]) @map("response_types")
   tokenEndpointAuthMethod String    @default("none") @map("token_endpoint_auth_method")
   scopes                  String[]  @default([])
@@ -63,6 +64,7 @@ model OAuthClient {
 
   authorizationCodes OAuthAuthorizationCode[]
   accessTokens       OAuthAccessToken[]
+  refreshTokens      OAuthRefreshToken[]
 
   @@map("oauth_clients")
 }
@@ -141,6 +143,7 @@ model OAuthAuthorizationCode {
 | `tokenHash` | VARCHAR(64) | NO | - | トークンハッシュ（SHA256、一意） |
 | `clientId` | VARCHAR(255) | NO | - | クライアント ID（外部キー） |
 | `userId` | UUID | NO | - | ユーザー ID（外部キー） |
+| `refreshTokenId` | UUID | YES | NULL | リフレッシュトークン ID（外部キー） |
 | `scopes` | TEXT[] | NO | - | 認可されたスコープ |
 | `audience` | VARCHAR(500) | NO | - | オーディエンス（RFC 8707 resource） |
 | `expiresAt` | TIMESTAMP | NO | - | 有効期限（1時間） |
@@ -160,11 +163,72 @@ model OAuthAuthorizationCode {
 
 - `tokenHash` は一意
 - 有効なトークンは `expiresAt` が未来かつ `revokedAt` が NULL
+- `refreshTokenId` はリフレッシュトークンから発行された場合のみ設定
 
 ### Prisma スキーマ
 
 ```prisma
 model OAuthAccessToken {
+  id             String    @id @default(uuid())
+  tokenHash      String    @unique @map("token_hash") @db.VarChar(64)
+  clientId       String    @map("client_id")
+  userId         String    @map("user_id")
+  refreshTokenId String?   @map("refresh_token_id")
+  scopes         String[]
+  audience       String    @db.VarChar(500)
+  expiresAt      DateTime  @map("expires_at")
+  revokedAt      DateTime? @map("revoked_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  client       OAuthClient        @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshToken OAuthRefreshToken? @relation(fields: [refreshTokenId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@map("oauth_access_tokens")
+}
+```
+
+---
+
+## OAuthRefreshToken
+
+リフレッシュトークンを管理するテーブル。アクセストークン更新に使用。
+
+### カラム定義
+
+| カラム | 型 | NULL | デフォルト | 説明 |
+|--------|------|------|------------|------|
+| `id` | UUID | NO | gen_random_uuid() | 主キー |
+| `tokenHash` | VARCHAR(64) | NO | - | トークンハッシュ（SHA256、一意） |
+| `clientId` | VARCHAR(255) | NO | - | クライアント ID（外部キー） |
+| `userId` | UUID | NO | - | ユーザー ID（外部キー） |
+| `scopes` | TEXT[] | NO | - | 認可されたスコープ |
+| `audience` | VARCHAR(500) | NO | - | オーディエンス（RFC 8707 resource） |
+| `expiresAt` | TIMESTAMP | NO | - | 有効期限（30日） |
+| `revokedAt` | TIMESTAMP | YES | NULL | 失効日時 |
+| `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
+
+### トークン仕様
+
+| 項目 | 値 | 説明 |
+|------|-----|------|
+| トークン形式 | ランダム文字列（32バイト） | Base64URL エンコード |
+| 保存方法 | SHA256 ハッシュ | 平文は保存しない |
+| 有効期限 | 30日 | 長期間有効 |
+| 失効 | `revokedAt` を設定 | 論理削除 |
+| ローテーション | なし | リフレッシュ時に新しいトークンは発行しない |
+
+### 制約
+
+- `tokenHash` は一意
+- 有効なトークンは `expiresAt` が未来かつ `revokedAt` が NULL
+- スコープダウングレードのみ許可（リフレッシュ時に元のスコープ以下のみ要求可能）
+
+### Prisma スキーマ
+
+```prisma
+model OAuthRefreshToken {
   id        String    @id @default(uuid())
   tokenHash String    @unique @map("token_hash") @db.VarChar(64)
   clientId  String    @map("client_id")
@@ -175,11 +239,12 @@ model OAuthAccessToken {
   revokedAt DateTime? @map("revoked_at")
   createdAt DateTime  @default(now()) @map("created_at")
 
-  client OAuthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
-  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client       OAuthClient        @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessTokens OAuthAccessToken[]
 
   @@index([userId])
-  @@map("oauth_access_tokens")
+  @@map("oauth_refresh_tokens")
 }
 ```
 
@@ -205,7 +270,10 @@ model OAuthAccessToken {
 - **PKCE 必須**: S256 のみサポート（plain は禁止）
 - **リソースインジケーター**: RFC 8707 準拠のオーディエンス検証
 - **動的クライアント登録**: redirect_uri は localhost/127.0.0.1 のみ許可
+- **CSRF 保護**: 同意エンドポイントで Origin/Referer ヘッダーを検証
+- **トークン失効**: RFC 7009 準拠、クライアント ID 不一致時は警告ログを記録
 - **HTTPS 必須**: 本番環境では HTTPS のみ
+- **本番環境シークレット必須**: JWT_ACCESS_SECRET, JWT_REFRESH_SECRET は必須
 
 ## 関連機能
 
@@ -213,9 +281,10 @@ model OAuthAccessToken {
 |---------|------|------|
 | MCP-OAuth-001 | 動的クライアント登録 | MCP クライアントの自動登録 |
 | MCP-OAuth-002 | 認可フロー | PKCE 付き認可コードフロー |
-| MCP-OAuth-003 | トークン発行 | アクセストークンの発行 |
+| MCP-OAuth-003 | トークン発行 | アクセストークン + リフレッシュトークンの発行 |
 | MCP-OAuth-004 | トークン検証 | イントロスペクションによる検証 |
-| MCP-OAuth-005 | トークン失効 | アクセストークンの無効化 |
+| MCP-OAuth-005 | トークン失効 | アクセストークン/リフレッシュトークンの無効化 |
+| MCP-OAuth-006 | トークン更新 | リフレッシュトークンによるアクセストークン更新 |
 
 ## 関連ドキュメント
 
