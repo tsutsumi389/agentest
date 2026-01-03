@@ -89,6 +89,28 @@ export class OAuthService {
       }
     }
 
+    // MCP Inspector対応: /oauth/callback と /oauth/callback/debug の両方を登録
+    // MCP Inspectorはガイド付きフローと接続時で異なるパスを使用するため
+    const expandedRedirectUris = new Set(input.redirect_uris);
+    for (const uri of input.redirect_uris) {
+      try {
+        const url = new URL(uri);
+        // /oauth/callback/debug が登録された場合、/oauth/callback も追加
+        if (url.pathname === '/oauth/callback/debug') {
+          url.pathname = '/oauth/callback';
+          expandedRedirectUris.add(url.toString());
+        }
+        // /oauth/callback が登録された場合、/oauth/callback/debug も追加
+        if (url.pathname === '/oauth/callback') {
+          url.pathname = '/oauth/callback/debug';
+          expandedRedirectUris.add(url.toString());
+        }
+      } catch {
+        // URLパースエラーは無視
+      }
+    }
+    const finalRedirectUris = Array.from(expandedRedirectUris);
+
     // スコープのパースと検証
     const scopes = parseAndValidateScopes(input.scope);
 
@@ -99,7 +121,7 @@ export class OAuthService {
     const client = await this.repository.createClient({
       clientId,
       clientName: input.client_name,
-      redirectUris: input.redirect_uris,
+      redirectUris: finalRedirectUris,
       grantTypes: input.grant_types,
       responseTypes: input.response_types,
       tokenEndpointAuthMethod: input.token_endpoint_auth_method,

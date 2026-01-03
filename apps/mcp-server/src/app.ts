@@ -22,21 +22,13 @@ export function createApp(): Express {
     contentSecurityPolicy: false, // MCP通信では不要
   }));
 
-  // CORS設定
+  // CORS設定（MCP Inspectorなどのクライアントからのアクセスを許可）
   app.use(cors({
     origin: env.CORS_ORIGIN.split(',').filter(Boolean),
     credentials: true,
     methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'X-MCP-Client-Id',
-      'X-MCP-Client-Name',
-      'X-MCP-Project-Id',
-      'X-MCP-Session-Id',
-      'Mcp-Session-Id',
-      'mcp-protocol-version',
-    ],
+    // MCP Inspectorは多くのカスタムヘッダーを使用するため、リクエストのヘッダーを反映
+    allowedHeaders: '*',
     exposedHeaders: ['Mcp-Session-Id'],
   }));
 
