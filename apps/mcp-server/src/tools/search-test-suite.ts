@@ -89,7 +89,6 @@ export const searchTestSuiteTool: ToolDefinition<SearchTestSuiteInput> = {
 
 使用場面: テストケースの作成・検索や、テスト実行を開始する前に、対象テストスイートのIDを取得するために使用します。
 関連ツール: get_test_suiteで詳細情報（前提条件リスト等）を取得可能。`,
-  // ZodDefaultを使用しているため、出力型でキャストが必要
-  inputSchema: searchTestSuiteInputSchema as unknown as z.ZodType<SearchTestSuiteInput>,
+  inputSchema: searchTestSuiteInputSchema,
   handler: searchTestSuiteHandler,
 };

@@ -93,6 +93,6 @@ export const searchTestCaseTool: ToolDefinition<SearchTestCaseInput> = {
 
 使用場面: テスト実行前に対象テストケースを確認したり、特定条件のテストケースを探す際に使用します。
 関連ツール: get_test_caseで詳細情報（前提条件・ステップ・期待結果の内容）を取得可能。`,
-  inputSchema: searchTestCaseInputSchema as unknown as z.ZodType<SearchTestCaseInput>,
+  inputSchema: searchTestCaseInputSchema,
   handler: searchTestCaseHandler,
 };

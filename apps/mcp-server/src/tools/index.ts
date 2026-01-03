@@ -1,6 +1,5 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { z } from 'zod';
-import { zodToJsonSchema as zodToJsonSchemaLib } from 'zod-to-json-schema';
 import type { AgentSession } from '@agentest/db';
 import { requestContext } from '../transport/streamable-http.js';
 import { searchProjectTool } from './search-project.js';
@@ -45,6 +44,15 @@ export type ToolHandler<TInput extends Record<string, unknown>, TOutput> = (
 ) => Promise<TOutput>;
 
 /**
+ * Zodスキーマで.shapeプロパティを持つ型
+ * MCP SDKがZodRawShapeを期待するため、shapeを抽出できる型を定義
+ */
+type ZodSchemaWithShape<T> = {
+  shape: z.ZodRawShape;
+  _output: T;
+};
+
+/**
  * ツール定義
  */
 export interface ToolDefinition<TInput extends Record<string, unknown> = Record<string, unknown>> {
@@ -52,8 +60,8 @@ export interface ToolDefinition<TInput extends Record<string, unknown> = Record<
   name: string;
   // ツールの説明
   description: string;
-  // 入力スキーマ（Zodスキーマ）
-  inputSchema: z.ZodType<TInput>;
+  // 入力スキーマ（.shapeを持つZodスキーマ）
+  inputSchema: ZodSchemaWithShape<TInput>;
   // ハンドラー
   handler: ToolHandler<TInput, unknown>;
 }
@@ -142,11 +150,11 @@ export function registerTools(server: McpServer): void {
 
   for (const tool of tools) {
     // MCPサーバーにツールを登録
-    // 注: zodSchemaからJSON Schemaへの変換が必要
+    // 注: MCP SDK v1.25.1はZodRawShape（.shape）を受け取り、内部でJSON Schemaに変換する
     server.tool(
       tool.name,
       tool.description,
-      zodToJsonSchema(tool.inputSchema),
+      tool.inputSchema.shape,
       async (args) => {
         // AsyncLocalStorageからコンテキストを取得
         const ctx = requestContext.getStore();
@@ -182,22 +190,4 @@ export function registerTools(server: McpServer): void {
   }
 
   console.log(`${tools.length}個のツールをMCPサーバーに登録しました`);
-}
-
-/**
- * ZodスキーマをJSON Schemaに変換
- * zod-to-json-schemaパッケージを使用して正確な変換を行う
- */
-function zodToJsonSchema(schema: z.ZodType): Record<string, unknown> {
-  const jsonSchema = zodToJsonSchemaLib(schema, {
-    // MCPが期待する形式に合わせる
-    $refStrategy: 'none',
-    // descriptionを含める
-    markdownDescription: false,
-  });
-
-  // $schemaプロパティを削除（MCPが期待しない）
-  const { $schema: _$schema, ...schemaWithoutMeta } = jsonSchema as Record<string, unknown>;
-
-  return schemaWithoutMeta;
 }

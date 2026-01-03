@@ -91,6 +91,6 @@ export const searchExecutionTool: ToolDefinition<SearchExecutionInput> = {
 
 使用場面: 過去のテスト実行結果を確認したり、進行中の実行を探す際に使用します。
 関連ツール: get_executionで詳細情報（テストケースごとの結果・エビデンス）を取得可能。`,
-  inputSchema: searchExecutionInputSchema as unknown as z.ZodType<SearchExecutionInput>,
+  inputSchema: searchExecutionInputSchema,
   handler: searchExecutionHandler,
 };
