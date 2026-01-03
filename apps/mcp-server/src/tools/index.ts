@@ -1,5 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { z } from 'zod';
+import { zodToJsonSchema as zodToJsonSchemaLib } from 'zod-to-json-schema';
 import type { AgentSession } from '@agentest/db';
 import { requestContext } from '../transport/streamable-http.js';
 import { searchProjectTool } from './search-project.js';
@@ -184,98 +185,19 @@ export function registerTools(server: McpServer): void {
 }
 
 /**
- * ZodスキーマをJSON Schemaに変換（簡易版）
- * 本格的な実装では zod-to-json-schema パッケージを使用推奨
+ * ZodスキーマをJSON Schemaに変換
+ * zod-to-json-schemaパッケージを使用して正確な変換を行う
  */
 function zodToJsonSchema(schema: z.ZodType): Record<string, unknown> {
-  // 簡易的な変換。実際の実装では zod-to-json-schema を使用
-  const def = schema._def as Record<string, unknown>;
+  const jsonSchema = zodToJsonSchemaLib(schema, {
+    // MCPが期待する形式に合わせる
+    $refStrategy: 'none',
+    // descriptionを含める
+    markdownDescription: false,
+  });
 
-  if (!def) {
-    return { type: 'object' };
-  }
+  // $schemaプロパティを削除（MCPが期待しない）
+  const { $schema: _$schema, ...schemaWithoutMeta } = jsonSchema as Record<string, unknown>;
 
-  const typeName = def.typeName as string | undefined;
-
-  // ZodObjectの場合
-  if ('shape' in def && typeof def.shape === 'function') {
-    const shape = (def.shape as () => Record<string, z.ZodType>)();
-    const properties: Record<string, unknown> = {};
-    const required: string[] = [];
-
-    for (const [key, value] of Object.entries(shape)) {
-      properties[key] = zodToJsonSchema(value);
-      // isOptionalかどうかをチェック
-      if (!value.isOptional()) {
-        required.push(key);
-      }
-    }
-
-    return {
-      type: 'object',
-      properties,
-      required: required.length > 0 ? required : undefined,
-    };
-  }
-
-  // ZodStringの場合
-  if (typeName === 'ZodString') {
-    return { type: 'string' };
-  }
-
-  // ZodNumberの場合
-  if (typeName === 'ZodNumber') {
-    return { type: 'number' };
-  }
-
-  // ZodBooleanの場合
-  if (typeName === 'ZodBoolean') {
-    return { type: 'boolean' };
-  }
-
-  // ZodArrayの場合
-  if (typeName === 'ZodArray' && 'type' in def) {
-    return {
-      type: 'array',
-      items: zodToJsonSchema(def.type as z.ZodType),
-    };
-  }
-
-  // ZodEnumの場合
-  if (typeName === 'ZodEnum' && 'values' in def) {
-    return {
-      type: 'string',
-      enum: def.values as string[],
-    };
-  }
-
-  // ZodOptionalの場合
-  if (typeName === 'ZodOptional' && 'innerType' in def) {
-    return zodToJsonSchema(def.innerType as z.ZodType);
-  }
-
-  // ZodNullableの場合
-  if (typeName === 'ZodNullable' && 'innerType' in def) {
-    const innerSchema = zodToJsonSchema(def.innerType as z.ZodType);
-    return {
-      ...innerSchema,
-      nullable: true,
-    };
-  }
-
-  // ZodDefaultの場合
-  if (typeName === 'ZodDefault' && 'innerType' in def) {
-    const innerSchema = zodToJsonSchema(def.innerType as z.ZodType);
-    const defaultValue =
-      typeof def.defaultValue === 'function'
-        ? (def.defaultValue as () => unknown)()
-        : def.defaultValue;
-    return {
-      ...innerSchema,
-      default: defaultValue,
-    };
-  }
-
-  // デフォルト
-  return { type: 'object' };
+  return schemaWithoutMeta;
 }
