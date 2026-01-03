@@ -202,6 +202,7 @@ model User {
   usageRecords           UsageRecord[]            @relation("UserUsageRecords")
   oauthAuthorizationCodes OAuthAuthorizationCode[]
   oauthAccessTokens       OAuthAccessToken[]
+  oauthRefreshTokens      OAuthRefreshToken[]
 
   @@index([email])
   @@index([deletedAt])
@@ -1110,6 +1111,7 @@ model OAuthClient {
 
   authorizationCodes OAuthAuthorizationCode[]
   accessTokens       OAuthAccessToken[]
+  refreshTokens      OAuthRefreshToken[]
 
   @@map("oauth_clients")
 }
@@ -1138,6 +1140,28 @@ model OAuthAuthorizationCode {
 
 // OAuthアクセストークン
 model OAuthAccessToken {
+  id             String    @id @default(uuid())
+  tokenHash      String    @unique @map("token_hash") @db.VarChar(64)
+  clientId       String    @map("client_id")
+  userId         String    @map("user_id")
+  scopes         String[]
+  audience       String    @db.VarChar(500) // RFC 8707
+  expiresAt      DateTime  @map("expires_at")
+  revokedAt      DateTime? @map("revoked_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  refreshTokenId String?   @map("refresh_token_id")
+
+  client       OAuthClient        @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshToken OAuthRefreshToken? @relation(fields: [refreshTokenId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([refreshTokenId])
+  @@map("oauth_access_tokens")
+}
+
+// OAuthリフレッシュトークン
+model OAuthRefreshToken {
   id        String    @id @default(uuid())
   tokenHash String    @unique @map("token_hash") @db.VarChar(64)
   clientId  String    @map("client_id")
@@ -1148,9 +1172,10 @@ model OAuthAccessToken {
   revokedAt DateTime? @map("revoked_at")
   createdAt DateTime  @default(now()) @map("created_at")
 
-  client OAuthClient @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
-  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  client       OAuthClient        @relation(fields: [clientId], references: [clientId], onDelete: Cascade)
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessTokens OAuthAccessToken[]
 
   @@index([userId])
-  @@map("oauth_access_tokens")
+  @@map("oauth_refresh_tokens")
 }

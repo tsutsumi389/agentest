@@ -1,5 +1,8 @@
 import rateLimit from 'express-rate-limit';
 
+// テスト環境ではレートリミットをスキップ
+const isTest = process.env.NODE_ENV === 'test';
+
 /**
  * 一般API用レート制限
  * 15分間で100リクエストまで
@@ -20,6 +23,7 @@ export const apiLimiter = rateLimit({
     // X-Forwarded-For ヘッダーまたはIPアドレスを使用
     return (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.ip || 'unknown';
   },
+  skip: () => isTest, // テスト環境ではスキップ
 });
 
 /**
@@ -39,6 +43,7 @@ export const authLimiter = rateLimit({
     },
   },
   skipSuccessfulRequests: true, // 成功したリクエストはカウントしない
+  skip: () => isTest, // テスト環境ではスキップ
 });
 
 /**
@@ -57,4 +62,5 @@ export const strictLimiter = rateLimit({
       statusCode: 429,
     },
   },
+  skip: () => isTest, // テスト環境ではスキップ
 });

@@ -24,7 +24,7 @@ export const SUPPORTED_SCOPES = [
 export const clientRegistrationSchema = z.object({
   client_name: z.string().min(1).max(100),
   redirect_uris: z.array(z.string().url()).min(1),
-  grant_types: z.array(z.enum(['authorization_code'])).default(['authorization_code']),
+  grant_types: z.array(z.enum(['authorization_code', 'refresh_token'])).default(['authorization_code']),
   response_types: z.array(z.enum(['code'])).default(['code']),
   token_endpoint_auth_method: z.enum(['none']).default('none'),
   scope: z.string().optional(),
@@ -53,9 +53,9 @@ export const authorizeRequestSchema = z.object({
 export type AuthorizeRequestInput = z.infer<typeof authorizeRequestSchema>;
 
 /**
- * トークンリクエスト (/oauth/token)
+ * 認可コードトークンリクエスト (/oauth/token grant_type=authorization_code)
  */
-export const tokenRequestSchema = z.object({
+export const authorizationCodeTokenRequestSchema = z.object({
   grant_type: z.literal('authorization_code'),
   code: z.string().min(1),
   redirect_uri: z.string().url(),
@@ -63,6 +63,28 @@ export const tokenRequestSchema = z.object({
   code_verifier: z.string().min(43).max(128), // RFC 7636: PKCE
   resource: z.string().url().optional(), // RFC 8707
 });
+
+export type AuthorizationCodeTokenRequestInput = z.infer<typeof authorizationCodeTokenRequestSchema>;
+
+/**
+ * リフレッシュトークンリクエスト (/oauth/token grant_type=refresh_token)
+ */
+export const refreshTokenRequestSchema = z.object({
+  grant_type: z.literal('refresh_token'),
+  refresh_token: z.string().min(1),
+  client_id: z.string().uuid(),
+  scope: z.string().optional(), // スコープのダウングレードが可能
+});
+
+export type RefreshTokenRequestInput = z.infer<typeof refreshTokenRequestSchema>;
+
+/**
+ * トークンリクエスト（共通） - grant_typeで分岐
+ */
+export const tokenRequestSchema = z.discriminatedUnion('grant_type', [
+  authorizationCodeTokenRequestSchema,
+  refreshTokenRequestSchema,
+]);
 
 export type TokenRequestInput = z.infer<typeof tokenRequestSchema>;
 

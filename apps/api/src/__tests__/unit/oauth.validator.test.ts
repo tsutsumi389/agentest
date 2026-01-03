@@ -375,9 +375,39 @@ describe('OAuthバリデーター', () => {
       const result = tokenRequestSchema.safeParse(input);
 
       expect(result.success).toBe(true);
-      if (result.success) {
+      if (result.success && result.data.grant_type === 'authorization_code') {
         expect(result.data.resource).toBe('http://localhost:3002');
       }
+    });
+  });
+
+  describe('refreshTokenRequestSchema', () => {
+    it('有効なリフレッシュトークンリクエストを受け入れる', () => {
+      const input = {
+        grant_type: 'refresh_token',
+        refresh_token: 'refresh-token-value',
+        client_id: '550e8400-e29b-41d4-a716-446655440000',
+      };
+
+      const result = tokenRequestSchema.safeParse(input);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.grant_type).toBe('refresh_token');
+      }
+    });
+
+    it('scopeオプションを受け入れる', () => {
+      const input = {
+        grant_type: 'refresh_token',
+        refresh_token: 'refresh-token-value',
+        client_id: '550e8400-e29b-41d4-a716-446655440000',
+        scope: 'mcp:read',
+      };
+
+      const result = tokenRequestSchema.safeParse(input);
+
+      expect(result.success).toBe(true);
     });
   });
 

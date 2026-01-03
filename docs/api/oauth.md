@@ -3,7 +3,8 @@
 ## 概要
 
 MCP クライアント（Claude Code 等）向けの OAuth 2.1 認証フローを提供。
-RFC 7591（動的クライアント登録）、RFC 8707（リソースインジケーター）、PKCE（S256）に準拠。
+RFC 7591（動的クライアント登録）、RFC 7009（トークン失効）、RFC 8707（リソースインジケーター）、PKCE（S256）に準拠。
+リフレッシュトークンによるトークン更新もサポート。
 
 ## 認証フロー
 
@@ -46,7 +47,7 @@ Authorization Server のメタデータを返却。
   "revocation_endpoint": "https://api.example.com/oauth/revoke",
   "introspection_endpoint": "https://api.example.com/oauth/introspect",
   "response_types_supported": ["code"],
-  "grant_types_supported": ["authorization_code"],
+  "grant_types_supported": ["authorization_code", "refresh_token"],
   "code_challenge_methods_supported": ["S256"],
   "token_endpoint_auth_methods_supported": ["none"],
   "scopes_supported": ["mcp:read", "mcp:write", "project:read", "project:write", "test-suite:read", "test-suite:write", "test-case:read", "test-case:write", "execution:read", "execution:write"]
@@ -69,7 +70,7 @@ MCP クライアントを動的に登録（RFC 7591）。
 {
   "client_name": "Claude Code",
   "redirect_uris": ["http://127.0.0.1:12345/callback"],
-  "grant_types": ["authorization_code"],
+  "grant_types": ["authorization_code", "refresh_token"],
   "response_types": ["code"],
   "token_endpoint_auth_method": "none",
   "scope": "mcp:read mcp:write"
@@ -84,7 +85,7 @@ MCP クライアントを動的に登録（RFC 7591）。
   "client_id_issued_at": 1704067200,
   "client_name": "Claude Code",
   "redirect_uris": ["http://127.0.0.1:12345/callback"],
-  "grant_types": ["authorization_code"],
+  "grant_types": ["authorization_code", "refresh_token"],
   "response_types": ["code"],
   "token_endpoint_auth_method": "none",
   "scope": "mcp:read mcp:write"
@@ -154,6 +155,7 @@ POST /oauth/authorize/consent
 ```
 
 ユーザーの同意を処理し、認可コードを発行。
+CSRF 保護のため `Origin` または `Referer` ヘッダーが必須。
 
 **Request:**
 
@@ -172,11 +174,26 @@ POST /oauth/authorize/consent
 
 **Response (承認時):**
 
-`redirect_uri?code=...&state=...` へリダイレクト
+```json
+{
+  "redirect_url": "http://127.0.0.1:12345/callback?code=...&state=xyz789"
+}
+```
+
+フロントエンドがこの URL にリダイレクトを実行する。
 
 **Response (拒否時):**
 
-`redirect_uri?error=access_denied&state=...` へリダイレクト
+```json
+{
+  "redirect_url": "http://127.0.0.1:12345/callback?error=access_denied&error_description=User%20denied%20access&state=xyz789"
+}
+```
+
+**セキュリティ:**
+
+- `Origin` または `Referer` ヘッダーによる CSRF 保護
+- 許可されたオリジンからのリクエストのみ受け付ける
 
 ---
 
@@ -186,18 +203,47 @@ POST /oauth/authorize/consent
 POST /oauth/token
 ```
 
-認可コードをアクセストークンと交換。
+認可コードまたはリフレッシュトークンをアクセストークンと交換。
 
-**Request (application/x-www-form-urlencoded):**
+#### grant_type: authorization_code
+
+認可コードを使用してアクセストークンとリフレッシュトークンを取得。
+
+**Request (application/x-www-form-urlencoded または application/json):**
 
 | パラメータ | 必須 | 説明 |
 |-----------|------|------|
-| `grant_type` | Yes | `authorization_code` 固定 |
+| `grant_type` | Yes | `authorization_code` |
 | `code` | Yes | 認可コード |
 | `redirect_uri` | Yes | 認可リクエスト時と同じ URI |
 | `client_id` | Yes | クライアント ID |
 | `code_verifier` | Yes | PKCE code_verifier |
-| `resource` | Yes | MCP サーバー URL |
+| `resource` | No | MCP サーバー URL（認可時と同じ） |
+
+**Response:**
+
+```json
+{
+  "access_token": "eyJhbGciOiJSUzI1NiIs...",
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "refresh_token": "dGhpcyBpcyBhIHJlZnJlc2ggdG9rZW4...",
+  "scope": "mcp:read mcp:write"
+}
+```
+
+#### grant_type: refresh_token
+
+リフレッシュトークンを使用して新しいアクセストークンを取得。
+
+**Request (application/x-www-form-urlencoded または application/json):**
+
+| パラメータ | 必須 | 説明 |
+|-----------|------|------|
+| `grant_type` | Yes | `refresh_token` |
+| `refresh_token` | Yes | リフレッシュトークン |
+| `client_id` | Yes | クライアント ID |
+| `scope` | No | 要求スコープ（元のスコープ以下のみ可） |
 
 **Response:**
 
@@ -210,13 +256,17 @@ POST /oauth/token
 }
 ```
 
+**注意:** リフレッシュトークンのローテーションは行わない（元のリフレッシュトークンは有効なまま）。
+
 **Errors:**
 
 | エラー | 説明 |
 |--------|------|
-| `invalid_grant` | 無効または期限切れの認可コード |
+| `invalid_grant` | 無効、期限切れ、または失効済みの認可コード/リフレッシュトークン |
 | `invalid_client` | 無効なクライアント ID |
-| `invalid_request` | PKCE 検証失敗 |
+| `invalid_request` | PKCE 検証失敗、必須パラメータ不足 |
+| `invalid_scope` | 要求スコープが元のスコープを超過 |
+| `invalid_target` | リソースが認可時と不一致 |
 
 ---
 
@@ -264,13 +314,14 @@ token=<access_token>
 POST /oauth/revoke
 ```
 
-アクセストークンを無効化。
+アクセストークンまたはリフレッシュトークンを無効化（RFC 7009 準拠）。
 
-**Request (application/x-www-form-urlencoded):**
+**Request (application/x-www-form-urlencoded または application/json):**
 
-```
-token=<access_token>
-```
+| パラメータ | 必須 | 説明 |
+|-----------|------|------|
+| `token` | Yes | 失効させるトークン（アクセストークンまたはリフレッシュトークン） |
+| `client_id` | No | クライアント ID（検証用） |
 
 **Response:**
 
@@ -278,7 +329,11 @@ token=<access_token>
 200 OK
 ```
 
-失効成功・失敗に関わらず 200 を返却（RFC 7009 準拠）。
+**注意:**
+- 失効成功・失敗に関わらず 200 を返却（RFC 7009 準拠）
+- 存在しないトークンでもエラーにならない
+- `client_id` が指定された場合、トークンの所有クライアントと一致しない場合は失効しない
+  - セキュリティログに警告が記録される
 
 ---
 
@@ -350,9 +405,14 @@ Content-Type: application/json
 - **PKCE 必須**: S256 のみサポート（plain は禁止）
 - **リソースインジケーター**: RFC 8707 準拠のオーディエンス検証
 - **動的クライアント登録**: redirect_uri は localhost/127.0.0.1 のみ許可
+- **CSRF 保護**: 同意エンドポイントで Origin/Referer ヘッダーを検証
 - **アクセストークン有効期限**: 1時間
+- **リフレッシュトークン有効期限**: 30日
 - **認可コード有効期限**: 10分
+- **認可コード使用回数**: 1回のみ（再利用時は関連トークン全て無効化）
+- **スコープダウングレード**: リフレッシュ時に元のスコープ以下のみ許可
 - **HTTPS 必須**: 本番環境では HTTPS のみ
+- **本番環境シークレット必須**: JWT_ACCESS_SECRET, JWT_REFRESH_SECRET は必須（開発環境はデフォルト値使用可）
 
 ## 関連ドキュメント
 

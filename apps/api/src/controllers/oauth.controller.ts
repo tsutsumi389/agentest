@@ -142,7 +142,8 @@ export class OAuthController {
         redirectUrl.searchParams.set('error', 'access_denied');
         redirectUrl.searchParams.set('error_description', 'User denied access');
         redirectUrl.searchParams.set('state', state);
-        res.redirect(redirectUrl.toString());
+        // JSONでリダイレクトURLを返す（フロントエンドがリダイレクトを処理）
+        res.json({ redirect_url: redirectUrl.toString() });
         return;
       }
 
@@ -157,21 +158,21 @@ export class OAuthController {
         resource,
       });
 
-      // redirect_uriにコードを付けてリダイレクト
+      // redirect_uriにコードを付けてJSONで返す（フロントエンドがリダイレクトを処理）
       const redirectUrl = new URL(redirect_uri);
       redirectUrl.searchParams.set('code', code);
       redirectUrl.searchParams.set('state', state);
-      res.redirect(redirectUrl.toString());
+      res.json({ redirect_url: redirectUrl.toString() });
     } catch (error) {
       if (error instanceof OAuthError) {
-        // エラー時はredirect_uriにエラーを返す
+        // エラー時はredirect_uriにエラーを返す（JSONでリダイレクトURLを返す）
         const { redirect_uri, state } = req.body;
         if (redirect_uri) {
           const redirectUrl = new URL(redirect_uri);
           redirectUrl.searchParams.set('error', error.error);
           redirectUrl.searchParams.set('error_description', error.errorDescription);
           if (state) redirectUrl.searchParams.set('state', state);
-          res.redirect(redirectUrl.toString());
+          res.json({ redirect_url: redirectUrl.toString() });
           return;
         }
         res.status(error.statusCode).json({

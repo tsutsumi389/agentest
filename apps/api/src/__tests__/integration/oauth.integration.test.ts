@@ -104,7 +104,7 @@ describe('OAuth API 結合テスト', () => {
       expect(response.body).toHaveProperty('token_endpoint');
       expect(response.body).toHaveProperty('registration_endpoint');
       expect(response.body.response_types_supported).toEqual(['code']);
-      expect(response.body.grant_types_supported).toEqual(['authorization_code']);
+      expect(response.body.grant_types_supported).toEqual(['authorization_code', 'refresh_token']);
       expect(response.body.code_challenge_methods_supported).toEqual(['S256']);
     });
   });
@@ -303,6 +303,7 @@ describe('OAuth API 結合テスト', () => {
 
       const response = await request(app)
         .post('/oauth/authorize/consent')
+        .set('Origin', 'http://localhost:5173')
         .send({
           client_id: testClient.clientId,
           redirect_uri: 'http://localhost:8080/callback',
@@ -314,13 +315,14 @@ describe('OAuth API 結合テスト', () => {
           approved: true,
         });
 
-      expect(response.status).toBe(302);
-      expect(response.headers.location).toContain('http://localhost:8080/callback');
-      expect(response.headers.location).toContain('code=');
-      expect(response.headers.location).toContain('state=random-state');
+      // JSONでリダイレクトURLが返される（フロントエンドがリダイレクトを処理）
+      expect(response.status).toBe(200);
+      expect(response.body.redirect_url).toContain('http://localhost:8080/callback');
+      expect(response.body.redirect_url).toContain('code=');
+      expect(response.body.redirect_url).toContain('state=random-state');
 
       // DBに認可コードが保存されていることを確認
-      const url = new URL(response.headers.location);
+      const url = new URL(response.body.redirect_url);
       const code = url.searchParams.get('code');
       const authCode = await prisma.oAuthAuthorizationCode.findUnique({
         where: { code: code! },
@@ -342,6 +344,7 @@ describe('OAuth API 結合テスト', () => {
 
       const response = await request(app)
         .post('/oauth/authorize/consent')
+        .set('Origin', 'http://localhost:5173')
         .send({
           client_id: testClient.clientId,
           redirect_uri: 'http://localhost:8080/callback',
@@ -353,9 +356,10 @@ describe('OAuth API 結合テスト', () => {
           approved: false,
         });
 
-      expect(response.status).toBe(302);
-      expect(response.headers.location).toContain('error=access_denied');
-      expect(response.headers.location).toContain('state=random-state');
+      // JSONでリダイレクトURLが返される（フロントエンドがリダイレクトを処理）
+      expect(response.status).toBe(200);
+      expect(response.body.redirect_url).toContain('error=access_denied');
+      expect(response.body.redirect_url).toContain('state=random-state');
     });
 
     it('異常系: 未認証の場合は401エラー', async () => {
@@ -363,6 +367,7 @@ describe('OAuth API 結合テスト', () => {
 
       const response = await request(app)
         .post('/oauth/authorize/consent')
+        .set('Origin', 'http://localhost:5173')
         .send({
           client_id: testClient.clientId,
           redirect_uri: 'http://localhost:8080/callback',
@@ -628,6 +633,219 @@ describe('OAuth API 結合テスト', () => {
     });
   });
 
+  describe('POST /oauth/token (refresh_token)', () => {
+    let testClient: Awaited<ReturnType<typeof createTestOAuthClient>>;
+    const internalApiSecret = 'development-internal-api-secret-32ch';
+
+    beforeEach(async () => {
+      testClient = await createTestOAuthClient({
+        clientName: 'Test Refresh Client',
+        grantTypes: ['authorization_code', 'refresh_token'],
+      });
+    });
+
+    it('正常系: リフレッシュトークンで新しいアクセストークンを取得', async () => {
+      // リフレッシュトークンをDBに作成
+      const { createTestOAuthRefreshToken } = await import('./test-helpers.js');
+      const refreshToken = await createTestOAuthRefreshToken(
+        testClient.clientId,
+        testUser.id,
+        {
+          tokenHash: hashToken('valid-refresh-token'),
+          scopes: ['mcp:read', 'mcp:write'],
+        }
+      );
+
+      const response = await request(app)
+        .post('/oauth/token')
+        .send({
+          grant_type: 'refresh_token',
+          refresh_token: 'valid-refresh-token',
+          client_id: testClient.clientId,
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.access_token).toBeTruthy();
+      expect(response.body.token_type).toBe('Bearer');
+      expect(response.body.expires_in).toBe(3600);
+      expect(response.body.scope).toBe('mcp:read mcp:write');
+      // リフレッシュトークンは再発行されない（ローテーションなし）
+      expect(response.body.refresh_token).toBeUndefined();
+    });
+
+    it('正常系: スコープのダウングレードが可能', async () => {
+      const { createTestOAuthRefreshToken } = await import('./test-helpers.js');
+      await createTestOAuthRefreshToken(
+        testClient.clientId,
+        testUser.id,
+        {
+          tokenHash: hashToken('refresh-for-downgrade'),
+          scopes: ['mcp:read', 'mcp:write'],
+        }
+      );
+
+      const response = await request(app)
+        .post('/oauth/token')
+        .send({
+          grant_type: 'refresh_token',
+          refresh_token: 'refresh-for-downgrade',
+          client_id: testClient.clientId,
+          scope: 'mcp:read',  // 元より少ないスコープ
+        });
+
+      expect(response.status).toBe(200);
+      expect(response.body.scope).toBe('mcp:read');
+    });
+
+    it('異常系: 存在しないリフレッシュトークン', async () => {
+      const response = await request(app)
+        .post('/oauth/token')
+        .send({
+          grant_type: 'refresh_token',
+          refresh_token: 'non-existent-token',
+          client_id: testClient.clientId,
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('invalid_grant');
+      expect(response.body.error_description).toBe('Refresh token not found');
+    });
+
+    it('異常系: 期限切れのリフレッシュトークン', async () => {
+      const { createTestOAuthRefreshToken } = await import('./test-helpers.js');
+      await createTestOAuthRefreshToken(
+        testClient.clientId,
+        testUser.id,
+        {
+          tokenHash: hashToken('expired-refresh-token'),
+          expiresAt: new Date(Date.now() - 1000), // 期限切れ
+        }
+      );
+
+      const response = await request(app)
+        .post('/oauth/token')
+        .send({
+          grant_type: 'refresh_token',
+          refresh_token: 'expired-refresh-token',
+          client_id: testClient.clientId,
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('invalid_grant');
+      expect(response.body.error_description).toBe('Refresh token expired');
+    });
+
+    it('異常系: 失効済みのリフレッシュトークン', async () => {
+      const { createTestOAuthRefreshToken } = await import('./test-helpers.js');
+      await createTestOAuthRefreshToken(
+        testClient.clientId,
+        testUser.id,
+        {
+          tokenHash: hashToken('revoked-refresh-token'),
+          revokedAt: new Date(), // 失効済み
+        }
+      );
+
+      const response = await request(app)
+        .post('/oauth/token')
+        .send({
+          grant_type: 'refresh_token',
+          refresh_token: 'revoked-refresh-token',
+          client_id: testClient.clientId,
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('invalid_grant');
+      expect(response.body.error_description).toBe('Refresh token revoked');
+    });
+
+    it('異常系: クライアントID不一致', async () => {
+      const { createTestOAuthRefreshToken } = await import('./test-helpers.js');
+      await createTestOAuthRefreshToken(
+        testClient.clientId,
+        testUser.id,
+        {
+          tokenHash: hashToken('client-mismatch-token'),
+        }
+      );
+
+      // 別のクライアントIDで要求
+      const otherClient = await createTestOAuthClient({
+        clientName: 'Other Client',
+      });
+
+      const response = await request(app)
+        .post('/oauth/token')
+        .send({
+          grant_type: 'refresh_token',
+          refresh_token: 'client-mismatch-token',
+          client_id: otherClient.clientId,
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('invalid_grant');
+      expect(response.body.error_description).toBe('Client ID mismatch');
+    });
+
+    it('異常系: スコープの拡大は拒否', async () => {
+      const { createTestOAuthRefreshToken } = await import('./test-helpers.js');
+      await createTestOAuthRefreshToken(
+        testClient.clientId,
+        testUser.id,
+        {
+          tokenHash: hashToken('scope-upgrade-token'),
+          scopes: ['mcp:read'], // 読み取りのみ
+        }
+      );
+
+      const response = await request(app)
+        .post('/oauth/token')
+        .send({
+          grant_type: 'refresh_token',
+          refresh_token: 'scope-upgrade-token',
+          client_id: testClient.clientId,
+          scope: 'mcp:read mcp:write', // 書き込みも要求（元のスコープを超える）
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('invalid_scope');
+      expect(response.body.error_description).toBe('Requested scope exceeds original scope');
+    });
+  });
+
+  describe('POST /oauth/revoke (リフレッシュトークン)', () => {
+    let testClient: Awaited<ReturnType<typeof createTestOAuthClient>>;
+
+    beforeEach(async () => {
+      testClient = await createTestOAuthClient({
+        clientName: 'Test Revoke Refresh Client',
+      });
+    });
+
+    it('正常系: リフレッシュトークンを失効させる', async () => {
+      const { createTestOAuthRefreshToken } = await import('./test-helpers.js');
+      await createTestOAuthRefreshToken(
+        testClient.clientId,
+        testUser.id,
+        {
+          tokenHash: hashToken('refresh-to-revoke'),
+        }
+      );
+
+      const response = await request(app)
+        .post('/oauth/revoke')
+        .send({ token: 'refresh-to-revoke' });
+
+      expect(response.status).toBe(200);
+
+      // DBでトークンが失効されていることを確認
+      const revokedToken = await prisma.oAuthRefreshToken.findUnique({
+        where: { tokenHash: hashToken('refresh-to-revoke') },
+      });
+      expect(revokedToken?.revokedAt).not.toBeNull();
+    });
+  });
+
   describe('完全なOAuth 2.1フロー', () => {
     // 内部API認証用のシークレット（デフォルト値）
     const internalApiSecret = 'development-internal-api-secret-32ch';
@@ -660,6 +878,7 @@ describe('OAuth API 結合テスト', () => {
 
       const consentResponse = await request(app)
         .post('/oauth/authorize/consent')
+        .set('Origin', 'http://localhost:5173')
         .send({
           client_id: clientId,
           redirect_uri: 'http://localhost:8080/callback',
@@ -671,8 +890,9 @@ describe('OAuth API 結合テスト', () => {
           approved: true,
         });
 
-      expect(consentResponse.status).toBe(302);
-      const redirectUrl = new URL(consentResponse.headers.location);
+      // JSONでリダイレクトURLが返される
+      expect(consentResponse.status).toBe(200);
+      const redirectUrl = new URL(consentResponse.body.redirect_url);
       const authCode = redirectUrl.searchParams.get('code');
       expect(authCode).toBeTruthy();
 
@@ -689,7 +909,9 @@ describe('OAuth API 結合テスト', () => {
 
       expect(tokenResponse.status).toBe(200);
       expect(tokenResponse.body.access_token).toBeTruthy();
+      expect(tokenResponse.body.refresh_token).toBeTruthy(); // リフレッシュトークンも発行される
       const accessToken = tokenResponse.body.access_token;
+      const refreshToken = tokenResponse.body.refresh_token;
 
       // 4. イントロスペクション（内部API認証必須）
       const introspectResponse = await request(app)
@@ -703,14 +925,36 @@ describe('OAuth API 結合テスト', () => {
       expect(introspectResponse.body.sub).toBe(testUser.id);
       expect(introspectResponse.body.scope).toBe('mcp:read mcp:write');
 
-      // 5. トークン失効
+      // 5. リフレッシュトークンで新しいアクセストークンを取得
+      const refreshResponse = await request(app)
+        .post('/oauth/token')
+        .send({
+          grant_type: 'refresh_token',
+          refresh_token: refreshToken,
+          client_id: clientId,
+        });
+
+      expect(refreshResponse.status).toBe(200);
+      expect(refreshResponse.body.access_token).toBeTruthy();
+      const newAccessToken = refreshResponse.body.access_token;
+
+      // 6. 新しいアクセストークンでイントロスペクション
+      const newIntrospectResponse = await request(app)
+        .post('/oauth/introspect')
+        .set('X-Internal-Api-Key', internalApiSecret)
+        .send({ token: newAccessToken });
+
+      expect(newIntrospectResponse.status).toBe(200);
+      expect(newIntrospectResponse.body.active).toBe(true);
+
+      // 7. 元のアクセストークンを失効
       const revokeResponse = await request(app)
         .post('/oauth/revoke')
         .send({ token: accessToken });
 
       expect(revokeResponse.status).toBe(200);
 
-      // 6. 失効後のイントロスペクション
+      // 8. 失効後のイントロスペクション（元のトークン）
       const afterRevokeResponse = await request(app)
         .post('/oauth/introspect')
         .set('X-Internal-Api-Key', internalApiSecret)
@@ -718,6 +962,15 @@ describe('OAuth API 結合テスト', () => {
 
       expect(afterRevokeResponse.status).toBe(200);
       expect(afterRevokeResponse.body.active).toBe(false);
+
+      // 9. 新しいアクセストークンはまだ有効
+      const newTokenStillValid = await request(app)
+        .post('/oauth/introspect')
+        .set('X-Internal-Api-Key', internalApiSecret)
+        .send({ token: newAccessToken });
+
+      expect(newTokenStillValid.status).toBe(200);
+      expect(newTokenStillValid.body.active).toBe(true);
     });
   });
 });
