@@ -24,7 +24,7 @@ export const SUPPORTED_SCOPES = [
 export const clientRegistrationSchema = z.object({
   client_name: z.string().min(1).max(100),
   redirect_uris: z.array(z.string().url()).min(1),
-  grant_types: z.array(z.enum(['authorization_code'])).default(['authorization_code']),
+  grant_types: z.array(z.enum(['authorization_code', 'refresh_token'])).default(['authorization_code']),
   response_types: z.array(z.enum(['code'])).default(['code']),
   token_endpoint_auth_method: z.enum(['none']).default('none'),
   scope: z.string().optional(),
