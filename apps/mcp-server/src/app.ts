@@ -27,8 +27,16 @@ export function createApp(): Express {
     origin: env.CORS_ORIGIN.split(',').filter(Boolean),
     credentials: true,
     methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
-    // MCP Inspectorは多くのカスタムヘッダーを使用するため、リクエストのヘッダーを反映
-    allowedHeaders: '*',
+    // MCPプロトコルで使用するヘッダーを明示的に許可
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'X-MCP-Client-Id',
+      'X-MCP-Client-Name',
+      'X-MCP-Project-Id',
+      'Mcp-Session-Id',
+    ],
     exposedHeaders: ['Mcp-Session-Id'],
   }));
 

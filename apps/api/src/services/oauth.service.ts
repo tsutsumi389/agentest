@@ -3,6 +3,7 @@ import { OAuthRepository, type IOAuthRepository } from '../repositories/oauth.re
 import {
   generateAuthorizationCode,
   generateAccessToken,
+  generateRefreshToken,
   generateClientId,
   hashToken,
   verifyCodeChallenge,
@@ -22,6 +23,9 @@ const AUTHORIZATION_CODE_EXPIRES_IN = 10 * 60 * 1000;
 
 // アクセストークン有効期限: 1時間
 const ACCESS_TOKEN_EXPIRES_IN = 60 * 60 * 1000;
+
+// リフレッシュトークン有効期限: 30日
+const REFRESH_TOKEN_EXPIRES_IN = 30 * 24 * 60 * 60 * 1000;
 
 /**
  * OAuth エラー
@@ -226,8 +230,16 @@ export class OAuthService {
     access_token: string;
     token_type: string;
     expires_in: number;
+    refresh_token?: string;
     scope?: string;
   }> {
+    // grant_typeに応じて処理を分岐
+    if (input.grant_type === 'refresh_token') {
+      return this.refreshAccessToken(input);
+    }
+
+    // 以下は authorization_code の処理
+
     // 認可コード検証
     const authCode = await this.repository.findAuthorizationCodeByCode(input.code);
     if (!authCode) {
@@ -244,6 +256,7 @@ export class OAuthService {
     // このコードで発行された全てのトークンを無効化する
     if (authCode.usedAt) {
       await this.repository.revokeAllAccessTokensByUserId(authCode.userId, authCode.clientId);
+      await this.repository.revokeAllRefreshTokensByUserId(authCode.userId, authCode.clientId);
       throw new OAuthError('invalid_grant', 'Authorization code already used', 400);
     }
 
@@ -270,6 +283,20 @@ export class OAuthService {
     // 認可コードを使用済みにマーク
     await this.repository.markAuthorizationCodeAsUsed(input.code);
 
+    // リフレッシュトークン発行
+    const refreshToken = generateRefreshToken();
+    const refreshTokenHash = hashToken(refreshToken);
+    const refreshTokenExpiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRES_IN);
+
+    const savedRefreshToken = await this.repository.createRefreshToken({
+      tokenHash: refreshTokenHash,
+      clientId: authCode.clientId,
+      userId: authCode.userId,
+      scopes: authCode.scopes,
+      audience: authCode.resource,
+      expiresAt: refreshTokenExpiresAt,
+    });
+
     // アクセストークン発行
     const accessToken = generateAccessToken();
     const tokenHash = hashToken(accessToken);
@@ -282,13 +309,89 @@ export class OAuthService {
       scopes: authCode.scopes,
       audience: authCode.resource,
       expiresAt,
+      refreshTokenId: savedRefreshToken.id,
     });
 
     return {
       access_token: accessToken,
       token_type: 'Bearer',
       expires_in: Math.floor(ACCESS_TOKEN_EXPIRES_IN / 1000),
+      refresh_token: refreshToken,
       ...(authCode.scopes.length > 0 && { scope: authCode.scopes.join(' ') }),
+    };
+  }
+
+  // ============================================
+  // リフレッシュトークンでアクセストークン更新
+  // ============================================
+
+  private async refreshAccessToken(input: {
+    grant_type: 'refresh_token';
+    refresh_token: string;
+    client_id: string;
+    scope?: string;
+  }): Promise<{
+    access_token: string;
+    token_type: string;
+    expires_in: number;
+    refresh_token?: string;
+    scope?: string;
+  }> {
+    // リフレッシュトークン検証
+    const refreshTokenHash = hashToken(input.refresh_token);
+    const refreshToken = await this.repository.findRefreshTokenByHash(refreshTokenHash);
+
+    if (!refreshToken) {
+      throw new OAuthError('invalid_grant', 'Refresh token not found', 400);
+    }
+
+    // 有効期限検証
+    if (refreshToken.expiresAt < new Date()) {
+      throw new OAuthError('invalid_grant', 'Refresh token expired', 400);
+    }
+
+    // 失効済み検証
+    if (refreshToken.revokedAt) {
+      throw new OAuthError('invalid_grant', 'Refresh token revoked', 400);
+    }
+
+    // クライアントID検証
+    if (refreshToken.clientId !== input.client_id) {
+      throw new OAuthError('invalid_grant', 'Client ID mismatch', 400);
+    }
+
+    // スコープの検証（ダウングレードのみ許可）
+    let scopes = refreshToken.scopes;
+    if (input.scope) {
+      const requestedScopes = parseAndValidateScopes(input.scope);
+      // リクエストされたスコープが元のスコープのサブセットであることを確認
+      const isSubset = requestedScopes.every((s) => refreshToken.scopes.includes(s));
+      if (!isSubset) {
+        throw new OAuthError('invalid_scope', 'Requested scope exceeds original scope', 400);
+      }
+      scopes = requestedScopes;
+    }
+
+    // 新しいアクセストークン発行
+    const accessToken = generateAccessToken();
+    const tokenHash = hashToken(accessToken);
+    const expiresAt = new Date(Date.now() + ACCESS_TOKEN_EXPIRES_IN);
+
+    await this.repository.createAccessToken({
+      tokenHash,
+      clientId: refreshToken.clientId,
+      userId: refreshToken.userId,
+      scopes,
+      audience: refreshToken.audience,
+      expiresAt,
+      refreshTokenId: refreshToken.id,
+    });
+
+    return {
+      access_token: accessToken,
+      token_type: 'Bearer',
+      expires_in: Math.floor(ACCESS_TOKEN_EXPIRES_IN / 1000),
+      ...(scopes.length > 0 && { scope: scopes.join(' ') }),
     };
   }
 
@@ -330,20 +433,46 @@ export class OAuthService {
 
   async revokeToken(token: string, clientId?: string): Promise<void> {
     const tokenHash = hashToken(token);
+
+    // まずアクセストークンとして検索
     const accessToken = await this.repository.findAccessTokenByHash(tokenHash);
 
-    if (!accessToken) {
-      // RFC 7009: トークンが見つからなくても成功レスポンスを返す
+    if (accessToken) {
+      // クライアントIDが指定されている場合は一致確認
+      if (clientId && accessToken.clientId !== clientId) {
+        // RFC 7009: クライアントが一致しない場合は何もしない
+        // セキュリティ: 他クライアントのトークン失効試行をログに記録
+        console.warn(
+          `[OAuth] Token revocation attempt by different client: ` +
+          `token_client_id=${accessToken.clientId}, request_client_id=${clientId}`
+        );
+        return;
+      }
+
+      await this.repository.revokeAccessToken(tokenHash);
       return;
     }
 
-    // クライアントIDが指定されている場合は一致確認
-    if (clientId && accessToken.clientId !== clientId) {
-      // RFC 7009: クライアントが一致しない場合は何もしない
+    // アクセストークンとして見つからなければリフレッシュトークンとして検索
+    const refreshToken = await this.repository.findRefreshTokenByHash(tokenHash);
+
+    if (refreshToken) {
+      // クライアントIDが指定されている場合は一致確認
+      if (clientId && refreshToken.clientId !== clientId) {
+        // RFC 7009: クライアントが一致しない場合は何もしない
+        // セキュリティ: 他クライアントのトークン失効試行をログに記録
+        console.warn(
+          `[OAuth] Refresh token revocation attempt by different client: ` +
+          `token_client_id=${refreshToken.clientId}, request_client_id=${clientId}`
+        );
+        return;
+      }
+
+      await this.repository.revokeRefreshToken(tokenHash);
       return;
     }
 
-    await this.repository.revokeAccessToken(tokenHash);
+    // RFC 7009: トークンが見つからなくても成功レスポンスを返す
   }
 
   // ============================================

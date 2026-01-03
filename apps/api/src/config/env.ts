@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+// 本番環境かどうかを判定
+const isProduction = process.env.NODE_ENV === 'production';
+
 // 環境変数スキーマ
 const envSchema = z.object({
   // サーバー設定
@@ -17,9 +20,14 @@ const envSchema = z.object({
   // Redis
   REDIS_URL: z.string().url().optional(),
 
-  // JWT
-  JWT_ACCESS_SECRET: z.string().min(32).default('development-access-secret-key-32ch'),
-  JWT_REFRESH_SECRET: z.string().min(32).default('development-refresh-secret-key-32ch'),
+  // JWT（認証用）
+  // 本番環境ではデフォルト値なし（必須）、開発環境ではデフォルト値あり
+  JWT_ACCESS_SECRET: isProduction
+    ? z.string().min(32)
+    : z.string().min(32).default('development-access-secret-key-32ch'),
+  JWT_REFRESH_SECRET: isProduction
+    ? z.string().min(32)
+    : z.string().min(32).default('development-refresh-secret-key-32ch'),
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
 
@@ -35,7 +43,10 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default('http://localhost:3000'),
 
   // 内部API認証（MCP↔API間通信）
-  INTERNAL_API_SECRET: z.string().min(32).default('development-internal-api-secret-32ch'),
+  // 本番環境ではデフォルト値なし（必須）、開発環境ではデフォルト値あり
+  INTERNAL_API_SECRET: isProduction
+    ? z.string().min(32)
+    : z.string().min(32).default('development-internal-api-secret-32ch'),
 
   // MinIO/S3
   S3_ENDPOINT: z.string().optional(),

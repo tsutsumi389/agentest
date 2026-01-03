@@ -3,6 +3,7 @@ import { oauthController } from '../controllers/oauth.controller.js';
 import { authenticate } from '@agentest/auth';
 import { authLimiter } from '../middleware/rate-limiter.js';
 import { requireInternalApiAuth } from '../middleware/internal-api.middleware.js';
+import { csrfProtection } from '../middleware/csrf.middleware.js';
 
 const router: Router = Router();
 
@@ -30,8 +31,8 @@ router.get('/authorize', authenticate({ optional: true }), oauthController.autho
 // 同意承認エンドポイント
 // POST /oauth/authorize/consent
 // ============================================
-// 認証必須
-router.post('/authorize/consent', authenticate(), oauthController.consent);
+// 認証必須 + CSRF保護（フロントエンドからのPOSTリクエスト）
+router.post('/authorize/consent', csrfProtection(), authenticate(), oauthController.consent);
 
 // ============================================
 // トークンエンドポイント

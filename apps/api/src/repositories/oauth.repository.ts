@@ -1,4 +1,4 @@
-import { prisma, type PrismaClient, type OAuthClient, type OAuthAuthorizationCode, type OAuthAccessToken } from '@agentest/db';
+import { prisma, type PrismaClient, type OAuthClient, type OAuthAuthorizationCode, type OAuthAccessToken, type OAuthRefreshToken } from '@agentest/db';
 
 /**
  * OAuth Repository インターフェース
@@ -18,6 +18,12 @@ export interface IOAuthRepository {
   findAccessTokenByHash(tokenHash: string): Promise<OAuthAccessToken | null>;
   revokeAccessToken(tokenHash: string): Promise<void>;
   revokeAllAccessTokensByUserId(userId: string, clientId?: string): Promise<void>;
+
+  // リフレッシュトークン
+  createRefreshToken(data: CreateRefreshTokenInput): Promise<OAuthRefreshToken>;
+  findRefreshTokenByHash(tokenHash: string): Promise<OAuthRefreshToken | null>;
+  revokeRefreshToken(tokenHash: string): Promise<void>;
+  revokeAllRefreshTokensByUserId(userId: string, clientId?: string): Promise<void>;
 }
 
 export interface CreateClientInput {
@@ -47,6 +53,16 @@ export interface CreateAuthorizationCodeInput {
 }
 
 export interface CreateAccessTokenInput {
+  tokenHash: string;
+  clientId: string;
+  userId: string;
+  scopes: string[];
+  audience: string;
+  expiresAt: Date;
+  refreshTokenId?: string;
+}
+
+export interface CreateRefreshTokenInput {
   tokenHash: string;
   clientId: string;
   userId: string;
@@ -139,6 +155,7 @@ export class OAuthRepository implements IOAuthRepository {
         scopes: data.scopes,
         audience: data.audience,
         expiresAt: data.expiresAt,
+        refreshTokenId: data.refreshTokenId,
       },
     });
   }
@@ -162,6 +179,51 @@ export class OAuthRepository implements IOAuthRepository {
 
   async revokeAllAccessTokensByUserId(userId: string, clientId?: string): Promise<void> {
     await this.db.oAuthAccessToken.updateMany({
+      where: {
+        userId,
+        ...(clientId && { clientId }),
+        revokedAt: null,
+      },
+      data: { revokedAt: new Date() },
+    });
+  }
+
+  // ============================================
+  // リフレッシュトークン操作
+  // ============================================
+
+  async createRefreshToken(data: CreateRefreshTokenInput): Promise<OAuthRefreshToken> {
+    return this.db.oAuthRefreshToken.create({
+      data: {
+        tokenHash: data.tokenHash,
+        clientId: data.clientId,
+        userId: data.userId,
+        scopes: data.scopes,
+        audience: data.audience,
+        expiresAt: data.expiresAt,
+      },
+    });
+  }
+
+  async findRefreshTokenByHash(tokenHash: string): Promise<OAuthRefreshToken | null> {
+    return this.db.oAuthRefreshToken.findUnique({
+      where: { tokenHash },
+      include: {
+        client: true,
+        user: true,
+      },
+    });
+  }
+
+  async revokeRefreshToken(tokenHash: string): Promise<void> {
+    await this.db.oAuthRefreshToken.update({
+      where: { tokenHash },
+      data: { revokedAt: new Date() },
+    });
+  }
+
+  async revokeAllRefreshTokensByUserId(userId: string, clientId?: string): Promise<void> {
+    await this.db.oAuthRefreshToken.updateMany({
       where: {
         userId,
         ...(clientId && { clientId }),

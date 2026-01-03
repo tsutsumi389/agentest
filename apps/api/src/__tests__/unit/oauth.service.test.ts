@@ -14,6 +14,10 @@ const createMockRepository = (): IOAuthRepository => ({
   findAccessTokenByHash: vi.fn(),
   revokeAccessToken: vi.fn(),
   revokeAllAccessTokensByUserId: vi.fn(),
+  createRefreshToken: vi.fn(),
+  findRefreshTokenByHash: vi.fn(),
+  revokeRefreshToken: vi.fn(),
+  revokeAllRefreshTokensByUserId: vi.fn(),
 });
 
 describe('OAuthService', () => {
@@ -37,7 +41,7 @@ describe('OAuthService', () => {
       expect(metadata).toHaveProperty('revocation_endpoint');
       expect(metadata).toHaveProperty('introspection_endpoint');
       expect(metadata.response_types_supported).toEqual(['code']);
-      expect(metadata.grant_types_supported).toEqual(['authorization_code']);
+      expect(metadata.grant_types_supported).toEqual(['authorization_code', 'refresh_token']);
       expect(metadata.code_challenge_methods_supported).toEqual(['S256']);
       expect(metadata.token_endpoint_auth_methods_supported).toEqual(['none']);
     });
@@ -48,8 +52,8 @@ describe('OAuthService', () => {
       const input = {
         client_name: 'Test Client',
         redirect_uris: ['http://localhost:8080/callback'],
-        grant_types: ['authorization_code'] as const,
-        response_types: ['code'] as const,
+        grant_types: ['authorization_code'] as ('authorization_code' | 'refresh_token')[],
+        response_types: ['code'] as 'code'[],
         token_endpoint_auth_method: 'none' as const,
         scope: 'mcp:read mcp:write',
       };
@@ -84,8 +88,8 @@ describe('OAuthService', () => {
       const input = {
         client_name: 'Test Client',
         redirect_uris: ['https://evil.com/callback'],
-        grant_types: ['authorization_code'] as const,
-        response_types: ['code'] as const,
+        grant_types: ['authorization_code'] as ('authorization_code' | 'refresh_token')[],
+        response_types: ['code'] as 'code'[],
         token_endpoint_auth_method: 'none' as const,
       };
 
@@ -100,8 +104,8 @@ describe('OAuthService', () => {
       const input = {
         client_name: 'Test Client',
         redirect_uris: ['http://localhost:8080/callback', 'https://evil.com/callback'],
-        grant_types: ['authorization_code'] as const,
-        response_types: ['code'] as const,
+        grant_types: ['authorization_code'] as ('authorization_code' | 'refresh_token')[],
+        response_types: ['code'] as 'code'[],
         token_endpoint_auth_method: 'none' as const,
       };
 
@@ -240,7 +244,7 @@ describe('OAuthService', () => {
     const validCodeVerifier = 'dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk';
     const validCodeChallenge = computeCodeChallenge(validCodeVerifier);
 
-    it('正常にトークンを発行できる', async () => {
+    it('正常にトークンを発行できる（リフレッシュトークン含む）', async () => {
       const input = {
         grant_type: 'authorization_code' as const,
         code: 'auth-code-123',
@@ -263,17 +267,24 @@ describe('OAuthService', () => {
         usedAt: null,
       };
 
+      const mockRefreshToken = {
+        id: 'refresh-token-db-id',
+      };
+
       (mockRepository.findAuthorizationCodeByCode as any).mockResolvedValue(mockAuthCode);
+      (mockRepository.createRefreshToken as any).mockResolvedValue(mockRefreshToken);
       (mockRepository.createAccessToken as any).mockResolvedValue({});
 
       const result = await service.exchangeCodeForToken(input);
 
       expect(result.access_token).toBeTruthy();
+      expect(result.refresh_token).toBeTruthy();
       expect(result.token_type).toBe('Bearer');
       expect(result.expires_in).toBe(3600);
       expect(result.scope).toBe('mcp:read');
 
       expect(mockRepository.markAuthorizationCodeAsUsed).toHaveBeenCalledWith('auth-code-123');
+      expect(mockRepository.createRefreshToken).toHaveBeenCalled();
       expect(mockRepository.createAccessToken).toHaveBeenCalled();
     });
 
@@ -355,8 +366,14 @@ describe('OAuthService', () => {
         errorDescription: 'Authorization code already used',
       });
 
-      // セキュリティ対策：全トークン無効化が呼ばれることを確認
+      // セキュリティ対策：全アクセストークン無効化が呼ばれることを確認
       expect(mockRepository.revokeAllAccessTokensByUserId).toHaveBeenCalledWith(
+        mockAuthCode.userId,
+        mockAuthCode.clientId
+      );
+
+      // セキュリティ対策：全リフレッシュトークン無効化が呼ばれることを確認
+      expect(mockRepository.revokeAllRefreshTokensByUserId).toHaveBeenCalledWith(
         mockAuthCode.userId,
         mockAuthCode.clientId
       );
@@ -567,7 +584,7 @@ describe('OAuthService', () => {
   });
 
   describe('revokeToken', () => {
-    it('トークンを失効させられる', async () => {
+    it('アクセストークンを失効させられる', async () => {
       const mockAccessToken = {
         id: 'token-db-id',
         tokenHash: 'hashed-token',
@@ -582,14 +599,32 @@ describe('OAuthService', () => {
       expect(mockRepository.revokeAccessToken).toHaveBeenCalled();
     });
 
+    it('リフレッシュトークンを失効させられる', async () => {
+      const mockRefreshToken = {
+        id: 'refresh-token-db-id',
+        tokenHash: 'hashed-refresh-token',
+        clientId: '550e8400-e29b-41d4-a716-446655440000',
+        userId: 'user-123',
+      };
+
+      (mockRepository.findAccessTokenByHash as any).mockResolvedValue(null);
+      (mockRepository.findRefreshTokenByHash as any).mockResolvedValue(mockRefreshToken);
+
+      await service.revokeToken('refresh-token');
+
+      expect(mockRepository.revokeRefreshToken).toHaveBeenCalled();
+    });
+
     it('トークンが見つからなくてもエラーにならない（RFC 7009準拠）', async () => {
       (mockRepository.findAccessTokenByHash as any).mockResolvedValue(null);
+      (mockRepository.findRefreshTokenByHash as any).mockResolvedValue(null);
 
       await expect(service.revokeToken('non-existent-token')).resolves.not.toThrow();
       expect(mockRepository.revokeAccessToken).not.toHaveBeenCalled();
+      expect(mockRepository.revokeRefreshToken).not.toHaveBeenCalled();
     });
 
-    it('クライアントID不一致の場合は何もしない（RFC 7009準拠）', async () => {
+    it('アクセストークン：クライアントID不一致の場合は何もしない（RFC 7009準拠）', async () => {
       const mockAccessToken = {
         id: 'token-db-id',
         tokenHash: 'hashed-token',
@@ -602,6 +637,22 @@ describe('OAuthService', () => {
       await service.revokeToken('access-token', 'different-client-id');
 
       expect(mockRepository.revokeAccessToken).not.toHaveBeenCalled();
+    });
+
+    it('リフレッシュトークン：クライアントID不一致の場合は何もしない（RFC 7009準拠）', async () => {
+      const mockRefreshToken = {
+        id: 'refresh-token-db-id',
+        tokenHash: 'hashed-refresh-token',
+        clientId: '550e8400-e29b-41d4-a716-446655440000',
+        userId: 'user-123',
+      };
+
+      (mockRepository.findAccessTokenByHash as any).mockResolvedValue(null);
+      (mockRepository.findRefreshTokenByHash as any).mockResolvedValue(mockRefreshToken);
+
+      await service.revokeToken('refresh-token', 'different-client-id');
+
+      expect(mockRepository.revokeRefreshToken).not.toHaveBeenCalled();
     });
   });
 

@@ -60,6 +60,13 @@ export function generateAccessToken(): string {
 }
 
 /**
+ * セキュアなランダム文字列を生成 (リフレッシュトークン用)
+ */
+export function generateRefreshToken(): string {
+  return base64UrlEncode(crypto.randomBytes(32));
+}
+
+/**
  * トークンのハッシュを計算 (DB保存用)
  */
 export function hashToken(token: string): string {
