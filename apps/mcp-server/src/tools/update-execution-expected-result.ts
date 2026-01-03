@@ -6,10 +6,10 @@ import { apiClient } from '../clients/api-client.js';
  * 入力スキーマ
  */
 export const updateExecutionExpectedResultInputSchema = z.object({
-  executionId: z.string().uuid().describe('実行ID'),
-  expectedResultId: z.string().uuid().describe('期待結果ID'),
-  status: z.enum(['PASS', 'FAIL', 'SKIPPED', 'NOT_EXECUTABLE']).describe('ステータス（PASS: 合格, FAIL: 不合格, SKIPPED: スキップ, NOT_EXECUTABLE: 実行不可）'),
-  note: z.string().max(2000).optional().describe('メモ'),
+  executionId: z.string().uuid().describe('テスト実行のID。create_executionで取得したIDを指定'),
+  expectedResultId: z.string().uuid().describe('期待結果のID。get_executionのexpectedResultsから取得'),
+  status: z.enum(['PASS', 'FAIL', 'SKIPPED', 'NOT_EXECUTABLE']).describe('判定結果: PASS（期待通り）, FAIL（期待と異なる）, SKIPPED（確認をスキップ）, NOT_EXECUTABLE（確認不可能）'),
+  note: z.string().max(2000).optional().describe('補足メモ（最大2000文字）。FAILの場合は実際の結果や差異を記録'),
 });
 
 type UpdateExecutionExpectedResultInput = z.infer<typeof updateExecutionExpectedResultInputSchema>;
@@ -54,7 +54,16 @@ const updateExecutionExpectedResultHandler: ToolHandler<UpdateExecutionExpectedR
  */
 export const updateExecutionExpectedResultTool: ToolDefinition<UpdateExecutionExpectedResultInput> = {
   name: 'update_execution_expected_result',
-  description: '実行中のテストの期待結果を更新します。実行ID、期待結果ID、ステータス（PASS/FAIL/SKIPPED/NOT_EXECUTABLE）を指定してください。',
+  description: `テスト実行中の期待結果の合否判定を記録します。
+
+必須: executionId, expectedResultId, status
+オプション: note
+
+返却情報: 更新後の期待結果（ID・ステータス・メモ・判定日時）。
+
+使用場面: テストステップ実行後、期待した結果が得られたかを判定・記録する際に使用します。
+ワークフロー: update_execution_step_resultでステップ実行記録後 → このツールで結果を判定 → 必要に応じてupload_execution_evidenceでエビデンスを添付。
+ステータスの使い分け: PASS（正常）, FAIL（バグ発見）, SKIPPED（関連ステップがスキップされた場合）, NOT_EXECUTABLE（前提条件未達等で確認できない場合）。`,
   inputSchema: updateExecutionExpectedResultInputSchema,
   handler: updateExecutionExpectedResultHandler,
 };

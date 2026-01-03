@@ -6,7 +6,7 @@ import { apiClient } from '../clients/api-client.js';
  * 入力スキーマ
  */
 export const getExecutionInputSchema = z.object({
-  executionId: z.string().uuid().describe('実行ID（必須）'),
+  executionId: z.string().uuid().describe('取得する実行のID。search_executionまたはcreate_executionで取得したIDを指定'),
 });
 
 type GetExecutionInput = z.infer<typeof getExecutionInputSchema>;
@@ -205,7 +205,12 @@ const getExecutionHandler: ToolHandler<GetExecutionInput, GetExecutionResponse> 
  */
 export const getExecutionTool: ToolDefinition<GetExecutionInput> = {
   name: 'get_execution',
-  description: 'テスト実行の詳細情報を取得します。スナップショット、各結果データ、エビデンスも含まれます。',
+  description: `テスト実行の詳細情報を取得します。
+
+返却情報: 実行ID・ステータス・開始/完了日時、実行者、実行環境、テストスイートスナップショット（実行時点のテスト内容）、前提条件結果一覧、ステップ結果一覧、期待結果一覧（エビデンス含む）。
+
+使用場面: 実行中または完了したテストの進捗・結果を確認する際に使用します。各結果のIDはupdate_execution_*ツールで結果を記録する際に必要です。
+関連ツール: update_execution_precondition_result, update_execution_step_result, update_execution_expected_result, upload_execution_evidence。`,
   inputSchema: getExecutionInputSchema,
   handler: getExecutionHandler,
 };

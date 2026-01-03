@@ -6,10 +6,10 @@ import { apiClient } from '../clients/api-client.js';
  * 入力スキーマ
  */
 export const createTestSuiteInputSchema = z.object({
-  projectId: z.string().uuid().describe('作成先プロジェクトID'),
-  name: z.string().min(1).max(200).describe('テストスイート名'),
-  description: z.string().max(2000).optional().describe('説明'),
-  status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).default('DRAFT').describe('ステータス'),
+  projectId: z.string().uuid().describe('テストスイートを作成するプロジェクトのID。search_projectで取得したIDを指定'),
+  name: z.string().min(1).max(200).describe('テストスイート名（1-200文字）'),
+  description: z.string().max(2000).optional().describe('テストスイートの説明（最大2000文字）。省略可'),
+  status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).default('DRAFT').describe('初期ステータス: DRAFT（下書き、デフォルト）, ACTIVE（有効）, ARCHIVED（アーカイブ済み）'),
 });
 
 type CreateTestSuiteInput = z.infer<typeof createTestSuiteInputSchema>;
@@ -59,7 +59,15 @@ const createTestSuiteHandler: ToolHandler<CreateTestSuiteInput, CreateTestSuiteR
  */
 export const createTestSuiteTool: ToolDefinition<CreateTestSuiteInput> = {
   name: 'create_test_suite',
-  description: 'テストスイートを作成します。プロジェクトIDとテストスイート名を指定してください。',
+  description: `プロジェクト内に新しいテストスイートを作成します。
+
+必須: projectId, name
+オプション: description, status
+
+返却情報: 作成されたテストスイートID・名前・説明・ステータス。
+
+使用場面: 新しいテスト群をまとめるスイートを作成する際に使用します。作成後、create_test_caseでテストケースを追加できます。
+注意: projectIdはsearch_projectで事前に取得してください。`,
   inputSchema: createTestSuiteInputSchema as z.ZodType<CreateTestSuiteInput>,
   handler: createTestSuiteHandler,
 };

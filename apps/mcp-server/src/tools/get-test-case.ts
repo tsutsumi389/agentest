@@ -6,7 +6,7 @@ import { apiClient } from '../clients/api-client.js';
  * 入力スキーマ
  */
 export const getTestCaseInputSchema = z.object({
-  testCaseId: z.string().uuid().describe('テストケースID（必須）'),
+  testCaseId: z.string().uuid().describe('取得するテストケースのID。search_test_caseまたはget_test_suiteで取得したIDを指定'),
 });
 
 type GetTestCaseInput = z.infer<typeof getTestCaseInputSchema>;
@@ -100,7 +100,12 @@ const getTestCaseHandler: ToolHandler<GetTestCaseInput, GetTestCaseResponse> = a
  */
 export const getTestCaseTool: ToolDefinition<GetTestCaseInput> = {
   name: 'get_test_case',
-  description: 'テストケースの詳細情報を取得します。前提条件、ステップ、期待結果も含まれます。',
+  description: `テストケースの詳細情報を取得します。
+
+返却情報: テストケースID・タイトル・説明・優先度・ステータス、所属テストスイート、作成者、前提条件一覧（ID・内容・順序）、ステップ一覧（ID・内容・順序）、期待結果一覧（ID・内容・順序）。
+
+使用場面: テストケースの全内容を確認したり、update_test_caseで更新する前に現在の内容を取得する際に使用します。
+関連ツール: update_test_caseで内容を更新、create_executionでテスト実行を開始。`,
   inputSchema: getTestCaseInputSchema,
   handler: getTestCaseHandler,
 };

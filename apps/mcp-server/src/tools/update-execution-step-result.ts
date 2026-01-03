@@ -6,10 +6,10 @@ import { apiClient } from '../clients/api-client.js';
  * 入力スキーマ
  */
 export const updateExecutionStepResultInputSchema = z.object({
-  executionId: z.string().uuid().describe('実行ID'),
-  stepResultId: z.string().uuid().describe('ステップ結果ID'),
-  status: z.enum(['DONE', 'SKIPPED']).describe('ステータス（DONE: 実行済み, SKIPPED: スキップ）'),
-  note: z.string().max(2000).optional().describe('メモ'),
+  executionId: z.string().uuid().describe('テスト実行のID。create_executionで取得したIDを指定'),
+  stepResultId: z.string().uuid().describe('ステップ結果のID。get_executionのstepResultsから取得'),
+  status: z.enum(['DONE', 'SKIPPED']).describe('実行結果: DONE（ステップを実行完了）, SKIPPED（ステップをスキップ）'),
+  note: z.string().max(2000).optional().describe('補足メモ（最大2000文字）。実行時の観察事項やスキップ理由を記録'),
 });
 
 type UpdateExecutionStepResultInput = z.infer<typeof updateExecutionStepResultInputSchema>;
@@ -54,7 +54,16 @@ const updateExecutionStepResultHandler: ToolHandler<UpdateExecutionStepResultInp
  */
 export const updateExecutionStepResultTool: ToolDefinition<UpdateExecutionStepResultInput> = {
   name: 'update_execution_step_result',
-  description: '実行中のテストのステップ結果を更新します。実行ID、ステップ結果ID、ステータス（DONE/SKIPPED）を指定してください。',
+  description: `テスト実行中のステップ実行結果を記録します。
+
+必須: executionId, stepResultId, status
+オプション: note
+
+返却情報: 更新後のステップ結果（ID・ステータス・メモ・実行日時）。
+
+使用場面: テストステップを実行した後、その完了状態を記録する際に使用します。
+ワークフロー: 前提条件確認後 → このツールでステップ実行を記録 → update_execution_expected_resultで期待結果を判定。
+関連ツール: update_execution_expected_result（期待結果の合否判定）と併用してテスト結果を記録。`,
   inputSchema: updateExecutionStepResultInputSchema,
   handler: updateExecutionStepResultHandler,
 };
