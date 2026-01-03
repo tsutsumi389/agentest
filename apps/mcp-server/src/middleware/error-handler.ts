@@ -99,6 +99,11 @@ export function errorHandler(
       let code: number = JSON_RPC_ERROR_CODES.INTERNAL_ERROR;
       if (error instanceof AuthenticationError) {
         code = JSON_RPC_ERROR_CODES.AUTHENTICATION_ERROR;
+        // OAuth 2.1: WWW-Authenticateヘッダーを設定（RFC 9728準拠）
+        res.setHeader(
+          'WWW-Authenticate',
+          `Bearer resource_metadata="${env.MCP_SERVER_URL}/.well-known/oauth-protected-resource"`
+        );
       } else if (error instanceof AuthorizationError) {
         code = JSON_RPC_ERROR_CODES.AUTHORIZATION_ERROR;
       } else if (error instanceof ValidationError) {
