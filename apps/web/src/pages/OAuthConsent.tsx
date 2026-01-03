@@ -111,20 +111,21 @@ export function OAuthConsentPage() {
         }),
       });
 
-      // リダイレクトレスポンスの場合
-      if (response.redirected) {
-        window.location.href = response.url;
+      const data = await response.json();
+
+      // 成功時はredirect_urlにリダイレクト
+      if (response.ok && data.redirect_url) {
+        window.location.href = data.redirect_url;
         return;
       }
 
       // エラーの場合
       if (!response.ok) {
-        const error = await response.json();
-        console.error('Consent error:', error);
+        console.error('Consent error:', data);
         // エラー時もリダイレクト
         const errorUrl = new URL(redirectUri);
-        errorUrl.searchParams.set('error', error.error || 'server_error');
-        errorUrl.searchParams.set('error_description', error.error_description || 'An error occurred');
+        errorUrl.searchParams.set('error', data.error || 'server_error');
+        errorUrl.searchParams.set('error_description', data.error_description || 'An error occurred');
         if (state) errorUrl.searchParams.set('state', state);
         window.location.href = errorUrl.toString();
       }

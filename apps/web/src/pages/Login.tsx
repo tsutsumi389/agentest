@@ -1,6 +1,19 @@
 import { Navigate, useSearchParams } from 'react-router';
 import { Github, Chrome, FlaskConical } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
+import { useEffect } from 'react';
+
+/**
+ * リダイレクト先が外部オリジンかどうかを判定
+ */
+function isExternalUrl(url: string): boolean {
+  try {
+    const parsedUrl = new URL(url, window.location.origin);
+    return parsedUrl.origin !== window.location.origin;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * ログインページ
@@ -12,8 +25,19 @@ export function LoginPage() {
   // リダイレクト先を取得（認証後に戻る先）
   const redirectTo = searchParams.get('redirect');
 
+  // 既にログイン済みで外部オリジンへのリダイレクトが必要な場合
+  useEffect(() => {
+    if (isAuthenticated && !isLoading && redirectTo && isExternalUrl(redirectTo)) {
+      window.location.href = redirectTo;
+    }
+  }, [isAuthenticated, isLoading, redirectTo]);
+
   // 既にログイン済みの場合はリダイレクト先またはダッシュボードにリダイレクト
   if (isAuthenticated && !isLoading) {
+    // 外部オリジンの場合はuseEffectで処理するので、ここではnullを返す
+    if (redirectTo && isExternalUrl(redirectTo)) {
+      return null;
+    }
     return <Navigate to={redirectTo || '/dashboard'} replace />;
   }
 
