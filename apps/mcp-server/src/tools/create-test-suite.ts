@@ -68,6 +68,6 @@ export const createTestSuiteTool: ToolDefinition<CreateTestSuiteInput> = {
 
 使用場面: 新しいテスト群をまとめるスイートを作成する際に使用します。作成後、create_test_caseでテストケースを追加できます。
 注意: projectIdはsearch_projectで事前に取得してください。`,
-  inputSchema: createTestSuiteInputSchema as z.ZodType<CreateTestSuiteInput>,
+  inputSchema: createTestSuiteInputSchema,
   handler: createTestSuiteHandler,
 };

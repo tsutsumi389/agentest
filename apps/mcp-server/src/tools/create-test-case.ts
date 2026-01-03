@@ -97,6 +97,6 @@ export const createTestCaseTool: ToolDefinition<CreateTestCaseInput> = {
 
 使用場面: 新しいテストケースを追加する際に使用します。前提条件・手順・期待結果は作成時に一括登録するか、後からupdate_test_caseで追加できます。
 注意: testSuiteIdはsearch_test_suiteで事前に取得してください。`,
-  inputSchema: createTestCaseInputSchema as z.ZodType<CreateTestCaseInput>,
+  inputSchema: createTestCaseInputSchema,
   handler: createTestCaseHandler,
 };

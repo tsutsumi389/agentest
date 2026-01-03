@@ -79,7 +79,6 @@ export const searchProjectTool: ToolDefinition<SearchProjectInput> = {
 返却情報: プロジェクトID・名前・説明、所属組織、ユーザー権限(OWNER/ADMIN/MEMBER/VIEWER)、テストスイート数。
 
 使用場面: テストスイートやテストケースを操作する前に、対象プロジェクトのIDを取得する最初のステップとして使用します。`,
-  // ZodDefaultを使用しているため、出力型でキャストが必要
-  inputSchema: searchProjectInputSchema as unknown as z.ZodType<SearchProjectInput>,
+  inputSchema: searchProjectInputSchema,
   handler: searchProjectHandler,
 };

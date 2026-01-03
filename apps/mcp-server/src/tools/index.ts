@@ -44,6 +44,15 @@ export type ToolHandler<TInput extends Record<string, unknown>, TOutput> = (
 ) => Promise<TOutput>;
 
 /**
+ * Zodスキーマで.shapeプロパティを持つ型
+ * MCP SDKがZodRawShapeを期待するため、shapeを抽出できる型を定義
+ */
+type ZodSchemaWithShape<T> = {
+  shape: z.ZodRawShape;
+  _output: T;
+};
+
+/**
  * ツール定義
  */
 export interface ToolDefinition<TInput extends Record<string, unknown> = Record<string, unknown>> {
@@ -51,8 +60,8 @@ export interface ToolDefinition<TInput extends Record<string, unknown> = Record<
   name: string;
   // ツールの説明
   description: string;
-  // 入力スキーマ（Zodスキーマ）
-  inputSchema: z.ZodType<TInput>;
+  // 入力スキーマ（.shapeを持つZodスキーマ）
+  inputSchema: ZodSchemaWithShape<TInput>;
   // ハンドラー
   handler: ToolHandler<TInput, unknown>;
 }
@@ -141,11 +150,11 @@ export function registerTools(server: McpServer): void {
 
   for (const tool of tools) {
     // MCPサーバーにツールを登録
-    // 注: zodSchemaからJSON Schemaへの変換が必要
+    // 注: MCP SDK v1.25.1はZodRawShape（.shape）を受け取り、内部でJSON Schemaに変換する
     server.tool(
       tool.name,
       tool.description,
-      zodToJsonSchema(tool.inputSchema),
+      tool.inputSchema.shape,
       async (args) => {
         // AsyncLocalStorageからコンテキストを取得
         const ctx = requestContext.getStore();
@@ -181,101 +190,4 @@ export function registerTools(server: McpServer): void {
   }
 
   console.log(`${tools.length}個のツールをMCPサーバーに登録しました`);
-}
-
-/**
- * ZodスキーマをJSON Schemaに変換（簡易版）
- * 本格的な実装では zod-to-json-schema パッケージを使用推奨
- */
-function zodToJsonSchema(schema: z.ZodType): Record<string, unknown> {
-  // 簡易的な変換。実際の実装では zod-to-json-schema を使用
-  const def = schema._def as Record<string, unknown>;
-
-  if (!def) {
-    return { type: 'object' };
-  }
-
-  const typeName = def.typeName as string | undefined;
-
-  // ZodObjectの場合
-  if ('shape' in def && typeof def.shape === 'function') {
-    const shape = (def.shape as () => Record<string, z.ZodType>)();
-    const properties: Record<string, unknown> = {};
-    const required: string[] = [];
-
-    for (const [key, value] of Object.entries(shape)) {
-      properties[key] = zodToJsonSchema(value);
-      // isOptionalかどうかをチェック
-      if (!value.isOptional()) {
-        required.push(key);
-      }
-    }
-
-    return {
-      type: 'object',
-      properties,
-      required: required.length > 0 ? required : undefined,
-    };
-  }
-
-  // ZodStringの場合
-  if (typeName === 'ZodString') {
-    return { type: 'string' };
-  }
-
-  // ZodNumberの場合
-  if (typeName === 'ZodNumber') {
-    return { type: 'number' };
-  }
-
-  // ZodBooleanの場合
-  if (typeName === 'ZodBoolean') {
-    return { type: 'boolean' };
-  }
-
-  // ZodArrayの場合
-  if (typeName === 'ZodArray' && 'type' in def) {
-    return {
-      type: 'array',
-      items: zodToJsonSchema(def.type as z.ZodType),
-    };
-  }
-
-  // ZodEnumの場合
-  if (typeName === 'ZodEnum' && 'values' in def) {
-    return {
-      type: 'string',
-      enum: def.values as string[],
-    };
-  }
-
-  // ZodOptionalの場合
-  if (typeName === 'ZodOptional' && 'innerType' in def) {
-    return zodToJsonSchema(def.innerType as z.ZodType);
-  }
-
-  // ZodNullableの場合
-  if (typeName === 'ZodNullable' && 'innerType' in def) {
-    const innerSchema = zodToJsonSchema(def.innerType as z.ZodType);
-    return {
-      ...innerSchema,
-      nullable: true,
-    };
-  }
-
-  // ZodDefaultの場合
-  if (typeName === 'ZodDefault' && 'innerType' in def) {
-    const innerSchema = zodToJsonSchema(def.innerType as z.ZodType);
-    const defaultValue =
-      typeof def.defaultValue === 'function'
-        ? (def.defaultValue as () => unknown)()
-        : def.defaultValue;
-    return {
-      ...innerSchema,
-      default: defaultValue,
-    };
-  }
-
-  // デフォルト
-  return { type: 'object' };
 }
