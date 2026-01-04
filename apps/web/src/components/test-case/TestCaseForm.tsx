@@ -1,4 +1,5 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useBlocker } from 'react-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
@@ -32,6 +33,7 @@ import {
 } from '../../lib/api';
 import { toast } from '../../stores/toast';
 import { MentionInput } from '../common/MentionInput';
+import { ConfirmDialog } from '../common/ConfirmDialog';
 
 /**
  * 動的リスト項目の型
@@ -125,6 +127,86 @@ export function TestCaseForm({
   // 保存処理の状態
   const [isSaving, setIsSaving] = useState(false);
 
+  // フォームに変更があるかどうかを判定
+  const hasChanges = useMemo(() => {
+    if (mode === 'create') {
+      // 新規作成時：何か入力があれば変更あり
+      return (
+        title.trim() !== '' ||
+        description.trim() !== '' ||
+        priority !== 'MEDIUM' ||
+        preconditions.filter((p) => !p.isDeleted && p.content.trim()).length > 0 ||
+        steps.filter((s) => !s.isDeleted && s.content.trim()).length > 0 ||
+        expectedResults.filter((e) => !e.isDeleted && e.content.trim()).length > 0
+      );
+    }
+    // 編集時：元の値と異なれば変更あり
+    if (!testCase) return false;
+
+    const titleChanged = title.trim() !== testCase.title;
+    const descriptionChanged = description.trim() !== (testCase.description || '');
+    const priorityChanged = priority !== testCase.priority;
+
+    // 前提条件の変更チェック
+    const activePreconditions = preconditions.filter((p) => !p.isDeleted);
+    const preconditionsChanged =
+      activePreconditions.length !== testCase.preconditions.length ||
+      activePreconditions.some((p, i) => {
+        if (p.isNew) return true;
+        const original = testCase.preconditions[i];
+        return !original || p.content.trim() !== original.content;
+      });
+
+    // ステップの変更チェック
+    const activeSteps = steps.filter((s) => !s.isDeleted);
+    const stepsChanged =
+      activeSteps.length !== testCase.steps.length ||
+      activeSteps.some((s, i) => {
+        if (s.isNew) return true;
+        const original = testCase.steps[i];
+        return !original || s.content.trim() !== original.content;
+      });
+
+    // 期待結果の変更チェック
+    const activeExpectedResults = expectedResults.filter((e) => !e.isDeleted);
+    const expectedResultsChanged =
+      activeExpectedResults.length !== testCase.expectedResults.length ||
+      activeExpectedResults.some((e, i) => {
+        if (e.isNew) return true;
+        const original = testCase.expectedResults[i];
+        return !original || e.content.trim() !== original.content;
+      });
+
+    return (
+      titleChanged ||
+      descriptionChanged ||
+      priorityChanged ||
+      preconditionsChanged ||
+      stepsChanged ||
+      expectedResultsChanged
+    );
+  }, [mode, testCase, title, description, priority, preconditions, steps, expectedResults]);
+
+  // ナビゲーションブロッカー（React Router）
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      hasChanges && !isSaving && currentLocation.pathname !== nextLocation.pathname
+  );
+
+  // ブラウザの閉じる/リロード警告
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasChanges && !isSaving) {
+        e.preventDefault();
+        // 最新のブラウザでは returnValue を設定するだけで警告が表示される
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasChanges, isSaving]);
+
   // dnd-kit センサー設定
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -145,21 +227,21 @@ export function TestCaseForm({
     setPriority(selectedTestCase.priority);
     setPreconditions(
       selectedTestCase.preconditions.map((p) => ({
-        id: `new-${Date.now()}-${Math.random()}`,
+        id: crypto.randomUUID(),
         content: p.content,
         isNew: true,
       }))
     );
     setSteps(
       selectedTestCase.steps.map((s) => ({
-        id: `new-${Date.now()}-${Math.random()}`,
+        id: crypto.randomUUID(),
         content: s.content,
         isNew: true,
       }))
     );
     setExpectedResults(
       selectedTestCase.expectedResults.map((e) => ({
-        id: `new-${Date.now()}-${Math.random()}`,
+        id: crypto.randomUUID(),
         content: e.content,
         isNew: true,
       }))
@@ -379,7 +461,7 @@ export function TestCaseForm({
     setter((prev) => [
       ...prev,
       {
-        id: `new-${Date.now()}-${Math.random()}`,
+        id: crypto.randomUUID(),
         content: '',
         isNew: true,
       },
@@ -587,6 +669,19 @@ export function TestCaseForm({
           )}
         </button>
       </div>
+
+      {/* ナビゲーション警告ダイアログ */}
+      {blocker.state === 'blocked' && (
+        <ConfirmDialog
+          isOpen={true}
+          title="変更を破棄しますか？"
+          message="入力中の内容は保存されていません。このまま移動すると変更が失われます。"
+          confirmLabel="破棄して移動"
+          onConfirm={() => blocker.proceed()}
+          onCancel={() => blocker.reset()}
+          isDanger
+        />
+      )}
     </form>
   );
 }

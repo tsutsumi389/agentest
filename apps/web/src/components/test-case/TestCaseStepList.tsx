@@ -1,79 +1,34 @@
 import { useState, useEffect } from 'react';
 import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import {
   Loader2,
-  Plus,
   ListOrdered,
 } from 'lucide-react';
 import { testCasesApi, ApiError, type TestCaseStep, type ProjectMemberRole } from '../../lib/api';
-import { toast } from '../../stores/toast';
-import { ConfirmDialog } from '../common/ConfirmDialog';
-import { SortableListItem } from '../common/SortableListItem';
-import { TestCaseItemFormModal } from './TestCaseItemFormModal';
 
 interface TestCaseStepListProps {
   /** テストケースID */
   testCaseId: string;
   /** 初期データ（オプティミスティック更新用） */
   initialSteps?: TestCaseStep[];
-  /** 現在のユーザーのロール */
+  /** 現在のユーザーのロール（未使用、互換性のため維持） */
   currentRole?: 'OWNER' | ProjectMemberRole;
-  /** 更新時のコールバック */
+  /** 更新時のコールバック（未使用、互換性のため維持） */
   onUpdated?: () => void;
 }
 
 /**
- * テストケースステップ一覧コンポーネント
+ * テストケースステップ一覧コンポーネント（表示のみ）
+ * 編集は編集モードのTestCaseFormで行う
  */
 export function TestCaseStepList({
   testCaseId,
   initialSteps,
-  currentRole,
-  onUpdated,
 }: TestCaseStepListProps) {
   const [steps, setSteps] = useState<TestCaseStep[]>(initialSteps || []);
   const [isLoading, setIsLoading] = useState(!initialSteps);
   const [error, setError] = useState<string | null>(null);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-  const [editingStep, setEditingStep] = useState<TestCaseStep | null>(null);
-
-  const [deleteConfirm, setDeleteConfirm] = useState<{
-    step: TestCaseStep;
-  } | null>(null);
-
-  const [isReordering, setIsReordering] = useState(false);
-
-  const canEdit = currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'WRITE';
-  const canDelete = currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'WRITE';
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
+  // ステップ一覧を取得
   useEffect(() => {
     if (initialSteps) {
       setSteps(initialSteps);
@@ -101,111 +56,6 @@ export function TestCaseStepList({
 
     fetchSteps();
   }, [testCaseId, initialSteps]);
-
-  const handleOpenCreate = () => {
-    setEditingStep(null);
-    setIsFormModalOpen(true);
-  };
-
-  const handleOpenEdit = (step: TestCaseStep) => {
-    setEditingStep(step);
-    setIsFormModalOpen(true);
-  };
-
-  const handleSubmit = async (content: string) => {
-    setIsSubmitting(true);
-
-    try {
-      if (editingStep) {
-        const response = await testCasesApi.updateStep(testCaseId, editingStep.id, { content });
-        setSteps((prev) =>
-          prev.map((s) => (s.id === editingStep.id ? response.step : s))
-        );
-        toast.success('ステップを更新しました');
-      } else {
-        const response = await testCasesApi.addStep(testCaseId, { content });
-        setSteps((prev) =>
-          [...prev, response.step].sort((a, b) => a.orderKey.localeCompare(b.orderKey))
-        );
-        toast.success('ステップを追加しました');
-      }
-      onUpdated?.();
-    } catch (err) {
-      if (err instanceof ApiError) {
-        throw new Error(err.message);
-      }
-      throw new Error(editingStep ? 'ステップの更新に失敗しました' : 'ステップの追加に失敗しました');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleRequestDelete = (step: TestCaseStep) => {
-    setDeleteConfirm({ step });
-  };
-
-  const handleDelete = async () => {
-    if (!deleteConfirm) return;
-
-    const step = deleteConfirm.step;
-    setUpdatingId(step.id);
-
-    try {
-      await testCasesApi.deleteStep(testCaseId, step.id);
-      setSteps((prev) => prev.filter((s) => s.id !== step.id));
-      toast.success('ステップを削除しました');
-      onUpdated?.();
-    } catch (err) {
-      if (err instanceof ApiError) {
-        toast.error(err.message);
-      } else {
-        toast.error('ステップの削除に失敗しました');
-      }
-    } finally {
-      setUpdatingId(null);
-      setDeleteConfirm(null);
-    }
-  };
-
-  const handleDragEnd = async (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (!over || active.id === over.id) {
-      return;
-    }
-
-    const oldIndex = steps.findIndex((s) => s.id === active.id);
-    const newIndex = steps.findIndex((s) => s.id === over.id);
-
-    if (oldIndex === -1 || newIndex === -1) {
-      return;
-    }
-
-    const newSteps = arrayMove(steps, oldIndex, newIndex);
-    setSteps(newSteps);
-    setIsReordering(true);
-
-    try {
-      const stepIds = newSteps.map((s) => s.id);
-      const response = await testCasesApi.reorderSteps(testCaseId, stepIds);
-      setSteps(response.steps.sort((a, b) => a.orderKey.localeCompare(b.orderKey)));
-      onUpdated?.();
-    } catch (err) {
-      try {
-        const response = await testCasesApi.getSteps(testCaseId);
-        setSteps(response.steps.sort((a, b) => a.orderKey.localeCompare(b.orderKey)));
-      } catch {
-        // 無視
-      }
-      if (err instanceof ApiError) {
-        toast.error(err.message);
-      } else {
-        toast.error('並び順の更新に失敗しました');
-      }
-    } finally {
-      setIsReordering(false);
-    }
-  };
 
   if (isLoading) {
     return (
@@ -236,92 +86,32 @@ export function TestCaseStepList({
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h3 className="text-sm font-semibold text-foreground">テスト手順</h3>
-          {isReordering && (
-            <Loader2 className="w-4 h-4 animate-spin text-foreground-muted" />
-          )}
-        </div>
-        {canEdit && (
-          <button
-            className="btn btn-secondary btn-sm"
-            onClick={handleOpenCreate}
-            disabled={isReordering}
-          >
-            <Plus className="w-3 h-3" />
-            追加
-          </button>
-        )}
+        <h3 className="text-sm font-semibold text-foreground">テスト手順</h3>
       </div>
 
       {steps.length === 0 ? (
         <div className="text-center py-6 border-2 border-dashed border-border rounded-lg">
           <ListOrdered className="w-8 h-8 text-foreground-muted mx-auto mb-2" />
-          <p className="text-foreground-muted text-sm mb-3">テスト手順が設定されていません</p>
-          {canEdit && (
-            <button className="btn btn-primary btn-sm" onClick={handleOpenCreate}>
-              <Plus className="w-3 h-3" />
-              手順を追加
-            </button>
-          )}
+          <p className="text-foreground-muted text-sm">テスト手順が設定されていません</p>
         </div>
       ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext
-            items={steps.map((s) => s.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <div className="space-y-2">
-              {steps.map((step, index) => (
-                <SortableListItem
-                  key={step.id}
-                  id={step.id}
-                  index={index + 1}
-                  content={step.content}
-                  indexColor="accent"
-                  canEdit={canEdit}
-                  canDelete={canDelete}
-                  onEdit={() => handleOpenEdit(step)}
-                  onDelete={() => handleRequestDelete(step)}
-                  isUpdating={updatingId === step.id}
-                  isReordering={isReordering}
-                  actionAriaLabel="ステップ操作メニュー"
-                />
-              ))}
+        <div className="space-y-2">
+          {steps.map((step, index) => (
+            <div
+              key={step.id}
+              className="flex items-start gap-3 p-3 bg-background-secondary rounded-lg"
+            >
+              {/* 番号（アクセントカラー） */}
+              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-accent/20 text-accent flex items-center justify-center text-xs font-medium">
+                {index + 1}
+              </span>
+              {/* 内容 */}
+              <p className="text-sm text-foreground flex-1 whitespace-pre-wrap">
+                {step.content}
+              </p>
             </div>
-          </SortableContext>
-        </DndContext>
-      )}
-
-      <TestCaseItemFormModal
-        isOpen={isFormModalOpen}
-        title={editingStep ? 'ステップを編集' : 'ステップを追加'}
-        placeholder="例: ログインボタンをクリックする"
-        helpText="テストで実行する操作を記述してください"
-        initialValue={editingStep?.content}
-        isSubmitting={isSubmitting}
-        onSubmit={handleSubmit}
-        onClose={() => {
-          setIsFormModalOpen(false);
-          setEditingStep(null);
-        }}
-      />
-
-      {deleteConfirm && (
-        <ConfirmDialog
-          isOpen={true}
-          title="ステップを削除"
-          message="このステップを削除しますか？この操作は取り消せません。"
-          confirmLabel="削除する"
-          onConfirm={handleDelete}
-          onCancel={() => setDeleteConfirm(null)}
-          isLoading={updatingId !== null}
-          isDanger
-        />
+          ))}
+        </div>
       )}
     </div>
   );
