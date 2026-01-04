@@ -12,6 +12,7 @@ import {
   History,
   Settings,
   MessageSquare,
+  Pencil,
 } from 'lucide-react';
 import { testSuitesApi, projectsApi, type TestCase, type TestSuite, type ProjectMemberRole } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
@@ -25,6 +26,7 @@ import { TestCaseForm } from '../components/test-case/TestCaseForm';
 import { StartExecutionModal } from '../components/execution/StartExecutionModal';
 import { ExecutionHistoryList } from '../components/execution/ExecutionHistoryList';
 import { ReviewCommentList } from '../components/review/ReviewCommentList';
+import { TestSuiteForm } from '../components/test-suite/TestSuiteForm';
 
 /**
  * タブ定義
@@ -50,6 +52,7 @@ export function TestSuiteDetailPage() {
   const { setSidebarContent } = usePageSidebar();
   const navigate = useNavigate();
   const [isStartExecutionModalOpen, setIsStartExecutionModalOpen] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
 
   // URLクエリパラメータから作成モードを取得
   const isCreateMode = searchParams.get('mode') === 'create';
@@ -103,6 +106,15 @@ export function TestSuiteDetailPage() {
   });
 
   const suite = suiteData?.testSuite;
+
+  // 前提条件を取得（編集モード用）
+  const { data: preconditionsData } = useQuery({
+    queryKey: ['test-suite-preconditions', testSuiteId],
+    queryFn: () => testSuitesApi.getPreconditions(testSuiteId!),
+    enabled: !!testSuiteId,
+  });
+
+  const preconditions = preconditionsData?.preconditions || [];
 
   // プロジェクトメンバー情報を取得して権限を判定
   const { data: membersData } = useQuery({
@@ -206,6 +218,42 @@ export function TestSuiteDetailPage() {
     );
   }
 
+  // 編集モード時: TestSuiteFormを表示
+  if (isEditMode) {
+    // 前提条件をorderKeyでソート
+    const sortedPreconditions = [...preconditions].sort((a, b) => a.orderKey.localeCompare(b.orderKey));
+
+    return (
+      <div className="space-y-6">
+        {/* パンくずリスト */}
+        <div>
+          <Link
+            to={`/projects/${suite.projectId}`}
+            className="inline-flex items-center gap-1 text-sm text-foreground-muted hover:text-foreground"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            プロジェクトに戻る
+          </Link>
+        </div>
+
+        {/* 編集フォーム */}
+        <div className="card h-[calc(100vh-10rem)] overflow-hidden">
+          <TestSuiteForm
+            mode="edit"
+            testSuite={suite}
+            preconditions={sortedPreconditions}
+            onSave={() => {
+              setIsEditMode(false);
+              queryClient.invalidateQueries({ queryKey: ['test-suite', testSuiteId] });
+              queryClient.invalidateQueries({ queryKey: ['test-suite-preconditions', testSuiteId] });
+            }}
+            onCancel={() => setIsEditMode(false)}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -232,6 +280,16 @@ export function TestSuiteDetailPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            {(currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'WRITE') && (
+              <button
+                onClick={() => setIsEditMode(true)}
+                className="btn btn-secondary"
+                title="テストスイートを編集"
+              >
+                <Pencil className="w-4 h-4" />
+                編集
+              </button>
+            )}
             <button
               onClick={handleStartCreateMode}
               className="btn btn-secondary"
@@ -315,7 +373,6 @@ export function TestSuiteDetailPage() {
           {currentTab === 'overview' && (
             <OverviewTab
               testSuiteId={testSuiteId}
-              currentRole={currentRole}
               executions={executions}
             />
           )}
@@ -376,19 +433,17 @@ export function TestSuiteDetailPage() {
  */
 interface OverviewTabProps {
   testSuiteId: string;
-  currentRole: 'OWNER' | ProjectMemberRole | undefined;
   executions: { id: string; status: string; startedAt: string }[];
 }
 
 function OverviewTab({
   testSuiteId,
-  currentRole,
   executions,
 }: OverviewTabProps) {
   return (
     <>
       {/* 前提条件セクション */}
-      <PreconditionList testSuiteId={testSuiteId} currentRole={currentRole} />
+      <PreconditionList testSuiteId={testSuiteId} />
 
       {/* 実行履歴 */}
       <div className="card">
