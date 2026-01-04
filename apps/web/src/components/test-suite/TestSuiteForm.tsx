@@ -1,30 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
-import {
-  Plus,
-  Trash2,
-  GripVertical,
-  Loader2,
-  ChevronDown,
-  ChevronUp,
-} from 'lucide-react';
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { Loader2 } from 'lucide-react';
 import {
   testSuitesApi,
   ApiError,
@@ -33,17 +8,12 @@ import {
 } from '../../lib/api';
 import { toast } from '../../stores/toast';
 import { ConfirmDialog } from '../common/ConfirmDialog';
-
-/**
- * 動的リスト項目の型
- */
-interface ListItem {
-  id: string;
-  content: string;
-  isNew?: boolean; // 新規追加された項目
-  isDeleted?: boolean; // 削除された項目
-  originalContent?: string; // 編集時の元の内容
-}
+import {
+  DynamicListSection,
+  useDndSensors,
+  createDragEndHandler,
+  type ListItem,
+} from '../common/DynamicListSection';
 
 /**
  * ステータスオプション
@@ -53,6 +23,12 @@ const STATUS_OPTIONS = [
   { value: 'ACTIVE', label: 'アクティブ' },
   { value: 'ARCHIVED', label: 'アーカイブ' },
 ] as const;
+
+/**
+ * 文字数制限
+ */
+const MAX_NAME_LENGTH = 100;
+const MAX_DESCRIPTION_LENGTH = 500;
 
 interface TestSuiteFormProps {
   /** フォームモード（現状は編集のみ） */
@@ -78,7 +54,6 @@ export function TestSuiteForm({
   onCancel,
 }: TestSuiteFormProps) {
   // _modeは将来の拡張用（新規作成モード対応時に使用）
-  const queryClient = useQueryClient();
 
   // フォーム値の状態
   const [name, setName] = useState(testSuite.name);
@@ -101,6 +76,9 @@ export function TestSuiteForm({
 
   // 保存処理の状態
   const [isSaving, setIsSaving] = useState(false);
+
+  // dnd-kit センサー設定
+  const sensors = useDndSensors();
 
   // フォームに変更があるかどうかを判定
   const hasChanges = useMemo(() => {
@@ -146,24 +124,26 @@ export function TestSuiteForm({
     }
   }, [hasChanges, onCancel]);
 
-  // dnd-kit センサー設定
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
-
   // フォーム送信ハンドラ
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!name.trim()) {
+    // バリデーション
+    const trimmedName = name.trim();
+    const trimmedDescription = description.trim();
+
+    if (!trimmedName) {
       toast.error('名前を入力してください');
+      return;
+    }
+
+    if (trimmedName.length > MAX_NAME_LENGTH) {
+      toast.error(`名前は${MAX_NAME_LENGTH}文字以内で入力してください`);
+      return;
+    }
+
+    if (trimmedDescription.length > MAX_DESCRIPTION_LENGTH) {
+      toast.error(`説明は${MAX_DESCRIPTION_LENGTH}文字以内で入力してください`);
       return;
     }
 
@@ -172,11 +152,11 @@ export function TestSuiteForm({
     try {
       // 基本情報の更新
       const updates: { name?: string; description?: string; status?: string } = {};
-      if (name.trim() !== testSuite.name) {
-        updates.name = name.trim();
+      if (trimmedName !== testSuite.name) {
+        updates.name = trimmedName;
       }
-      if (description.trim() !== (testSuite.description || '')) {
-        updates.description = description.trim();
+      if (trimmedDescription !== (testSuite.description || '')) {
+        updates.description = trimmedDescription;
       }
       if (status !== testSuite.status) {
         updates.status = status;
@@ -189,8 +169,6 @@ export function TestSuiteForm({
       // 前提条件の差分更新
       await updatePreconditions();
 
-      queryClient.invalidateQueries({ queryKey: ['test-suite', testSuite.id] });
-      queryClient.invalidateQueries({ queryKey: ['test-suite-preconditions', testSuite.id] });
       toast.success('テストスイートを更新しました');
       onSave();
     } catch (err) {
@@ -247,7 +225,7 @@ export function TestSuiteForm({
   };
 
   // リスト項目の追加
-  const addListItem = () => {
+  const addListItem = useCallback(() => {
     setPreconditions((prev) => [
       ...prev,
       {
@@ -256,46 +234,29 @@ export function TestSuiteForm({
         isNew: true,
       },
     ]);
-  };
+  }, []);
 
   // リスト項目の更新
-  const updateListItem = (id: string, content: string) => {
+  const updateListItem = useCallback((id: string, content: string) => {
     setPreconditions((prev) =>
       prev.map((item) => (item.id === id ? { ...item, content } : item))
     );
-  };
+  }, []);
 
   // リスト項目の削除
-  const deleteListItem = (id: string) => {
+  const deleteListItem = useCallback((id: string) => {
     setPreconditions((prev) =>
       prev.map((item) =>
         item.id === id ? { ...item, isDeleted: true } : item
       )
     );
-  };
+  }, []);
 
   // ドラッグ終了時のハンドラ
-  const handleDragEnd = useCallback((event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (!over || active.id === over.id) {
-      return;
-    }
-
-    setPreconditions((prev) => {
-      const activeItems = prev.filter((i) => !i.isDeleted);
-      const deletedItems = prev.filter((i) => i.isDeleted);
-      const oldIndex = activeItems.findIndex((i) => i.id === active.id);
-      const newIndex = activeItems.findIndex((i) => i.id === over.id);
-
-      if (oldIndex === -1 || newIndex === -1) {
-        return prev;
-      }
-
-      const reordered = arrayMove(activeItems, oldIndex, newIndex);
-      return [...reordered, ...deletedItems];
-    });
-  }, []);
+  const handleDragEnd = useMemo(
+    () => createDragEndHandler(preconditions, setPreconditions),
+    [preconditions]
+  );
 
   // セクション展開/折りたたみのトグル
   const toggleSection = (section: keyof typeof expandedSections) => {
@@ -327,10 +288,10 @@ export function TestSuiteForm({
             onChange={(e) => setName(e.target.value)}
             className="input w-full"
             placeholder="テストスイートの名前"
-            maxLength={100}
+            maxLength={MAX_NAME_LENGTH}
           />
           <p className="text-xs text-foreground-muted mt-1">
-            {name.length}/100文字
+            {name.length}/{MAX_NAME_LENGTH}文字
           </p>
         </div>
 
@@ -345,10 +306,10 @@ export function TestSuiteForm({
             className="input w-full resize-none"
             rows={3}
             placeholder="テストスイートの説明を入力..."
-            maxLength={500}
+            maxLength={MAX_DESCRIPTION_LENGTH}
           />
           <p className="text-xs text-foreground-muted mt-1">
-            {description.length}/500文字
+            {description.length}/{MAX_DESCRIPTION_LENGTH}文字
           </p>
         </div>
 
@@ -427,170 +388,5 @@ export function TestSuiteForm({
         />
       )}
     </form>
-  );
-}
-
-/**
- * 動的リストセクション
- */
-interface DynamicListSectionProps {
-  title: string;
-  items: ListItem[];
-  isExpanded: boolean;
-  onToggle: () => void;
-  onAdd: () => void;
-  onUpdate: (id: string, content: string) => void;
-  onDelete: (id: string) => void;
-  onDragEnd: (event: DragEndEvent) => void;
-  sensors: ReturnType<typeof useSensors>;
-  placeholder: string;
-}
-
-function DynamicListSection({
-  title,
-  items,
-  isExpanded,
-  onToggle,
-  onAdd,
-  onUpdate,
-  onDelete,
-  onDragEnd,
-  sensors,
-  placeholder,
-}: DynamicListSectionProps) {
-  return (
-    <div className="border border-border rounded-lg overflow-hidden">
-      {/* ヘッダー */}
-      <button
-        type="button"
-        onClick={onToggle}
-        className="w-full flex items-center justify-between px-3 py-2 bg-background-tertiary hover:bg-background-secondary transition-colors text-sm font-medium text-foreground"
-      >
-        <span>
-          {title}
-          {items.length > 0 && (
-            <span className="ml-2 text-foreground-muted">({items.length})</span>
-          )}
-        </span>
-        {isExpanded ? (
-          <ChevronUp className="w-4 h-4" />
-        ) : (
-          <ChevronDown className="w-4 h-4" />
-        )}
-      </button>
-
-      {/* コンテンツ */}
-      {isExpanded && (
-        <div className="p-3 space-y-2">
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={onDragEnd}
-          >
-            <SortableContext
-              items={items.map((i) => i.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              {items.map((item, index) => (
-                <SortableListItem
-                  key={item.id}
-                  item={item}
-                  index={index}
-                  onUpdate={onUpdate}
-                  onDelete={onDelete}
-                  placeholder={placeholder}
-                />
-              ))}
-            </SortableContext>
-          </DndContext>
-
-          {/* 追加ボタン */}
-          <button
-            type="button"
-            onClick={onAdd}
-            className="flex items-center gap-1 text-sm text-accent hover:text-accent-hover"
-          >
-            <Plus className="w-4 h-4" />
-            追加
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/**
- * ソート可能なリスト項目
- */
-interface SortableListItemProps {
-  item: ListItem;
-  index: number;
-  onUpdate: (id: string, content: string) => void;
-  onDelete: (id: string) => void;
-  placeholder: string;
-}
-
-function SortableListItem({
-  item,
-  index,
-  onUpdate,
-  onDelete,
-  placeholder,
-}: SortableListItemProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: item.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`flex items-center gap-2 ${isDragging ? 'opacity-50' : ''}`}
-    >
-      {/* ドラッグハンドル */}
-      <button
-        type="button"
-        {...attributes}
-        {...listeners}
-        className="cursor-grab active:cursor-grabbing touch-none p-1 text-foreground-muted hover:text-foreground flex-shrink-0"
-        aria-label="ドラッグして並び替え"
-      >
-        <GripVertical className="w-4 h-4" />
-      </button>
-
-      {/* 番号 */}
-      <span className="text-sm text-foreground-muted w-6 flex-shrink-0">
-        {index + 1}.
-      </span>
-
-      {/* 入力欄 */}
-      <input
-        type="text"
-        value={item.content}
-        onChange={(e) => onUpdate(item.id, e.target.value)}
-        className="input flex-1"
-        placeholder={placeholder}
-      />
-
-      {/* 削除ボタン */}
-      <button
-        type="button"
-        onClick={() => onDelete(item.id)}
-        className="p-1 text-foreground-muted hover:text-danger flex-shrink-0"
-        aria-label="削除"
-      >
-        <Trash2 className="w-4 h-4" />
-      </button>
-    </div>
   );
 }

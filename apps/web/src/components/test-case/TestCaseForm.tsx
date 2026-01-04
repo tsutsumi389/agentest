@@ -1,30 +1,8 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  Plus,
-  Trash2,
-  GripVertical,
-  Loader2,
-  ChevronDown,
-  ChevronUp,
-} from 'lucide-react';
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { Loader2 } from 'lucide-react';
+import { arrayMove } from '@dnd-kit/sortable';
+import { type DragEndEvent } from '@dnd-kit/core';
 import {
   testCasesApi,
   ApiError,
@@ -33,17 +11,11 @@ import {
 import { toast } from '../../stores/toast';
 import { MentionInput } from '../common/MentionInput';
 import { ConfirmDialog } from '../common/ConfirmDialog';
-
-/**
- * 動的リスト項目の型
- */
-interface ListItem {
-  id: string;
-  content: string;
-  isNew?: boolean; // 新規追加された項目
-  isDeleted?: boolean; // 削除された項目
-  originalContent?: string; // 編集時の元の内容
-}
+import {
+  DynamicListSection,
+  useDndSensors,
+  type ListItem,
+} from '../common/DynamicListSection';
 
 /**
  * 優先度オプション
@@ -213,16 +185,7 @@ export function TestCaseForm({
   }, [hasChanges, onCancel]);
 
   // dnd-kit センサー設定
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  const sensors = useDndSensors();
 
   // テストケース選択ハンドラ（コピー機能）
   const handleTestCaseSelect = (selectedTestCase: TestCaseWithDetails) => {
@@ -691,170 +654,5 @@ export function TestCaseForm({
         />
       )}
     </form>
-  );
-}
-
-/**
- * 動的リストセクション
- */
-interface DynamicListSectionProps {
-  title: string;
-  items: ListItem[];
-  isExpanded: boolean;
-  onToggle: () => void;
-  onAdd: () => void;
-  onUpdate: (id: string, content: string) => void;
-  onDelete: (id: string) => void;
-  onDragEnd: (event: DragEndEvent) => void;
-  sensors: ReturnType<typeof useSensors>;
-  placeholder: string;
-}
-
-function DynamicListSection({
-  title,
-  items,
-  isExpanded,
-  onToggle,
-  onAdd,
-  onUpdate,
-  onDelete,
-  onDragEnd,
-  sensors,
-  placeholder,
-}: DynamicListSectionProps) {
-  return (
-    <div className="border border-border rounded-lg overflow-hidden">
-      {/* ヘッダー */}
-      <button
-        type="button"
-        onClick={onToggle}
-        className="w-full flex items-center justify-between px-3 py-2 bg-background-tertiary hover:bg-background-secondary transition-colors text-sm font-medium text-foreground"
-      >
-        <span>
-          {title}
-          {items.length > 0 && (
-            <span className="ml-2 text-foreground-muted">({items.length})</span>
-          )}
-        </span>
-        {isExpanded ? (
-          <ChevronUp className="w-4 h-4" />
-        ) : (
-          <ChevronDown className="w-4 h-4" />
-        )}
-      </button>
-
-      {/* コンテンツ */}
-      {isExpanded && (
-        <div className="p-3 space-y-2">
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={onDragEnd}
-          >
-            <SortableContext
-              items={items.map((i) => i.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              {items.map((item, index) => (
-                <SortableListItem
-                  key={item.id}
-                  item={item}
-                  index={index}
-                  onUpdate={onUpdate}
-                  onDelete={onDelete}
-                  placeholder={placeholder}
-                />
-              ))}
-            </SortableContext>
-          </DndContext>
-
-          {/* 追加ボタン */}
-          <button
-            type="button"
-            onClick={onAdd}
-            className="flex items-center gap-1 text-sm text-accent hover:text-accent-hover"
-          >
-            <Plus className="w-4 h-4" />
-            追加
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/**
- * ソート可能なリスト項目
- */
-interface SortableListItemProps {
-  item: ListItem;
-  index: number;
-  onUpdate: (id: string, content: string) => void;
-  onDelete: (id: string) => void;
-  placeholder: string;
-}
-
-function SortableListItem({
-  item,
-  index,
-  onUpdate,
-  onDelete,
-  placeholder,
-}: SortableListItemProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: item.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`flex items-center gap-2 ${isDragging ? 'opacity-50' : ''}`}
-    >
-      {/* ドラッグハンドル */}
-      <button
-        type="button"
-        {...attributes}
-        {...listeners}
-        className="cursor-grab active:cursor-grabbing touch-none p-1 text-foreground-muted hover:text-foreground flex-shrink-0"
-        aria-label="ドラッグして並び替え"
-      >
-        <GripVertical className="w-4 h-4" />
-      </button>
-
-      {/* 番号 */}
-      <span className="text-sm text-foreground-muted w-6 flex-shrink-0">
-        {index + 1}.
-      </span>
-
-      {/* 入力欄 */}
-      <input
-        type="text"
-        value={item.content}
-        onChange={(e) => onUpdate(item.id, e.target.value)}
-        className="input flex-1"
-        placeholder={placeholder}
-      />
-
-      {/* 削除ボタン */}
-      <button
-        type="button"
-        onClick={() => onDelete(item.id)}
-        className="p-1 text-foreground-muted hover:text-danger flex-shrink-0"
-        aria-label="削除"
-      >
-        <Trash2 className="w-4 h-4" />
-      </button>
-    </div>
   );
 }
