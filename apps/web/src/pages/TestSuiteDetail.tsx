@@ -6,8 +6,6 @@ import {
   Plus,
   Play,
   ChevronLeft,
-  ChevronDown,
-  ChevronUp,
   CheckCircle2,
   AlertCircle,
   Clock,
@@ -15,8 +13,7 @@ import {
   Settings,
   MessageSquare,
 } from 'lucide-react';
-import { testSuitesApi, testCasesApi, projectsApi, ApiError, type TestCase, type TestSuite, type ProjectMemberRole, type TestCaseWithDetails } from '../lib/api';
-import { toast } from '../stores/toast';
+import { testSuitesApi, projectsApi, type TestCase, type TestSuite, type ProjectMemberRole } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { usePageSidebar } from '../components/Layout';
 import { PreconditionList } from '../components/test-suite/PreconditionList';
@@ -24,7 +21,7 @@ import { TestCaseSidebar } from '../components/test-suite/TestCaseSidebar';
 import { TestSuiteHistoryList } from '../components/test-suite/TestSuiteHistoryList';
 import { DeleteTestSuiteSection } from '../components/test-suite/DeleteTestSuiteSection';
 import { TestCaseDetailPanel } from '../components/test-case/TestCaseDetailPanel';
-import { MentionInput } from '../components/common/MentionInput';
+import { TestCaseForm } from '../components/test-case/TestCaseForm';
 import { StartExecutionModal } from '../components/execution/StartExecutionModal';
 import { ExecutionHistoryList } from '../components/execution/ExecutionHistoryList';
 import { ReviewCommentList } from '../components/review/ReviewCommentList';
@@ -52,8 +49,10 @@ export function TestSuiteDetailPage() {
   const { user } = useAuth();
   const { setSidebarContent } = usePageSidebar();
   const navigate = useNavigate();
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isStartExecutionModalOpen, setIsStartExecutionModalOpen] = useState(false);
+
+  // URLクエリパラメータから作成モードを取得
+  const isCreateMode = searchParams.get('mode') === 'create';
 
   // URLクエリパラメータから選択状態を取得
   const selectedTestCaseId = searchParams.get('testCase');
@@ -64,11 +63,28 @@ export function TestSuiteDetailPage() {
   // テストケース選択ハンドラ（URLを更新）
   const handleSelectTestCase = useCallback((testCaseId: string | null) => {
     const newParams = new URLSearchParams(searchParams);
+    // 作成モードを解除
+    newParams.delete('mode');
     if (testCaseId) {
       newParams.set('testCase', testCaseId);
     } else {
       newParams.delete('testCase');
     }
+    setSearchParams(newParams);
+  }, [searchParams, setSearchParams]);
+
+  // 作成モード開始ハンドラ
+  const handleStartCreateMode = useCallback(() => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('mode', 'create');
+    newParams.delete('testCase');
+    setSearchParams(newParams);
+  }, [searchParams, setSearchParams]);
+
+  // 作成モード終了ハンドラ
+  const handleExitCreateMode = useCallback(() => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete('mode');
     setSearchParams(newParams);
   }, [searchParams, setSearchParams]);
 
@@ -163,15 +179,16 @@ export function TestSuiteDetailPage() {
         testCases={testCases}
         selectedTestCaseId={selectedTestCaseId}
         onSelect={handleSelectTestCase}
-        onCreateClick={() => setIsCreateModalOpen(true)}
+        onCreateClick={handleStartCreateMode}
         currentRole={currentRole}
         isLoading={isLoadingCases}
         onTestCasesReordered={handleTestCasesReordered}
+        isCreateMode={isCreateMode}
       />
     );
 
     return () => setSidebarContent(null);
-  }, [testSuiteId, testCases, selectedTestCaseId, currentRole, isLoadingCases, setSidebarContent, handleTestCasesReordered, handleSelectTestCase]);
+  }, [testSuiteId, testCases, selectedTestCaseId, currentRole, isLoadingCases, setSidebarContent, handleTestCasesReordered, handleSelectTestCase, handleStartCreateMode, isCreateMode]);
 
   if (isLoadingSuite) {
     return (
@@ -216,7 +233,7 @@ export function TestSuiteDetailPage() {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setIsCreateModalOpen(true)}
+              onClick={handleStartCreateMode}
               className="btn btn-secondary"
             >
               <Plus className="w-4 h-4" />
@@ -263,12 +280,24 @@ export function TestSuiteDetailPage() {
       </div>
 
       {/* タブコンテンツ */}
-      {selectedTestCaseId ? (
+      {isCreateMode ? (
+        // 作成モード時: 作成フォームを表示
+        <div className="card h-[calc(100vh-16rem)] overflow-hidden">
+          <TestCaseForm
+            mode="create"
+            testSuiteId={testSuiteId}
+            projectId={suite.projectId}
+            onSave={handleExitCreateMode}
+            onCancel={handleExitCreateMode}
+          />
+        </div>
+      ) : selectedTestCaseId ? (
         // テストケース選択時: 詳細パネルを表示
         <div className="card h-[calc(100vh-16rem)] overflow-hidden">
           <TestCaseDetailPanel
             testCaseId={selectedTestCaseId}
             testSuiteId={testSuiteId}
+            projectId={suite.projectId}
             currentRole={currentRole}
             onClose={() => handleSelectTestCase(null)}
             onUpdated={() => {
@@ -320,15 +349,6 @@ export function TestSuiteDetailPage() {
             />
           )}
         </>
-      )}
-
-      {/* 作成モーダル */}
-      {isCreateModalOpen && testSuiteId && suite && (
-        <CreateTestCaseModal
-          testSuiteId={testSuiteId}
-          projectId={suite.projectId}
-          onClose={() => setIsCreateModalOpen(false)}
-        />
       )}
 
       {/* 実行開始モーダル */}
@@ -436,249 +456,5 @@ function SettingsTab({ testSuite, currentRole, onUpdated }: SettingsTabProps) {
       onUpdated={onUpdated}
       canEdit={canEdit}
     />
-  );
-}
-
-/**
- * テストケース作成モーダル
- */
-function CreateTestCaseModal({
-  testSuiteId,
-  projectId,
-  onClose,
-}: {
-  testSuiteId: string;
-  projectId: string;
-  onClose: () => void;
-}) {
-  const queryClient = useQueryClient();
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState<'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'>('MEDIUM');
-
-  // コピー元テストケースID（コピー時に使用）
-  const [sourceTestCaseId, setSourceTestCaseId] = useState<string | null>(null);
-
-  // コピーされたテストケースの詳細（プレビュー表示用）
-  const [preconditions, setPreconditions] = useState<string[]>([]);
-  const [steps, setSteps] = useState<string[]>([]);
-  const [expectedResults, setExpectedResults] = useState<string[]>([]);
-
-  // コピー内容の展開状態
-  const [isCopiedContentExpanded, setIsCopiedContentExpanded] = useState(false);
-
-  // コピーされた内容があるかどうか
-  const hasCopiedContent = preconditions.length > 0 || steps.length > 0 || expectedResults.length > 0;
-
-  // テストケース選択ハンドラ
-  const handleTestCaseSelect = (testCase: TestCaseWithDetails) => {
-    // コピー元テストケースIDを保持
-    setSourceTestCaseId(testCase.id);
-    // タイトルを選択したケースのタイトルにセット
-    setTitle(testCase.title);
-    setDescription(testCase.description || '');
-    setPriority(testCase.priority);
-    // プレビュー表示用にコピー
-    setPreconditions(testCase.preconditions.map(p => p.content));
-    setSteps(testCase.steps.map(s => s.content));
-    setExpectedResults(testCase.expectedResults.map(e => e.content));
-    setIsCopiedContentExpanded(true);
-    toast.info(`「${testCase.title}」の内容をコピーしました`);
-  };
-
-  // 通常作成用mutation
-  const createMutation = useMutation({
-    mutationFn: (data: { testSuiteId: string; title: string; description?: string; priority: string }) =>
-      testCasesApi.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
-      toast.success('テストケースを作成しました');
-      onClose();
-    },
-    onError: (err) => {
-      if (err instanceof ApiError) {
-        toast.error(err.message);
-      } else {
-        toast.error('テストケースの作成に失敗しました');
-      }
-    },
-  });
-
-  // コピー作成用mutation
-  const copyMutation = useMutation({
-    mutationFn: (data: { sourceTestCaseId: string; title: string; targetTestSuiteId: string }) =>
-      testCasesApi.copy(data.sourceTestCaseId, { title: data.title, targetTestSuiteId: data.targetTestSuiteId }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
-      toast.success('テストケースをコピーしました');
-      onClose();
-    },
-    onError: (err) => {
-      if (err instanceof ApiError) {
-        toast.error(err.message);
-      } else {
-        toast.error('テストケースのコピーに失敗しました');
-      }
-    },
-  });
-
-  const isPending = createMutation.isPending || copyMutation.isPending;
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (sourceTestCaseId) {
-      // コピー元がある場合はcopy APIを使用
-      copyMutation.mutate({
-        sourceTestCaseId,
-        title,
-        targetTestSuiteId: testSuiteId,
-      });
-    } else {
-      // 通常作成
-      createMutation.mutate({
-        testSuiteId,
-        title,
-        description: description || undefined,
-        priority,
-      });
-    }
-  };
-
-  // 背景クリックで閉じる
-  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/50"
-      onClick={handleBackdropClick}
-    >
-      <div className="card w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-lg font-semibold text-foreground mb-4">
-          新規テストケース
-        </h2>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              タイトル <span className="text-danger">*</span>
-            </label>
-            <MentionInput
-              value={title}
-              onChange={setTitle}
-              projectId={projectId}
-              onTestCaseSelect={handleTestCaseSelect}
-              placeholder="例: ログインフォームの表示確認（@でテストケース参照）"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              説明
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="input min-h-[80px]"
-              placeholder="テストケースの説明を入力..."
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              優先度
-            </label>
-            <select
-              value={priority}
-              onChange={(e) => setPriority(e.target.value as typeof priority)}
-              className="input"
-            >
-              <option value="CRITICAL">緊急</option>
-              <option value="HIGH">高</option>
-              <option value="MEDIUM">中</option>
-              <option value="LOW">低</option>
-            </select>
-          </div>
-
-          {/* コピーされた内容のプレビュー */}
-          {hasCopiedContent && (
-            <div className="border border-border rounded-lg overflow-hidden">
-              <button
-                type="button"
-                onClick={() => setIsCopiedContentExpanded(!isCopiedContentExpanded)}
-                className="w-full flex items-center justify-between px-3 py-2 bg-background-tertiary hover:bg-background-secondary transition-colors text-sm font-medium text-foreground"
-              >
-                <span>コピーされた内容</span>
-                {isCopiedContentExpanded ? (
-                  <ChevronUp className="w-4 h-4" />
-                ) : (
-                  <ChevronDown className="w-4 h-4" />
-                )}
-              </button>
-              {isCopiedContentExpanded && (
-                <div className="px-3 py-3 space-y-3 bg-background-secondary/50">
-                  {preconditions.length > 0 && (
-                    <div>
-                      <h4 className="text-xs font-medium text-foreground-muted mb-1">
-                        前提条件 ({preconditions.length}件)
-                      </h4>
-                      <ol className="list-decimal list-inside space-y-0.5 text-sm text-foreground">
-                        {preconditions.map((item, i) => (
-                          <li key={i} className="truncate">{item}</li>
-                        ))}
-                      </ol>
-                    </div>
-                  )}
-                  {steps.length > 0 && (
-                    <div>
-                      <h4 className="text-xs font-medium text-foreground-muted mb-1">
-                        ステップ ({steps.length}件)
-                      </h4>
-                      <ol className="list-decimal list-inside space-y-0.5 text-sm text-foreground">
-                        {steps.map((item, i) => (
-                          <li key={i} className="truncate">{item}</li>
-                        ))}
-                      </ol>
-                    </div>
-                  )}
-                  {expectedResults.length > 0 && (
-                    <div>
-                      <h4 className="text-xs font-medium text-foreground-muted mb-1">
-                        期待結果 ({expectedResults.length}件)
-                      </h4>
-                      <ol className="list-decimal list-inside space-y-0.5 text-sm text-foreground">
-                        {expectedResults.map((item, i) => (
-                          <li key={i} className="truncate">{item}</li>
-                        ))}
-                      </ol>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="flex justify-end gap-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn btn-secondary"
-            >
-              キャンセル
-            </button>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={!title || isPending}
-            >
-              {isPending ? '作成中...' : (sourceTestCaseId ? 'コピーして作成' : '作成')}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
   );
 }
