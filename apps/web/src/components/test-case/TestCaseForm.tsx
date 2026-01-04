@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
-import { useBlocker } from 'react-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
@@ -187,11 +186,8 @@ export function TestCaseForm({
     );
   }, [mode, testCase, title, description, priority, preconditions, steps, expectedResults]);
 
-  // ナビゲーションブロッカー（React Router）
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      hasChanges && !isSaving && currentLocation.pathname !== nextLocation.pathname
-  );
+  // キャンセル確認ダイアログの状態
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   // ブラウザの閉じる/リロード警告
   useEffect(() => {
@@ -206,6 +202,15 @@ export function TestCaseForm({
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasChanges, isSaving]);
+
+  // キャンセルボタンのハンドラ
+  const handleCancel = useCallback(() => {
+    if (hasChanges) {
+      setShowCancelConfirm(true);
+    } else {
+      onCancel();
+    }
+  }, [hasChanges, onCancel]);
 
   // dnd-kit センサー設定
   const sensors = useSensors(
@@ -646,7 +651,7 @@ export function TestCaseForm({
       <div className="flex-shrink-0 p-4 border-t border-border flex justify-end gap-3">
         <button
           type="button"
-          onClick={onCancel}
+          onClick={handleCancel}
           className="btn btn-secondary"
           disabled={isPending}
         >
@@ -670,15 +675,18 @@ export function TestCaseForm({
         </button>
       </div>
 
-      {/* ナビゲーション警告ダイアログ */}
-      {blocker.state === 'blocked' && (
+      {/* キャンセル確認ダイアログ */}
+      {showCancelConfirm && (
         <ConfirmDialog
           isOpen={true}
           title="変更を破棄しますか？"
-          message="入力中の内容は保存されていません。このまま移動すると変更が失われます。"
-          confirmLabel="破棄して移動"
-          onConfirm={() => blocker.proceed()}
-          onCancel={() => blocker.reset()}
+          message="入力中の内容は保存されていません。キャンセルすると変更が失われます。"
+          confirmLabel="破棄する"
+          onConfirm={() => {
+            setShowCancelConfirm(false);
+            onCancel();
+          }}
+          onCancel={() => setShowCancelConfirm(false)}
           isDanger
         />
       )}
