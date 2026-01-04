@@ -35,6 +35,8 @@ interface TestCaseSidebarProps {
   currentRole?: 'OWNER' | ProjectMemberRole;
   isLoading?: boolean;
   onTestCasesReordered?: (reorderedTestCases: TestCase[]) => void;
+  /** 作成モードかどうか */
+  isCreateMode?: boolean;
 }
 
 /**
@@ -132,6 +134,7 @@ export function TestCaseSidebar({
   currentRole,
   isLoading = false,
   onTestCasesReordered,
+  isCreateMode = false,
 }: TestCaseSidebarProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isReordering, setIsReordering] = useState(false);
@@ -237,7 +240,11 @@ export function TestCaseSidebar({
           {canEdit && (
             <button
               onClick={onCreateClick}
-              className="p-1.5 text-foreground-muted hover:text-foreground hover:bg-background-tertiary rounded transition-colors"
+              className={`p-1.5 rounded transition-colors ${
+                isCreateMode
+                  ? 'text-accent bg-accent-subtle'
+                  : 'text-foreground-muted hover:text-foreground hover:bg-background-tertiary'
+              }`}
               aria-label="テストケースを追加"
               disabled={isReordering}
             >
