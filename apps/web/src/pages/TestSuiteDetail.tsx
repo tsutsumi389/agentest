@@ -373,7 +373,6 @@ export function TestSuiteDetailPage() {
           {currentTab === 'overview' && (
             <OverviewTab
               testSuiteId={testSuiteId}
-              currentRole={currentRole}
               executions={executions}
             />
           )}
@@ -434,19 +433,17 @@ export function TestSuiteDetailPage() {
  */
 interface OverviewTabProps {
   testSuiteId: string;
-  currentRole: 'OWNER' | ProjectMemberRole | undefined;
   executions: { id: string; status: string; startedAt: string }[];
 }
 
 function OverviewTab({
   testSuiteId,
-  currentRole,
   executions,
 }: OverviewTabProps) {
   return (
     <>
       {/* 前提条件セクション */}
-      <PreconditionList testSuiteId={testSuiteId} currentRole={currentRole} />
+      <PreconditionList testSuiteId={testSuiteId} />
 
       {/* 実行履歴 */}
       <div className="card">
