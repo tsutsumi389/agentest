@@ -5,9 +5,11 @@ import { CheckCircle2, AlertCircle, Clock } from 'lucide-react';
 import { testSuitesApi, projectsApi, type TestCase, type TestSuite, type ProjectMemberRole } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { usePageSidebar } from '../components/Layout';
-import { TestSuiteHeader, type TabType } from '../components/test-suite/TestSuiteHeader';
+import { toast } from '../stores/toast';
+import { TestSuiteHeader, type TabType, type TestCaseTabType } from '../components/test-suite/TestSuiteHeader';
 import { TestCaseSidebar } from '../components/test-suite/TestCaseSidebar';
-import { TestCaseDetailPanel } from '../components/test-case/TestCaseDetailPanel';
+import { TestCaseDetailPanel, useTestCaseDetails } from '../components/test-case/TestCaseDetailPanel';
+import { CopyTestCaseModal } from '../components/test-case/CopyTestCaseModal';
 import { TestCaseForm } from '../components/test-case/TestCaseForm';
 import { TestSuiteForm } from '../components/test-suite/TestSuiteForm';
 import { StartExecutionModal } from '../components/execution/StartExecutionModal';
@@ -30,6 +32,8 @@ export function TestSuiteCasesPage() {
   const navigate = useNavigate();
   const [isStartExecutionModalOpen, setIsStartExecutionModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
+  const [isTestCaseEditMode, setIsTestCaseEditMode] = useState(false);
 
   // URLクエリパラメータから作成モードを取得
   const isCreateMode = searchParams.get('mode') === 'create';
@@ -40,13 +44,24 @@ export function TestSuiteCasesPage() {
   // URLクエリパラメータからタブを取得
   const currentTab = (searchParams.get('tab') as TabType) || 'overview';
 
+  // URLクエリパラメータからテストケースタブを取得
+  const testCaseTab = (searchParams.get('testCaseTab') as TestCaseTabType) || 'overview';
+
   // タブ変更ハンドラ
   const handleTabChange = useCallback((tab: TabType) => {
     const newParams = new URLSearchParams(searchParams);
     newParams.set('tab', tab);
     // タブ切り替え時はテストケース選択を解除
     newParams.delete('testCase');
+    newParams.delete('testCaseTab');
     newParams.delete('mode');
+    setSearchParams(newParams);
+  }, [searchParams, setSearchParams]);
+
+  // テストケースタブ変更ハンドラ
+  const handleTestCaseTabChange = useCallback((tab: TestCaseTabType) => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('testCaseTab', tab);
     setSearchParams(newParams);
   }, [searchParams, setSearchParams]);
 
@@ -57,9 +72,14 @@ export function TestSuiteCasesPage() {
     newParams.delete('mode');
     if (testCaseId) {
       newParams.set('testCase', testCaseId);
+      // 新しいテストケース選択時はタブをリセット
+      newParams.delete('testCaseTab');
     } else {
       newParams.delete('testCase');
+      newParams.delete('testCaseTab');
     }
+    // テストケース編集モードもリセット
+    setIsTestCaseEditMode(false);
     setSearchParams(newParams);
   }, [searchParams, setSearchParams]);
 
@@ -153,6 +173,19 @@ export function TestSuiteCasesPage() {
 
   const testCases = casesData?.testCases || [];
   const executions = executionsData?.executions || [];
+
+  // 選択中のテストケースの詳細情報を取得
+  const { data: selectedTestCaseData } = useTestCaseDetails(selectedTestCaseId);
+  const selectedTestCaseDetail = selectedTestCaseData?.testCase;
+
+  // TestSuiteHeaderに渡すテストケース情報
+  const selectedTestCaseInfo = selectedTestCaseDetail ? {
+    id: selectedTestCaseDetail.id,
+    title: selectedTestCaseDetail.title,
+    priority: selectedTestCaseDetail.priority,
+    status: selectedTestCaseDetail.status,
+    deletedAt: selectedTestCaseDetail.deletedAt,
+  } : undefined;
 
   // 実行開始ボタンのクリックハンドラ
   const handleStartExecution = useCallback(() => {
@@ -262,6 +295,13 @@ export function TestSuiteCasesPage() {
         currentTab={currentTab}
         onTabChange={handleTabChange}
         hasSelectedTestCase={!!selectedTestCaseId || isCreateMode}
+        // テストケース選択時のprops
+        selectedTestCase={selectedTestCaseInfo}
+        testCaseTab={testCaseTab}
+        onTestCaseTabChange={handleTestCaseTabChange}
+        onEditTestCase={() => setIsTestCaseEditMode(true)}
+        onCopyTestCase={() => setIsCopyModalOpen(true)}
+        onCloseTestCase={() => handleSelectTestCase(null)}
       />
 
       {/* メインコンテンツ */}
@@ -288,11 +328,15 @@ export function TestSuiteCasesPage() {
               onClose={() => handleSelectTestCase(null)}
               onUpdated={() => {
                 queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
+                queryClient.invalidateQueries({ queryKey: ['test-case-details', selectedTestCaseId] });
               }}
               onDeleted={() => {
                 handleSelectTestCase(null);
                 queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
               }}
+              currentTab={testCaseTab}
+              isEditMode={isTestCaseEditMode}
+              onEditModeChange={setIsTestCaseEditMode}
             />
           </div>
         ) : (
@@ -360,6 +404,21 @@ export function TestSuiteCasesPage() {
           onStarted={(execution) => {
             queryClient.invalidateQueries({ queryKey: ['test-suite-executions', testSuiteId] });
             navigate(`/executions/${execution.id}`);
+          }}
+        />
+      )}
+
+      {/* テストケースコピーモーダル */}
+      {isCopyModalOpen && selectedTestCaseDetail && (
+        <CopyTestCaseModal
+          isOpen={isCopyModalOpen}
+          testCase={selectedTestCaseDetail}
+          testSuiteId={testSuiteId!}
+          onClose={() => setIsCopyModalOpen(false)}
+          onCopied={() => {
+            queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
+            toast.success('テストケースをコピーしました');
+            setIsCopyModalOpen(false);
           }}
         />
       )}
