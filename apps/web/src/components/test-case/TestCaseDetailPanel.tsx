@@ -1,15 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  X,
   Loader2,
-  FileText,
-  History,
-  Settings,
   AlertTriangle,
-  Pencil,
-  Copy,
-  MessageSquare,
 } from 'lucide-react';
 import {
   testCasesApi,
@@ -18,66 +11,19 @@ import {
   type TestCaseWithDetails,
   type ProjectMemberRole,
 } from '../../lib/api';
-import { toast } from '../../stores/toast';
+import { PRIORITY_COLORS, PRIORITY_LABELS, STATUS_COLORS, STATUS_LABELS } from '../../lib/constants';
 import { useAuth } from '../../hooks/useAuth';
 import { TestCasePreconditionList } from './TestCasePreconditionList';
 import { TestCaseStepList } from './TestCaseStepList';
 import { TestCaseExpectedResultList } from './TestCaseExpectedResultList';
 import { TestCaseHistoryList } from './TestCaseHistoryList';
 import { DeleteTestCaseSection } from './DeleteTestCaseSection';
-import { CopyTestCaseModal } from './CopyTestCaseModal';
 import { ReviewCommentList } from '../review/ReviewCommentList';
 import { TestCaseForm } from './TestCaseForm';
+import { type TestCaseTabType } from '../test-suite/TestSuiteHeader';
 
-/**
- * タブ定義
- */
-type TabType = 'overview' | 'review' | 'history' | 'settings';
-
-const TABS: { id: TabType; label: string; icon: typeof FileText }[] = [
-  { id: 'overview', label: '概要', icon: FileText },
-  { id: 'review', label: 'レビュー', icon: MessageSquare },
-  { id: 'history', label: '履歴', icon: History },
-  { id: 'settings', label: '設定', icon: Settings },
-];
-
-/**
- * 優先度バッジの色
- */
-const PRIORITY_COLORS: Record<string, string> = {
-  CRITICAL: 'bg-danger text-white',
-  HIGH: 'bg-warning text-white',
-  MEDIUM: 'bg-accent text-white',
-  LOW: 'bg-foreground-muted text-white',
-};
-
-/**
- * 優先度のラベル
- */
-const PRIORITY_LABELS: Record<string, string> = {
-  CRITICAL: '緊急',
-  HIGH: '高',
-  MEDIUM: '中',
-  LOW: '低',
-};
-
-/**
- * ステータスバッジの色
- */
-const STATUS_COLORS: Record<string, string> = {
-  DRAFT: 'bg-foreground-muted/20 text-foreground-muted',
-  ACTIVE: 'bg-success/20 text-success',
-  ARCHIVED: 'bg-warning/20 text-warning',
-};
-
-/**
- * ステータスのラベル
- */
-const STATUS_LABELS: Record<string, string> = {
-  DRAFT: '下書き',
-  ACTIVE: 'アクティブ',
-  ARCHIVED: 'アーカイブ',
-};
+// TestCaseTabTypeをTabTypeとしてもエクスポート（後方互換性のため）
+export type TabType = TestCaseTabType;
 
 interface TestCaseDetailPanelProps {
   /** テストケースID */
@@ -94,10 +40,18 @@ interface TestCaseDetailPanelProps {
   onUpdated?: (testCase: TestCase) => void;
   /** 削除時のコールバック */
   onDeleted?: () => void;
+  /** 現在のタブ（親から受け取る） */
+  currentTab?: TabType;
+  /** 編集モード状態 */
+  isEditMode?: boolean;
+  /** 編集モード終了ハンドラ */
+  onEditModeChange?: (isEdit: boolean) => void;
 }
 
 /**
  * テストケース詳細パネル
+ * ヘッダーとタブナビゲーションは親コンポーネント（TestSuiteHeader）で表示
+ * このコンポーネントはタブコンテンツのみを表示する
  */
 export function TestCaseDetailPanel({
   testCaseId,
@@ -107,12 +61,12 @@ export function TestCaseDetailPanel({
   onClose,
   onUpdated,
   onDeleted,
+  currentTab = 'overview',
+  isEditMode = false,
+  onEditModeChange,
 }: TestCaseDetailPanelProps) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
-  const [currentTab, setCurrentTab] = useState<TabType>('overview');
-  const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
 
   // テストケース詳細を取得
   const {
@@ -158,16 +112,6 @@ export function TestCaseDetailPanel({
   if (isLoading) {
     return (
       <div className="flex flex-col h-full">
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <div className="h-6 w-48 bg-background-tertiary rounded animate-pulse" />
-          <button
-            onClick={onClose}
-            className="p-1.5 text-foreground-muted hover:text-foreground hover:bg-background-tertiary rounded transition-colors"
-            aria-label="閉じる"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
         <div className="flex-1 flex items-center justify-center">
           <Loader2 className="w-8 h-8 animate-spin text-foreground-muted" />
         </div>
@@ -178,16 +122,6 @@ export function TestCaseDetailPanel({
   if (error || !testCase) {
     return (
       <div className="flex flex-col h-full">
-        <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground">エラー</h2>
-          <button
-            onClick={onClose}
-            className="p-1.5 text-foreground-muted hover:text-foreground hover:bg-background-tertiary rounded transition-colors"
-            aria-label="閉じる"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
         <div className="flex-1 flex flex-col items-center justify-center p-6">
           <AlertTriangle className="w-12 h-12 text-danger mb-4" />
           <p className="text-danger mb-4">
@@ -210,98 +144,17 @@ export function TestCaseDetailPanel({
         projectId={projectId}
         testCase={testCase}
         onSave={() => {
-          setIsEditMode(false);
+          onEditModeChange?.(false);
           queryClient.invalidateQueries({ queryKey: ['test-case-details', testCaseId] });
           queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
         }}
-        onCancel={() => setIsEditMode(false)}
+        onCancel={() => onEditModeChange?.(false)}
       />
     );
   }
 
   return (
     <div className="flex flex-col h-full">
-      {/* ヘッダー */}
-      <div className="flex-shrink-0 p-4 border-b border-border">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1 min-w-0">
-            <h2 className="text-lg font-semibold text-foreground truncate">
-              {testCase.title}
-            </h2>
-            <div className="flex items-center gap-2 mt-2">
-              <span className={`px-2 py-0.5 text-xs font-medium rounded ${PRIORITY_COLORS[testCase.priority]}`}>
-                {PRIORITY_LABELS[testCase.priority]}
-              </span>
-              <span className={`px-2 py-0.5 text-xs font-medium rounded ${STATUS_COLORS[testCase.status]}`}>
-                {STATUS_LABELS[testCase.status]}
-              </span>
-              {testCase.deletedAt && (
-                <span className="px-2 py-0.5 text-xs font-medium rounded bg-danger/20 text-danger">
-                  削除予定
-                </span>
-              )}
-            </div>
-          </div>
-          <div className="flex items-center gap-1 flex-shrink-0">
-            {canEdit && (
-              <button
-                onClick={() => setIsEditMode(true)}
-                className="p-1.5 text-foreground-muted hover:text-foreground hover:bg-background-tertiary rounded transition-colors"
-                aria-label="編集"
-                title="編集"
-              >
-                <Pencil className="w-5 h-5" />
-              </button>
-            )}
-            {canEdit && (
-              <button
-                onClick={() => setIsCopyModalOpen(true)}
-                className="p-1.5 text-foreground-muted hover:text-foreground hover:bg-background-tertiary rounded transition-colors"
-                aria-label="テストケースをコピー"
-                title="テストケースをコピー"
-              >
-                <Copy className="w-5 h-5" />
-              </button>
-            )}
-            <button
-              onClick={onClose}
-              className="p-1.5 text-foreground-muted hover:text-foreground hover:bg-background-tertiary rounded transition-colors"
-              aria-label="閉じる"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-
-        {/* タブナビゲーション */}
-        <div className="mt-4 -mb-4">
-          <nav className="flex gap-4" aria-label="タブ">
-            {TABS.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = currentTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setCurrentTab(tab.id)}
-                  className={`
-                    flex items-center gap-1.5 px-1 py-2 text-sm font-medium border-b-2 transition-colors
-                    ${
-                      isActive
-                        ? 'border-accent text-accent'
-                        : 'border-transparent text-foreground-muted hover:text-foreground hover:border-border'
-                    }
-                  `}
-                  aria-current={isActive ? 'page' : undefined}
-                >
-                  <Icon className="w-4 h-4" />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </nav>
-        </div>
-      </div>
-
       {/* タブコンテンツ */}
       <div className="flex-1 overflow-y-auto p-4">
         {currentTab === 'overview' && (
@@ -333,21 +186,19 @@ export function TestCaseDetailPanel({
           />
         )}
       </div>
-
-      {/* コピーモーダル */}
-      <CopyTestCaseModal
-        isOpen={isCopyModalOpen}
-        testCase={testCase}
-        testSuiteId={testSuiteId}
-        onClose={() => setIsCopyModalOpen(false)}
-        onCopied={() => {
-          queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
-          toast.success('テストケースをコピーしました');
-          setIsCopyModalOpen(false);
-        }}
-      />
     </div>
   );
+}
+
+/**
+ * テストケース情報を取得するフック（親コンポーネントで使用）
+ */
+export function useTestCaseDetails(testCaseId: string | null) {
+  return useQuery({
+    queryKey: ['test-case-details', testCaseId],
+    queryFn: () => testCasesApi.getByIdWithDetails(testCaseId!),
+    enabled: !!testCaseId,
+  });
 }
 
 /**

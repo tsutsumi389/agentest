@@ -225,12 +225,12 @@ export class AuthController {
             const result = await this.handleOAuthLink(linkMode.userId, oauthUser.profile);
 
             if (!result.success) {
-              res.redirect(`${env.CORS_ORIGIN}/settings?tab=security&link=error&message=${encodeURIComponent(result.error || '連携に失敗しました')}`);
+              res.redirect(`${env.FRONTEND_URL}/settings?tab=security&link=error&message=${encodeURIComponent(result.error || '連携に失敗しました')}`);
               return;
             }
 
             // 連携成功
-            res.redirect(`${env.CORS_ORIGIN}/settings?tab=security&link=success`);
+            res.redirect(`${env.FRONTEND_URL}/settings?tab=security&link=success`);
             return;
           }
         } catch {
@@ -273,8 +273,8 @@ export class AuthController {
         maxAge: 7 * 24 * 60 * 60 * 1000,
       });
 
-      // フロントエンドにリダイレクト
-      res.redirect(`${env.CORS_ORIGIN}/auth/callback`);
+      // フロントエンドにリダイレクト（CORS_ORIGINは複数値の可能性があるためFRONTEND_URLを使用）
+      res.redirect(`${env.FRONTEND_URL}/auth/callback`);
     } catch (error) {
       next(error);
     }

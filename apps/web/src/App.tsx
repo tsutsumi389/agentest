@@ -8,7 +8,7 @@ import { LoginPage } from './pages/Login';
 import { DashboardPage } from './pages/Dashboard';
 import { ProjectsPage } from './pages/Projects';
 import { ProjectDetailPage } from './pages/ProjectDetail';
-import { TestSuiteDetailPage } from './pages/TestSuiteDetail';
+import { TestSuiteCasesPage } from './pages/TestSuiteCases';
 import { ExecutionPage } from './pages/Execution';
 import { SettingsPage } from './pages/Settings';
 import { AuthCallbackPage } from './pages/AuthCallback';
@@ -76,7 +76,7 @@ export function App() {
             <Route path="projects" element={<ProjectsPage />} />
             <Route path="projects/:projectId" element={<ProjectDetailPage />} />
             <Route path="projects/:projectId/settings" element={<ProjectSettingsPage />} />
-            <Route path="test-suites/:testSuiteId" element={<TestSuiteDetailPage />} />
+            <Route path="test-suites/:testSuiteId" element={<TestSuiteCasesPage />} />
             <Route path="executions/:executionId" element={<ExecutionPage />} />
             <Route path="settings" element={<SettingsPage />} />
             <Route path="organizations" element={<OrganizationsPage />} />
