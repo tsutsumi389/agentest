@@ -1,19 +1,25 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams, useSearchParams, useNavigate } from 'react-router';
+import { useParams, useSearchParams, useNavigate, Link } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { testSuitesApi, projectsApi, type TestCase, type ProjectMemberRole } from '../lib/api';
+import { CheckCircle2, AlertCircle, Clock } from 'lucide-react';
+import { testSuitesApi, projectsApi, type TestCase, type TestSuite, type ProjectMemberRole } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { usePageSidebar } from '../components/Layout';
-import { TestSuiteHeader } from '../components/test-suite/TestSuiteHeader';
+import { TestSuiteHeader, type TabType } from '../components/test-suite/TestSuiteHeader';
 import { TestCaseSidebar } from '../components/test-suite/TestCaseSidebar';
 import { TestCaseDetailPanel } from '../components/test-case/TestCaseDetailPanel';
 import { TestCaseForm } from '../components/test-case/TestCaseForm';
 import { TestSuiteForm } from '../components/test-suite/TestSuiteForm';
 import { StartExecutionModal } from '../components/execution/StartExecutionModal';
+import { PreconditionList } from '../components/test-suite/PreconditionList';
+import { TestSuiteHistoryList } from '../components/test-suite/TestSuiteHistoryList';
+import { DeleteTestSuiteSection } from '../components/test-suite/DeleteTestSuiteSection';
+import { ExecutionHistoryList } from '../components/execution/ExecutionHistoryList';
+import { ReviewCommentList } from '../components/review/ReviewCommentList';
 
 /**
- * テストケース一覧ページ
- * テストスイートのテストケースを表示・編集する
+ * テストスイート統合ページ
+ * サイドバー（テストケース一覧）は常に表示し、メインエリアでタブとテストケース詳細を切り替える
  */
 export function TestSuiteCasesPage() {
   const { testSuiteId } = useParams<{ testSuiteId: string }>();
@@ -30,6 +36,19 @@ export function TestSuiteCasesPage() {
 
   // URLクエリパラメータから選択状態を取得
   const selectedTestCaseId = searchParams.get('testCase');
+
+  // URLクエリパラメータからタブを取得
+  const currentTab = (searchParams.get('tab') as TabType) || 'overview';
+
+  // タブ変更ハンドラ
+  const handleTabChange = useCallback((tab: TabType) => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.set('tab', tab);
+    // タブ切り替え時はテストケース選択を解除
+    newParams.delete('testCase');
+    newParams.delete('mode');
+    setSearchParams(newParams);
+  }, [searchParams, setSearchParams]);
 
   // テストケース選択ハンドラ（URLを更新）
   const handleSelectTestCase = useCallback((testCaseId: string | null) => {
@@ -107,6 +126,13 @@ export function TestSuiteCasesPage() {
     enabled: !!testSuiteId,
   });
 
+  // 実行履歴を取得（概要タブ用）
+  const { data: executionsData } = useQuery({
+    queryKey: ['test-suite-executions', testSuiteId],
+    queryFn: () => testSuitesApi.getExecutions(testSuiteId!, { limit: 5 }),
+    enabled: !!testSuiteId,
+  });
+
   // 環境一覧を事前取得（モーダル表示判定用）
   const { data: environmentsData } = useQuery({
     queryKey: ['project-environments', suite?.projectId],
@@ -126,6 +152,7 @@ export function TestSuiteCasesPage() {
   });
 
   const testCases = casesData?.testCases || [];
+  const executions = executionsData?.executions || [];
 
   // 実行開始ボタンのクリックハンドラ
   const handleStartExecution = useCallback(() => {
@@ -195,6 +222,9 @@ export function TestSuiteCasesPage() {
           onStartExecution={handleStartExecution}
           onCreateTestCase={handleStartCreateMode}
           isExecutionPending={startExecutionMutation.isPending}
+          currentTab={currentTab}
+          onTabChange={handleTabChange}
+          hasSelectedTestCase={!!selectedTestCaseId}
         />
 
         {/* 編集フォーム */}
@@ -229,9 +259,12 @@ export function TestSuiteCasesPage() {
         onCreateTestCase={handleStartCreateMode}
         onEdit={() => setIsEditMode(true)}
         isExecutionPending={startExecutionMutation.isPending}
+        currentTab={currentTab}
+        onTabChange={handleTabChange}
+        hasSelectedTestCase={!!selectedTestCaseId || isCreateMode}
       />
 
-      {/* メインコンテンツ（テストケース表示領域） */}
+      {/* メインコンテンツ */}
       <div className="flex-1 overflow-hidden p-4">
         {isCreateMode ? (
           // 作成モード時: 作成フォームを表示
@@ -263,15 +296,52 @@ export function TestSuiteCasesPage() {
             />
           </div>
         ) : (
-          // テストケース未選択時: ガイドメッセージを表示
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center text-foreground-muted">
-              <p className="text-lg mb-2">テストケースを選択してください</p>
-              <p className="text-sm">
-                左のサイドバーからテストケースを選択するか、
-                <br />
-                「テストケース」ボタンをクリックして新規作成できます
+          // タブコンテンツを表示
+          <div className="h-full flex flex-col">
+            {/* 説明 */}
+            <div className="mb-4">
+              <p className="text-foreground-muted">
+                {suite.description || '説明なし'}
               </p>
+            </div>
+
+            {/* タブコンテンツ */}
+            <div className="flex-1 overflow-y-auto">
+              {currentTab === 'overview' && (
+                <OverviewTab
+                  testSuiteId={testSuiteId}
+                  executions={executions}
+                />
+              )}
+
+              {currentTab === 'executions' && (
+                <ExecutionHistoryList testSuiteId={testSuiteId!} />
+              )}
+
+              {currentTab === 'review' && user && (
+                <div className="card p-4">
+                  <ReviewCommentList
+                    targetType="SUITE"
+                    targetId={testSuiteId}
+                    currentUserId={user.id}
+                    currentRole={currentRole}
+                  />
+                </div>
+              )}
+
+              {currentTab === 'history' && (
+                <TestSuiteHistoryList testSuite={suite} />
+              )}
+
+              {currentTab === 'settings' && (
+                <SettingsTab
+                  testSuite={suite}
+                  currentRole={currentRole}
+                  onUpdated={(updated) => {
+                    queryClient.setQueryData(['test-suite', testSuiteId], { testSuite: updated });
+                  }}
+                />
+              )}
             </div>
           </div>
         )}
@@ -294,5 +364,91 @@ export function TestSuiteCasesPage() {
         />
       )}
     </div>
+  );
+}
+
+/**
+ * 概要タブ
+ */
+interface OverviewTabProps {
+  testSuiteId: string;
+  executions: { id: string; status: string; startedAt: string }[];
+}
+
+function OverviewTab({
+  testSuiteId,
+  executions,
+}: OverviewTabProps) {
+  return (
+    <div className="space-y-6">
+      {/* 前提条件セクション */}
+      <PreconditionList testSuiteId={testSuiteId} />
+
+      {/* 実行履歴 */}
+      <div className="card">
+        <div className="p-4 border-b border-border">
+          <h2 className="font-semibold text-foreground">最近の実行履歴</h2>
+        </div>
+
+        {executions.length === 0 ? (
+          <div className="p-6 text-center text-foreground-muted">
+            実行履歴がありません
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {executions.map((execution) => (
+              <Link
+                key={execution.id}
+                to={`/executions/${execution.id}`}
+                className="block p-4 hover:bg-background-tertiary transition-colors"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  {execution.status === 'COMPLETED' && (
+                    <CheckCircle2 className="w-4 h-4 text-success" />
+                  )}
+                  {execution.status === 'IN_PROGRESS' && (
+                    <Clock className="w-4 h-4 text-warning" />
+                  )}
+                  {execution.status === 'ABORTED' && (
+                    <AlertCircle className="w-4 h-4 text-danger" />
+                  )}
+                  <span className="text-sm font-medium text-foreground">
+                    {execution.status === 'COMPLETED' && '完了'}
+                    {execution.status === 'IN_PROGRESS' && '実行中'}
+                    {execution.status === 'ABORTED' && '中断'}
+                  </span>
+                </div>
+                <p className="text-xs text-foreground-muted">
+                  {new Date(execution.startedAt).toLocaleString('ja-JP')}
+                </p>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 設定タブ
+ */
+interface SettingsTabProps {
+  testSuite: TestSuite;
+  currentRole: 'OWNER' | ProjectMemberRole | undefined;
+  onUpdated?: (testSuite: TestSuite) => void;
+}
+
+function SettingsTab({ testSuite, currentRole, onUpdated }: SettingsTabProps) {
+  // ADMIN権限があるかどうか
+  const canEdit = currentRole === 'OWNER' || currentRole === 'ADMIN';
+
+  return (
+    <DeleteTestSuiteSection
+      testSuite={testSuite}
+      projectId={testSuite.projectId}
+      onUpdated={onUpdated}
+      canEdit={canEdit}
+    />
   );
 }

@@ -1,6 +1,19 @@
-import { Link, useLocation } from 'react-router';
-import { Play, Plus, Pencil, ChevronRight } from 'lucide-react';
+import { Link } from 'react-router';
+import { Play, Plus, Pencil, ChevronRight, FileText, History, MessageSquare, Settings } from 'lucide-react';
 import type { TestSuite, Project, ProjectMemberRole } from '../../lib/api';
+
+/**
+ * タブ定義
+ */
+export type TabType = 'overview' | 'executions' | 'review' | 'history' | 'settings';
+
+const TABS: { id: TabType; label: string; icon: typeof FileText }[] = [
+  { id: 'overview', label: '概要', icon: FileText },
+  { id: 'executions', label: '実行履歴', icon: Play },
+  { id: 'review', label: 'レビュー', icon: MessageSquare },
+  { id: 'history', label: '変更履歴', icon: History },
+  { id: 'settings', label: '設定', icon: Settings },
+];
 
 interface TestSuiteHeaderProps {
   testSuite: TestSuite;
@@ -11,6 +24,11 @@ interface TestSuiteHeaderProps {
   onCreateTestCase: () => void;
   onEdit?: () => void;
   isExecutionPending?: boolean;
+  // タブ関連のprops
+  currentTab?: TabType;
+  onTabChange?: (tab: TabType) => void;
+  // テストケース選択状態（タブのハイライト解除用）
+  hasSelectedTestCase?: boolean;
 }
 
 /**
@@ -26,12 +44,10 @@ export function TestSuiteHeader({
   onCreateTestCase,
   onEdit,
   isExecutionPending = false,
+  currentTab = 'overview',
+  onTabChange,
+  hasSelectedTestCase = false,
 }: TestSuiteHeaderProps) {
-  const location = useLocation();
-
-  // 現在のパスがinfoページかどうか判定
-  const isInfoPage = location.pathname.endsWith('/info');
-
   // 編集権限チェック
   const canEdit = currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'WRITE';
 
@@ -48,7 +64,7 @@ export function TestSuiteHeader({
           </Link>
           <ChevronRight className="w-4 h-4 text-foreground-muted" />
           <Link
-            to={`/test-suites/${testSuite.id}/info`}
+            to={`/test-suites/${testSuite.id}`}
             className="text-accent hover:text-accent-hover hover:underline font-medium"
           >
             {testSuite.name}
@@ -58,42 +74,36 @@ export function TestSuiteHeader({
 
       {/* ナビゲーションとアクション */}
       <div className="px-4 pb-0 flex items-center justify-between">
-        {/* ナビゲーションタブ */}
+        {/* サブタブナビゲーション */}
         <nav className="-mb-px flex gap-4" aria-label="タブ">
-          <Link
-            to={`/test-suites/${testSuite.id}`}
-            className={`
-              flex items-center gap-2 px-1 py-3 text-sm font-medium border-b-2 transition-colors
-              ${
-                !isInfoPage
-                  ? 'border-accent text-accent'
-                  : 'border-transparent text-foreground-muted hover:text-foreground hover:border-border'
-              }
-            `}
-          >
-            テストケース
-            <span className="px-1.5 py-0.5 text-xs rounded-full bg-background-tertiary">
-              {testCaseCount}
-            </span>
-          </Link>
-          <Link
-            to={`/test-suites/${testSuite.id}/info`}
-            className={`
-              flex items-center gap-2 px-1 py-3 text-sm font-medium border-b-2 transition-colors
-              ${
-                isInfoPage
-                  ? 'border-accent text-accent'
-                  : 'border-transparent text-foreground-muted hover:text-foreground hover:border-border'
-              }
-            `}
-          >
-            詳細情報
-          </Link>
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            // テストケース選択中はタブのハイライトを解除
+            const isActive = !hasSelectedTestCase && currentTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => onTabChange?.(tab.id)}
+                className={`
+                  flex items-center gap-2 px-1 py-3 text-sm font-medium border-b-2 transition-colors
+                  ${
+                    isActive
+                      ? 'border-accent text-accent'
+                      : 'border-transparent text-foreground-muted hover:text-foreground hover:border-border'
+                  }
+                `}
+                aria-current={isActive ? 'page' : undefined}
+              >
+                <Icon className="w-4 h-4" />
+                {tab.label}
+              </button>
+            );
+          })}
         </nav>
 
         {/* アクションボタン */}
         <div className="flex items-center gap-2 pb-2">
-          {canEdit && onEdit && !isInfoPage && (
+          {canEdit && onEdit && (
             <button
               onClick={onEdit}
               className="btn btn-secondary btn-sm"
@@ -103,7 +113,7 @@ export function TestSuiteHeader({
               編集
             </button>
           )}
-          {canEdit && !isInfoPage && (
+          {canEdit && (
             <button
               onClick={onCreateTestCase}
               className="btn btn-secondary btn-sm"
