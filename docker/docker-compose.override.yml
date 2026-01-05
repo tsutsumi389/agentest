@@ -87,6 +87,14 @@ services:
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
       FRONTEND_URL: ${WEB_URL:-http://localhost:3000}
       API_PORT: 3001
+      # GitHub OAuth
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET}
+      GITHUB_CALLBACK_URL: ${GITHUB_CALLBACK_URL}
+      # Google OAuth
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
     restart: "no"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
