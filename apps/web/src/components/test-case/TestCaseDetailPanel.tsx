@@ -11,6 +11,7 @@ import {
   type TestCaseWithDetails,
   type ProjectMemberRole,
 } from '../../lib/api';
+import { PRIORITY_COLORS, PRIORITY_LABELS, STATUS_COLORS, STATUS_LABELS } from '../../lib/constants';
 import { useAuth } from '../../hooks/useAuth';
 import { TestCasePreconditionList } from './TestCasePreconditionList';
 import { TestCaseStepList } from './TestCaseStepList';
@@ -19,49 +20,10 @@ import { TestCaseHistoryList } from './TestCaseHistoryList';
 import { DeleteTestCaseSection } from './DeleteTestCaseSection';
 import { ReviewCommentList } from '../review/ReviewCommentList';
 import { TestCaseForm } from './TestCaseForm';
+import { type TestCaseTabType } from '../test-suite/TestSuiteHeader';
 
-/**
- * タブ定義（TestSuiteHeaderと同じ型を使用）
- */
-export type TabType = 'overview' | 'review' | 'history' | 'settings';
-
-/**
- * 優先度バッジの色
- */
-const PRIORITY_COLORS: Record<string, string> = {
-  CRITICAL: 'bg-danger text-white',
-  HIGH: 'bg-warning text-white',
-  MEDIUM: 'bg-accent text-white',
-  LOW: 'bg-foreground-muted text-white',
-};
-
-/**
- * 優先度のラベル
- */
-const PRIORITY_LABELS: Record<string, string> = {
-  CRITICAL: '緊急',
-  HIGH: '高',
-  MEDIUM: '中',
-  LOW: '低',
-};
-
-/**
- * ステータスバッジの色
- */
-const STATUS_COLORS: Record<string, string> = {
-  DRAFT: 'bg-foreground-muted/20 text-foreground-muted',
-  ACTIVE: 'bg-success/20 text-success',
-  ARCHIVED: 'bg-warning/20 text-warning',
-};
-
-/**
- * ステータスのラベル
- */
-const STATUS_LABELS: Record<string, string> = {
-  DRAFT: '下書き',
-  ACTIVE: 'アクティブ',
-  ARCHIVED: 'アーカイブ',
-};
+// TestCaseTabTypeをTabTypeとしてもエクスポート（後方互換性のため）
+export type TabType = TestCaseTabType;
 
 interface TestCaseDetailPanelProps {
   /** テストケースID */

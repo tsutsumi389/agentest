@@ -1,6 +1,7 @@
 import { Link } from 'react-router';
 import { Play, Plus, Pencil, ChevronRight, FileText, History, MessageSquare, Settings, Copy, X } from 'lucide-react';
 import type { TestSuite, Project, ProjectMemberRole } from '../../lib/api';
+import { PRIORITY_COLORS, PRIORITY_LABELS, STATUS_COLORS, STATUS_LABELS } from '../../lib/constants';
 
 /**
  * テストスイート用タブ定義
@@ -26,44 +27,6 @@ const TEST_CASE_TABS: { id: TestCaseTabType; label: string; icon: typeof FileTex
   { id: 'history', label: '履歴', icon: History },
   { id: 'settings', label: '設定', icon: Settings },
 ];
-
-/**
- * 優先度バッジの色
- */
-const PRIORITY_COLORS: Record<string, string> = {
-  CRITICAL: 'bg-danger text-white',
-  HIGH: 'bg-warning text-white',
-  MEDIUM: 'bg-accent text-white',
-  LOW: 'bg-foreground-muted text-white',
-};
-
-/**
- * 優先度のラベル
- */
-const PRIORITY_LABELS: Record<string, string> = {
-  CRITICAL: '緊急',
-  HIGH: '高',
-  MEDIUM: '中',
-  LOW: '低',
-};
-
-/**
- * ステータスバッジの色
- */
-const STATUS_COLORS: Record<string, string> = {
-  DRAFT: 'bg-foreground-muted/20 text-foreground-muted',
-  ACTIVE: 'bg-success/20 text-success',
-  ARCHIVED: 'bg-warning/20 text-warning',
-};
-
-/**
- * ステータスのラベル
- */
-const STATUS_LABELS: Record<string, string> = {
-  DRAFT: '下書き',
-  ACTIVE: 'アクティブ',
-  ARCHIVED: 'アーカイブ',
-};
 
 /**
  * テストケース選択時の情報
