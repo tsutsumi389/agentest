@@ -11,7 +11,6 @@ import {
   type TestCaseWithDetails,
   type ProjectMemberRole,
 } from '../../lib/api';
-import { PRIORITY_COLORS, PRIORITY_LABELS, STATUS_COLORS, STATUS_LABELS } from '../../lib/constants';
 import { useAuth } from '../../hooks/useAuth';
 import { TestCasePreconditionList } from './TestCasePreconditionList';
 import { TestCaseStepList } from './TestCaseStepList';
@@ -225,25 +224,6 @@ function OverviewTab({
             説明なし
           </p>
         )}
-      </div>
-
-      {/* 基本情報 */}
-      <div className="grid grid-cols-2 gap-4">
-        {/* 優先度 */}
-        <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-foreground">優先度</h3>
-          <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded ${PRIORITY_COLORS[testCase.priority]}`}>
-            {PRIORITY_LABELS[testCase.priority]}
-          </span>
-        </div>
-
-        {/* ステータス */}
-        <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-foreground">ステータス</h3>
-          <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded ${STATUS_COLORS[testCase.status]}`}>
-            {STATUS_LABELS[testCase.status]}
-          </span>
-        </div>
       </div>
 
       {/* 前提条件 */}
