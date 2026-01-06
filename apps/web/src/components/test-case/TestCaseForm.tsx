@@ -27,6 +27,15 @@ const PRIORITY_OPTIONS = [
   { value: 'LOW', label: '低' },
 ] as const;
 
+/**
+ * ステータスオプション
+ */
+const STATUS_OPTIONS = [
+  { value: 'DRAFT', label: '下書き' },
+  { value: 'ACTIVE', label: 'アクティブ' },
+  { value: 'ARCHIVED', label: 'アーカイブ' },
+] as const;
+
 interface TestCaseFormProps {
   /** フォームモード */
   mode: 'create' | 'edit';
@@ -60,6 +69,9 @@ export function TestCaseForm({
   const [description, setDescription] = useState(testCase?.description || '');
   const [priority, setPriority] = useState<'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'>(
     testCase?.priority || 'MEDIUM'
+  );
+  const [status, setStatus] = useState<'DRAFT' | 'ACTIVE' | 'ARCHIVED'>(
+    testCase?.status || 'DRAFT'
   );
 
   // 動的リストの状態
@@ -106,6 +118,7 @@ export function TestCaseForm({
         title.trim() !== '' ||
         description.trim() !== '' ||
         priority !== 'MEDIUM' ||
+        status !== 'DRAFT' ||
         preconditions.filter((p) => !p.isDeleted && p.content.trim()).length > 0 ||
         steps.filter((s) => !s.isDeleted && s.content.trim()).length > 0 ||
         expectedResults.filter((e) => !e.isDeleted && e.content.trim()).length > 0
@@ -117,6 +130,7 @@ export function TestCaseForm({
     const titleChanged = title.trim() !== testCase.title;
     const descriptionChanged = description.trim() !== (testCase.description || '');
     const priorityChanged = priority !== testCase.priority;
+    const statusChanged = status !== testCase.status;
 
     // 前提条件の変更チェック
     const activePreconditions = preconditions.filter((p) => !p.isDeleted);
@@ -152,11 +166,12 @@ export function TestCaseForm({
       titleChanged ||
       descriptionChanged ||
       priorityChanged ||
+      statusChanged ||
       preconditionsChanged ||
       stepsChanged ||
       expectedResultsChanged
     );
-  }, [mode, testCase, title, description, priority, preconditions, steps, expectedResults]);
+  }, [mode, testCase, title, description, priority, status, preconditions, steps, expectedResults]);
 
   // キャンセル確認ダイアログの状態
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -293,7 +308,7 @@ export function TestCaseForm({
       } else if (mode === 'edit' && testCase) {
         // 編集モード
         // 基本情報の更新
-        const updates: { title?: string; description?: string; priority?: string } = {};
+        const updates: { title?: string; description?: string; priority?: string; status?: string } = {};
         if (title.trim() !== testCase.title) {
           updates.title = title.trim();
         }
@@ -302,6 +317,9 @@ export function TestCaseForm({
         }
         if (priority !== testCase.priority) {
           updates.priority = priority;
+        }
+        if (status !== testCase.status) {
+          updates.status = status;
         }
 
         if (Object.keys(updates).length > 0) {
@@ -560,6 +578,24 @@ export function TestCaseForm({
             className="input"
           >
             {PRIORITY_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* ステータス */}
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">
+            ステータス
+          </label>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value as typeof status)}
+            className="input"
+          >
+            {STATUS_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
