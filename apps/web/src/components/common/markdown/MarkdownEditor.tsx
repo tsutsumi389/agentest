@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useMemo } from 'react';
 import { MarkdownToolbar } from './MarkdownToolbar';
 import { MarkdownPreview } from './MarkdownPreview';
 
@@ -25,6 +25,9 @@ export function MarkdownEditor({
 }: MarkdownEditorProps) {
   const [mode, setMode] = useState<TabMode>('write');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // プレビューの最小高さをrowsと連動
+  const previewMinHeight = useMemo(() => `${rows * 1.5}rem`, [rows]);
 
   // テキストエリアに書式を挿入する
   const handleInsert = useCallback(
@@ -71,9 +74,12 @@ export function MarkdownEditor({
   return (
     <div className={`border border-border rounded-lg overflow-hidden bg-background-secondary ${className}`}>
       {/* タブ */}
-      <div className="flex border-b border-border">
+      <div className="flex border-b border-border" role="tablist" aria-label="エディタモード">
         <button
           type="button"
+          role="tab"
+          aria-selected={mode === 'write'}
+          aria-controls="editor-panel"
           onClick={() => setMode('write')}
           className={`px-4 py-2 text-sm font-medium transition-colors ${
             mode === 'write'
@@ -85,6 +91,9 @@ export function MarkdownEditor({
         </button>
         <button
           type="button"
+          role="tab"
+          aria-selected={mode === 'preview'}
+          aria-controls="preview-panel"
           onClick={() => setMode('preview')}
           className={`px-4 py-2 text-sm font-medium transition-colors ${
             mode === 'preview'
@@ -103,16 +112,24 @@ export function MarkdownEditor({
 
       {/* エディタ / プレビュー */}
       {mode === 'write' ? (
-        <textarea
-          ref={textareaRef}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
-          rows={rows}
-          className="w-full px-3 py-2 text-sm bg-transparent border-none resize-none focus:outline-none focus:ring-0 placeholder:text-foreground-subtle"
-        />
+        <div id="editor-panel" role="tabpanel" aria-labelledby="write-tab">
+          <textarea
+            ref={textareaRef}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder}
+            rows={rows}
+            className="w-full px-3 py-2 text-sm bg-transparent border-none resize-none focus:outline-none focus:ring-0 placeholder:text-foreground-subtle"
+          />
+        </div>
       ) : (
-        <div className="px-3 py-2 min-h-[100px]">
+        <div
+          id="preview-panel"
+          role="tabpanel"
+          aria-labelledby="preview-tab"
+          className="px-3 py-2"
+          style={{ minHeight: previewMinHeight }}
+        >
           {value ? (
             <MarkdownPreview content={value} />
           ) : (
