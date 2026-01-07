@@ -136,6 +136,7 @@ export function TestCaseItemFormModal({
               内容 <span className="text-danger">*</span>
             </label>
             <MarkdownEditor
+              id="item-content"
               value={content}
               onChange={(value) => {
                 setContent(value);

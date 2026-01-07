@@ -5,6 +5,8 @@ import { MarkdownPreview } from './MarkdownPreview';
 type TabMode = 'write' | 'preview';
 
 interface MarkdownEditorProps {
+  /** ラベル関連付け用のID */
+  id?: string;
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -17,6 +19,7 @@ interface MarkdownEditorProps {
  * Write/Previewタブ切り替え、ツールバー付きのエディタ
  */
 export function MarkdownEditor({
+  id,
   value,
   onChange,
   placeholder = '',
@@ -114,6 +117,7 @@ export function MarkdownEditor({
       {mode === 'write' ? (
         <div id="editor-panel" role="tabpanel" aria-labelledby="write-tab">
           <textarea
+            id={id}
             ref={textareaRef}
             value={value}
             onChange={(e) => onChange(e.target.value)}
