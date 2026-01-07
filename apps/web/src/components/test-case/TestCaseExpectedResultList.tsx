@@ -4,6 +4,7 @@ import {
   CheckCircle,
 } from 'lucide-react';
 import { testCasesApi, ApiError, type TestCaseExpectedResult, type ProjectMemberRole } from '../../lib/api';
+import { MarkdownPreview } from '../common/markdown';
 
 interface TestCaseExpectedResultListProps {
   /** テストケースID */
@@ -106,9 +107,9 @@ export function TestCaseExpectedResultList({
                 {index + 1}
               </span>
               {/* 内容 */}
-              <p className="text-sm text-foreground flex-1 whitespace-pre-wrap">
-                {expectedResult.content}
-              </p>
+              <div className="flex-1">
+                <MarkdownPreview content={expectedResult.content} />
+              </div>
             </div>
           ))}
         </div>
