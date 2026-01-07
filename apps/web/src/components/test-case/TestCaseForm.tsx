@@ -16,6 +16,7 @@ import {
   useDndSensors,
   type ListItem,
 } from '../common/DynamicListSection';
+import { MarkdownEditor } from '../common/markdown';
 
 /**
  * 優先度オプション
@@ -559,12 +560,11 @@ export function TestCaseForm({
           <label className="block text-sm font-medium text-foreground mb-1">
             説明
           </label>
-          <textarea
+          <MarkdownEditor
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="input w-full resize-none"
+            onChange={setDescription}
+            placeholder="テストケースの説明を入力...（Markdown対応）"
             rows={3}
-            placeholder="テストケースの説明を入力..."
           />
         </div>
 
@@ -615,7 +615,8 @@ export function TestCaseForm({
           onDelete={(id) => deleteListItem(setPreconditions, id)}
           onDragEnd={(event) => handleDragEnd(event, preconditions, setPreconditions)}
           sensors={sensors}
-          placeholder="前提条件を入力..."
+          placeholder="前提条件を入力...（Markdown対応）"
+          useMarkdown
         />
 
         {/* ステップ */}
@@ -629,7 +630,8 @@ export function TestCaseForm({
           onDelete={(id) => deleteListItem(setSteps, id)}
           onDragEnd={(event) => handleDragEnd(event, steps, setSteps)}
           sensors={sensors}
-          placeholder="ステップを入力..."
+          placeholder="ステップを入力...（Markdown対応）"
+          useMarkdown
         />
 
         {/* 期待結果 */}
@@ -643,7 +645,8 @@ export function TestCaseForm({
           onDelete={(id) => deleteListItem(setExpectedResults, id)}
           onDragEnd={(event) => handleDragEnd(event, expectedResults, setExpectedResults)}
           sensors={sensors}
-          placeholder="期待結果を入力..."
+          placeholder="期待結果を入力...（Markdown対応）"
+          useMarkdown
         />
       </div>
 
