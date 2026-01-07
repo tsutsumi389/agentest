@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
-import { FlaskConical, Building2, User, Clock, CheckCircle, XCircle, AlertCircle, LogIn, LogOut } from 'lucide-react';
+import { Building2, User, Clock, CheckCircle, XCircle, AlertCircle, LogIn, LogOut } from 'lucide-react';
+import { AgentestLogo } from '../components/ui/AgentestLogo';
 import { useAuthStore } from '../stores/auth';
 import { organizationsApi, ApiError } from '../lib/api';
 import type { InvitationDetail } from '../lib/api';
@@ -15,7 +16,7 @@ function InvitationLayout({ children }: { children: ReactNode }) {
       <div className="w-full max-w-md">
         <div className="flex flex-col items-center mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <FlaskConical className="w-10 h-10 text-accent" />
+            <AgentestLogo className="w-10 h-10 text-accent" />
             <span className="text-2xl font-bold text-foreground">Agentest</span>
           </div>
         </div>

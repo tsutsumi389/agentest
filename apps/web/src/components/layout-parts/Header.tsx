@@ -5,8 +5,8 @@ import {
   Settings,
   LogOut,
   ChevronDown,
-  FlaskConical,
 } from 'lucide-react';
+import { AgentestLogo } from '../ui/AgentestLogo';
 import { useAuthStore } from '../../stores/auth';
 
 interface HeaderProps {
@@ -32,7 +32,7 @@ export function Header({ onMenuClick }: HeaderProps) {
             <Menu className="w-5 h-5" />
           </button>
           <Link to="/dashboard" className="flex items-center gap-2">
-            <FlaskConical className="w-6 h-6 text-accent" />
+            <AgentestLogo className="w-6 h-6 text-accent" />
             <span className="font-semibold text-foreground hidden sm:block">
               Agentest
             </span>

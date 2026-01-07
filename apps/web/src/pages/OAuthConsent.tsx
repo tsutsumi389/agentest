@@ -1,5 +1,6 @@
 import { useSearchParams, Navigate } from 'react-router';
-import { FlaskConical, Shield, AlertCircle, Check, X } from 'lucide-react';
+import { Shield, AlertCircle, Check, X } from 'lucide-react';
+import { AgentestLogo } from '../components/ui/AgentestLogo';
 import { useAuthStore } from '../stores/auth';
 import { useState } from 'react';
 
@@ -141,7 +142,7 @@ export function OAuthConsentPage() {
         {/* ロゴ */}
         <div className="flex flex-col items-center mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <FlaskConical className="w-10 h-10 text-accent" />
+            <AgentestLogo className="w-10 h-10 text-accent" />
             <span className="text-2xl font-bold text-foreground">Agentest</span>
           </div>
         </div>
