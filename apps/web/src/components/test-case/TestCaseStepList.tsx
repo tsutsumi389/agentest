@@ -4,6 +4,7 @@ import {
   ListOrdered,
 } from 'lucide-react';
 import { testCasesApi, ApiError, type TestCaseStep, type ProjectMemberRole } from '../../lib/api';
+import { MarkdownPreview } from '../common/markdown';
 
 interface TestCaseStepListProps {
   /** テストケースID */
@@ -106,9 +107,9 @@ export function TestCaseStepList({
                 {index + 1}
               </span>
               {/* 内容 */}
-              <p className="text-sm text-foreground flex-1 whitespace-pre-wrap">
-                {step.content}
-              </p>
+              <div className="flex-1">
+                <MarkdownPreview content={step.content} />
+              </div>
             </div>
           ))}
         </div>

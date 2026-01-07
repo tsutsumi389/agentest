@@ -4,6 +4,7 @@ import {
   ClipboardList,
 } from 'lucide-react';
 import { testCasesApi, ApiError, type TestCasePrecondition, type ProjectMemberRole } from '../../lib/api';
+import { MarkdownPreview } from '../common/markdown';
 
 interface TestCasePreconditionListProps {
   /** テストケースID */
@@ -106,9 +107,9 @@ export function TestCasePreconditionList({
                 {index + 1}
               </span>
               {/* 内容 */}
-              <p className="text-sm text-foreground flex-1 whitespace-pre-wrap">
-                {precondition.content}
-              </p>
+              <div className="flex-1">
+                <MarkdownPreview content={precondition.content} />
+              </div>
             </div>
           ))}
         </div>

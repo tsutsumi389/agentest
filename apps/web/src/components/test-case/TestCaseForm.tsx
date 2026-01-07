@@ -16,6 +16,7 @@ import {
   useDndSensors,
   type ListItem,
 } from '../common/DynamicListSection';
+import { MarkdownEditor } from '../common/markdown';
 
 /**
  * 優先度オプション
@@ -328,28 +329,13 @@ export function TestCaseForm({
         }
 
         // 前提条件の差分更新
-        await updateListItems(
-          testCase.id,
-          'precondition',
-          preconditions,
-          testCase.preconditions.map((p) => p.id)
-        );
+        await updateListItems(testCase.id, 'precondition', preconditions);
 
         // ステップの差分更新
-        await updateListItems(
-          testCase.id,
-          'step',
-          steps,
-          testCase.steps.map((s) => s.id)
-        );
+        await updateListItems(testCase.id, 'step', steps);
 
         // 期待結果の差分更新
-        await updateListItems(
-          testCase.id,
-          'expectedResult',
-          expectedResults,
-          testCase.expectedResults.map((e) => e.id)
-        );
+        await updateListItems(testCase.id, 'expectedResult', expectedResults);
 
         queryClient.invalidateQueries({ queryKey: ['test-case-details', testCase.id] });
         queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
@@ -372,8 +358,7 @@ export function TestCaseForm({
   const updateListItems = async (
     testCaseId: string,
     type: 'precondition' | 'step' | 'expectedResult',
-    items: ListItem[],
-    _originalIds: string[]
+    items: ListItem[]
   ) => {
     const api = {
       precondition: {
@@ -532,7 +517,7 @@ export function TestCaseForm({
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
         {/* タイトル */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
+          <label htmlFor="case-title" className="block text-sm font-medium text-foreground mb-1">
             タイトル <span className="text-danger">*</span>
           </label>
           {mode === 'create' ? (
@@ -545,6 +530,7 @@ export function TestCaseForm({
             />
           ) : (
             <input
+              id="case-title"
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -556,24 +542,25 @@ export function TestCaseForm({
 
         {/* 説明 */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
+          <label htmlFor="case-description" className="block text-sm font-medium text-foreground mb-1">
             説明
           </label>
-          <textarea
+          <MarkdownEditor
+            id="case-description"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="input w-full resize-none"
+            onChange={setDescription}
+            placeholder="テストケースの説明を入力...（Markdown対応）"
             rows={3}
-            placeholder="テストケースの説明を入力..."
           />
         </div>
 
         {/* 優先度 */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
+          <label htmlFor="case-priority" className="block text-sm font-medium text-foreground mb-1">
             優先度
           </label>
           <select
+            id="case-priority"
             value={priority}
             onChange={(e) => setPriority(e.target.value as typeof priority)}
             className="input"
@@ -588,10 +575,11 @@ export function TestCaseForm({
 
         {/* ステータス */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
+          <label htmlFor="case-status" className="block text-sm font-medium text-foreground mb-1">
             ステータス
           </label>
           <select
+            id="case-status"
             value={status}
             onChange={(e) => setStatus(e.target.value as typeof status)}
             className="input"
@@ -615,7 +603,8 @@ export function TestCaseForm({
           onDelete={(id) => deleteListItem(setPreconditions, id)}
           onDragEnd={(event) => handleDragEnd(event, preconditions, setPreconditions)}
           sensors={sensors}
-          placeholder="前提条件を入力..."
+          placeholder="前提条件を入力...（Markdown対応）"
+          useMarkdown
         />
 
         {/* ステップ */}
@@ -629,7 +618,8 @@ export function TestCaseForm({
           onDelete={(id) => deleteListItem(setSteps, id)}
           onDragEnd={(event) => handleDragEnd(event, steps, setSteps)}
           sensors={sensors}
-          placeholder="ステップを入力..."
+          placeholder="ステップを入力...（Markdown対応）"
+          useMarkdown
         />
 
         {/* 期待結果 */}
@@ -643,7 +633,8 @@ export function TestCaseForm({
           onDelete={(id) => deleteListItem(setExpectedResults, id)}
           onDragEnd={(event) => handleDragEnd(event, expectedResults, setExpectedResults)}
           sensors={sensors}
-          placeholder="期待結果を入力..."
+          placeholder="期待結果を入力...（Markdown対応）"
+          useMarkdown
         />
       </div>
 

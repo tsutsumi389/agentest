@@ -48,6 +48,8 @@ interface DynamicListSectionProps {
   onDragEnd: (event: DragEndEvent) => void;
   sensors: ReturnType<typeof useSensors>;
   placeholder: string;
+  /** Markdown入力を有効にする（textareaを使用） */
+  useMarkdown?: boolean;
 }
 
 /**
@@ -66,6 +68,7 @@ export function DynamicListSection({
   onDragEnd,
   sensors,
   placeholder,
+  useMarkdown = false,
 }: DynamicListSectionProps) {
   return (
     <div className="border border-border rounded-lg overflow-hidden">
@@ -108,6 +111,7 @@ export function DynamicListSection({
                   onUpdate={onUpdate}
                   onDelete={onDelete}
                   placeholder={placeholder}
+                  useMarkdown={useMarkdown}
                 />
               ))}
             </SortableContext>
@@ -137,6 +141,7 @@ interface SortableListItemProps {
   onUpdate: (id: string, content: string) => void;
   onDelete: (id: string) => void;
   placeholder: string;
+  useMarkdown?: boolean;
 }
 
 /**
@@ -148,6 +153,7 @@ function SortableListItem({
   onUpdate,
   onDelete,
   placeholder,
+  useMarkdown = false,
 }: SortableListItemProps) {
   const {
     attributes,
@@ -167,38 +173,48 @@ function SortableListItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={`flex items-center gap-2 ${isDragging ? 'opacity-50' : ''}`}
+      className={`flex items-start gap-2 ${isDragging ? 'opacity-50' : ''}`}
     >
       {/* ドラッグハンドル */}
       <button
         type="button"
         {...attributes}
         {...listeners}
-        className="cursor-grab active:cursor-grabbing touch-none p-1 text-foreground-muted hover:text-foreground flex-shrink-0"
+        className="cursor-grab active:cursor-grabbing touch-none p-1 text-foreground-muted hover:text-foreground flex-shrink-0 mt-1"
         aria-label="ドラッグして並び替え"
       >
         <GripVertical className="w-4 h-4" />
       </button>
 
       {/* 番号 */}
-      <span className="text-sm text-foreground-muted w-6 flex-shrink-0">
+      <span className="text-sm text-foreground-muted w-6 flex-shrink-0 mt-2">
         {index + 1}.
       </span>
 
       {/* 入力欄 */}
-      <input
-        type="text"
-        value={item.content}
-        onChange={(e) => onUpdate(item.id, e.target.value)}
-        className="input flex-1"
-        placeholder={placeholder}
-      />
+      {useMarkdown ? (
+        <textarea
+          value={item.content}
+          onChange={(e) => onUpdate(item.id, e.target.value)}
+          className="input flex-1 resize-none min-h-[60px]"
+          placeholder={placeholder}
+          rows={2}
+        />
+      ) : (
+        <input
+          type="text"
+          value={item.content}
+          onChange={(e) => onUpdate(item.id, e.target.value)}
+          className="input flex-1"
+          placeholder={placeholder}
+        />
+      )}
 
       {/* 削除ボタン */}
       <button
         type="button"
         onClick={() => onDelete(item.id)}
-        className="p-1 text-foreground-muted hover:text-danger flex-shrink-0"
+        className="p-1 text-foreground-muted hover:text-danger flex-shrink-0 mt-1"
         aria-label="削除"
       >
         <Trash2 className="w-4 h-4" />

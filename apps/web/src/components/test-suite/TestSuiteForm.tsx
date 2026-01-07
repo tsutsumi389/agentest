@@ -14,6 +14,7 @@ import {
   createDragEndHandler,
   type ListItem,
 } from '../common/DynamicListSection';
+import { MarkdownEditor } from '../common/markdown';
 
 /**
  * ステータスオプション
@@ -279,10 +280,11 @@ export function TestSuiteForm({
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
         {/* 名前 */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
+          <label htmlFor="suite-name" className="block text-sm font-medium text-foreground mb-1">
             名前 <span className="text-danger">*</span>
           </label>
           <input
+            id="suite-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -297,16 +299,15 @@ export function TestSuiteForm({
 
         {/* 説明 */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
+          <label htmlFor="suite-description" className="block text-sm font-medium text-foreground mb-1">
             説明
           </label>
-          <textarea
+          <MarkdownEditor
+            id="suite-description"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="input w-full resize-none"
+            onChange={setDescription}
+            placeholder="テストスイートの説明を入力...（Markdown対応）"
             rows={3}
-            placeholder="テストスイートの説明を入力..."
-            maxLength={MAX_DESCRIPTION_LENGTH}
           />
           <p className="text-xs text-foreground-muted mt-1">
             {description.length}/{MAX_DESCRIPTION_LENGTH}文字
@@ -315,10 +316,11 @@ export function TestSuiteForm({
 
         {/* ステータス */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
+          <label htmlFor="suite-status" className="block text-sm font-medium text-foreground mb-1">
             ステータス
           </label>
           <select
+            id="suite-status"
             value={status}
             onChange={(e) => setStatus(e.target.value as typeof status)}
             className="input"
@@ -342,7 +344,8 @@ export function TestSuiteForm({
           onDelete={deleteListItem}
           onDragEnd={handleDragEnd}
           sensors={sensors}
-          placeholder="前提条件を入力..."
+          placeholder="前提条件を入力...（Markdown対応）"
+          useMarkdown
         />
       </div>
 

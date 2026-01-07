@@ -232,6 +232,127 @@
   }
 }
 
+@layer components {
+  /* Markdownプレビューのスタイル */
+  .markdown-preview {
+    @apply text-sm text-foreground leading-relaxed;
+  }
+
+  .markdown-preview h1 {
+    @apply text-xl font-bold mt-4 mb-2 pb-1 border-b border-border;
+  }
+
+  .markdown-preview h2 {
+    @apply text-lg font-bold mt-4 mb-2 pb-1 border-b border-border;
+  }
+
+  .markdown-preview h3 {
+    @apply text-base font-bold mt-3 mb-2;
+  }
+
+  .markdown-preview p {
+    @apply my-2;
+  }
+
+  .markdown-preview ul {
+    @apply my-2 pl-6 list-disc;
+  }
+
+  .markdown-preview ol {
+    @apply my-2 pl-6 list-decimal;
+  }
+
+  .markdown-preview li {
+    @apply my-1;
+  }
+
+  /* ネストしたリスト */
+  .markdown-preview ul ul,
+  .markdown-preview ol ul {
+    @apply list-[circle];
+  }
+
+  .markdown-preview ul ul ul,
+  .markdown-preview ol ul ul,
+  .markdown-preview ul ol ul,
+  .markdown-preview ol ol ul {
+    @apply list-[square];
+  }
+
+  .markdown-preview ol ol,
+  .markdown-preview ul ol {
+    @apply list-[lower-alpha];
+  }
+
+  .markdown-preview blockquote {
+    @apply my-2 pl-4 border-l-4 border-border text-foreground-muted;
+  }
+
+  .markdown-preview code {
+    @apply px-1.5 py-0.5 text-xs font-code bg-background-tertiary text-accent rounded;
+  }
+
+  .markdown-preview pre {
+    @apply my-2 p-3 bg-background-tertiary rounded-lg overflow-x-auto;
+  }
+
+  .markdown-preview pre code {
+    @apply p-0 bg-transparent text-foreground;
+  }
+
+  .markdown-preview a {
+    @apply text-accent hover:underline;
+  }
+
+  .markdown-preview strong {
+    @apply font-bold;
+  }
+
+  .markdown-preview em {
+    @apply italic;
+  }
+
+  .markdown-preview del {
+    @apply line-through text-foreground-muted;
+  }
+
+  .markdown-preview table {
+    @apply my-2 w-full border-collapse;
+  }
+
+  .markdown-preview th,
+  .markdown-preview td {
+    @apply px-3 py-2 border border-border text-left;
+  }
+
+  .markdown-preview th {
+    @apply bg-background-tertiary font-medium;
+  }
+
+  .markdown-preview tr:nth-child(even) {
+    @apply bg-background-tertiary/50;
+  }
+
+  .markdown-preview hr {
+    @apply my-4 border-t border-border;
+  }
+
+  /* タスクリスト（GFM） */
+  .markdown-preview input[type="checkbox"] {
+    @apply mr-2 accent-accent;
+  }
+
+  /* 最初の要素のマージンを削除 */
+  .markdown-preview > *:first-child {
+    @apply mt-0;
+  }
+
+  /* 最後の要素のマージンを削除 */
+  .markdown-preview > *:last-child {
+    @apply mb-0;
+  }
+}
+
 @layer utilities {
   /* テキストの省略 */
   .truncate-2 {

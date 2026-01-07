@@ -20,6 +20,7 @@ import { DeleteTestCaseSection } from './DeleteTestCaseSection';
 import { ReviewCommentList } from '../review/ReviewCommentList';
 import { TestCaseForm } from './TestCaseForm';
 import { type TestCaseTabType } from '../test-suite/TestSuiteHeader';
+import { MarkdownPreview } from '../common/markdown';
 
 // TestCaseTabTypeをTabTypeとしてもエクスポート（後方互換性のため）
 export type TabType = TestCaseTabType;
@@ -216,9 +217,7 @@ function OverviewTab({
       <div className="space-y-2">
         <h3 className="text-sm font-semibold text-foreground">説明</h3>
         {testCase.description ? (
-          <p className="text-sm text-foreground-muted whitespace-pre-wrap">
-            {testCase.description}
-          </p>
+          <MarkdownPreview content={testCase.description} />
         ) : (
           <p className="text-sm text-foreground-subtle italic">
             説明なし

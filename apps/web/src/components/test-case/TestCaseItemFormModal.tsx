@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { X, Loader2 } from 'lucide-react';
+import { MarkdownEditor } from '../common/markdown';
 
 interface TestCaseItemFormModalProps {
   isOpen: boolean;
@@ -32,8 +33,6 @@ export function TestCaseItemFormModal({
   onSubmit,
   onClose,
 }: TestCaseItemFormModalProps) {
-  const contentInputRef = useRef<HTMLTextAreaElement>(null);
-
   const [content, setContent] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -44,15 +43,6 @@ export function TestCaseItemFormModal({
       setError(null);
     }
   }, [isOpen, initialValue]);
-
-  // モーダルオープン時にフォーカス設定
-  useEffect(() => {
-    if (isOpen) {
-      requestAnimationFrame(() => {
-        contentInputRef.current?.focus();
-      });
-    }
-  }, [isOpen]);
 
   // モーダルを閉じる
   const handleClose = useCallback(() => {
@@ -145,23 +135,21 @@ export function TestCaseItemFormModal({
             <label htmlFor="item-content" className="block text-sm font-medium text-foreground mb-1">
               内容 <span className="text-danger">*</span>
             </label>
-            <textarea
-              ref={contentInputRef}
+            <MarkdownEditor
               id="item-content"
               value={content}
-              onChange={(e) => {
-                setContent(e.target.value);
+              onChange={(value) => {
+                setContent(value);
                 setError(null);
               }}
-              className={`input w-full resize-none ${error ? 'border-danger focus:border-danger focus:ring-danger' : ''}`}
               placeholder={placeholder}
-              rows={3}
-              disabled={isSubmitting}
+              rows={4}
+              error={!!error}
             />
             {error && <p className="text-xs text-danger mt-1">{error}</p>}
             {helpText && (
               <p className="text-xs text-foreground-subtle mt-1">
-                {helpText}
+                {helpText}（Markdown対応）
               </p>
             )}
           </div>
