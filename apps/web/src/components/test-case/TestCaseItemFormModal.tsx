@@ -144,7 +144,7 @@ export function TestCaseItemFormModal({
               }}
               placeholder={placeholder}
               rows={4}
-              className={error ? 'border-danger' : ''}
+              error={!!error}
             />
             {error && <p className="text-xs text-danger mt-1">{error}</p>}
             {helpText && (
