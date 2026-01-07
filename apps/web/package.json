@@ -19,7 +19,9 @@
     "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
+    "react-markdown": "^10.1.0",
     "react-router": "catalog:",
+    "remark-gfm": "^4.0.1",
     "zustand": "catalog:"
   },
   "devDependencies": {
