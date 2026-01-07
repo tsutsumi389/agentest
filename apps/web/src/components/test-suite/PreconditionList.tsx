@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Loader2, ClipboardList } from 'lucide-react';
 import { testSuitesApi, ApiError, type Precondition } from '../../lib/api';
+import { MarkdownPreview } from '../common/markdown/MarkdownPreview';
 
 interface PreconditionListProps {
   /** テストスイートID */
@@ -93,9 +94,7 @@ export function PreconditionList({ testSuiteId }: PreconditionListProps) {
               </span>
 
               {/* 内容 */}
-              <p className="text-sm text-foreground">
-                {precondition.content}
-              </p>
+              <MarkdownPreview content={precondition.content} className="text-sm" />
             </div>
           ))}
         </div>

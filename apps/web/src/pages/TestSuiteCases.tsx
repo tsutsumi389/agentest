@@ -18,6 +18,7 @@ import { TestSuiteHistoryList } from '../components/test-suite/TestSuiteHistoryL
 import { DeleteTestSuiteSection } from '../components/test-suite/DeleteTestSuiteSection';
 import { ExecutionHistoryList } from '../components/execution/ExecutionHistoryList';
 import { ReviewCommentList } from '../components/review/ReviewCommentList';
+import { MarkdownPreview } from '../components/common/markdown/MarkdownPreview';
 
 /**
  * テストスイート統合ページ
@@ -344,9 +345,11 @@ export function TestSuiteCasesPage() {
           <div className="h-full flex flex-col">
             {/* 説明 */}
             <div className="mb-4">
-              <p className="text-foreground-muted">
-                {suite.description || '説明なし'}
-              </p>
+              {suite.description ? (
+                <MarkdownPreview content={suite.description} className="text-foreground-muted" />
+              ) : (
+                <p className="text-foreground-muted">説明なし</p>
+              )}
             </div>
 
             {/* タブコンテンツ */}
