@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
+  CircleDot,
   LayoutGrid,
 } from 'lucide-react';
 import type {
@@ -27,7 +28,7 @@ interface ExecutionSidebarProps {
 }
 
 /** 優先度スタイル */
-const PRIORITY_STYLES = {
+const priorityStyles = {
   CRITICAL: { dot: 'bg-danger', label: '緊急' },
   HIGH: { dot: 'bg-warning', label: '高' },
   MEDIUM: { dot: 'bg-accent', label: '中' },
@@ -60,7 +61,8 @@ function calculateProgress(
     status = 'fail';
   } else if (passCount === total) {
     status = 'pass';
-  } else if (passCount > 0 || pendingCount < total) {
+  } else if (passCount > 0) {
+    // FAILがなくPASSが1つ以上あるが全PASSではない = mixed
     status = 'mixed';
   }
 
@@ -77,7 +79,7 @@ function ProgressIndicator({ status }: { status: ProgressStatus }) {
     case 'fail':
       return <XCircle className="w-4 h-4 text-danger flex-shrink-0" />;
     case 'mixed':
-      return <Clock className="w-4 h-4 text-warning flex-shrink-0" />;
+      return <CircleDot className="w-4 h-4 text-warning flex-shrink-0" />;
     case 'pending':
     default:
       return <Clock className="w-4 h-4 text-foreground-muted flex-shrink-0" />;
@@ -98,7 +100,7 @@ function TestCaseItem({
   progress: ReturnType<typeof calculateProgress>;
   onSelect: () => void;
 }) {
-  const priority = PRIORITY_STYLES[testCase.priority] || PRIORITY_STYLES.MEDIUM;
+  const priority = priorityStyles[testCase.priority] || priorityStyles.MEDIUM;
 
   return (
     <button
@@ -216,6 +218,7 @@ export function ExecutionSidebar({
         <button
           type="button"
           onClick={() => onSelect(null)}
+          aria-label="テストスイート概要を表示"
           className={`
             w-full flex items-center gap-2 p-2 rounded-md text-left transition-colors
             ${selectedTestCaseId === null
