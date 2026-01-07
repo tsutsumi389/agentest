@@ -74,6 +74,30 @@ export function MarkdownEditor({
     [value, onChange]
   );
 
+  // キーボードショートカットハンドラ
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      const isMod = e.metaKey || e.ctrlKey;
+      if (!isMod) return;
+
+      switch (e.key.toLowerCase()) {
+        case 'b': // 太字: Ctrl/Cmd+B
+          e.preventDefault();
+          handleInsert('**', '**');
+          break;
+        case 'i': // 斜体: Ctrl/Cmd+I
+          e.preventDefault();
+          handleInsert('*', '*');
+          break;
+        case 'k': // リンク: Ctrl/Cmd+K
+          e.preventDefault();
+          handleInsert('[', '](url)');
+          break;
+      }
+    },
+    [handleInsert]
+  );
+
   return (
     <div className={`border border-border rounded-lg overflow-hidden bg-background-secondary ${className}`}>
       {/* タブ */}
@@ -121,6 +145,7 @@ export function MarkdownEditor({
             ref={textareaRef}
             value={value}
             onChange={(e) => onChange(e.target.value)}
+            onKeyDown={handleKeyDown}
             placeholder={placeholder}
             rows={rows}
             className="w-full px-3 py-2 text-sm bg-transparent border-none resize-none focus:outline-none focus:ring-0 placeholder:text-foreground-subtle"

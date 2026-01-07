@@ -271,7 +271,7 @@
   }
 
   .markdown-preview code {
-    @apply px-1.5 py-0.5 text-xs font-code bg-background-tertiary rounded;
+    @apply px-1.5 py-0.5 text-xs font-code bg-background-tertiary text-accent rounded;
   }
 
   .markdown-preview pre {
@@ -279,7 +279,7 @@
   }
 
   .markdown-preview pre code {
-    @apply p-0 bg-transparent;
+    @apply p-0 bg-transparent text-foreground;
   }
 
   .markdown-preview a {
@@ -309,6 +309,10 @@
 
   .markdown-preview th {
     @apply bg-background-tertiary font-medium;
+  }
+
+  .markdown-preview tr:nth-child(even) {
+    @apply bg-background-tertiary/50;
   }
 
   .markdown-preview hr {
