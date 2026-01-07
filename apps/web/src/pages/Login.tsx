@@ -1,5 +1,6 @@
 import { Navigate, useSearchParams } from 'react-router';
-import { Github, FlaskConical } from 'lucide-react';
+import { Github } from 'lucide-react';
+import { AgentestLogo } from '../components/ui/AgentestLogo';
 
 /**
  * GoogleアイコンのSVGコンポーネント
@@ -88,7 +89,7 @@ export function LoginPage() {
         {/* ロゴ */}
         <div className="flex flex-col items-center mb-8">
           <div className="flex items-center gap-3 mb-2">
-            <FlaskConical className="w-10 h-10 text-accent" />
+            <AgentestLogo className="w-10 h-10 text-accent" />
             <span className="text-2xl font-bold text-foreground">Agentest</span>
           </div>
           <p className="text-foreground-muted text-sm">

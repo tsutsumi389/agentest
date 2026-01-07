@@ -5,9 +5,9 @@ import {
   FolderKanban,
   Play,
   FileText,
-  FlaskConical,
   Building2,
 } from 'lucide-react';
+import { AgentestLogo } from '../ui/AgentestLogo';
 import { useEffect } from 'react';
 import { OrganizationSelector } from '../organization';
 
@@ -73,7 +73,7 @@ export function SlideoverMenu({ isOpen, onClose }: SlideoverMenuProps) {
           {/* ヘッダー */}
           <div className="flex items-center justify-between h-14 px-4 border-b border-border">
             <div className="flex items-center gap-2">
-              <FlaskConical className="w-6 h-6 text-accent" />
+              <AgentestLogo className="w-6 h-6 text-accent" />
               <span className="font-semibold text-foreground">Agentest</span>
             </div>
             <button
