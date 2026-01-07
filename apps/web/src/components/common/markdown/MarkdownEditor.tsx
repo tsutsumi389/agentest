@@ -12,6 +12,8 @@ interface MarkdownEditorProps {
   placeholder?: string;
   rows?: number;
   className?: string;
+  /** エラー状態（ボーダーを赤色に） */
+  error?: boolean;
 }
 
 /**
@@ -25,6 +27,7 @@ export function MarkdownEditor({
   placeholder = '',
   rows = 4,
   className = '',
+  error = false,
 }: MarkdownEditorProps) {
   const [mode, setMode] = useState<TabMode>('write');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -98,11 +101,15 @@ export function MarkdownEditor({
     [handleInsert]
   );
 
+  // エラー時のボーダー色
+  const borderClass = error ? 'border-danger' : 'border-border';
+
   return (
-    <div className={`border border-border rounded-lg overflow-hidden bg-background-secondary ${className}`}>
+    <div className={`border ${borderClass} rounded-lg overflow-hidden bg-background-secondary ${className}`}>
       {/* タブ */}
       <div className="flex border-b border-border" role="tablist" aria-label="エディタモード">
         <button
+          id="write-tab"
           type="button"
           role="tab"
           aria-selected={mode === 'write'}
@@ -117,6 +124,7 @@ export function MarkdownEditor({
           Write
         </button>
         <button
+          id="preview-tab"
           type="button"
           role="tab"
           aria-selected={mode === 'preview'}

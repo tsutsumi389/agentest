@@ -280,10 +280,11 @@ export function TestSuiteForm({
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
         {/* 名前 */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
+          <label htmlFor="suite-name" className="block text-sm font-medium text-foreground mb-1">
             名前 <span className="text-danger">*</span>
           </label>
           <input
+            id="suite-name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
@@ -298,10 +299,11 @@ export function TestSuiteForm({
 
         {/* 説明 */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
+          <label htmlFor="suite-description" className="block text-sm font-medium text-foreground mb-1">
             説明
           </label>
           <MarkdownEditor
+            id="suite-description"
             value={description}
             onChange={setDescription}
             placeholder="テストスイートの説明を入力...（Markdown対応）"
@@ -314,10 +316,11 @@ export function TestSuiteForm({
 
         {/* ステータス */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
+          <label htmlFor="suite-status" className="block text-sm font-medium text-foreground mb-1">
             ステータス
           </label>
           <select
+            id="suite-status"
             value={status}
             onChange={(e) => setStatus(e.target.value as typeof status)}
             className="input"

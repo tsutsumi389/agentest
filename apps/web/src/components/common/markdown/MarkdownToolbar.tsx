@@ -21,22 +21,23 @@ interface ToolbarActionDef {
   prefix: string;
   suffix: string;
   block?: boolean; // 行頭に挿入するタイプか
+  shortcut?: string; // キーボードショートカット（表示用）
 }
 
 // パフォーマンス最適化: アクション定義をコンポーネント外で定数化
 const TOOLBAR_ACTIONS: ToolbarActionDef[] = [
-  { Icon: Bold, label: '太字', prefix: '**', suffix: '**' },
-  { Icon: Italic, label: '斜体', prefix: '*', suffix: '*' },
+  { Icon: Bold, label: '太字', prefix: '**', suffix: '**', shortcut: 'Ctrl+B' },
+  { Icon: Italic, label: '斜体', prefix: '*', suffix: '*', shortcut: 'Ctrl+I' },
   { Icon: Strikethrough, label: '取り消し線', prefix: '~~', suffix: '~~' },
   { Icon: List, label: '箇条書き', prefix: '- ', suffix: '', block: true },
   { Icon: ListOrdered, label: '番号付き', prefix: '1. ', suffix: '', block: true },
   { Icon: Quote, label: '引用', prefix: '> ', suffix: '', block: true },
   { Icon: Code, label: 'コード', prefix: '`', suffix: '`' },
-  { Icon: Link, label: 'リンク', prefix: '[', suffix: '](url)' },
+  { Icon: Link, label: 'リンク', prefix: '[', suffix: '](url)', shortcut: 'Ctrl+K' },
 ];
 
 interface MarkdownToolbarProps {
-  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   onInsert: (prefix: string, suffix: string, block?: boolean) => void;
 }
 
@@ -121,18 +122,23 @@ export function MarkdownToolbar({ textareaRef, onInsert }: MarkdownToolbarProps)
       <div className="w-px h-4 bg-border mx-1" aria-hidden="true" />
 
       {/* その他のアクションボタン */}
-      {TOOLBAR_ACTIONS.map((action) => (
-        <button
-          key={action.label}
-          type="button"
-          onClick={() => handleAction(action)}
-          className="p-1.5 text-foreground-muted hover:text-foreground hover:bg-background-secondary rounded transition-colors"
-          title={action.label}
-          aria-label={action.label}
-        >
-          <action.Icon className="w-4 h-4" />
-        </button>
-      ))}
+      {TOOLBAR_ACTIONS.map((action) => {
+        const tooltip = action.shortcut
+          ? `${action.label} (${action.shortcut})`
+          : action.label;
+        return (
+          <button
+            key={action.label}
+            type="button"
+            onClick={() => handleAction(action)}
+            className="p-1.5 text-foreground-muted hover:text-foreground hover:bg-background-secondary rounded transition-colors"
+            title={tooltip}
+            aria-label={tooltip}
+          >
+            <action.Icon className="w-4 h-4" />
+          </button>
+        );
+      })}
     </div>
   );
 }

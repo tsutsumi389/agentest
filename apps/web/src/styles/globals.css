@@ -266,6 +266,24 @@
     @apply my-1;
   }
 
+  /* ネストしたリスト */
+  .markdown-preview ul ul,
+  .markdown-preview ol ul {
+    @apply list-[circle];
+  }
+
+  .markdown-preview ul ul ul,
+  .markdown-preview ol ul ul,
+  .markdown-preview ul ol ul,
+  .markdown-preview ol ol ul {
+    @apply list-[square];
+  }
+
+  .markdown-preview ol ol,
+  .markdown-preview ul ol {
+    @apply list-[lower-alpha];
+  }
+
   .markdown-preview blockquote {
     @apply my-2 pl-4 border-l-4 border-border text-foreground-muted;
   }
