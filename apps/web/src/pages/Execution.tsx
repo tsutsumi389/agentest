@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useSearchParams } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -12,7 +12,6 @@ import {
 import { toast } from '../stores/toast';
 import { usePageSidebar } from '../components/Layout';
 import { usePictureInPicture } from '../hooks/usePictureInPicture';
-import { usePageVisibility } from '../hooks/usePageVisibility';
 import { ExecutionSidebar } from '../components/execution/ExecutionSidebar';
 import { ExecutionOverviewPanel } from '../components/execution/ExecutionOverviewPanel';
 import { ExecutionTestCaseDetailPanel } from '../components/execution/ExecutionTestCaseDetailPanel';
@@ -29,23 +28,10 @@ export function ExecutionPage() {
   const queryClient = useQueryClient();
   const { setSidebarContent } = usePageSidebar();
 
-  // ページ可視性状態
-  const { isHidden } = usePageVisibility();
-  // ユーザーがPiPを手動で閉じたかどうかを追跡
-  const userClosedPipRef = useRef(false);
-  // 前回のisHidden状態を保持（変化検知用）
-  const prevIsHiddenRef = useRef(isHidden);
-
   // Picture-in-Picture機能
   const { pipWindow, isPipSupported, isPipActive, openPip, closePip } = usePictureInPicture({
     width: 450,
     height: 400,
-    onClose: () => {
-      // バックグラウンド中にユーザーが手動でPiPを閉じた場合を検知
-      if (document.visibilityState === 'hidden') {
-        userClosedPipRef.current = true;
-      }
-    },
   });
 
   // URLパラメータから選択中のテストケースIDを取得
@@ -85,26 +71,6 @@ export function ExecutionPage() {
       setSearchParams({});
     }
   }, [setSearchParams]);
-
-  // 自動PiP: バックグラウンド時に自動でPiPを開き、フォアグラウンドで閉じる
-  useEffect(() => {
-    if (!isPipSupported || !selectedTestCaseId) return;
-
-    const wasHidden = prevIsHiddenRef.current;
-    prevIsHiddenRef.current = isHidden;
-
-    // バックグラウンドに移行した場合
-    if (!wasHidden && isHidden) {
-      if (!userClosedPipRef.current) {
-        void openPip();
-      }
-    }
-    // フォアグラウンドに戻った場合
-    else if (wasHidden && !isHidden) {
-      closePip();
-      userClosedPipRef.current = false;
-    }
-  }, [isHidden, isPipSupported, selectedTestCaseId, openPip, closePip]);
 
   // サイドバーを設定
   useEffect(() => {
@@ -500,6 +466,9 @@ export function ExecutionPage() {
         onEvidenceUpload={handleEvidenceUpload}
         onEvidenceDelete={handleEvidenceDelete}
         onEvidenceDownload={handleEvidenceDownload}
+        isPipSupported={isPipSupported}
+        isPipActive={isPipActive}
+        onOpenPip={openPip}
       />
 
       {/* Picture-in-Picture ポータル */}
