@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { CheckCircle2, XCircle, Clock } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, PictureInPicture2 } from 'lucide-react';
 import type {
   ExecutionTestCaseSnapshot,
   ExecutionPreconditionResult,
@@ -61,6 +61,12 @@ interface ExecutionTestCaseDetailPanelProps {
   onEvidenceDelete: (evidenceId: string) => void;
   /** エビデンスダウンロードハンドラ */
   onEvidenceDownload: (evidenceId: string) => void;
+  /** PiPがサポートされているか */
+  isPipSupported?: boolean;
+  /** PiPがアクティブか */
+  isPipActive?: boolean;
+  /** PiP開始ハンドラ */
+  onOpenPip?: () => void;
 }
 
 /**
@@ -91,6 +97,9 @@ export function ExecutionTestCaseDetailPanel({
   onEvidenceUpload,
   onEvidenceDelete,
   onEvidenceDownload,
+  isPipSupported = false,
+  isPipActive = false,
+  onOpenPip,
 }: ExecutionTestCaseDetailPanelProps) {
   // 進捗サマリーを計算（一度の走査でまとめて計算）
   const summary = useMemo(() => {
@@ -129,29 +138,45 @@ export function ExecutionTestCaseDetailPanel({
             )}
           </div>
 
-          {/* 進捗サマリー */}
-          {summary.total > 0 && (
-            <div className="flex items-center gap-3 flex-shrink-0">
-              {summary.pass > 0 && (
-                <div className="flex items-center gap-1 text-success">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span className="text-sm font-medium">{summary.pass}</span>
-                </div>
-              )}
-              {summary.fail > 0 && (
-                <div className="flex items-center gap-1 text-danger">
-                  <XCircle className="w-4 h-4" />
-                  <span className="text-sm font-medium">{summary.fail}</span>
-                </div>
-              )}
-              {summary.pending > 0 && (
-                <div className="flex items-center gap-1 text-foreground-muted">
-                  <Clock className="w-4 h-4" />
-                  <span className="text-sm font-medium">{summary.pending}</span>
-                </div>
-              )}
-            </div>
-          )}
+          <div className="flex items-center gap-4 flex-shrink-0">
+            {/* 進捗サマリー */}
+            {summary.total > 0 && (
+              <div className="flex items-center gap-3">
+                {summary.pass > 0 && (
+                  <div className="flex items-center gap-1 text-success">
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span className="text-sm font-medium">{summary.pass}</span>
+                  </div>
+                )}
+                {summary.fail > 0 && (
+                  <div className="flex items-center gap-1 text-danger">
+                    <XCircle className="w-4 h-4" />
+                    <span className="text-sm font-medium">{summary.fail}</span>
+                  </div>
+                )}
+                {summary.pending > 0 && (
+                  <div className="flex items-center gap-1 text-foreground-muted">
+                    <Clock className="w-4 h-4" />
+                    <span className="text-sm font-medium">{summary.pending}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* PiPボタン */}
+            {isPipSupported && onOpenPip && (
+              <button
+                onClick={onOpenPip}
+                disabled={isPipActive}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded border border-border hover:bg-background-tertiary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title={isPipActive ? 'PiPウィンドウは既に開いています' : 'Picture-in-Pictureで開く'}
+                aria-label={isPipActive ? 'PiPウィンドウは既に開いています' : 'Picture-in-Pictureで開く'}
+              >
+                <PictureInPicture2 className="w-4 h-4" />
+                <span className="hidden sm:inline">PiP</span>
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

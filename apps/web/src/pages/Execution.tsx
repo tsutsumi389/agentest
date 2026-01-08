@@ -11,9 +11,12 @@ import {
 } from '../lib/api';
 import { toast } from '../stores/toast';
 import { usePageSidebar } from '../components/Layout';
+import { usePictureInPicture } from '../hooks/usePictureInPicture';
 import { ExecutionSidebar } from '../components/execution/ExecutionSidebar';
 import { ExecutionOverviewPanel } from '../components/execution/ExecutionOverviewPanel';
 import { ExecutionTestCaseDetailPanel } from '../components/execution/ExecutionTestCaseDetailPanel';
+import { PipPortal } from '../components/execution/PipPortal';
+import { PipExecutionPanel } from '../components/execution/PipExecutionPanel';
 
 /**
  * 実行ページ
@@ -24,6 +27,12 @@ export function ExecutionPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { setSidebarContent } = usePageSidebar();
+
+  // Picture-in-Picture機能
+  const { pipWindow, isPipSupported, isPipActive, openPip, closePip } = usePictureInPicture({
+    width: 450,
+    height: 400,
+  });
 
   // URLパラメータから選択中のテストケースIDを取得
   const selectedTestCaseId = searchParams.get('testCase');
@@ -432,30 +441,56 @@ export function ExecutionPage() {
   }
 
   return (
-    <ExecutionTestCaseDetailPanel
-      testCase={selectedTestCase}
-      preconditionResults={selectedTestCaseResults.preconditionResults}
-      stepResults={selectedTestCaseResults.stepResults}
-      expectedResults={selectedTestCaseResults.expectedResults}
-      isEditable={isEditable}
-      updatingPreconditionStatusId={updatingPreconditionStatusId}
-      updatingPreconditionNoteId={updatingPreconditionNoteId}
-      updatingStepStatusId={updatingStepStatusId}
-      updatingStepNoteId={updatingStepNoteId}
-      updatingExpectedStatusId={updatingExpectedStatusId}
-      updatingExpectedNoteId={updatingExpectedNoteId}
-      onPreconditionStatusChange={handlePreconditionStatusChange}
-      onPreconditionNoteChange={handlePreconditionNoteChange}
-      onStepStatusChange={handleStepStatusChange}
-      onStepNoteChange={handleStepNoteChange}
-      onExpectedStatusChange={handleExpectedStatusChange}
-      onExpectedNoteChange={handleExpectedNoteChange}
-      uploadingEvidenceResultId={uploadingEvidenceResultId}
-      deletingEvidenceId={deletingEvidenceId}
-      downloadingEvidenceId={downloadingEvidenceId}
-      onEvidenceUpload={handleEvidenceUpload}
-      onEvidenceDelete={handleEvidenceDelete}
-      onEvidenceDownload={handleEvidenceDownload}
-    />
+    <>
+      <ExecutionTestCaseDetailPanel
+        testCase={selectedTestCase}
+        preconditionResults={selectedTestCaseResults.preconditionResults}
+        stepResults={selectedTestCaseResults.stepResults}
+        expectedResults={selectedTestCaseResults.expectedResults}
+        isEditable={isEditable}
+        updatingPreconditionStatusId={updatingPreconditionStatusId}
+        updatingPreconditionNoteId={updatingPreconditionNoteId}
+        updatingStepStatusId={updatingStepStatusId}
+        updatingStepNoteId={updatingStepNoteId}
+        updatingExpectedStatusId={updatingExpectedStatusId}
+        updatingExpectedNoteId={updatingExpectedNoteId}
+        onPreconditionStatusChange={handlePreconditionStatusChange}
+        onPreconditionNoteChange={handlePreconditionNoteChange}
+        onStepStatusChange={handleStepStatusChange}
+        onStepNoteChange={handleStepNoteChange}
+        onExpectedStatusChange={handleExpectedStatusChange}
+        onExpectedNoteChange={handleExpectedNoteChange}
+        uploadingEvidenceResultId={uploadingEvidenceResultId}
+        deletingEvidenceId={deletingEvidenceId}
+        downloadingEvidenceId={downloadingEvidenceId}
+        onEvidenceUpload={handleEvidenceUpload}
+        onEvidenceDelete={handleEvidenceDelete}
+        onEvidenceDownload={handleEvidenceDownload}
+        isPipSupported={isPipSupported}
+        isPipActive={isPipActive}
+        onOpenPip={openPip}
+      />
+
+      {/* Picture-in-Picture ポータル */}
+      <PipPortal pipWindow={pipWindow}>
+        <PipExecutionPanel
+          testCaseTitle={selectedTestCase.title}
+          steps={selectedTestCase.steps}
+          expectedResults={selectedTestCase.expectedResults}
+          stepResults={selectedTestCaseResults.stepResults}
+          expectedResultResults={selectedTestCaseResults.expectedResults}
+          isEditable={isEditable}
+          updatingStepStatusId={updatingStepStatusId}
+          updatingStepNoteId={updatingStepNoteId}
+          updatingExpectedStatusId={updatingExpectedStatusId}
+          updatingExpectedNoteId={updatingExpectedNoteId}
+          onStepStatusChange={handleStepStatusChange}
+          onStepNoteChange={handleStepNoteChange}
+          onExpectedStatusChange={handleExpectedStatusChange}
+          onExpectedNoteChange={handleExpectedNoteChange}
+          onClose={closePip}
+        />
+      </PipPortal>
+    </>
   );
 }
