@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useSearchParams } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -55,13 +55,13 @@ export function ExecutionPage() {
   const execution = data?.execution;
 
   // テストケース選択ハンドラ
-  const handleTestCaseSelect = (testCaseId: string | null) => {
+  const handleTestCaseSelect = useCallback((testCaseId: string | null) => {
     if (testCaseId) {
       setSearchParams({ testCase: testCaseId });
     } else {
       setSearchParams({});
     }
-  };
+  }, [setSearchParams]);
 
   // サイドバーを設定
   useEffect(() => {
@@ -87,7 +87,7 @@ export function ExecutionPage() {
     return () => {
       setSidebarContent(null);
     };
-  }, [execution, selectedTestCaseId, isLoading, setSidebarContent]);
+  }, [execution, selectedTestCaseId, isLoading, setSidebarContent, handleTestCaseSelect]);
 
   // 実行中止
   const abortMutation = useMutation({

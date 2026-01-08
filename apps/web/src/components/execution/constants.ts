@@ -17,3 +17,11 @@ export const priorityLabels: Record<string, string> = {
   MEDIUM: '中',
   LOW: '低',
 };
+
+/** 優先度スタイル（ドット用、サイドバー向け） */
+export const priorityStyles = {
+  CRITICAL: { dot: 'bg-danger', label: '緊急' },
+  HIGH: { dot: 'bg-warning', label: '高' },
+  MEDIUM: { dot: 'bg-accent', label: '中' },
+  LOW: { dot: 'bg-foreground-muted', label: '低' },
+} as const;

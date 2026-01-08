@@ -13,6 +13,7 @@ import type {
   ExecutionTestCaseSnapshot,
   ExecutionExpectedResult,
 } from '../../lib/api';
+import { priorityStyles } from './constants';
 
 interface ExecutionSidebarProps {
   /** 実行時テストケース一覧 */
@@ -26,14 +27,6 @@ interface ExecutionSidebarProps {
   /** ローディング状態 */
   isLoading?: boolean;
 }
-
-/** 優先度スタイル */
-const priorityStyles = {
-  CRITICAL: { dot: 'bg-danger', label: '緊急' },
-  HIGH: { dot: 'bg-warning', label: '高' },
-  MEDIUM: { dot: 'bg-accent', label: '中' },
-  LOW: { dot: 'bg-foreground-muted', label: '低' },
-} as const;
 
 /** テストケースの進捗状態 */
 type ProgressStatus = 'pass' | 'fail' | 'pending' | 'mixed';
