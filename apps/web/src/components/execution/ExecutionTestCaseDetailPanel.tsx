@@ -12,22 +12,7 @@ import type {
 import { ExecutionPreconditionList } from './ExecutionPreconditionList';
 import { ExecutionStepList } from './ExecutionStepList';
 import { ExecutionExpectedResultList } from './ExecutionExpectedResultList';
-
-/** 優先度バッジの色 */
-const priorityColors: Record<string, string> = {
-  CRITICAL: 'bg-danger text-white',
-  HIGH: 'bg-warning text-white',
-  MEDIUM: 'bg-accent text-white',
-  LOW: 'bg-foreground-muted text-white',
-};
-
-/** 優先度のラベル */
-const priorityLabels: Record<string, string> = {
-  CRITICAL: '緊急',
-  HIGH: '高',
-  MEDIUM: '中',
-  LOW: '低',
-};
+import { priorityColors, priorityLabels } from './constants';
 
 interface ExecutionTestCaseDetailPanelProps {
   /** 実行時テストケース */
@@ -113,7 +98,10 @@ export function ExecutionTestCaseDetailPanel({
       (acc, r) => {
         if (r.status === 'PASS') acc.pass++;
         else if (r.status === 'FAIL') acc.fail++;
-        else acc.pending++;
+        // PENDING, SKIPPED, NOT_EXECUTABLE を未完了としてカウント
+        else if (r.status === 'PENDING' || r.status === 'SKIPPED' || r.status === 'NOT_EXECUTABLE') {
+          acc.pending++;
+        }
         return acc;
       },
       { pass: 0, fail: 0, pending: 0, total: expectedResults.length }

@@ -12,22 +12,7 @@ import type {
 import { ExecutionPreconditionList } from './ExecutionPreconditionList';
 import { ExecutionStepList } from './ExecutionStepList';
 import { ExecutionExpectedResultList } from './ExecutionExpectedResultList';
-
-/** 優先度バッジの色 */
-const PRIORITY_COLORS: Record<string, string> = {
-  CRITICAL: 'bg-danger text-white',
-  HIGH: 'bg-warning text-white',
-  MEDIUM: 'bg-accent text-white',
-  LOW: 'bg-foreground-muted text-white',
-};
-
-/** 優先度のラベル */
-const PRIORITY_LABELS: Record<string, string> = {
-  CRITICAL: '緊急',
-  HIGH: '高',
-  MEDIUM: '中',
-  LOW: '低',
-};
+import { priorityColors, priorityLabels } from './constants';
 
 interface ExecutionTestCaseItemProps {
   /** 実行時テストケース */
@@ -143,9 +128,9 @@ export function ExecutionTestCaseItem({
 
         {/* 優先度バッジ */}
         <span
-          className={`flex-shrink-0 px-2 py-0.5 text-xs font-medium rounded ${PRIORITY_COLORS[testCase.priority] || PRIORITY_COLORS.MEDIUM}`}
+          className={`flex-shrink-0 px-2 py-0.5 text-xs font-medium rounded ${priorityColors[testCase.priority] || priorityColors.MEDIUM}`}
         >
-          {PRIORITY_LABELS[testCase.priority] || testCase.priority}
+          {priorityLabels[testCase.priority] || testCase.priority}
         </span>
 
         {/* 進捗サマリー */}
