@@ -1,4 +1,5 @@
 import type { StatusConfig, StatusOption } from '../../lib/execution-status';
+import { MarkdownPreview } from '../common/markdown';
 import { StatusButton } from './StatusButton';
 import { InlineNoteEditor } from './InlineNoteEditor';
 
@@ -55,7 +56,9 @@ export function ExecutionResultItem<T extends string>({
       <div className="flex-1 min-w-0 space-y-2">
         {/* 上段: 内容テキスト + ステータスボタン */}
         <div className="flex items-start justify-between gap-3">
-          <p className="text-sm text-foreground flex-1">{content}</p>
+          <div className="text-sm text-foreground flex-1">
+            <MarkdownPreview content={content} />
+          </div>
           <div className="flex-shrink-0">
             <StatusButton
               value={status}

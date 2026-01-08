@@ -9,6 +9,7 @@ import type {
   StepResultStatus,
   ExpectedResultStatus,
 } from '../../lib/api';
+import { MarkdownPreview } from '../common/markdown';
 import { ExecutionPreconditionList } from './ExecutionPreconditionList';
 import { ExecutionStepList } from './ExecutionStepList';
 import { ExecutionExpectedResultList } from './ExecutionExpectedResultList';
@@ -134,7 +135,7 @@ export function ExecutionTestCaseDetailPanel({
               </span>
             </div>
             {testCase.description && (
-              <p className="text-sm text-foreground-muted">{testCase.description}</p>
+              <MarkdownPreview content={testCase.description} className="text-sm text-foreground-muted" />
             )}
           </div>
 

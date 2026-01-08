@@ -18,6 +18,7 @@ import {
   stepResultStatusOptions,
   expectedResultStatusOptions,
 } from '../../lib/execution-status';
+import { MarkdownPreview } from '../common/markdown';
 import { InlineNoteEditor } from './InlineNoteEditor';
 
 /**
@@ -423,7 +424,7 @@ export function PipExecutionPanel({
 
         {/* コンテンツ */}
         <div className="text-sm text-foreground leading-relaxed">
-          {currentItem.content}
+          <MarkdownPreview content={currentItem.content} />
         </div>
 
         {/* ステータス変更 */}
