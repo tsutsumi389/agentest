@@ -17,6 +17,7 @@ import type {
   ExecutionPreconditionResult,
   PreconditionResultStatus,
 } from '../../lib/api';
+import { MarkdownPreview } from '../common/markdown';
 import { ExecutionPreconditionList } from './ExecutionPreconditionList';
 
 interface ExecutionOverviewPanelProps {
@@ -167,6 +168,9 @@ export function ExecutionOverviewPanel({
                   <> / 環境: {execution.environment.name}</>
                 )}
               </p>
+              {executionTestSuite?.description && (
+                <MarkdownPreview content={executionTestSuite.description} className="text-foreground-muted text-sm mt-2" />
+              )}
             </div>
           </div>
 
