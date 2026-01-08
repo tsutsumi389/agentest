@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router';
 import {
   ChevronLeft,
@@ -8,6 +9,7 @@ import {
   Square,
   Play,
   Ban,
+  Loader2,
 } from 'lucide-react';
 import type {
   ExecutionWithDetails,
@@ -112,13 +114,19 @@ export function ExecutionOverviewPanel({
   updatingPreconditionStatusId,
   updatingPreconditionNoteId,
 }: ExecutionOverviewPanelProps) {
-  // サマリー計算（期待結果から集計）
-  const passCount = execution.expectedResults.filter((r) => r.status === 'PASS').length;
-  const failCount = execution.expectedResults.filter((r) => r.status === 'FAIL').length;
-  const skippedCount = execution.expectedResults.filter(
-    (r) => r.status === 'SKIPPED' || r.status === 'NOT_EXECUTABLE'
-  ).length;
-  const pendingCount = execution.expectedResults.filter((r) => r.status === 'PENDING').length;
+  // サマリー計算（期待結果から集計、一度の走査でまとめて計算）
+  const summary = useMemo(() => {
+    return execution.expectedResults.reduce(
+      (acc, r) => {
+        if (r.status === 'PASS') acc.pass++;
+        else if (r.status === 'FAIL') acc.fail++;
+        else if (r.status === 'SKIPPED' || r.status === 'NOT_EXECUTABLE') acc.skipped++;
+        else if (r.status === 'PENDING') acc.pending++;
+        return acc;
+      },
+      { pass: 0, fail: 0, skipped: 0, pending: 0 }
+    );
+  }, [execution.expectedResults]);
 
   return (
     <div className="space-y-6">
@@ -142,7 +150,10 @@ export function ExecutionOverviewPanel({
                 <h1 className="text-2xl font-bold text-foreground">
                   {executionTestSuite?.name ?? 'テスト実行'}
                 </h1>
-                <span className="flex items-center gap-1 badge">
+                <span
+                  className="flex items-center gap-1 badge"
+                  aria-label={`ステータス: ${statusLabel[execution.status]}`}
+                >
                   {statusIcon[execution.status]}
                   {statusLabel[execution.status]}
                 </span>
@@ -163,19 +174,27 @@ export function ExecutionOverviewPanel({
             <div className="flex items-center gap-2">
               <button
                 onClick={onAbort}
-                disabled={isAborting}
+                disabled={isAborting || isCompleting}
                 className="btn btn-danger"
               >
-                <Square className="w-4 h-4" />
-                中止
+                {isAborting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Square className="w-4 h-4" />
+                )}
+                {isAborting ? '中止中...' : '中止'}
               </button>
               <button
                 onClick={onComplete}
-                disabled={isCompleting}
+                disabled={isCompleting || isAborting}
                 className="btn btn-primary"
               >
-                <CheckCircle2 className="w-4 h-4" />
-                完了
+                {isCompleting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <CheckCircle2 className="w-4 h-4" />
+                )}
+                {isCompleting ? '完了中...' : '完了'}
               </button>
             </div>
           )}
@@ -187,25 +206,25 @@ export function ExecutionOverviewPanel({
         <SummaryCard
           icon={CheckCircle2}
           label="成功"
-          value={passCount}
+          value={summary.pass}
           color="success"
         />
         <SummaryCard
           icon={XCircle}
           label="失敗"
-          value={failCount}
+          value={summary.fail}
           color="danger"
         />
         <SummaryCard
           icon={Ban}
           label="スキップ"
-          value={skippedCount}
+          value={summary.skipped}
           color="warning"
         />
         <SummaryCard
           icon={Clock}
           label="未実行"
-          value={pendingCount}
+          value={summary.pending}
           color="muted"
         />
       </div>
