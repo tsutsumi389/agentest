@@ -91,7 +91,7 @@ export function ExecutionPage() {
     if (isHidden) {
       // バックグラウンドになったら自動でPiPを開く（ユーザーが閉じた場合は除く）
       if (!userClosedPipRef.current && !isPipActive) {
-        openPip();
+        void openPip();
       }
     } else {
       // フォアグラウンドに戻ったらPiPを閉じる
