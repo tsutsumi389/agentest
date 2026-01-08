@@ -33,6 +33,8 @@ export function ExecutionPage() {
   const { isHidden } = usePageVisibility();
   // ユーザーがPiPを手動で閉じたかどうかを追跡
   const userClosedPipRef = useRef(false);
+  // 前回のisHidden状態を保持（変化検知用）
+  const prevIsHiddenRef = useRef(isHidden);
 
   // Picture-in-Picture機能
   const { pipWindow, isPipSupported, isPipActive, openPip, closePip } = usePictureInPicture({
@@ -88,20 +90,21 @@ export function ExecutionPage() {
   useEffect(() => {
     if (!isPipSupported || !selectedTestCaseId) return;
 
-    if (isHidden) {
-      // バックグラウンドになったら自動でPiPを開く（ユーザーが閉じた場合は除く）
-      if (!userClosedPipRef.current && !isPipActive) {
+    const wasHidden = prevIsHiddenRef.current;
+    prevIsHiddenRef.current = isHidden;
+
+    // バックグラウンドに移行した場合
+    if (!wasHidden && isHidden) {
+      if (!userClosedPipRef.current) {
         void openPip();
       }
-    } else {
-      // フォアグラウンドに戻ったらPiPを閉じる
-      if (isPipActive) {
-        closePip();
-      }
-      // フォアグラウンドに戻ったらフラグをリセット
+    }
+    // フォアグラウンドに戻った場合
+    else if (wasHidden && !isHidden) {
+      closePip();
       userClosedPipRef.current = false;
     }
-  }, [isHidden, isPipSupported, isPipActive, selectedTestCaseId, openPip, closePip]);
+  }, [isHidden, isPipSupported, selectedTestCaseId, openPip, closePip]);
 
   // サイドバーを設定
   useEffect(() => {
