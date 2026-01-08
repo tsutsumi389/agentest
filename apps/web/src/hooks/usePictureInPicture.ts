@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import '../types/document-pip.d.ts';
 
 /**
  * usePictureInPicture のオプション
@@ -148,7 +147,7 @@ export function usePictureInPicture(
   const closePip = useCallback(() => {
     if (pipWindow && !pipWindow.closed) {
       pipWindow.close();
-      setPipWindow(null);
+      // pagehideイベントでsetPipWindow(null)が呼ばれる
     }
   }, [pipWindow]);
 
