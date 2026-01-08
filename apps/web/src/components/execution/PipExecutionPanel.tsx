@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { ChevronLeft, ChevronRight, X, Loader2 } from 'lucide-react';
 import type {
   ExecutionTestCaseStepSnapshot,
   ExecutionTestCaseExpectedResultSnapshot,
@@ -8,16 +8,70 @@ import type {
   StepResultStatus,
   ExpectedResultStatus,
 } from '../../lib/api';
+import type { StatusConfig, StatusOption } from '../../lib/execution-status';
 import {
-  stepResultStatusConfig,
   stepResultStatusOptions,
-  expectedResultStatusConfig,
   expectedResultStatusOptions,
   getStepStatusConfig,
   getExpectedStatusConfig,
 } from '../../lib/execution-status';
-import { StatusButton } from './StatusButton';
 import { InlineNoteEditor } from './InlineNoteEditor';
+
+/**
+ * PiP用シンプルステータスセレクター
+ * StatusButtonはdocument.addEventListenerを使用するため、PiPウィンドウでは
+ * 親ウィンドウのdocumentを参照してしまう。このコンポーネントはselect要素を
+ * 使用することでその問題を回避する。
+ */
+function PipStatusSelector<T extends string>({
+  value,
+  config,
+  options,
+  onChange,
+  isEditable,
+  isUpdating,
+}: {
+  value: T;
+  config: StatusConfig;
+  options: StatusOption<T>[];
+  onChange: (value: T) => void;
+  isEditable: boolean;
+  isUpdating: boolean;
+}) {
+  if (!isEditable) {
+    const IconComponent = config.icon;
+    return (
+      <div className="flex items-center gap-1.5">
+        <IconComponent className={`w-4 h-4 ${config.colorClass}`} />
+        <span className={`text-sm ${config.colorClass}`}>{config.label}</span>
+      </div>
+    );
+  }
+
+  const IconComponent = config.icon;
+
+  return (
+    <div className="flex items-center gap-2">
+      {isUpdating ? (
+        <Loader2 className="w-4 h-4 animate-spin text-foreground-muted" />
+      ) : (
+        <IconComponent className={`w-4 h-4 ${config.colorClass}`} />
+      )}
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value as T)}
+        disabled={isUpdating}
+        className="text-sm bg-background border border-border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50"
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.config.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
 
 /**
  * ナビゲーション可能なアイテムの型
@@ -127,21 +181,47 @@ export function PipExecutionPanel({
   // 現在のインデックス
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const currentItem = navigableItems[currentIndex];
   const totalItems = navigableItems.length;
 
+  // navigableItems が変更された時に currentIndex が範囲外にならないよう調整
+  useEffect(() => {
+    if (currentIndex >= navigableItems.length && navigableItems.length > 0) {
+      setCurrentIndex(navigableItems.length - 1);
+    }
+  }, [navigableItems.length, currentIndex]);
+
+  const currentItem = navigableItems[currentIndex];
+
   // 前へ/次へ
-  const goToPrevious = () => {
+  const goToPrevious = useCallback(() => {
     if (currentIndex > 0) {
       setCurrentIndex(currentIndex - 1);
     }
-  };
+  }, [currentIndex]);
 
-  const goToNext = () => {
+  const goToNext = useCallback(() => {
     if (currentIndex < totalItems - 1) {
       setCurrentIndex(currentIndex + 1);
     }
-  };
+  }, [currentIndex, totalItems]);
+
+  // キーボードナビゲーション（左右矢印キー）
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 入力フィールドにフォーカスがある場合はスキップ
+      const target = e.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+        return;
+      }
+      if (e.key === 'ArrowLeft') {
+        goToPrevious();
+      } else if (e.key === 'ArrowRight') {
+        goToNext();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [goToPrevious, goToNext]);
 
   // 現在のアイテムの結果データを取得
   const currentStepResult = currentItem?.type === 'step'
@@ -154,7 +234,7 @@ export function PipExecutionPanel({
   // アイテムがない場合
   if (!currentItem) {
     return (
-      <div className="min-h-screen bg-background p-4">
+      <div className="min-h-full bg-background p-4">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-sm font-medium text-foreground truncate">{testCaseTitle}</h1>
           <button
@@ -173,11 +253,11 @@ export function PipExecutionPanel({
   // 現在のアイテムの種類に応じたステータス設定
   const isStep = currentItem.type === 'step';
   const statusConfig = isStep
-    ? (currentStepResult ? getStepStatusConfig(currentStepResult.status) : stepResultStatusConfig.PENDING)
-    : (currentExpectedResult ? getExpectedStatusConfig(currentExpectedResult.status) : expectedResultStatusConfig.PENDING);
+    ? getStepStatusConfig(currentStepResult?.status ?? 'PENDING')
+    : getExpectedStatusConfig(currentExpectedResult?.status ?? 'PENDING');
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-full bg-background flex flex-col">
       {/* ヘッダー */}
       <header className="flex items-center justify-between px-4 py-3 border-b border-border bg-background-secondary">
         <h1 className="text-sm font-medium text-foreground truncate flex-1 mr-2">
@@ -216,24 +296,22 @@ export function PipExecutionPanel({
         <div className="flex items-center gap-3">
           <span className="text-xs text-foreground-muted">ステータス:</span>
           {isStep && currentStepResult ? (
-            <StatusButton
+            <PipStatusSelector
               value={currentStepResult.status}
               config={statusConfig}
               options={stepResultStatusOptions}
               onChange={(status) => onStepStatusChange(currentStepResult.id, status)}
               isEditable={isEditable}
               isUpdating={updatingStepStatusId === currentStepResult.id}
-              ariaLabel="ステップのステータスを変更"
             />
           ) : currentExpectedResult ? (
-            <StatusButton
+            <PipStatusSelector
               value={currentExpectedResult.status}
               config={statusConfig}
               options={expectedResultStatusOptions}
               onChange={(status) => onExpectedStatusChange(currentExpectedResult.id, status)}
               isEditable={isEditable}
               isUpdating={updatingExpectedStatusId === currentExpectedResult.id}
-              ariaLabel="期待結果のステータスを変更"
             />
           ) : null}
         </div>
@@ -274,7 +352,7 @@ export function PipExecutionPanel({
         </button>
 
         <span className="text-xs text-foreground-muted">
-          {currentIndex + 1} / {totalItems}
+          全体: {currentIndex + 1} / {totalItems}
         </span>
 
         <button
