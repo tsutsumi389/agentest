@@ -62,6 +62,7 @@ function PipStatusSelector<T extends string>({
         onChange={(e) => onChange(e.target.value as T)}
         disabled={isUpdating}
         className="text-sm bg-background border border-border rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-accent disabled:opacity-50"
+        aria-label="ステータスを選択"
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
