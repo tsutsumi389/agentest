@@ -54,9 +54,7 @@ export function PipPortal({ pipWindow, children }: PipPortalProps) {
 
     return () => {
       // クリーンアップ時にコンテナを削除
-      if (containerElement.parentNode) {
-        containerElement.parentNode.removeChild(containerElement);
-      }
+      containerElement.remove();
     };
   }, [pipWindow]);
 
