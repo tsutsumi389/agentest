@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 
 /**
  * usePageVisibility の戻り値型
@@ -8,6 +8,17 @@ export interface UsePageVisibilityReturn {
   isVisible: boolean;
   /** ページが非表示状態か */
   isHidden: boolean;
+}
+
+/**
+ * 現在のページ可視性状態を取得
+ * SSR対応: document が存在しない場合は visible として扱う
+ */
+function getVisibilityState(): DocumentVisibilityState {
+  if (typeof document === 'undefined') {
+    return 'visible';
+  }
+  return document.visibilityState;
 }
 
 /**
@@ -33,14 +44,6 @@ export interface UsePageVisibilityReturn {
  * ```
  */
 export function usePageVisibility(): UsePageVisibilityReturn {
-  // SSR対応: document が存在しない場合は visible として扱う
-  const getVisibilityState = useCallback(() => {
-    if (typeof document === 'undefined') {
-      return 'visible';
-    }
-    return document.visibilityState;
-  }, []);
-
   const [visibilityState, setVisibilityState] = useState<DocumentVisibilityState>(
     getVisibilityState
   );
