@@ -90,6 +90,8 @@ interface NavigableItem {
 }
 
 interface PipExecutionPanelProps {
+  /** PiPウィンドウへの参照（キーボードイベント登録用） */
+  pipWindow: Window | null;
   /** テストケースタイトル */
   testCaseTitle: string;
   /** ステップスナップショット一覧 */
@@ -128,6 +130,7 @@ interface PipExecutionPanelProps {
  * ステップと期待結果を順番にナビゲートしながらステータス更新を行えます。
  */
 export function PipExecutionPanel({
+  pipWindow,
   testCaseTitle,
   steps,
   expectedResults,
@@ -184,6 +187,11 @@ export function PipExecutionPanel({
 
   const totalItems = navigableItems.length;
 
+  // テストケースが切り替わったらcurrentIndexをリセット
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [testCaseTitle]);
+
   // navigableItems が変更された時に currentIndex が範囲外にならないよう調整
   useEffect(() => {
     if (currentIndex >= navigableItems.length && navigableItems.length > 0) {
@@ -207,7 +215,10 @@ export function PipExecutionPanel({
   }, [currentIndex, totalItems]);
 
   // キーボードナビゲーション（左右矢印キー）
+  // PiPウィンドウが渡された場合はそちらに登録、なければ親ウィンドウに登録
   useEffect(() => {
+    const targetWindow = pipWindow ?? window;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       // 入力フィールドにフォーカスがある場合はスキップ
       const target = e.target as HTMLElement;
@@ -220,9 +231,9 @@ export function PipExecutionPanel({
         goToNext();
       }
     };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [goToPrevious, goToNext]);
+    targetWindow.addEventListener('keydown', handleKeyDown);
+    return () => targetWindow.removeEventListener('keydown', handleKeyDown);
+  }, [pipWindow, goToPrevious, goToNext]);
 
   // 現在のアイテムの結果データを取得
   const currentStepResult = currentItem?.type === 'step'

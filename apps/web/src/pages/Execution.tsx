@@ -474,6 +474,7 @@ export function ExecutionPage() {
       {/* Picture-in-Picture ポータル */}
       <PipPortal pipWindow={pipWindow}>
         <PipExecutionPanel
+          pipWindow={pipWindow}
           testCaseTitle={selectedTestCase.title}
           steps={selectedTestCase.steps}
           expectedResults={selectedTestCase.expectedResults}
