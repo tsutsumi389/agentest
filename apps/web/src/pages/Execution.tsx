@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useParams, useSearchParams } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -12,6 +12,7 @@ import {
 import { toast } from '../stores/toast';
 import { usePageSidebar } from '../components/Layout';
 import { usePictureInPicture } from '../hooks/usePictureInPicture';
+import { usePageVisibility } from '../hooks/usePageVisibility';
 import { ExecutionSidebar } from '../components/execution/ExecutionSidebar';
 import { ExecutionOverviewPanel } from '../components/execution/ExecutionOverviewPanel';
 import { ExecutionTestCaseDetailPanel } from '../components/execution/ExecutionTestCaseDetailPanel';
@@ -28,10 +29,21 @@ export function ExecutionPage() {
   const queryClient = useQueryClient();
   const { setSidebarContent } = usePageSidebar();
 
+  // ページ可視性状態
+  const { isHidden } = usePageVisibility();
+  // ユーザーがPiPを手動で閉じたかどうかを追跡
+  const userClosedPipRef = useRef(false);
+
   // Picture-in-Picture機能
   const { pipWindow, isPipSupported, isPipActive, openPip, closePip } = usePictureInPicture({
     width: 450,
     height: 400,
+    onClose: () => {
+      // バックグラウンド中にユーザーが手動でPiPを閉じた場合を検知
+      if (document.visibilityState === 'hidden') {
+        userClosedPipRef.current = true;
+      }
+    },
   });
 
   // URLパラメータから選択中のテストケースIDを取得
@@ -71,6 +83,25 @@ export function ExecutionPage() {
       setSearchParams({});
     }
   }, [setSearchParams]);
+
+  // 自動PiP: バックグラウンド時に自動でPiPを開き、フォアグラウンドで閉じる
+  useEffect(() => {
+    if (!isPipSupported || !selectedTestCaseId) return;
+
+    if (isHidden) {
+      // バックグラウンドになったら自動でPiPを開く（ユーザーが閉じた場合は除く）
+      if (!userClosedPipRef.current && !isPipActive) {
+        openPip();
+      }
+    } else {
+      // フォアグラウンドに戻ったらPiPを閉じる
+      if (isPipActive) {
+        closePip();
+      }
+      // フォアグラウンドに戻ったらフラグをリセット
+      userClosedPipRef.current = false;
+    }
+  }, [isHidden, isPipSupported, isPipActive, selectedTestCaseId, openPip, closePip]);
 
   // サイドバーを設定
   useEffect(() => {
@@ -466,9 +497,6 @@ export function ExecutionPage() {
         onEvidenceUpload={handleEvidenceUpload}
         onEvidenceDelete={handleEvidenceDelete}
         onEvidenceDownload={handleEvidenceDownload}
-        isPipSupported={isPipSupported}
-        isPipActive={isPipActive}
-        onOpenPip={openPip}
       />
 
       {/* Picture-in-Picture ポータル */}
