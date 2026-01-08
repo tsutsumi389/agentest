@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useMemo } from 'react';
+import { CheckCircle2, XCircle, Clock, PictureInPicture2 } from 'lucide-react';
 import type {
   ExecutionTestCaseSnapshot,
   ExecutionPreconditionResult,
@@ -14,11 +14,9 @@ import { ExecutionStepList } from './ExecutionStepList';
 import { ExecutionExpectedResultList } from './ExecutionExpectedResultList';
 import { priorityColors, priorityLabels } from './constants';
 
-interface ExecutionTestCaseItemProps {
+interface ExecutionTestCaseDetailPanelProps {
   /** 実行時テストケース */
   testCase: ExecutionTestCaseSnapshot;
-  /** テストケースインデックス（表示用） */
-  index: number;
   /** 前提条件結果一覧（このテストケースに紐づくもの） */
   preconditionResults: ExecutionPreconditionResult[];
   /** ステップ結果一覧（このテストケースに紐づくもの） */
@@ -51,8 +49,6 @@ interface ExecutionTestCaseItemProps {
   onExpectedStatusChange: (resultId: string, status: ExpectedResultStatus) => void;
   /** 期待結果ノート変更ハンドラ */
   onExpectedNoteChange: (resultId: string, note: string | null) => void;
-  /** デフォルトで展開するか */
-  defaultExpanded?: boolean;
   /** アップロード中の期待結果ID */
   uploadingEvidenceResultId: string | null;
   /** 削除中のエビデンスID */
@@ -65,14 +61,20 @@ interface ExecutionTestCaseItemProps {
   onEvidenceDelete: (evidenceId: string) => void;
   /** エビデンスダウンロードハンドラ */
   onEvidenceDownload: (evidenceId: string) => void;
+  /** PiPがサポートされているか */
+  isPipSupported?: boolean;
+  /** PiPがアクティブか */
+  isPipActive?: boolean;
+  /** PiP開始ハンドラ */
+  onOpenPip?: () => void;
 }
 
 /**
- * 実行テストケースアイテム（アコーディオン）
+ * テストケース詳細パネル
+ * 選択されたテストケースの詳細をフルパネルで表示
  */
-export function ExecutionTestCaseItem({
+export function ExecutionTestCaseDetailPanel({
   testCase,
-  index,
   preconditionResults,
   stepResults,
   expectedResults,
@@ -89,82 +91,98 @@ export function ExecutionTestCaseItem({
   onStepNoteChange,
   onExpectedStatusChange,
   onExpectedNoteChange,
-  defaultExpanded = false,
   uploadingEvidenceResultId,
   deletingEvidenceId,
   downloadingEvidenceId,
   onEvidenceUpload,
   onEvidenceDelete,
   onEvidenceDownload,
-}: ExecutionTestCaseItemProps) {
-  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
-
-  // 進捗サマリーを計算
-  const passCount = expectedResults.filter((r) => r.status === 'PASS').length;
-  const failCount = expectedResults.filter((r) => r.status === 'FAIL').length;
-  const pendingCount = expectedResults.filter(
-    (r) => r.status === 'PENDING' || r.status === 'SKIPPED' || r.status === 'NOT_EXECUTABLE'
-  ).length;
-  const totalCount = expectedResults.length;
+  isPipSupported = false,
+  isPipActive = false,
+  onOpenPip,
+}: ExecutionTestCaseDetailPanelProps) {
+  // 進捗サマリーを計算（一度の走査でまとめて計算）
+  const summary = useMemo(() => {
+    return expectedResults.reduce(
+      (acc, r) => {
+        if (r.status === 'PASS') acc.pass++;
+        else if (r.status === 'FAIL') acc.fail++;
+        // PENDING, SKIPPED, NOT_EXECUTABLE を未完了としてカウント
+        else if (r.status === 'PENDING' || r.status === 'SKIPPED' || r.status === 'NOT_EXECUTABLE') {
+          acc.pending++;
+        }
+        return acc;
+      },
+      { pass: 0, fail: 0, pending: 0, total: expectedResults.length }
+    );
+  }, [expectedResults]);
 
   return (
-    <div className="border border-border rounded-lg overflow-hidden">
+    <div className="space-y-6">
       {/* ヘッダー */}
-      <button
-        type="button"
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center gap-3 px-4 py-3 bg-background-secondary hover:bg-background-tertiary transition-colors text-left"
-        aria-expanded={isExpanded}
-      >
-        {/* インデックス */}
-        <span className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded bg-background-tertiary text-foreground-muted text-xs font-medium">
-          {index}
-        </span>
-
-        {/* タイトル */}
-        <span className="flex-1 min-w-0 text-sm font-medium text-foreground truncate">
-          {testCase.title}
-        </span>
-
-        {/* 優先度バッジ */}
-        <span
-          className={`flex-shrink-0 px-2 py-0.5 text-xs font-medium rounded ${priorityColors[testCase.priority] || priorityColors.MEDIUM}`}
-        >
-          {priorityLabels[testCase.priority] || testCase.priority}
-        </span>
-
-        {/* 進捗サマリー */}
-        {totalCount > 0 && (
-          <div className="flex-shrink-0 flex items-center gap-2 text-xs">
-            {passCount > 0 && (
-              <span className="text-success">{passCount} PASS</span>
-            )}
-            {failCount > 0 && (
-              <span className="text-danger">{failCount} FAIL</span>
-            )}
-            {pendingCount > 0 && (
-              <span className="text-foreground-muted">{pendingCount} 未</span>
+      <div className="card p-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3 mb-2">
+              <h2 className="text-xl font-bold text-foreground truncate">
+                {testCase.title}
+              </h2>
+              <span
+                className={`flex-shrink-0 px-2 py-0.5 text-xs font-medium rounded ${priorityColors[testCase.priority] || priorityColors.MEDIUM}`}
+              >
+                {priorityLabels[testCase.priority] || testCase.priority}
+              </span>
+            </div>
+            {testCase.description && (
+              <p className="text-sm text-foreground-muted">{testCase.description}</p>
             )}
           </div>
-        )}
 
-        {/* 展開/折りたたみアイコン */}
-        {isExpanded ? (
-          <ChevronUp className="w-4 h-4 text-foreground-muted flex-shrink-0" />
-        ) : (
-          <ChevronDown className="w-4 h-4 text-foreground-muted flex-shrink-0" />
-        )}
-      </button>
+          <div className="flex items-center gap-4 flex-shrink-0">
+            {/* 進捗サマリー */}
+            {summary.total > 0 && (
+              <div className="flex items-center gap-3">
+                {summary.pass > 0 && (
+                  <div className="flex items-center gap-1 text-success">
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span className="text-sm font-medium">{summary.pass}</span>
+                  </div>
+                )}
+                {summary.fail > 0 && (
+                  <div className="flex items-center gap-1 text-danger">
+                    <XCircle className="w-4 h-4" />
+                    <span className="text-sm font-medium">{summary.fail}</span>
+                  </div>
+                )}
+                {summary.pending > 0 && (
+                  <div className="flex items-center gap-1 text-foreground-muted">
+                    <Clock className="w-4 h-4" />
+                    <span className="text-sm font-medium">{summary.pending}</span>
+                  </div>
+                )}
+              </div>
+            )}
 
-      {/* コンテンツ */}
-      {isExpanded && (
-        <div className="px-4 py-4 space-y-6 bg-background">
-          {/* 説明 */}
-          {testCase.description && (
-            <p className="text-sm text-foreground-muted">{testCase.description}</p>
-          )}
+            {/* PiPボタン */}
+            {isPipSupported && onOpenPip && (
+              <button
+                onClick={onOpenPip}
+                disabled={isPipActive}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded border border-border hover:bg-background-tertiary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                title={isPipActive ? 'PiPウィンドウは既に開いています' : 'Picture-in-Pictureで開く'}
+                aria-label={isPipActive ? 'PiPウィンドウは既に開いています' : 'Picture-in-Pictureで開く'}
+              >
+                <PictureInPicture2 className="w-4 h-4" />
+                <span className="hidden sm:inline">PiP</span>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
 
-          {/* 前提条件 */}
+      {/* 前提条件 */}
+      {testCase.preconditions.length > 0 && (
+        <div className="card p-4">
           <ExecutionPreconditionList
             preconditions={testCase.preconditions}
             results={preconditionResults}
@@ -174,8 +192,12 @@ export function ExecutionTestCaseItem({
             onStatusChange={onPreconditionStatusChange}
             onNoteChange={onPreconditionNoteChange}
           />
+        </div>
+      )}
 
-          {/* ステップ */}
+      {/* ステップ */}
+      {testCase.steps.length > 0 && (
+        <div className="card p-4">
           <ExecutionStepList
             steps={testCase.steps}
             results={stepResults}
@@ -185,8 +207,12 @@ export function ExecutionTestCaseItem({
             onStatusChange={onStepStatusChange}
             onNoteChange={onStepNoteChange}
           />
+        </div>
+      )}
 
-          {/* 期待結果 */}
+      {/* 期待結果 */}
+      {testCase.expectedResults.length > 0 && (
+        <div className="card p-4">
           <ExecutionExpectedResultList
             expectedResults={testCase.expectedResults}
             results={expectedResults}

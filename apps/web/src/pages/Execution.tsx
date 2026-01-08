@@ -1,16 +1,6 @@
-import { useState } from 'react';
-import { useParams, Link } from 'react-router';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useParams, useSearchParams } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import {
-  ChevronLeft,
-  CheckCircle2,
-  XCircle,
-  Clock,
-  AlertCircle,
-  Square,
-  Play,
-  Ban,
-} from 'lucide-react';
 import {
   executionsApi,
   type ExecutionWithDetails,
@@ -20,15 +10,32 @@ import {
   type ExpectedResultStatus,
 } from '../lib/api';
 import { toast } from '../stores/toast';
-import { ExecutionPreconditionList } from '../components/execution/ExecutionPreconditionList';
-import { ExecutionTestCaseList } from '../components/execution/ExecutionTestCaseList';
+import { usePageSidebar } from '../components/Layout';
+import { usePictureInPicture } from '../hooks/usePictureInPicture';
+import { ExecutionSidebar } from '../components/execution/ExecutionSidebar';
+import { ExecutionOverviewPanel } from '../components/execution/ExecutionOverviewPanel';
+import { ExecutionTestCaseDetailPanel } from '../components/execution/ExecutionTestCaseDetailPanel';
+import { PipPortal } from '../components/execution/PipPortal';
+import { PipExecutionPanel } from '../components/execution/PipExecutionPanel';
 
 /**
  * 実行ページ
+ * サイドバー + メインパネル構成
  */
 export function ExecutionPage() {
   const { executionId } = useParams<{ executionId: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
+  const { setSidebarContent } = usePageSidebar();
+
+  // Picture-in-Picture機能
+  const { pipWindow, isPipSupported, isPipActive, openPip, closePip } = usePictureInPicture({
+    width: 450,
+    height: 400,
+  });
+
+  // URLパラメータから選択中のテストケースIDを取得
+  const selectedTestCaseId = searchParams.get('testCase');
 
   // 更新中の結果IDを管理
   const [updatingPreconditionStatusId, setUpdatingPreconditionStatusId] = useState<string | null>(null);
@@ -53,6 +60,43 @@ export function ExecutionPage() {
       return data?.execution?.status === 'IN_PROGRESS' ? 10000 : false;
     },
   });
+
+  const execution = data?.execution;
+
+  // テストケース選択ハンドラ
+  const handleTestCaseSelect = useCallback((testCaseId: string | null) => {
+    if (testCaseId) {
+      setSearchParams({ testCase: testCaseId });
+    } else {
+      setSearchParams({});
+    }
+  }, [setSearchParams]);
+
+  // サイドバーを設定
+  useEffect(() => {
+    if (execution) {
+      setSidebarContent(
+        <ExecutionSidebar
+          testCases={execution.executionTestSuite?.testCases ?? []}
+          selectedTestCaseId={selectedTestCaseId}
+          onSelect={handleTestCaseSelect}
+          allExpectedResults={execution.expectedResults}
+          isLoading={false}
+        />
+      );
+    } else if (isLoading) {
+      setSidebarContent(
+        <div className="flex items-center justify-center h-full">
+          <div className="text-foreground-muted">読み込み中...</div>
+        </div>
+      );
+    }
+
+    // クリーンアップ: ページ離脱時にサイドバーをクリア
+    return () => {
+      setSidebarContent(null);
+    };
+  }, [execution, selectedTestCaseId, isLoading, setSidebarContent, handleTestCaseSelect]);
 
   // 実行中止
   const abortMutation = useMutation({
@@ -86,7 +130,6 @@ export function ExecutionPage() {
         note: note ?? undefined,
       }),
     onMutate: async ({ resultId, status, note }) => {
-      // 楽観的更新
       await queryClient.cancelQueries({ queryKey: ['execution', executionId, 'details'] });
       const previousData = queryClient.getQueryData<{ execution: ExecutionWithDetails }>(['execution', executionId, 'details']);
 
@@ -106,7 +149,6 @@ export function ExecutionPage() {
       return { previousData };
     },
     onError: (_error, _variables, context) => {
-      // ロールバック
       if (context?.previousData) {
         queryClient.setQueryData(['execution', executionId, 'details'], context.previousData);
       }
@@ -194,7 +236,7 @@ export function ExecutionPage() {
     },
   });
 
-  // エビデンスアップロード（楽観的更新）
+  // エビデンスアップロード
   const uploadEvidenceMutation = useMutation({
     mutationFn: ({ expectedResultId, file, description }: { expectedResultId: string; file: File; description?: string }) =>
       executionsApi.uploadEvidence(executionId!, expectedResultId, file, description),
@@ -202,7 +244,6 @@ export function ExecutionPage() {
       setUploadingEvidenceResultId(expectedResultId);
     },
     onSuccess: (data, { expectedResultId }) => {
-      // キャッシュを更新
       const previousData = queryClient.getQueryData<{ execution: ExecutionWithDetails }>(['execution', executionId, 'details']);
       if (previousData) {
         queryClient.setQueryData(['execution', executionId, 'details'], {
@@ -305,7 +346,6 @@ export function ExecutionPage() {
     updateExpectedMutation.mutate({ resultId, status: current.status, note });
   };
 
-  // エビデンスハンドラー
   const handleEvidenceUpload = (expectedResultId: string, file: File, description?: string) => {
     uploadEvidenceMutation.mutate({ expectedResultId, file, description });
   };
@@ -318,7 +358,6 @@ export function ExecutionPage() {
     try {
       setDownloadingEvidenceId(evidenceId);
       const { downloadUrl } = await executionsApi.getEvidenceDownloadUrl(executionId!, evidenceId);
-      // 新しいタブでダウンロードURLを開く
       window.open(downloadUrl, '_blank');
     } catch {
       toast.error('ダウンロードURLの取得に失敗しました');
@@ -327,8 +366,37 @@ export function ExecutionPage() {
     }
   };
 
-  const execution = data?.execution;
+  // 選択中のテストケースを取得
+  const selectedTestCase = useMemo(() => {
+    if (!selectedTestCaseId || !execution?.executionTestSuite) return null;
+    return execution.executionTestSuite.testCases.find((tc) => tc.id === selectedTestCaseId) ?? null;
+  }, [selectedTestCaseId, execution?.executionTestSuite]);
 
+  // 選択中のテストケースに紐づく結果を取得
+  const selectedTestCaseResults = useMemo(() => {
+    if (!selectedTestCaseId || !execution) {
+      return { preconditionResults: [], stepResults: [], expectedResults: [] };
+    }
+    return {
+      preconditionResults: execution.preconditionResults.filter(
+        (r) => r.executionTestCaseId === selectedTestCaseId
+      ),
+      stepResults: execution.stepResults.filter(
+        (r) => r.executionTestCaseId === selectedTestCaseId
+      ),
+      expectedResults: execution.expectedResults.filter(
+        (r) => r.executionTestCaseId === selectedTestCaseId
+      ),
+    };
+  }, [selectedTestCaseId, execution]);
+
+  // スイートレベル前提条件（executionTestCaseId = null）
+  const suitePreconditionResults = useMemo(() => {
+    if (!execution) return [];
+    return execution.preconditionResults.filter((r) => r.executionTestCaseId === null);
+  }, [execution]);
+
+  // ローディング表示
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -337,6 +405,7 @@ export function ExecutionPage() {
     );
   }
 
+  // 実行が見つからない
   if (!execution) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -347,209 +416,82 @@ export function ExecutionPage() {
 
   // 編集可否判定
   const isEditable = execution.status === 'IN_PROGRESS';
-
-  // 正規化テストスイートデータ
   const executionTestSuite = execution.executionTestSuite;
 
-  // スイートレベル前提条件（executionTestCaseId = null）
-  const suitePreconditionResults = execution.preconditionResults.filter(
-    (r) => r.executionTestCaseId === null
-  );
-
-  // サマリー計算（期待結果から集計）
-  const passCount = execution.expectedResults.filter((r) => r.status === 'PASS').length;
-  const failCount = execution.expectedResults.filter((r) => r.status === 'FAIL').length;
-  const skippedCount = execution.expectedResults.filter(
-    (r) => r.status === 'SKIPPED' || r.status === 'NOT_EXECUTABLE'
-  ).length;
-  const pendingCount = execution.expectedResults.filter((r) => r.status === 'PENDING').length;
-
-  const statusIcon = {
-    IN_PROGRESS: <Clock className="w-5 h-5 text-warning" />,
-    COMPLETED: <CheckCircle2 className="w-5 h-5 text-success" />,
-    ABORTED: <AlertCircle className="w-5 h-5 text-danger" />,
-  };
-
-  const statusLabel = {
-    IN_PROGRESS: '実行中',
-    COMPLETED: '完了',
-    ABORTED: '中断',
-  };
+  // メインコンテンツの条件分岐
+  // テストケース未選択 → 概要パネル
+  // テストケース選択済み → 詳細パネル
+  if (!selectedTestCase) {
+    return (
+      <ExecutionOverviewPanel
+        execution={execution}
+        executionTestSuite={executionTestSuite}
+        suitePreconditionResults={suitePreconditionResults}
+        isEditable={isEditable}
+        onAbort={() => abortMutation.mutate()}
+        onComplete={() => completeMutation.mutate()}
+        isAborting={abortMutation.isPending}
+        isCompleting={completeMutation.isPending}
+        onPreconditionStatusChange={handlePreconditionStatusChange}
+        onPreconditionNoteChange={handlePreconditionNoteChange}
+        updatingPreconditionStatusId={updatingPreconditionStatusId}
+        updatingPreconditionNoteId={updatingPreconditionNoteId}
+      />
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      {/* ヘッダー */}
-      <div>
-        <Link
-          to={`/test-suites/${execution.testSuiteId}`}
-          className="inline-flex items-center gap-1 text-sm text-foreground-muted hover:text-foreground mb-4"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          テストスイートに戻る
-        </Link>
+    <>
+      <ExecutionTestCaseDetailPanel
+        testCase={selectedTestCase}
+        preconditionResults={selectedTestCaseResults.preconditionResults}
+        stepResults={selectedTestCaseResults.stepResults}
+        expectedResults={selectedTestCaseResults.expectedResults}
+        isEditable={isEditable}
+        updatingPreconditionStatusId={updatingPreconditionStatusId}
+        updatingPreconditionNoteId={updatingPreconditionNoteId}
+        updatingStepStatusId={updatingStepStatusId}
+        updatingStepNoteId={updatingStepNoteId}
+        updatingExpectedStatusId={updatingExpectedStatusId}
+        updatingExpectedNoteId={updatingExpectedNoteId}
+        onPreconditionStatusChange={handlePreconditionStatusChange}
+        onPreconditionNoteChange={handlePreconditionNoteChange}
+        onStepStatusChange={handleStepStatusChange}
+        onStepNoteChange={handleStepNoteChange}
+        onExpectedStatusChange={handleExpectedStatusChange}
+        onExpectedNoteChange={handleExpectedNoteChange}
+        uploadingEvidenceResultId={uploadingEvidenceResultId}
+        deletingEvidenceId={deletingEvidenceId}
+        downloadingEvidenceId={downloadingEvidenceId}
+        onEvidenceUpload={handleEvidenceUpload}
+        onEvidenceDelete={handleEvidenceDelete}
+        onEvidenceDownload={handleEvidenceDownload}
+        isPipSupported={isPipSupported}
+        isPipActive={isPipActive}
+        onOpenPip={openPip}
+      />
 
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-background-tertiary flex items-center justify-center">
-              <Play className="w-6 h-6 text-foreground-muted" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-foreground">{executionTestSuite?.name ?? 'テスト実行'}</h1>
-                <span className="flex items-center gap-1 badge">
-                  {statusIcon[execution.status]}
-                  {statusLabel[execution.status]}
-                </span>
-              </div>
-              <p className="text-foreground-muted">
-                開始: {new Date(execution.startedAt).toLocaleString('ja-JP')}
-                {execution.completedAt && (
-                  <> / 終了: {new Date(execution.completedAt).toLocaleString('ja-JP')}</>
-                )}
-                {execution.environment && (
-                  <> / 環境: {execution.environment.name}</>
-                )}
-              </p>
-            </div>
-          </div>
-
-          {execution.status === 'IN_PROGRESS' && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => abortMutation.mutate()}
-                disabled={abortMutation.isPending}
-                className="btn btn-danger"
-              >
-                <Square className="w-4 h-4" />
-                中止
-              </button>
-              <button
-                onClick={() => completeMutation.mutate()}
-                disabled={completeMutation.isPending}
-                className="btn btn-primary"
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                完了
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* 実行サマリー */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <SummaryCard
-          icon={CheckCircle2}
-          label="成功"
-          value={passCount}
-          color="success"
+      {/* Picture-in-Picture ポータル */}
+      <PipPortal pipWindow={pipWindow}>
+        <PipExecutionPanel
+          pipWindow={pipWindow}
+          testCaseTitle={selectedTestCase.title}
+          steps={selectedTestCase.steps}
+          expectedResults={selectedTestCase.expectedResults}
+          stepResults={selectedTestCaseResults.stepResults}
+          expectedResultResults={selectedTestCaseResults.expectedResults}
+          isEditable={isEditable}
+          updatingStepStatusId={updatingStepStatusId}
+          updatingStepNoteId={updatingStepNoteId}
+          updatingExpectedStatusId={updatingExpectedStatusId}
+          updatingExpectedNoteId={updatingExpectedNoteId}
+          onStepStatusChange={handleStepStatusChange}
+          onStepNoteChange={handleStepNoteChange}
+          onExpectedStatusChange={handleExpectedStatusChange}
+          onExpectedNoteChange={handleExpectedNoteChange}
+          onClose={closePip}
         />
-        <SummaryCard
-          icon={XCircle}
-          label="失敗"
-          value={failCount}
-          color="danger"
-        />
-        <SummaryCard
-          icon={Ban}
-          label="スキップ"
-          value={skippedCount}
-          color="warning"
-        />
-        <SummaryCard
-          icon={Clock}
-          label="未実行"
-          value={pendingCount}
-          color="muted"
-        />
-      </div>
-
-      {/* スイートレベル前提条件 */}
-      {executionTestSuite && executionTestSuite.preconditions.length > 0 && (
-        <div className="card p-4">
-          <ExecutionPreconditionList
-            preconditions={executionTestSuite.preconditions}
-            results={suitePreconditionResults}
-            isEditable={isEditable}
-            updatingStatusId={updatingPreconditionStatusId}
-            updatingNoteId={updatingPreconditionNoteId}
-            onStatusChange={handlePreconditionStatusChange}
-            onNoteChange={handlePreconditionNoteChange}
-            title="スイート前提条件"
-          />
-        </div>
-      )}
-
-      {/* テストケース一覧 */}
-      <div className="card">
-        <div className="p-4 border-b border-border">
-          <h2 className="font-semibold text-foreground">テストケース</h2>
-        </div>
-        <div className="p-4">
-          <ExecutionTestCaseList
-            testCases={executionTestSuite?.testCases ?? []}
-            allPreconditionResults={execution.preconditionResults}
-            allStepResults={execution.stepResults}
-            allExpectedResults={execution.expectedResults}
-            isEditable={isEditable}
-            updatingPreconditionStatusId={updatingPreconditionStatusId}
-            updatingPreconditionNoteId={updatingPreconditionNoteId}
-            updatingStepStatusId={updatingStepStatusId}
-            updatingStepNoteId={updatingStepNoteId}
-            updatingExpectedStatusId={updatingExpectedStatusId}
-            updatingExpectedNoteId={updatingExpectedNoteId}
-            onPreconditionStatusChange={handlePreconditionStatusChange}
-            onPreconditionNoteChange={handlePreconditionNoteChange}
-            onStepStatusChange={handleStepStatusChange}
-            onStepNoteChange={handleStepNoteChange}
-            onExpectedStatusChange={handleExpectedStatusChange}
-            onExpectedNoteChange={handleExpectedNoteChange}
-            uploadingEvidenceResultId={uploadingEvidenceResultId}
-            deletingEvidenceId={deletingEvidenceId}
-            downloadingEvidenceId={downloadingEvidenceId}
-            onEvidenceUpload={handleEvidenceUpload}
-            onEvidenceDelete={handleEvidenceDelete}
-            onEvidenceDownload={handleEvidenceDownload}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/**
- * サマリーカード
- */
-function SummaryCard({
-  icon: Icon,
-  label,
-  value,
-  color,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: number;
-  color: 'success' | 'danger' | 'warning' | 'muted';
-}) {
-  // ガイドライン準拠: subtle背景を使用
-  const colorClasses = {
-    success: 'bg-success-subtle text-success',
-    danger: 'bg-danger-subtle text-danger',
-    warning: 'bg-warning-subtle text-warning',
-    muted: 'bg-background-tertiary text-foreground-muted',
-  };
-
-  return (
-    <div className="card p-4">
-      <div className="flex items-center gap-3">
-        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${colorClasses[color]}`}>
-          <Icon className="w-5 h-5" />
-        </div>
-        <div>
-          <p className="text-2xl font-bold text-foreground">{value}</p>
-          <p className="text-sm text-foreground-muted">{label}</p>
-        </div>
-      </div>
-    </div>
+      </PipPortal>
+    </>
   );
 }
