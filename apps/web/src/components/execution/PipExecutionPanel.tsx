@@ -67,13 +67,12 @@ function PipStatusButtons<T extends string>({
           <button
             key={option.value}
             onClick={() => onChange(option.value)}
-            className={`
-              flex items-center gap-1 px-2 py-1 text-xs rounded border transition-colors
-              ${isSelected
+            className={[
+              'flex items-center gap-1 px-2 py-1 text-xs rounded border transition-colors',
+              isSelected
                 ? `${option.config.bgClass} border-current ${option.config.colorClass}`
-                : 'bg-background border-border text-foreground-muted hover:bg-background-tertiary'
-              }
-            `}
+                : 'bg-background border-border text-foreground-muted hover:bg-background-tertiary',
+            ].join(' ')}
             aria-pressed={isSelected}
           >
             <IconComponent className="w-3 h-3" />
@@ -105,6 +104,8 @@ interface NavigableItem {
 interface PipExecutionPanelProps {
   /** PiPウィンドウへの参照（キーボードイベント登録用） */
   pipWindow: Window | null;
+  /** テストケースID（切り替え検知用） */
+  testCaseId: string;
   /** テストケースタイトル */
   testCaseTitle: string;
   /** スイートレベル前提条件スナップショット */
@@ -166,6 +167,7 @@ interface PipExecutionPanelProps {
  */
 export function PipExecutionPanel({
   pipWindow,
+  testCaseId,
   testCaseTitle,
   suitePreconditions,
   casePreconditions,
@@ -274,7 +276,7 @@ export function PipExecutionPanel({
   // テストケースが切り替わったらcurrentIndexをリセット
   useEffect(() => {
     setCurrentIndex(0);
-  }, [testCaseTitle]);
+  }, [testCaseId]);
 
   // navigableItems が変更された時に currentIndex が範囲外にならないよう調整
   useEffect(() => {
