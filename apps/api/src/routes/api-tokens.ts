@@ -17,6 +17,13 @@ const createTokenBodySchema = z.object({
 });
 
 /**
+ * トークンIDパラメータのスキーマ
+ */
+const tokenIdParamsSchema = z.object({
+  id: z.string().uuid('無効なトークンIDです'),
+});
+
+/**
  * APIトークン一覧を取得
  * GET /api/api-tokens
  */
@@ -98,7 +105,17 @@ router.post('/', requireAuth(authConfig), async (req: Request, res: Response, ne
  */
 router.delete('/:id', requireAuth(authConfig), async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { id } = req.params;
+    // パラメータ検証
+    const parseResult = tokenIdParamsSchema.safeParse(req.params);
+    if (!parseResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: '無効なトークンIDです',
+      });
+      return;
+    }
+
+    const { id } = parseResult.data;
     const userId = req.user!.id;
 
     await apiTokenService.revokeToken(id, userId);

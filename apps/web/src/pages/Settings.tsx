@@ -1078,7 +1078,7 @@ function TokenItem({
                 <span>最終使用: {formatRelativeTime(token.lastUsedAt)}</span>
               </>
             )}
-            {token.expiresAt && (
+            {!isRevoked && token.expiresAt && (
               <>
                 <span>•</span>
                 <span className={new Date(token.expiresAt) < new Date() ? 'text-danger' : ''}>
