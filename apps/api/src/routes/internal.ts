@@ -1345,6 +1345,7 @@ router.post('/api-token/validate', async (req: Request, res: Response, next: Nex
       userId: result.userId,
       organizationId: result.organizationId,
       scopes: result.scopes,
+      tokenId: result.tokenId,
     });
   } catch (error) {
     next(error);

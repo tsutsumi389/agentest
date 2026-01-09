@@ -1,11 +1,16 @@
 import { createHash, randomBytes } from 'crypto';
-import { NotFoundError, AuthorizationError } from '@agentest/shared';
+import { NotFoundError, AuthorizationError, ValidationError } from '@agentest/shared';
 import { ApiTokenRepository } from '../repositories/api-token.repository.js';
 
 /**
  * APIキーのプレフィックス
  */
 const TOKEN_PREFIX = 'agentest_';
+
+/**
+ * トークンの最小長（プレフィックス + Base64URL 32バイト = 9 + 43 = 52文字）
+ */
+const MIN_TOKEN_LENGTH = TOKEN_PREFIX.length + 32;
 
 /**
  * APIトークンサービス
@@ -42,8 +47,8 @@ export class ApiTokenService {
     scopes?: string[];
     tokenId?: string;
   }> {
-    // プレフィックスチェック
-    if (!rawToken.startsWith(TOKEN_PREFIX)) {
+    // プレフィックスと最小長チェック（不正なトークンでのDB検索を回避）
+    if (!rawToken.startsWith(TOKEN_PREFIX) || rawToken.length < MIN_TOKEN_LENGTH) {
       return { valid: false };
     }
 
@@ -101,7 +106,7 @@ export class ApiTokenService {
   }> {
     // ユーザーまたは組織のどちらかが必須
     if (!params.userId && !params.organizationId) {
-      throw new Error('userId or organizationId is required');
+      throw new ValidationError('userId or organizationId is required');
     }
 
     // 生トークンを生成
@@ -153,7 +158,7 @@ export class ApiTokenService {
 
     // 既に失効済みの場合はエラー
     if (apiToken.revokedAt) {
-      throw new Error('このAPIキーは既に失効しています');
+      throw new ValidationError('このAPIキーは既に失効しています');
     }
 
     await this.tokenRepo.revoke(id);
