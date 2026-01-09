@@ -10,6 +10,8 @@ declare global {
       token?: JwtPayload;
       /** OAuth スコープ一覧 */
       oauthScopes?: string[];
+      /** 認証方式 */
+      authType?: 'oauth' | 'api-key' | 'cookie';
     }
   }
 }

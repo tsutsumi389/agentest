@@ -1369,3 +1369,47 @@ export const getTestCaseComments = (testCaseId: string, params?: ReviewCommentSe
     `/api/test-cases/${testCaseId}/comments${queryString ? `?${queryString}` : ''}`
   );
 };
+
+// ============================================
+// APIトークン関連型定義
+// ============================================
+
+/** APIトークン */
+export interface ApiToken {
+  id: string;
+  name: string;
+  tokenPrefix: string;
+  scopes: string[];
+  expiresAt: string | null;
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+}
+
+/** 新規作成されたAPIトークン（生トークン含む） */
+export interface CreatedApiToken extends ApiToken {
+  rawToken: string;
+}
+
+/** APIトークン作成リクエスト */
+export interface CreateApiTokenRequest {
+  name: string;
+  expiresInDays?: number;
+}
+
+// ============================================
+// APIトークンAPI
+// ============================================
+
+export const apiTokensApi = {
+  // トークン一覧を取得
+  list: () => api.get<{ tokens: ApiToken[] }>('/api/api-tokens'),
+
+  // トークンを作成
+  create: (data: CreateApiTokenRequest) =>
+    api.post<{ token: CreatedApiToken }>('/api/api-tokens', data),
+
+  // トークンを失効
+  revoke: (tokenId: string) =>
+    api.delete<{ success: boolean }>(`/api/api-tokens/${tokenId}`),
+};

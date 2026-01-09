@@ -190,7 +190,166 @@ const response = await fetch('/api/v1/auth/refresh', {
 const { data: { accessToken } } = await response.json();
 ```
 
+## APIキー認証
+
+MCP サーバーへのアクセスに使用できる API キー認証。OAuth 2.1 に対応していない Coding Agent（Claude Code 等）向け。
+
+### 認証ヘッダー
+
+```
+X-API-Key: agentest_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+### 認証優先順位
+
+MCPサーバーでは以下の優先順位で認証を行う：
+
+1. **OAuth Bearer Token** - `Authorization: Bearer <token>`
+2. **API キー** - `X-API-Key: agentest_...`
+3. **Cookie JWT** - `access_token` Cookie
+
+### 特徴
+
+- ユーザーと同等の権限（フルアクセス）
+- 有効期限設定可能（または無期限）
+- WebUI から管理可能
+- 最終使用日時を記録
+
+詳細は [認証機能](../architecture/features/authentication.md#apiキー認証) を参照。
+
+---
+
+## APIキー管理エンドポイント
+
+WebUI でのAPIキー管理用エンドポイント。
+
+### APIキー一覧取得
+
+```
+GET /api/api-tokens
+```
+
+認証中のユーザーが発行した API キー一覧を取得。
+
+**Headers:**
+
+```
+Authorization: Bearer <access_token>
+```
+
+**Response:**
+
+```json
+{
+  "data": [
+    {
+      "id": "uuid-1234",
+      "name": "Claude Code Token",
+      "tokenPrefix": "agentest_x",
+      "scopes": ["*"],
+      "expiresAt": "2025-12-31T23:59:59Z",
+      "lastUsedAt": "2025-01-15T12:00:00Z",
+      "revokedAt": null,
+      "createdAt": "2025-01-01T00:00:00Z"
+    }
+  ]
+}
+```
+
+---
+
+### APIキー作成
+
+```
+POST /api/api-tokens
+```
+
+新しい API キーを作成。生トークンは作成直後の1回のみ取得可能。
+
+**Headers:**
+
+```
+Authorization: Bearer <access_token>
+```
+
+**Request:**
+
+```json
+{
+  "name": "Claude Code Token",
+  "expiresInDays": 90
+}
+```
+
+| パラメータ | 必須 | 説明 |
+|-----------|------|------|
+| `name` | Yes | トークン名（1-100文字） |
+| `expiresInDays` | No | 有効期限（日数）。省略時は無期限 |
+
+**Response:**
+
+```json
+{
+  "data": {
+    "id": "uuid-1234",
+    "name": "Claude Code Token",
+    "tokenPrefix": "agentest_x",
+    "rawToken": "agentest_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+    "scopes": ["*"],
+    "expiresAt": "2025-04-01T00:00:00Z",
+    "createdAt": "2025-01-01T00:00:00Z"
+  }
+}
+```
+
+**重要:** `rawToken` は作成時の1回のみ返却される。以後は取得不可。
+
+---
+
+### APIキー失効
+
+```
+DELETE /api/api-tokens/:id
+```
+
+指定した API キーを即時無効化。
+
+**Headers:**
+
+```
+Authorization: Bearer <access_token>
+```
+
+**Path Parameters:**
+
+| パラメータ | 説明 |
+|-----------|------|
+| `id` | API キー ID |
+
+**Response:**
+
+```json
+{
+  "data": {
+    "message": "Token revoked successfully"
+  }
+}
+```
+
+**Errors:**
+
+| コード | 説明 |
+|-------|------|
+| 400 | 無効なトークンID |
+| 401 | 認証が必要 |
+| 403 | 他ユーザーのトークン |
+| 404 | トークンが存在しない |
+
+---
+
 ## 関連ドキュメント
 
 - [API 設計方針](../architecture/api-design.md)
 - [ユーザー API](./users.md)
+- [APIトークン データベース設計](../architecture/database/api-token.md)
+- [認証機能](../architecture/features/authentication.md)

@@ -8,6 +8,7 @@ import { InternalAuthorizationService } from '../services/internal-authorization
 import { TestSuiteService } from '../services/test-suite.service.js';
 import { TestCaseService } from '../services/test-case.service.js';
 import { ExecutionService } from '../services/execution.service.js';
+import { ApiTokenService } from '../services/api-token.service.js';
 import { isAllowedMimeType, MAX_FILE_SIZE } from '../config/upload.js';
 
 const router: RouterType = Router();
@@ -16,6 +17,7 @@ const authService = new InternalAuthorizationService();
 const testSuiteService = new TestSuiteService();
 const testCaseService = new TestCaseService();
 const executionService = new ExecutionService();
+const apiTokenService = new ApiTokenService();
 
 // 全エンドポイントに内部API認証を適用
 router.use(requireInternalApiAuth());
@@ -1303,6 +1305,47 @@ router.post('/executions/:executionId/expected-results/:expectedResultId/evidenc
         uploadedByUserId: evidence.uploadedByUserId,
         createdAt: evidence.createdAt.toISOString(),
       },
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * APIトークン検証リクエストボディのスキーマ
+ */
+const validateApiTokenBodySchema = z.object({
+  token: z.string().min(1),
+});
+
+/**
+ * POST /internal/api/api-token/validate
+ * APIキーを検証（MCP内部通信用）
+ */
+router.post('/api-token/validate', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    // ボディ検証
+    const bodyResult = validateApiTokenBodySchema.safeParse(req.body);
+    if (!bodyResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid request body',
+        details: bodyResult.error.flatten(),
+      });
+      return;
+    }
+
+    const { token } = bodyResult.data;
+
+    // トークン検証
+    const result = await apiTokenService.validateToken(token);
+
+    res.json({
+      valid: result.valid,
+      userId: result.userId,
+      organizationId: result.organizationId,
+      scopes: result.scopes,
+      tokenId: result.tokenId,
     });
   } catch (error) {
     next(error);
