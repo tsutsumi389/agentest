@@ -112,7 +112,8 @@ export class ApiTokenService {
     // 生トークンを生成
     const rawToken = this.generateRawToken();
     const tokenHash = this.hashToken(rawToken);
-    const tokenPrefix = rawToken.slice(0, 12); // agentest_xxx
+    // DBのtokenPrefixカラムはVarChar(10)
+    const tokenPrefix = rawToken.slice(0, 10); // agentest_x
 
     // スコープのデフォルト値（フルアクセス）
     const scopes = params.scopes ?? ['*'];
