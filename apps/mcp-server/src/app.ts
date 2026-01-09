@@ -36,6 +36,7 @@ export function createApp(): Express {
       'X-MCP-Client-Name',
       'X-MCP-Project-Id',
       'Mcp-Session-Id',
+      'X-API-Key',
     ],
     exposedHeaders: ['Mcp-Session-Id'],
   }));

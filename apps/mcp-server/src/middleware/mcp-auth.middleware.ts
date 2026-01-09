@@ -81,6 +81,7 @@ export function mcpAuthenticate() {
       // リクエストにユーザー情報を設定
       req.user = user;
       req.token = payload;
+      req.authType = 'cookie';
 
       next();
     } catch (error) {
