@@ -1,5 +1,7 @@
 # MCPサーバー APIキー認証機能追加
 
+> **✅ 実装完了** - 2025年1月
+
 ## 概要
 OAuth 2.1に対応していないcoding agent（Claude Code等）をサポートするため、MCPサーバーにAPIキー認証を追加する。
 
@@ -11,7 +13,7 @@ OAuth 2.1に対応していないcoding agent（Claude Code等）をサポート
 
 ## 実装計画
 
-### Phase 1: API側 - APIキー検証エンドポイント
+### Phase 1: API側 - APIキー検証エンドポイント ✅
 
 #### 1.1 APIトークンリポジトリ作成
 **新規**: `apps/api/src/repositories/api-token.repository.ts`
@@ -39,7 +41,7 @@ POST /internal/api-token/validate
 
 **新規**: `apps/api/src/controllers/api-token.controller.ts`
 
-### Phase 2: MCP側 - APIキー認証ミドルウェア
+### Phase 2: MCP側 - APIキー認証ミドルウェア ✅
 
 #### 2.1 APIキー認証サービス
 **新規**: `apps/mcp-server/src/services/api-key-auth.service.ts`
@@ -62,7 +64,7 @@ POST /internal/api-token/validate
 **修正**: `apps/mcp-server/src/app.ts`
 - `Access-Control-Allow-Headers` に `X-API-Key` 追加
 
-### Phase 3: WebUI - APIキー管理機能
+### Phase 3: WebUI - APIキー管理機能 ✅
 
 #### 3.1 APIキー管理エンドポイント
 **新規**: `apps/api/src/routes/api-tokens.ts`
@@ -79,7 +81,7 @@ DELETE /api/api-tokens/:id   - APIキー失効
 - 作成直後のトークン表示（一度のみ）
 - 削除確認ダイアログ
 
-### Phase 4: 型定義・テスト
+### Phase 4: 型定義・テスト ✅
 
 #### 4.1 型定義拡張
 **修正**: `apps/mcp-server/src/types/express.d.ts`

@@ -79,6 +79,16 @@ Authorization: Bearer <access_token>
 
 → [OAuth 連携 API 詳細](./accounts.md)
 
+### API トークン管理
+
+| メソッド | パス | 説明 |
+|---------|------|------|
+| GET | `/api-tokens` | API トークン一覧 |
+| POST | `/api-tokens` | API トークン作成 |
+| DELETE | `/api-tokens/:id` | API トークン失効 |
+
+→ [認証 API 詳細](./auth.md#apiキー管理エンドポイント)
+
 ### 組織
 
 | メソッド | パス | 説明 |

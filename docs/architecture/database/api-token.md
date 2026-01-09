@@ -17,7 +17,7 @@ API トークンを管理するテーブル。
 | `organizationId` | UUID | YES | NULL | 組織 ID（外部キー）※1 |
 | `name` | VARCHAR(100) | NO | - | トークン名（識別用） |
 | `tokenHash` | VARCHAR(64) | NO | - | トークンハッシュ（SHA-256） |
-| `tokenPrefix` | VARCHAR(8) | NO | - | トークンプレフィックス（表示用） |
+| `tokenPrefix` | VARCHAR(10) | NO | - | トークンプレフィックス（表示用、例: `agentest_x`） |
 | `scopes` | TEXT[] | NO | - | 権限スコープ配列 |
 | `expiresAt` | TIMESTAMP | YES | NULL | 有効期限（NULL は無期限） |
 | `lastUsedAt` | TIMESTAMP | YES | NULL | 最終使用日時 |
@@ -28,9 +28,14 @@ API トークンを管理するテーブル。
 
 ### トークン形式
 
-- ランダム 32 バイト
-- SHA-256 でハッシュ化して保存
-- プレフィックス（先頭8文字）は平文で保存（識別用）
+```
+agentest_<32バイトのBase64URL>
+```
+
+- **プレフィックス**: `agentest_`（識別用、固定）
+- **ボディ**: 32 バイトのランダム値を Base64URL エンコード
+- **保存**: SHA-256 ハッシュ値を `tokenHash` に保存
+- **表示用プレフィックス**: 先頭 10 文字（例: `agentest_x`）を `tokenPrefix` に平文保存
 
 ### API トークンスコープ
 
@@ -61,7 +66,7 @@ model ApiToken {
   organizationId String?   @db.Uuid
   name           String    @db.VarChar(100)
   tokenHash      String    @unique @db.VarChar(64)
-  tokenPrefix    String    @db.VarChar(8)
+  tokenPrefix    String    @db.VarChar(10)
   scopes         String[]
   expiresAt      DateTime?
   lastUsedAt     DateTime?

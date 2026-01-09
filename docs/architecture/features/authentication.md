@@ -17,6 +17,9 @@
 | AUTH-007 | MCP OAuth 2.1認証 | MCPクライアント向けOAuth 2.1認証フロー | 実装済 |
 | AUTH-008 | 動的クライアント登録 | MCPクライアントの動的登録（RFC 7591） | 実装済 |
 | AUTH-009 | トークンイントロスペクション | アクセストークンの検証 | 実装済 |
+| AUTH-010 | APIキー認証 | X-API-Keyヘッダーによる認証（MCP向け） | 実装済 |
+| AUTH-011 | APIキー管理 | APIキーの作成・一覧・失効 | 実装済 |
+| AUTH-012 | ハイブリッド認証 | OAuth/APIキー/Cookieの優先順位付き認証 | 実装済 |
 
 ## 画面仕様
 
@@ -353,6 +356,80 @@ erDiagram
     }
 ```
 
+## APIキー認証
+
+OAuth 2.1 に対応していない Coding Agent（Claude Code 等）向けの API キー認証機能。
+
+### 概要
+
+- **対象**: MCP サーバーへのアクセス
+- **ヘッダー**: `X-API-Key` ヘッダーを使用
+- **権限**: フルアクセス（ユーザーと同等の権限）
+- **フォーマット**: `agentest_<32バイトのBase64URL>`
+
+### 認証優先順位（ハイブリッド認証）
+
+MCP サーバーでは以下の優先順位で認証を行う：
+
+1. **OAuth Bearer Token** - `Authorization: Bearer <token>` があれば OAuth 2.1 認証
+2. **API キー** - `X-API-Key: agentest_...` があれば API キー認証
+3. **Cookie JWT** - 上記がなければ Cookie 認証（フォールバック）
+
+### APIキー管理画面
+
+- **URL**: `/settings`（API キータブ）
+- **表示要素**
+  - API キー一覧（名前、プレフィックス、作成日、最終使用日、有効期限）
+  - 「新規作成」ボタン
+  - 各キーの「失効」ボタン
+- **操作**
+  - 新規作成 → 名前と有効期限を入力 → 生成されたトークンを表示（1回のみ）
+  - 失効 → 確認ダイアログ → 即時無効化
+
+### APIキー認証フロー
+
+```mermaid
+sequenceDiagram
+    participant C as Claude Code
+    participant M as MCP Server
+    participant A as API Server
+    participant DB as Database
+
+    C->>M: POST /mcp (X-API-Key: agentest_xxx)
+    M->>M: プレフィックス検証 (agentest_)
+    M->>A: POST /internal/api/api-token/validate
+    A->>A: SHA-256ハッシュ化
+    A->>DB: トークン検索 (ハッシュ照合)
+    A->>A: 有効性検証 (期限、失効、ユーザー状態)
+    A->>M: { valid: true, userId, scopes }
+    M->>M: req.user, req.authType 設定
+    M->>C: MCP response
+```
+
+### セキュリティ考慮事項
+
+- **ハッシュ保存**: 生トークンは保存せず、SHA-256 ハッシュのみ保存
+- **1回限りの表示**: 作成直後の 1 回のみ生トークンを返却
+- **最終使用日時**: トークン使用時に自動更新（不正利用検知に活用）
+- **即時失効**: 失効操作で即座に無効化
+
+### 使用例（Claude Code 設定）
+
+```json
+{
+  "mcpServers": {
+    "agentest": {
+      "url": "https://mcp.example.com/mcp",
+      "headers": {
+        "X-API-Key": "agentest_xxxxxxxxxxxxx",
+        "X-MCP-Client-Id": "claude-code-user123",
+        "X-MCP-Project-Id": "project-uuid"
+      }
+    }
+  }
+}
+```
+
 ## 関連機能
 
 - [ユーザー管理](./user-management.md) - OAuth連携の追加・解除
@@ -360,3 +437,5 @@ erDiagram
 - [MCP連携](./mcp-integration.md) - MCP認証フローの詳細
 - [OAuth 2.1 API](../../api/oauth.md) - APIリファレンス
 - [OAuth 2.1データベース設計](../database/oauth.md) - テーブル定義
+- [APIトークン データベース設計](../database/api-token.md) - APIトークンテーブル定義
+- [認証 API](../../api/auth.md) - APIキー管理エンドポイント
