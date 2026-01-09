@@ -6,7 +6,9 @@ import { env } from '../config/env.js';
 const TOKEN_PREFIX = 'agentest_';
 
 /**
- * トークンの最小長（プレフィックス + Base64URL 32バイト = 9 + 32 = 41文字）
+ * トークンの最小長
+ * プレフィックス(9文字) + Base64URL 32バイト(約43文字) = 約52文字
+ * 余裕を持って32文字以上を要求
  */
 const MIN_TOKEN_LENGTH = TOKEN_PREFIX.length + 32;
 

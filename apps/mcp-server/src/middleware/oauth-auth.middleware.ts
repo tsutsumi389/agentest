@@ -4,21 +4,8 @@ import { env } from '../config/env.js';
 import { tokenIntrospectionService } from '../services/token-introspection.service.js';
 import { mcpApiKeyAuthenticate, hasApiKeyHeader } from './api-key-auth.middleware.js';
 
-/**
- * サポートするスコープ一覧
- */
-export const SUPPORTED_SCOPES = [
-  'mcp:read',
-  'mcp:write',
-  'project:read',
-  'project:write',
-  'test-suite:read',
-  'test-suite:write',
-  'test-case:read',
-  'test-case:write',
-  'execution:read',
-  'execution:write',
-] as const;
+// 後方互換性のため再エクスポート
+export { SUPPORTED_SCOPES } from '../config/scopes.js';
 
 /**
  * MCP OAuth 2.1 Bearer Token認証ミドルウェア

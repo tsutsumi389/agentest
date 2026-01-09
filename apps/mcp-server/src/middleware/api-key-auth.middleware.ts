@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { prisma } from '@agentest/db';
 import { apiKeyAuthService } from '../services/api-key-auth.service.js';
 import { env } from '../config/env.js';
+import { SUPPORTED_SCOPES } from '../config/scopes.js';
 
 /**
  * X-API-Key ヘッダー名
@@ -45,7 +46,7 @@ export function mcpApiKeyAuthenticate() {
       req.user = user;
       // APIキーのスコープを設定（'*'はフルアクセスとして扱う）
       req.oauthScopes = result.scopes?.includes('*')
-        ? ['mcp:read', 'mcp:write', 'project:read', 'project:write', 'test-suite:read', 'test-suite:write', 'test-case:read', 'test-case:write', 'execution:read', 'execution:write']
+        ? [...SUPPORTED_SCOPES]
         : result.scopes;
       // 認証タイプを設定
       req.authType = 'api-key';
