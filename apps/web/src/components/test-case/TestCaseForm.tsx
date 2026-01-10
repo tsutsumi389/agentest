@@ -229,10 +229,10 @@ export function TestCaseForm({
   const copyMutation = useMutation({
     mutationFn: (data: { sourceTestCaseId: string; title: string; targetTestSuiteId: string }) =>
       testCasesApi.copy(data.sourceTestCaseId, { title: data.title, targetTestSuiteId: data.targetTestSuiteId }),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
       toast.success('テストケースをコピーしました');
-      onSave();
+      onSave(data.testCase.id);
     },
     onError: (err) => {
       if (err instanceof ApiError) {
