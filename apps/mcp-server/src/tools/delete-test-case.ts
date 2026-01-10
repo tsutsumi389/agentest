@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { ToolHandler, ToolDefinition } from './index.js';
-import { apiClient } from '../clients/api-client.js';
+import { apiClient, checkLockStatus } from '../clients/api-client.js';
 
 /**
  * 入力スキーマ
@@ -30,6 +30,9 @@ const deleteTestCaseHandler: ToolHandler<DeleteTestCaseInput, DeleteTestCaseResp
   }
 
   const { testCaseId } = input;
+
+  // 楽観的ロック確認：人間がロック中なら削除拒否
+  await checkLockStatus('CASE', testCaseId);
 
   // 内部APIを呼び出し
   const response = await apiClient.delete<DeleteTestCaseResponse>(

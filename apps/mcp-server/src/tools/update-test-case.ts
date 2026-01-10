@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { ToolHandler, ToolDefinition } from './index.js';
-import { apiClient } from '../clients/api-client.js';
+import { apiClient, checkLockStatus } from '../clients/api-client.js';
 
 /**
  * 子エンティティ更新用スキーマ（idあり→更新、idなし→新規作成）
@@ -70,6 +70,9 @@ const updateTestCaseHandler: ToolHandler<UpdateTestCaseInput, UpdateTestCaseResp
   if (Object.keys(updateData).length === 0) {
     throw new Error('少なくとも1つの更新フィールドを指定してください');
   }
+
+  // 楽観的ロック確認：人間がロック中なら更新拒否
+  await checkLockStatus('CASE', testCaseId);
 
   // 内部APIを呼び出し（子エンティティの差分更新含む）
   const response = await apiClient.patch<UpdateTestCaseResponse>(

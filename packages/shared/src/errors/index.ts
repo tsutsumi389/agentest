@@ -79,6 +79,43 @@ export class ConflictError extends AppError {
   }
 }
 
+/**
+ * ロック保持者の情報
+ * ユーザーまたはエージェントがロックを保持できる
+ */
+export interface LockHolder {
+  type: 'user' | 'agent';
+  id: string;
+  name: string;
+}
+
+/**
+ * ロック競合エラー
+ * リソースが既に他のユーザーによってロックされている場合に使用
+ */
+export class LockConflictError extends AppError {
+  public readonly lockedBy: LockHolder;
+  public readonly expiresAt: Date;
+
+  constructor(lockedBy: LockHolder, expiresAt: Date) {
+    super(409, 'LOCK_CONFLICT', 'Resource is already locked');
+    this.lockedBy = lockedBy;
+    this.expiresAt = expiresAt;
+  }
+
+  toJSON() {
+    return {
+      error: {
+        code: this.code,
+        message: this.message,
+        statusCode: this.statusCode,
+        lockedBy: this.lockedBy,
+        expiresAt: this.expiresAt.toISOString(),
+      },
+    };
+  }
+}
+
 export class RateLimitError extends AppError {
   public readonly retryAfter: number;
 
