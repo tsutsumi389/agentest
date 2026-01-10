@@ -1,6 +1,7 @@
 import { createApp } from './app.js';
 import { env } from './config/env.js';
 import { prisma } from '@agentest/db';
+import { startLockCleanupJob, stopLockCleanupJob } from './jobs/lock-cleanup.job.js';
 
 /**
  * サーバー起動
@@ -17,6 +18,9 @@ async function main() {
 
   const app = createApp();
 
+  // ロッククリーンアップジョブを開始
+  const lockCleanupJobId = startLockCleanupJob();
+
   // サーバー起動
   const server = app.listen(env.PORT, env.HOST, () => {
     console.log(`🚀 APIサーバーが起動しました: http://${env.HOST}:${env.PORT}`);
@@ -26,6 +30,9 @@ async function main() {
   // グレースフルシャットダウン
   const shutdown = async (signal: string) => {
     console.log(`\n${signal} を受信しました。シャットダウンを開始します...`);
+
+    // ジョブを停止
+    stopLockCleanupJob(lockCleanupJobId);
 
     server.close(async () => {
       console.log('HTTPサーバーを終了しました');

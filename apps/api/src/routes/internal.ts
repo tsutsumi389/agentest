@@ -9,6 +9,7 @@ import { TestSuiteService } from '../services/test-suite.service.js';
 import { TestCaseService } from '../services/test-case.service.js';
 import { ExecutionService } from '../services/execution.service.js';
 import { ApiTokenService } from '../services/api-token.service.js';
+import { EditLockService } from '../services/edit-lock.service.js';
 import { isAllowedMimeType, MAX_FILE_SIZE } from '../config/upload.js';
 
 const router: RouterType = Router();
@@ -18,6 +19,7 @@ const testSuiteService = new TestSuiteService();
 const testCaseService = new TestCaseService();
 const executionService = new ExecutionService();
 const apiTokenService = new ApiTokenService();
+const editLockService = new EditLockService();
 
 // 全エンドポイントに内部API認証を適用
 router.use(requireInternalApiAuth());
@@ -1347,6 +1349,57 @@ router.post('/api-token/validate', async (req: Request, res: Response, next: Nex
       scopes: result.scopes,
       tokenId: result.tokenId,
     });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * ロック状態確認クエリパラメータのスキーマ
+ */
+const getLockStatusQuerySchema = z.object({
+  targetType: z.enum(['SUITE', 'CASE']),
+  targetId: z.string().uuid(),
+});
+
+/**
+ * GET /internal/api/locks
+ * ロック状態を確認（MCP楽観的ロック確認用）
+ */
+router.get('/locks', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const parseResult = getLockStatusQuerySchema.safeParse(req.query);
+    if (!parseResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid query parameters',
+        details: parseResult.error.flatten(),
+      });
+      return;
+    }
+
+    const { targetType, targetId } = parseResult.data;
+
+    // ロック状態を確認
+    const status = await editLockService.getLockStatus(targetType, targetId);
+
+    if (status.lock) {
+      res.json({
+        isLocked: true,
+        lock: {
+          id: status.lock.id,
+          targetType: status.lock.targetType,
+          targetId: status.lock.targetId,
+          lockedBy: status.lock.lockedBy,
+          expiresAt: status.lock.expiresAt.toISOString(),
+        },
+      });
+    } else {
+      res.json({
+        isLocked: false,
+        lock: null,
+      });
+    }
   } catch (error) {
     next(error);
   }

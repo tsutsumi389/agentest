@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { ToolHandler, ToolDefinition } from './index.js';
-import { apiClient } from '../clients/api-client.js';
+import { apiClient, checkLockStatus } from '../clients/api-client.js';
 
 /**
  * 入力スキーマ
@@ -45,6 +45,9 @@ const updateTestSuiteHandler: ToolHandler<UpdateTestSuiteInput, UpdateTestSuiteR
   if (Object.keys(updateData).length === 0) {
     throw new Error('少なくとも1つの更新フィールドを指定してください');
   }
+
+  // 楽観的ロック確認：人間がロック中なら更新拒否
+  await checkLockStatus('SUITE', testSuiteId);
 
   // 内部APIを呼び出し
   const response = await apiClient.patch<UpdateTestSuiteResponse>(

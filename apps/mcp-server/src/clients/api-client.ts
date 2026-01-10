@@ -139,3 +139,55 @@ export class InternalApiClient {
 }
 
 export const apiClient = new InternalApiClient();
+
+/**
+ * ロック状態レスポンス
+ */
+interface LockStatusResponse {
+  isLocked: boolean;
+  lock: {
+    id: string;
+    targetType: string;
+    targetId: string;
+    lockedBy: {
+      type: 'user';
+      id: string;
+      name: string;
+    };
+    expiresAt: string;
+  } | null;
+}
+
+/**
+ * ロック競合エラー
+ */
+export class LockConflictError extends Error {
+  public readonly lockedBy: { type: 'user'; id: string; name: string };
+  public readonly expiresAt: string;
+
+  constructor(lockedBy: { type: 'user'; id: string; name: string }, expiresAt: string) {
+    super(`編集がブロックされました。ユーザー '${lockedBy.name}' が現在このリソースを編集中です。しばらく待ってから再試行してください。`);
+    this.name = 'LockConflictError';
+    this.lockedBy = lockedBy;
+    this.expiresAt = expiresAt;
+  }
+}
+
+/**
+ * ロック状態を確認（楽観的ロック）
+ * 人間がロック中の場合はLockConflictErrorをスロー
+ */
+export async function checkLockStatus(
+  targetType: 'SUITE' | 'CASE',
+  targetId: string
+): Promise<void> {
+  const response = await apiClient.get<LockStatusResponse>(
+    '/internal/api/locks',
+    { targetType, targetId }
+  );
+
+  if (response.isLocked && response.lock) {
+    // 人間がロック中 → 更新拒否
+    throw new LockConflictError(response.lock.lockedBy, response.lock.expiresAt);
+  }
+}
