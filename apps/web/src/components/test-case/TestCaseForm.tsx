@@ -272,6 +272,7 @@ export function TestCaseForm({
           title: title.trim(),
           description: description.trim() || undefined,
           priority,
+          status,
         });
 
         // 各項目を順次追加
