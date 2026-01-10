@@ -259,6 +259,7 @@ export function TestSuiteCasesPage() {
           currentTab={currentTab}
           onTabChange={handleTabChange}
           hasSelectedTestCase={!!selectedTestCaseId}
+          isCreateMode={isCreateMode}
         />
 
         {/* 編集フォーム */}
@@ -296,6 +297,7 @@ export function TestSuiteCasesPage() {
         currentTab={currentTab}
         onTabChange={handleTabChange}
         hasSelectedTestCase={!!selectedTestCaseId || isCreateMode}
+        isCreateMode={isCreateMode}
         // テストケース選択時のprops
         selectedTestCase={selectedTestCaseInfo}
         testCaseTab={testCaseTab}

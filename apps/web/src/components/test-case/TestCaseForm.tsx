@@ -28,14 +28,6 @@ const PRIORITY_OPTIONS = [
   { value: 'LOW', label: '低' },
 ] as const;
 
-/**
- * ステータスオプション
- */
-const STATUS_OPTIONS = [
-  { value: 'DRAFT', label: '下書き' },
-  { value: 'ACTIVE', label: 'アクティブ' },
-  { value: 'ARCHIVED', label: 'アーカイブ' },
-] as const;
 
 interface TestCaseFormProps {
   /** フォームモード */
@@ -72,7 +64,7 @@ export function TestCaseForm({
     testCase?.priority || 'MEDIUM'
   );
   const [status, setStatus] = useState<'DRAFT' | 'ACTIVE' | 'ARCHIVED'>(
-    testCase?.status || 'DRAFT'
+    testCase?.status || 'ACTIVE'
   );
 
   // 動的リストの状態
@@ -119,7 +111,7 @@ export function TestCaseForm({
         title.trim() !== '' ||
         description.trim() !== '' ||
         priority !== 'MEDIUM' ||
-        status !== 'DRAFT' ||
+        status !== 'ACTIVE' ||
         preconditions.filter((p) => !p.isDeleted && p.content.trim()).length > 0 ||
         steps.filter((s) => !s.isDeleted && s.content.trim()).length > 0 ||
         expectedResults.filter((e) => !e.isDeleted && e.content.trim()).length > 0
@@ -572,23 +564,18 @@ export function TestCaseForm({
           </select>
         </div>
 
-        {/* ステータス */}
-        <div>
-          <label htmlFor="case-status" className="block text-sm font-medium text-foreground mb-1">
-            ステータス
+        {/* 下書きとして保存 */}
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="case-draft"
+            checked={status === 'DRAFT'}
+            onChange={(e) => setStatus(e.target.checked ? 'DRAFT' : 'ACTIVE')}
+            className="w-4 h-4 rounded border-border text-accent focus:ring-accent"
+          />
+          <label htmlFor="case-draft" className="text-sm text-foreground">
+            下書きとして保存
           </label>
-          <select
-            id="case-status"
-            value={status}
-            onChange={(e) => setStatus(e.target.value as typeof status)}
-            className="input"
-          >
-            {STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
         </div>
 
         {/* 前提条件 */}
@@ -606,9 +593,9 @@ export function TestCaseForm({
           useMarkdown
         />
 
-        {/* ステップ */}
+        {/* 手順 */}
         <DynamicListSection
-          title="ステップ"
+          title="手順"
           items={steps.filter((i) => !i.isDeleted)}
           isExpanded={expandedSections.steps}
           onToggle={() => toggleSection('steps')}
@@ -617,7 +604,7 @@ export function TestCaseForm({
           onDelete={(id) => deleteListItem(setSteps, id)}
           onDragEnd={(event) => handleDragEnd(event, steps, setSteps)}
           sensors={sensors}
-          placeholder="ステップを入力...（Markdown対応）"
+          placeholder="手順を入力...（Markdown対応）"
           useMarkdown
         />
 
