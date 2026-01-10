@@ -38,8 +38,8 @@ interface TestCaseFormProps {
   projectId: string;
   /** 編集対象のテストケース（編集時のみ） */
   testCase?: TestCaseWithDetails;
-  /** 保存完了時のコールバック */
-  onSave: () => void;
+  /** 保存完了時のコールバック（作成時は作成されたテストケースIDを渡す） */
+  onSave: (createdTestCaseId?: string) => void;
   /** キャンセル時のコールバック */
   onCancel: () => void;
 }
@@ -299,6 +299,8 @@ export function TestCaseForm({
 
         queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
         toast.success('テストケースを作成しました');
+        onSave(createdTestCase.id);
+        return;
       } else if (mode === 'edit' && testCase) {
         // 編集モード
         // 基本情報の更新

@@ -92,10 +92,13 @@ export function TestSuiteCasesPage() {
     setSearchParams(newParams);
   }, [searchParams, setSearchParams]);
 
-  // 作成モード終了ハンドラ
-  const handleExitCreateMode = useCallback(() => {
+  // 作成モード終了ハンドラ（作成されたテストケースIDがあればそれを選択）
+  const handleExitCreateMode = useCallback((createdTestCaseId?: string) => {
     const newParams = new URLSearchParams(searchParams);
     newParams.delete('mode');
+    if (createdTestCaseId) {
+      newParams.set('testCase', createdTestCaseId);
+    }
     setSearchParams(newParams);
   }, [searchParams, setSearchParams]);
 
