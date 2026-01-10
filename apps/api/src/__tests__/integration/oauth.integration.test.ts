@@ -521,7 +521,7 @@ describe('OAuth API 結合テスト', () => {
     });
 
     it('正常系: active: true (有効なトークン)', async () => {
-      const accessToken = await createTestOAuthAccessToken(
+      await createTestOAuthAccessToken(
         testClient.clientId,
         testUser.id,
         {
@@ -635,7 +635,6 @@ describe('OAuth API 結合テスト', () => {
 
   describe('POST /oauth/token (refresh_token)', () => {
     let testClient: Awaited<ReturnType<typeof createTestOAuthClient>>;
-    const internalApiSecret = 'development-internal-api-secret-32ch';
 
     beforeEach(async () => {
       testClient = await createTestOAuthClient({
@@ -647,7 +646,7 @@ describe('OAuth API 結合テスト', () => {
     it('正常系: リフレッシュトークンで新しいアクセストークンを取得', async () => {
       // リフレッシュトークンをDBに作成
       const { createTestOAuthRefreshToken } = await import('./test-helpers.js');
-      const refreshToken = await createTestOAuthRefreshToken(
+      await createTestOAuthRefreshToken(
         testClient.clientId,
         testUser.id,
         {
