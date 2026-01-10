@@ -564,19 +564,30 @@ export function TestCaseForm({
           </select>
         </div>
 
-        {/* 下書きとして保存 */}
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="case-draft"
-            checked={status === 'DRAFT'}
-            onChange={(e) => setStatus(e.target.checked ? 'DRAFT' : 'ACTIVE')}
-            className="w-4 h-4 rounded border-border text-accent focus:ring-accent"
-          />
-          <label htmlFor="case-draft" className="text-sm text-foreground">
-            下書きとして保存
-          </label>
-        </div>
+        {/* 下書きとして保存（ARCHIVEDの場合は表示のみ） */}
+        {status === 'ARCHIVED' ? (
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-1 text-xs font-medium rounded bg-foreground-muted/20 text-foreground-muted">
+              アーカイブ済み
+            </span>
+            <span className="text-xs text-foreground-muted">
+              ステータスは設定タブから変更できます
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="case-draft"
+              checked={status === 'DRAFT'}
+              onChange={(e) => setStatus(e.target.checked ? 'DRAFT' : 'ACTIVE')}
+              className="w-4 h-4 rounded border-border text-accent focus:ring-accent"
+            />
+            <label htmlFor="case-draft" className="text-sm text-foreground">
+              下書きとして保存
+            </label>
+          </div>
+        )}
 
         {/* 前提条件 */}
         <DynamicListSection
