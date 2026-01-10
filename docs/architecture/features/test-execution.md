@@ -32,7 +32,31 @@
 
 ### 実行画面（Execution.tsx）
 
-- **URL**: `/executions/{executionId}`
+- **URL**: `/executions/{executionId}?testCase={testCaseId}`
+- **レイアウト**: サイドバー + メインパネル構成
+
+#### サイドバー（ExecutionSidebar）
+
+テストケース一覧を表示し、選択状態をURLパラメータで管理する。
+
+- **表示要素**
+  - テストケース一覧
+  - 各テストケースの進捗インジケーター（ドット表示）
+    - 緑ドット: 全期待結果がPASS
+    - 赤ドット: 1件以上がFAIL
+    - 黄ドット: PASS/FAILが混在（部分的に合格）
+    - グレードット: 未実行（PENDING）
+  - 優先度ドット表示
+  - 全体サマリーバッジ（PASS数/FAIL数/未実行数）
+  - 「概要を表示」ボタン
+- **操作**
+  - テストケースクリックで選択（URLパラメータ連動）
+  - テストケース検索（タイトル・説明からフィルタ）
+
+#### メインパネル：概要表示（ExecutionOverviewPanel）
+
+テストケース未選択時に表示される概要パネル。
+
 - **表示要素（ヘッダー）**
   - テストスイートに戻るリンク
   - テストスイート名（スナップショットから）
@@ -42,50 +66,51 @@
   - 中止ボタン（実行中のみ）
   - 完了ボタン（実行中のみ）
 
-#### サマリーカード
+- **サマリーカード**
+  - 4つのカードを横並びで表示：
+    - **成功**: 期待結果がPASSの件数（緑色）
+    - **失敗**: 期待結果がFAILの件数（赤色）
+    - **スキップ**: SKIPPED/NOT_EXECUTABLEの件数（黄色）
+    - **未実行**: PENDINGの件数（グレー）
 
-4つのカードを横並びで表示：
-- **成功**: 期待結果がPASSの件数（緑色）
-- **失敗**: 期待結果がFAILの件数（赤色）
-- **スキップ**: SKIPPED/NOT_EXECUTABLEの件数（黄色）
-- **未実行**: PENDINGの件数（グレー）
+- **スイート前提条件セクション**
+  - **表示条件**: テストスイートに前提条件がある場合のみ
+  - **表示要素**
+    - 前提条件一覧
+    - 各前提条件のステータス（UNCHECKED/MET/NOT_MET）
+    - ノート入力欄
+  - **操作（実行中のみ）**
+    - ステータスボタンをクリックして更新
+    - ノートを入力して保存
 
-#### スイート前提条件セクション
+- **テストケース選択へのガイド**
+  - サイドバーからテストケースを選択するよう促すメッセージ
 
-- **表示条件**: テストスイートに前提条件がある場合のみ
-- **表示要素**
-  - 前提条件一覧
-  - 各前提条件のステータス（UNCHECKED/MET/NOT_MET）
-  - ノート入力欄
-- **操作（実行中のみ）**
-  - ステータスボタンをクリックして更新
-  - ノートを入力して保存
+#### メインパネル：テストケース詳細（ExecutionTestCaseDetailPanel）
 
-#### テストケース一覧セクション
+テストケース選択時に表示される詳細パネル。
 
-- **表示要素**
-  - テストケースをアコーディオン形式で表示
-  - 各テストケースの展開/折り畳み
-  - テストケース名
-  - テストケースごとの結果サマリー（PASS/FAIL/PENDING数）
+- **テストケースヘッダー**
+  - テストケースタイトル
+  - 優先度バッジ
+  - 進捗サマリー（PASS/FAIL/未実行数）
+  - PiPボタン（対応ブラウザのみ）
 
-#### テストケース詳細（アコーディオン展開時）
+- **テストケース前提条件**
+  - 各前提条件のステータス更新
+  - ノート入力
 
-1. **テストケース前提条件**
-   - 各前提条件のステータス更新
-   - ノート入力
+- **ステップ一覧**
+  - ステップ番号、手順内容（マークダウン対応）
+  - ステータス（PENDING/DONE/SKIPPED）
+  - ノート入力
 
-2. **ステップ一覧**
-   - ステップ番号、手順内容
-   - ステータス（PENDING/DONE/SKIPPED）
-   - ノート入力
-
-3. **期待結果一覧**
-   - 期待結果の内容
-   - ステータス（PENDING/PASS/FAIL/SKIPPED/NOT_EXECUTABLE）
-   - ノート入力
-   - エビデンスアップロード領域
-   - エビデンス一覧
+- **期待結果一覧**
+  - 期待結果の内容（マークダウン対応）
+  - ステータス（PENDING/PASS/FAIL/SKIPPED/NOT_EXECUTABLE）
+  - ノート入力
+  - エビデンスアップロード領域
+  - エビデンス一覧
 
 #### エビデンス表示
 
@@ -99,6 +124,25 @@
   - ドラッグ&ドロップ対応
   - クリックしてファイル選択
   - アップロード中はローディング表示
+
+### Picture-in-Picture機能（PipExecutionPanel）
+
+テスト実行中に別アプリケーションを操作しながらステータスを更新できる「ながら実行」機能。
+
+- **対応環境**: Document Picture-in-Picture API対応ブラウザ（Chrome 116以降等）
+- **ウィンドウサイズ**: 450×600px
+- **表示内容**
+  - 現在のテストケースタイトル
+  - テストケース番号（X/Y形式）
+  - 前提条件・ステップ・期待結果一覧
+  - 各項目のステータス更新ボタン
+- **操作**
+  - 前へ/次へボタンでテストケース切り替え
+  - ステータスボタンでPASS/FAIL等を更新
+  - ノート入力
+  - 閉じるボタンでPiPウィンドウを閉じる
+- **キーボード操作**
+  - 矢印キーでナビゲーション可能
 
 ### 実行履歴一覧（ExecutionHistoryList）
 
@@ -785,6 +829,28 @@ agentest/
   "offset": 0
 }
 ```
+
+## フロントエンドコンポーネント
+
+テスト実行画面を構成する主要コンポーネント一覧。
+
+| 分類 | コンポーネント | ファイルパス | 説明 |
+|------|---------------|--------------|------|
+| ページ | ExecutionPage | `apps/web/src/pages/Execution.tsx` | メインページ、状態管理・API連携 |
+| サイドバー | ExecutionSidebar | `apps/web/src/components/execution/ExecutionSidebar.tsx` | テストケース一覧・選択 |
+| 概要パネル | ExecutionOverviewPanel | `apps/web/src/components/execution/ExecutionOverviewPanel.tsx` | 実行概要・サマリー表示 |
+| 詳細パネル | ExecutionTestCaseDetailPanel | `apps/web/src/components/execution/ExecutionTestCaseDetailPanel.tsx` | テストケース詳細表示 |
+| リスト | ExecutionPreconditionList | `apps/web/src/components/execution/ExecutionPreconditionList.tsx` | 前提条件一覧 |
+| リスト | ExecutionStepList | `apps/web/src/components/execution/ExecutionStepList.tsx` | ステップ一覧 |
+| リスト | ExecutionExpectedResultList | `apps/web/src/components/execution/ExecutionExpectedResultList.tsx` | 期待結果一覧 |
+| エビデンス | ExecutionEvidenceList | `apps/web/src/components/execution/ExecutionEvidenceList.tsx` | エビデンス一覧・削除・ダウンロード |
+| エビデンス | ExecutionEvidenceUpload | `apps/web/src/components/execution/ExecutionEvidenceUpload.tsx` | ドラッグ&ドロップアップロード |
+| UI部品 | ExecutionResultItem | `apps/web/src/components/execution/ExecutionResultItem.tsx` | 結果項目（番号・内容・ステータス） |
+| UI部品 | StatusButton | `apps/web/src/components/execution/StatusButton.tsx` | ステータス変更ドロップダウン |
+| PiP | PipPortal | `apps/web/src/components/execution/PipPortal.tsx` | PiPウィンドウへのポータル |
+| PiP | PipExecutionPanel | `apps/web/src/components/execution/PipExecutionPanel.tsx` | PiP用コンパクトUI |
+| Hook | usePictureInPicture | `apps/web/src/hooks/usePictureInPicture.ts` | Document PiP APIラッパー |
+| 定数 | execution-status | `apps/web/src/lib/execution-status.ts` | ステータス定義・アイコン・色 |
 
 ## 関連機能
 
