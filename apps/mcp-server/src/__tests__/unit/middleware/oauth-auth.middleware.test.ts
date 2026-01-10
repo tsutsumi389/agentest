@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
 
 // Prismaのモック
@@ -239,12 +239,12 @@ describe('mcpOAuthAuthenticate', () => {
 
 describe('mcpHybridAuthenticate', () => {
   let mockNext: NextFunction;
-  let mockFallbackAuth: vi.Mock;
+  let mockFallbackAuth: Mock;
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockNext = vi.fn();
-    mockFallbackAuth = vi.fn((_req, _res, next) => next());
+    mockFallbackAuth = vi.fn((_req: Request, _res: Response, next: NextFunction) => next());
   });
 
   describe('認証方式の選択', () => {
