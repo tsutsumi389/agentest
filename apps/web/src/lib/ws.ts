@@ -143,16 +143,17 @@ class WebSocketClient {
 
   /**
    * メッセージハンドラを登録
+   * @template T - イベントの型（ServerEventのサブタイプ）
    */
-  on(eventType: string, handler: MessageHandler): () => void {
+  on<T extends ServerEvent = ServerEvent>(eventType: string, handler: (event: T) => void): () => void {
     if (!this.messageHandlers.has(eventType)) {
       this.messageHandlers.set(eventType, new Set());
     }
-    this.messageHandlers.get(eventType)!.add(handler);
+    this.messageHandlers.get(eventType)!.add(handler as MessageHandler);
 
     // クリーンアップ関数を返す
     return () => {
-      this.messageHandlers.get(eventType)?.delete(handler);
+      this.messageHandlers.get(eventType)?.delete(handler as MessageHandler);
     };
   }
 

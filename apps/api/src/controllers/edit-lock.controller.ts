@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import type { LockTargetType } from '@agentest/db';
+import { prisma, type LockTargetType } from '@agentest/db';
+import { AuthorizationError, NotFoundError, AuthenticationError } from '@agentest/shared';
 import { EditLockService, LOCK_CONFIG } from '../services/edit-lock.service.js';
 
 /**
@@ -18,6 +19,86 @@ const getLockStatusSchema = z.object({
   targetType: z.enum(['SUITE', 'CASE']),
   targetId: z.string().uuid(),
 });
+
+/**
+ * ロック対象からプロジェクトを取得し、ユーザーのADMIN権限をチェック
+ * @param userId - チェック対象のユーザーID
+ * @param targetType - ロック対象の種類
+ * @param targetId - ロック対象のID
+ * @throws AuthorizationError - 権限がない場合
+ */
+async function checkAdminAccess(userId: string, targetType: LockTargetType, targetId: string): Promise<void> {
+  let project: {
+    id: string;
+    organizationId: string | null;
+    members: Array<{ role: string }>;
+  } | null = null;
+
+  if (targetType === 'SUITE') {
+    const testSuite = await prisma.testSuite.findUnique({
+      where: { id: targetId },
+      include: {
+        project: {
+          include: {
+            members: {
+              where: { userId },
+              select: { role: true },
+            },
+          },
+        },
+      },
+    });
+    project = testSuite?.project ?? null;
+  } else {
+    // CASE
+    const testCase = await prisma.testCase.findUnique({
+      where: { id: targetId },
+      include: {
+        testSuite: {
+          include: {
+            project: {
+              include: {
+                members: {
+                  where: { userId },
+                  select: { role: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    project = testCase?.testSuite?.project ?? null;
+  }
+
+  if (!project) {
+    throw new NotFoundError('Project', targetId);
+  }
+
+  // プロジェクトメンバーシップをチェック
+  const member = project.members[0];
+  if (member && (member.role === 'OWNER' || member.role === 'ADMIN')) {
+    return;
+  }
+
+  // プロジェクトが組織に属する場合、組織メンバーシップをチェック
+  if (project.organizationId) {
+    const orgMember = await prisma.organizationMember.findUnique({
+      where: {
+        organizationId_userId: {
+          organizationId: project.organizationId,
+          userId,
+        },
+      },
+    });
+
+    if (orgMember && ['OWNER', 'ADMIN'].includes(orgMember.role)) {
+      return;
+    }
+  }
+
+  throw new AuthorizationError('Admin permission required to force release lock');
+}
 
 /**
  * 編集ロックコントローラー
@@ -153,6 +234,29 @@ export class EditLockController {
   forceRelease = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { lockId } = req.params;
+      const user = req.user;
+
+      if (!user) {
+        throw new AuthenticationError('Not authenticated');
+      }
+
+      // ロック情報を取得して認可チェック
+      const existingLock = await prisma.editLock.findUnique({
+        where: { id: lockId },
+      });
+
+      if (!existingLock) {
+        res.status(404).json({
+          error: {
+            code: 'NOT_FOUND',
+            message: 'Lock not found',
+          },
+        });
+        return;
+      }
+
+      // ADMIN権限をチェック
+      await checkAdminAccess(user.id, existingLock.targetType, existingLock.targetId);
 
       const lock = await this.editLockService.forceRelease(lockId);
 

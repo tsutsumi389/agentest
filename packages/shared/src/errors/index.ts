@@ -80,10 +80,11 @@ export class ConflictError extends AppError {
 }
 
 /**
- * ロック競合情報
+ * ロック保持者の情報
+ * ユーザーまたはエージェントがロックを保持できる
  */
 export interface LockHolder {
-  type: 'user';
+  type: 'user' | 'agent';
   id: string;
   name: string;
 }

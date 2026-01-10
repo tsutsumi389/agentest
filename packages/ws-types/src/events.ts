@@ -3,9 +3,13 @@ import type {
   PreconditionStatus,
   StepStatus,
   JudgmentStatus,
-  LockTargetType,
+  LockTargetType as _LockTargetType,
   ReviewStatus,
 } from '@agentest/shared';
+
+// 再エクスポート
+export type { LockTargetType } from '@agentest/shared';
+type LockTargetType = _LockTargetType;
 
 // ============================================
 // 基本型
@@ -350,6 +354,7 @@ export type WebSocketMessage = ClientMessage | ServerMessage | ServerEvent;
 export const Channels = {
   project: (projectId: string) => `project:${projectId}`,
   testSuite: (testSuiteId: string) => `test_suite:${testSuiteId}`,
+  testCase: (testCaseId: string) => `test_case:${testCaseId}`,
   execution: (executionId: string) => `execution:${executionId}`,
   user: (userId: string) => `user:${userId}`,
 } as const;

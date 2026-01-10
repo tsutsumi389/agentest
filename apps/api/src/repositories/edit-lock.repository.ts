@@ -11,13 +11,29 @@ export interface CreateEditLockData {
 }
 
 /**
+ * ロック所有者情報
+ */
+export interface LockOwnerInfo {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+}
+
+/**
+ * リレーション付きEditLock型
+ */
+export type EditLockWithOwner = EditLock & {
+  lockedBy: LockOwnerInfo | null;
+};
+
+/**
  * 編集ロックリポジトリ
  */
 export class EditLockRepository {
   /**
    * ターゲット（スイート/ケース）でロックを検索
    */
-  async findByTarget(targetType: LockTargetType, targetId: string): Promise<EditLock | null> {
+  async findByTarget(targetType: LockTargetType, targetId: string): Promise<EditLockWithOwner | null> {
     return prisma.editLock.findUnique({
       where: {
         targetType_targetId: {
@@ -36,7 +52,7 @@ export class EditLockRepository {
   /**
    * IDでロックを検索
    */
-  async findById(id: string): Promise<EditLock | null> {
+  async findById(id: string): Promise<EditLockWithOwner | null> {
     return prisma.editLock.findUnique({
       where: { id },
       include: {
@@ -50,7 +66,7 @@ export class EditLockRepository {
   /**
    * ロックを作成
    */
-  async create(data: CreateEditLockData): Promise<EditLock> {
+  async create(data: CreateEditLockData): Promise<EditLockWithOwner> {
     return prisma.editLock.create({
       data: {
         targetType: data.targetType,
@@ -71,7 +87,7 @@ export class EditLockRepository {
   /**
    * ハートビートを更新
    */
-  async updateHeartbeat(id: string, expiresAt: Date): Promise<EditLock> {
+  async updateHeartbeat(id: string, expiresAt: Date): Promise<EditLockWithOwner> {
     return prisma.editLock.update({
       where: { id },
       data: {
@@ -98,7 +114,7 @@ export class EditLockRepository {
   /**
    * 期限切れロックを検索
    */
-  async findExpired(): Promise<EditLock[]> {
+  async findExpired(): Promise<EditLockWithOwner[]> {
     return prisma.editLock.findMany({
       where: {
         expiresAt: {

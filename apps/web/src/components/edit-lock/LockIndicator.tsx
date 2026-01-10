@@ -1,13 +1,5 @@
-import { Lock, Unlock, Pencil } from 'lucide-react';
-
-/**
- * ロック所有者情報
- */
-interface LockHolder {
-  type: 'user' | 'agent';
-  id: string;
-  name: string;
-}
+import { Lock, Pencil } from 'lucide-react';
+import type { LockHolder } from '@agentest/shared';
 
 interface LockIndicatorProps {
   /** ロック状態 */

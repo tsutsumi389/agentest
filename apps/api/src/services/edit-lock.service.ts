@@ -1,6 +1,6 @@
-import type { LockTargetType, EditLock } from '@agentest/db';
+import type { LockTargetType } from '@agentest/db';
 import { LockConflictError, NotFoundError, AuthorizationError } from '@agentest/shared';
-import { EditLockRepository } from '../repositories/edit-lock.repository.js';
+import { EditLockRepository, type EditLockWithOwner } from '../repositories/edit-lock.repository.js';
 
 /**
  * ロック設定
@@ -73,12 +73,11 @@ export class EditLockService {
         }
 
         // 他者がロック中 → 競合エラー
-        const lockedByUser = existingLock.lockedBy as { id: string; name: string } | null;
         throw new LockConflictError(
           {
             type: 'user',
             id: existingLock.lockedByUserId!,
-            name: lockedByUser?.name ?? 'Unknown',
+            name: existingLock.lockedBy?.name ?? 'Unknown',
           },
           existingLock.expiresAt
         );
@@ -160,7 +159,7 @@ export class EditLockService {
   /**
    * 強制ロック解除（管理者用）
    */
-  async forceRelease(lockId: string): Promise<EditLock | null> {
+  async forceRelease(lockId: string): Promise<EditLockWithOwner | null> {
     const lock = await this.lockRepo.findById(lockId);
 
     if (!lock) {
@@ -174,7 +173,7 @@ export class EditLockService {
   /**
    * 期限切れロックを処理
    */
-  async processExpiredLocks(): Promise<{ count: number; locks: EditLock[] }> {
+  async processExpiredLocks(): Promise<{ count: number; locks: EditLockWithOwner[] }> {
     // 期限切れロックを取得（WebSocket通知用）
     const expiredLocks = await this.lockRepo.findExpired();
 
@@ -187,9 +186,7 @@ export class EditLockService {
   /**
    * EditLockエンティティをLockInfoに変換
    */
-  private toLockInfo(lock: EditLock): LockInfo {
-    const lockedByUser = lock.lockedBy as { id: string; name: string } | null;
-
+  private toLockInfo(lock: EditLockWithOwner): LockInfo {
     return {
       id: lock.id,
       targetType: lock.targetType,
@@ -197,7 +194,7 @@ export class EditLockService {
       lockedBy: {
         type: 'user',
         id: lock.lockedByUserId!,
-        name: lockedByUser?.name ?? 'Unknown',
+        name: lock.lockedBy?.name ?? 'Unknown',
       },
       expiresAt: lock.expiresAt,
     };

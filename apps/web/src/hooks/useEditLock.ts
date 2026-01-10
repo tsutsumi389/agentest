@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { LockTargetType } from '@agentest/ws-types';
+import type { LockTargetType, LockAcquiredEvent, LockReleasedEvent, LockExpiredEvent } from '@agentest/ws-types';
+import type { LockHolder } from '@agentest/shared';
 import { api } from '../lib/api';
 import { wsClient } from '../lib/ws';
 import { useAuth } from './useAuth';
@@ -10,15 +11,6 @@ import { useAuth } from './useAuth';
 const LOCK_CONFIG = {
   HEARTBEAT_INTERVAL_MS: 30000, // 30秒
 };
-
-/**
- * ロック所有者情報
- */
-interface LockHolder {
-  type: 'user' | 'agent';
-  id: string;
-  name: string;
-}
 
 /**
  * ロック情報
@@ -202,29 +194,26 @@ export function useEditLock(options: UseEditLockOptions): UseEditLockResult {
    */
   useEffect(() => {
     // ロックイベントを購読
-    const unsubscribeAcquired = wsClient.on('lock:acquired', (event) => {
-      const lockEvent = event as unknown as { targetType: string; targetId: string; lockId: string; lockedBy: LockHolder; expiresAt: string };
-      if (lockEvent.targetType === targetType && lockEvent.targetId === targetId) {
+    const unsubscribeAcquired = wsClient.on<LockAcquiredEvent>('lock:acquired', (event) => {
+      if (event.targetType === targetType && event.targetId === targetId) {
         updateLockState({
-          id: lockEvent.lockId,
-          targetType: lockEvent.targetType as LockTargetType,
-          targetId: lockEvent.targetId,
-          lockedBy: lockEvent.lockedBy,
-          expiresAt: lockEvent.expiresAt,
+          id: event.lockId,
+          targetType: event.targetType,
+          targetId: event.targetId,
+          lockedBy: event.lockedBy,
+          expiresAt: event.expiresAt,
         });
       }
     });
 
-    const unsubscribeReleased = wsClient.on('lock:released', (event) => {
-      const lockEvent = event as unknown as { targetType: string; targetId: string };
-      if (lockEvent.targetType === targetType && lockEvent.targetId === targetId) {
+    const unsubscribeReleased = wsClient.on<LockReleasedEvent>('lock:released', (event) => {
+      if (event.targetType === targetType && event.targetId === targetId) {
         updateLockState(null);
       }
     });
 
-    const unsubscribeExpired = wsClient.on('lock:expired', (event) => {
-      const lockEvent = event as unknown as { targetType: string; targetId: string };
-      if (lockEvent.targetType === targetType && lockEvent.targetId === targetId) {
+    const unsubscribeExpired = wsClient.on<LockExpiredEvent>('lock:expired', (event) => {
+      if (event.targetType === targetType && event.targetId === targetId) {
         updateLockState(null);
       }
     });

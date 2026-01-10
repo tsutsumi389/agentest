@@ -1,13 +1,5 @@
 import { Lock, X } from 'lucide-react';
-
-/**
- * ロック所有者情報
- */
-interface LockHolder {
-  type: 'user' | 'agent';
-  id: string;
-  name: string;
-}
+import type { LockHolder } from '@agentest/shared';
 
 interface LockConflictModalProps {
   /** モーダル表示状態 */

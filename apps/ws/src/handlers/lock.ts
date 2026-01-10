@@ -31,9 +31,9 @@ export async function publishLockAcquired(
 
   // プロジェクトチャンネルとターゲットチャンネルにパブリッシュ
   const targetChannel =
-    targetType === 'SUITE' ? Channels.testSuite(targetId) : Channels.testSuite(targetId);
+    targetType === 'SUITE' ? Channels.testSuite(targetId) : Channels.testCase(targetId);
 
-  await Promise.all([
+  await Promise.allSettled([
     publishEvent(Channels.project(projectId), event),
     publishEvent(targetChannel, event),
   ]);
@@ -59,9 +59,9 @@ export async function publishLockReleased(
 
   // プロジェクトチャンネルとターゲットチャンネルにパブリッシュ
   const targetChannel =
-    targetType === 'SUITE' ? Channels.testSuite(targetId) : Channels.testSuite(targetId);
+    targetType === 'SUITE' ? Channels.testSuite(targetId) : Channels.testCase(targetId);
 
-  await Promise.all([
+  await Promise.allSettled([
     publishEvent(Channels.project(projectId), event),
     publishEvent(targetChannel, event),
   ]);
@@ -87,9 +87,9 @@ export async function publishLockExpired(
 
   // プロジェクトチャンネルとターゲットチャンネルにパブリッシュ
   const targetChannel =
-    targetType === 'SUITE' ? Channels.testSuite(targetId) : Channels.testSuite(targetId);
+    targetType === 'SUITE' ? Channels.testSuite(targetId) : Channels.testCase(targetId);
 
-  await Promise.all([
+  await Promise.allSettled([
     publishEvent(Channels.project(projectId), event),
     publishEvent(targetChannel, event),
   ]);
