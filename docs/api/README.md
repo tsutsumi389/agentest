@@ -137,6 +137,18 @@ Authorization: Bearer <access_token>
 | GET | `/executions/:id` | 実行詳細 |
 | PUT | `/executions/:id/results` | 結果更新 |
 
+### 編集ロック
+
+| メソッド | パス | 説明 |
+|---------|------|------|
+| POST | `/locks` | ロック取得 |
+| GET | `/locks` | ロック状態確認 |
+| PATCH | `/locks/:lockId/heartbeat` | ハートビート更新 |
+| DELETE | `/locks/:lockId` | ロック解放 |
+| DELETE | `/locks/:lockId/force` | 強制解除（管理者） |
+
+→ [編集ロック API 詳細](./edit-locks.md)
+
 ## レスポンス形式
 
 ### 成功
