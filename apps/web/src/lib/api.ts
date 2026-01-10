@@ -880,7 +880,7 @@ export const testSuitesApi = {
 // ============================================
 
 export const testCasesApi = {
-  create: (data: { testSuiteId: string; title: string; description?: string; priority?: string }) =>
+  create: (data: { testSuiteId: string; title: string; description?: string; priority?: string; status?: string }) =>
     api.post<{ testCase: TestCase }>('/api/test-cases', data),
   getById: (testCaseId: string) => api.get<{ testCase: TestCase }>(`/api/test-cases/${testCaseId}`),
   getByIdWithDetails: (testCaseId: string) =>

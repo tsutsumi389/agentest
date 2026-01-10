@@ -28,14 +28,6 @@ const PRIORITY_OPTIONS = [
   { value: 'LOW', label: '低' },
 ] as const;
 
-/**
- * ステータスオプション
- */
-const STATUS_OPTIONS = [
-  { value: 'DRAFT', label: '下書き' },
-  { value: 'ACTIVE', label: 'アクティブ' },
-  { value: 'ARCHIVED', label: 'アーカイブ' },
-] as const;
 
 interface TestCaseFormProps {
   /** フォームモード */
@@ -46,8 +38,8 @@ interface TestCaseFormProps {
   projectId: string;
   /** 編集対象のテストケース（編集時のみ） */
   testCase?: TestCaseWithDetails;
-  /** 保存完了時のコールバック */
-  onSave: () => void;
+  /** 保存完了時のコールバック（作成時は作成されたテストケースIDを渡す） */
+  onSave: (createdTestCaseId?: string) => void;
   /** キャンセル時のコールバック */
   onCancel: () => void;
 }
@@ -72,7 +64,7 @@ export function TestCaseForm({
     testCase?.priority || 'MEDIUM'
   );
   const [status, setStatus] = useState<'DRAFT' | 'ACTIVE' | 'ARCHIVED'>(
-    testCase?.status || 'DRAFT'
+    testCase?.status || 'ACTIVE'
   );
 
   // 動的リストの状態
@@ -119,7 +111,7 @@ export function TestCaseForm({
         title.trim() !== '' ||
         description.trim() !== '' ||
         priority !== 'MEDIUM' ||
-        status !== 'DRAFT' ||
+        status !== 'ACTIVE' ||
         preconditions.filter((p) => !p.isDeleted && p.content.trim()).length > 0 ||
         steps.filter((s) => !s.isDeleted && s.content.trim()).length > 0 ||
         expectedResults.filter((e) => !e.isDeleted && e.content.trim()).length > 0
@@ -237,10 +229,10 @@ export function TestCaseForm({
   const copyMutation = useMutation({
     mutationFn: (data: { sourceTestCaseId: string; title: string; targetTestSuiteId: string }) =>
       testCasesApi.copy(data.sourceTestCaseId, { title: data.title, targetTestSuiteId: data.targetTestSuiteId }),
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
       toast.success('テストケースをコピーしました');
-      onSave();
+      onSave(data.testCase.id);
     },
     onError: (err) => {
       if (err instanceof ApiError) {
@@ -280,6 +272,7 @@ export function TestCaseForm({
           title: title.trim(),
           description: description.trim() || undefined,
           priority,
+          status,
         });
 
         // 各項目を順次追加
@@ -306,6 +299,8 @@ export function TestCaseForm({
 
         queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
         toast.success('テストケースを作成しました');
+        onSave(createdTestCase.id);
+        return;
       } else if (mode === 'edit' && testCase) {
         // 編集モード
         // 基本情報の更新
@@ -572,24 +567,30 @@ export function TestCaseForm({
           </select>
         </div>
 
-        {/* ステータス */}
-        <div>
-          <label htmlFor="case-status" className="block text-sm font-medium text-foreground mb-1">
-            ステータス
-          </label>
-          <select
-            id="case-status"
-            value={status}
-            onChange={(e) => setStatus(e.target.value as typeof status)}
-            className="input"
-          >
-            {STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* 下書きとして保存（ARCHIVEDの場合は表示のみ） */}
+        {status === 'ARCHIVED' ? (
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-1 text-xs font-medium rounded bg-foreground-muted/20 text-foreground-muted">
+              アーカイブ済み
+            </span>
+            <span className="text-xs text-foreground-muted">
+              ステータスは設定タブから変更できます
+            </span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="case-draft"
+              checked={status === 'DRAFT'}
+              onChange={(e) => setStatus(e.target.checked ? 'DRAFT' : 'ACTIVE')}
+              className="w-4 h-4 rounded border-border text-accent focus:ring-accent"
+            />
+            <label htmlFor="case-draft" className="text-sm text-foreground">
+              下書きとして保存
+            </label>
+          </div>
+        )}
 
         {/* 前提条件 */}
         <DynamicListSection
@@ -606,9 +607,9 @@ export function TestCaseForm({
           useMarkdown
         />
 
-        {/* ステップ */}
+        {/* 手順 */}
         <DynamicListSection
-          title="ステップ"
+          title="手順"
           items={steps.filter((i) => !i.isDeleted)}
           isExpanded={expandedSections.steps}
           onToggle={() => toggleSection('steps')}
@@ -617,7 +618,7 @@ export function TestCaseForm({
           onDelete={(id) => deleteListItem(setSteps, id)}
           onDragEnd={(event) => handleDragEnd(event, steps, setSteps)}
           sensors={sensors}
-          placeholder="ステップを入力...（Markdown対応）"
+          placeholder="手順を入力...（Markdown対応）"
           useMarkdown
         />
 

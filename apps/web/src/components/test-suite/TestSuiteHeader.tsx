@@ -53,6 +53,8 @@ interface TestSuiteHeaderProps {
   onTabChange?: (tab: TabType) => void;
   // テストケース選択状態（タブのハイライト解除用）
   hasSelectedTestCase?: boolean;
+  // 作成モード（タブとアクションボタンを非表示にする）
+  isCreateMode?: boolean;
   // テストケース選択時の情報
   selectedTestCase?: SelectedTestCaseInfo;
   testCaseTab?: TestCaseTabType;
@@ -79,6 +81,7 @@ export function TestSuiteHeader({
   currentTab = 'overview',
   onTabChange,
   hasSelectedTestCase = false,
+  isCreateMode = false,
   // テストケース選択時のprops
   selectedTestCase,
   testCaseTab = 'overview',
@@ -145,7 +148,8 @@ export function TestSuiteHeader({
         </div>
       </div>
 
-      {/* ナビゲーションとアクション */}
+      {/* ナビゲーションとアクション（作成モード時は非表示） */}
+      {!isCreateMode && (
       <div className="px-4 pb-0 flex items-center justify-between">
         {isTestCaseMode ? (
           // テストケース選択時: テストケース用タブ
@@ -272,6 +276,7 @@ export function TestSuiteHeader({
           )}
         </div>
       </div>
+      )}
     </div>
   );
 }
