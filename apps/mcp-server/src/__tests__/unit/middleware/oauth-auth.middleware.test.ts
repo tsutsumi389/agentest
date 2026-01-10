@@ -244,7 +244,7 @@ describe('mcpHybridAuthenticate', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockNext = vi.fn();
-    mockFallbackAuth = vi.fn((_req, _res, next) => next());
+    mockFallbackAuth = vi.fn((_req: Request, _res: Response, next: NextFunction) => next());
   });
 
   describe('認証方式の選択', () => {

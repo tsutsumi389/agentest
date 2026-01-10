@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { ApiKeyValidationResult } from '../../../services/api-key-auth.service.js';
 
 // env のモック（インポート前にモックする必要がある）
 vi.mock('../../../config/env.js', () => ({
@@ -12,9 +13,14 @@ vi.mock('../../../config/env.js', () => ({
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
+// サービスのインターフェース定義
+interface ApiKeyAuthServiceInterface {
+  validateToken(rawToken: string): Promise<ApiKeyValidationResult>;
+}
+
 describe('ApiKeyAuthService', () => {
   // 動的インポートで新しいインスタンスを取得
-  let apiKeyAuthService: typeof import('../../../services/api-key-auth.service.js').apiKeyAuthService;
+  let apiKeyAuthService: ApiKeyAuthServiceInterface;
 
   beforeEach(async () => {
     vi.clearAllMocks();
