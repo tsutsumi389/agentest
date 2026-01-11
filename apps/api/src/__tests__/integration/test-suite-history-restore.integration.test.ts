@@ -137,11 +137,11 @@ describe('Test Suite History & Restore API Integration Tests', () => {
   });
 
   // ============================================================
-  // GET /api/test-suites/:testSuiteId/histories - 履歴一覧取得
+  // GET /api/test-suites/:testSuiteId/histories - 履歴一覧取得（グループ化版）
   // ============================================================
   describe('GET /api/test-suites/:testSuiteId/histories', () => {
     beforeEach(async () => {
-      // 履歴を作成
+      // 履歴を作成（groupIdなし = 個別グループ）
       await createTestSuiteHistory(testSuite.id, {
         changedByUserId: owner.id,
         changeType: 'CREATE',
@@ -159,24 +159,30 @@ describe('Test Suite History & Restore API Integration Tests', () => {
       });
     });
 
-    it('履歴一覧を取得できる', async () => {
+    it('グループ化された履歴一覧を取得できる', async () => {
       setTestAuth({ id: reader.id, email: reader.email }, 'READ', 'READ');
 
       const response = await request(app)
         .get(`/api/test-suites/${testSuite.id}/histories`)
         .expect(200);
 
-      expect(response.body.histories).toHaveLength(2);
+      expect(response.body.items).toHaveLength(2); // 2つの個別グループ
+      expect(response.body.totalGroups).toBe(2);
       expect(response.body.total).toBe(2);
     });
 
-    it('履歴は作成日時の降順で返される', async () => {
+    it('履歴はグループの作成日時の降順で返される', async () => {
       const response = await request(app)
         .get(`/api/test-suites/${testSuite.id}/histories`)
         .expect(200);
 
-      expect(response.body.histories[0].changeType).toBe('UPDATE'); // 後に作成された方が先
-      expect(response.body.histories[1].changeType).toBe('CREATE');
+      // 各グループにcategorizedHistoriesが含まれる
+      const firstGroup = response.body.items[0];
+      const secondGroup = response.body.items[1];
+
+      // 後に作成された方が先
+      expect(firstGroup.categorizedHistories.basicInfo[0].changeType).toBe('UPDATE');
+      expect(secondGroup.categorizedHistories.basicInfo[0].changeType).toBe('CREATE');
     });
 
     it('履歴には変更者情報が含まれる', async () => {
@@ -184,27 +190,27 @@ describe('Test Suite History & Restore API Integration Tests', () => {
         .get(`/api/test-suites/${testSuite.id}/histories`)
         .expect(200);
 
-      const updateHistory = response.body.histories[0];
+      const updateHistory = response.body.items[0].categorizedHistories.basicInfo[0];
       expect(updateHistory.changedBy).toHaveProperty('id', admin.id);
       expect(updateHistory.changedBy).toHaveProperty('name', 'Admin');
     });
 
-    it('limitパラメータで取得件数を制限できる', async () => {
+    it('limitパラメータでグループ取得件数を制限できる', async () => {
       const response = await request(app)
         .get(`/api/test-suites/${testSuite.id}/histories?limit=1`)
         .expect(200);
 
-      expect(response.body.histories).toHaveLength(1);
-      expect(response.body.total).toBe(2); // totalは全件数
+      expect(response.body.items).toHaveLength(1);
+      expect(response.body.totalGroups).toBe(2); // totalGroupsは全グループ数
     });
 
-    it('offsetパラメータでスキップできる', async () => {
+    it('offsetパラメータでグループをスキップできる', async () => {
       const response = await request(app)
         .get(`/api/test-suites/${testSuite.id}/histories?offset=1`)
         .expect(200);
 
-      expect(response.body.histories).toHaveLength(1);
-      expect(response.body.histories[0].changeType).toBe('CREATE'); // 2番目の履歴
+      expect(response.body.items).toHaveLength(1);
+      expect(response.body.items[0].categorizedHistories.basicInfo[0].changeType).toBe('CREATE'); // 2番目のグループ
     });
 
     it('limitとoffsetを組み合わせてページネーションできる', async () => {
@@ -219,9 +225,44 @@ describe('Test Suite History & Restore API Integration Tests', () => {
         .get(`/api/test-suites/${testSuite.id}/histories?limit=1&offset=1`)
         .expect(200);
 
-      expect(response.body.histories).toHaveLength(1);
-      expect(response.body.histories[0].changeType).toBe('UPDATE');
-      expect(response.body.total).toBe(3);
+      expect(response.body.items).toHaveLength(1);
+      expect(response.body.items[0].categorizedHistories.basicInfo[0].changeType).toBe('UPDATE');
+      expect(response.body.totalGroups).toBe(3);
+    });
+
+    it('同じgroupIdを持つ履歴は1つのグループにまとめられる', async () => {
+      const groupId = '550e8400-e29b-41d4-a716-446655440000';
+
+      // 同じgroupIdで複数の履歴を作成
+      await createTestSuiteHistory(testSuite.id, {
+        changedByUserId: owner.id,
+        changeType: 'UPDATE',
+        snapshot: { before: { name: 'Old' }, after: { name: 'New' } },
+        changeDetail: { type: 'BASIC_INFO_UPDATE' },
+        groupId,
+        createdAt: new Date('2024-01-03T00:00:00Z'),
+      });
+      await createTestSuiteHistory(testSuite.id, {
+        changedByUserId: owner.id,
+        changeType: 'UPDATE',
+        snapshot: { id: 'precond-1', content: 'Precondition' },
+        changeDetail: { type: 'PRECONDITION_ADD', entityId: 'precond-1' },
+        groupId,
+        createdAt: new Date('2024-01-03T00:00:01Z'),
+      });
+
+      const response = await request(app)
+        .get(`/api/test-suites/${testSuite.id}/histories`)
+        .expect(200);
+
+      // 2(既存個別) + 1(グループ化された履歴) = 3グループ
+      expect(response.body.totalGroups).toBe(3);
+
+      // 最新のグループにgroupIdがある
+      const groupedItem = response.body.items[0];
+      expect(groupedItem.groupId).toBe(groupId);
+      expect(groupedItem.categorizedHistories.basicInfo).toHaveLength(1);
+      expect(groupedItem.categorizedHistories.preconditions).toHaveLength(1);
     });
 
     it('削除済みテストスイートでも履歴を取得できる', async () => {
@@ -235,7 +276,7 @@ describe('Test Suite History & Restore API Integration Tests', () => {
         .get(`/api/test-suites/${testSuite.id}/histories`)
         .expect(200);
 
-      expect(response.body.histories).toHaveLength(2);
+      expect(response.body.items).toHaveLength(2);
     });
 
     it('limit=0は無効で400エラー', async () => {

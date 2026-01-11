@@ -369,6 +369,7 @@ export async function createTestExecution(
 
 /**
  * テスト用テストスイート履歴を作成
+ * changeDetailはsnapshot内に含まれる（BASIC_INFO_UPDATE, PRECONDITION_ADD/UPDATE/DELETE/REORDER, TEST_CASE_REORDER等）
  */
 export async function createTestSuiteHistory(
   testSuiteId: string,
@@ -378,11 +379,19 @@ export async function createTestSuiteHistory(
     changedByAgentSessionId: string | null;
     changeType: 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE';
     snapshot: Prisma.InputJsonValue;
+    changeDetail: Prisma.InputJsonValue | null;
     changeReason: string | null;
+    groupId: string | null;
     createdAt: Date;
   }> = {}
 ) {
   const id = overrides.id ?? randomUUID();
+  // changeDetailはsnapshotの中に含める
+  const baseSnapshot = overrides.snapshot ?? { name: 'Test Suite' };
+  const snapshot = overrides.changeDetail
+    ? { ...(baseSnapshot as object), changeDetail: overrides.changeDetail }
+    : baseSnapshot;
+
   return prisma.testSuiteHistory.create({
     data: {
       id,
@@ -390,8 +399,9 @@ export async function createTestSuiteHistory(
       changedByUserId: overrides.changedByUserId ?? null,
       changedByAgentSessionId: overrides.changedByAgentSessionId ?? null,
       changeType: overrides.changeType ?? 'CREATE',
-      snapshot: overrides.snapshot ?? { name: 'Test Suite' },
+      snapshot,
       changeReason: overrides.changeReason ?? null,
+      groupId: overrides.groupId ?? null,
       createdAt: overrides.createdAt ?? new Date(),
     },
   });

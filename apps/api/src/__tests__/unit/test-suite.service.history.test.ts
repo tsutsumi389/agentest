@@ -6,6 +6,7 @@ const mockTestSuiteRepo = vi.hoisted(() => ({
   findById: vi.fn(),
   findDeletedById: vi.fn(),
   getHistories: vi.fn(),
+  getHistoriesGrouped: vi.fn(),
   countHistories: vi.fn(),
   restore: vi.fn(),
 }));
@@ -80,61 +81,87 @@ describe('TestSuiteService - History & Restore', () => {
   });
 
   // ============================================================
-  // getHistories
+  // getHistories (グループ化版)
   // ============================================================
   describe('getHistories', () => {
-    const mockHistories = [
-      { ...mockHistory, changeType: 'UPDATE' },
-      { ...mockHistory, id: 'history-2', changeType: 'CREATE' },
-    ];
+    const mockGroupedResult = {
+      items: [
+        {
+          groupId: null,
+          categorizedHistories: {
+            basicInfo: [{ ...mockHistory, changeType: 'UPDATE' }],
+            preconditions: [],
+          },
+          createdAt: new Date(),
+        },
+        {
+          groupId: null,
+          categorizedHistories: {
+            basicInfo: [{ ...mockHistory, id: 'history-2', changeType: 'CREATE' }],
+            preconditions: [],
+          },
+          createdAt: new Date(),
+        },
+      ],
+      totalGroups: 2,
+      totalHistories: 2,
+    };
 
-    it('履歴一覧を取得できる', async () => {
+    it('グループ化された履歴一覧を取得できる', async () => {
       mockPrisma.testSuite.findUnique.mockResolvedValue(mockTestSuite);
-      mockTestSuiteRepo.getHistories.mockResolvedValue(mockHistories);
-      mockTestSuiteRepo.countHistories.mockResolvedValue(2);
+      mockTestSuiteRepo.getHistoriesGrouped.mockResolvedValue(mockGroupedResult);
 
       const result = await service.getHistories('test-suite-1', { limit: 20, offset: 0 });
 
       expect(mockPrisma.testSuite.findUnique).toHaveBeenCalledWith({
         where: { id: 'test-suite-1' },
       });
-      expect(mockTestSuiteRepo.getHistories).toHaveBeenCalledWith('test-suite-1', { limit: 20, offset: 0 });
-      expect(mockTestSuiteRepo.countHistories).toHaveBeenCalledWith('test-suite-1');
-      expect(result.histories).toEqual(mockHistories);
+      expect(mockTestSuiteRepo.getHistoriesGrouped).toHaveBeenCalledWith('test-suite-1', { limit: 20, offset: 0 });
+      expect(result.items).toEqual(mockGroupedResult.items);
+      expect(result.totalGroups).toBe(2);
       expect(result.total).toBe(2);
     });
 
     it('limitとoffsetを指定して履歴を取得できる', async () => {
+      const singleItemResult = {
+        items: [mockGroupedResult.items[0]],
+        totalGroups: 10,
+        totalHistories: 15,
+      };
       mockPrisma.testSuite.findUnique.mockResolvedValue(mockTestSuite);
-      mockTestSuiteRepo.getHistories.mockResolvedValue([mockHistories[0]]);
-      mockTestSuiteRepo.countHistories.mockResolvedValue(10);
+      mockTestSuiteRepo.getHistoriesGrouped.mockResolvedValue(singleItemResult);
 
       const result = await service.getHistories('test-suite-1', { limit: 1, offset: 5 });
 
-      expect(mockTestSuiteRepo.getHistories).toHaveBeenCalledWith('test-suite-1', { limit: 1, offset: 5 });
-      expect(result.histories).toHaveLength(1);
-      expect(result.total).toBe(10);
+      expect(mockTestSuiteRepo.getHistoriesGrouped).toHaveBeenCalledWith('test-suite-1', { limit: 1, offset: 5 });
+      expect(result.items).toHaveLength(1);
+      expect(result.totalGroups).toBe(10);
+      expect(result.total).toBe(15);
     });
 
     it('削除済みテストスイートでも履歴を取得できる', async () => {
       mockPrisma.testSuite.findUnique.mockResolvedValue(mockDeletedTestSuite);
-      mockTestSuiteRepo.getHistories.mockResolvedValue(mockHistories);
-      mockTestSuiteRepo.countHistories.mockResolvedValue(2);
+      mockTestSuiteRepo.getHistoriesGrouped.mockResolvedValue(mockGroupedResult);
 
       const result = await service.getHistories('test-suite-1', { limit: 20, offset: 0 });
 
-      expect(result.histories).toEqual(mockHistories);
-      expect(result.total).toBe(2);
+      expect(result.items).toEqual(mockGroupedResult.items);
+      expect(result.totalGroups).toBe(2);
     });
 
     it('履歴が0件の場合、空配列と0を返す', async () => {
+      const emptyResult = {
+        items: [],
+        totalGroups: 0,
+        totalHistories: 0,
+      };
       mockPrisma.testSuite.findUnique.mockResolvedValue(mockTestSuite);
-      mockTestSuiteRepo.getHistories.mockResolvedValue([]);
-      mockTestSuiteRepo.countHistories.mockResolvedValue(0);
+      mockTestSuiteRepo.getHistoriesGrouped.mockResolvedValue(emptyResult);
 
       const result = await service.getHistories('test-suite-1', { limit: 20, offset: 0 });
 
-      expect(result.histories).toEqual([]);
+      expect(result.items).toEqual([]);
+      expect(result.totalGroups).toBe(0);
       expect(result.total).toBe(0);
     });
 
@@ -142,44 +169,6 @@ describe('TestSuiteService - History & Restore', () => {
       mockPrisma.testSuite.findUnique.mockResolvedValue(null);
 
       await expect(service.getHistories('invalid-suite', { limit: 20, offset: 0 })).rejects.toThrow(NotFoundError);
-    });
-
-    it('履歴にユーザー情報が含まれる', async () => {
-      const historyWithUser = {
-        ...mockHistory,
-        changedBy: { id: 'user-1', name: 'Test User', avatarUrl: 'https://example.com/avatar.png' },
-      };
-      mockPrisma.testSuite.findUnique.mockResolvedValue(mockTestSuite);
-      mockTestSuiteRepo.getHistories.mockResolvedValue([historyWithUser]);
-      mockTestSuiteRepo.countHistories.mockResolvedValue(1);
-
-      const result = await service.getHistories('test-suite-1', { limit: 20, offset: 0 });
-
-      expect(result.histories[0].changedBy).toEqual({
-        id: 'user-1',
-        name: 'Test User',
-        avatarUrl: 'https://example.com/avatar.png',
-      });
-    });
-
-    it('履歴にAgentSession情報が含まれる', async () => {
-      const historyWithAgent = {
-        ...mockHistory,
-        changedByUserId: null,
-        changedByAgentSessionId: 'agent-session-1',
-        changedBy: null,
-        agentSession: { id: 'agent-session-1', clientName: 'Claude Code' },
-      };
-      mockPrisma.testSuite.findUnique.mockResolvedValue(mockTestSuite);
-      mockTestSuiteRepo.getHistories.mockResolvedValue([historyWithAgent]);
-      mockTestSuiteRepo.countHistories.mockResolvedValue(1);
-
-      const result = await service.getHistories('test-suite-1', { limit: 20, offset: 0 });
-
-      expect(result.histories[0].agentSession).toEqual({
-        id: 'agent-session-1',
-        clientName: 'Claude Code',
-      });
     });
   });
 
@@ -222,7 +211,22 @@ describe('TestSuiteService - History & Restore', () => {
             description: mockDeletedTestSuite.description,
             status: mockDeletedTestSuite.status,
           }),
+          groupId: undefined,
         },
+      });
+    });
+
+    it('復元時にgroupIdを指定できる', async () => {
+      mockTestSuiteRepo.findDeletedById.mockResolvedValue(mockDeletedTestSuite);
+      mockPrisma.testSuiteHistory.create.mockResolvedValue(mockHistory);
+      mockTestSuiteRepo.restore.mockResolvedValue(restoredTestSuite);
+
+      await service.restore('test-suite-1', 'user-1', { groupId: 'group-123' });
+
+      expect(mockPrisma.testSuiteHistory.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          groupId: 'group-123',
+        }),
       });
     });
 

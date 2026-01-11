@@ -124,7 +124,8 @@ describe('TestSuiteController', () => {
       expect(mockTestSuiteService.update).toHaveBeenCalledWith(
         TEST_SUITE_ID,
         TEST_USER_ID,
-        { name: 'Updated Suite' }
+        { name: 'Updated Suite' },
+        { groupId: undefined }
       );
       expect(res.json).toHaveBeenCalledWith({ testSuite: mockSuite });
     });
@@ -205,7 +206,8 @@ describe('TestSuiteController', () => {
       expect(mockTestSuiteService.reorderTestCases).toHaveBeenCalledWith(
         TEST_SUITE_ID,
         caseIds,
-        TEST_USER_ID
+        TEST_USER_ID,
+        { groupId: undefined }
       );
       expect(res.json).toHaveBeenCalledWith({ testCases: mockCases });
     });
@@ -260,7 +262,8 @@ describe('TestSuiteController', () => {
         TEST_SUITE_ID,
         TEST_PRECONDITION_ID,
         TEST_USER_ID,
-        { content: 'Updated' }
+        { content: 'Updated' },
+        { groupId: undefined }
       );
       expect(res.json).toHaveBeenCalledWith({ precondition: mockPrecondition });
     });
@@ -280,7 +283,8 @@ describe('TestSuiteController', () => {
       expect(mockTestSuiteService.deletePrecondition).toHaveBeenCalledWith(
         TEST_SUITE_ID,
         TEST_PRECONDITION_ID,
-        TEST_USER_ID
+        TEST_USER_ID,
+        { groupId: undefined }
       );
       expect(res.status).toHaveBeenCalledWith(204);
     });
@@ -356,7 +360,17 @@ describe('TestSuiteController', () => {
   describe('getHistories', () => {
     it('変更履歴を取得できる', async () => {
       const mockResult = {
-        histories: [{ id: 'history-1' }],
+        items: [
+          {
+            groupId: null,
+            categorizedHistories: {
+              basicInfo: [{ id: 'history-1' }],
+              preconditions: [],
+            },
+            createdAt: new Date(),
+          },
+        ],
+        totalGroups: 1,
         total: 1,
       };
       mockTestSuiteService.getHistories.mockResolvedValue(mockResult);

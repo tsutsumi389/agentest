@@ -338,6 +338,7 @@ export interface TestSuiteHistory {
   changeType: TestSuiteChangeType;
   snapshot: Record<string, unknown>;
   changeReason: string | null;
+  groupId: string | null;
   createdAt: string;
   changedBy: {
     id: string;
@@ -345,6 +346,34 @@ export interface TestSuiteHistory {
     name: string;
     avatarUrl: string | null;
   } | null;
+}
+
+/**
+ * テストスイートのカテゴリ別履歴（APIレスポンス用）
+ */
+export interface TestSuiteCategorizedHistories {
+  basicInfo: TestSuiteHistory[];
+  preconditions: TestSuiteHistory[];
+}
+
+/**
+ * グループ化されたテストスイート履歴アイテム（APIレスポンス用）
+ * groupIdがnullの場合は単一履歴を含むグループ
+ * @agentest/sharedではcreatedAt: Dateだが、APIレスポンスのJSONシリアライズによりstring型として受け取る
+ */
+export interface TestSuiteHistoryGroupedItem {
+  groupId: string | null;
+  categorizedHistories: TestSuiteCategorizedHistories;
+  createdAt: string;
+}
+
+/**
+ * テストスイート履歴一覧レスポンス（グループ化版）
+ */
+export interface TestSuiteHistoriesGroupedResponse {
+  items: TestSuiteHistoryGroupedItem[];
+  totalGroups: number;
+  total: number;
 }
 
 /** テストスイート検索パラメータ */
@@ -875,13 +904,13 @@ export const testSuitesApi = {
   reorderPreconditions: (testSuiteId: string, preconditionIds: string[]) =>
     api.post<{ preconditions: Precondition[] }>(`/api/test-suites/${testSuiteId}/preconditions/reorder`, { preconditionIds }),
 
-  // 履歴管理
+  // 履歴管理（グループ化版）
   getHistories: (testSuiteId: string, params?: { limit?: number; offset?: number }) => {
     const query = new URLSearchParams();
     if (params?.limit !== undefined) query.set('limit', String(params.limit));
     if (params?.offset !== undefined) query.set('offset', String(params.offset));
     const queryString = query.toString();
-    return api.get<{ histories: TestSuiteHistory[]; total: number }>(
+    return api.get<TestSuiteHistoriesGroupedResponse>(
       `/api/test-suites/${testSuiteId}/histories${queryString ? `?${queryString}` : ''}`
     );
   },
