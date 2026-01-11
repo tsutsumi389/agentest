@@ -145,7 +145,7 @@ describe('TestCaseController', () => {
 
       await controller.update(req, res, mockNext);
 
-      expect(mockTestCaseService.update).toHaveBeenCalledWith(TEST_CASE_ID, TEST_USER_ID, { title: 'Updated' });
+      expect(mockTestCaseService.update).toHaveBeenCalledWith(TEST_CASE_ID, TEST_USER_ID, { title: 'Updated' }, undefined);
       expect(res.json).toHaveBeenCalledWith({ testCase: mockCase });
     });
   });

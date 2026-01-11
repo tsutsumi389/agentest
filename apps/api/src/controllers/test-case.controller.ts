@@ -15,37 +15,45 @@ const updateTestCaseSchema = z.object({
   description: z.string().max(2000).optional().nullable(),
   priority: z.enum(['CRITICAL', 'HIGH', 'MEDIUM', 'LOW']).optional(),
   status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).optional(),
+  groupId: z.string().uuid().optional(),
 });
 
 const addPreconditionSchema = z.object({
   content: z.string().min(1).max(2000),
   orderKey: z.string().optional(),
+  groupId: z.string().uuid().optional(),
 });
 
 const addStepSchema = z.object({
   content: z.string().min(1).max(2000),
   orderKey: z.string().optional(),
+  groupId: z.string().uuid().optional(),
 });
 
 const addExpectedResultSchema = z.object({
   content: z.string().min(1).max(2000),
   orderKey: z.string().optional(),
+  groupId: z.string().uuid().optional(),
 });
 
 const updateContentSchema = z.object({
   content: z.string().min(1).max(2000),
+  groupId: z.string().uuid().optional(),
 });
 
 const reorderPreconditionsSchema = z.object({
   preconditionIds: z.array(z.string().uuid()).min(0),
+  groupId: z.string().uuid().optional(),
 });
 
 const reorderStepsSchema = z.object({
   stepIds: z.array(z.string().uuid()).min(0),
+  groupId: z.string().uuid().optional(),
 });
 
 const reorderExpectedResultsSchema = z.object({
   expectedResultIds: z.array(z.string().uuid()).min(0),
+  groupId: z.string().uuid().optional(),
 });
 
 const copyTestCaseSchema = z.object({
@@ -98,8 +106,8 @@ export class TestCaseController {
   update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testCaseId } = req.params;
-      const data = updateTestCaseSchema.parse(req.body);
-      const testCase = await this.testCaseService.update(testCaseId, req.user!.id, data);
+      const { groupId, ...data } = updateTestCaseSchema.parse(req.body);
+      const testCase = await this.testCaseService.update(testCaseId, req.user!.id, data, groupId);
 
       res.json({ testCase });
     } catch (error) {
@@ -141,8 +149,8 @@ export class TestCaseController {
   addPrecondition = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testCaseId } = req.params;
-      const data = addPreconditionSchema.parse(req.body);
-      const precondition = await this.testCaseService.addPrecondition(testCaseId, req.user!.id, data);
+      const { groupId, ...data } = addPreconditionSchema.parse(req.body);
+      const precondition = await this.testCaseService.addPrecondition(testCaseId, req.user!.id, data, groupId);
 
       res.status(201).json({ precondition });
     } catch (error) {
@@ -156,8 +164,8 @@ export class TestCaseController {
   updatePrecondition = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testCaseId, preconditionId } = req.params;
-      const data = updateContentSchema.parse(req.body);
-      const precondition = await this.testCaseService.updatePrecondition(testCaseId, preconditionId, req.user!.id, data);
+      const { groupId, ...data } = updateContentSchema.parse(req.body);
+      const precondition = await this.testCaseService.updatePrecondition(testCaseId, preconditionId, req.user!.id, data, groupId);
 
       res.json({ precondition });
     } catch (error) {
@@ -171,7 +179,9 @@ export class TestCaseController {
   deletePrecondition = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testCaseId, preconditionId } = req.params;
-      await this.testCaseService.deletePrecondition(testCaseId, preconditionId, req.user!.id);
+      // DELETEリクエストでもボディからgroupIdを取得できるようにする
+      const { groupId } = z.object({ groupId: z.string().uuid().optional() }).parse(req.body ?? {});
+      await this.testCaseService.deletePrecondition(testCaseId, preconditionId, req.user!.id, groupId);
 
       res.status(204).send();
     } catch (error) {
@@ -185,8 +195,8 @@ export class TestCaseController {
   reorderPreconditions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testCaseId } = req.params;
-      const { preconditionIds } = reorderPreconditionsSchema.parse(req.body);
-      const preconditions = await this.testCaseService.reorderPreconditions(testCaseId, preconditionIds, req.user!.id);
+      const { preconditionIds, groupId } = reorderPreconditionsSchema.parse(req.body);
+      const preconditions = await this.testCaseService.reorderPreconditions(testCaseId, preconditionIds, req.user!.id, groupId);
 
       res.json({ preconditions });
     } catch (error) {
@@ -214,8 +224,8 @@ export class TestCaseController {
   addStep = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testCaseId } = req.params;
-      const data = addStepSchema.parse(req.body);
-      const step = await this.testCaseService.addStep(testCaseId, req.user!.id, data);
+      const { groupId, ...data } = addStepSchema.parse(req.body);
+      const step = await this.testCaseService.addStep(testCaseId, req.user!.id, data, groupId);
 
       res.status(201).json({ step });
     } catch (error) {
@@ -229,8 +239,8 @@ export class TestCaseController {
   updateStep = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testCaseId, stepId } = req.params;
-      const data = updateContentSchema.parse(req.body);
-      const step = await this.testCaseService.updateStep(testCaseId, stepId, req.user!.id, data);
+      const { groupId, ...data } = updateContentSchema.parse(req.body);
+      const step = await this.testCaseService.updateStep(testCaseId, stepId, req.user!.id, data, groupId);
 
       res.json({ step });
     } catch (error) {
@@ -244,7 +254,9 @@ export class TestCaseController {
   deleteStep = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testCaseId, stepId } = req.params;
-      await this.testCaseService.deleteStep(testCaseId, stepId, req.user!.id);
+      // DELETEリクエストでもボディからgroupIdを取得できるようにする
+      const { groupId } = z.object({ groupId: z.string().uuid().optional() }).parse(req.body ?? {});
+      await this.testCaseService.deleteStep(testCaseId, stepId, req.user!.id, groupId);
 
       res.status(204).send();
     } catch (error) {
@@ -258,8 +270,8 @@ export class TestCaseController {
   reorderSteps = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testCaseId } = req.params;
-      const { stepIds } = reorderStepsSchema.parse(req.body);
-      const steps = await this.testCaseService.reorderSteps(testCaseId, stepIds, req.user!.id);
+      const { stepIds, groupId } = reorderStepsSchema.parse(req.body);
+      const steps = await this.testCaseService.reorderSteps(testCaseId, stepIds, req.user!.id, groupId);
 
       res.json({ steps });
     } catch (error) {
@@ -287,8 +299,8 @@ export class TestCaseController {
   addExpectedResult = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testCaseId } = req.params;
-      const data = addExpectedResultSchema.parse(req.body);
-      const expectedResult = await this.testCaseService.addExpectedResult(testCaseId, req.user!.id, data);
+      const { groupId, ...data } = addExpectedResultSchema.parse(req.body);
+      const expectedResult = await this.testCaseService.addExpectedResult(testCaseId, req.user!.id, data, groupId);
 
       res.status(201).json({ expectedResult });
     } catch (error) {
@@ -302,8 +314,8 @@ export class TestCaseController {
   updateExpectedResult = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testCaseId, expectedResultId } = req.params;
-      const data = updateContentSchema.parse(req.body);
-      const expectedResult = await this.testCaseService.updateExpectedResult(testCaseId, expectedResultId, req.user!.id, data);
+      const { groupId, ...data } = updateContentSchema.parse(req.body);
+      const expectedResult = await this.testCaseService.updateExpectedResult(testCaseId, expectedResultId, req.user!.id, data, groupId);
 
       res.json({ expectedResult });
     } catch (error) {
@@ -317,7 +329,9 @@ export class TestCaseController {
   deleteExpectedResult = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testCaseId, expectedResultId } = req.params;
-      await this.testCaseService.deleteExpectedResult(testCaseId, expectedResultId, req.user!.id);
+      // DELETEリクエストでもボディからgroupIdを取得できるようにする
+      const { groupId } = z.object({ groupId: z.string().uuid().optional() }).parse(req.body ?? {});
+      await this.testCaseService.deleteExpectedResult(testCaseId, expectedResultId, req.user!.id, groupId);
 
       res.status(204).send();
     } catch (error) {
@@ -331,8 +345,8 @@ export class TestCaseController {
   reorderExpectedResults = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testCaseId } = req.params;
-      const { expectedResultIds } = reorderExpectedResultsSchema.parse(req.body);
-      const expectedResults = await this.testCaseService.reorderExpectedResults(testCaseId, expectedResultIds, req.user!.id);
+      const { expectedResultIds, groupId } = reorderExpectedResultsSchema.parse(req.body);
+      const expectedResults = await this.testCaseService.reorderExpectedResults(testCaseId, expectedResultIds, req.user!.id, groupId);
 
       res.json({ expectedResults });
     } catch (error) {

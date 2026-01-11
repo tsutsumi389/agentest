@@ -74,10 +74,13 @@ const updateTestCaseHandler: ToolHandler<UpdateTestCaseInput, UpdateTestCaseResp
   // 楽観的ロック確認：人間がロック中なら更新拒否
   await checkLockStatus('CASE', testCaseId);
 
+  // MCPツール内でgroupIdを自動生成し、全カテゴリの変更を同一グループとして扱う
+  const groupId = crypto.randomUUID();
+
   // 内部APIを呼び出し（子エンティティの差分更新含む）
   const response = await apiClient.patch<UpdateTestCaseResponse>(
     `/internal/api/test-cases/${testCaseId}`,
-    updateData,
+    { ...updateData, groupId },
     { userId }
   );
 

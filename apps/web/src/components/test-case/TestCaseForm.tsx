@@ -303,8 +303,11 @@ export function TestCaseForm({
         return;
       } else if (mode === 'edit' && testCase) {
         // 編集モード
+        // 全ての変更を同一グループとして扱うためのgroupIdを生成
+        const groupId = crypto.randomUUID();
+
         // 基本情報の更新
-        const updates: { title?: string; description?: string; priority?: string; status?: string } = {};
+        const updates: { title?: string; description?: string; priority?: string; status?: string; groupId?: string } = {};
         if (title.trim() !== testCase.title) {
           updates.title = title.trim();
         }
@@ -319,17 +322,18 @@ export function TestCaseForm({
         }
 
         if (Object.keys(updates).length > 0) {
+          updates.groupId = groupId;
           await testCasesApi.update(testCase.id, updates);
         }
 
         // 前提条件の差分更新
-        await updateListItems(testCase.id, 'precondition', preconditions);
+        await updateListItems(testCase.id, 'precondition', preconditions, groupId);
 
         // ステップの差分更新
-        await updateListItems(testCase.id, 'step', steps);
+        await updateListItems(testCase.id, 'step', steps, groupId);
 
         // 期待結果の差分更新
-        await updateListItems(testCase.id, 'expectedResult', expectedResults);
+        await updateListItems(testCase.id, 'expectedResult', expectedResults, groupId);
 
         queryClient.invalidateQueries({ queryKey: ['test-case-details', testCase.id] });
         queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
@@ -352,38 +356,39 @@ export function TestCaseForm({
   const updateListItems = async (
     testCaseId: string,
     type: 'precondition' | 'step' | 'expectedResult',
-    items: ListItem[]
+    items: ListItem[],
+    groupId?: string
   ) => {
     const api = {
       precondition: {
-        add: testCasesApi.addPrecondition,
-        update: testCasesApi.updatePrecondition,
-        delete: testCasesApi.deletePrecondition,
-        reorder: testCasesApi.reorderPreconditions,
+        add: (id: string, data: { content: string; groupId?: string }) => testCasesApi.addPrecondition(id, data),
+        update: (id: string, itemId: string, data: { content: string; groupId?: string }) => testCasesApi.updatePrecondition(id, itemId, data),
+        delete: (id: string, itemId: string, gId?: string) => testCasesApi.deletePrecondition(id, itemId, gId),
+        reorder: (id: string, ids: string[], gId?: string) => testCasesApi.reorderPreconditions(id, ids, gId),
       },
       step: {
-        add: testCasesApi.addStep,
-        update: testCasesApi.updateStep,
-        delete: testCasesApi.deleteStep,
-        reorder: testCasesApi.reorderSteps,
+        add: (id: string, data: { content: string; groupId?: string }) => testCasesApi.addStep(id, data),
+        update: (id: string, itemId: string, data: { content: string; groupId?: string }) => testCasesApi.updateStep(id, itemId, data),
+        delete: (id: string, itemId: string, gId?: string) => testCasesApi.deleteStep(id, itemId, gId),
+        reorder: (id: string, ids: string[], gId?: string) => testCasesApi.reorderSteps(id, ids, gId),
       },
       expectedResult: {
-        add: testCasesApi.addExpectedResult,
-        update: testCasesApi.updateExpectedResult,
-        delete: testCasesApi.deleteExpectedResult,
-        reorder: testCasesApi.reorderExpectedResults,
+        add: (id: string, data: { content: string; groupId?: string }) => testCasesApi.addExpectedResult(id, data),
+        update: (id: string, itemId: string, data: { content: string; groupId?: string }) => testCasesApi.updateExpectedResult(id, itemId, data),
+        delete: (id: string, itemId: string, gId?: string) => testCasesApi.deleteExpectedResult(id, itemId, gId),
+        reorder: (id: string, ids: string[], gId?: string) => testCasesApi.reorderExpectedResults(id, ids, gId),
       },
     }[type];
 
     // 削除された項目を処理
     for (const item of items.filter((i) => i.isDeleted && !i.isNew)) {
-      await api.delete(testCaseId, item.id);
+      await api.delete(testCaseId, item.id, groupId);
     }
 
     // 新規追加された項目を処理
     const newItems: { tempId: string; realId: string }[] = [];
     for (const item of items.filter((i) => i.isNew && !i.isDeleted && i.content.trim())) {
-      const result = await api.add(testCaseId, { content: item.content.trim() });
+      const result = await api.add(testCaseId, { content: item.content.trim(), groupId });
       const realId = 'precondition' in result
         ? result.precondition.id
         : 'step' in result
@@ -396,7 +401,7 @@ export function TestCaseForm({
     for (const item of items.filter(
       (i) => !i.isNew && !i.isDeleted && i.content.trim() !== i.originalContent
     )) {
-      await api.update(testCaseId, item.id, { content: item.content.trim() });
+      await api.update(testCaseId, item.id, { content: item.content.trim(), groupId });
     }
 
     // 並び順の更新
@@ -415,7 +420,7 @@ export function TestCaseForm({
         orderedIds.some((id, index) => id !== currentOrder[index]);
 
       if (hasOrderChanged || newItems.length > 0) {
-        await api.reorder(testCaseId, orderedIds);
+        await api.reorder(testCaseId, orderedIds, groupId);
       }
     }
   };

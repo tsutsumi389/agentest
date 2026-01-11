@@ -16,9 +16,15 @@ import { AuthenticationError, AuthorizationError } from '@agentest/shared';
 
 /**
  * グループ化されたレスポンスから履歴を平坦化するヘルパー
+ * categorizedHistoriesの全カテゴリから履歴を抽出
  */
-function flattenHistories(items: { histories: unknown[] }[]): unknown[] {
-  return items.flatMap((item) => item.histories);
+function flattenHistories(items: { categorizedHistories: { basicInfo: unknown[]; preconditions: unknown[]; steps: unknown[]; expectedResults: unknown[] } }[]): unknown[] {
+  return items.flatMap((item) => [
+    ...item.categorizedHistories.basicInfo,
+    ...item.categorizedHistories.preconditions,
+    ...item.categorizedHistories.steps,
+    ...item.categorizedHistories.expectedResults,
+  ]);
 }
 import { createApp } from '../../app.js';
 
