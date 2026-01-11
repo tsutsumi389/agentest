@@ -338,6 +338,7 @@ export interface TestSuiteHistory {
   changeType: TestSuiteChangeType;
   snapshot: Record<string, unknown>;
   changeReason: string | null;
+  groupId: string | null;
   createdAt: string;
   changedBy: {
     id: string;
@@ -345,6 +346,34 @@ export interface TestSuiteHistory {
     name: string;
     avatarUrl: string | null;
   } | null;
+}
+
+/**
+ * テストスイートのカテゴリ別履歴（APIレスポンス用）
+ */
+export interface TestSuiteCategorizedHistories {
+  basicInfo: TestSuiteHistory[];
+  preconditions: TestSuiteHistory[];
+}
+
+/**
+ * グループ化されたテストスイート履歴アイテム（APIレスポンス用）
+ * groupIdがnullの場合は単一履歴を含むグループ
+ * @agentest/sharedではcreatedAt: Dateだが、APIレスポンスのJSONシリアライズによりstring型として受け取る
+ */
+export interface TestSuiteHistoryGroupedItem {
+  groupId: string | null;
+  categorizedHistories: TestSuiteCategorizedHistories;
+  createdAt: string;
+}
+
+/**
+ * テストスイート履歴一覧レスポンス（グループ化版）
+ */
+export interface TestSuiteHistoriesGroupedResponse {
+  items: TestSuiteHistoryGroupedItem[];
+  totalGroups: number;
+  total: number;
 }
 
 /** テストスイート検索パラメータ */
@@ -841,9 +870,10 @@ export const testSuitesApi = {
   create: (data: { projectId: string; name: string; description?: string }) =>
     api.post<{ testSuite: TestSuite }>('/api/test-suites', data),
   getById: (testSuiteId: string) => api.get<{ testSuite: TestSuite }>(`/api/test-suites/${testSuiteId}`),
-  update: (testSuiteId: string, data: { name?: string; description?: string; status?: string }) =>
+  update: (testSuiteId: string, data: { name?: string; description?: string; status?: string; groupId?: string }) =>
     api.patch<{ testSuite: TestSuite }>(`/api/test-suites/${testSuiteId}`, data),
-  delete: (testSuiteId: string) => api.delete<void>(`/api/test-suites/${testSuiteId}`),
+  delete: (testSuiteId: string, options?: { groupId?: string }) =>
+    api.delete<void>(`/api/test-suites/${testSuiteId}`, options),
   getTestCases: (testSuiteId: string) =>
     api.get<{ testCases: TestCase[] }>(`/api/test-suites/${testSuiteId}/test-cases`),
   getExecutions: (testSuiteId: string, params?: ExecutionSearchParams) => {
@@ -866,29 +896,29 @@ export const testSuitesApi = {
   // 前提条件管理
   getPreconditions: (testSuiteId: string) =>
     api.get<{ preconditions: Precondition[] }>(`/api/test-suites/${testSuiteId}/preconditions`),
-  addPrecondition: (testSuiteId: string, data: { content: string; orderKey?: string }) =>
+  addPrecondition: (testSuiteId: string, data: { content: string; orderKey?: string; groupId?: string }) =>
     api.post<{ precondition: Precondition }>(`/api/test-suites/${testSuiteId}/preconditions`, data),
-  updatePrecondition: (testSuiteId: string, preconditionId: string, data: { content: string }) =>
+  updatePrecondition: (testSuiteId: string, preconditionId: string, data: { content: string; groupId?: string }) =>
     api.patch<{ precondition: Precondition }>(`/api/test-suites/${testSuiteId}/preconditions/${preconditionId}`, data),
-  deletePrecondition: (testSuiteId: string, preconditionId: string) =>
-    api.delete<void>(`/api/test-suites/${testSuiteId}/preconditions/${preconditionId}`),
-  reorderPreconditions: (testSuiteId: string, preconditionIds: string[]) =>
-    api.post<{ preconditions: Precondition[] }>(`/api/test-suites/${testSuiteId}/preconditions/reorder`, { preconditionIds }),
+  deletePrecondition: (testSuiteId: string, preconditionId: string, options?: { groupId?: string }) =>
+    api.delete<void>(`/api/test-suites/${testSuiteId}/preconditions/${preconditionId}`, options),
+  reorderPreconditions: (testSuiteId: string, preconditionIds: string[], options?: { groupId?: string }) =>
+    api.post<{ preconditions: Precondition[] }>(`/api/test-suites/${testSuiteId}/preconditions/reorder`, { preconditionIds, ...options }),
 
-  // 履歴管理
+  // 履歴管理（グループ化版）
   getHistories: (testSuiteId: string, params?: { limit?: number; offset?: number }) => {
     const query = new URLSearchParams();
     if (params?.limit !== undefined) query.set('limit', String(params.limit));
     if (params?.offset !== undefined) query.set('offset', String(params.offset));
     const queryString = query.toString();
-    return api.get<{ histories: TestSuiteHistory[]; total: number }>(
+    return api.get<TestSuiteHistoriesGroupedResponse>(
       `/api/test-suites/${testSuiteId}/histories${queryString ? `?${queryString}` : ''}`
     );
   },
 
   // 復元
-  restore: (testSuiteId: string) =>
-    api.post<{ testSuite: TestSuite }>(`/api/test-suites/${testSuiteId}/restore`),
+  restore: (testSuiteId: string, options?: { groupId?: string }) =>
+    api.post<{ testSuite: TestSuite }>(`/api/test-suites/${testSuiteId}/restore`, options),
 
   // テストケースサジェスト（@メンション用）
   suggestTestCases: (testSuiteId: string, params?: { q?: string; limit?: number }) => {
@@ -902,8 +932,8 @@ export const testSuitesApi = {
   },
 
   // テストケース並び替え
-  reorderTestCases: (testSuiteId: string, testCaseIds: string[]) =>
-    api.post<{ testCases: TestCase[] }>(`/api/test-suites/${testSuiteId}/test-cases/reorder`, { testCaseIds }),
+  reorderTestCases: (testSuiteId: string, testCaseIds: string[], options?: { groupId?: string }) =>
+    api.post<{ testCases: TestCase[] }>(`/api/test-suites/${testSuiteId}/test-cases/reorder`, { testCaseIds, ...options }),
 };
 
 // ============================================

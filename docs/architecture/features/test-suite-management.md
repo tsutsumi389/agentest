@@ -86,18 +86,43 @@
 #### 履歴タブ
 
 - **表示要素**
-  - 変更履歴タイムライン
-    - 変更者アバター、名前
-    - 変更タイプ（CREATE/UPDATE/DELETE/RESTORE）
-    - 変更内容の差分
-    - 変更理由（あれば）
-    - 日時（相対時間 + 絶対時間ツールチップ）
-  - ページネーション（20件ずつ）
+  - 変更履歴タイムライン（グループ化対応）
+    - **単一変更の場合**
+      - 変更者アバター、名前
+      - 変更タイプバッジ（CREATE/UPDATE/DELETE/RESTORE）
+      - 変更内容のサマリー（例: 「名前、説明を変更」）
+      - 「詳細を見る」ボタン（UPDATE/CREATEで`changeDetail`がある場合のみ）
+      - 日時（相対時間 + 絶対時間ツールチップ）
+    - **グループ化された変更の場合**（同一 groupId の複数履歴）
+      - グループアイコン（Layers アイコン）
+      - 変更者アバター、名前
+      - 「更新 (N件)」バッジ（N=グループ内の履歴数）
+      - 変更内容のサマリー（例: 「名前、前提条件を変更」）
+      - 「詳細を見る」ボタン
+      - 日時（グループの作成日時）
+  - 詳細展開時（グループ化対応）
+    - カテゴリ別の変更内容表示
+      - 基本情報（FileText アイコン）: 名前、説明、ステータス
+      - 前提条件（List アイコン）: 追加/更新/削除/並び替え
+    - 各カテゴリ内で変更件数を表示
+  - 差分表示（折りたたみ式）
+    - 変更前の値（赤色、取り消し線）
+    - 変更後の値（緑色）
+  - ページネーション（20グループずつ）
+    - グループ単位でのページネーション
+    - ページ境界でグループが分断されない設計
 - **変更タイプアイコン**
-  - CREATE: 緑色
-  - UPDATE: 青色
-  - DELETE: 赤色
-  - RESTORE: 紫色
+  - CREATE: 緑色（PlusCircle アイコン）
+  - UPDATE: 青色（Pencil アイコン）
+  - DELETE: 赤色（Trash2 アイコン）
+  - RESTORE: 紫色（RotateCcw アイコン）
+  - グループ: 青色（Layers アイコン）
+- **差分表示対応項目**
+  - 基本情報: 名前、説明、ステータス
+  - 子エンティティ: 前提条件（追加/更新/削除/並び替え）、テストケース（並び替え）
+- **後方互換性**
+  - groupId が NULL の既存データは個別の単一変更として表示
+  - 新規データは同一トランザクション内の変更が自動的にグループ化
 
 #### 設定タブ
 
@@ -293,6 +318,7 @@ erDiagram
         enum changeType "CREATE, UPDATE, DELETE, RESTORE"
         json snapshot
         text changeReason "nullable"
+        varchar(36) groupId "nullable, 変更グループID"
         timestamp createdAt
     }
 ```
@@ -527,33 +553,77 @@ after:  ["a", "b", "c"]  （b を新規生成）
 }
 ```
 
-### 履歴一覧取得
+### 履歴一覧取得（グループ化対応）
 
 **レスポンス**
 ```json
 {
-  "histories": [
+  "items": [
     {
-      "id": "uuid",
-      "testSuiteId": "uuid",
-      "changeType": "UPDATE",
-      "snapshot": {
-        "name": "旧テストスイート名",
-        "description": "旧説明"
+      "groupId": "uuid",
+      "categorizedHistories": {
+        "basicInfo": [
+          {
+            "id": "uuid",
+            "testSuiteId": "uuid",
+            "changeType": "UPDATE",
+            "snapshot": {
+              "name": "旧テストスイート名",
+              "description": "旧説明",
+              "status": "DRAFT",
+              "changeDetail": {
+                "type": "BASIC_INFO_UPDATE",
+                "fields": {
+                  "name": { "before": "旧名前", "after": "新名前" }
+                }
+              }
+            },
+            "changeReason": null,
+            "groupId": "uuid",
+            "createdAt": "2024-01-01T00:00:00Z",
+            "changedBy": {
+              "id": "uuid",
+              "email": "user@example.com",
+              "name": "ユーザー名",
+              "avatarUrl": "https://..."
+            }
+          }
+        ],
+        "preconditions": [
+          {
+            "id": "uuid",
+            "changeType": "UPDATE",
+            "snapshot": {
+              "changeDetail": {
+                "type": "PRECONDITION_ADD",
+                "preconditionId": "uuid",
+                "added": { "content": "前提条件内容", "orderKey": "a0" }
+              }
+            },
+            "groupId": "uuid",
+            "createdAt": "2024-01-01T00:00:00Z",
+            "changedBy": { ... }
+          }
+        ]
       },
-      "changeReason": null,
-      "createdAt": "2024-01-01T00:00:00Z",
-      "changedBy": {
-        "id": "uuid",
-        "email": "user@example.com",
-        "name": "ユーザー名",
-        "avatarUrl": "https://..."
-      }
+      "createdAt": "2024-01-01T00:00:00Z"
     }
   ],
-  "total": 10
+  "totalGroups": 10,
+  "total": 25
 }
 ```
+
+**changeDetail の型**
+
+| type | 説明 | 追加フィールド |
+|------|------|----------------|
+| `BASIC_INFO_UPDATE` | 基本情報変更 | `fields`: 変更されたフィールドの before/after |
+| `PRECONDITION_ADD` | 前提条件追加 | `preconditionId`, `added` |
+| `PRECONDITION_UPDATE` | 前提条件更新 | `preconditionId`, `before`, `after` |
+| `PRECONDITION_DELETE` | 前提条件削除 | `preconditionId`, `deleted` |
+| `PRECONDITION_REORDER` | 前提条件並替 | `before`, `after`（ID配列） |
+| `TEST_CASE_REORDER` | テストケース並替 | `before`, `after`（ID配列） |
 
 ### テストスイート検索
 

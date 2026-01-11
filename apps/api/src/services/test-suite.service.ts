@@ -1,5 +1,5 @@
 import { prisma, type EntityStatus, type ExecutionStatus, type Prisma } from '@agentest/db';
-import { NotFoundError, BadRequestError, ConflictError } from '@agentest/shared';
+import { NotFoundError, BadRequestError, ConflictError, type TestSuiteChangeDetail } from '@agentest/shared';
 import { TestSuiteRepository } from '../repositories/test-suite.repository.js';
 import { TestCaseRepository, type TestCaseSearchOptions } from '../repositories/test-case.repository.js';
 
@@ -34,47 +34,12 @@ type TestCaseSnapshot = {
 };
 
 /**
- * 前提条件変更の詳細情報
- */
-type PreconditionChangeDetail =
-  | {
-      type: 'PRECONDITION_ADD';
-      preconditionId: string;
-      added: { content: string; orderKey: string };
-    }
-  | {
-      type: 'PRECONDITION_UPDATE';
-      preconditionId: string;
-      before: { content: string };
-      after: { content: string };
-    }
-  | {
-      type: 'PRECONDITION_DELETE';
-      preconditionId: string;
-      deleted: { content: string; orderKey: string };
-    }
-  | {
-      type: 'PRECONDITION_REORDER';
-      before: string[];
-      after: string[];
-    };
-
-/**
- * テストケース変更の詳細情報
- */
-type TestCaseChangeDetail = {
-  type: 'TEST_CASE_REORDER';
-  before: string[];
-  after: string[];
-};
-
-/**
  * 履歴保存用のスナップショット型
  */
 type HistorySnapshot = TestSuiteSnapshot & {
   preconditions?: PreconditionSnapshot[];
   testCases?: TestCaseSnapshot[];
-  changeDetail?: PreconditionChangeDetail | TestCaseChangeDetail;
+  changeDetail?: TestSuiteChangeDetail;
 };
 
 /**
@@ -131,16 +96,33 @@ export class TestSuiteService {
   async update(
     testSuiteId: string,
     userId: string,
-    data: { name?: string; description?: string | null; status?: EntityStatus }
+    data: { name?: string; description?: string | null; status?: EntityStatus },
+    options?: { groupId?: string }
   ) {
     const testSuite = await this.findById(testSuiteId);
 
-    const snapshot: TestSuiteSnapshot = {
+    // 変更差分を構築
+    const fields: Extract<TestSuiteChangeDetail, { type: 'BASIC_INFO_UPDATE' }>['fields'] = {};
+    if (data.name !== undefined && data.name !== testSuite.name) {
+      fields.name = { before: testSuite.name, after: data.name };
+    }
+    if (data.description !== undefined && data.description !== testSuite.description) {
+      fields.description = { before: testSuite.description, after: data.description };
+    }
+    if (data.status !== undefined && data.status !== testSuite.status) {
+      fields.status = { before: testSuite.status, after: data.status };
+    }
+
+    const snapshot: HistorySnapshot = {
       id: testSuite.id,
       projectId: testSuite.projectId,
       name: testSuite.name,
       description: testSuite.description,
       status: testSuite.status,
+      changeDetail: {
+        type: 'BASIC_INFO_UPDATE',
+        fields,
+      },
     };
 
     // 履歴を保存
@@ -150,6 +132,7 @@ export class TestSuiteService {
         changedByUserId: userId,
         changeType: 'UPDATE',
         snapshot: toJsonSnapshot(snapshot),
+        groupId: options?.groupId,
       },
     });
 
@@ -159,7 +142,7 @@ export class TestSuiteService {
   /**
    * テストスイートを論理削除
    */
-  async softDelete(testSuiteId: string, userId: string) {
+  async softDelete(testSuiteId: string, userId: string, options?: { groupId?: string }) {
     const testSuite = await this.findById(testSuiteId);
 
     const snapshot: TestSuiteSnapshot = {
@@ -177,6 +160,7 @@ export class TestSuiteService {
         changedByUserId: userId,
         changeType: 'DELETE',
         snapshot: toJsonSnapshot(snapshot),
+        groupId: options?.groupId,
       },
     });
 
@@ -240,7 +224,12 @@ export class TestSuiteService {
   /**
    * 前提条件を追加
    */
-  async addPrecondition(testSuiteId: string, userId: string, data: { content: string; orderKey?: string }) {
+  async addPrecondition(
+    testSuiteId: string,
+    userId: string,
+    data: { content: string; orderKey?: string },
+    options?: { groupId?: string }
+  ) {
     const testSuite = await this.findById(testSuiteId);
 
     // orderKeyが指定されていない場合は自動生成
@@ -282,6 +271,7 @@ export class TestSuiteService {
         changedByUserId: userId,
         changeType: 'UPDATE',
         snapshot: toJsonSnapshot(snapshot),
+        groupId: options?.groupId,
       },
     });
 
@@ -291,7 +281,13 @@ export class TestSuiteService {
   /**
    * 前提条件を更新
    */
-  async updatePrecondition(testSuiteId: string, preconditionId: string, userId: string, data: { content: string }) {
+  async updatePrecondition(
+    testSuiteId: string,
+    preconditionId: string,
+    userId: string,
+    data: { content: string },
+    options?: { groupId?: string }
+  ) {
     const testSuite = await this.findById(testSuiteId);
 
     // 前提条件の存在確認
@@ -324,6 +320,7 @@ export class TestSuiteService {
         changedByUserId: userId,
         changeType: 'UPDATE',
         snapshot: toJsonSnapshot(snapshot),
+        groupId: options?.groupId,
       },
     });
 
@@ -336,7 +333,7 @@ export class TestSuiteService {
   /**
    * 前提条件を削除
    */
-  async deletePrecondition(testSuiteId: string, preconditionId: string, userId: string) {
+  async deletePrecondition(testSuiteId: string, preconditionId: string, userId: string, options?: { groupId?: string }) {
     const testSuite = await this.findById(testSuiteId);
 
     // 前提条件の存在確認
@@ -370,6 +367,7 @@ export class TestSuiteService {
           changedByUserId: userId,
           changeType: 'UPDATE',
           snapshot: toJsonSnapshot(snapshot),
+          groupId: options?.groupId,
         },
       });
 
@@ -396,7 +394,7 @@ export class TestSuiteService {
   /**
    * 前提条件を並び替え
    */
-  async reorderPreconditions(testSuiteId: string, preconditionIds: string[], userId: string) {
+  async reorderPreconditions(testSuiteId: string, preconditionIds: string[], userId: string, options?: { groupId?: string }) {
     const testSuite = await this.findById(testSuiteId);
 
     // 全ての前提条件を取得
@@ -449,6 +447,7 @@ export class TestSuiteService {
         changedByUserId: userId,
         changeType: 'UPDATE',
         snapshot: toJsonSnapshot(snapshot),
+        groupId: options?.groupId,
       },
     });
 
@@ -694,7 +693,7 @@ export class TestSuiteService {
   }
 
   /**
-   * 変更履歴一覧を取得
+   * 変更履歴一覧を取得（グループ化版）
    */
   async getHistories(testSuiteId: string, options: { limit: number; offset: number }) {
     // 削除済みを含めてテストスイートの存在確認
@@ -705,18 +704,19 @@ export class TestSuiteService {
       throw new NotFoundError('TestSuite', testSuiteId);
     }
 
-    const [histories, total] = await Promise.all([
-      this.testSuiteRepo.getHistories(testSuiteId, options),
-      this.testSuiteRepo.countHistories(testSuiteId),
-    ]);
+    const result = await this.testSuiteRepo.getHistoriesGrouped(testSuiteId, options);
 
-    return { histories, total };
+    return {
+      items: result.items,
+      totalGroups: result.totalGroups,
+      total: result.totalHistories,
+    };
   }
 
   /**
    * 削除済みテストスイートを復元
    */
-  async restore(testSuiteId: string, userId: string) {
+  async restore(testSuiteId: string, userId: string, options?: { groupId?: string }) {
     // 削除済みテストスイートを取得
     const testSuite = await this.testSuiteRepo.findDeletedById(testSuiteId);
     if (!testSuite) {
@@ -748,6 +748,7 @@ export class TestSuiteService {
           changedByUserId: userId,
           changeType: 'RESTORE',
           snapshot: toJsonSnapshot(snapshot),
+          groupId: options?.groupId,
         },
       });
 
@@ -759,7 +760,7 @@ export class TestSuiteService {
   /**
    * テストケースを並び替え
    */
-  async reorderTestCases(testSuiteId: string, testCaseIds: string[], userId: string) {
+  async reorderTestCases(testSuiteId: string, testCaseIds: string[], userId: string, options?: { groupId?: string }) {
     const testSuite = await this.findById(testSuiteId);
 
     // 現在のテストケース一覧取得
@@ -829,6 +830,7 @@ export class TestSuiteService {
           changedByUserId: userId,
           changeType: 'UPDATE',
           snapshot: toJsonSnapshot(snapshot),
+          groupId: options?.groupId,
         },
       });
 

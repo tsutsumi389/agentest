@@ -49,10 +49,13 @@ const updateTestSuiteHandler: ToolHandler<UpdateTestSuiteInput, UpdateTestSuiteR
   // 楽観的ロック確認：人間がロック中なら更新拒否
   await checkLockStatus('SUITE', testSuiteId);
 
+  // MCPツール内でgroupIdを自動生成し、全カテゴリの変更を同一グループとして扱う
+  const groupId = crypto.randomUUID();
+
   // 内部APIを呼び出し
   const response = await apiClient.patch<UpdateTestSuiteResponse>(
     `/internal/api/test-suites/${testSuiteId}`,
-    updateData,
+    { ...updateData, groupId },
     { userId }
   );
 

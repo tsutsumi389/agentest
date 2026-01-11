@@ -18,15 +18,18 @@ const updateTestSuiteSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).optional().nullable(),
   status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).optional(),
+  groupId: z.string().uuid().optional(),
 });
 
 const addPreconditionSchema = z.object({
   content: z.string().min(1).max(2000),
   orderKey: z.string().optional(),
+  groupId: z.string().uuid().optional(),
 });
 
 const updatePreconditionSchema = z.object({
   content: z.string().min(1).max(2000),
+  groupId: z.string().uuid().optional(),
 });
 
 const preconditionIdParamSchema = z.object({
@@ -35,11 +38,25 @@ const preconditionIdParamSchema = z.object({
 
 const reorderPreconditionsSchema = z.object({
   preconditionIds: z.array(z.string().uuid()),
+  groupId: z.string().uuid().optional(),
 });
 
 const reorderTestCasesSchema = z.object({
   testCaseIds: z.array(z.string().uuid()).min(1),
+  groupId: z.string().uuid().optional(),
 });
+
+const deletePreconditionBodySchema = z.object({
+  groupId: z.string().uuid().optional(),
+}).optional().default({});
+
+const deleteTestSuiteBodySchema = z.object({
+  groupId: z.string().uuid().optional(),
+}).optional().default({});
+
+const restoreTestSuiteBodySchema = z.object({
+  groupId: z.string().uuid().optional(),
+}).optional().default({});
 
 const startExecutionSchema = z.object({
   environmentId: z.string().uuid().optional(),
@@ -90,8 +107,8 @@ export class TestSuiteController {
   update = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testSuiteId } = req.params;
-      const data = updateTestSuiteSchema.parse(req.body);
-      const testSuite = await this.testSuiteService.update(testSuiteId, req.user!.id, data);
+      const { groupId, ...data } = updateTestSuiteSchema.parse(req.body);
+      const testSuite = await this.testSuiteService.update(testSuiteId, req.user!.id, data, { groupId });
 
       res.json({ testSuite });
     } catch (error) {
@@ -105,7 +122,8 @@ export class TestSuiteController {
   delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testSuiteId } = req.params;
-      await this.testSuiteService.softDelete(testSuiteId, req.user!.id);
+      const { groupId } = deleteTestSuiteBodySchema.parse(req.body);
+      await this.testSuiteService.softDelete(testSuiteId, req.user!.id, { groupId });
 
       res.status(204).send();
     } catch (error) {
@@ -154,8 +172,8 @@ export class TestSuiteController {
   reorderTestCases = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testSuiteId } = req.params;
-      const { testCaseIds } = reorderTestCasesSchema.parse(req.body);
-      const testCases = await this.testSuiteService.reorderTestCases(testSuiteId, testCaseIds, req.user!.id);
+      const { testCaseIds, groupId } = reorderTestCasesSchema.parse(req.body);
+      const testCases = await this.testSuiteService.reorderTestCases(testSuiteId, testCaseIds, req.user!.id, { groupId });
 
       res.json({ testCases });
     } catch (error) {
@@ -183,8 +201,8 @@ export class TestSuiteController {
   addPrecondition = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testSuiteId } = req.params;
-      const data = addPreconditionSchema.parse(req.body);
-      const precondition = await this.testSuiteService.addPrecondition(testSuiteId, req.user!.id, data);
+      const { groupId, ...data } = addPreconditionSchema.parse(req.body);
+      const precondition = await this.testSuiteService.addPrecondition(testSuiteId, req.user!.id, data, { groupId });
 
       res.status(201).json({ precondition });
     } catch (error) {
@@ -199,8 +217,8 @@ export class TestSuiteController {
     try {
       const { testSuiteId } = req.params;
       const { preconditionId } = preconditionIdParamSchema.parse(req.params);
-      const data = updatePreconditionSchema.parse(req.body);
-      const precondition = await this.testSuiteService.updatePrecondition(testSuiteId, preconditionId, req.user!.id, data);
+      const { groupId, ...data } = updatePreconditionSchema.parse(req.body);
+      const precondition = await this.testSuiteService.updatePrecondition(testSuiteId, preconditionId, req.user!.id, data, { groupId });
 
       res.json({ precondition });
     } catch (error) {
@@ -215,7 +233,8 @@ export class TestSuiteController {
     try {
       const { testSuiteId } = req.params;
       const { preconditionId } = preconditionIdParamSchema.parse(req.params);
-      await this.testSuiteService.deletePrecondition(testSuiteId, preconditionId, req.user!.id);
+      const { groupId } = deletePreconditionBodySchema.parse(req.body);
+      await this.testSuiteService.deletePrecondition(testSuiteId, preconditionId, req.user!.id, { groupId });
 
       res.status(204).send();
     } catch (error) {
@@ -229,8 +248,8 @@ export class TestSuiteController {
   reorderPreconditions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testSuiteId } = req.params;
-      const { preconditionIds } = reorderPreconditionsSchema.parse(req.body);
-      const preconditions = await this.testSuiteService.reorderPreconditions(testSuiteId, preconditionIds, req.user!.id);
+      const { preconditionIds, groupId } = reorderPreconditionsSchema.parse(req.body);
+      const preconditions = await this.testSuiteService.reorderPreconditions(testSuiteId, preconditionIds, req.user!.id, { groupId });
 
       res.json({ preconditions });
     } catch (error) {
@@ -269,15 +288,15 @@ export class TestSuiteController {
   };
 
   /**
-   * 変更履歴一覧取得
+   * 変更履歴一覧取得（グループ化版）
    */
   getHistories = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testSuiteId } = req.params;
       const { limit, offset } = paginationQuerySchema.parse(req.query);
-      const { histories, total } = await this.testSuiteService.getHistories(testSuiteId, { limit, offset });
+      const { items, totalGroups, total } = await this.testSuiteService.getHistories(testSuiteId, { limit, offset });
 
-      res.json({ histories, total });
+      res.json({ items, totalGroups, total });
     } catch (error) {
       next(error);
     }
@@ -289,7 +308,8 @@ export class TestSuiteController {
   restore = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testSuiteId } = req.params;
-      const testSuite = await this.testSuiteService.restore(testSuiteId, req.user!.id);
+      const { groupId } = restoreTestSuiteBodySchema.parse(req.body);
+      const testSuite = await this.testSuiteService.restore(testSuiteId, req.user!.id, { groupId });
 
       res.json({ testSuite });
     } catch (error) {
