@@ -144,9 +144,10 @@ model TestSuitePrecondition {
 | `testSuiteId` | UUID | NO | - | テストスイート ID（外部キー） |
 | `changedByUserId` | UUID | YES | NULL | 変更者ユーザー ID（外部キー）※1 |
 | `changedByAgentSessionId` | UUID | YES | NULL | 変更者 Agent セッション ID（外部キー）※1 |
-| `changeType` | ENUM | NO | - | 変更種別（CREATE, UPDATE, DELETE） |
+| `changeType` | ENUM | NO | - | 変更種別（CREATE, UPDATE, DELETE, RESTORE） |
 | `snapshot` | JSONB | NO | - | 変更時点のスナップショット |
 | `changeReason` | TEXT | YES | NULL | 変更理由 |
+| `groupId` | VARCHAR(36) | YES | NULL | 変更グループID |
 | `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
 
 ※1: `changedByUserId` と `changedByAgentSessionId` はどちらか一方のみ設定（排他制約）
@@ -184,6 +185,7 @@ model TestSuiteHistory {
   changeType              ChangeType
   snapshot                Json
   changeReason            String?
+  groupId                 String?    @map("group_id") @db.VarChar(36)
   createdAt               DateTime   @default(now())
 
   testSuite             TestSuite     @relation(fields: [testSuiteId], references: [id], onDelete: Cascade)
@@ -191,6 +193,8 @@ model TestSuiteHistory {
   changedByAgentSession AgentSession? @relation(fields: [changedByAgentSessionId], references: [id])
 
   @@index([testSuiteId])
+  @@index([testSuiteId, groupId])
+  @@index([createdAt])
 }
 ```
 
@@ -204,6 +208,53 @@ ALTER TABLE "TestSuiteHistory" ADD CONSTRAINT "test_suite_history_changer_check"
     (changed_by_user_id IS NULL AND changed_by_agent_session_id IS NOT NULL)
   );
 ```
+
+### groupId（変更グループ ID）
+
+同一トランザクション内で行われた複数の変更を1つのグループとしてまとめるための ID。
+
+#### 用途
+
+- **一括更新のグループ化**: テストスイートの基本情報と前提条件を同時に更新した場合、同じ groupId が付与される
+- **履歴表示の統合**: フロントエンドで同じ groupId を持つ履歴レコードを1つの更新として表示
+- **カテゴリ別分類**: グループ内の変更を基本情報/前提条件の2カテゴリに分類して表示
+
+#### 仕様
+
+| 項目 | 値 |
+|------|-----|
+| 形式 | UUID v4（36文字） |
+| 生成タイミング | 履歴作成時に自動生成、または呼び出し元から指定 |
+| 既存データ | NULL（グループ化されていない単独の変更） |
+
+#### グループ化のイメージ
+
+```
+┌─────────────────────────────────────────────────┐
+│ groupId = "abc-123-..."                         │
+├─────────────────────────────────────────────────┤
+│ ┌─────────────┐ ┌─────────────────────────────┐ │
+│ │ 基本情報     │ │ 前提条件                    │ │
+│ │ BASIC_INFO  │ │ PRECONDITION_ADD/UPDATE/    │ │
+│ │ _UPDATE     │ │ DELETE/REORDER              │ │
+│ └─────────────┘ └─────────────────────────────┘ │
+└─────────────────────────────────────────────────┘
+                       ↓
+           フロントエンドで1つの更新として表示
+```
+
+#### changeDetail 型
+
+スナップショット内に格納される変更詳細情報。
+
+| type | 説明 |
+|------|------|
+| `BASIC_INFO_UPDATE` | 基本情報（名前、説明、ステータス）の変更 |
+| `PRECONDITION_ADD` | 前提条件の追加 |
+| `PRECONDITION_UPDATE` | 前提条件の更新 |
+| `PRECONDITION_DELETE` | 前提条件の削除 |
+| `PRECONDITION_REORDER` | 前提条件の並び替え |
+| `TEST_CASE_REORDER` | テストケースの並び替え |
 
 ---
 
