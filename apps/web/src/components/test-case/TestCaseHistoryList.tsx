@@ -9,13 +9,20 @@ import {
   Trash2,
   RotateCcw,
   User,
+  Layers,
+  FileText,
+  List,
+  CheckCircle,
+  type LucideIcon,
 } from 'lucide-react';
 import {
   testCasesApi,
   ApiError,
   type TestCase,
   type TestCaseHistory,
+  type TestCaseHistoryGroupedItem,
   type TestCaseChangeType,
+  type CategorizedHistories,
 } from '../../lib/api';
 import { type TestCaseChangeDetail } from '@agentest/shared';
 import { formatDateTime, formatRelativeTime } from '../../lib/date';
@@ -36,25 +43,72 @@ const CHANGE_TYPES: Record<TestCaseChangeType, { label: string; icon: typeof Plu
 };
 
 /**
- * ページサイズ
+ * ページサイズ（グループ単位）
  */
 const PAGE_SIZE = 20;
+
+/**
+ * カテゴリの定義
+ */
+const CATEGORY_DEFINITIONS: Record<
+  keyof CategorizedHistories,
+  { label: string; icon: LucideIcon; order: number }
+> = {
+  basicInfo: { label: '基本情報', icon: FileText, order: 0 },
+  preconditions: { label: '前提条件', icon: List, order: 1 },
+  steps: { label: '手順', icon: Pencil, order: 2 },
+  expectedResults: { label: '期待結果', icon: CheckCircle, order: 3 },
+};
+
+/**
+ * カテゴリ別履歴の総数を取得
+ */
+function getTotalHistoryCount(categorizedHistories: CategorizedHistories): number {
+  return (
+    categorizedHistories.basicInfo.length +
+    categorizedHistories.preconditions.length +
+    categorizedHistories.steps.length +
+    categorizedHistories.expectedResults.length
+  );
+}
+
+/**
+ * グループ化されたアイテムが複数履歴を持つかどうかを判定
+ * 複数履歴の場合はグループ表示、単一履歴の場合は個別表示
+ */
+function isMultipleHistoryGroup(item: TestCaseHistoryGroupedItem): boolean {
+  return getTotalHistoryCount(item.categorizedHistories) > 1;
+}
+
+/**
+ * カテゴリ別履歴から最初の履歴を取得
+ */
+function getFirstHistory(categorizedHistories: CategorizedHistories): TestCaseHistory | null {
+  for (const category of ['basicInfo', 'preconditions', 'steps', 'expectedResults'] as const) {
+    if (categorizedHistories[category].length > 0) {
+      return categorizedHistories[category][0];
+    }
+  }
+  return null;
+}
 
 /**
  * テストケース変更履歴一覧コンポーネント
  */
 export function TestCaseHistoryList({ testCase }: TestCaseHistoryListProps) {
-  const [histories, setHistories] = useState<TestCaseHistory[]>([]);
+  // バックエンドからグループ化済みのアイテムを受け取る
+  const [groupedItems, setGroupedItems] = useState<TestCaseHistoryGroupedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // ページネーション状態
+  // ページネーション状態（グループ単位）
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
+  const [totalGroups, setTotalGroups] = useState(0);
+  const [total, setTotal] = useState(0); // 履歴レコード総数（表示用）
 
-  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const totalPages = Math.ceil(totalGroups / PAGE_SIZE);
 
-  // 履歴を取得
+  // 履歴を取得（グループ化済み）
   const fetchHistories = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -64,7 +118,8 @@ export function TestCaseHistoryList({ testCase }: TestCaseHistoryListProps) {
         limit: PAGE_SIZE,
         offset: (page - 1) * PAGE_SIZE,
       });
-      setHistories(response.histories);
+      setGroupedItems(response.items);
+      setTotalGroups(response.totalGroups);
       setTotal(response.total);
     } catch (err) {
       if (err instanceof ApiError) {
@@ -89,7 +144,7 @@ export function TestCaseHistoryList({ testCase }: TestCaseHistoryListProps) {
   };
 
   // ローディング表示
-  if (isLoading && histories.length === 0) {
+  if (isLoading && groupedItems.length === 0) {
     return (
       <div className="space-y-4">
         <h3 className="text-sm font-semibold text-foreground">変更履歴</h3>
@@ -124,9 +179,9 @@ export function TestCaseHistoryList({ testCase }: TestCaseHistoryListProps) {
       </div>
 
       {/* 履歴一覧 */}
-      {histories.length === 0 ? (
+      {groupedItems.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-foreground-muted text-sm">履歴の読み込みに失敗しました</p>
+          <p className="text-foreground-muted text-sm">変更履歴はありません</p>
         </div>
       ) : (
         <>
@@ -139,9 +194,15 @@ export function TestCaseHistoryList({ testCase }: TestCaseHistoryListProps) {
 
               {/* 履歴アイテム */}
               <div className="space-y-4">
-                {histories.map((history) => (
-                  <HistoryItem key={history.id} history={history} />
-                ))}
+                {groupedItems.map((item) => {
+                  const firstHistory = getFirstHistory(item.categorizedHistories);
+                  if (!firstHistory) return null;
+                  return isMultipleHistoryGroup(item) ? (
+                    <HistoryGroupItem key={item.groupId ?? firstHistory.id} group={item} />
+                  ) : (
+                    <HistoryItem key={firstHistory.id} history={firstHistory} />
+                  );
+                })}
               </div>
             </div>
 
@@ -156,8 +217,8 @@ export function TestCaseHistoryList({ testCase }: TestCaseHistoryListProps) {
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
               <p className="text-xs text-foreground-muted">
-                {total}件中 {(page - 1) * PAGE_SIZE + 1} -{' '}
-                {Math.min(page * PAGE_SIZE, total)}件を表示
+                {totalGroups}グループ中 {(page - 1) * PAGE_SIZE + 1} -{' '}
+                {Math.min(page * PAGE_SIZE, totalGroups)}グループを表示
               </p>
 
               <div className="flex items-center gap-2">
@@ -592,6 +653,156 @@ function HistoryItem({ history }: { history: TestCaseHistory }) {
             <p className="mt-1 text-xs text-foreground-subtle">
               <span title={formatDateTime(history.createdAt)}>
                 {formatRelativeTime(history.createdAt)}
+              </span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * グループ化された履歴のサマリーを取得（カテゴリ別対応）
+ */
+function getGroupSummary(categorizedHistories: CategorizedHistories): string {
+  const allHistories = [
+    ...categorizedHistories.basicInfo,
+    ...categorizedHistories.preconditions,
+    ...categorizedHistories.steps,
+    ...categorizedHistories.expectedResults,
+  ];
+  const allChangedFields = allHistories.flatMap((h) => getChangedFields(h.snapshot));
+  const uniqueFields = [...new Set(allChangedFields)];
+  if (uniqueFields.length === 0) {
+    return '複数の変更';
+  }
+  return `${uniqueFields.join('、')}を変更`;
+}
+
+/**
+ * グループ化された履歴アイテム
+ */
+function HistoryGroupItem({ group }: { group: TestCaseHistoryGroupedItem }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // グループ内の最初の履歴から変更者情報を取得
+  const firstHistory = getFirstHistory(group.categorizedHistories);
+  const changedBy = firstHistory?.changedBy ?? null;
+
+  // グループ内のサマリー
+  const summary = getGroupSummary(group.categorizedHistories);
+  const totalCount = getTotalHistoryCount(group.categorizedHistories);
+
+  // カテゴリ別に表示するためのリスト（空でないカテゴリのみ）
+  const nonEmptyCategories = (
+    Object.entries(group.categorizedHistories) as [keyof CategorizedHistories, TestCaseHistory[]][]
+  )
+    .filter(([, histories]) => histories.length > 0)
+    .sort(([a], [b]) => CATEGORY_DEFINITIONS[a].order - CATEGORY_DEFINITIONS[b].order);
+
+  return (
+    <div className="relative flex items-start gap-4 pl-8">
+      {/* タイムラインドット - グループ用アイコン */}
+      <div
+        className="absolute left-0 w-8 h-8 rounded-full bg-background-secondary border-2 border-border flex items-center justify-center text-blue-500"
+        role="img"
+        aria-label="グループ更新"
+      >
+        <Layers className="w-4 h-4" aria-hidden="true" />
+      </div>
+
+      {/* コンテンツ */}
+      <div className="flex-1 min-w-0 py-1">
+        <div className="flex items-start gap-3">
+          {/* ユーザーアバター */}
+          <div className="flex-shrink-0">
+            {changedBy?.avatarUrl ? (
+              <img
+                src={changedBy.avatarUrl}
+                alt={changedBy.name}
+                className="w-6 h-6 rounded-full"
+              />
+            ) : changedBy ? (
+              <div className="w-6 h-6 rounded-full bg-accent-subtle flex items-center justify-center">
+                <span className="text-xs font-medium text-accent">
+                  {changedBy.name.charAt(0).toUpperCase()}
+                </span>
+              </div>
+            ) : (
+              <div className="w-6 h-6 rounded-full bg-background-tertiary flex items-center justify-center">
+                <User className="w-3 h-3 text-foreground-muted" />
+              </div>
+            )}
+          </div>
+
+          {/* 情報 */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* 変更タイプバッジ */}
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded text-blue-500 bg-background-tertiary">
+                <Pencil className="w-3 h-3" />
+                更新
+                <span className="text-foreground-muted">
+                  ({totalCount}件)
+                </span>
+              </span>
+
+              {/* ユーザー名 */}
+              <span className="text-xs text-foreground">
+                {changedBy?.name || 'システム'}
+              </span>
+            </div>
+
+            {/* サマリー表示 + 詳細ボタン */}
+            <div className="mt-1 flex items-center gap-2">
+              <p className="text-xs text-foreground-muted">{summary}</p>
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="inline-flex items-center gap-0.5 text-xs text-accent hover:underline"
+              >
+                {isExpanded ? '閉じる' : '詳細を見る'}
+                <ChevronDown
+                  className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                />
+              </button>
+            </div>
+
+            {/* 折りたたみ式カテゴリ別差分表示 */}
+            {isExpanded && (
+              <div className="mt-2 pl-3 border-l-2 border-accent space-y-4">
+                {nonEmptyCategories.map(([category, histories]) => {
+                  const categoryDef = CATEGORY_DEFINITIONS[category];
+                  const CategoryIcon = categoryDef.icon;
+                  return (
+                    <div key={category} className="space-y-2">
+                      {/* カテゴリヘッダー */}
+                      <div className="flex items-center gap-1.5 text-xs font-medium text-foreground">
+                        <CategoryIcon className="w-3.5 h-3.5 text-foreground-muted" />
+                        <span>{categoryDef.label}</span>
+                        <span className="text-foreground-muted">({histories.length}件)</span>
+                      </div>
+                      {/* カテゴリ内の履歴 */}
+                      <div className="space-y-2 pl-5">
+                        {histories.map((history) => (
+                          <div key={history.id} className="space-y-1">
+                            <p className="text-xs text-foreground-muted">
+                              {getChangeSummary(history.snapshot, history.changeType)}
+                            </p>
+                            <DiffView snapshot={history.snapshot} />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* 日時 */}
+            <p className="mt-1 text-xs text-foreground-subtle">
+              <span title={formatDateTime(group.createdAt)}>
+                {formatRelativeTime(group.createdAt)}
               </span>
             </p>
           </div>

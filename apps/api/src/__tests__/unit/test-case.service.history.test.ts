@@ -234,6 +234,7 @@ describe('TestCaseService - History & Restore', () => {
           testCaseId: 'test-case-1',
           changedByUserId: 'user-1',
           changeType: 'RESTORE',
+          groupId: expect.any(String),
           snapshot: expect.objectContaining({
             id: mockDeletedTestCase.id,
             testSuiteId: mockDeletedTestCase.testSuiteId,
@@ -241,6 +242,7 @@ describe('TestCaseService - History & Restore', () => {
             description: mockDeletedTestCase.description,
             priority: mockDeletedTestCase.priority,
             status: mockDeletedTestCase.status,
+            deletedAt: expect.any(String),
           }),
         },
       });

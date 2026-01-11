@@ -711,7 +711,12 @@ const updateTestCaseBodySchema = z.object({
   preconditions: z.array(childEntityUpdateSchema).optional(),
   steps: z.array(childEntityUpdateSchema).optional(),
   expectedResults: z.array(childEntityUpdateSchema).optional(),
-}).refine((data) => Object.keys(data).length > 0, {
+  groupId: z.string().uuid().optional(),
+}).refine((data) => {
+  // groupIdを除外してチェック
+  const { groupId: _, ...rest } = data;
+  return Object.keys(rest).length > 0;
+}, {
   message: 'At least one field must be provided',
 });
 
@@ -911,9 +916,12 @@ router.patch('/test-cases/:testCaseId', async (req: Request, res: Response, next
       updateData.steps !== undefined ||
       updateData.expectedResults !== undefined;
 
+    // groupIdを分離
+    const { groupId, ...updateDataWithoutGroupId } = updateData;
+
     const testCase = hasChildEntities
-      ? await testCaseService.updateWithChildren(testCaseId, userId, updateData)
-      : await testCaseService.update(testCaseId, userId, updateData);
+      ? await testCaseService.updateWithChildren(testCaseId, userId, updateDataWithoutGroupId, groupId)
+      : await testCaseService.update(testCaseId, userId, updateDataWithoutGroupId, groupId);
 
     res.json({ testCase });
   } catch (error) {

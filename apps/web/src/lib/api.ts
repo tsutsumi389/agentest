@@ -172,8 +172,8 @@ export const api = {
   put: <T>(endpoint: string, body?: unknown, options?: RequestOptions) =>
     request<T>(endpoint, { ...options, method: 'PUT', body }),
 
-  delete: <T>(endpoint: string, options?: RequestOptions) =>
-    request<T>(endpoint, { ...options, method: 'DELETE' }),
+  delete: <T>(endpoint: string, body?: unknown, options?: RequestOptions) =>
+    request<T>(endpoint, { ...options, method: 'DELETE', body }),
 };
 
 // ============================================
@@ -501,6 +501,7 @@ export interface TestCaseHistory {
   changeType: TestCaseChangeType;
   snapshot: Record<string, unknown>;
   changeReason: string | null;
+  groupId: string | null;
   createdAt: string;
   changedBy: {
     id: string;
@@ -508,6 +509,36 @@ export interface TestCaseHistory {
     name: string;
     avatarUrl: string | null;
   } | null;
+}
+
+/**
+ * カテゴリ別履歴（APIレスポンス用）
+ */
+export interface CategorizedHistories {
+  basicInfo: TestCaseHistory[];
+  preconditions: TestCaseHistory[];
+  steps: TestCaseHistory[];
+  expectedResults: TestCaseHistory[];
+}
+
+/**
+ * グループ化された履歴アイテム（APIレスポンス用）
+ * groupIdがnullの場合は単一履歴を含むグループ
+ * @agentest/sharedではcreatedAt: Dateだが、APIレスポンスのJSONシリアライズによりstring型として受け取る
+ */
+export interface TestCaseHistoryGroupedItem {
+  groupId: string | null;
+  categorizedHistories: CategorizedHistories;
+  createdAt: string;
+}
+
+/**
+ * 履歴一覧レスポンス（グループ化版）
+ */
+export interface TestCaseHistoriesGroupedResponse {
+  items: TestCaseHistoryGroupedItem[];
+  totalGroups: number;
+  total: number;
 }
 
 /** テストケース詳細（前提条件・ステップ・期待結果含む） */
@@ -885,53 +916,53 @@ export const testCasesApi = {
   getById: (testCaseId: string) => api.get<{ testCase: TestCase }>(`/api/test-cases/${testCaseId}`),
   getByIdWithDetails: (testCaseId: string) =>
     api.get<{ testCase: TestCaseWithDetails }>(`/api/test-cases/${testCaseId}`),
-  update: (testCaseId: string, data: { title?: string; description?: string; priority?: string; status?: string }) =>
+  update: (testCaseId: string, data: { title?: string; description?: string; priority?: string; status?: string; groupId?: string }) =>
     api.patch<{ testCase: TestCase }>(`/api/test-cases/${testCaseId}`, data),
   delete: (testCaseId: string) => api.delete<void>(`/api/test-cases/${testCaseId}`),
 
   // 前提条件管理
   getPreconditions: (testCaseId: string) =>
     api.get<{ preconditions: TestCasePrecondition[] }>(`/api/test-cases/${testCaseId}/preconditions`),
-  addPrecondition: (testCaseId: string, data: { content: string; orderKey?: string }) =>
+  addPrecondition: (testCaseId: string, data: { content: string; orderKey?: string; groupId?: string }) =>
     api.post<{ precondition: TestCasePrecondition }>(`/api/test-cases/${testCaseId}/preconditions`, data),
-  updatePrecondition: (testCaseId: string, preconditionId: string, data: { content: string }) =>
+  updatePrecondition: (testCaseId: string, preconditionId: string, data: { content: string; groupId?: string }) =>
     api.patch<{ precondition: TestCasePrecondition }>(`/api/test-cases/${testCaseId}/preconditions/${preconditionId}`, data),
-  deletePrecondition: (testCaseId: string, preconditionId: string) =>
-    api.delete<void>(`/api/test-cases/${testCaseId}/preconditions/${preconditionId}`),
-  reorderPreconditions: (testCaseId: string, preconditionIds: string[]) =>
-    api.post<{ preconditions: TestCasePrecondition[] }>(`/api/test-cases/${testCaseId}/preconditions/reorder`, { preconditionIds }),
+  deletePrecondition: (testCaseId: string, preconditionId: string, groupId?: string) =>
+    api.delete<void>(`/api/test-cases/${testCaseId}/preconditions/${preconditionId}`, groupId ? { groupId } : undefined),
+  reorderPreconditions: (testCaseId: string, preconditionIds: string[], groupId?: string) =>
+    api.post<{ preconditions: TestCasePrecondition[] }>(`/api/test-cases/${testCaseId}/preconditions/reorder`, { preconditionIds, groupId }),
 
   // ステップ管理
   getSteps: (testCaseId: string) =>
     api.get<{ steps: TestCaseStep[] }>(`/api/test-cases/${testCaseId}/steps`),
-  addStep: (testCaseId: string, data: { content: string; orderKey?: string }) =>
+  addStep: (testCaseId: string, data: { content: string; orderKey?: string; groupId?: string }) =>
     api.post<{ step: TestCaseStep }>(`/api/test-cases/${testCaseId}/steps`, data),
-  updateStep: (testCaseId: string, stepId: string, data: { content: string }) =>
+  updateStep: (testCaseId: string, stepId: string, data: { content: string; groupId?: string }) =>
     api.patch<{ step: TestCaseStep }>(`/api/test-cases/${testCaseId}/steps/${stepId}`, data),
-  deleteStep: (testCaseId: string, stepId: string) =>
-    api.delete<void>(`/api/test-cases/${testCaseId}/steps/${stepId}`),
-  reorderSteps: (testCaseId: string, stepIds: string[]) =>
-    api.post<{ steps: TestCaseStep[] }>(`/api/test-cases/${testCaseId}/steps/reorder`, { stepIds }),
+  deleteStep: (testCaseId: string, stepId: string, groupId?: string) =>
+    api.delete<void>(`/api/test-cases/${testCaseId}/steps/${stepId}`, groupId ? { groupId } : undefined),
+  reorderSteps: (testCaseId: string, stepIds: string[], groupId?: string) =>
+    api.post<{ steps: TestCaseStep[] }>(`/api/test-cases/${testCaseId}/steps/reorder`, { stepIds, groupId }),
 
   // 期待結果管理
   getExpectedResults: (testCaseId: string) =>
     api.get<{ expectedResults: TestCaseExpectedResult[] }>(`/api/test-cases/${testCaseId}/expected-results`),
-  addExpectedResult: (testCaseId: string, data: { content: string; orderKey?: string }) =>
+  addExpectedResult: (testCaseId: string, data: { content: string; orderKey?: string; groupId?: string }) =>
     api.post<{ expectedResult: TestCaseExpectedResult }>(`/api/test-cases/${testCaseId}/expected-results`, data),
-  updateExpectedResult: (testCaseId: string, expectedResultId: string, data: { content: string }) =>
+  updateExpectedResult: (testCaseId: string, expectedResultId: string, data: { content: string; groupId?: string }) =>
     api.patch<{ expectedResult: TestCaseExpectedResult }>(`/api/test-cases/${testCaseId}/expected-results/${expectedResultId}`, data),
-  deleteExpectedResult: (testCaseId: string, expectedResultId: string) =>
-    api.delete<void>(`/api/test-cases/${testCaseId}/expected-results/${expectedResultId}`),
-  reorderExpectedResults: (testCaseId: string, expectedResultIds: string[]) =>
-    api.post<{ expectedResults: TestCaseExpectedResult[] }>(`/api/test-cases/${testCaseId}/expected-results/reorder`, { expectedResultIds }),
+  deleteExpectedResult: (testCaseId: string, expectedResultId: string, groupId?: string) =>
+    api.delete<void>(`/api/test-cases/${testCaseId}/expected-results/${expectedResultId}`, groupId ? { groupId } : undefined),
+  reorderExpectedResults: (testCaseId: string, expectedResultIds: string[], groupId?: string) =>
+    api.post<{ expectedResults: TestCaseExpectedResult[] }>(`/api/test-cases/${testCaseId}/expected-results/reorder`, { expectedResultIds, groupId }),
 
-  // 履歴管理
+  // 履歴管理（グループ化版）
   getHistories: (testCaseId: string, params?: { limit?: number; offset?: number }) => {
     const query = new URLSearchParams();
     if (params?.limit !== undefined) query.set('limit', String(params.limit));
     if (params?.offset !== undefined) query.set('offset', String(params.offset));
     const queryString = query.toString();
-    return api.get<{ histories: TestCaseHistory[]; total: number }>(
+    return api.get<TestCaseHistoriesGroupedResponse>(
       `/api/test-cases/${testCaseId}/histories${queryString ? `?${queryString}` : ''}`
     );
   },

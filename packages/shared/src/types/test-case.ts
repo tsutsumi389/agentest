@@ -50,7 +50,38 @@ export interface TestCaseHistory {
   changeType: ChangeType;
   snapshot: Record<string, unknown>;
   changeReason: string | null;
+  groupId: string | null;
   createdAt: Date;
+}
+
+/**
+ * カテゴリ別履歴
+ * グループ内の履歴を4つのカテゴリに分類
+ */
+export interface CategorizedHistories {
+  basicInfo: TestCaseHistory[];
+  preconditions: TestCaseHistory[];
+  steps: TestCaseHistory[];
+  expectedResults: TestCaseHistory[];
+}
+
+/**
+ * グループ化された履歴アイテム（APIレスポンス用）
+ * groupIdがnullの場合は単一履歴を含むグループ
+ */
+export interface TestCaseHistoryGroupedItem {
+  groupId: string | null;
+  categorizedHistories: CategorizedHistories;
+  createdAt: Date;
+}
+
+/**
+ * 履歴一覧レスポンス（グループ化版）
+ */
+export interface TestCaseHistoriesGroupedResponse {
+  items: TestCaseHistoryGroupedItem[];
+  totalGroups: number;
+  total: number; // 後方互換性のため履歴レコード総数も含める
 }
 
 // APIリクエスト/レスポンス型

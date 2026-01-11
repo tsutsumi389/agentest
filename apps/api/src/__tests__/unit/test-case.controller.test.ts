@@ -26,6 +26,7 @@ const mockTestCaseService = {
   reorderExpectedResults: vi.fn(),
   copy: vi.fn(),
   getHistories: vi.fn(),
+  getHistoriesGrouped: vi.fn(),
   restore: vi.fn(),
 };
 
@@ -144,7 +145,7 @@ describe('TestCaseController', () => {
 
       await controller.update(req, res, mockNext);
 
-      expect(mockTestCaseService.update).toHaveBeenCalledWith(TEST_CASE_ID, TEST_USER_ID, { title: 'Updated' });
+      expect(mockTestCaseService.update).toHaveBeenCalledWith(TEST_CASE_ID, TEST_USER_ID, { title: 'Updated' }, undefined);
       expect(res.json).toHaveBeenCalledWith({ testCase: mockCase });
     });
   });
@@ -336,9 +337,13 @@ describe('TestCaseController', () => {
   });
 
   describe('getHistories', () => {
-    it('履歴を取得できる', async () => {
-      const mockResult = { histories: [{ id: 'h1' }], total: 1 };
-      mockTestCaseService.getHistories.mockResolvedValue(mockResult);
+    it('グループ化された履歴を取得できる', async () => {
+      const mockServiceResult = {
+        items: [{ groupId: 'g1', histories: [{ id: 'h1' }], createdAt: new Date() }],
+        totalGroups: 1,
+        totalHistories: 1,
+      };
+      mockTestCaseService.getHistoriesGrouped.mockResolvedValue(mockServiceResult);
 
       const req = mockRequest({
         query: { limit: '20', offset: '0' },
@@ -347,8 +352,12 @@ describe('TestCaseController', () => {
 
       await controller.getHistories(req, res, mockNext);
 
-      expect(mockTestCaseService.getHistories).toHaveBeenCalledWith(TEST_CASE_ID, { limit: 20, offset: 0 });
-      expect(res.json).toHaveBeenCalledWith(mockResult);
+      expect(mockTestCaseService.getHistoriesGrouped).toHaveBeenCalledWith(TEST_CASE_ID, { limit: 20, offset: 0 });
+      expect(res.json).toHaveBeenCalledWith({
+        items: mockServiceResult.items,
+        totalGroups: 1,
+        total: 1,
+      });
     });
   });
 
