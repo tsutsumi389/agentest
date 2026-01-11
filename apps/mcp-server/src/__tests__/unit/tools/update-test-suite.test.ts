@@ -6,8 +6,11 @@ const mockApiClient = vi.hoisted(() => ({
   patch: vi.fn(),
 }));
 
+const mockCheckLockStatus = vi.hoisted(() => vi.fn());
+
 vi.mock('../../../clients/api-client.js', () => ({
   apiClient: mockApiClient,
+  checkLockStatus: mockCheckLockStatus,
 }));
 
 // モック設定後にインポート
@@ -25,7 +28,7 @@ describe('updateTestSuiteTool', () => {
   describe('ツール定義', () => {
     it('正しい名前と説明を持つ', () => {
       expect(updateTestSuiteTool.name).toBe('update_test_suite');
-      expect(updateTestSuiteTool.description).toContain('テストスイートを更新');
+      expect(updateTestSuiteTool.description).toContain('テストスイートの情報を更新');
     });
 
     it('入力スキーマが定義されている', () => {
@@ -140,7 +143,7 @@ describe('updateTestSuiteTool', () => {
 
       expect(mockApiClient.patch).toHaveBeenCalledWith(
         `/internal/api/test-suites/${TEST_SUITE_ID}`,
-        { name: 'Updated Suite' },
+        expect.objectContaining({ name: 'Updated Suite', groupId: expect.stringMatching(/^[0-9a-f-]{36}$/) }),
         { userId: TEST_USER_ID }
       );
       expect(result).toEqual(mockResponse);
@@ -172,7 +175,7 @@ describe('updateTestSuiteTool', () => {
 
       expect(mockApiClient.patch).toHaveBeenCalledWith(
         `/internal/api/test-suites/${TEST_SUITE_ID}`,
-        { name: 'Updated Suite', description: 'New Description', status: 'ACTIVE' },
+        expect.objectContaining({ name: 'Updated Suite', description: 'New Description', status: 'ACTIVE', groupId: expect.stringMatching(/^[0-9a-f-]{36}$/) }),
         { userId: TEST_USER_ID }
       );
     });
@@ -198,7 +201,7 @@ describe('updateTestSuiteTool', () => {
 
       expect(mockApiClient.patch).toHaveBeenCalledWith(
         `/internal/api/test-suites/${TEST_SUITE_ID}`,
-        { description: null },
+        expect.objectContaining({ description: null, groupId: expect.stringMatching(/^[0-9a-f-]{36}$/) }),
         { userId: TEST_USER_ID }
       );
     });

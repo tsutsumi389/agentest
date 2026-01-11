@@ -696,7 +696,12 @@ const updateTestSuiteBodySchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(2000).nullable().optional(),
   status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).optional(),
-}).refine((data) => Object.keys(data).length > 0, {
+  groupId: z.string().uuid().optional(),
+}).refine((data) => {
+  // groupIdを除外してチェック
+  const { groupId: _, ...rest } = data;
+  return Object.keys(rest).length > 0;
+}, {
   message: 'At least one field must be provided',
 });
 
@@ -833,6 +838,9 @@ router.patch('/test-suites/:testSuiteId', async (req: Request, res: Response, ne
 
     const updateData = bodyResult.data;
 
+    // groupIdを分離
+    const { groupId, ...updateDataWithoutGroupId } = updateData;
+
     // 書き込み権限チェック
     const canWrite = await authService.canWriteToTestSuite(userId, testSuiteId);
     if (!canWrite) {
@@ -844,7 +852,7 @@ router.patch('/test-suites/:testSuiteId', async (req: Request, res: Response, ne
     }
 
     // テストスイート更新
-    const testSuite = await testSuiteService.update(testSuiteId, userId, updateData);
+    const testSuite = await testSuiteService.update(testSuiteId, userId, updateDataWithoutGroupId, { groupId });
 
     res.json({ testSuite });
   } catch (error) {

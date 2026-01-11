@@ -102,7 +102,7 @@ export class TestSuiteService {
     const testSuite = await this.findById(testSuiteId);
 
     // 変更差分を構築
-    const fields: BasicInfoChangeDetail['fields'] = {};
+    const fields: Extract<TestSuiteChangeDetail, { type: 'BASIC_INFO_UPDATE' }>['fields'] = {};
     if (data.name !== undefined && data.name !== testSuite.name) {
       fields.name = { before: testSuite.name, after: data.name };
     }
