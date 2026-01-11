@@ -224,39 +224,130 @@ model TestCaseExpectedResult {
 
 ```json
 {
+  "id": "uuid",
+  "testSuiteId": "uuid",
   "title": "テストケースタイトル",
   "description": "説明",
   "priority": "HIGH",
   "status": "ACTIVE",
-  "orderKey": "a",
   "preconditions": [
     {
       "id": "uuid-1",
       "content": "ユーザーがログイン済みであること",
-      "orderKey": "a"
+      "orderKey": "00001"
     }
   ],
   "steps": [
     {
       "id": "uuid-2",
       "content": "ダッシュボード画面を開く",
-      "orderKey": "a"
-    },
-    {
-      "id": "uuid-3",
-      "content": "「設定」ボタンをクリックする",
-      "orderKey": "b"
+      "orderKey": "00001"
     }
   ],
   "expectedResults": [
     {
-      "id": "uuid-4",
+      "id": "uuid-3",
       "content": "設定画面が表示されること",
-      "orderKey": "a"
+      "orderKey": "00001"
     }
-  ]
+  ],
+  "changeDetail": {
+    "type": "BASIC_INFO_UPDATE",
+    "fields": {
+      "title": { "before": "旧タイトル", "after": "新タイトル" }
+    }
+  }
 }
 ```
+
+### changeDetail（変更詳細）
+
+変更操作の詳細情報を記録するフィールド。変更タイプごとに構造が異なる。
+
+#### BASIC_INFO_UPDATE（基本情報の更新）
+
+```json
+{
+  "type": "BASIC_INFO_UPDATE",
+  "fields": {
+    "title": { "before": "旧タイトル", "after": "新タイトル" },
+    "description": { "before": null, "after": "新しい説明" },
+    "priority": { "before": "MEDIUM", "after": "HIGH" },
+    "status": { "before": "DRAFT", "after": "ACTIVE" }
+  }
+}
+```
+
+#### 子エンティティの追加
+
+```json
+{
+  "type": "STEP_ADD",
+  "stepId": "uuid",
+  "added": { "content": "新しいステップ", "orderKey": "00003" }
+}
+```
+
+#### 子エンティティの更新
+
+```json
+{
+  "type": "PRECONDITION_UPDATE",
+  "preconditionId": "uuid",
+  "before": { "content": "旧内容" },
+  "after": { "content": "新内容" }
+}
+```
+
+#### 子エンティティの削除
+
+```json
+{
+  "type": "EXPECTED_RESULT_DELETE",
+  "expectedResultId": "uuid",
+  "deleted": { "content": "削除された内容", "orderKey": "00002" }
+}
+```
+
+#### 並び替え
+
+```json
+{
+  "type": "STEP_REORDER",
+  "before": ["uuid-1", "uuid-2", "uuid-3"],
+  "after": ["uuid-2", "uuid-1", "uuid-3"]
+}
+```
+
+#### コピー
+
+```json
+{
+  "type": "COPY",
+  "sourceTestCaseId": "uuid",
+  "sourceTitle": "コピー元テストケース",
+  "targetTestSuiteId": "uuid"
+}
+```
+
+### changeDetailタイプ一覧
+
+| タイプ | 説明 |
+|--------|------|
+| `BASIC_INFO_UPDATE` | タイトル、説明、優先度、ステータスの更新 |
+| `PRECONDITION_ADD` | 前提条件の追加 |
+| `PRECONDITION_UPDATE` | 前提条件の更新 |
+| `PRECONDITION_DELETE` | 前提条件の削除 |
+| `PRECONDITION_REORDER` | 前提条件の並び替え |
+| `STEP_ADD` | ステップの追加 |
+| `STEP_UPDATE` | ステップの更新 |
+| `STEP_DELETE` | ステップの削除 |
+| `STEP_REORDER` | ステップの並び替え |
+| `EXPECTED_RESULT_ADD` | 期待結果の追加 |
+| `EXPECTED_RESULT_UPDATE` | 期待結果の更新 |
+| `EXPECTED_RESULT_DELETE` | 期待結果の削除 |
+| `EXPECTED_RESULT_REORDER` | 期待結果の並び替え |
+| `COPY` | テストケースのコピー |
 
 ### Prisma スキーマ
 

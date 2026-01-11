@@ -1,7 +1,25 @@
 # テストケース変更履歴の改善プラン
 
+**ステータス: 実装完了**
+
 ## 概要
 変更履歴の表示形式を変更し、一覧では変更項目のサマリーのみ表示、詳細表示で差分（変更前/後）を表示する。
+
+## 実装結果
+
+### 変更ファイル
+
+| ファイル | 変更内容 |
+|---------|---------|
+| `packages/shared/src/types/test-case.ts` | `TestCaseChangeDetail`型を追加（共通型） |
+| `apps/api/src/services/test-case.service.ts` | `update`メソッドで`changeDetail`を保存、共通型をインポート |
+| `apps/web/src/components/test-case/TestCaseHistoryList.tsx` | サマリー表示、折りたたみ式差分表示を実装 |
+
+### 主な実装内容
+
+1. **バックエンド**: 基本情報（タイトル、説明、優先度、ステータス）の更新時に`BASIC_INFO_UPDATE`タイプの`changeDetail`を保存
+2. **フロントエンド**: 履歴一覧でサマリー表示、「詳細を見る」ボタンで差分を展開表示
+3. **型の共通化**: `TestCaseChangeDetail`型を`@agentest/shared`パッケージに定義し、バックエンド・フロントエンドで共有
 
 ## 現状の課題
 1. **基本情報（タイトル、説明、優先度、ステータス）の更新時**: 変更後の値のみ保存しており、変更前の値を含む`changeDetail`が保存されていない
