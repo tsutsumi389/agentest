@@ -1,4 +1,3 @@
-import crypto from 'crypto';
 import { z } from 'zod';
 import type { ToolHandler, ToolDefinition } from './index.js';
 import { apiClient, checkLockStatus } from '../clients/api-client.js';
