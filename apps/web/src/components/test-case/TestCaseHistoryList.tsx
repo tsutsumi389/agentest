@@ -17,6 +17,7 @@ import {
   type TestCaseHistory,
   type TestCaseChangeType,
 } from '../../lib/api';
+import { type TestCaseChangeDetail } from '@agentest/shared';
 import { formatDateTime, formatRelativeTime } from '../../lib/date';
 
 interface TestCaseHistoryListProps {
@@ -191,89 +192,6 @@ export function TestCaseHistoryList({ testCase }: TestCaseHistoryListProps) {
 }
 
 /**
- * changeDetailの型定義
- */
-type ChangeDetail =
-  | {
-      type: 'BASIC_INFO_UPDATE';
-      fields: {
-        title?: { before: string; after: string };
-        description?: { before: string | null; after: string | null };
-        priority?: { before: string; after: string };
-        status?: { before: string; after: string };
-      };
-    }
-  | {
-      type: 'PRECONDITION_ADD';
-      preconditionId: string;
-      added: { content: string; orderKey: string };
-    }
-  | {
-      type: 'PRECONDITION_UPDATE';
-      preconditionId: string;
-      before: { content: string };
-      after: { content: string };
-    }
-  | {
-      type: 'PRECONDITION_DELETE';
-      preconditionId: string;
-      deleted: { content: string; orderKey: string };
-    }
-  | {
-      type: 'PRECONDITION_REORDER';
-      before: string[];
-      after: string[];
-    }
-  | {
-      type: 'STEP_ADD';
-      stepId: string;
-      added: { content: string; orderKey: string };
-    }
-  | {
-      type: 'STEP_UPDATE';
-      stepId: string;
-      before: { content: string };
-      after: { content: string };
-    }
-  | {
-      type: 'STEP_DELETE';
-      stepId: string;
-      deleted: { content: string; orderKey: string };
-    }
-  | {
-      type: 'STEP_REORDER';
-      before: string[];
-      after: string[];
-    }
-  | {
-      type: 'EXPECTED_RESULT_ADD';
-      expectedResultId: string;
-      added: { content: string; orderKey: string };
-    }
-  | {
-      type: 'EXPECTED_RESULT_UPDATE';
-      expectedResultId: string;
-      before: { content: string };
-      after: { content: string };
-    }
-  | {
-      type: 'EXPECTED_RESULT_DELETE';
-      expectedResultId: string;
-      deleted: { content: string; orderKey: string };
-    }
-  | {
-      type: 'EXPECTED_RESULT_REORDER';
-      before: string[];
-      after: string[];
-    }
-  | {
-      type: 'COPY';
-      sourceTestCaseId: string;
-      sourceTitle: string;
-      targetTestSuiteId: string;
-    };
-
-/**
  * フィールド名のラベル
  */
 const FIELD_LABELS: Record<string, string> = {
@@ -306,7 +224,7 @@ const STATUS_LABELS: Record<string, string> = {
  * changeDetailから変更されたフィールド名を抽出
  */
 function getChangedFields(snapshot: Record<string, unknown>): string[] {
-  const changeDetail = snapshot.changeDetail as ChangeDetail | undefined;
+  const changeDetail = snapshot.changeDetail as TestCaseChangeDetail | undefined;
   if (!changeDetail) return [];
 
   switch (changeDetail.type) {
@@ -346,8 +264,8 @@ function getChangedFields(snapshot: Record<string, unknown>): string[] {
 /**
  * changeDetailが存在するか確認
  */
-function hasChangeDetail(snapshot: Record<string, unknown>): boolean {
-  return snapshot.changeDetail !== undefined;
+function hasTestCaseChangeDetail(snapshot: Record<string, unknown>): boolean {
+  return snapshot.changeDetail != null;
 }
 
 /**
@@ -355,7 +273,7 @@ function hasChangeDetail(snapshot: Record<string, unknown>): boolean {
  */
 function getChangeSummary(snapshot: Record<string, unknown>, changeType: TestCaseChangeType): string {
   if (changeType === 'CREATE') {
-    const changeDetail = snapshot.changeDetail as ChangeDetail | undefined;
+    const changeDetail = snapshot.changeDetail as TestCaseChangeDetail | undefined;
     if (changeDetail?.type === 'COPY') {
       return `「${changeDetail.sourceTitle}」からコピーして作成`;
     }
@@ -393,7 +311,7 @@ function getChangeSummary(snapshot: Record<string, unknown>, changeType: TestCas
  * 差分表示コンポーネント
  */
 function DiffView({ snapshot }: { snapshot: Record<string, unknown> }) {
-  const changeDetail = snapshot.changeDetail as ChangeDetail | undefined;
+  const changeDetail = snapshot.changeDetail as TestCaseChangeDetail | undefined;
 
   if (!changeDetail) {
     return (
@@ -582,7 +500,9 @@ function HistoryItem({ history }: { history: TestCaseHistory }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const changeTypeDef = CHANGE_TYPES[history.changeType];
   const Icon = changeTypeDef.icon;
-  const showDetailButton = history.changeType === 'UPDATE' && hasChangeDetail(history.snapshot);
+  const showDetailButton =
+    (history.changeType === 'UPDATE' || history.changeType === 'CREATE') &&
+    hasTestCaseChangeDetail(history.snapshot);
 
   return (
     <div className="relative flex items-start gap-4 pl-8">
