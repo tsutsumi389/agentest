@@ -55,16 +55,6 @@ export interface TestCaseHistory {
 }
 
 /**
- * グループ化されたテストケース変更履歴
- * 同一トランザクションで行われた変更をまとめて表示するために使用
- */
-export interface TestCaseHistoryGroup {
-  groupId: string;
-  histories: TestCaseHistory[];
-  createdAt: Date;
-}
-
-/**
  * グループ化された履歴アイテム（APIレスポンス用）
  * groupIdがnullの場合は単一履歴を含むグループ
  */

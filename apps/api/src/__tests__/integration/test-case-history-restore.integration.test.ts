@@ -13,6 +13,13 @@ import {
 } from './test-helpers.js';
 
 import { AuthenticationError, AuthorizationError } from '@agentest/shared';
+
+/**
+ * グループ化されたレスポンスから履歴を平坦化するヘルパー
+ */
+function flattenHistories(items: { histories: unknown[] }[]): unknown[] {
+  return items.flatMap((item) => item.histories);
+}
 import { createApp } from '../../app.js';
 
 // グローバルな認証状態（モック用）
@@ -162,7 +169,8 @@ describe('Test Case History & Restore API Integration Tests', () => {
         .get(`/api/test-cases/${testCase.id}/histories`)
         .expect(200);
 
-      expect(response.body.histories).toHaveLength(2);
+      const histories = flattenHistories(response.body.items);
+      expect(histories).toHaveLength(2);
       expect(response.body.total).toBe(2);
     });
 
@@ -171,8 +179,9 @@ describe('Test Case History & Restore API Integration Tests', () => {
         .get(`/api/test-cases/${testCase.id}/histories`)
         .expect(200);
 
-      expect(response.body.histories[0].changeType).toBe('UPDATE'); // 後に作成された方が先
-      expect(response.body.histories[1].changeType).toBe('CREATE');
+      const histories = flattenHistories(response.body.items) as { changeType: string }[];
+      expect(histories[0].changeType).toBe('UPDATE'); // 後に作成された方が先
+      expect(histories[1].changeType).toBe('CREATE');
     });
 
     it('履歴には変更者情報が含まれる', async () => {
@@ -180,7 +189,8 @@ describe('Test Case History & Restore API Integration Tests', () => {
         .get(`/api/test-cases/${testCase.id}/histories`)
         .expect(200);
 
-      const updateHistory = response.body.histories[0];
+      const histories = flattenHistories(response.body.items) as { changedBy: { id: string; name: string } }[];
+      const updateHistory = histories[0];
       expect(updateHistory.changedBy).toHaveProperty('id', admin.id);
       expect(updateHistory.changedBy).toHaveProperty('name', 'Admin');
     });
@@ -190,7 +200,8 @@ describe('Test Case History & Restore API Integration Tests', () => {
         .get(`/api/test-cases/${testCase.id}/histories?limit=1`)
         .expect(200);
 
-      expect(response.body.histories).toHaveLength(1);
+      // グループ単位でページネーションされるため、items.lengthが1
+      expect(response.body.items).toHaveLength(1);
       expect(response.body.total).toBe(2); // totalは全件数
     });
 
@@ -199,8 +210,10 @@ describe('Test Case History & Restore API Integration Tests', () => {
         .get(`/api/test-cases/${testCase.id}/histories?offset=1`)
         .expect(200);
 
-      expect(response.body.histories).toHaveLength(1);
-      expect(response.body.histories[0].changeType).toBe('CREATE'); // 2番目の履歴
+      // グループ単位でページネーションされるため、items.lengthが1
+      expect(response.body.items).toHaveLength(1);
+      const histories = flattenHistories(response.body.items) as { changeType: string }[];
+      expect(histories[0].changeType).toBe('CREATE'); // 2番目の履歴
     });
 
     it('limitとoffsetを組み合わせてページネーションできる', async () => {
@@ -215,8 +228,10 @@ describe('Test Case History & Restore API Integration Tests', () => {
         .get(`/api/test-cases/${testCase.id}/histories?limit=1&offset=1`)
         .expect(200);
 
-      expect(response.body.histories).toHaveLength(1);
-      expect(response.body.histories[0].changeType).toBe('UPDATE');
+      // グループ単位でページネーションされるため、items.lengthが1
+      expect(response.body.items).toHaveLength(1);
+      const histories = flattenHistories(response.body.items) as { changeType: string }[];
+      expect(histories[0].changeType).toBe('UPDATE');
       expect(response.body.total).toBe(3);
     });
 
@@ -231,7 +246,8 @@ describe('Test Case History & Restore API Integration Tests', () => {
         .get(`/api/test-cases/${testCase.id}/histories`)
         .expect(200);
 
-      expect(response.body.histories).toHaveLength(2);
+      const histories = flattenHistories(response.body.items);
+      expect(histories).toHaveLength(2);
     });
 
     it('limit=0は無効で400エラー', async () => {

@@ -1,6 +1,41 @@
 import { prisma, type TestCasePriority, type EntityStatus, type Prisma } from '@agentest/db';
 
 /**
+ * グループ化された履歴アイテム内の履歴レコード
+ */
+export interface GroupedHistoryRecord {
+  id: string;
+  testCaseId: string;
+  changedByUserId: string | null;
+  changedByAgentSessionId: string | null;
+  changeType: 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE';
+  snapshot: Record<string, unknown>;
+  changeReason: string | null;
+  groupId: string | null;
+  createdAt: Date;
+  changedBy: { id: string; name: string; avatarUrl: string | null } | null;
+  agentSession: { id: string; clientName: string } | null;
+}
+
+/**
+ * グループ化された履歴アイテム
+ */
+export interface GroupedHistoryItem {
+  groupId: string | null;
+  histories: GroupedHistoryRecord[];
+  createdAt: Date;
+}
+
+/**
+ * グループ化された履歴一覧の戻り値
+ */
+export interface GroupedHistoriesResult {
+  items: GroupedHistoryItem[];
+  totalGroups: number;
+  totalHistories: number;
+}
+
+/**
  * テストケース検索オプション
  */
 export interface TestCaseSearchOptions {
@@ -214,7 +249,7 @@ export class TestCaseRepository {
    * グループ化された履歴一覧を取得
    * グループ単位でのページネーションを行い、ページ境界をまたぐグループの分断を防ぐ
    */
-  async getHistoriesGrouped(testCaseId: string, options: { limit: number; offset: number }) {
+  async getHistoriesGrouped(testCaseId: string, options: { limit: number; offset: number }): Promise<GroupedHistoriesResult> {
     // 1. グループ総数を取得（groupIdがnullの場合はidをグループとして扱う）
     // カラム側をtextにキャストしてパラメータと比較（text = text）
     const countResult = await prisma.$queryRaw<[{ group_count: bigint }]>`

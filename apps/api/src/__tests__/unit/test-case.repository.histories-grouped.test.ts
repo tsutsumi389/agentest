@@ -1,0 +1,211 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { TestCaseRepository } from '../../repositories/test-case.repository.js';
+
+// Prisma のモック（vi.hoistedでホイスティング問題を回避）
+const mockPrisma = vi.hoisted(() => ({
+  $queryRaw: vi.fn(),
+  testCaseHistory: {
+    count: vi.fn(),
+  },
+  user: {
+    findMany: vi.fn(),
+  },
+  agentSession: {
+    findMany: vi.fn(),
+  },
+}));
+
+vi.mock('@agentest/db', () => ({
+  prisma: mockPrisma,
+}));
+
+describe('TestCaseRepository - getHistoriesGrouped', () => {
+  let repository: TestCaseRepository;
+
+  const TEST_CASE_ID = '11111111-1111-1111-1111-111111111111';
+  const USER_ID = '22222222-2222-2222-2222-222222222222';
+  const GROUP_ID = 'group-1';
+
+  const mockUser = {
+    id: USER_ID,
+    name: 'Test User',
+    avatarUrl: 'https://example.com/avatar.png',
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    repository = new TestCaseRepository();
+  });
+
+  describe('空の履歴', () => {
+    it('履歴がない場合は空の配列を返す', async () => {
+      // グループ総数クエリ: 0を返す
+      mockPrisma.$queryRaw.mockResolvedValueOnce([{ group_count: BigInt(0) }]);
+      // 履歴レコード総数: 0を返す
+      mockPrisma.testCaseHistory.count.mockResolvedValueOnce(0);
+      // 履歴クエリ: 空配列を返す
+      mockPrisma.$queryRaw.mockResolvedValueOnce([]);
+
+      const result = await repository.getHistoriesGrouped(TEST_CASE_ID, { limit: 20, offset: 0 });
+
+      expect(result).toEqual({
+        items: [],
+        totalGroups: 0,
+        totalHistories: 0,
+      });
+    });
+  });
+
+  describe('groupIdがNULLの履歴（単一履歴）', () => {
+    it('groupIdがnullの場合は各履歴が個別のグループとして扱われる', async () => {
+      const rawHistory1 = {
+        id: 'history-1',
+        test_case_id: TEST_CASE_ID,
+        changed_by_user_id: USER_ID,
+        changed_by_agent_session_id: null,
+        change_type: 'CREATE',
+        snapshot: { title: 'Test' },
+        change_reason: null,
+        group_id: null,
+        created_at: new Date('2025-01-15T10:00:00Z'),
+        effective_group_id: 'history-1',
+      };
+
+      const rawHistory2 = {
+        id: 'history-2',
+        test_case_id: TEST_CASE_ID,
+        changed_by_user_id: USER_ID,
+        changed_by_agent_session_id: null,
+        change_type: 'UPDATE',
+        snapshot: { title: 'Updated Test' },
+        change_reason: null,
+        group_id: null,
+        created_at: new Date('2025-01-16T10:00:00Z'),
+        effective_group_id: 'history-2',
+      };
+
+      // グループ総数: 2
+      mockPrisma.$queryRaw.mockResolvedValueOnce([{ group_count: BigInt(2) }]);
+      // 履歴レコード総数: 2
+      mockPrisma.testCaseHistory.count.mockResolvedValueOnce(2);
+      // 履歴クエリ（createdAt降順）
+      mockPrisma.$queryRaw.mockResolvedValueOnce([rawHistory2, rawHistory1]);
+      // ユーザー取得
+      mockPrisma.user.findMany.mockResolvedValueOnce([mockUser]);
+      // エージェントセッション取得（空）
+      mockPrisma.agentSession.findMany.mockResolvedValueOnce([]);
+
+      const result = await repository.getHistoriesGrouped(TEST_CASE_ID, { limit: 20, offset: 0 });
+
+      expect(result.items).toHaveLength(2);
+      expect(result.totalGroups).toBe(2);
+      expect(result.totalHistories).toBe(2);
+
+      // 各グループは1件ずつの履歴を持つ
+      expect(result.items[0].histories).toHaveLength(1);
+      expect(result.items[0].groupId).toBeNull();
+      expect(result.items[1].histories).toHaveLength(1);
+      expect(result.items[1].groupId).toBeNull();
+    });
+  });
+
+  describe('グループ化された履歴', () => {
+    it('同じgroupIdの履歴が1つのグループにまとめられる', async () => {
+      const rawHistories = [
+        {
+          id: 'history-1',
+          test_case_id: TEST_CASE_ID,
+          changed_by_user_id: USER_ID,
+          changed_by_agent_session_id: null,
+          change_type: 'UPDATE',
+          snapshot: { title: 'Test', description: 'Updated' },
+          change_reason: null,
+          group_id: GROUP_ID,
+          created_at: new Date('2025-01-15T10:00:01Z'),
+          effective_group_id: GROUP_ID,
+        },
+        {
+          id: 'history-2',
+          test_case_id: TEST_CASE_ID,
+          changed_by_user_id: USER_ID,
+          changed_by_agent_session_id: null,
+          change_type: 'UPDATE',
+          snapshot: { title: 'Updated Title' },
+          change_reason: null,
+          group_id: GROUP_ID,
+          created_at: new Date('2025-01-15T10:00:00Z'),
+          effective_group_id: GROUP_ID,
+        },
+      ];
+
+      // グループ総数: 1
+      mockPrisma.$queryRaw.mockResolvedValueOnce([{ group_count: BigInt(1) }]);
+      // 履歴レコード総数: 2
+      mockPrisma.testCaseHistory.count.mockResolvedValueOnce(2);
+      // 履歴クエリ
+      mockPrisma.$queryRaw.mockResolvedValueOnce(rawHistories);
+      // ユーザー取得
+      mockPrisma.user.findMany.mockResolvedValueOnce([mockUser]);
+
+      const result = await repository.getHistoriesGrouped(TEST_CASE_ID, { limit: 20, offset: 0 });
+
+      expect(result.items).toHaveLength(1);
+      expect(result.totalGroups).toBe(1);
+      expect(result.totalHistories).toBe(2);
+
+      // 1つのグループに2件の履歴が含まれる
+      const group = result.items[0];
+      expect(group.groupId).toBe(GROUP_ID);
+      expect(group.histories).toHaveLength(2);
+      expect(group.histories[0].id).toBe('history-1');
+      expect(group.histories[1].id).toBe('history-2');
+    });
+  });
+
+  describe('関連データの取得', () => {
+    it('changedByユーザー情報が含まれる', async () => {
+      const rawHistory = {
+        id: 'history-1',
+        test_case_id: TEST_CASE_ID,
+        changed_by_user_id: USER_ID,
+        changed_by_agent_session_id: null,
+        change_type: 'CREATE',
+        snapshot: { title: 'Test' },
+        change_reason: null,
+        group_id: null,
+        created_at: new Date('2025-01-15T10:00:00Z'),
+        effective_group_id: 'history-1',
+      };
+
+      mockPrisma.$queryRaw.mockResolvedValueOnce([{ group_count: BigInt(1) }]);
+      mockPrisma.testCaseHistory.count.mockResolvedValueOnce(1);
+      mockPrisma.$queryRaw.mockResolvedValueOnce([rawHistory]);
+      mockPrisma.user.findMany.mockResolvedValueOnce([mockUser]);
+
+      const result = await repository.getHistoriesGrouped(TEST_CASE_ID, { limit: 20, offset: 0 });
+
+      expect(result.items[0].histories[0].changedBy).toEqual(mockUser);
+    });
+
+    // Note: エージェントセッション情報のテストは統合テストでカバー
+    // ユニットテストでのモック設定が複雑なため、統合テストで動作確認済み
+  });
+
+  describe('ページネーション', () => {
+    it('offsetとlimitが正しくSQLに渡される', async () => {
+      mockPrisma.$queryRaw.mockResolvedValueOnce([{ group_count: BigInt(0) }]);
+      mockPrisma.testCaseHistory.count.mockResolvedValueOnce(0);
+      mockPrisma.$queryRaw.mockResolvedValueOnce([]);
+
+      await repository.getHistoriesGrouped(TEST_CASE_ID, { limit: 10, offset: 5 });
+
+      // 2番目の$queryRaw呼び出し（履歴取得）にLIMIT/OFFSETが渡されることを確認
+      const secondCall = mockPrisma.$queryRaw.mock.calls[1];
+      expect(secondCall).toBeDefined();
+      // テンプレートリテラルの中にlimitとoffsetが含まれている
+      const sqlStrings = secondCall[0];
+      expect(sqlStrings.join('')).toContain('LIMIT');
+      expect(sqlStrings.join('')).toContain('OFFSET');
+    });
+  });
+});
