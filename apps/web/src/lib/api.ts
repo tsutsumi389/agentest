@@ -172,8 +172,8 @@ export const api = {
   put: <T>(endpoint: string, body?: unknown, options?: RequestOptions) =>
     request<T>(endpoint, { ...options, method: 'PUT', body }),
 
-  delete: <T>(endpoint: string, options?: RequestOptions) =>
-    request<T>(endpoint, { ...options, method: 'DELETE' }),
+  delete: <T>(endpoint: string, body?: unknown, options?: RequestOptions) =>
+    request<T>(endpoint, { ...options, method: 'DELETE', body }),
 };
 
 // ============================================
@@ -928,7 +928,7 @@ export const testCasesApi = {
   updatePrecondition: (testCaseId: string, preconditionId: string, data: { content: string; groupId?: string }) =>
     api.patch<{ precondition: TestCasePrecondition }>(`/api/test-cases/${testCaseId}/preconditions/${preconditionId}`, data),
   deletePrecondition: (testCaseId: string, preconditionId: string, groupId?: string) =>
-    api.delete<void>(`/api/test-cases/${testCaseId}/preconditions/${preconditionId}`, { body: groupId ? { groupId } : undefined }),
+    api.delete<void>(`/api/test-cases/${testCaseId}/preconditions/${preconditionId}`, groupId ? { groupId } : undefined),
   reorderPreconditions: (testCaseId: string, preconditionIds: string[], groupId?: string) =>
     api.post<{ preconditions: TestCasePrecondition[] }>(`/api/test-cases/${testCaseId}/preconditions/reorder`, { preconditionIds, groupId }),
 
@@ -940,7 +940,7 @@ export const testCasesApi = {
   updateStep: (testCaseId: string, stepId: string, data: { content: string; groupId?: string }) =>
     api.patch<{ step: TestCaseStep }>(`/api/test-cases/${testCaseId}/steps/${stepId}`, data),
   deleteStep: (testCaseId: string, stepId: string, groupId?: string) =>
-    api.delete<void>(`/api/test-cases/${testCaseId}/steps/${stepId}`, { body: groupId ? { groupId } : undefined }),
+    api.delete<void>(`/api/test-cases/${testCaseId}/steps/${stepId}`, groupId ? { groupId } : undefined),
   reorderSteps: (testCaseId: string, stepIds: string[], groupId?: string) =>
     api.post<{ steps: TestCaseStep[] }>(`/api/test-cases/${testCaseId}/steps/reorder`, { stepIds, groupId }),
 
@@ -952,7 +952,7 @@ export const testCasesApi = {
   updateExpectedResult: (testCaseId: string, expectedResultId: string, data: { content: string; groupId?: string }) =>
     api.patch<{ expectedResult: TestCaseExpectedResult }>(`/api/test-cases/${testCaseId}/expected-results/${expectedResultId}`, data),
   deleteExpectedResult: (testCaseId: string, expectedResultId: string, groupId?: string) =>
-    api.delete<void>(`/api/test-cases/${testCaseId}/expected-results/${expectedResultId}`, { body: groupId ? { groupId } : undefined }),
+    api.delete<void>(`/api/test-cases/${testCaseId}/expected-results/${expectedResultId}`, groupId ? { groupId } : undefined),
   reorderExpectedResults: (testCaseId: string, expectedResultIds: string[], groupId?: string) =>
     api.post<{ expectedResults: TestCaseExpectedResult[] }>(`/api/test-cases/${testCaseId}/expected-results/reorder`, { expectedResultIds, groupId }),
 

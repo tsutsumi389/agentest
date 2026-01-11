@@ -282,19 +282,22 @@ export function TestCaseForm({
           expectedResults: expectedResults.filter((e) => !e.isDeleted && e.content.trim()),
         };
 
+        // 新規作成時も子エンティティを同一グループとして扱うためのgroupIdを生成
+        const groupId = crypto.randomUUID();
+
         // 前提条件を追加
         for (const item of activeItems.preconditions) {
-          await testCasesApi.addPrecondition(createdTestCase.id, { content: item.content.trim() });
+          await testCasesApi.addPrecondition(createdTestCase.id, { content: item.content.trim(), groupId });
         }
 
         // ステップを追加
         for (const item of activeItems.steps) {
-          await testCasesApi.addStep(createdTestCase.id, { content: item.content.trim() });
+          await testCasesApi.addStep(createdTestCase.id, { content: item.content.trim(), groupId });
         }
 
         // 期待結果を追加
         for (const item of activeItems.expectedResults) {
-          await testCasesApi.addExpectedResult(createdTestCase.id, { content: item.content.trim() });
+          await testCasesApi.addExpectedResult(createdTestCase.id, { content: item.content.trim(), groupId });
         }
 
         queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
