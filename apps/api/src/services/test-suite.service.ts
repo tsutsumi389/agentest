@@ -1,5 +1,5 @@
 import { prisma, type EntityStatus, type ExecutionStatus, type Prisma } from '@agentest/db';
-import { NotFoundError, BadRequestError, ConflictError } from '@agentest/shared';
+import { NotFoundError, BadRequestError, ConflictError, type TestSuiteChangeDetail } from '@agentest/shared';
 import { TestSuiteRepository } from '../repositories/test-suite.repository.js';
 import { TestCaseRepository, type TestCaseSearchOptions } from '../repositories/test-case.repository.js';
 
@@ -34,59 +34,12 @@ type TestCaseSnapshot = {
 };
 
 /**
- * 基本情報変更の詳細情報
- */
-type BasicInfoChangeDetail = {
-  type: 'BASIC_INFO_UPDATE';
-  fields: {
-    name?: { before: string; after: string };
-    description?: { before: string | null; after: string | null };
-    status?: { before: string; after: string };
-  };
-};
-
-/**
- * 前提条件変更の詳細情報
- */
-type PreconditionChangeDetail =
-  | {
-      type: 'PRECONDITION_ADD';
-      preconditionId: string;
-      added: { content: string; orderKey: string };
-    }
-  | {
-      type: 'PRECONDITION_UPDATE';
-      preconditionId: string;
-      before: { content: string };
-      after: { content: string };
-    }
-  | {
-      type: 'PRECONDITION_DELETE';
-      preconditionId: string;
-      deleted: { content: string; orderKey: string };
-    }
-  | {
-      type: 'PRECONDITION_REORDER';
-      before: string[];
-      after: string[];
-    };
-
-/**
- * テストケース変更の詳細情報
- */
-type TestCaseChangeDetail = {
-  type: 'TEST_CASE_REORDER';
-  before: string[];
-  after: string[];
-};
-
-/**
  * 履歴保存用のスナップショット型
  */
 type HistorySnapshot = TestSuiteSnapshot & {
   preconditions?: PreconditionSnapshot[];
   testCases?: TestCaseSnapshot[];
-  changeDetail?: BasicInfoChangeDetail | PreconditionChangeDetail | TestCaseChangeDetail;
+  changeDetail?: TestSuiteChangeDetail;
 };
 
 /**

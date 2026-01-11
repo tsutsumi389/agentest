@@ -50,6 +50,14 @@ const deletePreconditionBodySchema = z.object({
   groupId: z.string().uuid().optional(),
 }).optional().default({});
 
+const deleteTestSuiteBodySchema = z.object({
+  groupId: z.string().uuid().optional(),
+}).optional().default({});
+
+const restoreTestSuiteBodySchema = z.object({
+  groupId: z.string().uuid().optional(),
+}).optional().default({});
+
 const startExecutionSchema = z.object({
   environmentId: z.string().uuid().optional(),
 });
@@ -114,7 +122,8 @@ export class TestSuiteController {
   delete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testSuiteId } = req.params;
-      await this.testSuiteService.softDelete(testSuiteId, req.user!.id);
+      const { groupId } = deleteTestSuiteBodySchema.parse(req.body);
+      await this.testSuiteService.softDelete(testSuiteId, req.user!.id, { groupId });
 
       res.status(204).send();
     } catch (error) {
@@ -299,7 +308,8 @@ export class TestSuiteController {
   restore = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testSuiteId } = req.params;
-      const testSuite = await this.testSuiteService.restore(testSuiteId, req.user!.id);
+      const { groupId } = restoreTestSuiteBodySchema.parse(req.body);
+      const testSuite = await this.testSuiteService.restore(testSuiteId, req.user!.id, { groupId });
 
       res.json({ testSuite });
     } catch (error) {
