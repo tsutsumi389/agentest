@@ -216,6 +216,7 @@ model TestCaseExpectedResult {
 | `changeType` | ENUM | NO | - | 変更種別（CREATE, UPDATE, DELETE） |
 | `snapshot` | JSONB | NO | - | 変更時点のスナップショット |
 | `changeReason` | TEXT | YES | NULL | 変更理由 |
+| `groupId` | VARCHAR(36) | YES | NULL | 変更グループ ID（同一トランザクション内の変更をグループ化） |
 | `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
 
 ※1: `changedByUserId` と `changedByAgentSessionId` はどちらか一方のみ設定（排他制約）
@@ -349,6 +350,40 @@ model TestCaseExpectedResult {
 | `EXPECTED_RESULT_REORDER` | 期待結果の並び替え |
 | `COPY` | テストケースのコピー |
 
+### groupId（変更グループ ID）
+
+同一トランザクション内で行われた複数の変更を1つのグループとしてまとめるための ID。
+
+#### 用途
+
+- **一括更新のグループ化**: テストケースの基本情報と子エンティティ（前提条件、ステップ、期待結果）を同時に更新した場合、同じ groupId が付与される
+- **履歴表示の統合**: フロントエンドで同じ groupId を持つ履歴レコードを1つの更新として表示
+- **カテゴリ別分類**: グループ内の変更を基本情報/前提条件/ステップ/期待結果の4カテゴリに分類して表示
+
+#### 仕様
+
+| 項目 | 値 |
+|------|-----|
+| 形式 | UUID v4（36文字） |
+| 生成タイミング | 履歴作成時に自動生成、または呼び出し元から指定 |
+| 既存データ | NULL（グループ化されていない単独の変更） |
+
+#### グループ化のイメージ
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ groupId = "abc-123-..."                                         │
+├─────────────────────────────────────────────────────────────────┤
+│ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ │
+│ │ 基本情報     │ │ 前提条件    │ │ ステップ    │ │ 期待結果    │ │
+│ │ BASIC_INFO  │ │ PRECONDITION│ │ STEP_ADD    │ │ EXPECTED_   │ │
+│ │ _UPDATE     │ │ _UPDATE     │ │             │ │ RESULT_ADD  │ │
+│ └─────────────┘ └─────────────┘ └─────────────┘ └─────────────┘ │
+└─────────────────────────────────────────────────────────────────┘
+                           ↓
+               フロントエンドで1つの更新として表示
+```
+
 ### Prisma スキーマ
 
 ```prisma
@@ -360,6 +395,7 @@ model TestCaseHistory {
   changeType              ChangeType
   snapshot                Json
   changeReason            String?
+  groupId                 String?    @map("group_id") @db.VarChar(36)
   createdAt               DateTime   @default(now())
 
   testCase              TestCase      @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
@@ -367,6 +403,8 @@ model TestCaseHistory {
   changedByAgentSession AgentSession? @relation(fields: [changedByAgentSessionId], references: [id])
 
   @@index([testCaseId])
+  @@index([testCaseId, groupId])
+  @@index([createdAt])
 }
 ```
 
