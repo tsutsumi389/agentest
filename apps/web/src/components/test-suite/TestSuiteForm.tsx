@@ -151,8 +151,11 @@ export function TestSuiteForm({
     setIsSaving(true);
 
     try {
+      // 複数の変更をグループ化するためのgroupIdを生成
+      const groupId = crypto.randomUUID();
+
       // 基本情報の更新
-      const updates: { name?: string; description?: string; status?: string } = {};
+      const updates: { name?: string; description?: string; status?: string; groupId?: string } = {};
       if (trimmedName !== testSuite.name) {
         updates.name = trimmedName;
       }
@@ -164,11 +167,12 @@ export function TestSuiteForm({
       }
 
       if (Object.keys(updates).length > 0) {
+        updates.groupId = groupId;
         await testSuitesApi.update(testSuite.id, updates);
       }
 
       // 前提条件の差分更新
-      await updatePreconditions();
+      await updatePreconditions(groupId);
 
       toast.success('テストスイートを更新しました');
       onSave();
@@ -184,16 +188,16 @@ export function TestSuiteForm({
   };
 
   // 前提条件の差分更新
-  const updatePreconditions = async () => {
+  const updatePreconditions = async (groupId: string) => {
     // 削除された項目を処理
     for (const item of preconditions.filter((i) => i.isDeleted && !i.isNew)) {
-      await testSuitesApi.deletePrecondition(testSuite.id, item.id);
+      await testSuitesApi.deletePrecondition(testSuite.id, item.id, { groupId });
     }
 
     // 新規追加された項目を処理
     const newItems: { tempId: string; realId: string }[] = [];
     for (const item of preconditions.filter((i) => i.isNew && !i.isDeleted && i.content.trim())) {
-      const result = await testSuitesApi.addPrecondition(testSuite.id, { content: item.content.trim() });
+      const result = await testSuitesApi.addPrecondition(testSuite.id, { content: item.content.trim(), groupId });
       newItems.push({ tempId: item.id, realId: result.precondition.id });
     }
 
@@ -201,7 +205,7 @@ export function TestSuiteForm({
     for (const item of preconditions.filter(
       (i) => !i.isNew && !i.isDeleted && i.content.trim() !== i.originalContent
     )) {
-      await testSuitesApi.updatePrecondition(testSuite.id, item.id, { content: item.content.trim() });
+      await testSuitesApi.updatePrecondition(testSuite.id, item.id, { content: item.content.trim(), groupId });
     }
 
     // 並び順の更新
@@ -220,7 +224,7 @@ export function TestSuiteForm({
         orderedIds.some((id, index) => id !== currentOrder[index]);
 
       if (hasOrderChanged || newItems.length > 0) {
-        await testSuitesApi.reorderPreconditions(testSuite.id, orderedIds);
+        await testSuitesApi.reorderPreconditions(testSuite.id, orderedIds, { groupId });
       }
     }
   };

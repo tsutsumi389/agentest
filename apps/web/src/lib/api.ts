@@ -870,9 +870,10 @@ export const testSuitesApi = {
   create: (data: { projectId: string; name: string; description?: string }) =>
     api.post<{ testSuite: TestSuite }>('/api/test-suites', data),
   getById: (testSuiteId: string) => api.get<{ testSuite: TestSuite }>(`/api/test-suites/${testSuiteId}`),
-  update: (testSuiteId: string, data: { name?: string; description?: string; status?: string }) =>
+  update: (testSuiteId: string, data: { name?: string; description?: string; status?: string; groupId?: string }) =>
     api.patch<{ testSuite: TestSuite }>(`/api/test-suites/${testSuiteId}`, data),
-  delete: (testSuiteId: string) => api.delete<void>(`/api/test-suites/${testSuiteId}`),
+  delete: (testSuiteId: string, options?: { groupId?: string }) =>
+    api.delete<void>(`/api/test-suites/${testSuiteId}`, options),
   getTestCases: (testSuiteId: string) =>
     api.get<{ testCases: TestCase[] }>(`/api/test-suites/${testSuiteId}/test-cases`),
   getExecutions: (testSuiteId: string, params?: ExecutionSearchParams) => {
@@ -895,14 +896,14 @@ export const testSuitesApi = {
   // 前提条件管理
   getPreconditions: (testSuiteId: string) =>
     api.get<{ preconditions: Precondition[] }>(`/api/test-suites/${testSuiteId}/preconditions`),
-  addPrecondition: (testSuiteId: string, data: { content: string; orderKey?: string }) =>
+  addPrecondition: (testSuiteId: string, data: { content: string; orderKey?: string; groupId?: string }) =>
     api.post<{ precondition: Precondition }>(`/api/test-suites/${testSuiteId}/preconditions`, data),
-  updatePrecondition: (testSuiteId: string, preconditionId: string, data: { content: string }) =>
+  updatePrecondition: (testSuiteId: string, preconditionId: string, data: { content: string; groupId?: string }) =>
     api.patch<{ precondition: Precondition }>(`/api/test-suites/${testSuiteId}/preconditions/${preconditionId}`, data),
-  deletePrecondition: (testSuiteId: string, preconditionId: string) =>
-    api.delete<void>(`/api/test-suites/${testSuiteId}/preconditions/${preconditionId}`),
-  reorderPreconditions: (testSuiteId: string, preconditionIds: string[]) =>
-    api.post<{ preconditions: Precondition[] }>(`/api/test-suites/${testSuiteId}/preconditions/reorder`, { preconditionIds }),
+  deletePrecondition: (testSuiteId: string, preconditionId: string, options?: { groupId?: string }) =>
+    api.delete<void>(`/api/test-suites/${testSuiteId}/preconditions/${preconditionId}`, options),
+  reorderPreconditions: (testSuiteId: string, preconditionIds: string[], options?: { groupId?: string }) =>
+    api.post<{ preconditions: Precondition[] }>(`/api/test-suites/${testSuiteId}/preconditions/reorder`, { preconditionIds, ...options }),
 
   // 履歴管理（グループ化版）
   getHistories: (testSuiteId: string, params?: { limit?: number; offset?: number }) => {
@@ -916,8 +917,8 @@ export const testSuitesApi = {
   },
 
   // 復元
-  restore: (testSuiteId: string) =>
-    api.post<{ testSuite: TestSuite }>(`/api/test-suites/${testSuiteId}/restore`),
+  restore: (testSuiteId: string, options?: { groupId?: string }) =>
+    api.post<{ testSuite: TestSuite }>(`/api/test-suites/${testSuiteId}/restore`, options),
 
   // テストケースサジェスト（@メンション用）
   suggestTestCases: (testSuiteId: string, params?: { q?: string; limit?: number }) => {
@@ -931,8 +932,8 @@ export const testSuitesApi = {
   },
 
   // テストケース並び替え
-  reorderTestCases: (testSuiteId: string, testCaseIds: string[]) =>
-    api.post<{ testCases: TestCase[] }>(`/api/test-suites/${testSuiteId}/test-cases/reorder`, { testCaseIds }),
+  reorderTestCases: (testSuiteId: string, testCaseIds: string[], options?: { groupId?: string }) =>
+    api.post<{ testCases: TestCase[] }>(`/api/test-suites/${testSuiteId}/test-cases/reorder`, { testCaseIds, ...options }),
 };
 
 // ============================================
