@@ -13,6 +13,7 @@ import {
   FileText,
   List,
   CheckCircle,
+  type LucideIcon,
 } from 'lucide-react';
 import {
   testCasesApi,
@@ -51,7 +52,7 @@ const PAGE_SIZE = 20;
  */
 const CATEGORY_DEFINITIONS: Record<
   keyof CategorizedHistories,
-  { label: string; icon: typeof FileText; order: number }
+  { label: string; icon: LucideIcon; order: number }
 > = {
   basicInfo: { label: '基本情報', icon: FileText, order: 0 },
   preconditions: { label: '前提条件', icon: List, order: 1 },

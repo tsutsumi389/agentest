@@ -18,9 +18,10 @@ export interface GroupedHistoryRecord {
 }
 
 /**
- * カテゴリ別履歴
+ * カテゴリ別履歴（内部用）
+ * 外部向けには@agentest/sharedのCategorizedHistoriesを使用
  */
-export interface CategorizedHistories {
+interface CategorizedHistories {
   basicInfo: GroupedHistoryRecord[];
   preconditions: GroupedHistoryRecord[];
   steps: GroupedHistoryRecord[];

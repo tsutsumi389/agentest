@@ -162,6 +162,138 @@ describe('TestCaseRepository - getHistoriesGrouped', () => {
     });
   });
 
+  describe('カテゴリ分類', () => {
+    it('changeDetail.typeに基づいて正しいカテゴリに分類される', async () => {
+      const rawHistories = [
+        {
+          id: 'history-step',
+          test_case_id: TEST_CASE_ID,
+          changed_by_user_id: USER_ID,
+          changed_by_agent_session_id: null,
+          change_type: 'UPDATE',
+          snapshot: { changeDetail: { type: 'STEP_ADD', stepId: 'step-1', added: { content: 'ステップ1', orderKey: 'a' } } },
+          change_reason: null,
+          group_id: GROUP_ID,
+          created_at: new Date('2025-01-15T10:00:03Z'),
+          effective_group_id: GROUP_ID,
+        },
+        {
+          id: 'history-precondition',
+          test_case_id: TEST_CASE_ID,
+          changed_by_user_id: USER_ID,
+          changed_by_agent_session_id: null,
+          change_type: 'UPDATE',
+          snapshot: { changeDetail: { type: 'PRECONDITION_UPDATE', preconditionId: 'pre-1', before: { content: '旧' }, after: { content: '新' } } },
+          change_reason: null,
+          group_id: GROUP_ID,
+          created_at: new Date('2025-01-15T10:00:02Z'),
+          effective_group_id: GROUP_ID,
+        },
+        {
+          id: 'history-expected',
+          test_case_id: TEST_CASE_ID,
+          changed_by_user_id: USER_ID,
+          changed_by_agent_session_id: null,
+          change_type: 'UPDATE',
+          snapshot: { changeDetail: { type: 'EXPECTED_RESULT_DELETE', expectedResultId: 'exp-1', deleted: { content: '削除', orderKey: 'a' } } },
+          change_reason: null,
+          group_id: GROUP_ID,
+          created_at: new Date('2025-01-15T10:00:01Z'),
+          effective_group_id: GROUP_ID,
+        },
+        {
+          id: 'history-basic',
+          test_case_id: TEST_CASE_ID,
+          changed_by_user_id: USER_ID,
+          changed_by_agent_session_id: null,
+          change_type: 'UPDATE',
+          snapshot: { changeDetail: { type: 'BASIC_INFO_UPDATE', fields: { title: { before: '旧', after: '新' } } } },
+          change_reason: null,
+          group_id: GROUP_ID,
+          created_at: new Date('2025-01-15T10:00:00Z'),
+          effective_group_id: GROUP_ID,
+        },
+      ];
+
+      mockPrisma.$queryRaw.mockResolvedValueOnce([{ group_count: BigInt(1) }]);
+      mockPrisma.testCaseHistory.count.mockResolvedValueOnce(4);
+      mockPrisma.$queryRaw.mockResolvedValueOnce(rawHistories);
+      mockPrisma.user.findMany.mockResolvedValueOnce([mockUser]);
+
+      const result = await repository.getHistoriesGrouped(TEST_CASE_ID, { limit: 20, offset: 0 });
+
+      expect(result.items).toHaveLength(1);
+      const group = result.items[0];
+
+      // 各カテゴリに正しく分類されていることを確認
+      expect(group.categorizedHistories.basicInfo).toHaveLength(1);
+      expect(group.categorizedHistories.basicInfo[0].id).toBe('history-basic');
+
+      expect(group.categorizedHistories.preconditions).toHaveLength(1);
+      expect(group.categorizedHistories.preconditions[0].id).toBe('history-precondition');
+
+      expect(group.categorizedHistories.steps).toHaveLength(1);
+      expect(group.categorizedHistories.steps[0].id).toBe('history-step');
+
+      expect(group.categorizedHistories.expectedResults).toHaveLength(1);
+      expect(group.categorizedHistories.expectedResults[0].id).toBe('history-expected');
+    });
+
+    it('changeDetailがない場合はbasicInfoに分類される', async () => {
+      const rawHistory = {
+        id: 'history-no-detail',
+        test_case_id: TEST_CASE_ID,
+        changed_by_user_id: USER_ID,
+        changed_by_agent_session_id: null,
+        change_type: 'UPDATE',
+        snapshot: { title: 'テスト' }, // changeDetailなし
+        change_reason: null,
+        group_id: null,
+        created_at: new Date('2025-01-15T10:00:00Z'),
+        effective_group_id: 'history-no-detail',
+      };
+
+      mockPrisma.$queryRaw.mockResolvedValueOnce([{ group_count: BigInt(1) }]);
+      mockPrisma.testCaseHistory.count.mockResolvedValueOnce(1);
+      mockPrisma.$queryRaw.mockResolvedValueOnce([rawHistory]);
+      mockPrisma.user.findMany.mockResolvedValueOnce([mockUser]);
+
+      const result = await repository.getHistoriesGrouped(TEST_CASE_ID, { limit: 20, offset: 0 });
+
+      expect(result.items[0].categorizedHistories.basicInfo).toHaveLength(1);
+      expect(result.items[0].categorizedHistories.preconditions).toHaveLength(0);
+      expect(result.items[0].categorizedHistories.steps).toHaveLength(0);
+      expect(result.items[0].categorizedHistories.expectedResults).toHaveLength(0);
+    });
+
+    it('COPY, CREATE, DELETE, RESTOREはbasicInfoに分類される', async () => {
+      const rawHistories = [
+        {
+          id: 'history-copy',
+          test_case_id: TEST_CASE_ID,
+          changed_by_user_id: USER_ID,
+          changed_by_agent_session_id: null,
+          change_type: 'CREATE',
+          snapshot: { changeDetail: { type: 'COPY', sourceTestCaseId: 'src-1', sourceTitle: '元', targetTestSuiteId: 'suite-1' } },
+          change_reason: null,
+          group_id: null,
+          created_at: new Date('2025-01-15T10:00:00Z'),
+          effective_group_id: 'history-copy',
+        },
+      ];
+
+      mockPrisma.$queryRaw.mockResolvedValueOnce([{ group_count: BigInt(1) }]);
+      mockPrisma.testCaseHistory.count.mockResolvedValueOnce(1);
+      mockPrisma.$queryRaw.mockResolvedValueOnce(rawHistories);
+      mockPrisma.user.findMany.mockResolvedValueOnce([mockUser]);
+
+      const result = await repository.getHistoriesGrouped(TEST_CASE_ID, { limit: 20, offset: 0 });
+
+      expect(result.items[0].categorizedHistories.basicInfo).toHaveLength(1);
+      expect(result.items[0].categorizedHistories.basicInfo[0].id).toBe('history-copy');
+    });
+  });
+
   describe('関連データの取得', () => {
     it('changedByユーザー情報が含まれる', async () => {
       const rawHistory = {
