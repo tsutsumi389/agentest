@@ -50,6 +50,17 @@ export interface TestCaseHistory {
   changeType: ChangeType;
   snapshot: Record<string, unknown>;
   changeReason: string | null;
+  groupId: string | null;
+  createdAt: Date;
+}
+
+/**
+ * グループ化されたテストケース変更履歴
+ * 同一トランザクションで行われた変更をまとめて表示するために使用
+ */
+export interface TestCaseHistoryGroup {
+  groupId: string;
+  histories: TestCaseHistory[];
   createdAt: Date;
 }
 

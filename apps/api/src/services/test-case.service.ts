@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { prisma, type TestCasePriority, type EntityStatus, type Prisma } from '@agentest/db';
 import {
   NotFoundError,
@@ -277,6 +278,7 @@ export class TestCaseService {
     };
 
     // 履歴保存と更新を同じトランザクションで実行
+    const groupId = crypto.randomUUID();
     return prisma.$transaction(async (tx) => {
       await tx.testCaseHistory.create({
         data: {
@@ -284,6 +286,7 @@ export class TestCaseService {
           changedByUserId: userId,
           changeType: 'UPDATE',
           snapshot: toJsonSnapshot(snapshot),
+          groupId,
         },
       });
 
@@ -301,6 +304,7 @@ export class TestCaseService {
     const testCase = await this.findById(testCaseId);
 
     // 履歴保存と論理削除を同じトランザクションで実行
+    const groupId = crypto.randomUUID();
     return prisma.$transaction(async (tx) => {
       await tx.testCaseHistory.create({
         data: {
@@ -308,6 +312,7 @@ export class TestCaseService {
           changedByUserId: userId,
           changeType: 'DELETE',
           snapshot: testCase as unknown as object,
+          groupId,
         },
       });
 
@@ -336,6 +341,7 @@ export class TestCaseService {
   async addPrecondition(testCaseId: string, userId: string, data: { content: string; orderKey?: string }) {
     const testCase = await this.findById(testCaseId);
 
+    const groupId = crypto.randomUUID();
     return prisma.$transaction(async (tx) => {
       let orderKey = data.orderKey;
       if (!orderKey) {
@@ -376,6 +382,7 @@ export class TestCaseService {
           changedByUserId: userId,
           changeType: 'UPDATE',
           snapshot: toJsonSnapshot(snapshot),
+          groupId,
         },
       });
 
@@ -403,6 +410,7 @@ export class TestCaseService {
     }
 
     // 履歴保存と更新を同じトランザクションで実行
+    const groupId = crypto.randomUUID();
     return prisma.$transaction(async (tx) => {
       const snapshot: HistorySnapshot = {
         id: testCase.id,
@@ -426,6 +434,7 @@ export class TestCaseService {
           changedByUserId: userId,
           changeType: 'UPDATE',
           snapshot: toJsonSnapshot(snapshot),
+          groupId,
         },
       });
 
@@ -466,6 +475,7 @@ export class TestCaseService {
     };
 
     // トランザクションで削除と再整列を実行
+    const groupId = crypto.randomUUID();
     await prisma.$transaction(async (tx) => {
       // 履歴を保存
       await tx.testCaseHistory.create({
@@ -474,6 +484,7 @@ export class TestCaseService {
           changedByUserId: userId,
           changeType: 'UPDATE',
           snapshot: toJsonSnapshot(snapshot),
+          groupId,
         },
       });
 
@@ -558,6 +569,7 @@ export class TestCaseService {
     };
 
     // 履歴保存とorderKey更新を同じトランザクションで実行
+    const groupId = crypto.randomUUID();
     await prisma.$transaction(async (tx) => {
       await tx.testCaseHistory.create({
         data: {
@@ -565,6 +577,7 @@ export class TestCaseService {
           changedByUserId: userId,
           changeType: 'UPDATE',
           snapshot: toJsonSnapshot(snapshot),
+          groupId,
         },
       });
 
@@ -604,6 +617,7 @@ export class TestCaseService {
   async addStep(testCaseId: string, userId: string, data: { content: string; orderKey?: string }) {
     const testCase = await this.findById(testCaseId);
 
+    const groupId = crypto.randomUUID();
     return prisma.$transaction(async (tx) => {
       let orderKey = data.orderKey;
       if (!orderKey) {
@@ -644,6 +658,7 @@ export class TestCaseService {
           changedByUserId: userId,
           changeType: 'UPDATE',
           snapshot: toJsonSnapshot(snapshot),
+          groupId,
         },
       });
 
@@ -671,6 +686,7 @@ export class TestCaseService {
     }
 
     // 履歴保存と更新を同じトランザクションで実行
+    const groupId = crypto.randomUUID();
     return prisma.$transaction(async (tx) => {
       const snapshot: HistorySnapshot = {
         id: testCase.id,
@@ -694,6 +710,7 @@ export class TestCaseService {
           changedByUserId: userId,
           changeType: 'UPDATE',
           snapshot: toJsonSnapshot(snapshot),
+          groupId,
         },
       });
 
@@ -734,6 +751,7 @@ export class TestCaseService {
     };
 
     // トランザクションで削除と再整列を実行
+    const groupId = crypto.randomUUID();
     await prisma.$transaction(async (tx) => {
       // 履歴を保存
       await tx.testCaseHistory.create({
@@ -742,6 +760,7 @@ export class TestCaseService {
           changedByUserId: userId,
           changeType: 'UPDATE',
           snapshot: toJsonSnapshot(snapshot),
+          groupId,
         },
       });
 
@@ -826,6 +845,7 @@ export class TestCaseService {
     };
 
     // 履歴保存とorderKey更新を同じトランザクションで実行
+    const groupId = crypto.randomUUID();
     await prisma.$transaction(async (tx) => {
       await tx.testCaseHistory.create({
         data: {
@@ -833,6 +853,7 @@ export class TestCaseService {
           changedByUserId: userId,
           changeType: 'UPDATE',
           snapshot: toJsonSnapshot(snapshot),
+          groupId,
         },
       });
 
@@ -872,6 +893,7 @@ export class TestCaseService {
   async addExpectedResult(testCaseId: string, userId: string, data: { content: string; orderKey?: string }) {
     const testCase = await this.findById(testCaseId);
 
+    const groupId = crypto.randomUUID();
     return prisma.$transaction(async (tx) => {
       let orderKey = data.orderKey;
       if (!orderKey) {
@@ -912,6 +934,7 @@ export class TestCaseService {
           changedByUserId: userId,
           changeType: 'UPDATE',
           snapshot: toJsonSnapshot(snapshot),
+          groupId,
         },
       });
 
@@ -939,6 +962,7 @@ export class TestCaseService {
     }
 
     // 履歴保存と更新を同じトランザクションで実行
+    const groupId = crypto.randomUUID();
     return prisma.$transaction(async (tx) => {
       const snapshot: HistorySnapshot = {
         id: testCase.id,
@@ -962,6 +986,7 @@ export class TestCaseService {
           changedByUserId: userId,
           changeType: 'UPDATE',
           snapshot: toJsonSnapshot(snapshot),
+          groupId,
         },
       });
 
@@ -1002,6 +1027,7 @@ export class TestCaseService {
     };
 
     // トランザクションで削除と再整列を実行
+    const groupId = crypto.randomUUID();
     await prisma.$transaction(async (tx) => {
       // 履歴を保存
       await tx.testCaseHistory.create({
@@ -1010,6 +1036,7 @@ export class TestCaseService {
           changedByUserId: userId,
           changeType: 'UPDATE',
           snapshot: toJsonSnapshot(snapshot),
+          groupId,
         },
       });
 
@@ -1094,6 +1121,7 @@ export class TestCaseService {
     };
 
     // 履歴保存とorderKey更新を同じトランザクションで実行
+    const groupId = crypto.randomUUID();
     await prisma.$transaction(async (tx) => {
       await tx.testCaseHistory.create({
         data: {
@@ -1101,6 +1129,7 @@ export class TestCaseService {
           changedByUserId: userId,
           changeType: 'UPDATE',
           snapshot: toJsonSnapshot(snapshot),
+          groupId,
         },
       });
 
@@ -1164,6 +1193,7 @@ export class TestCaseService {
     const newTitle = data.title ?? `${sourceTestCase.title} (コピー)`;
 
     // 6. トランザクションでコピー実行
+    const groupId = crypto.randomUUID();
     return prisma.$transaction(async (tx) => {
       // orderKey取得
       const lastTestCase = await tx.testCase.findFirst({
@@ -1267,6 +1297,7 @@ export class TestCaseService {
           changedByUserId: userId,
           changeType: 'CREATE',
           snapshot: toJsonSnapshot(snapshot),
+          groupId,
         },
       });
 
@@ -1350,6 +1381,7 @@ export class TestCaseService {
     };
 
     // 復元と履歴保存をトランザクションで実行
+    const groupId = crypto.randomUUID();
     return prisma.$transaction(async (tx) => {
       // 履歴を保存
       await tx.testCaseHistory.create({
@@ -1358,6 +1390,7 @@ export class TestCaseService {
           changedByUserId: userId,
           changeType: 'RESTORE',
           snapshot: toJsonSnapshot(snapshot),
+          groupId,
         },
       });
 
@@ -1388,6 +1421,7 @@ export class TestCaseService {
     const testCase = await this.findById(testCaseId);
 
     // 履歴保存と更新を同じトランザクションで実行
+    const groupId = crypto.randomUUID();
     return prisma.$transaction(async (tx) => {
       // 更新前のスナップショットを取得
       const beforePreconditions = await tx.testCasePrecondition.findMany({
@@ -1433,6 +1467,7 @@ export class TestCaseService {
           changedByUserId: userId,
           changeType: 'UPDATE',
           snapshot: toJsonSnapshot(snapshot),
+          groupId,
         },
       });
 

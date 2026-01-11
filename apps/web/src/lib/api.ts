@@ -501,6 +501,7 @@ export interface TestCaseHistory {
   changeType: TestCaseChangeType;
   snapshot: Record<string, unknown>;
   changeReason: string | null;
+  groupId: string | null;
   createdAt: string;
   changedBy: {
     id: string;
@@ -508,6 +509,13 @@ export interface TestCaseHistory {
     name: string;
     avatarUrl: string | null;
   } | null;
+}
+
+/** グループ化されたテストケース変更履歴 */
+export interface TestCaseHistoryGroup {
+  groupId: string;
+  histories: TestCaseHistory[];
+  createdAt: string;
 }
 
 /** テストケース詳細（前提条件・ステップ・期待結果含む） */

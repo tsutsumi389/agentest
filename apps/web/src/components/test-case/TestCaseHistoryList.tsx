@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Loader2,
   ChevronLeft,
@@ -9,12 +9,14 @@ import {
   Trash2,
   RotateCcw,
   User,
+  Layers,
 } from 'lucide-react';
 import {
   testCasesApi,
   ApiError,
   type TestCase,
   type TestCaseHistory,
+  type TestCaseHistoryGroup,
   type TestCaseChangeType,
 } from '../../lib/api';
 import { type TestCaseChangeDetail } from '@agentest/shared';
@@ -41,6 +43,60 @@ const CHANGE_TYPES: Record<TestCaseChangeType, { label: string; icon: typeof Plu
 const PAGE_SIZE = 20;
 
 /**
+ * 履歴をグループ化する
+ * groupIdがある履歴は同じグループにまとめ、groupIdがない履歴は個別に表示
+ */
+function groupHistories(
+  histories: TestCaseHistory[]
+): (TestCaseHistory | TestCaseHistoryGroup)[] {
+  const result: (TestCaseHistory | TestCaseHistoryGroup)[] = [];
+  const groupMap = new Map<string, TestCaseHistory[]>();
+
+  for (const history of histories) {
+    if (history.groupId) {
+      // groupIdがある場合はグループ化
+      const group = groupMap.get(history.groupId) || [];
+      group.push(history);
+      groupMap.set(history.groupId, group);
+    } else {
+      // groupIdがない場合は個別表示
+      result.push(history);
+    }
+  }
+
+  // グループをresultに追加
+  for (const [groupId, group] of groupMap) {
+    // グループ内に複数の履歴がある場合のみグループとして扱う
+    // 単一の履歴の場合は個別表示
+    if (group.length > 1) {
+      result.push({
+        groupId,
+        histories: group,
+        createdAt: group[0].createdAt,
+      });
+    } else {
+      result.push(group[0]);
+    }
+  }
+
+  // createdAtでソート（降順 - 新しいものが上）
+  return result.sort((a, b) => {
+    const aDate = 'histories' in a ? a.createdAt : a.createdAt;
+    const bDate = 'histories' in b ? b.createdAt : b.createdAt;
+    return new Date(bDate).getTime() - new Date(aDate).getTime();
+  });
+}
+
+/**
+ * グループかどうかを判定
+ */
+function isHistoryGroup(
+  item: TestCaseHistory | TestCaseHistoryGroup
+): item is TestCaseHistoryGroup {
+  return 'histories' in item && Array.isArray(item.histories);
+}
+
+/**
  * テストケース変更履歴一覧コンポーネント
  */
 export function TestCaseHistoryList({ testCase }: TestCaseHistoryListProps) {
@@ -53,6 +109,9 @@ export function TestCaseHistoryList({ testCase }: TestCaseHistoryListProps) {
   const [total, setTotal] = useState(0);
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  // グループ化した履歴
+  const groupedItems = useMemo(() => groupHistories(histories), [histories]);
 
   // 履歴を取得
   const fetchHistories = useCallback(async () => {
@@ -139,9 +198,13 @@ export function TestCaseHistoryList({ testCase }: TestCaseHistoryListProps) {
 
               {/* 履歴アイテム */}
               <div className="space-y-4">
-                {histories.map((history) => (
-                  <HistoryItem key={history.id} history={history} />
-                ))}
+                {groupedItems.map((item) =>
+                  isHistoryGroup(item) ? (
+                    <HistoryGroupItem key={item.groupId} group={item} />
+                  ) : (
+                    <HistoryItem key={item.id} history={item} />
+                  )
+                )}
               </div>
             </div>
 
@@ -592,6 +655,125 @@ function HistoryItem({ history }: { history: TestCaseHistory }) {
             <p className="mt-1 text-xs text-foreground-subtle">
               <span title={formatDateTime(history.createdAt)}>
                 {formatRelativeTime(history.createdAt)}
+              </span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * グループ化された履歴のサマリーを取得
+ */
+function getGroupSummary(histories: TestCaseHistory[]): string {
+  const allChangedFields = histories.flatMap((h) => getChangedFields(h.snapshot));
+  const uniqueFields = [...new Set(allChangedFields)];
+  if (uniqueFields.length === 0) {
+    return '複数の変更';
+  }
+  return `${uniqueFields.join('、')}を変更`;
+}
+
+/**
+ * グループ化された履歴アイテム
+ */
+function HistoryGroupItem({ group }: { group: TestCaseHistoryGroup }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // グループ内の最初の履歴から変更者情報を取得
+  const firstHistory = group.histories[0];
+  const changedBy = firstHistory.changedBy;
+
+  // グループ内のサマリー
+  const summary = getGroupSummary(group.histories);
+
+  return (
+    <div className="relative flex items-start gap-4 pl-8">
+      {/* タイムラインドット - グループ用アイコン */}
+      <div
+        className="absolute left-0 w-8 h-8 rounded-full bg-background-secondary border-2 border-border flex items-center justify-center text-blue-500"
+        role="img"
+        aria-label="グループ更新"
+      >
+        <Layers className="w-4 h-4" aria-hidden="true" />
+      </div>
+
+      {/* コンテンツ */}
+      <div className="flex-1 min-w-0 py-1">
+        <div className="flex items-start gap-3">
+          {/* ユーザーアバター */}
+          <div className="flex-shrink-0">
+            {changedBy?.avatarUrl ? (
+              <img
+                src={changedBy.avatarUrl}
+                alt={changedBy.name}
+                className="w-6 h-6 rounded-full"
+              />
+            ) : changedBy ? (
+              <div className="w-6 h-6 rounded-full bg-accent-subtle flex items-center justify-center">
+                <span className="text-xs font-medium text-accent">
+                  {changedBy.name.charAt(0).toUpperCase()}
+                </span>
+              </div>
+            ) : (
+              <div className="w-6 h-6 rounded-full bg-background-tertiary flex items-center justify-center">
+                <User className="w-3 h-3 text-foreground-muted" />
+              </div>
+            )}
+          </div>
+
+          {/* 情報 */}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* 変更タイプバッジ */}
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded text-blue-500 bg-background-tertiary">
+                <Pencil className="w-3 h-3" />
+                更新
+                <span className="text-foreground-muted">
+                  ({group.histories.length}件)
+                </span>
+              </span>
+
+              {/* ユーザー名 */}
+              <span className="text-xs text-foreground">
+                {changedBy?.name || 'システム'}
+              </span>
+            </div>
+
+            {/* サマリー表示 + 詳細ボタン */}
+            <div className="mt-1 flex items-center gap-2">
+              <p className="text-xs text-foreground-muted">{summary}</p>
+              <button
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="inline-flex items-center gap-0.5 text-xs text-accent hover:underline"
+              >
+                {isExpanded ? '閉じる' : '詳細を見る'}
+                <ChevronDown
+                  className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                />
+              </button>
+            </div>
+
+            {/* 折りたたみ式差分表示 */}
+            {isExpanded && (
+              <div className="mt-2 pl-3 border-l-2 border-accent space-y-3">
+                {group.histories.map((history) => (
+                  <div key={history.id} className="space-y-1">
+                    <p className="text-xs font-medium text-foreground-muted">
+                      {getChangeSummary(history.snapshot, history.changeType)}
+                    </p>
+                    <DiffView snapshot={history.snapshot} />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 日時 */}
+            <p className="mt-1 text-xs text-foreground-subtle">
+              <span title={formatDateTime(group.createdAt)}>
+                {formatRelativeTime(group.createdAt)}
               </span>
             </p>
           </div>

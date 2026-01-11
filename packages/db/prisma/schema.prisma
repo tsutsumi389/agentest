@@ -559,6 +559,7 @@ model TestCaseHistory {
   changeType              ChangeType @map("change_type")
   snapshot                Json
   changeReason            String?    @map("change_reason") @db.Text
+  groupId                 String?    @map("group_id") @db.VarChar(36)
   createdAt               DateTime   @default(now()) @map("created_at")
 
   testCase     TestCase      @relation(fields: [testCaseId], references: [id], onDelete: Cascade)
@@ -566,6 +567,7 @@ model TestCaseHistory {
   agentSession AgentSession? @relation(fields: [changedByAgentSessionId], references: [id])
 
   @@index([testCaseId])
+  @@index([testCaseId, groupId])
   @@index([createdAt])
   @@map("test_case_histories")
 }
