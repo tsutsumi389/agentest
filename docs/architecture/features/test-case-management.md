@@ -118,15 +118,23 @@
 - **表示要素**
   - 変更履歴タイムライン
     - 変更者アバター、名前
-    - 変更タイプ（CREATE/UPDATE/DELETE/RESTORE）
-    - 変更内容の詳細
+    - 変更タイプバッジ（CREATE/UPDATE/DELETE/RESTORE）
+    - 変更内容のサマリー（例: 「タイトル、優先度を変更」）
+    - 「詳細を見る」ボタン（UPDATE/CREATEで`changeDetail`がある場合のみ）
     - 日時（相対時間 + 絶対時間ツールチップ）
+  - 差分表示（折りたたみ式）
+    - 変更前の値（赤色、取り消し線）
+    - 変更後の値（緑色）
   - ページネーション（20件ずつ）
 - **変更タイプアイコン**
   - CREATE: 緑色
   - UPDATE: 青色
   - DELETE: 赤色
   - RESTORE: 紫色
+- **差分表示対応項目**
+  - 基本情報: タイトル、説明、優先度、ステータス
+  - 子エンティティ: 前提条件、ステップ、期待結果（追加/更新/削除/並び替え）
+  - コピー: コピー元テストケース情報
 
 #### 設定タブ
 
@@ -420,7 +428,11 @@ erDiagram
 - すべての変更操作で履歴が自動記録される
 - 履歴は削除不可
 - スナップショットには変更前の状態がJSON形式で保存される
-- 子エンティティの変更詳細（changeDetail）も記録される
+- `changeDetail`フィールドで変更の詳細を記録
+  - 基本情報更新時: 変更前後の値をフィールドごとに記録（`BASIC_INFO_UPDATE`）
+  - 子エンティティ操作時: 追加/更新/削除/並び替えの詳細を記録
+  - コピー時: コピー元のテストケースID・タイトルを記録（`COPY`）
+- フロントエンドでサマリー表示と折りたたみ式差分表示を提供
 
 ## 権限
 
@@ -699,11 +711,42 @@ erDiagram
       "changeType": "UPDATE",
       "snapshot": {
         "id": "uuid",
+        "testSuiteId": "uuid",
         "title": "旧タイトル",
+        "description": "旧説明",
+        "priority": "MEDIUM",
+        "status": "DRAFT",
+        "changeDetail": {
+          "type": "BASIC_INFO_UPDATE",
+          "fields": {
+            "title": { "before": "旧タイトル", "after": "新タイトル" },
+            "priority": { "before": "MEDIUM", "after": "HIGH" }
+          }
+        }
+      },
+      "createdAt": "2024-01-01T00:00:00Z",
+      "changedBy": {
+        "id": "uuid",
+        "name": "ユーザー名",
+        "avatarUrl": "https://..."
+      }
+    },
+    {
+      "id": "uuid",
+      "testCaseId": "uuid",
+      "changeType": "UPDATE",
+      "snapshot": {
+        "id": "uuid",
+        "testSuiteId": "uuid",
+        "title": "テストケースタイトル",
+        "description": null,
+        "priority": "HIGH",
+        "status": "ACTIVE",
+        "steps": [{ "id": "uuid", "content": "ステップ内容", "orderKey": "00001" }],
         "changeDetail": {
           "type": "STEP_ADD",
           "stepId": "uuid",
-          "added": { "content": "新しいステップ", "orderKey": "00003" }
+          "added": { "content": "新しいステップ", "orderKey": "00002" }
         }
       },
       "createdAt": "2024-01-01T00:00:00Z",

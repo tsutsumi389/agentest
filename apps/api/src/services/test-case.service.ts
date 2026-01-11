@@ -1,5 +1,11 @@
 import { prisma, type TestCasePriority, type EntityStatus, type Prisma } from '@agentest/db';
-import { NotFoundError, BadRequestError, ConflictError, AuthorizationError } from '@agentest/shared';
+import {
+  NotFoundError,
+  BadRequestError,
+  ConflictError,
+  AuthorizationError,
+  type TestCaseChangeDetail,
+} from '@agentest/shared';
 import { TestCaseRepository } from '../repositories/test-case.repository.js';
 
 // orderKey関連の定数
@@ -50,87 +56,13 @@ type ChildEntitySnapshot = {
 };
 
 /**
- * 子エンティティ変更の詳細情報
- */
-type ChildEntityChangeDetail =
-  | {
-      type: 'PRECONDITION_ADD';
-      preconditionId: string;
-      added: { content: string; orderKey: string };
-    }
-  | {
-      type: 'PRECONDITION_UPDATE';
-      preconditionId: string;
-      before: { content: string };
-      after: { content: string };
-    }
-  | {
-      type: 'PRECONDITION_DELETE';
-      preconditionId: string;
-      deleted: { content: string; orderKey: string };
-    }
-  | {
-      type: 'PRECONDITION_REORDER';
-      before: string[];
-      after: string[];
-    }
-  | {
-      type: 'STEP_ADD';
-      stepId: string;
-      added: { content: string; orderKey: string };
-    }
-  | {
-      type: 'STEP_UPDATE';
-      stepId: string;
-      before: { content: string };
-      after: { content: string };
-    }
-  | {
-      type: 'STEP_DELETE';
-      stepId: string;
-      deleted: { content: string; orderKey: string };
-    }
-  | {
-      type: 'STEP_REORDER';
-      before: string[];
-      after: string[];
-    }
-  | {
-      type: 'EXPECTED_RESULT_ADD';
-      expectedResultId: string;
-      added: { content: string; orderKey: string };
-    }
-  | {
-      type: 'EXPECTED_RESULT_UPDATE';
-      expectedResultId: string;
-      before: { content: string };
-      after: { content: string };
-    }
-  | {
-      type: 'EXPECTED_RESULT_DELETE';
-      expectedResultId: string;
-      deleted: { content: string; orderKey: string };
-    }
-  | {
-      type: 'EXPECTED_RESULT_REORDER';
-      before: string[];
-      after: string[];
-    }
-  | {
-      type: 'COPY';
-      sourceTestCaseId: string;
-      sourceTitle: string;
-      targetTestSuiteId: string;
-    };
-
-/**
  * 履歴保存用のスナップショット型
  */
 type HistorySnapshot = TestCaseSnapshot & {
   preconditions?: ChildEntitySnapshot[];
   steps?: ChildEntitySnapshot[];
   expectedResults?: ChildEntitySnapshot[];
-  changeDetail?: ChildEntityChangeDetail;
+  changeDetail?: TestCaseChangeDetail;
 };
 
 /**
@@ -304,6 +236,46 @@ export class TestCaseService {
   ) {
     const testCase = await this.findById(testCaseId);
 
+    // 変更があるフィールドのみchangeDetailに含める
+    const fields: {
+      title?: { before: string; after: string };
+      description?: { before: string | null; after: string | null };
+      priority?: { before: string; after: string };
+      status?: { before: string; after: string };
+    } = {};
+
+    if (data.title !== undefined && data.title !== testCase.title) {
+      fields.title = { before: testCase.title, after: data.title };
+    }
+    if (data.description !== undefined && data.description !== testCase.description) {
+      fields.description = { before: testCase.description, after: data.description };
+    }
+    if (data.priority !== undefined && data.priority !== testCase.priority) {
+      fields.priority = { before: testCase.priority, after: data.priority };
+    }
+    if (data.status !== undefined && data.status !== testCase.status) {
+      fields.status = { before: testCase.status, after: data.status };
+    }
+
+    // 変更がない場合はそのまま返す
+    if (Object.keys(fields).length === 0) {
+      return testCase;
+    }
+
+    // 履歴用のスナップショットを作成
+    const snapshot: HistorySnapshot = {
+      id: testCase.id,
+      testSuiteId: testCase.testSuiteId,
+      title: testCase.title,
+      description: testCase.description,
+      priority: testCase.priority,
+      status: testCase.status,
+      changeDetail: {
+        type: 'BASIC_INFO_UPDATE',
+        fields,
+      },
+    };
+
     // 履歴保存と更新を同じトランザクションで実行
     return prisma.$transaction(async (tx) => {
       await tx.testCaseHistory.create({
@@ -311,7 +283,7 @@ export class TestCaseService {
           testCaseId,
           changedByUserId: userId,
           changeType: 'UPDATE',
-          snapshot: testCase as unknown as object,
+          snapshot: toJsonSnapshot(snapshot),
         },
       });
 
