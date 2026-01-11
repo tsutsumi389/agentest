@@ -2,53 +2,62 @@
 
 ## 概要
 
-`TestCaseHistoryList.tsx` のグループ展開時に、変更を4つのカテゴリ別にセクション分けして表示する機能を実装します。
+履歴APIのレスポンスで、グループ内の変更を4つのカテゴリ別にまとめて返す機能を実装します。
 
 ## 対象ファイル
 
-- `/apps/web/src/components/test-case/TestCaseHistoryList.tsx`（メイン変更対象）
+### バックエンド（API側）
+- `/packages/shared/src/types/test-case.ts` - 型定義の更新
+- `/apps/api/src/repositories/test-case.repository.ts` - カテゴリ別グループ化ロジック
+
+### フロントエンド
+- `/apps/web/src/lib/api.ts` - 型定義の更新
+- `/apps/web/src/components/test-case/TestCaseHistoryList.tsx` - 表示対応
 
 ## 実装内容
 
-### 1. カテゴリ定義の追加
+### 1. 型定義の更新（@agentest/shared）
 
-```tsx
-type HistoryCategory = 'BASIC_INFO' | 'PRECONDITION' | 'STEP' | 'EXPECTED_RESULT';
+```typescript
+// カテゴリ別履歴
+export interface CategorizedHistories {
+  basicInfo: TestCaseHistory[];
+  preconditions: TestCaseHistory[];
+  steps: TestCaseHistory[];
+  expectedResults: TestCaseHistory[];
+}
 
-const HISTORY_CATEGORIES: Record<HistoryCategory, { label: string; icon: typeof FileText }> = {
-  BASIC_INFO: { label: '基本情報', icon: FileText },
-  PRECONDITION: { label: '前提条件', icon: ClipboardList },
-  STEP: { label: 'ステップ', icon: ListOrdered },
-  EXPECTED_RESULT: { label: '期待結果', icon: Target },
-};
+// グループ化された履歴アイテム（更新）
+export interface TestCaseHistoryGroupedItem {
+  groupId: string | null;
+  categorizedHistories: CategorizedHistories;
+  createdAt: Date;
+}
 ```
 
-アイコン（`FileText`, `ClipboardList`, `ListOrdered`, `Target`）を追加importします。
+### 2. カテゴリ判定ロジック（Repository）
 
-### 2. カテゴリ判定関数の追加
-
-`getCategoryFromChangeDetail(snapshot, changeType)` 関数を追加し、`changeDetail.type` からカテゴリを判定します：
+`changeDetail.type` からカテゴリを判定：
 
 | カテゴリ | 対応する changeDetail.type |
 |---------|---------------------------|
-| BASIC_INFO | BASIC_INFO_UPDATE, COPY, CREATE, DELETE, RESTORE |
-| PRECONDITION | PRECONDITION_ADD, PRECONDITION_UPDATE, PRECONDITION_DELETE, PRECONDITION_REORDER |
-| STEP | STEP_ADD, STEP_UPDATE, STEP_DELETE, STEP_REORDER |
-| EXPECTED_RESULT | EXPECTED_RESULT_ADD, EXPECTED_RESULT_UPDATE, EXPECTED_RESULT_DELETE, EXPECTED_RESULT_REORDER |
+| basicInfo | BASIC_INFO_UPDATE, COPY, CREATE, DELETE, RESTORE, なし |
+| preconditions | PRECONDITION_ADD, PRECONDITION_UPDATE, PRECONDITION_DELETE, PRECONDITION_REORDER |
+| steps | STEP_ADD, STEP_UPDATE, STEP_DELETE, STEP_REORDER |
+| expectedResults | EXPECTED_RESULT_ADD, EXPECTED_RESULT_UPDATE, EXPECTED_RESULT_DELETE, EXPECTED_RESULT_REORDER |
 
-### 3. グループ化関数の追加
+### 3. Repository更新（getHistoriesGrouped）
 
-`groupHistoriesByCategory(histories)` 関数で履歴をカテゴリ別にグループ化。表示順序を保証し、空カテゴリは除外します。
+`test-case.repository.ts` の362-396行目付近を更新：
+- グループ化時にカテゴリ別に振り分け
+- `CategorizedHistories` 形式で返却
 
-### 4. CategorySectionコンポーネントの追加
+### 4. フロントエンド更新
 
-各カテゴリのセクションを表示するコンポーネント：
-- カテゴリヘッダー（アイコン + ラベル + 件数）
-- 配下の履歴一覧（既存の `DiffView` を使用）
-
-### 5. HistoryGroupItemコンポーネントの更新
-
-展開部分（714-724行目）を更新し、`CategorySection` を使ったカテゴリ別表示に変更します。
+- `api.ts` の型定義を更新
+- `TestCaseHistoryList.tsx` でカテゴリ別表示に対応
+  - 空カテゴリは非表示
+  - カテゴリごとにセクションヘッダー（アイコン + ラベル）
 
 ## 表示イメージ
 
@@ -61,9 +70,13 @@ const HISTORY_CATEGORIES: Record<HistoryCategory, { label: string; icon: typeof 
 │    前提条件を追加
 │    追加: ユーザーがログアウト状態であること
 │
-│ 📝 ステップ (1件)
-│    ステップを更新
+│ 📝 手順 (1件)
+│    手順を更新
 │    旧: メールを入力 → 新: メールアドレスを入力
+│
+│ 🎯 期待結果 (1件)
+│    期待結果を追加
+│    追加: ログイン成功メッセージが表示される
 ```
 
 ## 検証方法
