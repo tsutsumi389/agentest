@@ -356,15 +356,20 @@ export class TestCaseController {
   };
 
   /**
-   * 履歴取得
+   * 履歴取得（グループ化版）
+   * グループ単位でのページネーションを行い、ページ境界をまたぐグループの分断を防ぐ
    */
   getHistories = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testCaseId } = req.params;
       const { limit, offset } = paginationQuerySchema.parse(req.query);
-      const { histories, total } = await this.testCaseService.getHistories(testCaseId, { limit, offset });
+      const result = await this.testCaseService.getHistoriesGrouped(testCaseId, { limit, offset });
 
-      res.json({ histories, total });
+      res.json({
+        items: result.items,
+        totalGroups: result.totalGroups,
+        total: result.totalHistories,
+      });
     } catch (error) {
       next(error);
     }

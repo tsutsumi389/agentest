@@ -209,4 +209,155 @@ export class TestCaseRepository {
       where: { testCaseId: id },
     });
   }
+
+  /**
+   * グループ化された履歴一覧を取得
+   * グループ単位でのページネーションを行い、ページ境界をまたぐグループの分断を防ぐ
+   */
+  async getHistoriesGrouped(testCaseId: string, options: { limit: number; offset: number }) {
+    // 1. グループ総数を取得（groupIdがnullの場合はidをグループとして扱う）
+    // カラム側をtextにキャストしてパラメータと比較（text = text）
+    const countResult = await prisma.$queryRaw<[{ group_count: bigint }]>`
+      SELECT COUNT(DISTINCT COALESCE(group_id, id::text)) as group_count
+      FROM test_case_histories WHERE test_case_id::text = ${testCaseId}
+    `;
+    const totalGroups = Number(countResult[0]?.group_count ?? 0);
+
+    // 履歴レコード総数（後方互換性のため）
+    const totalHistories = await prisma.testCaseHistory.count({
+      where: { testCaseId },
+    });
+
+    // 2. 対象グループに属する履歴を取得（ページネーション）
+    // グループごとの最新createdAtで降順ソートし、offset/limitでページネーション
+    // Raw SQLでフィルタリングした履歴情報を取得
+    const limitNum = options.limit;
+    const offsetNum = options.offset;
+    const rawHistories = await prisma.$queryRaw<
+      {
+        id: string;
+        test_case_id: string;
+        changed_by_user_id: string | null;
+        changed_by_agent_session_id: string | null;
+        change_type: string;
+        snapshot: unknown;
+        change_reason: string | null;
+        group_id: string | null;
+        created_at: Date;
+        effective_group_id: string;
+      }[]
+    >`
+      WITH grouped AS (
+        SELECT
+          id,
+          test_case_id,
+          changed_by_user_id,
+          changed_by_agent_session_id,
+          change_type,
+          snapshot,
+          change_reason,
+          group_id,
+          created_at,
+          COALESCE(group_id, id::text) as effective_group_id
+        FROM test_case_histories
+        WHERE test_case_id::text = ${testCaseId}
+      ),
+      group_times AS (
+        SELECT
+          effective_group_id,
+          MAX(created_at) as latest_created_at
+        FROM grouped
+        GROUP BY effective_group_id
+      ),
+      paginated_groups AS (
+        SELECT effective_group_id
+        FROM group_times
+        ORDER BY latest_created_at DESC
+        LIMIT ${limitNum} OFFSET ${offsetNum}
+      )
+      SELECT g.*
+      FROM grouped g
+      INNER JOIN paginated_groups pg ON g.effective_group_id = pg.effective_group_id
+      ORDER BY g.created_at DESC
+    `;
+
+    if (rawHistories.length === 0) {
+      return { items: [], totalGroups, totalHistories };
+    }
+
+    const targetGroupIds = [...new Set(rawHistories.map((r) => r.effective_group_id))];
+
+    // 3. 関連データ（ユーザー、エージェントセッション）を別途取得
+    const userIds = [...new Set(rawHistories.map((h) => h.changed_by_user_id).filter((id): id is string => id !== null))];
+    const sessionIds = [...new Set(rawHistories.map((h) => h.changed_by_agent_session_id).filter((id): id is string => id !== null))];
+
+    const [users, sessions] = await Promise.all([
+      userIds.length > 0
+        ? prisma.user.findMany({
+            where: { id: { in: userIds } },
+            select: { id: true, name: true, avatarUrl: true },
+          })
+        : [],
+      sessionIds.length > 0
+        ? prisma.agentSession.findMany({
+            where: { id: { in: sessionIds } },
+            select: { id: true, clientName: true },
+          })
+        : [],
+    ]);
+
+    const userMap = new Map(users.map((u) => [u.id, u]));
+    const sessionMap = new Map(sessions.map((s) => [s.id, s]));
+
+    // 履歴データを整形
+    const histories = rawHistories.map((h) => ({
+      id: h.id,
+      testCaseId: h.test_case_id,
+      changedByUserId: h.changed_by_user_id,
+      changedByAgentSessionId: h.changed_by_agent_session_id,
+      changeType: h.change_type as 'CREATE' | 'UPDATE' | 'DELETE' | 'RESTORE',
+      snapshot: h.snapshot as Record<string, unknown>,
+      changeReason: h.change_reason,
+      groupId: h.group_id,
+      createdAt: h.created_at,
+      changedBy: h.changed_by_user_id ? userMap.get(h.changed_by_user_id) ?? null : null,
+      agentSession: h.changed_by_agent_session_id ? sessionMap.get(h.changed_by_agent_session_id) ?? null : null,
+    }));
+
+    // 4. グループ化して返却
+    const groupMap = new Map<
+      string,
+      {
+        groupId: string | null;
+        histories: typeof histories;
+        createdAt: Date;
+      }
+    >();
+
+    for (const history of histories) {
+      const effectiveGroupId = history.groupId ?? history.id;
+      const existing = groupMap.get(effectiveGroupId);
+
+      if (existing) {
+        existing.histories.push(history);
+        // より新しい日時を保持
+        if (history.createdAt > existing.createdAt) {
+          existing.createdAt = history.createdAt;
+        }
+      } else {
+        groupMap.set(effectiveGroupId, {
+          groupId: history.groupId,
+          histories: [history],
+          createdAt: history.createdAt,
+        });
+      }
+    }
+
+    // targetGroupIdsの順序を維持
+    const items = targetGroupIds
+      .map((gid) => groupMap.get(gid))
+      .filter((item): item is NonNullable<typeof item> => item !== undefined);
+
+    return { items, totalGroups, totalHistories };
+  }
 }

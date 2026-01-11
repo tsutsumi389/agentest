@@ -1316,7 +1316,24 @@ export class TestCaseService {
   }
 
   /**
+   * 変更履歴一覧を取得（グループ化版）
+   * グループ単位でのページネーションを行い、ページ境界をまたぐグループの分断を防ぐ
+   */
+  async getHistoriesGrouped(testCaseId: string, options: { limit: number; offset: number }) {
+    // 削除済みを含めてテストケースの存在確認
+    const testCase = await prisma.testCase.findUnique({
+      where: { id: testCaseId },
+    });
+    if (!testCase) {
+      throw new NotFoundError('TestCase', testCaseId);
+    }
+
+    return this.testCaseRepo.getHistoriesGrouped(testCaseId, options);
+  }
+
+  /**
    * 変更履歴一覧を取得
+   * @deprecated グループ化版のgetHistoriesGroupedを使用してください
    */
   async getHistories(testCaseId: string, options: { limit: number; offset: number }) {
     // 削除済みを含めてテストケースの存在確認

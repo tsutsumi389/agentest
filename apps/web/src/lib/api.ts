@@ -521,6 +521,25 @@ export interface TestCaseHistoryGroup {
   createdAt: string;
 }
 
+/**
+ * グループ化された履歴アイテム（APIレスポンス用）
+ * groupIdがnullの場合は単一履歴を含むグループ
+ */
+export interface TestCaseHistoryGroupedItem {
+  groupId: string | null;
+  histories: TestCaseHistory[];
+  createdAt: string;
+}
+
+/**
+ * 履歴一覧レスポンス（グループ化版）
+ */
+export interface TestCaseHistoriesGroupedResponse {
+  items: TestCaseHistoryGroupedItem[];
+  totalGroups: number;
+  total: number;
+}
+
 /** テストケース詳細（前提条件・ステップ・期待結果含む） */
 export interface TestCaseWithDetails extends TestCase {
   preconditions: TestCasePrecondition[];
@@ -936,13 +955,13 @@ export const testCasesApi = {
   reorderExpectedResults: (testCaseId: string, expectedResultIds: string[]) =>
     api.post<{ expectedResults: TestCaseExpectedResult[] }>(`/api/test-cases/${testCaseId}/expected-results/reorder`, { expectedResultIds }),
 
-  // 履歴管理
+  // 履歴管理（グループ化版）
   getHistories: (testCaseId: string, params?: { limit?: number; offset?: number }) => {
     const query = new URLSearchParams();
     if (params?.limit !== undefined) query.set('limit', String(params.limit));
     if (params?.offset !== undefined) query.set('offset', String(params.offset));
     const queryString = query.toString();
-    return api.get<{ histories: TestCaseHistory[]; total: number }>(
+    return api.get<TestCaseHistoriesGroupedResponse>(
       `/api/test-cases/${testCaseId}/histories${queryString ? `?${queryString}` : ''}`
     );
   },

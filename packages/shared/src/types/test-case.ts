@@ -64,6 +64,25 @@ export interface TestCaseHistoryGroup {
   createdAt: Date;
 }
 
+/**
+ * グループ化された履歴アイテム（APIレスポンス用）
+ * groupIdがnullの場合は単一履歴を含むグループ
+ */
+export interface TestCaseHistoryGroupedItem {
+  groupId: string | null;
+  histories: TestCaseHistory[];
+  createdAt: Date;
+}
+
+/**
+ * 履歴一覧レスポンス（グループ化版）
+ */
+export interface TestCaseHistoriesGroupedResponse {
+  items: TestCaseHistoryGroupedItem[];
+  totalGroups: number;
+  total: number; // 後方互換性のため履歴レコード総数も含める
+}
+
 // APIリクエスト/レスポンス型
 export interface TestCaseCreateInput {
   title: string;

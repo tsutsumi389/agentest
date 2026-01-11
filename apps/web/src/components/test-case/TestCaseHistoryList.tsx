@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Loader2,
   ChevronLeft,
@@ -16,7 +16,7 @@ import {
   ApiError,
   type TestCase,
   type TestCaseHistory,
-  type TestCaseHistoryGroup,
+  type TestCaseHistoryGroupedItem,
   type TestCaseChangeType,
 } from '../../lib/api';
 import { type TestCaseChangeDetail } from '@agentest/shared';
@@ -38,88 +38,35 @@ const CHANGE_TYPES: Record<TestCaseChangeType, { label: string; icon: typeof Plu
 };
 
 /**
- * ページサイズ
+ * ページサイズ（グループ単位）
  */
 const PAGE_SIZE = 20;
 
 /**
- * 履歴をグループ化する
- * groupIdがある履歴は同じグループにまとめ、groupIdがない履歴は個別に表示
- *
- * 【制限事項】
- * 現在の実装ではページ単位で取得した履歴をフロントエンドでグループ化している。
- * そのため、同じgroupIdを持つ履歴がページ境界をまたぐ場合、別々のグループとして
- * 表示される可能性がある。ただし、同一トランザクション内の履歴は同時刻に作成され、
- * 時系列順（createdAt DESC）でソートされるため、通常は連続して並ぶ。
+ * グループ化されたアイテムが複数履歴を持つかどうかを判定
+ * 複数履歴の場合はグループ表示、単一履歴の場合は個別表示
  */
-function groupHistories(
-  histories: TestCaseHistory[]
-): (TestCaseHistory | TestCaseHistoryGroup)[] {
-  const result: (TestCaseHistory | TestCaseHistoryGroup)[] = [];
-  const groupMap = new Map<string, TestCaseHistory[]>();
-
-  for (const history of histories) {
-    if (history.groupId) {
-      // groupIdがある場合はグループ化
-      const group = groupMap.get(history.groupId) || [];
-      group.push(history);
-      groupMap.set(history.groupId, group);
-    } else {
-      // groupIdがない場合は個別表示
-      result.push(history);
-    }
-  }
-
-  // グループをresultに追加
-  for (const [groupId, group] of groupMap) {
-    // グループ内に複数の履歴がある場合のみグループとして扱う
-    // 単一の履歴の場合は個別表示
-    if (group.length > 1) {
-      result.push({
-        groupId,
-        histories: group,
-        createdAt: group[0].createdAt,
-      });
-    } else {
-      result.push(group[0]);
-    }
-  }
-
-  // createdAtでソート（降順 - 新しいものが上）
-  return result.sort((a, b) => {
-    const aDate = 'histories' in a ? a.createdAt : a.createdAt;
-    const bDate = 'histories' in b ? b.createdAt : b.createdAt;
-    return new Date(bDate).getTime() - new Date(aDate).getTime();
-  });
-}
-
-/**
- * グループかどうかを判定
- */
-function isHistoryGroup(
-  item: TestCaseHistory | TestCaseHistoryGroup
-): item is TestCaseHistoryGroup {
-  return 'histories' in item && Array.isArray(item.histories);
+function isMultipleHistoryGroup(item: TestCaseHistoryGroupedItem): boolean {
+  return item.histories.length > 1;
 }
 
 /**
  * テストケース変更履歴一覧コンポーネント
  */
 export function TestCaseHistoryList({ testCase }: TestCaseHistoryListProps) {
-  const [histories, setHistories] = useState<TestCaseHistory[]>([]);
+  // バックエンドからグループ化済みのアイテムを受け取る
+  const [groupedItems, setGroupedItems] = useState<TestCaseHistoryGroupedItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // ページネーション状態
+  // ページネーション状態（グループ単位）
   const [page, setPage] = useState(1);
-  const [total, setTotal] = useState(0);
+  const [totalGroups, setTotalGroups] = useState(0);
+  const [total, setTotal] = useState(0); // 履歴レコード総数（表示用）
 
-  const totalPages = Math.ceil(total / PAGE_SIZE);
+  const totalPages = Math.ceil(totalGroups / PAGE_SIZE);
 
-  // グループ化した履歴
-  const groupedItems = useMemo(() => groupHistories(histories), [histories]);
-
-  // 履歴を取得
+  // 履歴を取得（グループ化済み）
   const fetchHistories = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -129,7 +76,8 @@ export function TestCaseHistoryList({ testCase }: TestCaseHistoryListProps) {
         limit: PAGE_SIZE,
         offset: (page - 1) * PAGE_SIZE,
       });
-      setHistories(response.histories);
+      setGroupedItems(response.items);
+      setTotalGroups(response.totalGroups);
       setTotal(response.total);
     } catch (err) {
       if (err instanceof ApiError) {
@@ -154,7 +102,7 @@ export function TestCaseHistoryList({ testCase }: TestCaseHistoryListProps) {
   };
 
   // ローディング表示
-  if (isLoading && histories.length === 0) {
+  if (isLoading && groupedItems.length === 0) {
     return (
       <div className="space-y-4">
         <h3 className="text-sm font-semibold text-foreground">変更履歴</h3>
@@ -189,7 +137,7 @@ export function TestCaseHistoryList({ testCase }: TestCaseHistoryListProps) {
       </div>
 
       {/* 履歴一覧 */}
-      {histories.length === 0 ? (
+      {groupedItems.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-foreground-muted text-sm">変更履歴はありません</p>
         </div>
@@ -205,10 +153,10 @@ export function TestCaseHistoryList({ testCase }: TestCaseHistoryListProps) {
               {/* 履歴アイテム */}
               <div className="space-y-4">
                 {groupedItems.map((item) =>
-                  isHistoryGroup(item) ? (
-                    <HistoryGroupItem key={item.groupId} group={item} />
+                  isMultipleHistoryGroup(item) ? (
+                    <HistoryGroupItem key={item.groupId ?? item.histories[0].id} group={item} />
                   ) : (
-                    <HistoryItem key={item.id} history={item} />
+                    <HistoryItem key={item.histories[0].id} history={item.histories[0]} />
                   )
                 )}
               </div>
@@ -225,8 +173,8 @@ export function TestCaseHistoryList({ testCase }: TestCaseHistoryListProps) {
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
               <p className="text-xs text-foreground-muted">
-                {total}件中 {(page - 1) * PAGE_SIZE + 1} -{' '}
-                {Math.min(page * PAGE_SIZE, total)}件を表示
+                {totalGroups}グループ中 {(page - 1) * PAGE_SIZE + 1} -{' '}
+                {Math.min(page * PAGE_SIZE, totalGroups)}グループを表示
               </p>
 
               <div className="flex items-center gap-2">
@@ -685,7 +633,7 @@ function getGroupSummary(histories: TestCaseHistory[]): string {
 /**
  * グループ化された履歴アイテム
  */
-function HistoryGroupItem({ group }: { group: TestCaseHistoryGroup }) {
+function HistoryGroupItem({ group }: { group: TestCaseHistoryGroupedItem }) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   // グループ内の最初の履歴から変更者情報を取得
