@@ -3,6 +3,7 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   PlusCircle,
   Pencil,
   Trash2,
@@ -190,12 +191,175 @@ export function TestCaseHistoryList({ testCase }: TestCaseHistoryListProps) {
 }
 
 /**
- * スナップショットの変更内容をフォーマット
+ * changeDetailの型定義
  */
-function formatSnapshot(snapshot: Record<string, unknown>, changeType: TestCaseChangeType): string {
+type ChangeDetail =
+  | {
+      type: 'BASIC_INFO_UPDATE';
+      fields: {
+        title?: { before: string; after: string };
+        description?: { before: string | null; after: string | null };
+        priority?: { before: string; after: string };
+        status?: { before: string; after: string };
+      };
+    }
+  | {
+      type: 'PRECONDITION_ADD';
+      preconditionId: string;
+      added: { content: string; orderKey: string };
+    }
+  | {
+      type: 'PRECONDITION_UPDATE';
+      preconditionId: string;
+      before: { content: string };
+      after: { content: string };
+    }
+  | {
+      type: 'PRECONDITION_DELETE';
+      preconditionId: string;
+      deleted: { content: string; orderKey: string };
+    }
+  | {
+      type: 'PRECONDITION_REORDER';
+      before: string[];
+      after: string[];
+    }
+  | {
+      type: 'STEP_ADD';
+      stepId: string;
+      added: { content: string; orderKey: string };
+    }
+  | {
+      type: 'STEP_UPDATE';
+      stepId: string;
+      before: { content: string };
+      after: { content: string };
+    }
+  | {
+      type: 'STEP_DELETE';
+      stepId: string;
+      deleted: { content: string; orderKey: string };
+    }
+  | {
+      type: 'STEP_REORDER';
+      before: string[];
+      after: string[];
+    }
+  | {
+      type: 'EXPECTED_RESULT_ADD';
+      expectedResultId: string;
+      added: { content: string; orderKey: string };
+    }
+  | {
+      type: 'EXPECTED_RESULT_UPDATE';
+      expectedResultId: string;
+      before: { content: string };
+      after: { content: string };
+    }
+  | {
+      type: 'EXPECTED_RESULT_DELETE';
+      expectedResultId: string;
+      deleted: { content: string; orderKey: string };
+    }
+  | {
+      type: 'EXPECTED_RESULT_REORDER';
+      before: string[];
+      after: string[];
+    }
+  | {
+      type: 'COPY';
+      sourceTestCaseId: string;
+      sourceTitle: string;
+      targetTestSuiteId: string;
+    };
+
+/**
+ * フィールド名のラベル
+ */
+const FIELD_LABELS: Record<string, string> = {
+  title: 'タイトル',
+  description: '説明',
+  priority: '優先度',
+  status: 'ステータス',
+};
+
+/**
+ * 優先度のラベル
+ */
+const PRIORITY_LABELS: Record<string, string> = {
+  CRITICAL: '緊急',
+  HIGH: '高',
+  MEDIUM: '中',
+  LOW: '低',
+};
+
+/**
+ * ステータスのラベル
+ */
+const STATUS_LABELS: Record<string, string> = {
+  DRAFT: '下書き',
+  ACTIVE: 'アクティブ',
+  ARCHIVED: 'アーカイブ',
+};
+
+/**
+ * changeDetailから変更されたフィールド名を抽出
+ */
+function getChangedFields(snapshot: Record<string, unknown>): string[] {
+  const changeDetail = snapshot.changeDetail as ChangeDetail | undefined;
+  if (!changeDetail) return [];
+
+  switch (changeDetail.type) {
+    case 'BASIC_INFO_UPDATE':
+      return Object.keys(changeDetail.fields).map((key) => FIELD_LABELS[key] || key);
+    case 'PRECONDITION_ADD':
+      return ['前提条件（追加）'];
+    case 'PRECONDITION_UPDATE':
+      return ['前提条件'];
+    case 'PRECONDITION_DELETE':
+      return ['前提条件（削除）'];
+    case 'PRECONDITION_REORDER':
+      return ['前提条件（並び替え）'];
+    case 'STEP_ADD':
+      return ['ステップ（追加）'];
+    case 'STEP_UPDATE':
+      return ['ステップ'];
+    case 'STEP_DELETE':
+      return ['ステップ（削除）'];
+    case 'STEP_REORDER':
+      return ['ステップ（並び替え）'];
+    case 'EXPECTED_RESULT_ADD':
+      return ['期待結果（追加）'];
+    case 'EXPECTED_RESULT_UPDATE':
+      return ['期待結果'];
+    case 'EXPECTED_RESULT_DELETE':
+      return ['期待結果（削除）'];
+    case 'EXPECTED_RESULT_REORDER':
+      return ['期待結果（並び替え）'];
+    case 'COPY':
+      return ['コピー'];
+    default:
+      return [];
+  }
+}
+
+/**
+ * changeDetailが存在するか確認
+ */
+function hasChangeDetail(snapshot: Record<string, unknown>): boolean {
+  return snapshot.changeDetail !== undefined;
+}
+
+/**
+ * 変更内容のサマリーを取得
+ */
+function getChangeSummary(snapshot: Record<string, unknown>, changeType: TestCaseChangeType): string {
   if (changeType === 'CREATE') {
-    const title = snapshot.title as string | undefined;
-    return title ? `テストケース「${title}」を作成` : 'テストケースを作成';
+    const changeDetail = snapshot.changeDetail as ChangeDetail | undefined;
+    if (changeDetail?.type === 'COPY') {
+      return `「${changeDetail.sourceTitle}」からコピーして作成`;
+    }
+    return 'テストケースを作成';
   }
 
   if (changeType === 'DELETE') {
@@ -206,93 +370,219 @@ function formatSnapshot(snapshot: Record<string, unknown>, changeType: TestCaseC
     return 'テストケースを復元';
   }
 
-  // UPDATEの場合、変更されたフィールドを表示
+  // UPDATEの場合
+  const changedFields = getChangedFields(snapshot);
+  if (changedFields.length > 0) {
+    return `${changedFields.join('、')}を変更`;
+  }
+
+  // changeDetailがない古いデータの場合（後方互換性）
   const changes: string[] = [];
+  if (snapshot.title !== undefined) changes.push('タイトル');
+  if (snapshot.description !== undefined) changes.push('説明');
+  if (snapshot.priority !== undefined) changes.push('優先度');
+  if (snapshot.status !== undefined) changes.push('ステータス');
+  if (snapshot.preconditions !== undefined) changes.push('前提条件');
+  if (snapshot.steps !== undefined) changes.push('ステップ');
+  if (snapshot.expectedResults !== undefined) changes.push('期待結果');
 
-  if (snapshot.title !== undefined) {
-    changes.push(`タイトルを「${snapshot.title}」に変更`);
+  return changes.length > 0 ? `${changes.join('、')}を変更` : '設定を更新';
+}
+
+/**
+ * 差分表示コンポーネント
+ */
+function DiffView({ snapshot }: { snapshot: Record<string, unknown> }) {
+  const changeDetail = snapshot.changeDetail as ChangeDetail | undefined;
+
+  if (!changeDetail) {
+    return (
+      <p className="text-xs text-foreground-muted italic">
+        詳細な差分情報がありません（過去のデータ）
+      </p>
+    );
   }
 
-  if (snapshot.description !== undefined) {
-    if (snapshot.description === null || snapshot.description === '') {
-      changes.push('説明を削除');
-    } else {
-      changes.push('説明を更新');
-    }
-  }
-
-  if (snapshot.priority !== undefined) {
-    const priorityLabels: Record<string, string> = {
-      CRITICAL: '緊急',
-      HIGH: '高',
-      MEDIUM: '中',
-      LOW: '低',
-    };
-    const priorityLabel = priorityLabels[snapshot.priority as string] || snapshot.priority;
-    changes.push(`優先度を「${priorityLabel}」に変更`);
-  }
-
-  if (snapshot.status !== undefined) {
-    const statusLabels: Record<string, string> = {
-      DRAFT: '下書き',
-      ACTIVE: 'アクティブ',
-      ARCHIVED: 'アーカイブ',
-    };
-    const statusLabel = statusLabels[snapshot.status as string] || snapshot.status;
-    changes.push(`ステータスを「${statusLabel}」に変更`);
+  // BASIC_INFO_UPDATEの場合
+  if (changeDetail.type === 'BASIC_INFO_UPDATE') {
+    const { fields } = changeDetail;
+    return (
+      <div className="space-y-2">
+        {fields.title && (
+          <DiffField
+            label="タイトル"
+            before={fields.title.before}
+            after={fields.title.after}
+          />
+        )}
+        {fields.description && (
+          <DiffField
+            label="説明"
+            before={fields.description.before || '（なし）'}
+            after={fields.description.after || '（なし）'}
+          />
+        )}
+        {fields.priority && (
+          <DiffField
+            label="優先度"
+            before={PRIORITY_LABELS[fields.priority.before] || fields.priority.before}
+            after={PRIORITY_LABELS[fields.priority.after] || fields.priority.after}
+          />
+        )}
+        {fields.status && (
+          <DiffField
+            label="ステータス"
+            before={STATUS_LABELS[fields.status.before] || fields.status.before}
+            after={STATUS_LABELS[fields.status.after] || fields.status.after}
+          />
+        )}
+      </div>
+    );
   }
 
   // 前提条件の変更
-  if (snapshot.preconditions !== undefined) {
-    const preconditions = snapshot.preconditions as unknown[];
-    if (Array.isArray(preconditions)) {
-      if (preconditions.length === 0) {
-        changes.push('前提条件をすべて削除');
-      } else {
-        changes.push(`前提条件を${preconditions.length}件に更新`);
-      }
-    } else {
-      changes.push('前提条件を更新');
-    }
+  if (changeDetail.type === 'PRECONDITION_UPDATE') {
+    return (
+      <DiffField
+        label="前提条件"
+        before={changeDetail.before.content}
+        after={changeDetail.after.content}
+      />
+    );
+  }
+
+  if (changeDetail.type === 'PRECONDITION_ADD') {
+    return (
+      <div className="text-xs">
+        <span className="text-foreground-muted">追加: </span>
+        <span className="text-green-600">{changeDetail.added.content}</span>
+      </div>
+    );
+  }
+
+  if (changeDetail.type === 'PRECONDITION_DELETE') {
+    return (
+      <div className="text-xs">
+        <span className="text-foreground-muted">削除: </span>
+        <span className="text-danger line-through">{changeDetail.deleted.content}</span>
+      </div>
+    );
   }
 
   // ステップの変更
-  if (snapshot.steps !== undefined) {
-    const steps = snapshot.steps as unknown[];
-    if (Array.isArray(steps)) {
-      if (steps.length === 0) {
-        changes.push('テスト手順をすべて削除');
-      } else {
-        changes.push(`テスト手順を${steps.length}件に更新`);
-      }
-    } else {
-      changes.push('テスト手順を更新');
-    }
+  if (changeDetail.type === 'STEP_UPDATE') {
+    return (
+      <DiffField
+        label="ステップ"
+        before={changeDetail.before.content}
+        after={changeDetail.after.content}
+      />
+    );
+  }
+
+  if (changeDetail.type === 'STEP_ADD') {
+    return (
+      <div className="text-xs">
+        <span className="text-foreground-muted">追加: </span>
+        <span className="text-green-600">{changeDetail.added.content}</span>
+      </div>
+    );
+  }
+
+  if (changeDetail.type === 'STEP_DELETE') {
+    return (
+      <div className="text-xs">
+        <span className="text-foreground-muted">削除: </span>
+        <span className="text-danger line-through">{changeDetail.deleted.content}</span>
+      </div>
+    );
   }
 
   // 期待結果の変更
-  if (snapshot.expectedResults !== undefined) {
-    const expectedResults = snapshot.expectedResults as unknown[];
-    if (Array.isArray(expectedResults)) {
-      if (expectedResults.length === 0) {
-        changes.push('期待結果をすべて削除');
-      } else {
-        changes.push(`期待結果を${expectedResults.length}件に更新`);
-      }
-    } else {
-      changes.push('期待結果を更新');
-    }
+  if (changeDetail.type === 'EXPECTED_RESULT_UPDATE') {
+    return (
+      <DiffField
+        label="期待結果"
+        before={changeDetail.before.content}
+        after={changeDetail.after.content}
+      />
+    );
   }
 
-  return changes.length > 0 ? changes.join('、') : '設定を更新';
+  if (changeDetail.type === 'EXPECTED_RESULT_ADD') {
+    return (
+      <div className="text-xs">
+        <span className="text-foreground-muted">追加: </span>
+        <span className="text-green-600">{changeDetail.added.content}</span>
+      </div>
+    );
+  }
+
+  if (changeDetail.type === 'EXPECTED_RESULT_DELETE') {
+    return (
+      <div className="text-xs">
+        <span className="text-foreground-muted">削除: </span>
+        <span className="text-danger line-through">{changeDetail.deleted.content}</span>
+      </div>
+    );
+  }
+
+  // 並び替えの場合
+  if (
+    changeDetail.type === 'PRECONDITION_REORDER' ||
+    changeDetail.type === 'STEP_REORDER' ||
+    changeDetail.type === 'EXPECTED_RESULT_REORDER'
+  ) {
+    return (
+      <p className="text-xs text-foreground-muted italic">順序を変更しました</p>
+    );
+  }
+
+  // COPYの場合
+  if (changeDetail.type === 'COPY') {
+    return (
+      <p className="text-xs text-foreground-muted">
+        コピー元: 「{changeDetail.sourceTitle}」
+      </p>
+    );
+  }
+
+  return null;
+}
+
+/**
+ * 差分フィールド表示コンポーネント
+ */
+function DiffField({
+  label,
+  before,
+  after,
+}: {
+  label: string;
+  before: string;
+  after: string;
+}) {
+  return (
+    <div className="text-xs space-y-1">
+      <p className="font-medium text-foreground-muted">{label}</p>
+      <div className="pl-2 space-y-0.5">
+        <p className="text-danger">
+          <span className="line-through">{before}</span>
+        </p>
+        <p className="text-green-600">{after}</p>
+      </div>
+    </div>
+  );
 }
 
 /**
  * 履歴アイテム
  */
 function HistoryItem({ history }: { history: TestCaseHistory }) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const changeTypeDef = CHANGE_TYPES[history.changeType];
   const Icon = changeTypeDef.icon;
+  const showDetailButton = history.changeType === 'UPDATE' && hasChangeDetail(history.snapshot);
 
   return (
     <div className="relative flex items-start gap-4 pl-8">
@@ -346,10 +636,30 @@ function HistoryItem({ history }: { history: TestCaseHistory }) {
               </span>
             </div>
 
-            {/* 変更内容 */}
-            <p className="mt-1 text-xs text-foreground-muted">
-              {formatSnapshot(history.snapshot, history.changeType)}
-            </p>
+            {/* サマリー表示 + 詳細ボタン */}
+            <div className="mt-1 flex items-center gap-2">
+              <p className="text-xs text-foreground-muted">
+                {getChangeSummary(history.snapshot, history.changeType)}
+              </p>
+              {showDetailButton && (
+                <button
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="inline-flex items-center gap-0.5 text-xs text-accent hover:underline"
+                >
+                  {isExpanded ? '閉じる' : '詳細を見る'}
+                  <ChevronDown
+                    className={`w-3 h-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                  />
+                </button>
+              )}
+            </div>
+
+            {/* 折りたたみ式差分表示 */}
+            {isExpanded && (
+              <div className="mt-2 pl-3 border-l-2 border-accent">
+                <DiffView snapshot={history.snapshot} />
+              </div>
+            )}
 
             {/* 変更理由 */}
             {history.changeReason && (

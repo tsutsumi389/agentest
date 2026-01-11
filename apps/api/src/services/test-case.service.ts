@@ -121,6 +121,15 @@ type ChildEntityChangeDetail =
       sourceTestCaseId: string;
       sourceTitle: string;
       targetTestSuiteId: string;
+    }
+  | {
+      type: 'BASIC_INFO_UPDATE';
+      fields: {
+        title?: { before: string; after: string };
+        description?: { before: string | null; after: string | null };
+        priority?: { before: string; after: string };
+        status?: { before: string; after: string };
+      };
     };
 
 /**
@@ -304,6 +313,46 @@ export class TestCaseService {
   ) {
     const testCase = await this.findById(testCaseId);
 
+    // 変更があるフィールドのみchangeDetailに含める
+    const fields: {
+      title?: { before: string; after: string };
+      description?: { before: string | null; after: string | null };
+      priority?: { before: string; after: string };
+      status?: { before: string; after: string };
+    } = {};
+
+    if (data.title !== undefined && data.title !== testCase.title) {
+      fields.title = { before: testCase.title, after: data.title };
+    }
+    if (data.description !== undefined && data.description !== testCase.description) {
+      fields.description = { before: testCase.description, after: data.description };
+    }
+    if (data.priority !== undefined && data.priority !== testCase.priority) {
+      fields.priority = { before: testCase.priority, after: data.priority };
+    }
+    if (data.status !== undefined && data.status !== testCase.status) {
+      fields.status = { before: testCase.status, after: data.status };
+    }
+
+    // 変更がない場合はそのまま返す
+    if (Object.keys(fields).length === 0) {
+      return testCase;
+    }
+
+    // 履歴用のスナップショットを作成
+    const snapshot: HistorySnapshot = {
+      id: testCase.id,
+      testSuiteId: testCase.testSuiteId,
+      title: testCase.title,
+      description: testCase.description,
+      priority: testCase.priority,
+      status: testCase.status,
+      changeDetail: {
+        type: 'BASIC_INFO_UPDATE',
+        fields,
+      },
+    };
+
     // 履歴保存と更新を同じトランザクションで実行
     return prisma.$transaction(async (tx) => {
       await tx.testCaseHistory.create({
@@ -311,7 +360,7 @@ export class TestCaseService {
           testCaseId,
           changedByUserId: userId,
           changeType: 'UPDATE',
-          snapshot: testCase as unknown as object,
+          snapshot: toJsonSnapshot(snapshot),
         },
       });
 
