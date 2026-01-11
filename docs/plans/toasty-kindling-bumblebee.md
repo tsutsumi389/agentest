@@ -1,5 +1,7 @@
 # テストスイート更新MCPツールへのgroupId追加計画
 
+> ✅ **実装完了**
+
 ## 概要
 
 テストスイートの更新MCPツールに変更時のグループIDを付与する機能を追加する。
@@ -14,19 +16,19 @@
 
 ## 実装ステップ
 
-### Step 1: MCPツール層の修正
+### Step 1: MCPツール層の修正 ✅
 **ファイル**: `apps/mcp-server/src/tools/update-test-suite.ts`
 
 - `crypto` モジュールのインポート追加（行1付近）
 - ハンドラー内（行52付近）でgroupId生成・API呼び出しに含める
 
-### Step 2: API層スキーマ修正
+### Step 2: API層スキーマ修正 ✅
 **ファイル**: `apps/api/src/routes/internal.ts` (行695-701)
 
 - `updateTestSuiteBodySchema` に `groupId: z.string().uuid().optional()` 追加
 - refine関数でgroupIdを除外してバリデーション（テストケースと同じパターン）
 
-### Step 3: APIエンドポイント修正
+### Step 3: APIエンドポイント修正 ✅
 **ファイル**: `apps/api/src/routes/internal.ts` (行834, 847付近)
 
 - リクエストボディからgroupIdを分離

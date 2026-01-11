@@ -1,12 +1,14 @@
 # テストスイート変更履歴のグループ化機能
 
+> ✅ **実装完了**
+
 ## 概要
 
 テストケースで実装済みの「groupIdによる変更履歴のグループ化機能」を、テストスイートにも同様に実装する。
 
 ## 実装ステップ
 
-### Step 1: スキーマ変更
+### Step 1: スキーマ変更 ✅
 
 **ファイル**: `packages/db/prisma/schema.prisma`
 
@@ -23,7 +25,7 @@ model TestSuiteHistory {
 
 マイグレーション実行。
 
-### Step 2: 型定義の追加
+### Step 2: 型定義の追加 ✅
 
 **ファイル**: `packages/shared/src/types/test-suite.ts`
 
@@ -33,7 +35,7 @@ model TestSuiteHistory {
 - `TestSuiteHistoryGroupedItem`型を追加
 - `TestSuiteHistoriesGroupedResponse`型を追加
 
-### Step 3: リポジトリ層
+### Step 3: リポジトリ層 ✅
 
 **ファイル**: `apps/api/src/repositories/test-suite.repository.ts`
 
@@ -42,7 +44,7 @@ model TestSuiteHistory {
 - カテゴリ別分類（basicInfo, preconditions）
 - 参考: `test-case.repository.ts`の`getHistoriesGrouped`（291-448行）
 
-### Step 4: サービス層
+### Step 4: サービス層 ✅
 
 **ファイル**: `apps/api/src/services/test-suite.service.ts`
 
@@ -57,7 +59,7 @@ model TestSuiteHistory {
    - `reorderTestCases` → changeDetail: `TEST_CASE_REORDER`
    - `restore` → groupIdのみ
 
-### Step 5: コントローラー層
+### Step 5: コントローラー層 ✅
 
 **ファイル**: `apps/api/src/controllers/test-suite.controller.ts`
 
@@ -65,7 +67,7 @@ model TestSuiteHistory {
 2. 各バリデーションスキーマに`groupId`を追加
 3. 各操作メソッドで`groupId`をサービスに渡す
 
-### Step 6: フロントエンド
+### Step 6: フロントエンド ✅
 
 **ファイル**: `apps/web/src/lib/api.ts`
 - 型定義の更新（TestSuiteHistoriesGroupedResponse等）
@@ -78,7 +80,7 @@ model TestSuiteHistory {
 - ページネーションをグループ単位に変更
 - 参考: `TestCaseHistoryList.tsx`
 
-### Step 7: テスト
+### Step 7: テスト ✅
 
 **新規**: `apps/api/src/__tests__/unit/test-suite.repository.histories-grouped.test.ts`
 - グループ化、カテゴリ分類、ページネーションのテスト
