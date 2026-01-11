@@ -45,6 +45,12 @@ const PAGE_SIZE = 20;
 /**
  * 履歴をグループ化する
  * groupIdがある履歴は同じグループにまとめ、groupIdがない履歴は個別に表示
+ *
+ * 【制限事項】
+ * 現在の実装ではページ単位で取得した履歴をフロントエンドでグループ化している。
+ * そのため、同じgroupIdを持つ履歴がページ境界をまたぐ場合、別々のグループとして
+ * 表示される可能性がある。ただし、同一トランザクション内の履歴は同時刻に作成され、
+ * 時系列順（createdAt DESC）でソートされるため、通常は連続して並ぶ。
  */
 function groupHistories(
   histories: TestCaseHistory[]
@@ -185,7 +191,7 @@ export function TestCaseHistoryList({ testCase }: TestCaseHistoryListProps) {
       {/* 履歴一覧 */}
       {histories.length === 0 ? (
         <div className="text-center py-12">
-          <p className="text-foreground-muted text-sm">履歴の読み込みに失敗しました</p>
+          <p className="text-foreground-muted text-sm">変更履歴はありません</p>
         </div>
       ) : (
         <>

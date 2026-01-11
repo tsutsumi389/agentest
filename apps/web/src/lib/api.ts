@@ -511,7 +511,10 @@ export interface TestCaseHistory {
   } | null;
 }
 
-/** グループ化されたテストケース変更履歴 */
+/**
+ * グループ化されたテストケース変更履歴
+ * @agentest/sharedではcreatedAt: Dateだが、APIレスポンスのJSONシリアライズによりstring型として受け取る
+ */
 export interface TestCaseHistoryGroup {
   groupId: string;
   histories: TestCaseHistory[];
