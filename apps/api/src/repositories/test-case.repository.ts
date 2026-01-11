@@ -14,7 +14,17 @@ export interface GroupedHistoryRecord {
   groupId: string | null;
   createdAt: Date;
   changedBy: { id: string; name: string; avatarUrl: string | null } | null;
-  agentSession: { id: string; clientName: string } | null;
+  agentSession: { id: string; clientName: string | null } | null;
+}
+
+/**
+ * カテゴリ別履歴
+ */
+export interface CategorizedHistories {
+  basicInfo: GroupedHistoryRecord[];
+  preconditions: GroupedHistoryRecord[];
+  steps: GroupedHistoryRecord[];
+  expectedResults: GroupedHistoryRecord[];
 }
 
 /**
@@ -22,8 +32,38 @@ export interface GroupedHistoryRecord {
  */
 export interface GroupedHistoryItem {
   groupId: string | null;
-  histories: GroupedHistoryRecord[];
+  categorizedHistories: CategorizedHistories;
   createdAt: Date;
+}
+
+/**
+ * changeDetail.typeからカテゴリを判定
+ */
+function getCategoryFromChangeDetail(snapshot: Record<string, unknown>): keyof CategorizedHistories {
+  const changeDetail = snapshot.changeDetail as { type?: string } | undefined;
+  if (!changeDetail?.type) {
+    return 'basicInfo';
+  }
+
+  const type = changeDetail.type;
+
+  // 前提条件関連
+  if (type.startsWith('PRECONDITION_')) {
+    return 'preconditions';
+  }
+
+  // ステップ関連
+  if (type.startsWith('STEP_')) {
+    return 'steps';
+  }
+
+  // 期待結果関連
+  if (type.startsWith('EXPECTED_RESULT_')) {
+    return 'expectedResults';
+  }
+
+  // その他（BASIC_INFO_UPDATE, COPY, CREATE, DELETE, RESTOREなど）
+  return 'basicInfo';
 }
 
 /**
@@ -359,30 +399,40 @@ export class TestCaseRepository {
       agentSession: h.changed_by_agent_session_id ? sessionMap.get(h.changed_by_agent_session_id) ?? null : null,
     }));
 
-    // 4. グループ化して返却
+    // 4. グループ化してカテゴリ別に振り分け
     const groupMap = new Map<
       string,
       {
         groupId: string | null;
-        histories: typeof histories;
+        categorizedHistories: CategorizedHistories;
         createdAt: Date;
       }
     >();
 
     for (const history of histories) {
       const effectiveGroupId = history.groupId ?? history.id;
+      const category = getCategoryFromChangeDetail(history.snapshot);
       const existing = groupMap.get(effectiveGroupId);
 
       if (existing) {
-        existing.histories.push(history);
+        existing.categorizedHistories[category].push(history);
         // より新しい日時を保持
         if (history.createdAt > existing.createdAt) {
           existing.createdAt = history.createdAt;
         }
       } else {
+        // 空のカテゴリ別履歴を初期化
+        const categorizedHistories: CategorizedHistories = {
+          basicInfo: [],
+          preconditions: [],
+          steps: [],
+          expectedResults: [],
+        };
+        categorizedHistories[category].push(history);
+
         groupMap.set(effectiveGroupId, {
           groupId: history.groupId,
-          histories: [history],
+          categorizedHistories,
           createdAt: history.createdAt,
         });
       }

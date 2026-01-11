@@ -55,12 +55,23 @@ export interface TestCaseHistory {
 }
 
 /**
+ * カテゴリ別履歴
+ * グループ内の履歴を4つのカテゴリに分類
+ */
+export interface CategorizedHistories {
+  basicInfo: TestCaseHistory[];
+  preconditions: TestCaseHistory[];
+  steps: TestCaseHistory[];
+  expectedResults: TestCaseHistory[];
+}
+
+/**
  * グループ化された履歴アイテム（APIレスポンス用）
  * groupIdがnullの場合は単一履歴を含むグループ
  */
 export interface TestCaseHistoryGroupedItem {
   groupId: string | null;
-  histories: TestCaseHistory[];
+  categorizedHistories: CategorizedHistories;
   createdAt: Date;
 }
 

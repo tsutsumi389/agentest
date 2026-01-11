@@ -101,10 +101,10 @@ describe('TestCaseRepository - getHistoriesGrouped', () => {
       expect(result.totalGroups).toBe(2);
       expect(result.totalHistories).toBe(2);
 
-      // 各グループは1件ずつの履歴を持つ
-      expect(result.items[0].histories).toHaveLength(1);
+      // 各グループは1件ずつの履歴を持つ（changeDetailがないのでbasicInfoに分類）
+      expect(result.items[0].categorizedHistories.basicInfo).toHaveLength(1);
       expect(result.items[0].groupId).toBeNull();
-      expect(result.items[1].histories).toHaveLength(1);
+      expect(result.items[1].categorizedHistories.basicInfo).toHaveLength(1);
       expect(result.items[1].groupId).toBeNull();
     });
   });
@@ -153,12 +153,12 @@ describe('TestCaseRepository - getHistoriesGrouped', () => {
       expect(result.totalGroups).toBe(1);
       expect(result.totalHistories).toBe(2);
 
-      // 1つのグループに2件の履歴が含まれる
+      // 1つのグループに2件の履歴が含まれる（changeDetailがないのでbasicInfoに分類）
       const group = result.items[0];
       expect(group.groupId).toBe(GROUP_ID);
-      expect(group.histories).toHaveLength(2);
-      expect(group.histories[0].id).toBe('history-1');
-      expect(group.histories[1].id).toBe('history-2');
+      expect(group.categorizedHistories.basicInfo).toHaveLength(2);
+      expect(group.categorizedHistories.basicInfo[0].id).toBe('history-1');
+      expect(group.categorizedHistories.basicInfo[1].id).toBe('history-2');
     });
   });
 
@@ -184,7 +184,7 @@ describe('TestCaseRepository - getHistoriesGrouped', () => {
 
       const result = await repository.getHistoriesGrouped(TEST_CASE_ID, { limit: 20, offset: 0 });
 
-      expect(result.items[0].histories[0].changedBy).toEqual(mockUser);
+      expect(result.items[0].categorizedHistories.basicInfo[0].changedBy).toEqual(mockUser);
     });
 
     // Note: エージェントセッション情報のテストは統合テストでカバー

@@ -512,13 +512,23 @@ export interface TestCaseHistory {
 }
 
 /**
+ * カテゴリ別履歴（APIレスポンス用）
+ */
+export interface CategorizedHistories {
+  basicInfo: TestCaseHistory[];
+  preconditions: TestCaseHistory[];
+  steps: TestCaseHistory[];
+  expectedResults: TestCaseHistory[];
+}
+
+/**
  * グループ化された履歴アイテム（APIレスポンス用）
  * groupIdがnullの場合は単一履歴を含むグループ
  * @agentest/sharedではcreatedAt: Dateだが、APIレスポンスのJSONシリアライズによりstring型として受け取る
  */
 export interface TestCaseHistoryGroupedItem {
   groupId: string | null;
-  histories: TestCaseHistory[];
+  categorizedHistories: CategorizedHistories;
   createdAt: string;
 }
 
