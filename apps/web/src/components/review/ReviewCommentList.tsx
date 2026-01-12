@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { MessageSquare, Plus, Filter, Loader2, AlertCircle } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { MessageSquare, Plus, Filter, Loader2, AlertCircle, FileEdit } from 'lucide-react';
 import {
-  reviewCommentsApi,
   getTestSuiteComments,
   getTestCaseComments,
   ApiError,
@@ -12,6 +11,7 @@ import {
   type ProjectMemberRole,
 } from '../../lib/api';
 import { toast } from '../../stores/toast';
+import { useReviewSession } from '../../contexts/ReviewSessionContext';
 import { ReviewCommentItem } from './ReviewCommentItem';
 import { ReviewCommentForm } from './ReviewCommentForm';
 
@@ -56,11 +56,12 @@ export function ReviewCommentList({
   currentUserId,
   currentRole,
 }: ReviewCommentListProps) {
-  const queryClient = useQueryClient();
+  const { isReviewing, addComment, isLoading: isReviewLoading } = useReviewSession();
   const [statusFilter, setStatusFilter] = useState<'ALL' | ReviewStatus>('ALL');
   const [fieldFilter, setFieldFilter] = useState<ReviewTargetField | 'ALL'>('ALL');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedField, setSelectedField] = useState<ReviewTargetField>('TITLE');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 編集権限
   const canEdit = currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'WRITE';
@@ -86,28 +87,33 @@ export function ReviewCommentList({
     },
   });
 
-  // コメント作成mutation
-  const createMutation = useMutation({
-    mutationFn: (content: string) =>
-      reviewCommentsApi.create({
+  // コメント作成（レビューセッション経由）
+  const handleAddComment = async (content: string) => {
+    if (!isReviewing) {
+      toast.error('レビューを開始してからコメントを追加してください');
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      await addComment({
         targetType,
         targetId,
         targetField: selectedField,
         content,
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
+      });
       setIsFormOpen(false);
-      toast.success('コメントを投稿しました');
-    },
-    onError: (err) => {
+      toast.success('コメントを追加しました');
+    } catch (err) {
       if (err instanceof ApiError) {
         toast.error(err.message);
       } else {
-        toast.error('コメントの投稿に失敗しました');
+        toast.error('コメントの追加に失敗しました');
       }
-    },
-  });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const comments = data?.comments || [];
   const total = data?.total || 0;
@@ -148,15 +154,22 @@ export function ReviewCommentList({
             )}
           </h3>
         </div>
-        {canEdit && (
+        {canEdit && isReviewing && (
           <button
             type="button"
             onClick={() => setIsFormOpen(!isFormOpen)}
             className="btn btn-primary btn-sm"
+            disabled={isReviewLoading}
           >
             <Plus className="w-4 h-4" />
-            コメント
+            コメント追加
           </button>
+        )}
+        {canEdit && !isReviewing && (
+          <div className="flex items-center gap-2 text-sm text-foreground-muted">
+            <FileEdit className="w-4 h-4" />
+            <span>コメントを追加するにはレビューを開始してください</span>
+          </div>
         )}
       </div>
 
@@ -189,8 +202,8 @@ export function ReviewCommentList({
         </select>
       </div>
 
-      {/* コメント作成フォーム */}
-      {isFormOpen && (
+      {/* コメント作成フォーム（レビューモード時のみ表示） */}
+      {isFormOpen && isReviewing && (
         <div className="card p-4 space-y-3">
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
@@ -200,6 +213,7 @@ export function ReviewCommentList({
               value={selectedField}
               onChange={(e) => setSelectedField(e.target.value as ReviewTargetField)}
               className="input text-sm"
+              disabled={isSubmitting}
             >
               {fieldOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -209,8 +223,8 @@ export function ReviewCommentList({
             </select>
           </div>
           <ReviewCommentForm
-            onSubmit={(content) => createMutation.mutate(content)}
-            isSubmitting={createMutation.isPending}
+            onSubmit={handleAddComment}
+            isSubmitting={isSubmitting}
             placeholder="コメントを入力..."
             onCancel={() => setIsFormOpen(false)}
             autoFocus
@@ -223,9 +237,14 @@ export function ReviewCommentList({
         <div className="card p-8 text-center text-foreground-muted">
           <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
           <p>レビューコメントはまだありません</p>
-          {canEdit && (
+          {canEdit && isReviewing && (
             <p className="text-sm mt-1">
-              「コメント」ボタンからコメントを追加できます
+              「コメント追加」ボタンからコメントを追加できます
+            </p>
+          )}
+          {canEdit && !isReviewing && (
+            <p className="text-sm mt-1">
+              レビューを開始してコメントを追加できます
             </p>
           )}
         </div>
