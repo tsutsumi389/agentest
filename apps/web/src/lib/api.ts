@@ -1281,127 +1281,45 @@ export const organizationsApi = {
 };
 
 // ============================================
-// レビュー関連型定義
+// レビュー関連型定義（@agentest/sharedから再エクスポート）
 // ============================================
 
-/** レビュー対象タイプ */
-export type ReviewTargetType = 'SUITE' | 'CASE';
+// 共通型はsharedパッケージから再エクスポート
+export type {
+  ReviewTargetType,
+  ReviewTargetField,
+  ReviewStatus,
+  ReviewSessionStatus,
+  ReviewVerdict,
+} from '@agentest/shared';
 
-/** レビュー対象フィールド */
-export type ReviewTargetField = 'TITLE' | 'DESCRIPTION' | 'PRECONDITION' | 'STEP' | 'EXPECTED_RESULT';
+export type {
+  Review,
+  ReviewAuthor,
+  ReviewAgentSession,
+  ReviewWithAuthor,
+  ReviewWithDetails,
+  DraftReview,
+  ReviewComment,
+  ReviewCommentWithReplies,
+  ReviewReply,
+  ReviewCommentListResponse,
+  ReviewListResponse,
+} from '@agentest/shared';
 
-/** レビューステータス */
-export type ReviewStatus = 'OPEN' | 'RESOLVED';
-
-/** レビューセッションステータス */
-export type ReviewSessionStatus = 'DRAFT' | 'SUBMITTED';
-
-/** レビュー評価 */
-export type ReviewVerdict = 'APPROVED' | 'CHANGES_REQUESTED' | 'COMMENT_ONLY';
-
-/** レビューコメント著者情報 */
-export interface ReviewAuthor {
-  id: string;
-  name: string;
-  avatarUrl: string | null;
-}
-
-/** レビューコメント用エージェントセッション情報 */
-export interface ReviewAgentSession {
-  id: string;
-  clientName: string | null;
-}
-
-/** レビューセッション基本型 */
-export interface Review {
-  id: string;
-  testSuiteId: string;
-  authorUserId: string | null;
-  authorAgentSessionId: string | null;
-  status: ReviewSessionStatus;
-  verdict: ReviewVerdict | null;
-  summary: string | null;
-  submittedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-/** 著者情報付きレビュー（一覧用） */
-export interface ReviewWithAuthor extends Review {
-  author: ReviewAuthor | null;
-  agentSession: ReviewAgentSession | null;
-  _count: { comments: number };
-}
-
-/** レビュー返信 */
-export interface ReviewReply {
-  id: string;
-  commentId: string;
-  authorUserId: string | null;
-  authorAgentSessionId: string | null;
-  content: string;
-  createdAt: string;
-  updatedAt: string;
-  author: ReviewAuthor | null;
-  agentSession: ReviewAgentSession | null;
-}
-
-/** レビューコメント基本型 */
-export interface ReviewComment {
-  id: string;
-  reviewId: string;
-  targetType: ReviewTargetType;
-  targetId: string;
-  targetField: ReviewTargetField;
-  targetItemId: string | null;
-  authorUserId: string | null;
-  authorAgentSessionId: string | null;
-  content: string;
-  status: ReviewStatus;
-  createdAt: string;
-  updatedAt: string;
-}
-
-/** 返信を含むレビューコメント */
-export interface ReviewCommentWithReplies extends ReviewComment {
-  author: ReviewAuthor | null;
-  agentSession: ReviewAgentSession | null;
-  replies: ReviewReply[];
-  _count: { replies: number };
-}
-
-/** 詳細付きレビュー（コメント含む） */
-export interface ReviewWithDetails extends ReviewWithAuthor {
-  comments: ReviewCommentWithReplies[];
-}
-
-/** 下書きレビュー（テストスイート情報付き） */
-export interface DraftReview extends ReviewWithAuthor {
-  testSuite: {
-    id: string;
-    name: string;
-    project: {
-      id: string;
-      name: string;
-    };
-  };
-}
-
-/** コメント一覧レスポンス */
-export interface ReviewCommentListResponse {
-  comments: ReviewCommentWithReplies[];
-  total: number;
-  limit: number;
-  offset: number;
-}
-
-/** レビュー一覧レスポンス */
-export interface ReviewListResponse {
-  reviews: ReviewWithAuthor[];
-  total: number;
-  limit: number;
-  offset: number;
-}
+// APIクライアント固有の型定義
+import type {
+  ReviewTargetType,
+  ReviewTargetField,
+  ReviewVerdict,
+  ReviewStatus,
+  ReviewCommentWithReplies,
+  ReviewReply,
+  ReviewCommentListResponse,
+  ReviewListResponse,
+  ReviewWithDetails,
+  DraftReview,
+} from '@agentest/shared';
 
 /** コメント作成リクエスト */
 export interface CreateReviewCommentRequest {
@@ -1430,7 +1348,10 @@ export interface ReviewSearchParams {
 // ============================================
 // レビューコメントAPI
 // ============================================
-
+/**
+ * @deprecated 非推奨: 新しいレビューセッションベースのAPIを使用してください
+ * reviewsApi.addComment(), reviewsApi.updateComment()等を使用してください
+ */
 export const reviewCommentsApi = {
   // コメント作成
   create: (data: CreateReviewCommentRequest) =>

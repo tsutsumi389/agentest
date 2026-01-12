@@ -162,9 +162,10 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       throw new Error('レビューが開始されていません');
     }
 
+    setIsLoading(true);
     setError(null);
     try {
-      const response = await reviewsApi.addComment(currentReview.id, data as CreateReviewCommentRequest);
+      const response = await reviewsApi.addComment(currentReview.id, data);
       // レビューを再取得してコメント一覧を更新
       const refreshed = await reviewsApi.getById(currentReview.id);
       setCurrentReview(refreshed.review);
@@ -173,6 +174,8 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       const message = err instanceof Error ? err.message : 'コメントの追加に失敗しました';
       setError(message);
       throw err;
+    } finally {
+      setIsLoading(false);
     }
   }, [currentReview]);
 
@@ -182,6 +185,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       throw new Error('レビューが開始されていません');
     }
 
+    setIsLoading(true);
     setError(null);
     try {
       const response = await reviewsApi.updateComment(currentReview.id, commentId, { content });
@@ -193,6 +197,8 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       const message = err instanceof Error ? err.message : 'コメントの更新に失敗しました';
       setError(message);
       throw err;
+    } finally {
+      setIsLoading(false);
     }
   }, [currentReview]);
 
@@ -202,6 +208,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       throw new Error('レビューが開始されていません');
     }
 
+    setIsLoading(true);
     setError(null);
     try {
       await reviewsApi.deleteComment(currentReview.id, commentId);
@@ -212,6 +219,8 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       const message = err instanceof Error ? err.message : 'コメントの削除に失敗しました';
       setError(message);
       throw err;
+    } finally {
+      setIsLoading(false);
     }
   }, [currentReview]);
 
@@ -221,6 +230,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       throw new Error('レビューが開始されていません');
     }
 
+    setIsLoading(true);
     setError(null);
     try {
       const response = await reviewsApi.updateCommentStatus(currentReview.id, commentId, status);
@@ -232,6 +242,8 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       const message = err instanceof Error ? err.message : 'ステータスの更新に失敗しました';
       setError(message);
       throw err;
+    } finally {
+      setIsLoading(false);
     }
   }, [currentReview]);
 
@@ -241,6 +253,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       throw new Error('レビューが開始されていません');
     }
 
+    setIsLoading(true);
     setError(null);
     try {
       const response = await reviewsApi.addReply(currentReview.id, commentId, { content });
@@ -252,6 +265,8 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       const message = err instanceof Error ? err.message : '返信の追加に失敗しました';
       setError(message);
       throw err;
+    } finally {
+      setIsLoading(false);
     }
   }, [currentReview]);
 
@@ -261,6 +276,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       throw new Error('レビューが開始されていません');
     }
 
+    setIsLoading(true);
     setError(null);
     try {
       const response = await reviewsApi.updateReply(currentReview.id, commentId, replyId, { content });
@@ -272,6 +288,8 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       const message = err instanceof Error ? err.message : '返信の更新に失敗しました';
       setError(message);
       throw err;
+    } finally {
+      setIsLoading(false);
     }
   }, [currentReview]);
 
@@ -281,6 +299,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       throw new Error('レビューが開始されていません');
     }
 
+    setIsLoading(true);
     setError(null);
     try {
       await reviewsApi.deleteReply(currentReview.id, commentId, replyId);
@@ -291,6 +310,8 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       const message = err instanceof Error ? err.message : '返信の削除に失敗しました';
       setError(message);
       throw err;
+    } finally {
+      setIsLoading(false);
     }
   }, [currentReview]);
 
@@ -298,6 +319,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
   const refreshReview = useCallback(async () => {
     if (!currentReview) return;
 
+    setIsLoading(true);
     setError(null);
     try {
       const response = await reviewsApi.getById(currentReview.id);
@@ -306,6 +328,8 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       const message = err instanceof Error ? err.message : 'レビューの再読み込みに失敗しました';
       setError(message);
       throw err;
+    } finally {
+      setIsLoading(false);
     }
   }, [currentReview]);
 
