@@ -10,6 +10,8 @@ import {
   PreconditionStatus,
   StepStatus,
   JudgmentStatus,
+  ReviewSessionStatus,
+  ReviewVerdict,
 } from '../types/enums.js';
 
 // 共通スキーマ
@@ -277,7 +279,34 @@ export const suggestionSearchSchema = z.object({
 export const reviewTargetTypeSchema = z.enum(['SUITE', 'CASE']);
 export const reviewTargetFieldSchema = z.enum(['TITLE', 'DESCRIPTION', 'PRECONDITION', 'STEP', 'EXPECTED_RESULT']);
 export const reviewStatusSchema = z.enum(['OPEN', 'RESOLVED']);
+export const reviewSessionStatusSchema = z.enum([ReviewSessionStatus.DRAFT, ReviewSessionStatus.SUBMITTED]);
+export const reviewVerdictSchema = z.enum([
+  ReviewVerdict.APPROVED,
+  ReviewVerdict.CHANGES_REQUESTED,
+  ReviewVerdict.COMMENT_ONLY,
+]);
 
+// レビューセッションスキーマ
+export const reviewCreateSchema = z.object({
+  summary: z.string().max(5000).optional(),
+});
+
+export const reviewUpdateSchema = z.object({
+  summary: z.string().max(5000).optional(),
+});
+
+export const reviewSubmitSchema = z.object({
+  verdict: reviewVerdictSchema,
+  summary: z.string().max(5000).optional(),
+});
+
+export const reviewSearchSchema = z.object({
+  verdict: reviewVerdictSchema.optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).default(0),
+});
+
+// レビューコメントスキーマ（レビューセッション内）
 export const reviewCommentCreateSchema = z.object({
   targetType: reviewTargetTypeSchema,
   targetId: z.string().uuid(),
@@ -330,6 +359,10 @@ export type ExecutionSearch = z.infer<typeof executionSearchSchema>;
 export type SuggestionSearch = z.infer<typeof suggestionSearchSchema>;
 export type Pagination = z.infer<typeof paginationSchema>;
 export type Sort = z.infer<typeof sortSchema>;
+export type ReviewCreate = z.infer<typeof reviewCreateSchema>;
+export type ReviewUpdate = z.infer<typeof reviewUpdateSchema>;
+export type ReviewSubmit = z.infer<typeof reviewSubmitSchema>;
+export type ReviewSearch = z.infer<typeof reviewSearchSchema>;
 export type ReviewCommentCreate = z.infer<typeof reviewCommentCreateSchema>;
 export type ReviewCommentUpdate = z.infer<typeof reviewCommentUpdateSchema>;
 export type ReviewStatusUpdate = z.infer<typeof reviewStatusUpdateSchema>;

@@ -9,6 +9,7 @@ import testSuiteRoutes from './test-suites.js';
 import testCaseRoutes from './test-cases.js';
 import executionRoutes from './executions.js';
 import reviewCommentRoutes from './review-comments.js';
+import reviewRoutes from './reviews.js';
 import apiTokenRoutes from './api-tokens.js';
 import editLockRoutes from './edit-locks.js';
 import internalRoutes from './internal.js';
@@ -33,6 +34,7 @@ router.use('/api/test-suites', testSuiteRoutes);
 router.use('/api/test-cases', testCaseRoutes);
 router.use('/api/executions', executionRoutes);
 router.use('/api/review-comments', reviewCommentRoutes);
+router.use('/api/reviews', reviewRoutes);
 router.use('/api/api-tokens', apiTokenRoutes);
 router.use('/api/locks', editLockRoutes);
 

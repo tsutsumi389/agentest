@@ -2,12 +2,14 @@ import { Router } from 'express';
 import { requireAuth, requireProjectRole } from '@agentest/auth';
 import { TestSuiteController } from '../controllers/test-suite.controller.js';
 import { ReviewCommentController } from '../controllers/review-comment.controller.js';
+import { ReviewController } from '../controllers/review.controller.js';
 import { requireTestSuiteRole } from '../middleware/require-test-suite-role.js';
 import { authConfig } from '../config/auth.js';
 
 const router: Router = Router();
 const testSuiteController = new TestSuiteController();
 const reviewCommentController = new ReviewCommentController();
+const reviewController = new ReviewController();
 
 /**
  * テストスイート作成
@@ -113,5 +115,17 @@ router.post('/:testSuiteId/restore', requireAuth(authConfig), requireTestSuiteRo
  * GET /api/test-suites/:testSuiteId/comments
  */
 router.get('/:testSuiteId/comments', requireAuth(authConfig), requireTestSuiteRole(['ADMIN', 'WRITE', 'READ']), reviewCommentController.getTestSuiteComments);
+
+/**
+ * テストスイートのレビュー一覧取得（SUBMITTEDのみ）
+ * GET /api/test-suites/:testSuiteId/reviews
+ */
+router.get('/:testSuiteId/reviews', requireAuth(authConfig), requireTestSuiteRole(['ADMIN', 'WRITE', 'READ']), reviewController.getReviewsByTestSuite);
+
+/**
+ * テストスイートのレビュー開始（DRAFT作成）
+ * POST /api/test-suites/:testSuiteId/reviews
+ */
+router.post('/:testSuiteId/reviews', requireAuth(authConfig), requireTestSuiteRole(['ADMIN', 'WRITE']), reviewController.startReview);
 
 export default router;

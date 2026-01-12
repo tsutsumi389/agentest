@@ -60,7 +60,6 @@ const TEST_SUITE_ID = '33333333-3333-3333-3333-333333333333';
 const TEST_PROJECT_ID = '55555555-5555-5555-5555-555555555555';
 const TEST_COMMENT_ID = '66666666-6666-6666-6666-666666666666';
 const TEST_REPLY_ID = '77777777-7777-7777-7777-777777777777';
-const TEST_PRECONDITION_ID = '88888888-8888-8888-8888-888888888888';
 
 describe('ReviewCommentService', () => {
   let service: ReviewCommentService;
@@ -102,46 +101,10 @@ describe('ReviewCommentService', () => {
     });
   });
 
-  describe('create', () => {
-    beforeEach(() => {
-      // テストスイートの存在確認
-      mockPrisma.testSuite.findFirst.mockResolvedValue({
-        id: TEST_SUITE_ID,
-        projectId: TEST_PROJECT_ID,
-      });
-      // プロジェクト権限チェック
-      mockPrisma.projectMember.findUnique.mockResolvedValue({
-        userId: TEST_USER_ID,
-        projectId: TEST_PROJECT_ID,
-        role: 'WRITE',
-      });
-    });
-
-    it('コメントを作成できる', async () => {
-      const mockCreatedComment = {
-        id: TEST_COMMENT_ID,
-        targetType: 'SUITE',
-        targetId: TEST_SUITE_ID,
-        targetField: 'TITLE',
-        content: 'New comment',
-        status: 'OPEN',
-        authorUserId: TEST_USER_ID,
-      };
-      mockPrisma.reviewComment.create.mockResolvedValue(mockCreatedComment);
-
-      const result = await service.create(TEST_USER_ID, {
-        targetType: 'SUITE',
-        targetId: TEST_SUITE_ID,
-        targetField: 'TITLE',
-        content: 'New comment',
-      });
-
-      expect(result).toEqual(mockCreatedComment);
-    });
-
-    it('対象リソースが存在しない場合はNotFoundErrorを投げる', async () => {
-      mockPrisma.testSuite.findFirst.mockResolvedValue(null);
-
+  describe('create (deprecated)', () => {
+    it('BadRequestErrorを投げる（非推奨）', async () => {
+      // 旧APIは非推奨となり、BadRequestErrorを投げるようになった
+      // 新しい /api/reviews/:reviewId/comments エンドポイントを使用する必要がある
       await expect(
         service.create(TEST_USER_ID, {
           targetType: 'SUITE',
@@ -149,69 +112,7 @@ describe('ReviewCommentService', () => {
           targetField: 'TITLE',
           content: 'New comment',
         })
-      ).rejects.toThrow(NotFoundError);
-    });
-
-    it('権限がない場合はAuthorizationErrorを投げる', async () => {
-      mockPrisma.projectMember.findUnique.mockResolvedValue({
-        userId: TEST_USER_ID,
-        projectId: TEST_PROJECT_ID,
-        role: 'READ', // WRITE以上が必要
-      });
-      mockPrisma.project.findUnique.mockResolvedValue({
-        id: TEST_PROJECT_ID,
-        organizationId: null,
-      });
-
-      await expect(
-        service.create(TEST_USER_ID, {
-          targetType: 'SUITE',
-          targetId: TEST_SUITE_ID,
-          targetField: 'TITLE',
-          content: 'New comment',
-        })
-      ).rejects.toThrow(AuthorizationError);
-    });
-
-    it('targetItemIdを指定して前提条件へのコメントを作成できる', async () => {
-      mockPrisma.testSuitePrecondition.findFirst.mockResolvedValue({
-        id: TEST_PRECONDITION_ID,
-        testSuiteId: TEST_SUITE_ID,
-      });
-      mockPrisma.reviewComment.create.mockResolvedValue({
-        id: TEST_COMMENT_ID,
-        targetType: 'SUITE',
-        targetId: TEST_SUITE_ID,
-        targetField: 'PRECONDITION',
-        targetItemId: TEST_PRECONDITION_ID,
-        content: 'Precondition comment',
-      });
-
-      await service.create(TEST_USER_ID, {
-        targetType: 'SUITE',
-        targetId: TEST_SUITE_ID,
-        targetField: 'PRECONDITION',
-        targetItemId: TEST_PRECONDITION_ID,
-        content: 'Precondition comment',
-      });
-
-      expect(mockPrisma.testSuitePrecondition.findFirst).toHaveBeenCalledWith({
-        where: { id: TEST_PRECONDITION_ID, testSuiteId: TEST_SUITE_ID },
-      });
-    });
-
-    it('存在しない前提条件へのコメントはNotFoundErrorを投げる', async () => {
-      mockPrisma.testSuitePrecondition.findFirst.mockResolvedValue(null);
-
-      await expect(
-        service.create(TEST_USER_ID, {
-          targetType: 'SUITE',
-          targetId: TEST_SUITE_ID,
-          targetField: 'PRECONDITION',
-          targetItemId: TEST_PRECONDITION_ID,
-          content: 'Precondition comment',
-        })
-      ).rejects.toThrow(NotFoundError);
+      ).rejects.toThrow(BadRequestError);
     });
   });
 
