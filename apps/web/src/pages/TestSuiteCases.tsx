@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate, Link } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, AlertCircle, Clock } from 'lucide-react';
-import { testSuitesApi, projectsApi, reviewsApi, type TestCase, type TestSuite, type ProjectMemberRole, type ReviewCommentWithReplies } from '../lib/api';
+import { testSuitesApi, projectsApi, type TestCase, type TestSuite, type ProjectMemberRole, type ReviewCommentWithReplies } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { usePageSidebar } from '../components/Layout';
 import { toast } from '../stores/toast';
@@ -14,7 +14,7 @@ import { TestCaseForm } from '../components/test-case/TestCaseForm';
 import { TestSuiteForm } from '../components/test-suite/TestSuiteForm';
 import { StartExecutionModal } from '../components/execution/StartExecutionModal';
 import { PreconditionList } from '../components/test-suite/PreconditionList';
-import { OverviewReviewSelector } from '../components/test-suite/OverviewReviewSelector';
+import { UnresolvedCommentList } from '../components/review/UnresolvedCommentList';
 import { TestSuiteHistoryList } from '../components/test-suite/TestSuiteHistoryList';
 import { DeleteTestSuiteSection } from '../components/test-suite/DeleteTestSuiteSection';
 import { ExecutionHistoryList } from '../components/execution/ExecutionHistoryList';
@@ -361,6 +361,7 @@ export function TestSuiteCasesPage() {
                   description={suite.description}
                   executions={executions}
                   currentRole={currentRole}
+                  currentUserId={user?.id || ''}
                 />
               )}
 
@@ -437,6 +438,7 @@ interface OverviewTabProps {
   description: string | null;
   executions: { id: string; status: string; startedAt: string }[];
   currentRole: 'OWNER' | ProjectMemberRole | undefined;
+  currentUserId: string;
 }
 
 function OverviewTab({
@@ -444,35 +446,25 @@ function OverviewTab({
   description,
   executions,
   currentRole,
+  currentUserId,
 }: OverviewTabProps) {
-  // レビュー選択状態
-  const [selectedReviewId, setSelectedReviewId] = useState<string | null>(null);
-
   // ReviewSessionからコメントを取得
   const { currentReview, refreshReview } = useReviewSession();
 
-  // 選択したレビューの詳細を取得
-  const { data: selectedReviewData } = useQuery({
-    queryKey: ['review-detail', selectedReviewId],
-    queryFn: () => reviewsApi.getById(selectedReviewId!),
-    enabled: !!selectedReviewId,
-  });
-
-  // 表示するコメント（レビュー選択時はそのレビュー、レビュー中は現在のセッション）
-  const displayComments: ReviewCommentWithReplies[] = selectedReviewId
-    ? (selectedReviewData?.review?.comments || [])
-    : (currentReview?.comments || []);
+  // 表示するコメント（レビュー中は現在のセッション）
+  const displayComments: ReviewCommentWithReplies[] = currentReview?.comments || [];
 
   // 編集権限の判定（WRITE以上）
   const canEdit = currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'WRITE';
 
   return (
     <div className="space-y-6">
-      {/* レビュー選択UI */}
-      <OverviewReviewSelector
-        testSuiteId={testSuiteId}
-        selectedReviewId={selectedReviewId}
-        onSelectReview={setSelectedReviewId}
+      {/* 未解決のレビューコメント一覧 */}
+      <UnresolvedCommentList
+        targetType="SUITE"
+        targetId={testSuiteId}
+        currentUserId={currentUserId}
+        canEdit={canEdit}
       />
 
       {/* 説明セクション（コメント可能） */}

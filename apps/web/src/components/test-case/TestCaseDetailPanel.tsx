@@ -11,6 +11,7 @@ import {
   type TestCaseWithDetails,
   type ProjectMemberRole,
 } from '../../lib/api';
+import { useAuth } from '../../hooks/useAuth';
 import { useReviewSession } from '../../contexts/ReviewSessionContext';
 import { TestCasePreconditionList } from './TestCasePreconditionList';
 import { TestCaseStepList } from './TestCaseStepList';
@@ -18,6 +19,7 @@ import { TestCaseExpectedResultList } from './TestCaseExpectedResultList';
 import { TestCaseHistoryList } from './TestCaseHistoryList';
 import { DeleteTestCaseSection } from './DeleteTestCaseSection';
 import { CommentableField } from '../review/CommentableField';
+import { UnresolvedCommentList } from '../review/UnresolvedCommentList';
 import { TestCaseForm } from './TestCaseForm';
 import { type TestCaseTabType } from '../test-suite/TestSuiteHeader';
 import { MarkdownPreview } from '../common/markdown';
@@ -199,6 +201,7 @@ function OverviewTab({
   testCase: TestCaseWithDetails;
   canEdit: boolean;
 }) {
+  const { user } = useAuth();
   const { currentReview, refreshReview } = useReviewSession();
 
   // 現在のレビューセッションからコメントを取得
@@ -211,6 +214,14 @@ function OverviewTab({
 
   return (
     <div className="space-y-6">
+      {/* 未解決のレビューコメント一覧 */}
+      <UnresolvedCommentList
+        targetType="CASE"
+        targetId={testCase.id}
+        currentUserId={user?.id || ''}
+        canEdit={canEdit}
+      />
+
       {/* 説明 */}
       <CommentableField
         targetType="CASE"
