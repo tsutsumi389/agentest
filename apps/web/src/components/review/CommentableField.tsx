@@ -7,7 +7,7 @@ import { toast } from '../../stores/toast';
 import { ReviewCommentForm } from './ReviewCommentForm';
 import { InlineCommentThread } from './InlineCommentThread';
 
-interface CommentableItemProps {
+interface CommentableFieldProps {
   /** 子要素 */
   children: ReactNode;
   /** 対象タイプ（SUITE or CASE） */
@@ -16,10 +16,8 @@ interface CommentableItemProps {
   targetId: string;
   /** 対象フィールド */
   targetField: ReviewTargetField;
-  /** アイテムID（前提条件/ステップ/期待結果のID） */
-  itemId: string;
-  /** アイテムの内容（スナップショット用） */
-  itemContent: string;
+  /** フィールド全体のコンテンツ（スナップショット用、オプション） */
+  fieldContent?: string;
   /** 外部から渡されるコメント一覧（オプション） */
   comments?: ReviewCommentWithReplies[];
   /** 編集権限があるか */
@@ -29,36 +27,35 @@ interface CommentableItemProps {
 }
 
 /**
- * コメント可能なアイテムのラッパーコンポーネント
- * レビューモード中にホバーするとコメント追加ボタンを表示し、
- * クリックでインラインフォームを展開する
+ * フィールド全体にコメントを追加できるラッパーコンポーネント
+ * 前提条件セクション全体や説明フィールド全体へのコメント追加に使用
+ * targetItemIdなしでコメントを追加する
  */
-export function CommentableItem({
+export function CommentableField({
   children,
   targetType,
   targetId,
   targetField,
-  itemId,
-  itemContent,
+  fieldContent,
   comments: externalComments,
   canEdit: externalCanEdit,
   onCommentAdded,
-}: CommentableItemProps) {
+}: CommentableFieldProps) {
   const { isReviewing, currentReview, addComment, isLoading } = useReviewSession();
   const { user } = useAuth();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // このアイテムに紐づくコメントを取得
+  // このフィールドに紐づくコメントを取得（targetItemIdがnullのもの）
   const allComments = externalComments || currentReview?.comments || [];
-  const itemComments = getCommentsForTarget(
+  const fieldComments = getCommentsForTarget(
     allComments,
     targetType,
     targetId,
     targetField,
-    itemId
+    null // targetItemIdがnullのコメントのみ取得
   );
-  const commentCount = itemComments.length;
+  const commentCount = fieldComments.length;
 
   // 編集権限の判定
   const canEdit = externalCanEdit !== undefined ? externalCanEdit : true;
@@ -71,8 +68,8 @@ export function CommentableItem({
         targetType,
         targetId,
         targetField,
-        targetItemId: itemId,
-        targetItemContent: itemContent,
+        // targetItemIdは指定しない（フィールド全体へのコメント）
+        targetItemContent: fieldContent,
         content,
       });
       setIsFormOpen(false);
@@ -128,11 +125,11 @@ export function CommentableItem({
 
       {/* インラインフォーム */}
       {isFormOpen && (
-        <div className="mt-3 ml-9 p-3 bg-background-secondary rounded-lg border border-border">
+        <div className="mt-3 p-3 bg-background-secondary rounded-lg border border-border">
           <ReviewCommentForm
             onSubmit={handleAddComment}
             isSubmitting={isSubmitting}
-            placeholder="このアイテムへのコメントを入力..."
+            placeholder="このセクションへのコメントを入力..."
             autoFocus
             onCancel={() => setIsFormOpen(false)}
             compact
@@ -142,14 +139,12 @@ export function CommentableItem({
 
       {/* インラインコメント表示 */}
       {commentCount > 0 && user && (
-        <div className="ml-9">
-          <InlineCommentThread
-            comments={itemComments}
-            currentUserId={user.id}
-            canEdit={canEdit}
-            onCommentUpdated={onCommentAdded}
-          />
-        </div>
+        <InlineCommentThread
+          comments={fieldComments}
+          currentUserId={user.id}
+          canEdit={canEdit}
+          onCommentUpdated={onCommentAdded}
+        />
       )}
     </div>
   );
