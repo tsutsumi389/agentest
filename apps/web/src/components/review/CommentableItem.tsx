@@ -60,7 +60,7 @@ export function CommentableItem({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // APIから未解決コメントを取得（レビュー中でない場合のみ）
-  const { data: unresolvedData } = useQuery({
+  const { data: unresolvedData, isLoading: isLoadingUnresolved } = useQuery({
     queryKey: ['unresolved-comments', targetType, targetId],
     queryFn: () => {
       const params = { status: 'OPEN' as const, limit: 100 };
@@ -130,7 +130,8 @@ export function CommentableItem({
 
   // レビューモードでない場合：未解決コメントがあれば表示
   if (!isReviewing) {
-    if (unresolvedComments.length === 0) {
+    // ローディング中またはコメントがない場合
+    if (isLoadingUnresolved || unresolvedComments.length === 0) {
       return <>{children}</>;
     }
 

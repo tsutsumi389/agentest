@@ -57,7 +57,7 @@ export function CommentableField({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // APIから未解決コメントを取得（レビュー中でない場合のみ）
-  const { data: unresolvedData } = useQuery({
+  const { data: unresolvedData, isLoading: isLoadingUnresolved } = useQuery({
     queryKey: ['unresolved-comments', targetType, targetId],
     queryFn: () => {
       const params = { status: 'OPEN' as const, limit: 100 };
@@ -127,8 +127,20 @@ export function CommentableField({
 
   // レビューモードでない場合：未解決コメントがあれば表示
   if (!isReviewing) {
-    if (unresolvedComments.length === 0) {
-      return <>{children}</>;
+    // ローディング中またはコメントがない場合
+    if (isLoadingUnresolved || unresolvedComments.length === 0) {
+      return (
+        <div>
+          {children}
+          {/* ローディング中の表示 */}
+          {isLoadingUnresolved && (
+            <div className="mt-2 flex items-center gap-2 text-foreground-muted text-sm">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>コメントを読み込み中...</span>
+            </div>
+          )}
+        </div>
+      );
     }
 
     return (
