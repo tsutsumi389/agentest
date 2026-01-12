@@ -1,6 +1,7 @@
-import { prisma, type ReviewTargetType, type ReviewTargetField, type ReviewStatus, type ProjectRole } from '@agentest/db';
+import { prisma, type ReviewTargetType, type ReviewTargetField, type ReviewStatus } from '@agentest/db';
 import { NotFoundError, AuthorizationError, BadRequestError } from '@agentest/shared';
 import { ReviewCommentRepository, type ReviewCommentSearchOptions } from '../repositories/review-comment.repository.js';
+import { authorizationService } from './authorization.service.js';
 
 /**
  * レビューコメント作成データ
@@ -42,52 +43,6 @@ export class ReviewCommentService {
       }
       return testCase.testSuite.projectId;
     }
-  }
-
-  /**
-   * ユーザーのプロジェクト権限を確認
-   */
-  async checkProjectRole(
-    userId: string,
-    projectId: string,
-    requiredRoles: ProjectRole[]
-  ): Promise<boolean> {
-    // プロジェクトメンバーシップをチェック
-    const projectMember = await prisma.projectMember.findUnique({
-      where: {
-        projectId_userId: { projectId, userId },
-      },
-    });
-
-    if (projectMember) {
-      if (projectMember.role === 'OWNER' || requiredRoles.includes(projectMember.role)) {
-        return true;
-      }
-    }
-
-    // プロジェクトの組織情報を取得
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-      select: { organizationId: true },
-    });
-
-    // 組織メンバーシップをチェック
-    if (project?.organizationId) {
-      const orgMember = await prisma.organizationMember.findUnique({
-        where: {
-          organizationId_userId: {
-            organizationId: project.organizationId,
-            userId,
-          },
-        },
-      });
-
-      if (orgMember && ['OWNER', 'ADMIN'].includes(orgMember.role)) {
-        return true;
-      }
-    }
-
-    return false;
   }
 
   /**
@@ -150,7 +105,7 @@ export class ReviewCommentService {
     const projectId = await this.getTargetProjectId(comment.targetType, comment.targetId);
 
     // プロジェクト権限確認（WRITE以上）
-    const hasPermission = await this.checkProjectRole(userId, projectId, ['ADMIN', 'WRITE']);
+    const hasPermission = await authorizationService.checkProjectRole(userId, projectId, ['ADMIN', 'WRITE']);
     if (!hasPermission) {
       throw new AuthorizationError('Insufficient permissions to update comment status');
     }
@@ -182,7 +137,7 @@ export class ReviewCommentService {
     const projectId = await this.getTargetProjectId(comment.targetType, comment.targetId);
 
     // プロジェクト権限確認（WRITE以上）
-    const hasPermission = await this.checkProjectRole(userId, projectId, ['ADMIN', 'WRITE']);
+    const hasPermission = await authorizationService.checkProjectRole(userId, projectId, ['ADMIN', 'WRITE']);
     if (!hasPermission) {
       throw new AuthorizationError('Insufficient permissions to create reply');
     }

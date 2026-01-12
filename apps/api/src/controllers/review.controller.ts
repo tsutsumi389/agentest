@@ -99,14 +99,12 @@ export class ReviewController {
     try {
       const { reviewId } = reviewIdSchema.parse(req.params);
 
-      // アクセス権限確認
-      const canAccess = await this.reviewService.canAccessReview(reviewId, req.user!.id);
-      if (!canAccess) {
+      // アクセス権限確認とレビュー取得を1回で実行
+      const review = await this.reviewService.getAccessibleReview(reviewId, req.user!.id);
+      if (!review) {
         res.status(404).json({ error: { message: 'Review not found' } });
         return;
       }
-
-      const review = await this.reviewService.findById(reviewId);
 
       res.json({ review });
     } catch (error) {

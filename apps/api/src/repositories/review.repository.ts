@@ -429,17 +429,6 @@ export class ReviewRepository {
   }
 
   /**
-   * テストスイートのプロジェクトIDを取得
-   */
-  async getTestSuiteProjectId(testSuiteId: string): Promise<string | null> {
-    const testSuite = await prisma.testSuite.findUnique({
-      where: { id: testSuiteId },
-      select: { projectId: true },
-    });
-    return testSuite?.projectId ?? null;
-  }
-
-  /**
    * レビューの未解決コメント数を取得
    */
   async getOpenCommentCount(reviewId: string): Promise<number> {

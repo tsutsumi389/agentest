@@ -4,10 +4,10 @@ import {
   type ReviewTargetType,
   type ReviewTargetField,
   type ReviewStatus,
-  type ProjectRole,
 } from '@agentest/db';
 import { NotFoundError, AuthorizationError, BadRequestError } from '@agentest/shared';
 import { ReviewRepository, type ReviewSearchOptions } from '../repositories/review.repository.js';
+import { authorizationService } from './authorization.service.js';
 
 /**
  * レビュー作成データ
@@ -33,52 +33,6 @@ interface CreateCommentData {
  */
 export class ReviewService {
   private reviewRepo = new ReviewRepository();
-
-  /**
-   * ユーザーのプロジェクト権限を確認
-   */
-  private async checkProjectRole(
-    userId: string,
-    projectId: string,
-    requiredRoles: ProjectRole[]
-  ): Promise<boolean> {
-    // プロジェクトメンバーシップをチェック
-    const projectMember = await prisma.projectMember.findUnique({
-      where: {
-        projectId_userId: { projectId, userId },
-      },
-    });
-
-    if (projectMember) {
-      if (projectMember.role === 'OWNER' || requiredRoles.includes(projectMember.role)) {
-        return true;
-      }
-    }
-
-    // プロジェクトの組織情報を取得
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-      select: { organizationId: true },
-    });
-
-    // 組織メンバーシップをチェック
-    if (project?.organizationId) {
-      const orgMember = await prisma.organizationMember.findUnique({
-        where: {
-          organizationId_userId: {
-            organizationId: project.organizationId,
-            userId,
-          },
-        },
-      });
-
-      if (orgMember && ['OWNER', 'ADMIN'].includes(orgMember.role)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
 
   /**
    * テストスイートの存在確認とプロジェクトID取得
@@ -183,7 +137,7 @@ export class ReviewService {
     const projectId = await this.getTestSuiteProjectId(data.testSuiteId);
 
     // プロジェクト権限確認（WRITE以上）
-    const hasPermission = await this.checkProjectRole(userId, projectId, ['ADMIN', 'WRITE']);
+    const hasPermission = await authorizationService.checkProjectRole(userId, projectId, ['ADMIN', 'WRITE']);
     if (!hasPermission) {
       throw new AuthorizationError('Insufficient permissions to start review');
     }
@@ -273,7 +227,7 @@ export class ReviewService {
     } else {
       // SUBMITTEDの場合は権限確認（WRITE以上）
       const projectId = await this.getTestSuiteProjectId(review.testSuiteId);
-      const hasPermission = await this.checkProjectRole(userId, projectId, ['ADMIN', 'WRITE']);
+      const hasPermission = await authorizationService.checkProjectRole(userId, projectId, ['ADMIN', 'WRITE']);
       if (!hasPermission) {
         throw new AuthorizationError('Insufficient permissions to add comment');
       }
@@ -334,7 +288,7 @@ export class ReviewService {
 
     // プロジェクト権限確認（WRITE以上）
     const projectId = await this.getTestSuiteProjectId(review.testSuiteId);
-    const hasPermission = await this.checkProjectRole(userId, projectId, ['ADMIN', 'WRITE']);
+    const hasPermission = await authorizationService.checkProjectRole(userId, projectId, ['ADMIN', 'WRITE']);
     if (!hasPermission) {
       throw new AuthorizationError('Insufficient permissions to update comment status');
     }
@@ -388,7 +342,7 @@ export class ReviewService {
 
     // プロジェクト権限確認（WRITE以上）
     const projectId = await this.getTestSuiteProjectId(review.testSuiteId);
-    const hasPermission = await this.checkProjectRole(userId, projectId, ['ADMIN', 'WRITE']);
+    const hasPermission = await authorizationService.checkProjectRole(userId, projectId, ['ADMIN', 'WRITE']);
     if (!hasPermission) {
       throw new AuthorizationError('Insufficient permissions to add reply');
     }
@@ -466,20 +420,26 @@ export class ReviewService {
   }
 
   /**
-   * レビューにアクセスできるか確認（DRAFTは投稿者本人のみ）
+   * レビューにアクセスできるか確認し、アクセス可能ならレビューを返す
+   * DRAFTは投稿者本人のみアクセス可能
+   * @returns アクセス可能な場合はレビュー、そうでなければnull
    */
-  async canAccessReview(reviewId: string, userId: string): Promise<boolean> {
+  async getAccessibleReview(reviewId: string, userId: string) {
     const review = await this.reviewRepo.findById(reviewId);
     if (!review) {
-      return false;
+      return null;
     }
 
     // SUBMITTEDは誰でもアクセス可能
     if (review.status === 'SUBMITTED') {
-      return true;
+      return review;
     }
 
     // DRAFTは投稿者本人のみ
-    return review.authorUserId === userId;
+    if (review.authorUserId === userId) {
+      return review;
+    }
+
+    return null;
   }
 }
