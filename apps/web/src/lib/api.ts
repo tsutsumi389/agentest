@@ -1281,7 +1281,7 @@ export const organizationsApi = {
 };
 
 // ============================================
-// レビューコメント関連型定義
+// レビュー関連型定義
 // ============================================
 
 /** レビュー対象タイプ */
@@ -1292,6 +1292,12 @@ export type ReviewTargetField = 'TITLE' | 'DESCRIPTION' | 'PRECONDITION' | 'STEP
 
 /** レビューステータス */
 export type ReviewStatus = 'OPEN' | 'RESOLVED';
+
+/** レビューセッションステータス */
+export type ReviewSessionStatus = 'DRAFT' | 'SUBMITTED';
+
+/** レビュー評価 */
+export type ReviewVerdict = 'APPROVED' | 'CHANGES_REQUESTED' | 'COMMENT_ONLY';
 
 /** レビューコメント著者情報 */
 export interface ReviewAuthor {
@@ -1304,6 +1310,27 @@ export interface ReviewAuthor {
 export interface ReviewAgentSession {
   id: string;
   clientName: string | null;
+}
+
+/** レビューセッション基本型 */
+export interface Review {
+  id: string;
+  testSuiteId: string;
+  authorUserId: string | null;
+  authorAgentSessionId: string | null;
+  status: ReviewSessionStatus;
+  verdict: ReviewVerdict | null;
+  summary: string | null;
+  submittedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** 著者情報付きレビュー（一覧用） */
+export interface ReviewWithAuthor extends Review {
+  author: ReviewAuthor | null;
+  agentSession: ReviewAgentSession | null;
+  _count: { comments: number };
 }
 
 /** レビュー返信 */
@@ -1322,6 +1349,7 @@ export interface ReviewReply {
 /** レビューコメント基本型 */
 export interface ReviewComment {
   id: string;
+  reviewId: string;
   targetType: ReviewTargetType;
   targetId: string;
   targetField: ReviewTargetField;
@@ -1342,9 +1370,34 @@ export interface ReviewCommentWithReplies extends ReviewComment {
   _count: { replies: number };
 }
 
+/** 詳細付きレビュー（コメント含む） */
+export interface ReviewWithDetails extends ReviewWithAuthor {
+  comments: ReviewCommentWithReplies[];
+}
+
+/** 下書きレビュー（テストスイート情報付き） */
+export interface DraftReview extends ReviewWithAuthor {
+  testSuite: {
+    id: string;
+    name: string;
+    project: {
+      id: string;
+      name: string;
+    };
+  };
+}
+
 /** コメント一覧レスポンス */
 export interface ReviewCommentListResponse {
   comments: ReviewCommentWithReplies[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+/** レビュー一覧レスポンス */
+export interface ReviewListResponse {
+  reviews: ReviewWithAuthor[];
   total: number;
   limit: number;
   offset: number;
@@ -1363,6 +1416,13 @@ export interface CreateReviewCommentRequest {
 export interface ReviewCommentSearchParams {
   status?: 'OPEN' | 'RESOLVED' | 'ALL';
   targetField?: ReviewTargetField;
+  limit?: number;
+  offset?: number;
+}
+
+/** レビュー検索パラメータ */
+export interface ReviewSearchParams {
+  verdict?: ReviewVerdict;
   limit?: number;
   offset?: number;
 }
@@ -1429,6 +1489,76 @@ export const getTestCaseComments = (testCaseId: string, params?: ReviewCommentSe
   return api.get<ReviewCommentListResponse>(
     `/api/test-cases/${testCaseId}/comments${queryString ? `?${queryString}` : ''}`
   );
+};
+
+// ============================================
+// レビューAPI（GitHub PR形式）
+// ============================================
+
+export const reviewsApi = {
+  // テストスイートのレビュー一覧取得（SUBMITTEDのみ）
+  getByTestSuite: (testSuiteId: string, params?: ReviewSearchParams) => {
+    const query = new URLSearchParams();
+    if (params?.verdict) query.set('verdict', params.verdict);
+    if (params?.limit !== undefined) query.set('limit', String(params.limit));
+    if (params?.offset !== undefined) query.set('offset', String(params.offset));
+    const queryString = query.toString();
+    return api.get<ReviewListResponse>(
+      `/api/test-suites/${testSuiteId}/reviews${queryString ? `?${queryString}` : ''}`
+    );
+  },
+
+  // レビュー開始（DRAFT作成）
+  start: (testSuiteId: string, data?: { summary?: string }) =>
+    api.post<{ review: ReviewWithDetails }>(`/api/test-suites/${testSuiteId}/reviews`, data),
+
+  // 自分の下書きレビュー一覧取得
+  getDrafts: () =>
+    api.get<{ reviews: DraftReview[] }>('/api/reviews/drafts'),
+
+  // レビュー詳細取得
+  getById: (reviewId: string) =>
+    api.get<{ review: ReviewWithDetails }>(`/api/reviews/${reviewId}`),
+
+  // レビュー更新（DRAFTのみ）
+  update: (reviewId: string, data: { summary?: string }) =>
+    api.patch<{ review: ReviewWithDetails }>(`/api/reviews/${reviewId}`, data),
+
+  // レビュー提出（DRAFT → SUBMITTED）
+  submit: (reviewId: string, data: { verdict: ReviewVerdict; summary?: string }) =>
+    api.post<{ review: ReviewWithDetails }>(`/api/reviews/${reviewId}/submit`, data),
+
+  // レビュー削除（DRAFTのみ）
+  delete: (reviewId: string) =>
+    api.delete<void>(`/api/reviews/${reviewId}`),
+
+  // コメント追加
+  addComment: (reviewId: string, data: CreateReviewCommentRequest) =>
+    api.post<{ comment: ReviewCommentWithReplies }>(`/api/reviews/${reviewId}/comments`, data),
+
+  // コメント更新
+  updateComment: (reviewId: string, commentId: string, data: { content: string }) =>
+    api.patch<{ comment: ReviewCommentWithReplies }>(`/api/reviews/${reviewId}/comments/${commentId}`, data),
+
+  // コメント削除
+  deleteComment: (reviewId: string, commentId: string) =>
+    api.delete<void>(`/api/reviews/${reviewId}/comments/${commentId}`),
+
+  // コメントステータス変更
+  updateCommentStatus: (reviewId: string, commentId: string, status: ReviewStatus) =>
+    api.patch<{ comment: ReviewCommentWithReplies }>(`/api/reviews/${reviewId}/comments/${commentId}/status`, { status }),
+
+  // 返信追加
+  addReply: (reviewId: string, commentId: string, data: { content: string }) =>
+    api.post<{ reply: ReviewReply }>(`/api/reviews/${reviewId}/comments/${commentId}/replies`, data),
+
+  // 返信更新
+  updateReply: (reviewId: string, commentId: string, replyId: string, data: { content: string }) =>
+    api.patch<{ reply: ReviewReply }>(`/api/reviews/${reviewId}/comments/${commentId}/replies/${replyId}`, data),
+
+  // 返信削除
+  deleteReply: (reviewId: string, commentId: string, replyId: string) =>
+    api.delete<void>(`/api/reviews/${reviewId}/comments/${commentId}/replies/${replyId}`),
 };
 
 // ============================================
