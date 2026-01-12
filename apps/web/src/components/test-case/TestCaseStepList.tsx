@@ -3,8 +3,9 @@ import {
   Loader2,
   ListOrdered,
 } from 'lucide-react';
-import { testCasesApi, ApiError, type TestCaseStep, type ProjectMemberRole } from '../../lib/api';
+import { testCasesApi, ApiError, type TestCaseStep, type ProjectMemberRole, type ReviewCommentWithReplies } from '../../lib/api';
 import { MarkdownPreview } from '../common/markdown';
+import { CommentableItem } from '../review/CommentableItem';
 
 interface TestCaseStepListProps {
   /** テストケースID */
@@ -15,6 +16,10 @@ interface TestCaseStepListProps {
   currentRole?: 'OWNER' | ProjectMemberRole;
   /** 更新時のコールバック（未使用、互換性のため維持） */
   onUpdated?: () => void;
+  /** レビューコメント一覧 */
+  comments?: ReviewCommentWithReplies[];
+  /** コメント追加時のコールバック */
+  onCommentAdded?: () => void;
 }
 
 /**
@@ -24,6 +29,8 @@ interface TestCaseStepListProps {
 export function TestCaseStepList({
   testCaseId,
   initialSteps,
+  comments,
+  onCommentAdded,
 }: TestCaseStepListProps) {
   const [steps, setSteps] = useState<TestCaseStep[]>(initialSteps || []);
   const [isLoading, setIsLoading] = useState(!initialSteps);
@@ -106,10 +113,20 @@ export function TestCaseStepList({
               <span className="flex-shrink-0 w-6 h-6 rounded-full bg-accent/20 text-accent flex items-center justify-center text-xs font-medium">
                 {index + 1}
               </span>
-              {/* 内容 */}
-              <div className="flex-1">
-                <MarkdownPreview content={step.content} />
-              </div>
+              {/* 内容（CommentableItemでラップ） */}
+              <CommentableItem
+                targetType="CASE"
+                targetId={testCaseId}
+                targetField="STEP"
+                itemId={step.id}
+                itemContent={step.content}
+                comments={comments}
+                onCommentAdded={onCommentAdded}
+              >
+                <div className="flex-1">
+                  <MarkdownPreview content={step.content} />
+                </div>
+              </CommentableItem>
             </div>
           ))}
         </div>

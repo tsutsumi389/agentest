@@ -3,8 +3,9 @@ import {
   Loader2,
   ClipboardList,
 } from 'lucide-react';
-import { testCasesApi, ApiError, type TestCasePrecondition, type ProjectMemberRole } from '../../lib/api';
+import { testCasesApi, ApiError, type TestCasePrecondition, type ProjectMemberRole, type ReviewCommentWithReplies } from '../../lib/api';
 import { MarkdownPreview } from '../common/markdown';
+import { CommentableItem } from '../review/CommentableItem';
 
 interface TestCasePreconditionListProps {
   /** テストケースID */
@@ -15,6 +16,10 @@ interface TestCasePreconditionListProps {
   currentRole?: 'OWNER' | ProjectMemberRole;
   /** 更新時のコールバック（未使用、互換性のため維持） */
   onUpdated?: () => void;
+  /** レビューコメント一覧 */
+  comments?: ReviewCommentWithReplies[];
+  /** コメント追加時のコールバック */
+  onCommentAdded?: () => void;
 }
 
 /**
@@ -24,6 +29,8 @@ interface TestCasePreconditionListProps {
 export function TestCasePreconditionList({
   testCaseId,
   initialPreconditions,
+  comments,
+  onCommentAdded,
 }: TestCasePreconditionListProps) {
   const [preconditions, setPreconditions] = useState<TestCasePrecondition[]>(initialPreconditions || []);
   const [isLoading, setIsLoading] = useState(!initialPreconditions);
@@ -106,10 +113,20 @@ export function TestCasePreconditionList({
               <span className="flex-shrink-0 w-6 h-6 rounded-full bg-background-tertiary flex items-center justify-center text-xs font-medium text-foreground-muted">
                 {index + 1}
               </span>
-              {/* 内容 */}
-              <div className="flex-1">
-                <MarkdownPreview content={precondition.content} />
-              </div>
+              {/* 内容（CommentableItemでラップ） */}
+              <CommentableItem
+                targetType="CASE"
+                targetId={testCaseId}
+                targetField="PRECONDITION"
+                itemId={precondition.id}
+                itemContent={precondition.content}
+                comments={comments}
+                onCommentAdded={onCommentAdded}
+              >
+                <div className="flex-1">
+                  <MarkdownPreview content={precondition.content} />
+                </div>
+              </CommentableItem>
             </div>
           ))}
         </div>

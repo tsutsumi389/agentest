@@ -25,6 +25,7 @@ interface CreateCommentData {
   targetId: string;
   targetField: ReviewTargetField;
   targetItemId?: string;
+  targetItemContent?: string;
   content: string;
 }
 
@@ -242,6 +243,7 @@ export class ReviewService {
       targetId: data.targetId,
       targetField: data.targetField,
       targetItemId: data.targetItemId,
+      targetItemContent: data.targetItemContent,
       authorUserId: userId,
       content: data.content,
     });

@@ -312,6 +312,7 @@ export const reviewCommentCreateSchema = z.object({
   targetId: z.string().uuid(),
   targetField: reviewTargetFieldSchema,
   targetItemId: z.string().uuid().optional(),
+  targetItemContent: z.string().max(1000).optional(),
   content: z.string().min(1).max(2000),
 });
 

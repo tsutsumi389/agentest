@@ -21,6 +21,7 @@ import {
 } from '../../lib/api';
 import { TARGET_FIELD_LABELS } from '../../lib/constants';
 import { toast } from '../../stores/toast';
+import { MarkdownPreview } from '../common/markdown';
 import { ReviewStatusBadge } from './ReviewStatusBadge';
 import { ReviewCommentForm } from './ReviewCommentForm';
 import { ReviewCommentEditor } from './ReviewCommentEditor';
@@ -245,6 +246,13 @@ export function ReviewCommentItem({
             </span>
           </div>
         </div>
+
+        {/* 対象アイテムのスナップショット表示 */}
+        {comment.targetItemContent && (
+          <div className="mb-3 p-2 bg-background-tertiary rounded border-l-2 border-accent">
+            <MarkdownPreview content={comment.targetItemContent} />
+          </div>
+        )}
 
         {/* コメント内容 */}
         {isEditing ? (

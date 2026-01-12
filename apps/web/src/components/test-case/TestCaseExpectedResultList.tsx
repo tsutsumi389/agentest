@@ -3,8 +3,9 @@ import {
   Loader2,
   CheckCircle,
 } from 'lucide-react';
-import { testCasesApi, ApiError, type TestCaseExpectedResult, type ProjectMemberRole } from '../../lib/api';
+import { testCasesApi, ApiError, type TestCaseExpectedResult, type ProjectMemberRole, type ReviewCommentWithReplies } from '../../lib/api';
 import { MarkdownPreview } from '../common/markdown';
+import { CommentableItem } from '../review/CommentableItem';
 
 interface TestCaseExpectedResultListProps {
   /** テストケースID */
@@ -15,6 +16,10 @@ interface TestCaseExpectedResultListProps {
   currentRole?: 'OWNER' | ProjectMemberRole;
   /** 更新時のコールバック（未使用、互換性のため維持） */
   onUpdated?: () => void;
+  /** レビューコメント一覧 */
+  comments?: ReviewCommentWithReplies[];
+  /** コメント追加時のコールバック */
+  onCommentAdded?: () => void;
 }
 
 /**
@@ -24,6 +29,8 @@ interface TestCaseExpectedResultListProps {
 export function TestCaseExpectedResultList({
   testCaseId,
   initialExpectedResults,
+  comments,
+  onCommentAdded,
 }: TestCaseExpectedResultListProps) {
   const [expectedResults, setExpectedResults] = useState<TestCaseExpectedResult[]>(initialExpectedResults || []);
   const [isLoading, setIsLoading] = useState(!initialExpectedResults);
@@ -106,10 +113,20 @@ export function TestCaseExpectedResultList({
               <span className="flex-shrink-0 w-6 h-6 rounded-full bg-success/20 text-success flex items-center justify-center text-xs font-medium">
                 {index + 1}
               </span>
-              {/* 内容 */}
-              <div className="flex-1">
-                <MarkdownPreview content={expectedResult.content} />
-              </div>
+              {/* 内容（CommentableItemでラップ） */}
+              <CommentableItem
+                targetType="CASE"
+                targetId={testCaseId}
+                targetField="EXPECTED_RESULT"
+                itemId={expectedResult.id}
+                itemContent={expectedResult.content}
+                comments={comments}
+                onCommentAdded={onCommentAdded}
+              >
+                <div className="flex-1">
+                  <MarkdownPreview content={expectedResult.content} />
+                </div>
+              </CommentableItem>
             </div>
           ))}
         </div>
