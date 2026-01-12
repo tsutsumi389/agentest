@@ -111,8 +111,8 @@ export function ReviewPanel({ testSuiteId }: ReviewPanelProps) {
         </div>
       </div>
 
-      {/* 下書き一覧（複数の下書きがある場合のみ表示） */}
-      {!isLoadingDrafts && drafts.length > 1 && (
+      {/* 他のテストスイートの下書きがある場合のみ表示 */}
+      {!isLoadingDrafts && drafts.length > (myDraft ? 1 : 0) && (
         <div className="p-3 bg-background-secondary rounded-lg">
           <div className="text-sm text-foreground-muted mb-2">
             他のテストスイートの下書き ({drafts.length - (myDraft ? 1 : 0)}件)
