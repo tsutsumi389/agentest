@@ -87,7 +87,7 @@ export function ReviewPanel({ testSuiteId }: ReviewPanelProps) {
           {/* 下書きがある場合 */}
           {myDraft && !isReviewing && (
             <DraftIndicator
-              testSuiteId={testSuiteId}
+              reviewId={myDraft.id}
               commentCount={myDraft._count.comments}
             />
           )}
@@ -144,23 +144,17 @@ export function ReviewPanel({ testSuiteId }: ReviewPanelProps) {
  * 下書きインジケーター
  */
 function DraftIndicator({
-  testSuiteId,
+  reviewId,
   commentCount,
 }: {
-  testSuiteId: string;
+  reviewId: string;
   commentCount: number;
 }) {
   const { loadDraftReview, isLoading } = useReviewSession();
 
   const handleLoadDraft = async () => {
-    // このテストスイートの下書きをロードする必要がある
-    // 実際にはreviewIdが必要なので、API経由で取得する
     try {
-      const drafts = await reviewsApi.getDrafts();
-      const myDraft = drafts.reviews.find((d) => d.testSuiteId === testSuiteId);
-      if (myDraft) {
-        await loadDraftReview(myDraft.id);
-      }
+      await loadDraftReview(reviewId);
     } catch {
       // エラーはContextで処理される
     }

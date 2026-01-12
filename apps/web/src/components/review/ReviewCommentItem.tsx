@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   RotateCcw,
   MoreVertical,
-  Bot,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -20,19 +19,12 @@ import {
   type ReviewStatus,
   type ReviewTargetType,
 } from '../../lib/api';
+import { TARGET_FIELD_LABELS } from '../../lib/constants';
 import { toast } from '../../stores/toast';
 import { ReviewStatusBadge } from './ReviewStatusBadge';
 import { ReviewCommentForm } from './ReviewCommentForm';
 import { ReviewCommentEditor } from './ReviewCommentEditor';
-
-/** ターゲットフィールドのラベル */
-const TARGET_FIELD_LABELS: Record<string, string> = {
-  TITLE: '全体',
-  DESCRIPTION: '説明',
-  PRECONDITION: '前提条件',
-  STEP: 'ステップ',
-  EXPECTED_RESULT: '期待結果',
-};
+import { AuthorAvatar, AuthorName } from '../common/AuthorAvatar';
 
 /** メニュー項目の型 */
 interface MenuItem {
@@ -469,70 +461,5 @@ function ReplyItem({
         )}
       </div>
     </div>
-  );
-}
-
-/**
- * 著者アバター
- */
-function AuthorAvatar({
-  author,
-  agentSession,
-  size = 'md',
-}: {
-  author: { name: string; avatarUrl: string | null } | null;
-  agentSession: { clientName: string | null } | null;
-  size?: 'sm' | 'md';
-}) {
-  const sizeClass = size === 'sm' ? 'w-5 h-5 text-xs' : 'w-6 h-6 text-sm';
-
-  if (agentSession) {
-    return (
-      <div className={`${sizeClass} rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0`}>
-        <Bot className={size === 'sm' ? 'w-3 h-3' : 'w-4 h-4'} />
-      </div>
-    );
-  }
-
-  if (author?.avatarUrl) {
-    return (
-      <img
-        src={author.avatarUrl}
-        alt={author.name}
-        className={`${sizeClass} rounded-full flex-shrink-0`}
-      />
-    );
-  }
-
-  return (
-    <div className={`${sizeClass} rounded-full bg-foreground-muted/20 flex items-center justify-center flex-shrink-0`}>
-      {author?.name?.[0]?.toUpperCase() || '?'}
-    </div>
-  );
-}
-
-/**
- * 著者名
- */
-function AuthorName({
-  author,
-  agentSession,
-}: {
-  author: { name: string } | null;
-  agentSession: { clientName: string | null } | null;
-}) {
-  if (agentSession) {
-    return (
-      <span className="text-sm font-medium text-foreground flex items-center gap-1">
-        <Bot className="w-3 h-3" />
-        {agentSession.clientName || 'Agent'}
-      </span>
-    );
-  }
-
-  return (
-    <span className="text-sm font-medium text-foreground">
-      {author?.name || '不明なユーザー'}
-    </span>
   );
 }

@@ -3,7 +3,6 @@ import { useQuery } from '@tanstack/react-query';
 import {
   X,
   Loader2,
-  Bot,
   ChevronDown,
   ChevronUp,
   MessageSquare,
@@ -13,17 +12,10 @@ import {
   type ReviewWithDetails,
   type ReviewCommentWithReplies,
 } from '../../lib/api';
+import { TARGET_FIELD_LABELS } from '../../lib/constants';
 import { ReviewVerdictBadge } from './ReviewVerdictBadge';
 import { ReviewStatusBadge } from './ReviewStatusBadge';
-
-/** ターゲットフィールドのラベル */
-const TARGET_FIELD_LABELS: Record<string, string> = {
-  TITLE: '全体',
-  DESCRIPTION: '説明',
-  PRECONDITION: '前提条件',
-  STEP: 'ステップ',
-  EXPECTED_RESULT: '期待結果',
-};
+import { AuthorAvatar, getAuthorDisplayName } from '../common/AuthorAvatar';
 
 interface ReviewDetailModalProps {
   /** モーダルの表示状態 */
@@ -150,9 +142,7 @@ export function ReviewDetailModal({
  * レビュー詳細コンテンツ
  */
 function ReviewDetailContent({ review }: { review: ReviewWithDetails }) {
-  const authorName = review.agentSession
-    ? review.agentSession.clientName || 'Agent'
-    : review.author?.name || '不明なユーザー';
+  const authorName = getAuthorDisplayName(review.author, review.agentSession);
 
   const submittedAt = review.submittedAt
     ? new Date(review.submittedAt).toLocaleString('ja-JP', {
@@ -173,6 +163,7 @@ function ReviewDetailContent({ review }: { review: ReviewWithDetails }) {
           <AuthorAvatar
             author={review.author}
             agentSession={review.agentSession}
+            size="lg"
           />
           <div>
             <div className="font-medium text-foreground">{authorName}</div>
@@ -227,9 +218,7 @@ function CommentCard({ comment }: { comment: ReviewCommentWithReplies }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const hasReplies = comment.replies.length > 0;
 
-  const authorName = comment.agentSession
-    ? comment.agentSession.clientName || 'Agent'
-    : comment.author?.name || '不明なユーザー';
+  const authorName = getAuthorDisplayName(comment.author, comment.agentSession);
 
   return (
     <div className="border border-border rounded-lg overflow-hidden">
@@ -296,9 +285,7 @@ function CommentCard({ comment }: { comment: ReviewCommentWithReplies }) {
                     />
                     <div className="min-w-0">
                       <span className="text-sm font-medium text-foreground">
-                        {reply.agentSession
-                          ? reply.agentSession.clientName || 'Agent'
-                          : reply.author?.name || '不明なユーザー'}
+                        {getAuthorDisplayName(reply.author, reply.agentSession)}
                       </span>
                       <span className="text-xs text-foreground-muted ml-2">
                         {new Date(reply.createdAt).toLocaleString('ja-JP')}
@@ -314,50 +301,6 @@ function CommentCard({ comment }: { comment: ReviewCommentWithReplies }) {
           )}
         </div>
       )}
-    </div>
-  );
-}
-
-/**
- * 著者アバター
- */
-function AuthorAvatar({
-  author,
-  agentSession,
-  size = 'md',
-}: {
-  author: { name: string; avatarUrl: string | null } | null;
-  agentSession: { clientName: string | null } | null;
-  size?: 'sm' | 'md';
-}) {
-  const sizeClass = size === 'sm' ? 'w-5 h-5 text-xs' : 'w-8 h-8 text-sm';
-  const iconSize = size === 'sm' ? 'w-3 h-3' : 'w-4 h-4';
-
-  if (agentSession) {
-    return (
-      <div
-        className={`${sizeClass} rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0`}
-      >
-        <Bot className={`${iconSize} text-accent`} />
-      </div>
-    );
-  }
-
-  if (author?.avatarUrl) {
-    return (
-      <img
-        src={author.avatarUrl}
-        alt={author.name}
-        className={`${sizeClass} rounded-full flex-shrink-0`}
-      />
-    );
-  }
-
-  return (
-    <div
-      className={`${sizeClass} rounded-full bg-foreground-muted/20 flex items-center justify-center flex-shrink-0 font-medium text-foreground-muted`}
-    >
-      {author?.name?.[0]?.toUpperCase() || '?'}
     </div>
   );
 }

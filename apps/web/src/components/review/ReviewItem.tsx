@@ -1,6 +1,7 @@
-import { MessageSquare, ChevronRight, Bot } from 'lucide-react';
+import { MessageSquare, ChevronRight } from 'lucide-react';
 import type { ReviewWithAuthor } from '../../lib/api';
 import { ReviewVerdictBadge } from './ReviewVerdictBadge';
+import { AuthorAvatar, getAuthorDisplayName } from '../common/AuthorAvatar';
 
 interface ReviewItemProps {
   /** レビューデータ */
@@ -14,9 +15,7 @@ interface ReviewItemProps {
  * 提出済みレビューを一覧表示するためのカード
  */
 export function ReviewItem({ review, onClick }: ReviewItemProps) {
-  const authorName = review.agentSession
-    ? review.agentSession.clientName || 'Agent'
-    : review.author?.name || '不明なユーザー';
+  const authorName = getAuthorDisplayName(review.author, review.agentSession);
 
   const submittedAt = review.submittedAt
     ? new Date(review.submittedAt).toLocaleString('ja-JP', {
@@ -42,6 +41,7 @@ export function ReviewItem({ review, onClick }: ReviewItemProps) {
             <AuthorAvatar
               author={review.author}
               agentSession={review.agentSession}
+              size="lg"
             />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
@@ -82,40 +82,5 @@ export function ReviewItem({ review, onClick }: ReviewItemProps) {
         </div>
       </div>
     </button>
-  );
-}
-
-/**
- * 著者アバター
- */
-function AuthorAvatar({
-  author,
-  agentSession,
-}: {
-  author: { name: string; avatarUrl: string | null } | null;
-  agentSession: { clientName: string | null } | null;
-}) {
-  if (agentSession) {
-    return (
-      <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
-        <Bot className="w-4 h-4 text-accent" />
-      </div>
-    );
-  }
-
-  if (author?.avatarUrl) {
-    return (
-      <img
-        src={author.avatarUrl}
-        alt={author.name}
-        className="w-8 h-8 rounded-full flex-shrink-0"
-      />
-    );
-  }
-
-  return (
-    <div className="w-8 h-8 rounded-full bg-foreground-muted/20 flex items-center justify-center flex-shrink-0 text-sm font-medium text-foreground-muted">
-      {author?.name?.[0]?.toUpperCase() || '?'}
-    </div>
   );
 }
