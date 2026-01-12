@@ -19,11 +19,10 @@ const TABS: { id: TabType; label: string; icon: typeof FileText }[] = [
 /**
  * テストケース用タブ定義
  */
-export type TestCaseTabType = 'overview' | 'review' | 'history' | 'settings';
+export type TestCaseTabType = 'overview' | 'history' | 'settings';
 
 const TEST_CASE_TABS: { id: TestCaseTabType; label: string; icon: typeof FileText }[] = [
   { id: 'overview', label: '概要', icon: FileText },
-  { id: 'review', label: 'レビュー', icon: MessageSquare },
   { id: 'history', label: '履歴', icon: History },
   { id: 'settings', label: '設定', icon: Settings },
 ];

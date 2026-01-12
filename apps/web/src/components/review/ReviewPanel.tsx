@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Plus, FileEdit, Loader2 } from 'lucide-react';
+import { Plus, FileEdit, Loader2, ChevronLeft } from 'lucide-react';
 import { reviewsApi, type ReviewVerdict } from '../../lib/api';
 import { useReviewSession } from '../../contexts/ReviewSessionContext';
 import { ReviewList } from './ReviewList';
-import { ReviewDetailModal } from './ReviewDetailModal';
+import { ReviewDetailContent } from './ReviewDetailContent';
 
 interface ReviewPanelProps {
   /** テストスイートID */
@@ -14,6 +14,7 @@ interface ReviewPanelProps {
 /**
  * レビューパネルコンポーネント
  * テストスイートのレビュータブのメインコンテンツ
+ * レビュー一覧と詳細表示を切り替え
  */
 export function ReviewPanel({ testSuiteId }: ReviewPanelProps) {
   const [selectedReviewId, setSelectedReviewId] = useState<string | null>(null);
@@ -33,6 +34,13 @@ export function ReviewPanel({ testSuiteId }: ReviewPanelProps) {
         offset: 0,
       }),
     enabled: !!testSuiteId,
+  });
+
+  // 選択されたレビューの詳細を取得
+  const { data: reviewDetailData, isLoading: isLoadingDetail } = useQuery({
+    queryKey: ['review-detail', selectedReviewId],
+    queryFn: () => reviewsApi.getById(selectedReviewId!),
+    enabled: !!selectedReviewId,
   });
 
   // 自分の下書きレビュー一覧を取得
@@ -57,6 +65,39 @@ export function ReviewPanel({ testSuiteId }: ReviewPanelProps) {
     }
   };
 
+  // レビュー詳細表示モード
+  if (selectedReviewId) {
+    return (
+      <div className="space-y-4">
+        {/* ヘッダー（戻るボタン） */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setSelectedReviewId(null)}
+            className="flex items-center gap-1 text-sm text-foreground-muted hover:text-foreground transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+            レビュー一覧に戻る
+          </button>
+        </div>
+
+        {/* レビュー詳細 */}
+        {isLoadingDetail ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="w-6 h-6 animate-spin text-foreground-muted" />
+          </div>
+        ) : reviewDetailData?.review ? (
+          <ReviewDetailContent review={reviewDetailData.review} />
+        ) : (
+          <div className="flex flex-col items-center justify-center py-12 text-foreground-muted">
+            <p className="text-sm">レビューの読み込みに失敗しました</p>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // レビュー一覧表示モード
   return (
     <div className="space-y-6">
       {/* ヘッダー部分 */}
@@ -128,13 +169,6 @@ export function ReviewPanel({ testSuiteId }: ReviewPanelProps) {
         reviews={reviews}
         isLoading={isLoadingReviews}
         onReviewClick={setSelectedReviewId}
-      />
-
-      {/* 詳細モーダル */}
-      <ReviewDetailModal
-        isOpen={selectedReviewId !== null}
-        reviewId={selectedReviewId}
-        onClose={() => setSelectedReviewId(null)}
       />
     </div>
   );

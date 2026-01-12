@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate, Link } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, AlertCircle, Clock } from 'lucide-react';
-import { testSuitesApi, projectsApi, type TestCase, type TestSuite, type ProjectMemberRole } from '../lib/api';
+import { testSuitesApi, projectsApi, reviewsApi, type TestCase, type TestSuite, type ProjectMemberRole, type ReviewCommentWithReplies } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { usePageSidebar } from '../components/Layout';
 import { toast } from '../stores/toast';
@@ -14,12 +14,14 @@ import { TestCaseForm } from '../components/test-case/TestCaseForm';
 import { TestSuiteForm } from '../components/test-suite/TestSuiteForm';
 import { StartExecutionModal } from '../components/execution/StartExecutionModal';
 import { PreconditionList } from '../components/test-suite/PreconditionList';
+import { OverviewReviewSelector } from '../components/test-suite/OverviewReviewSelector';
 import { TestSuiteHistoryList } from '../components/test-suite/TestSuiteHistoryList';
 import { DeleteTestSuiteSection } from '../components/test-suite/DeleteTestSuiteSection';
 import { ExecutionHistoryList } from '../components/execution/ExecutionHistoryList';
 import { ReviewPanel } from '../components/review/ReviewPanel';
 import { ReviewSessionBar } from '../components/review/ReviewSessionBar';
-import { ReviewSessionProvider } from '../contexts/ReviewSessionContext';
+import { ReviewSessionProvider, useReviewSession } from '../contexts/ReviewSessionContext';
+import { CommentableField } from '../components/review/CommentableField';
 import { MarkdownPreview } from '../components/common/markdown/MarkdownPreview';
 
 /**
@@ -351,20 +353,12 @@ export function TestSuiteCasesPage() {
         ) : (
           // タブコンテンツを表示
           <div className="h-full flex flex-col">
-            {/* 説明 */}
-            <div className="mb-4">
-              {suite.description ? (
-                <MarkdownPreview content={suite.description} className="text-foreground-muted" />
-              ) : (
-                <p className="text-foreground-muted">説明なし</p>
-              )}
-            </div>
-
             {/* タブコンテンツ */}
             <div className="flex-1 overflow-y-auto">
               {currentTab === 'overview' && (
                 <OverviewTab
                   testSuiteId={testSuiteId}
+                  description={suite.description}
                   executions={executions}
                   currentRole={currentRole}
                 />
@@ -440,22 +434,74 @@ export function TestSuiteCasesPage() {
  */
 interface OverviewTabProps {
   testSuiteId: string;
+  description: string | null;
   executions: { id: string; status: string; startedAt: string }[];
   currentRole: 'OWNER' | ProjectMemberRole | undefined;
 }
 
 function OverviewTab({
   testSuiteId,
+  description,
   executions,
   currentRole,
 }: OverviewTabProps) {
+  // レビュー選択状態
+  const [selectedReviewId, setSelectedReviewId] = useState<string | null>(null);
+
+  // ReviewSessionからコメントを取得
+  const { currentReview, refreshReview } = useReviewSession();
+
+  // 選択したレビューの詳細を取得
+  const { data: selectedReviewData } = useQuery({
+    queryKey: ['review-detail', selectedReviewId],
+    queryFn: () => reviewsApi.getById(selectedReviewId!),
+    enabled: !!selectedReviewId,
+  });
+
+  // 表示するコメント（レビュー選択時はそのレビュー、レビュー中は現在のセッション）
+  const displayComments: ReviewCommentWithReplies[] = selectedReviewId
+    ? (selectedReviewData?.review?.comments || [])
+    : (currentReview?.comments || []);
+
   // 編集権限の判定（WRITE以上）
   const canEdit = currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'WRITE';
 
   return (
     <div className="space-y-6">
+      {/* レビュー選択UI */}
+      <OverviewReviewSelector
+        testSuiteId={testSuiteId}
+        selectedReviewId={selectedReviewId}
+        onSelectReview={setSelectedReviewId}
+      />
+
+      {/* 説明セクション（コメント可能） */}
+      <CommentableField
+        targetType="SUITE"
+        targetId={testSuiteId}
+        targetField="DESCRIPTION"
+        fieldContent={description || undefined}
+        comments={displayComments}
+        canEdit={canEdit}
+        onCommentAdded={refreshReview}
+      >
+        <div className="card p-6">
+          <h2 className="text-lg font-semibold text-foreground mb-4">説明</h2>
+          {description ? (
+            <MarkdownPreview content={description} />
+          ) : (
+            <p className="text-foreground-muted">説明なし</p>
+          )}
+        </div>
+      </CommentableField>
+
       {/* 前提条件セクション */}
-      <PreconditionList testSuiteId={testSuiteId} canEdit={canEdit} />
+      <PreconditionList
+        testSuiteId={testSuiteId}
+        canEdit={canEdit}
+        comments={displayComments}
+        onCommentAdded={refreshReview}
+      />
 
       {/* 実行履歴 */}
       <div className="card">
