@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { FileEdit, MessageSquare, Send, X, Loader2 } from 'lucide-react';
+import { ApiError } from '../../lib/api';
 import { useReviewSession } from '../../contexts/ReviewSessionContext';
+import { toast } from '../../stores/toast';
 import { ReviewSubmitModal } from './ReviewSubmitModal';
 
 /**
@@ -34,8 +36,12 @@ export function ReviewSessionBar() {
     setIsCanceling(true);
     try {
       await cancelReview();
-    } catch {
-      // エラーはContextで処理される
+    } catch (err) {
+      if (err instanceof ApiError) {
+        toast.error(err.message);
+      } else {
+        toast.error('レビューのキャンセルに失敗しました');
+      }
     } finally {
       setIsCanceling(false);
     }
@@ -100,9 +106,6 @@ export function ReviewSessionBar() {
         onClose={() => setIsSubmitModalOpen(false)}
         commentCount={commentCount}
       />
-
-      {/* バー分の余白を確保するためのスペーサー */}
-      <div className="h-16" />
     </>
   );
 }

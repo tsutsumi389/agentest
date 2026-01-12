@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Loader2, CheckCircle, AlertTriangle, MessageSquare } from 'lucide-react';
-import type { ReviewVerdict } from '../../lib/api';
+import { ApiError, type ReviewVerdict } from '../../lib/api';
 import { useReviewSession } from '../../contexts/ReviewSessionContext';
 import { toast } from '../../stores/toast';
 
@@ -124,8 +124,12 @@ export function ReviewSubmitModal({
       await submitReview(selectedVerdict, summary || undefined);
       toast.success('レビューを提出しました');
       onClose();
-    } catch {
-      // エラーはContextで処理される
+    } catch (err) {
+      if (err instanceof ApiError) {
+        toast.error(err.message);
+      } else {
+        toast.error('レビューの提出に失敗しました');
+      }
     } finally {
       setIsSubmitting(false);
     }

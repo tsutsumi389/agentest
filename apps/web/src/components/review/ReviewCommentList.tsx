@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MessageSquare, Plus, Filter, Loader2, AlertCircle, FileEdit } from 'lucide-react';
 import {
   getTestSuiteComments,
@@ -56,6 +56,7 @@ export function ReviewCommentList({
   currentUserId,
   currentRole,
 }: ReviewCommentListProps) {
+  const queryClient = useQueryClient();
   const { isReviewing, addComment, isLoading: isReviewLoading } = useReviewSession();
   const [statusFilter, setStatusFilter] = useState<'ALL' | ReviewStatus>('ALL');
   const [fieldFilter, setFieldFilter] = useState<ReviewTargetField | 'ALL'>('ALL');
@@ -102,6 +103,8 @@ export function ReviewCommentList({
         targetField: selectedField,
         content,
       });
+      // コメント一覧のキャッシュを無効化して再取得
+      queryClient.invalidateQueries({ queryKey: ['review-comments', { targetType, targetId }] });
       setIsFormOpen(false);
       toast.success('コメントを追加しました');
     } catch (err) {
