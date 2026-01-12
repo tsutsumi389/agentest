@@ -3,7 +3,7 @@ import {
   Loader2,
   ListOrdered,
 } from 'lucide-react';
-import { testCasesApi, ApiError, type TestCaseStep, type ProjectMemberRole, type ReviewCommentWithReplies } from '../../lib/api';
+import { testCasesApi, ApiError, type TestCaseStep, type ReviewCommentWithReplies } from '../../lib/api';
 import { MarkdownPreview } from '../common/markdown';
 import { CommentableItem } from '../review/CommentableItem';
 
@@ -12,10 +12,6 @@ interface TestCaseStepListProps {
   testCaseId: string;
   /** 初期データ（オプティミスティック更新用） */
   initialSteps?: TestCaseStep[];
-  /** 現在のユーザーのロール（未使用、互換性のため維持） */
-  currentRole?: 'OWNER' | ProjectMemberRole;
-  /** 更新時のコールバック（未使用、互換性のため維持） */
-  onUpdated?: () => void;
   /** レビューコメント一覧 */
   comments?: ReviewCommentWithReplies[];
   /** コメント追加時のコールバック */

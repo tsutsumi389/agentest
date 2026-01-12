@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { MessageSquarePlus, Loader2 } from 'lucide-react';
 import { useReviewSession, getCommentsForTarget } from '../../contexts/ReviewSessionContext';
-import type { ReviewTargetType, ReviewTargetField, ReviewCommentWithReplies } from '../../lib/api';
+import { ApiError, type ReviewTargetType, type ReviewTargetField, type ReviewCommentWithReplies } from '../../lib/api';
 import { toast } from '../../stores/toast';
 import { ReviewCommentForm } from './ReviewCommentForm';
 
@@ -70,8 +70,11 @@ export function CommentableItem({
       toast.success('コメントを追加しました');
       onCommentAdded?.();
     } catch (err) {
-      // エラーはコンテキストで処理される
-      console.error('コメントの追加に失敗しました', err);
+      if (err instanceof ApiError) {
+        toast.error(err.message);
+      } else {
+        toast.error('コメントの追加に失敗しました');
+      }
     } finally {
       setIsSubmitting(false);
     }
