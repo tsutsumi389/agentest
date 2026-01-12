@@ -25,11 +25,13 @@ export function ReviewPanel({ testSuiteId }: ReviewPanelProps) {
   const { isReviewing, startReview, isLoading: isStarting } = useReviewSession();
 
   // 提出済みレビュー一覧を取得
+  // ALLフィルター時はundefinedを使用してOverviewReviewSelectorとキャッシュを共有
+  const verdictFilterForQuery = verdictFilter === 'ALL' ? undefined : verdictFilter;
   const { data: reviewsData, isLoading: isLoadingReviews } = useQuery({
-    queryKey: ['test-suite-reviews', testSuiteId, verdictFilter],
+    queryKey: ['test-suite-reviews', testSuiteId, verdictFilterForQuery],
     queryFn: () =>
       reviewsApi.getByTestSuite(testSuiteId, {
-        verdict: verdictFilter === 'ALL' ? undefined : verdictFilter,
+        verdict: verdictFilterForQuery,
         limit: 50,
         offset: 0,
       }),

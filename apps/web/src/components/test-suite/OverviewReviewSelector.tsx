@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Loader2 } from 'lucide-react';
 import { reviewsApi, type ReviewVerdict } from '../../lib/api';
 import { getAuthorDisplayName } from '../common/AuthorAvatar';
 import { ReviewVerdictBadge } from '../review/ReviewVerdictBadge';
@@ -23,8 +23,9 @@ export function OverviewReviewSelector({
   onSelectReview,
 }: OverviewReviewSelectorProps) {
   // 提出済みレビュー一覧を取得
+  // ReviewPanelと同じqueryKeyを使用してキャッシュを共有（フィルターなし = undefined）
   const { data: reviewsData, isLoading } = useQuery({
-    queryKey: ['test-suite-reviews', testSuiteId],
+    queryKey: ['test-suite-reviews', testSuiteId, undefined],
     queryFn: () => reviewsApi.getByTestSuite(testSuiteId, { limit: 50 }),
     enabled: !!testSuiteId,
   });
@@ -43,30 +44,36 @@ export function OverviewReviewSelector({
         <span className="text-sm">レビューコメント表示:</span>
       </div>
 
-      <select
-        value={selectedReviewId || ''}
-        onChange={(e) => onSelectReview(e.target.value || null)}
-        className="input text-sm py-1.5 min-w-[200px]"
-        disabled={isLoading}
-      >
-        <option value="">なし</option>
-        {reviews.map((review) => {
-          const authorName = getAuthorDisplayName(review.author, review.agentSession);
-          const submittedDate = review.submittedAt
-            ? new Date(review.submittedAt).toLocaleDateString('ja-JP')
-            : '';
+      {isLoading ? (
+        <div className="flex items-center gap-2 text-sm text-foreground-muted">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          読み込み中...
+        </div>
+      ) : (
+        <select
+          value={selectedReviewId || ''}
+          onChange={(e) => onSelectReview(e.target.value || null)}
+          className="input text-sm py-1.5 min-w-[200px]"
+        >
+          <option value="">なし</option>
+          {reviews.map((review) => {
+            const authorName = getAuthorDisplayName(review.author, review.agentSession);
+            const submittedDate = review.submittedAt
+              ? new Date(review.submittedAt).toLocaleDateString('ja-JP')
+              : '';
 
-          return (
-            <option key={review.id} value={review.id}>
-              {authorName} - {submittedDate}
-              {review.verdict && ` (${getVerdictLabel(review.verdict)})`}
-            </option>
-          );
-        })}
-      </select>
+            return (
+              <option key={review.id} value={review.id}>
+                {authorName} - {submittedDate}
+                {review.verdict && ` (${getVerdictLabel(review.verdict)})`}
+              </option>
+            );
+          })}
+        </select>
+      )}
 
       {/* 選択中のレビューのバッジ */}
-      {selectedReviewId && (
+      {selectedReviewId && !isLoading && (
         <SelectedReviewBadge
           reviewId={selectedReviewId}
           reviews={reviews}
