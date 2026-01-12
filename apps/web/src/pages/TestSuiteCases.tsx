@@ -17,7 +17,9 @@ import { PreconditionList } from '../components/test-suite/PreconditionList';
 import { TestSuiteHistoryList } from '../components/test-suite/TestSuiteHistoryList';
 import { DeleteTestSuiteSection } from '../components/test-suite/DeleteTestSuiteSection';
 import { ExecutionHistoryList } from '../components/execution/ExecutionHistoryList';
-import { ReviewCommentList } from '../components/review/ReviewCommentList';
+import { ReviewPanel } from '../components/review/ReviewPanel';
+import { ReviewSessionBar } from '../components/review/ReviewSessionBar';
+import { ReviewSessionProvider } from '../contexts/ReviewSessionContext';
 import { MarkdownPreview } from '../components/common/markdown/MarkdownPreview';
 
 /**
@@ -286,9 +288,10 @@ export function TestSuiteCasesPage() {
   }
 
   return (
-    <div className="h-full flex flex-col">
-      {/* ヘッダー */}
-      <TestSuiteHeader
+    <ReviewSessionProvider>
+      <div className="h-full flex flex-col">
+        {/* ヘッダー */}
+        <TestSuiteHeader
         testSuite={suite}
         project={project}
         testCaseCount={testCases.length}
@@ -370,15 +373,8 @@ export function TestSuiteCasesPage() {
                 <ExecutionHistoryList testSuiteId={testSuiteId!} />
               )}
 
-              {currentTab === 'review' && user && (
-                <div className="card p-4">
-                  <ReviewCommentList
-                    targetType="SUITE"
-                    targetId={testSuiteId}
-                    currentUserId={user.id}
-                    currentRole={currentRole}
-                  />
-                </div>
+              {currentTab === 'review' && (
+                <ReviewPanel testSuiteId={testSuiteId} />
               )}
 
               {currentTab === 'history' && (
@@ -399,38 +395,42 @@ export function TestSuiteCasesPage() {
         )}
       </div>
 
-      {/* 実行開始モーダル */}
-      {isStartExecutionModalOpen && suite && (
-        <StartExecutionModal
-          isOpen={isStartExecutionModalOpen}
-          testSuiteId={testSuiteId!}
-          projectId={suite.projectId}
-          suiteName={suite.name}
-          testCaseCount={testCases.length}
-          preconditionCount={suite._count?.preconditions || 0}
-          onClose={() => setIsStartExecutionModalOpen(false)}
-          onStarted={(execution) => {
-            queryClient.invalidateQueries({ queryKey: ['test-suite-executions', testSuiteId] });
-            navigate(`/executions/${execution.id}`);
-          }}
-        />
-      )}
+        {/* 実行開始モーダル */}
+        {isStartExecutionModalOpen && suite && (
+          <StartExecutionModal
+            isOpen={isStartExecutionModalOpen}
+            testSuiteId={testSuiteId!}
+            projectId={suite.projectId}
+            suiteName={suite.name}
+            testCaseCount={testCases.length}
+            preconditionCount={suite._count?.preconditions || 0}
+            onClose={() => setIsStartExecutionModalOpen(false)}
+            onStarted={(execution) => {
+              queryClient.invalidateQueries({ queryKey: ['test-suite-executions', testSuiteId] });
+              navigate(`/executions/${execution.id}`);
+            }}
+          />
+        )}
 
-      {/* テストケースコピーモーダル */}
-      {isCopyModalOpen && selectedTestCaseDetail && (
-        <CopyTestCaseModal
-          isOpen={isCopyModalOpen}
-          testCase={selectedTestCaseDetail}
-          testSuiteId={testSuiteId!}
-          onClose={() => setIsCopyModalOpen(false)}
-          onCopied={() => {
-            queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
-            toast.success('テストケースをコピーしました');
-            setIsCopyModalOpen(false);
-          }}
-        />
-      )}
-    </div>
+        {/* テストケースコピーモーダル */}
+        {isCopyModalOpen && selectedTestCaseDetail && (
+          <CopyTestCaseModal
+            isOpen={isCopyModalOpen}
+            testCase={selectedTestCaseDetail}
+            testSuiteId={testSuiteId!}
+            onClose={() => setIsCopyModalOpen(false)}
+            onCopied={() => {
+              queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
+              toast.success('テストケースをコピーしました');
+              setIsCopyModalOpen(false);
+            }}
+          />
+        )}
+
+        {/* レビューセッションバー（レビュー中に画面下部に表示） */}
+        <ReviewSessionBar />
+      </div>
+    </ReviewSessionProvider>
   );
 }
 
