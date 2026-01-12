@@ -292,26 +292,26 @@ export function TestSuiteCasesPage() {
       <div className="h-full flex flex-col">
         {/* ヘッダー */}
         <TestSuiteHeader
-        testSuite={suite}
-        project={project}
-        testCaseCount={testCases.length}
-        currentRole={currentRole}
-        onStartExecution={handleStartExecution}
-        onCreateTestCase={handleStartCreateMode}
-        onEdit={() => setIsEditMode(true)}
-        isExecutionPending={startExecutionMutation.isPending}
-        currentTab={currentTab}
-        onTabChange={handleTabChange}
-        hasSelectedTestCase={!!selectedTestCaseId || isCreateMode}
-        isCreateMode={isCreateMode}
-        // テストケース選択時のprops
-        selectedTestCase={selectedTestCaseInfo}
-        testCaseTab={testCaseTab}
-        onTestCaseTabChange={handleTestCaseTabChange}
-        onEditTestCase={() => setIsTestCaseEditMode(true)}
-        onCopyTestCase={() => setIsCopyModalOpen(true)}
-        onCloseTestCase={() => handleSelectTestCase(null)}
-      />
+          testSuite={suite}
+          project={project}
+          testCaseCount={testCases.length}
+          currentRole={currentRole}
+          onStartExecution={handleStartExecution}
+          onCreateTestCase={handleStartCreateMode}
+          onEdit={() => setIsEditMode(true)}
+          isExecutionPending={startExecutionMutation.isPending}
+          currentTab={currentTab}
+          onTabChange={handleTabChange}
+          hasSelectedTestCase={!!selectedTestCaseId || isCreateMode}
+          isCreateMode={isCreateMode}
+          // テストケース選択時のprops
+          selectedTestCase={selectedTestCaseInfo}
+          testCaseTab={testCaseTab}
+          onTestCaseTabChange={handleTestCaseTabChange}
+          onEditTestCase={() => setIsTestCaseEditMode(true)}
+          onCopyTestCase={() => setIsCopyModalOpen(true)}
+          onCloseTestCase={() => handleSelectTestCase(null)}
+        />
 
       {/* メインコンテンツ */}
       <div className="flex-1 overflow-hidden p-4">
@@ -395,41 +395,41 @@ export function TestSuiteCasesPage() {
         )}
       </div>
 
-        {/* 実行開始モーダル */}
-        {isStartExecutionModalOpen && suite && (
-          <StartExecutionModal
-            isOpen={isStartExecutionModalOpen}
-            testSuiteId={testSuiteId!}
-            projectId={suite.projectId}
-            suiteName={suite.name}
-            testCaseCount={testCases.length}
-            preconditionCount={suite._count?.preconditions || 0}
-            onClose={() => setIsStartExecutionModalOpen(false)}
-            onStarted={(execution) => {
-              queryClient.invalidateQueries({ queryKey: ['test-suite-executions', testSuiteId] });
-              navigate(`/executions/${execution.id}`);
-            }}
-          />
-        )}
+      {/* 実行開始モーダル */}
+      {isStartExecutionModalOpen && suite && (
+        <StartExecutionModal
+          isOpen={isStartExecutionModalOpen}
+          testSuiteId={testSuiteId!}
+          projectId={suite.projectId}
+          suiteName={suite.name}
+          testCaseCount={testCases.length}
+          preconditionCount={suite._count?.preconditions || 0}
+          onClose={() => setIsStartExecutionModalOpen(false)}
+          onStarted={(execution) => {
+            queryClient.invalidateQueries({ queryKey: ['test-suite-executions', testSuiteId] });
+            navigate(`/executions/${execution.id}`);
+          }}
+        />
+      )}
 
-        {/* テストケースコピーモーダル */}
-        {isCopyModalOpen && selectedTestCaseDetail && (
-          <CopyTestCaseModal
-            isOpen={isCopyModalOpen}
-            testCase={selectedTestCaseDetail}
-            testSuiteId={testSuiteId!}
-            onClose={() => setIsCopyModalOpen(false)}
-            onCopied={() => {
-              queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
-              toast.success('テストケースをコピーしました');
-              setIsCopyModalOpen(false);
-            }}
-          />
-        )}
+      {/* テストケースコピーモーダル */}
+      {isCopyModalOpen && selectedTestCaseDetail && (
+        <CopyTestCaseModal
+          isOpen={isCopyModalOpen}
+          testCase={selectedTestCaseDetail}
+          testSuiteId={testSuiteId!}
+          onClose={() => setIsCopyModalOpen(false)}
+          onCopied={() => {
+            queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
+            toast.success('テストケースをコピーしました');
+            setIsCopyModalOpen(false);
+          }}
+        />
+      )}
 
-        {/* レビューセッションバー（レビュー中に画面下部に表示） */}
-        <ReviewSessionBar />
-      </div>
+      {/* レビューセッションバー（レビュー中に画面下部に表示） */}
+      <ReviewSessionBar />
+    </div>
     </ReviewSessionProvider>
   );
 }
