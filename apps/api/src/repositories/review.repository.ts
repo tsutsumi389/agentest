@@ -218,6 +218,7 @@ export class ReviewRepository {
     targetId: string;
     targetField: ReviewTargetField;
     targetItemId?: string;
+    targetItemContent?: string;
     authorUserId?: string;
     authorAgentSessionId?: string;
     content: string;
@@ -229,6 +230,7 @@ export class ReviewRepository {
         targetId: data.targetId,
         targetField: data.targetField,
         targetItemId: data.targetItemId,
+        targetItemContent: data.targetItemContent,
         authorUserId: data.authorUserId,
         authorAgentSessionId: data.authorAgentSessionId,
         content: data.content,

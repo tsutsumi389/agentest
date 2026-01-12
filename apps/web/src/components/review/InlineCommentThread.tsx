@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ChevronDown,
   ChevronUp,
@@ -11,17 +10,9 @@ import {
   MoreVertical,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import {
-  reviewCommentsApi,
-  ApiError,
-  type ReviewCommentWithReplies,
-  type ReviewReply,
-  type ReviewStatus,
-  type ReviewTargetType,
-} from '../../lib/api';
-import { TARGET_FIELD_LABELS } from '../../lib/constants';
+import type { ReviewCommentWithReplies, ReviewReply } from '../../lib/api';
+import { useReviewSession } from '../../contexts/ReviewSessionContext';
 import { toast } from '../../stores/toast';
-import { MarkdownPreview } from '../common/markdown';
 import { ReviewStatusBadge } from './ReviewStatusBadge';
 import { ReviewCommentForm } from './ReviewCommentForm';
 import { ReviewCommentEditor } from './ReviewCommentEditor';
@@ -35,141 +26,174 @@ interface MenuItem {
   danger?: boolean;
 }
 
-interface ReviewCommentItemProps {
-  /** コメントデータ */
-  comment: ReviewCommentWithReplies;
-  /** ターゲットタイプ */
-  targetType: ReviewTargetType;
-  /** ターゲットID */
-  targetId: string;
+interface InlineCommentThreadProps {
+  /** コメント一覧 */
+  comments: ReviewCommentWithReplies[];
   /** 現在のユーザーID */
   currentUserId: string;
   /** 編集権限があるか（WRITE以上） */
   canEdit: boolean;
+  /** コメント更新時のコールバック */
+  onCommentUpdated?: () => void;
 }
 
 /**
- * レビューコメントアイテム
- * コメント表示、返信リスト、アコーディオン機能
+ * インラインコメントスレッド表示コンポーネント
+ * GitHub PR風のコンパクトなコメント表示
  */
-export function ReviewCommentItem({
-  comment,
-  targetType,
-  targetId,
+export function InlineCommentThread({
+  comments,
   currentUserId,
   canEdit,
-}: ReviewCommentItemProps) {
-  const queryClient = useQueryClient();
+  onCommentUpdated,
+}: InlineCommentThreadProps) {
+  if (comments.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-3 space-y-2">
+      {comments.map((comment) => (
+        <InlineCommentItem
+          key={comment.id}
+          comment={comment}
+          currentUserId={currentUserId}
+          canEdit={canEdit}
+          onCommentUpdated={onCommentUpdated}
+        />
+      ))}
+    </div>
+  );
+}
+
+interface InlineCommentItemProps {
+  comment: ReviewCommentWithReplies;
+  currentUserId: string;
+  canEdit: boolean;
+  onCommentUpdated?: () => void;
+}
+
+/**
+ * 個別のインラインコメント表示
+ */
+function InlineCommentItem({
+  comment,
+  currentUserId,
+  canEdit,
+  onCommentUpdated,
+}: InlineCommentItemProps) {
+  const {
+    updateComment,
+    deleteComment,
+    updateCommentStatus,
+    addReply,
+    updateReply,
+    deleteReply,
+    isLoading,
+  } = useReviewSession();
+
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isReplying, setIsReplying] = useState(false);
   const [editingReplyId, setEditingReplyId] = useState<string | null>(null);
-
-  const queryKey = ['review-comments', { targetType, targetId }];
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 投稿者かどうか
   const isAuthor = comment.authorUserId === currentUserId;
 
-  // コメント編集mutation
-  const updateMutation = useMutation({
-    mutationFn: (content: string) => reviewCommentsApi.update(comment.id, { content }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
+  // コメント編集ハンドラ
+  const handleUpdate = async (content: string) => {
+    setIsSubmitting(true);
+    try {
+      await updateComment(comment.id, content);
       setIsEditing(false);
       toast.success('コメントを更新しました');
-    },
-    onError: (err) => {
-      if (err instanceof ApiError) {
-        toast.error(err.message);
-      } else {
-        toast.error('コメントの更新に失敗しました');
-      }
-    },
-  });
+      onCommentUpdated?.();
+    } catch {
+      toast.error('コメントの更新に失敗しました');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-  // コメント削除mutation
-  const deleteMutation = useMutation({
-    mutationFn: () => reviewCommentsApi.delete(comment.id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
+  // コメント削除ハンドラ
+  const handleDelete = async () => {
+    if (!window.confirm('このコメントを削除しますか？返信もすべて削除されます。')) {
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await deleteComment(comment.id);
       toast.success('コメントを削除しました');
-    },
-    onError: (err) => {
-      if (err instanceof ApiError) {
-        toast.error(err.message);
-      } else {
-        toast.error('コメントの削除に失敗しました');
-      }
-    },
-  });
+      onCommentUpdated?.();
+    } catch {
+      toast.error('コメントの削除に失敗しました');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-  // ステータス変更mutation
-  const updateStatusMutation = useMutation({
-    mutationFn: (status: ReviewStatus) => reviewCommentsApi.updateStatus(comment.id, status),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
+  // ステータス変更ハンドラ
+  const handleStatusChange = async (status: 'OPEN' | 'RESOLVED') => {
+    setIsSubmitting(true);
+    try {
+      await updateCommentStatus(comment.id, status);
       toast.success('ステータスを更新しました');
-    },
-    onError: (err) => {
-      if (err instanceof ApiError) {
-        toast.error(err.message);
-      } else {
-        toast.error('ステータスの更新に失敗しました');
-      }
-    },
-  });
+      onCommentUpdated?.();
+    } catch {
+      toast.error('ステータスの更新に失敗しました');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-  // 返信作成mutation
-  const createReplyMutation = useMutation({
-    mutationFn: (content: string) => reviewCommentsApi.createReply(comment.id, { content }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
+  // 返信作成ハンドラ
+  const handleAddReply = async (content: string) => {
+    setIsSubmitting(true);
+    try {
+      await addReply(comment.id, content);
       setIsReplying(false);
       setIsExpanded(true);
       toast.success('返信を投稿しました');
-    },
-    onError: (err) => {
-      if (err instanceof ApiError) {
-        toast.error(err.message);
-      } else {
-        toast.error('返信の投稿に失敗しました');
-      }
-    },
-  });
+      onCommentUpdated?.();
+    } catch {
+      toast.error('返信の投稿に失敗しました');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-  // 返信編集mutation
-  const updateReplyMutation = useMutation({
-    mutationFn: ({ replyId, content }: { replyId: string; content: string }) =>
-      reviewCommentsApi.updateReply(comment.id, replyId, { content }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
+  // 返信編集ハンドラ
+  const handleUpdateReply = async (replyId: string, content: string) => {
+    setIsSubmitting(true);
+    try {
+      await updateReply(comment.id, replyId, content);
       setEditingReplyId(null);
       toast.success('返信を更新しました');
-    },
-    onError: (err) => {
-      if (err instanceof ApiError) {
-        toast.error(err.message);
-      } else {
-        toast.error('返信の更新に失敗しました');
-      }
-    },
-  });
+      onCommentUpdated?.();
+    } catch {
+      toast.error('返信の更新に失敗しました');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-  // 返信削除mutation
-  const deleteReplyMutation = useMutation({
-    mutationFn: (replyId: string) => reviewCommentsApi.deleteReply(comment.id, replyId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey });
+  // 返信削除ハンドラ
+  const handleDeleteReply = async (replyId: string) => {
+    if (!window.confirm('この返信を削除しますか？')) {
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      await deleteReply(comment.id, replyId);
       toast.success('返信を削除しました');
-    },
-    onError: (err) => {
-      if (err instanceof ApiError) {
-        toast.error(err.message);
-      } else {
-        toast.error('返信の削除に失敗しました');
-      }
-    },
-  });
+      onCommentUpdated?.();
+    } catch {
+      toast.error('返信の削除に失敗しました');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   // アクションメニュー項目
   const actionItems: MenuItem[] = [
@@ -182,11 +206,7 @@ export function ReviewCommentItem({
       {
         label: '削除',
         icon: Trash2,
-        onClick: () => {
-          if (window.confirm('このコメントを削除しますか？返信もすべて削除されます。')) {
-            deleteMutation.mutate();
-          }
-        },
+        onClick: handleDelete,
         danger: true,
       },
     ] : []),
@@ -195,12 +215,12 @@ export function ReviewCommentItem({
         ? {
             label: '解決済みにする',
             icon: CheckCircle2,
-            onClick: () => updateStatusMutation.mutate('RESOLVED'),
+            onClick: () => handleStatusChange('RESOLVED'),
           }
         : {
             label: '未解決に戻す',
             icon: RotateCcw,
-            onClick: () => updateStatusMutation.mutate('OPEN'),
+            onClick: () => handleStatusChange('OPEN'),
           },
     ] : []),
   ];
@@ -208,13 +228,15 @@ export function ReviewCommentItem({
   const hasReplies = comment.replies.length > 0;
 
   return (
-    <div className="border border-border rounded-lg overflow-hidden">
+    <div className="border border-border rounded-lg overflow-hidden bg-background">
       {/* ヘッダー */}
       <div className="flex items-center justify-between px-3 py-2 bg-background-secondary">
         <div className="flex items-center gap-2 min-w-0">
           <ReviewStatusBadge status={comment.status} showLabel={false} />
-          <span className="text-xs text-foreground-muted truncate">
-            {TARGET_FIELD_LABELS[comment.targetField]}
+          <AuthorAvatar author={comment.author} agentSession={comment.agentSession} size="sm" />
+          <AuthorName author={comment.author} agentSession={comment.agentSession} />
+          <span className="text-xs text-foreground-muted">
+            {new Date(comment.createdAt).toLocaleString('ja-JP')}
           </span>
         </div>
         <div className="flex items-center gap-1">
@@ -222,45 +244,27 @@ export function ReviewCommentItem({
             <button
               type="button"
               onClick={() => setIsReplying(!isReplying)}
-              className="p-1 text-foreground-muted hover:text-foreground transition-colors"
+              disabled={isLoading || isSubmitting}
+              className="p-1 text-foreground-muted hover:text-foreground transition-colors disabled:opacity-50"
               title="返信"
             >
               <Reply className="w-4 h-4" />
             </button>
           )}
           {actionItems.length > 0 && (
-            <MenuDropdown items={actionItems} />
+            <MenuDropdown items={actionItems} disabled={isLoading || isSubmitting} />
           )}
         </div>
       </div>
 
       {/* コンテンツ */}
-      <div className="p-3">
-        {/* 著者情報 */}
-        <div className="flex items-center gap-2 mb-2">
-          <AuthorAvatar author={comment.author} agentSession={comment.agentSession} />
-          <div className="min-w-0">
-            <AuthorName author={comment.author} agentSession={comment.agentSession} />
-            <span className="text-xs text-foreground-muted">
-              {new Date(comment.createdAt).toLocaleString('ja-JP')}
-            </span>
-          </div>
-        </div>
-
-        {/* 対象アイテムのスナップショット表示 */}
-        {comment.targetItemContent && (
-          <div className="mb-3 p-2 bg-background-tertiary rounded border-l-2 border-accent">
-            <MarkdownPreview content={comment.targetItemContent} />
-          </div>
-        )}
-
-        {/* コメント内容 */}
+      <div className="px-3 py-2">
         {isEditing ? (
           <ReviewCommentEditor
             initialContent={comment.content}
-            onSave={(content) => updateMutation.mutate(content)}
+            onSave={handleUpdate}
             onCancel={() => setIsEditing(false)}
-            isUpdating={updateMutation.isPending}
+            isUpdating={isSubmitting}
           />
         ) : (
           <p className="text-sm text-foreground whitespace-pre-wrap break-words">
@@ -273,8 +277,8 @@ export function ReviewCommentItem({
       {isReplying && (
         <div className="px-3 pb-3 border-t border-border pt-3">
           <ReviewCommentForm
-            onSubmit={(content) => createReplyMutation.mutate(content)}
-            isSubmitting={createReplyMutation.isPending}
+            onSubmit={handleAddReply}
+            isSubmitting={isSubmitting}
             placeholder="返信を入力..."
             autoFocus
             onCancel={() => setIsReplying(false)}
@@ -289,30 +293,25 @@ export function ReviewCommentItem({
           <button
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="w-full flex items-center justify-between px-3 py-2 text-sm text-foreground-muted hover:text-foreground hover:bg-background-tertiary transition-colors"
+            className="w-full flex items-center justify-between px-3 py-1.5 text-xs text-foreground-muted hover:text-foreground hover:bg-background-tertiary transition-colors"
           >
             <span>{comment.replies.length} 件の返信</span>
-            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            {isExpanded ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </button>
 
           {isExpanded && (
             <div className="border-t border-border divide-y divide-border">
               {comment.replies.map((reply) => (
-                <ReplyItem
+                <InlineReplyItem
                   key={reply.id}
                   reply={reply}
                   currentUserId={currentUserId}
                   isEditing={editingReplyId === reply.id}
                   onStartEdit={() => setEditingReplyId(reply.id)}
                   onCancelEdit={() => setEditingReplyId(null)}
-                  onSave={(content) => updateReplyMutation.mutate({ replyId: reply.id, content })}
-                  onDelete={() => {
-                    if (window.confirm('この返信を削除しますか？')) {
-                      deleteReplyMutation.mutate(reply.id);
-                    }
-                  }}
-                  isUpdating={updateReplyMutation.isPending}
-                  isDeleting={deleteReplyMutation.isPending}
+                  onSave={(content) => handleUpdateReply(reply.id, content)}
+                  onDelete={() => handleDeleteReply(reply.id)}
+                  isSubmitting={isSubmitting}
                 />
               ))}
             </div>
@@ -326,7 +325,7 @@ export function ReviewCommentItem({
 /**
  * メニュードロップダウン
  */
-function MenuDropdown({ items }: { items: MenuItem[] }) {
+function MenuDropdown({ items, disabled }: { items: MenuItem[]; disabled?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -361,7 +360,8 @@ function MenuDropdown({ items }: { items: MenuItem[] }) {
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="p-1 text-foreground-muted hover:text-foreground transition-colors"
+        disabled={disabled}
+        className="p-1 text-foreground-muted hover:text-foreground transition-colors disabled:opacity-50"
         aria-label="操作メニュー"
         aria-expanded={isOpen}
         aria-haspopup="menu"
@@ -374,11 +374,11 @@ function MenuDropdown({ items }: { items: MenuItem[] }) {
           className="absolute right-0 top-full mt-1 w-40 bg-background border border-border rounded-lg shadow-lg py-1 z-dropdown"
           role="menu"
         >
-          {items.map((item, index) => {
+          {items.map((item) => {
             const Icon = item.icon;
             return (
               <button
-                key={index}
+                key={item.label}
                 type="button"
                 className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
                   item.danger
@@ -403,9 +403,9 @@ function MenuDropdown({ items }: { items: MenuItem[] }) {
 }
 
 /**
- * 返信アイテム
+ * インライン返信アイテム
  */
-interface ReplyItemProps {
+interface InlineReplyItemProps {
   reply: ReviewReply;
   currentUserId: string;
   isEditing: boolean;
@@ -413,11 +413,10 @@ interface ReplyItemProps {
   onCancelEdit: () => void;
   onSave: (content: string) => void;
   onDelete: () => void;
-  isUpdating: boolean;
-  isDeleting: boolean;
+  isSubmitting: boolean;
 }
 
-function ReplyItem({
+function InlineReplyItem({
   reply,
   currentUserId,
   isEditing,
@@ -425,9 +424,8 @@ function ReplyItem({
   onCancelEdit,
   onSave,
   onDelete,
-  isUpdating,
-  isDeleting,
-}: ReplyItemProps) {
+  isSubmitting,
+}: InlineReplyItemProps) {
   const isAuthor = reply.authorUserId === currentUserId;
 
   const actionItems: MenuItem[] = isAuthor
@@ -438,29 +436,27 @@ function ReplyItem({
     : [];
 
   return (
-    <div className="p-3 bg-background-secondary/50">
+    <div className="px-3 py-2 bg-background-secondary/50">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <AuthorAvatar author={reply.author} agentSession={reply.agentSession} size="sm" />
-          <div className="min-w-0">
-            <AuthorName author={reply.author} agentSession={reply.agentSession} />
-            <span className="text-xs text-foreground-muted">
-              {new Date(reply.createdAt).toLocaleString('ja-JP')}
-            </span>
-          </div>
+          <AuthorName author={reply.author} agentSession={reply.agentSession} />
+          <span className="text-xs text-foreground-muted">
+            {new Date(reply.createdAt).toLocaleString('ja-JP')}
+          </span>
         </div>
-        {actionItems.length > 0 && !isEditing && !isDeleting && (
-          <MenuDropdown items={actionItems} />
+        {actionItems.length > 0 && !isEditing && (
+          <MenuDropdown items={actionItems} disabled={isSubmitting} />
         )}
       </div>
 
-      <div className="mt-2 pl-8">
+      <div className="mt-1 pl-7">
         {isEditing ? (
           <ReviewCommentEditor
             initialContent={reply.content}
             onSave={onSave}
             onCancel={onCancelEdit}
-            isUpdating={isUpdating}
+            isUpdating={isSubmitting}
           />
         ) : (
           <p className="text-sm text-foreground whitespace-pre-wrap break-words">

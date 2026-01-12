@@ -848,6 +848,7 @@ model ReviewComment {
   targetId              String            @map("target_id")
   targetField           ReviewTargetField @map("target_field")
   targetItemId          String?           @map("target_item_id")
+  targetItemContent     String?           @map("target_item_content") @db.Text
   authorUserId          String?           @map("author_user_id")
   authorAgentSessionId  String?           @map("author_agent_session_id")
   content               String            @db.Text

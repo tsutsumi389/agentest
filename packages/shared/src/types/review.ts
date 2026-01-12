@@ -53,6 +53,7 @@ export interface ReviewComment {
   targetId: string;
   targetField: ReviewTargetField;
   targetItemId: string | null;
+  targetItemContent: string | null;
   authorUserId: string | null;
   authorAgentSessionId: string | null;
   content: string;

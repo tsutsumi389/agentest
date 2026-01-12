@@ -12,15 +12,18 @@ import {
   type ProjectMemberRole,
 } from '../../lib/api';
 import { useAuth } from '../../hooks/useAuth';
+import { useReviewSession } from '../../contexts/ReviewSessionContext';
 import { TestCasePreconditionList } from './TestCasePreconditionList';
 import { TestCaseStepList } from './TestCaseStepList';
 import { TestCaseExpectedResultList } from './TestCaseExpectedResultList';
 import { TestCaseHistoryList } from './TestCaseHistoryList';
 import { DeleteTestCaseSection } from './DeleteTestCaseSection';
 import { ReviewCommentList } from '../review/ReviewCommentList';
+import { CommentableField } from '../review/CommentableField';
 import { TestCaseForm } from './TestCaseForm';
 import { type TestCaseTabType } from '../test-suite/TestSuiteHeader';
 import { MarkdownPreview } from '../common/markdown';
+import type { ReviewCommentWithReplies } from '../../lib/api';
 
 // TestCaseTabTypeをTabTypeとしてもエクスポート（後方互換性のため）
 export type TabType = TestCaseTabType;
@@ -158,10 +161,7 @@ export function TestCaseDetailPanel({
       {/* タブコンテンツ */}
       <div className="flex-1 overflow-y-auto p-4">
         {currentTab === 'overview' && (
-          <OverviewTab
-            testCase={testCase}
-            currentRole={currentRole}
-          />
+          <OverviewTab testCase={testCase} canEdit={canEdit} />
         )}
 
         {currentTab === 'review' && user && (
@@ -206,44 +206,67 @@ export function useTestCaseDetails(testCaseId: string | null) {
  */
 function OverviewTab({
   testCase,
-  currentRole,
+  canEdit,
 }: {
   testCase: TestCaseWithDetails;
-  currentRole?: 'OWNER' | ProjectMemberRole;
+  canEdit: boolean;
 }) {
+  const { currentReview, refreshReview } = useReviewSession();
+
+  // 現在のレビューセッションからコメントを取得
+  const comments: ReviewCommentWithReplies[] = currentReview?.comments || [];
+
+  // コメント追加時のコールバック
+  const handleCommentAdded = () => {
+    refreshReview();
+  };
+
   return (
     <div className="space-y-6">
       {/* 説明 */}
-      <div className="space-y-2">
-        <h3 className="text-sm font-semibold text-foreground">説明</h3>
-        {testCase.description ? (
-          <MarkdownPreview content={testCase.description} />
-        ) : (
-          <p className="text-sm text-foreground-subtle italic">
-            説明なし
-          </p>
-        )}
-      </div>
+      <CommentableField
+        targetType="CASE"
+        targetId={testCase.id}
+        targetField="DESCRIPTION"
+        fieldContent={testCase.description || undefined}
+        comments={comments}
+        canEdit={canEdit}
+        onCommentAdded={handleCommentAdded}
+      >
+        <div className="space-y-2">
+          <h3 className="text-sm font-semibold text-foreground">説明</h3>
+          {testCase.description ? (
+            <MarkdownPreview content={testCase.description} />
+          ) : (
+            <p className="text-sm text-foreground-subtle italic">
+              説明なし
+            </p>
+          )}
+        </div>
+      </CommentableField>
 
       {/* 前提条件 */}
       <TestCasePreconditionList
         testCaseId={testCase.id}
         initialPreconditions={testCase.preconditions}
-        currentRole={currentRole}
+        comments={comments}
+        onCommentAdded={handleCommentAdded}
       />
 
       {/* テスト手順 */}
       <TestCaseStepList
         testCaseId={testCase.id}
         initialSteps={testCase.steps}
-        currentRole={currentRole}
+        comments={comments}
+        onCommentAdded={handleCommentAdded}
       />
 
       {/* 期待結果 */}
       <TestCaseExpectedResultList
         testCaseId={testCase.id}
         initialExpectedResults={testCase.expectedResults}
-        currentRole={currentRole}
+        comments={comments}
+        onCommentAdded={handleCommentAdded}
       />
     </div>
   );

@@ -3,18 +3,20 @@ import {
   Loader2,
   ClipboardList,
 } from 'lucide-react';
-import { testCasesApi, ApiError, type TestCasePrecondition, type ProjectMemberRole } from '../../lib/api';
+import { testCasesApi, ApiError, type TestCasePrecondition, type ReviewCommentWithReplies } from '../../lib/api';
 import { MarkdownPreview } from '../common/markdown';
+import { CommentableItem } from '../review/CommentableItem';
+import { CommentableField } from '../review/CommentableField';
 
 interface TestCasePreconditionListProps {
   /** テストケースID */
   testCaseId: string;
   /** 初期データ（オプティミスティック更新用） */
   initialPreconditions?: TestCasePrecondition[];
-  /** 現在のユーザーのロール（未使用、互換性のため維持） */
-  currentRole?: 'OWNER' | ProjectMemberRole;
-  /** 更新時のコールバック（未使用、互換性のため維持） */
-  onUpdated?: () => void;
+  /** レビューコメント一覧 */
+  comments?: ReviewCommentWithReplies[];
+  /** コメント追加時のコールバック */
+  onCommentAdded?: () => void;
 }
 
 /**
@@ -24,6 +26,8 @@ interface TestCasePreconditionListProps {
 export function TestCasePreconditionList({
   testCaseId,
   initialPreconditions,
+  comments,
+  onCommentAdded,
 }: TestCasePreconditionListProps) {
   const [preconditions, setPreconditions] = useState<TestCasePrecondition[]>(initialPreconditions || []);
   const [isLoading, setIsLoading] = useState(!initialPreconditions);
@@ -85,35 +89,53 @@ export function TestCasePreconditionList({
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">前提条件</h3>
-      </div>
+    <CommentableField
+      targetType="CASE"
+      targetId={testCaseId}
+      targetField="PRECONDITION"
+      comments={comments}
+      onCommentAdded={onCommentAdded}
+    >
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-foreground">前提条件</h3>
+        </div>
 
-      {preconditions.length === 0 ? (
-        <div className="text-center py-6 border-2 border-dashed border-border rounded-lg">
-          <ClipboardList className="w-8 h-8 text-foreground-muted mx-auto mb-2" />
-          <p className="text-foreground-muted text-sm">前提条件が設定されていません</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {preconditions.map((precondition, index) => (
-            <div
-              key={precondition.id}
-              className="flex items-start gap-3 p-3 bg-background-secondary rounded-lg"
-            >
-              {/* 番号 */}
-              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-background-tertiary flex items-center justify-center text-xs font-medium text-foreground-muted">
-                {index + 1}
-              </span>
-              {/* 内容 */}
-              <div className="flex-1">
-                <MarkdownPreview content={precondition.content} />
+        {preconditions.length === 0 ? (
+          <div className="text-center py-6 border-2 border-dashed border-border rounded-lg">
+            <ClipboardList className="w-8 h-8 text-foreground-muted mx-auto mb-2" />
+            <p className="text-foreground-muted text-sm">前提条件が設定されていません</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {preconditions.map((precondition, index) => (
+              <div
+                key={precondition.id}
+                className="flex items-start gap-3 p-3 bg-background-secondary rounded-lg"
+              >
+                {/* 番号 */}
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-background-tertiary flex items-center justify-center text-xs font-medium text-foreground-muted">
+                  {index + 1}
+                </span>
+                {/* 内容（CommentableItemでラップ） */}
+                <CommentableItem
+                  targetType="CASE"
+                  targetId={testCaseId}
+                  targetField="PRECONDITION"
+                  itemId={precondition.id}
+                  itemContent={precondition.content}
+                  comments={comments}
+                  onCommentAdded={onCommentAdded}
+                >
+                  <div className="flex-1">
+                    <MarkdownPreview content={precondition.content} />
+                  </div>
+                </CommentableItem>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </CommentableField>
   );
 }

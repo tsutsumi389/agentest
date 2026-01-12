@@ -1327,6 +1327,7 @@ export interface CreateReviewCommentRequest {
   targetId: string;
   targetField: ReviewTargetField;
   targetItemId?: string;
+  targetItemContent?: string;
   content: string;
 }
 

@@ -366,6 +366,7 @@ export function TestSuiteCasesPage() {
                 <OverviewTab
                   testSuiteId={testSuiteId}
                   executions={executions}
+                  currentRole={currentRole}
                 />
               )}
 
@@ -440,16 +441,21 @@ export function TestSuiteCasesPage() {
 interface OverviewTabProps {
   testSuiteId: string;
   executions: { id: string; status: string; startedAt: string }[];
+  currentRole: 'OWNER' | ProjectMemberRole | undefined;
 }
 
 function OverviewTab({
   testSuiteId,
   executions,
+  currentRole,
 }: OverviewTabProps) {
+  // 編集権限の判定（WRITE以上）
+  const canEdit = currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'WRITE';
+
   return (
     <div className="space-y-6">
       {/* 前提条件セクション */}
-      <PreconditionList testSuiteId={testSuiteId} />
+      <PreconditionList testSuiteId={testSuiteId} canEdit={canEdit} />
 
       {/* 実行履歴 */}
       <div className="card">
