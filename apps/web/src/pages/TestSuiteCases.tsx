@@ -14,7 +14,6 @@ import { TestCaseForm } from '../components/test-case/TestCaseForm';
 import { TestSuiteForm } from '../components/test-suite/TestSuiteForm';
 import { StartExecutionModal } from '../components/execution/StartExecutionModal';
 import { PreconditionList } from '../components/test-suite/PreconditionList';
-import { UnresolvedCommentList } from '../components/review/UnresolvedCommentList';
 import { TestSuiteHistoryList } from '../components/test-suite/TestSuiteHistoryList';
 import { DeleteTestSuiteSection } from '../components/test-suite/DeleteTestSuiteSection';
 import { ExecutionHistoryList } from '../components/execution/ExecutionHistoryList';
@@ -361,7 +360,6 @@ export function TestSuiteCasesPage() {
                   description={suite.description}
                   executions={executions}
                   currentRole={currentRole}
-                  currentUserId={user?.id || ''}
                 />
               )}
 
@@ -438,7 +436,6 @@ interface OverviewTabProps {
   description: string | null;
   executions: { id: string; status: string; startedAt: string }[];
   currentRole: 'OWNER' | ProjectMemberRole | undefined;
-  currentUserId: string;
 }
 
 function OverviewTab({
@@ -446,7 +443,6 @@ function OverviewTab({
   description,
   executions,
   currentRole,
-  currentUserId,
 }: OverviewTabProps) {
   // ReviewSessionからコメントを取得
   const { currentReview, refreshReview } = useReviewSession();
@@ -459,14 +455,6 @@ function OverviewTab({
 
   return (
     <div className="space-y-6">
-      {/* 未解決のレビューコメント一覧 */}
-      <UnresolvedCommentList
-        targetType="SUITE"
-        targetId={testSuiteId}
-        currentUserId={currentUserId}
-        canEdit={canEdit}
-      />
-
       {/* 説明セクション（コメント可能） */}
       <CommentableField
         targetType="SUITE"
