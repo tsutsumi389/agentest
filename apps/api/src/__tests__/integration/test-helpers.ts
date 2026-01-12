@@ -586,9 +586,52 @@ export async function createTestCaseHistory(
 }
 
 /**
+ * テスト用レビューセッションを作成
+ */
+export async function createTestReview(
+  testSuiteId: string,
+  overrides: Partial<{
+    id: string;
+    authorUserId: string | null;
+    authorAgentSessionId: string | null;
+    status: 'DRAFT' | 'SUBMITTED';
+    verdict: 'APPROVED' | 'CHANGES_REQUESTED' | 'COMMENT_ONLY' | null;
+    summary: string | null;
+    submittedAt: Date | null;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.review.create({
+    data: {
+      id,
+      testSuiteId,
+      authorUserId: overrides.authorUserId ?? null,
+      authorAgentSessionId: overrides.authorAgentSessionId ?? null,
+      status: overrides.status ?? 'DRAFT',
+      verdict: overrides.verdict ?? null,
+      summary: overrides.summary ?? null,
+      submittedAt: overrides.submittedAt ?? null,
+    },
+    include: {
+      author: {
+        select: { id: true, name: true, avatarUrl: true },
+      },
+      agentSession: {
+        select: { id: true, clientName: true },
+      },
+      comments: true,
+      _count: {
+        select: { comments: true },
+      },
+    },
+  });
+}
+
+/**
  * テスト用レビューコメントを作成
  */
 export async function createTestReviewComment(
+  reviewId: string,
   overrides: Partial<{
     id: string;
     targetType: 'SUITE' | 'CASE';
@@ -605,6 +648,7 @@ export async function createTestReviewComment(
   return prisma.reviewComment.create({
     data: {
       id,
+      reviewId,
       targetType: overrides.targetType ?? 'SUITE',
       targetId: overrides.targetId ?? randomUUID(),
       targetField: overrides.targetField ?? 'TITLE',

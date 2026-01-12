@@ -17,7 +17,9 @@ import { PreconditionList } from '../components/test-suite/PreconditionList';
 import { TestSuiteHistoryList } from '../components/test-suite/TestSuiteHistoryList';
 import { DeleteTestSuiteSection } from '../components/test-suite/DeleteTestSuiteSection';
 import { ExecutionHistoryList } from '../components/execution/ExecutionHistoryList';
-import { ReviewCommentList } from '../components/review/ReviewCommentList';
+import { ReviewPanel } from '../components/review/ReviewPanel';
+import { ReviewSessionBar } from '../components/review/ReviewSessionBar';
+import { ReviewSessionProvider } from '../contexts/ReviewSessionContext';
 import { MarkdownPreview } from '../components/common/markdown/MarkdownPreview';
 
 /**
@@ -286,29 +288,30 @@ export function TestSuiteCasesPage() {
   }
 
   return (
-    <div className="h-full flex flex-col">
-      {/* ヘッダー */}
-      <TestSuiteHeader
-        testSuite={suite}
-        project={project}
-        testCaseCount={testCases.length}
-        currentRole={currentRole}
-        onStartExecution={handleStartExecution}
-        onCreateTestCase={handleStartCreateMode}
-        onEdit={() => setIsEditMode(true)}
-        isExecutionPending={startExecutionMutation.isPending}
-        currentTab={currentTab}
-        onTabChange={handleTabChange}
-        hasSelectedTestCase={!!selectedTestCaseId || isCreateMode}
-        isCreateMode={isCreateMode}
-        // テストケース選択時のprops
-        selectedTestCase={selectedTestCaseInfo}
-        testCaseTab={testCaseTab}
-        onTestCaseTabChange={handleTestCaseTabChange}
-        onEditTestCase={() => setIsTestCaseEditMode(true)}
-        onCopyTestCase={() => setIsCopyModalOpen(true)}
-        onCloseTestCase={() => handleSelectTestCase(null)}
-      />
+    <ReviewSessionProvider>
+      <div className="h-full flex flex-col">
+        {/* ヘッダー */}
+        <TestSuiteHeader
+          testSuite={suite}
+          project={project}
+          testCaseCount={testCases.length}
+          currentRole={currentRole}
+          onStartExecution={handleStartExecution}
+          onCreateTestCase={handleStartCreateMode}
+          onEdit={() => setIsEditMode(true)}
+          isExecutionPending={startExecutionMutation.isPending}
+          currentTab={currentTab}
+          onTabChange={handleTabChange}
+          hasSelectedTestCase={!!selectedTestCaseId || isCreateMode}
+          isCreateMode={isCreateMode}
+          // テストケース選択時のprops
+          selectedTestCase={selectedTestCaseInfo}
+          testCaseTab={testCaseTab}
+          onTestCaseTabChange={handleTestCaseTabChange}
+          onEditTestCase={() => setIsTestCaseEditMode(true)}
+          onCopyTestCase={() => setIsCopyModalOpen(true)}
+          onCloseTestCase={() => handleSelectTestCase(null)}
+        />
 
       {/* メインコンテンツ */}
       <div className="flex-1 overflow-hidden p-4">
@@ -370,15 +373,8 @@ export function TestSuiteCasesPage() {
                 <ExecutionHistoryList testSuiteId={testSuiteId!} />
               )}
 
-              {currentTab === 'review' && user && (
-                <div className="card p-4">
-                  <ReviewCommentList
-                    targetType="SUITE"
-                    targetId={testSuiteId}
-                    currentUserId={user.id}
-                    currentRole={currentRole}
-                  />
-                </div>
+              {currentTab === 'review' && (
+                <ReviewPanel testSuiteId={testSuiteId} />
               )}
 
               {currentTab === 'history' && (
@@ -430,7 +426,11 @@ export function TestSuiteCasesPage() {
           }}
         />
       )}
+
+      {/* レビューセッションバー（レビュー中に画面下部に表示） */}
+      <ReviewSessionBar />
     </div>
+    </ReviewSessionProvider>
   );
 }
 

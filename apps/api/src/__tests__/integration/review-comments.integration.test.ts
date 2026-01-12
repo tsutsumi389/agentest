@@ -8,6 +8,7 @@ import {
   createTestProjectMember,
   createTestSuite,
   createTestCase,
+  createTestReview,
   createTestReviewComment,
   createTestReviewReply,
   cleanupTestData,
@@ -134,6 +135,7 @@ describe('Review Comments API Integration Tests', () => {
   let project: Awaited<ReturnType<typeof createTestProject>>;
   let testSuite: Awaited<ReturnType<typeof createTestSuite>>;
   let testCase: Awaited<ReturnType<typeof createTestCase>>;
+  let testReview: Awaited<ReturnType<typeof createTestReview>>;
 
   beforeAll(async () => {
     app = createApp();
@@ -174,15 +176,22 @@ describe('Review Comments API Integration Tests', () => {
       description: 'Test case description',
     });
 
+    // テストレビューを作成
+    testReview = await createTestReview(testSuite.id, {
+      authorUserId: owner.id,
+      status: 'SUBMITTED',
+      verdict: 'APPROVED',
+    });
+
     // デフォルトでオーナーとして認証
     setTestAuth({ id: owner.id, email: owner.email }, 'ADMIN', 'ADMIN', 'ADMIN', 'ADMIN');
   });
 
   // ============================================================
-  // POST /api/review-comments - コメント作成
+  // POST /api/review-comments - コメント作成（非推奨）
   // ============================================================
-  describe('POST /api/review-comments', () => {
-    it('テストスイートへのコメントを作成できる', async () => {
+  describe('POST /api/review-comments (deprecated)', () => {
+    it('非推奨のため400エラーを返す', async () => {
       setTestAuth({ id: writer.id, email: writer.email }, 'WRITE', 'WRITE', 'WRITE', 'WRITE');
 
       const response = await request(app)
@@ -193,29 +202,10 @@ describe('Review Comments API Integration Tests', () => {
           targetField: 'TITLE',
           content: 'This is a test comment',
         })
-        .expect(201);
+        .expect(400);
 
-      expect(response.body.comment.content).toBe('This is a test comment');
-      expect(response.body.comment.targetType).toBe('SUITE');
-      expect(response.body.comment.targetId).toBe(testSuite.id);
-      expect(response.body.comment.status).toBe('OPEN');
-    });
-
-    it('テストケースへのコメントを作成できる', async () => {
-      setTestAuth({ id: writer.id, email: writer.email }, 'WRITE', 'WRITE', 'WRITE', 'WRITE');
-
-      const response = await request(app)
-        .post('/api/review-comments')
-        .send({
-          targetType: 'CASE',
-          targetId: testCase.id,
-          targetField: 'DESCRIPTION',
-          content: 'Test case comment',
-        })
-        .expect(201);
-
-      expect(response.body.comment.targetType).toBe('CASE');
-      expect(response.body.comment.targetId).toBe(testCase.id);
+      expect(response.body.error.code).toBe('BAD_REQUEST');
+      expect(response.body.error.message).toContain('deprecated');
     });
 
     it('未認証の場合は401エラー', async () => {
@@ -261,19 +251,82 @@ describe('Review Comments API Integration Tests', () => {
 
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
     });
+  });
 
-    it('存在しないターゲットには404エラー', async () => {
+  // ============================================================
+  // POST /api/reviews/:reviewId/comments - 新しいコメント作成API
+  // ============================================================
+  describe('POST /api/reviews/:reviewId/comments', () => {
+    let draftReview: Awaited<ReturnType<typeof createTestReview>>;
+
+    beforeEach(async () => {
+      // 下書きレビューを作成
+      draftReview = await createTestReview(testSuite.id, {
+        authorUserId: owner.id,
+        status: 'DRAFT',
+      });
+    });
+
+    it('下書きレビューにコメントを追加できる', async () => {
       const response = await request(app)
-        .post('/api/review-comments')
+        .post(`/api/reviews/${draftReview.id}/comments`)
         .send({
           targetType: 'SUITE',
-          targetId: '00000000-0000-0000-0000-000000000000',
+          targetId: testSuite.id,
+          targetField: 'TITLE',
+          content: 'This is a new comment',
+        })
+        .expect(201);
+
+      expect(response.body.comment.content).toBe('This is a new comment');
+      expect(response.body.comment.targetType).toBe('SUITE');
+      expect(response.body.comment.targetId).toBe(testSuite.id);
+      expect(response.body.comment.status).toBe('OPEN');
+    });
+
+    it('テストケースへのコメントを追加できる', async () => {
+      const response = await request(app)
+        .post(`/api/reviews/${draftReview.id}/comments`)
+        .send({
+          targetType: 'CASE',
+          targetId: testCase.id,
+          targetField: 'DESCRIPTION',
+          content: 'Test case comment via new API',
+        })
+        .expect(201);
+
+      expect(response.body.comment.targetType).toBe('CASE');
+      expect(response.body.comment.targetId).toBe(testCase.id);
+    });
+
+    it('未認証の場合は401エラー', async () => {
+      clearTestAuth();
+
+      const response = await request(app)
+        .post(`/api/reviews/${draftReview.id}/comments`)
+        .send({
+          targetType: 'SUITE',
+          targetId: testSuite.id,
           targetField: 'TITLE',
           content: 'Test comment',
         })
-        .expect(404);
+        .expect(401);
 
-      expect(response.body.error.code).toBe('NOT_FOUND');
+      expect(response.body.error.code).toBe('AUTHENTICATION_ERROR');
+    });
+
+    it('空のcontentは400エラー', async () => {
+      const response = await request(app)
+        .post(`/api/reviews/${draftReview.id}/comments`)
+        .send({
+          targetType: 'SUITE',
+          targetId: testSuite.id,
+          targetField: 'TITLE',
+          content: '',
+        })
+        .expect(400);
+
+      expect(response.body.error.code).toBe('VALIDATION_ERROR');
     });
   });
 
@@ -284,7 +337,7 @@ describe('Review Comments API Integration Tests', () => {
     let comment: Awaited<ReturnType<typeof createTestReviewComment>>;
 
     beforeEach(async () => {
-      comment = await createTestReviewComment({
+      comment = await createTestReviewComment(testReview.id, {
         targetType: 'SUITE',
         targetId: testSuite.id,
         targetField: 'TITLE',
@@ -330,7 +383,7 @@ describe('Review Comments API Integration Tests', () => {
     let comment: Awaited<ReturnType<typeof createTestReviewComment>>;
 
     beforeEach(async () => {
-      comment = await createTestReviewComment({
+      comment = await createTestReviewComment(testReview.id, {
         targetType: 'SUITE',
         targetId: testSuite.id,
         targetField: 'TITLE',
@@ -376,7 +429,7 @@ describe('Review Comments API Integration Tests', () => {
     let comment: Awaited<ReturnType<typeof createTestReviewComment>>;
 
     beforeEach(async () => {
-      comment = await createTestReviewComment({
+      comment = await createTestReviewComment(testReview.id, {
         targetType: 'SUITE',
         targetId: testSuite.id,
         targetField: 'TITLE',
@@ -432,7 +485,7 @@ describe('Review Comments API Integration Tests', () => {
     let comment: Awaited<ReturnType<typeof createTestReviewComment>>;
 
     beforeEach(async () => {
-      comment = await createTestReviewComment({
+      comment = await createTestReviewComment(testReview.id, {
         targetType: 'SUITE',
         targetId: testSuite.id,
         targetField: 'TITLE',
@@ -505,7 +558,7 @@ describe('Review Comments API Integration Tests', () => {
     let comment: Awaited<ReturnType<typeof createTestReviewComment>>;
 
     beforeEach(async () => {
-      comment = await createTestReviewComment({
+      comment = await createTestReviewComment(testReview.id, {
         targetType: 'SUITE',
         targetId: testSuite.id,
         targetField: 'TITLE',
@@ -554,7 +607,7 @@ describe('Review Comments API Integration Tests', () => {
     let reply: Awaited<ReturnType<typeof createTestReviewReply>>;
 
     beforeEach(async () => {
-      comment = await createTestReviewComment({
+      comment = await createTestReviewComment(testReview.id, {
         targetType: 'SUITE',
         targetId: testSuite.id,
         targetField: 'TITLE',
@@ -596,7 +649,7 @@ describe('Review Comments API Integration Tests', () => {
     let reply: Awaited<ReturnType<typeof createTestReviewReply>>;
 
     beforeEach(async () => {
-      comment = await createTestReviewComment({
+      comment = await createTestReviewComment(testReview.id, {
         targetType: 'SUITE',
         targetId: testSuite.id,
         targetField: 'TITLE',
@@ -637,7 +690,7 @@ describe('Review Comments API Integration Tests', () => {
   // ============================================================
   describe('GET /api/test-suites/:testSuiteId/comments', () => {
     beforeEach(async () => {
-      await createTestReviewComment({
+      await createTestReviewComment(testReview.id, {
         targetType: 'SUITE',
         targetId: testSuite.id,
         targetField: 'TITLE',
@@ -645,7 +698,7 @@ describe('Review Comments API Integration Tests', () => {
         content: 'Comment 1',
         status: 'OPEN',
       });
-      await createTestReviewComment({
+      await createTestReviewComment(testReview.id, {
         targetType: 'SUITE',
         targetId: testSuite.id,
         targetField: 'DESCRIPTION',
@@ -700,7 +753,7 @@ describe('Review Comments API Integration Tests', () => {
   // ============================================================
   describe('GET /api/test-cases/:testCaseId/comments', () => {
     beforeEach(async () => {
-      await createTestReviewComment({
+      await createTestReviewComment(testReview.id, {
         targetType: 'CASE',
         targetId: testCase.id,
         targetField: 'STEP',

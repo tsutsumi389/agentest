@@ -1281,74 +1281,45 @@ export const organizationsApi = {
 };
 
 // ============================================
-// レビューコメント関連型定義
+// レビュー関連型定義（@agentest/sharedから再エクスポート）
 // ============================================
 
-/** レビュー対象タイプ */
-export type ReviewTargetType = 'SUITE' | 'CASE';
+// 共通型はsharedパッケージから再エクスポート
+export type {
+  ReviewTargetType,
+  ReviewTargetField,
+  ReviewStatus,
+  ReviewSessionStatus,
+  ReviewVerdict,
+} from '@agentest/shared';
 
-/** レビュー対象フィールド */
-export type ReviewTargetField = 'TITLE' | 'DESCRIPTION' | 'PRECONDITION' | 'STEP' | 'EXPECTED_RESULT';
+export type {
+  Review,
+  ReviewAuthor,
+  ReviewAgentSession,
+  ReviewWithAuthor,
+  ReviewWithDetails,
+  DraftReview,
+  ReviewComment,
+  ReviewCommentWithReplies,
+  ReviewReply,
+  ReviewCommentListResponse,
+  ReviewListResponse,
+} from '@agentest/shared';
 
-/** レビューステータス */
-export type ReviewStatus = 'OPEN' | 'RESOLVED';
-
-/** レビューコメント著者情報 */
-export interface ReviewAuthor {
-  id: string;
-  name: string;
-  avatarUrl: string | null;
-}
-
-/** レビューコメント用エージェントセッション情報 */
-export interface ReviewAgentSession {
-  id: string;
-  clientName: string | null;
-}
-
-/** レビュー返信 */
-export interface ReviewReply {
-  id: string;
-  commentId: string;
-  authorUserId: string | null;
-  authorAgentSessionId: string | null;
-  content: string;
-  createdAt: string;
-  updatedAt: string;
-  author: ReviewAuthor | null;
-  agentSession: ReviewAgentSession | null;
-}
-
-/** レビューコメント基本型 */
-export interface ReviewComment {
-  id: string;
-  targetType: ReviewTargetType;
-  targetId: string;
-  targetField: ReviewTargetField;
-  targetItemId: string | null;
-  authorUserId: string | null;
-  authorAgentSessionId: string | null;
-  content: string;
-  status: ReviewStatus;
-  createdAt: string;
-  updatedAt: string;
-}
-
-/** 返信を含むレビューコメント */
-export interface ReviewCommentWithReplies extends ReviewComment {
-  author: ReviewAuthor | null;
-  agentSession: ReviewAgentSession | null;
-  replies: ReviewReply[];
-  _count: { replies: number };
-}
-
-/** コメント一覧レスポンス */
-export interface ReviewCommentListResponse {
-  comments: ReviewCommentWithReplies[];
-  total: number;
-  limit: number;
-  offset: number;
-}
+// APIクライアント固有の型定義
+import type {
+  ReviewTargetType,
+  ReviewTargetField,
+  ReviewVerdict,
+  ReviewStatus,
+  ReviewCommentWithReplies,
+  ReviewReply,
+  ReviewCommentListResponse,
+  ReviewListResponse,
+  ReviewWithDetails,
+  DraftReview,
+} from '@agentest/shared';
 
 /** コメント作成リクエスト */
 export interface CreateReviewCommentRequest {
@@ -1367,10 +1338,20 @@ export interface ReviewCommentSearchParams {
   offset?: number;
 }
 
+/** レビュー検索パラメータ */
+export interface ReviewSearchParams {
+  verdict?: ReviewVerdict;
+  limit?: number;
+  offset?: number;
+}
+
 // ============================================
 // レビューコメントAPI
 // ============================================
-
+/**
+ * @deprecated 非推奨: 新しいレビューセッションベースのAPIを使用してください
+ * reviewsApi.addComment(), reviewsApi.updateComment()等を使用してください
+ */
 export const reviewCommentsApi = {
   // コメント作成
   create: (data: CreateReviewCommentRequest) =>
@@ -1429,6 +1410,76 @@ export const getTestCaseComments = (testCaseId: string, params?: ReviewCommentSe
   return api.get<ReviewCommentListResponse>(
     `/api/test-cases/${testCaseId}/comments${queryString ? `?${queryString}` : ''}`
   );
+};
+
+// ============================================
+// レビューAPI（GitHub PR形式）
+// ============================================
+
+export const reviewsApi = {
+  // テストスイートのレビュー一覧取得（SUBMITTEDのみ）
+  getByTestSuite: (testSuiteId: string, params?: ReviewSearchParams) => {
+    const query = new URLSearchParams();
+    if (params?.verdict) query.set('verdict', params.verdict);
+    if (params?.limit !== undefined) query.set('limit', String(params.limit));
+    if (params?.offset !== undefined) query.set('offset', String(params.offset));
+    const queryString = query.toString();
+    return api.get<ReviewListResponse>(
+      `/api/test-suites/${testSuiteId}/reviews${queryString ? `?${queryString}` : ''}`
+    );
+  },
+
+  // レビュー開始（DRAFT作成）
+  start: (testSuiteId: string, data?: { summary?: string }) =>
+    api.post<{ review: ReviewWithDetails }>(`/api/test-suites/${testSuiteId}/reviews`, data),
+
+  // 自分の下書きレビュー一覧取得
+  getDrafts: () =>
+    api.get<{ reviews: DraftReview[] }>('/api/reviews/drafts'),
+
+  // レビュー詳細取得
+  getById: (reviewId: string) =>
+    api.get<{ review: ReviewWithDetails }>(`/api/reviews/${reviewId}`),
+
+  // レビュー更新（DRAFTのみ）
+  update: (reviewId: string, data: { summary?: string }) =>
+    api.patch<{ review: ReviewWithDetails }>(`/api/reviews/${reviewId}`, data),
+
+  // レビュー提出（DRAFT → SUBMITTED）
+  submit: (reviewId: string, data: { verdict: ReviewVerdict; summary?: string }) =>
+    api.post<{ review: ReviewWithDetails }>(`/api/reviews/${reviewId}/submit`, data),
+
+  // レビュー削除（DRAFTのみ）
+  delete: (reviewId: string) =>
+    api.delete<void>(`/api/reviews/${reviewId}`),
+
+  // コメント追加
+  addComment: (reviewId: string, data: CreateReviewCommentRequest) =>
+    api.post<{ comment: ReviewCommentWithReplies }>(`/api/reviews/${reviewId}/comments`, data),
+
+  // コメント更新
+  updateComment: (reviewId: string, commentId: string, data: { content: string }) =>
+    api.patch<{ comment: ReviewCommentWithReplies }>(`/api/reviews/${reviewId}/comments/${commentId}`, data),
+
+  // コメント削除
+  deleteComment: (reviewId: string, commentId: string) =>
+    api.delete<void>(`/api/reviews/${reviewId}/comments/${commentId}`),
+
+  // コメントステータス変更
+  updateCommentStatus: (reviewId: string, commentId: string, status: ReviewStatus) =>
+    api.patch<{ comment: ReviewCommentWithReplies }>(`/api/reviews/${reviewId}/comments/${commentId}/status`, { status }),
+
+  // 返信追加
+  addReply: (reviewId: string, commentId: string, data: { content: string }) =>
+    api.post<{ reply: ReviewReply }>(`/api/reviews/${reviewId}/comments/${commentId}/replies`, data),
+
+  // 返信更新
+  updateReply: (reviewId: string, commentId: string, replyId: string, data: { content: string }) =>
+    api.patch<{ reply: ReviewReply }>(`/api/reviews/${reviewId}/comments/${commentId}/replies/${replyId}`, data),
+
+  // 返信削除
+  deleteReply: (reviewId: string, commentId: string, replyId: string) =>
+    api.delete<void>(`/api/reviews/${reviewId}/comments/${commentId}/replies/${replyId}`),
 };
 
 // ============================================

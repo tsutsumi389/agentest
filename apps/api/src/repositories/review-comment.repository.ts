@@ -93,8 +93,10 @@ export class ReviewCommentRepository {
 
   /**
    * レビューコメントを作成
+   * @deprecated 新しいReviewRepositoryを使用してください
    */
   async create(data: {
+    reviewId: string;
     targetType: ReviewTargetType;
     targetId: string;
     targetField: ReviewTargetField;
@@ -105,6 +107,7 @@ export class ReviewCommentRepository {
   }) {
     return prisma.reviewComment.create({
       data: {
+        reviewId: data.reviewId,
         targetType: data.targetType,
         targetId: data.targetId,
         targetField: data.targetField,

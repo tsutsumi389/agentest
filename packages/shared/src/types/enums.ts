@@ -83,6 +83,21 @@ export const ReviewStatus = {
 } as const;
 export type ReviewStatus = (typeof ReviewStatus)[keyof typeof ReviewStatus];
 
+// レビューセッションステータス
+export const ReviewSessionStatus = {
+  DRAFT: 'DRAFT',
+  SUBMITTED: 'SUBMITTED',
+} as const;
+export type ReviewSessionStatus = (typeof ReviewSessionStatus)[keyof typeof ReviewSessionStatus];
+
+// レビュー評価
+export const ReviewVerdict = {
+  APPROVED: 'APPROVED',
+  CHANGES_REQUESTED: 'CHANGES_REQUESTED',
+  COMMENT_ONLY: 'COMMENT_ONLY',
+} as const;
+export type ReviewVerdict = (typeof ReviewVerdict)[keyof typeof ReviewVerdict];
+
 export const ReviewTargetType = {
   SUITE: 'SUITE',
   CASE: 'CASE',

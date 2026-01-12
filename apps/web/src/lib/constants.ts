@@ -39,3 +39,14 @@ export const STATUS_LABELS: Record<string, string> = {
   ACTIVE: 'アクティブ',
   ARCHIVED: 'アーカイブ',
 };
+
+/**
+ * レビューターゲットフィールドのラベル
+ */
+export const TARGET_FIELD_LABELS: Record<string, string> = {
+  TITLE: '全体',
+  DESCRIPTION: '説明',
+  PRECONDITION: '前提条件',
+  STEP: 'ステップ',
+  EXPECTED_RESULT: '期待結果',
+};

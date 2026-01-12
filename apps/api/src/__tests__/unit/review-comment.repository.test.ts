@@ -240,6 +240,7 @@ describe('ReviewCommentRepository', () => {
     it('コメントを作成できる', async () => {
       const mockComment = {
         id: 'comment-1',
+        reviewId: 'review-1',
         targetType: 'SUITE',
         targetId: 'suite-1',
         targetField: 'TITLE',
@@ -250,6 +251,7 @@ describe('ReviewCommentRepository', () => {
       mockPrismaReviewComment.create.mockResolvedValue(mockComment);
 
       const result = await repository.create({
+        reviewId: 'review-1',
         targetType: 'SUITE',
         targetId: 'suite-1',
         targetField: 'TITLE',
@@ -259,6 +261,7 @@ describe('ReviewCommentRepository', () => {
 
       expect(mockPrismaReviewComment.create).toHaveBeenCalledWith({
         data: {
+          reviewId: 'review-1',
           targetType: 'SUITE',
           targetId: 'suite-1',
           targetField: 'TITLE',
@@ -277,6 +280,7 @@ describe('ReviewCommentRepository', () => {
       mockPrismaReviewComment.create.mockResolvedValue({ status: 'OPEN' });
 
       await repository.create({
+        reviewId: 'review-1',
         targetType: 'CASE',
         targetId: 'case-1',
         targetField: 'STEP',
@@ -298,6 +302,7 @@ describe('ReviewCommentRepository', () => {
       mockPrismaReviewComment.create.mockResolvedValue({ id: 'comment-1' });
 
       await repository.create({
+        reviewId: 'review-1',
         targetType: 'SUITE',
         targetId: 'suite-1',
         targetField: 'DESCRIPTION',

@@ -1,6 +1,7 @@
-import { prisma, type ReviewTargetType, type ReviewTargetField, type ReviewStatus, type ProjectRole } from '@agentest/db';
+import { prisma, type ReviewTargetType, type ReviewTargetField, type ReviewStatus } from '@agentest/db';
 import { NotFoundError, AuthorizationError, BadRequestError } from '@agentest/shared';
 import { ReviewCommentRepository, type ReviewCommentSearchOptions } from '../repositories/review-comment.repository.js';
+import { authorizationService } from './authorization.service.js';
 
 /**
  * レビューコメント作成データ
@@ -45,105 +46,6 @@ export class ReviewCommentService {
   }
 
   /**
-   * ユーザーのプロジェクト権限を確認
-   */
-  async checkProjectRole(
-    userId: string,
-    projectId: string,
-    requiredRoles: ProjectRole[]
-  ): Promise<boolean> {
-    // プロジェクトメンバーシップをチェック
-    const projectMember = await prisma.projectMember.findUnique({
-      where: {
-        projectId_userId: { projectId, userId },
-      },
-    });
-
-    if (projectMember) {
-      if (projectMember.role === 'OWNER' || requiredRoles.includes(projectMember.role)) {
-        return true;
-      }
-    }
-
-    // プロジェクトの組織情報を取得
-    const project = await prisma.project.findUnique({
-      where: { id: projectId },
-      select: { organizationId: true },
-    });
-
-    // 組織メンバーシップをチェック
-    if (project?.organizationId) {
-      const orgMember = await prisma.organizationMember.findUnique({
-        where: {
-          organizationId_userId: {
-            organizationId: project.organizationId,
-            userId,
-          },
-        },
-      });
-
-      if (orgMember && ['OWNER', 'ADMIN'].includes(orgMember.role)) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * 対象アイテムの存在確認（前提条件/ステップ/期待結果）
-   */
-  private async validateTargetItem(
-    targetType: ReviewTargetType,
-    targetId: string,
-    targetField: ReviewTargetField,
-    targetItemId?: string
-  ): Promise<void> {
-    if (!targetItemId) return;
-
-    // TITLE, DESCRIPTION は targetItemId 不要
-    if (targetField === 'TITLE' || targetField === 'DESCRIPTION') {
-      return;
-    }
-
-    if (targetType === 'SUITE') {
-      // スイートの前提条件のみ
-      if (targetField === 'PRECONDITION') {
-        const precondition = await prisma.testSuitePrecondition.findFirst({
-          where: { id: targetItemId, testSuiteId: targetId },
-        });
-        if (!precondition) {
-          throw new NotFoundError('TestSuitePrecondition', targetItemId);
-        }
-      }
-    } else {
-      // テストケースの前提条件/ステップ/期待結果
-      if (targetField === 'PRECONDITION') {
-        const precondition = await prisma.testCasePrecondition.findFirst({
-          where: { id: targetItemId, testCaseId: targetId },
-        });
-        if (!precondition) {
-          throw new NotFoundError('TestCasePrecondition', targetItemId);
-        }
-      } else if (targetField === 'STEP') {
-        const step = await prisma.testCaseStep.findFirst({
-          where: { id: targetItemId, testCaseId: targetId },
-        });
-        if (!step) {
-          throw new NotFoundError('TestCaseStep', targetItemId);
-        }
-      } else if (targetField === 'EXPECTED_RESULT') {
-        const expectedResult = await prisma.testCaseExpectedResult.findFirst({
-          where: { id: targetItemId, testCaseId: targetId },
-        });
-        if (!expectedResult) {
-          throw new NotFoundError('TestCaseExpectedResult', targetItemId);
-        }
-      }
-    }
-  }
-
-  /**
    * コメントIDで検索
    */
   async findById(commentId: string) {
@@ -170,28 +72,13 @@ export class ReviewCommentService {
 
   /**
    * コメントを作成
+   * @deprecated 新しい /api/reviews/:reviewId/comments エンドポイントを使用してください
    */
-  async create(userId: string, data: CreateCommentData) {
-    // 対象リソースの存在確認とプロジェクトID取得
-    const projectId = await this.getTargetProjectId(data.targetType, data.targetId);
-
-    // プロジェクト権限確認（WRITE以上）
-    const hasPermission = await this.checkProjectRole(userId, projectId, ['ADMIN', 'WRITE']);
-    if (!hasPermission) {
-      throw new AuthorizationError('Insufficient permissions to create comment');
-    }
-
-    // 対象アイテムの存在確認
-    await this.validateTargetItem(data.targetType, data.targetId, data.targetField, data.targetItemId);
-
-    return this.reviewCommentRepo.create({
-      targetType: data.targetType,
-      targetId: data.targetId,
-      targetField: data.targetField,
-      targetItemId: data.targetItemId,
-      authorUserId: userId,
-      content: data.content,
-    });
+  async create(_userId: string, _data: CreateCommentData): Promise<never> {
+    // 旧API: 新しいレビューセッションベースのAPIを使用してください
+    throw new BadRequestError(
+      'This API is deprecated. Please use POST /api/test-suites/:testSuiteId/reviews to start a review, then POST /api/reviews/:reviewId/comments to add comments.'
+    );
   }
 
   /**
@@ -218,7 +105,7 @@ export class ReviewCommentService {
     const projectId = await this.getTargetProjectId(comment.targetType, comment.targetId);
 
     // プロジェクト権限確認（WRITE以上）
-    const hasPermission = await this.checkProjectRole(userId, projectId, ['ADMIN', 'WRITE']);
+    const hasPermission = await authorizationService.checkProjectRole(userId, projectId, ['ADMIN', 'WRITE']);
     if (!hasPermission) {
       throw new AuthorizationError('Insufficient permissions to update comment status');
     }
@@ -250,7 +137,7 @@ export class ReviewCommentService {
     const projectId = await this.getTargetProjectId(comment.targetType, comment.targetId);
 
     // プロジェクト権限確認（WRITE以上）
-    const hasPermission = await this.checkProjectRole(userId, projectId, ['ADMIN', 'WRITE']);
+    const hasPermission = await authorizationService.checkProjectRole(userId, projectId, ['ADMIN', 'WRITE']);
     if (!hasPermission) {
       throw new AuthorizationError('Insufficient permissions to create reply');
     }
