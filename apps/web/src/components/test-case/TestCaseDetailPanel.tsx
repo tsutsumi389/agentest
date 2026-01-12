@@ -11,14 +11,12 @@ import {
   type TestCaseWithDetails,
   type ProjectMemberRole,
 } from '../../lib/api';
-import { useAuth } from '../../hooks/useAuth';
 import { useReviewSession } from '../../contexts/ReviewSessionContext';
 import { TestCasePreconditionList } from './TestCasePreconditionList';
 import { TestCaseStepList } from './TestCaseStepList';
 import { TestCaseExpectedResultList } from './TestCaseExpectedResultList';
 import { TestCaseHistoryList } from './TestCaseHistoryList';
 import { DeleteTestCaseSection } from './DeleteTestCaseSection';
-import { ReviewCommentList } from '../review/ReviewCommentList';
 import { CommentableField } from '../review/CommentableField';
 import { TestCaseForm } from './TestCaseForm';
 import { type TestCaseTabType } from '../test-suite/TestSuiteHeader';
@@ -69,7 +67,6 @@ export function TestCaseDetailPanel({
   onEditModeChange,
 }: TestCaseDetailPanelProps) {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
 
   // テストケース詳細を取得
   const {
@@ -162,15 +159,6 @@ export function TestCaseDetailPanel({
       <div className="flex-1 overflow-y-auto p-4">
         {currentTab === 'overview' && (
           <OverviewTab testCase={testCase} canEdit={canEdit} />
-        )}
-
-        {currentTab === 'review' && user && (
-          <ReviewCommentList
-            targetType="CASE"
-            targetId={testCaseId}
-            currentUserId={user.id}
-            currentRole={currentRole}
-          />
         )}
 
         {currentTab === 'history' && (

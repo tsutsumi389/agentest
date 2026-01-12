@@ -1,11 +1,20 @@
 import { useState, type ReactNode } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { MessageSquarePlus, Loader2 } from 'lucide-react';
 import { useReviewSession, getCommentsForTarget } from '../../contexts/ReviewSessionContext';
-import { ApiError, type ReviewTargetType, type ReviewTargetField, type ReviewCommentWithReplies } from '../../lib/api';
+import {
+  ApiError,
+  getTestSuiteComments,
+  getTestCaseComments,
+  type ReviewTargetType,
+  type ReviewTargetField,
+  type ReviewCommentWithReplies,
+} from '../../lib/api';
 import { useAuth } from '../../hooks/useAuth';
 import { toast } from '../../stores/toast';
 import { ReviewCommentForm } from './ReviewCommentForm';
 import { InlineCommentThread } from './InlineCommentThread';
+import { ReviewCommentItem } from './ReviewCommentItem';
 
 interface CommentableFieldProps {
   /** 子要素 */
@@ -41,10 +50,23 @@ export function CommentableField({
   canEdit: externalCanEdit,
   onCommentAdded,
 }: CommentableFieldProps) {
+  const queryClient = useQueryClient();
   const { isReviewing, currentReview, addComment, isLoading } = useReviewSession();
   const { user } = useAuth();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // APIから未解決コメントを取得（レビュー中でない場合のみ）
+  const { data: unresolvedData, isLoading: isLoadingUnresolved } = useQuery({
+    queryKey: ['unresolved-comments', targetType, targetId],
+    queryFn: () => {
+      const params = { status: 'OPEN' as const, limit: 100 };
+      return targetType === 'SUITE'
+        ? getTestSuiteComments(targetId, params)
+        : getTestCaseComments(targetId, params);
+    },
+    enabled: !isReviewing && !!targetId,
+  });
 
   // このフィールドに紐づくコメントを取得（targetItemIdがnullのもの）
   const allComments = externalComments || currentReview?.comments || [];
@@ -56,6 +78,17 @@ export function CommentableField({
     null // targetItemIdがnullのコメントのみ取得
   );
   const commentCount = fieldComments.length;
+
+  // 未解決コメントをフィルタリング（レビュー中でない場合）
+  const unresolvedComments = !isReviewing
+    ? getCommentsForTarget(
+        unresolvedData?.comments || [],
+        targetType,
+        targetId,
+        targetField,
+        null
+      )
+    : [];
 
   // 編集権限の判定（デフォルトはfalseで安全側に倒す）
   const canEdit = externalCanEdit ?? false;
@@ -86,9 +119,48 @@ export function CommentableField({
     }
   };
 
-  // レビューモードでない場合は子要素のみを表示
+  // コメント更新時のコールバック（キャッシュ無効化）
+  const handleCommentUpdated = () => {
+    queryClient.invalidateQueries({ queryKey: ['unresolved-comments', targetType, targetId] });
+    onCommentAdded?.();
+  };
+
+  // レビューモードでない場合：未解決コメントがあれば表示
   if (!isReviewing) {
-    return <>{children}</>;
+    // ローディング中またはコメントがない場合
+    if (isLoadingUnresolved || unresolvedComments.length === 0) {
+      return (
+        <div>
+          {children}
+          {/* ローディング中の表示 */}
+          {isLoadingUnresolved && (
+            <div className="mt-2 flex items-center gap-2 text-foreground-muted text-sm">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>コメントを読み込み中...</span>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return (
+      <div>
+        {children}
+        {/* 未解決コメント表示 */}
+        <div className="mt-3 space-y-2">
+          {unresolvedComments.map((comment) => (
+            <ReviewCommentItem
+              key={comment.id}
+              comment={comment}
+              targetType={targetType}
+              targetId={targetId}
+              currentUserId={user?.id || ''}
+              canEdit={canEdit}
+            />
+          ))}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -143,7 +215,7 @@ export function CommentableField({
           comments={fieldComments}
           currentUserId={user.id}
           canEdit={canEdit}
-          onCommentUpdated={onCommentAdded}
+          onCommentUpdated={handleCommentUpdated}
         />
       )}
     </div>

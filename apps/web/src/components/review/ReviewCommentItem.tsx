@@ -108,6 +108,8 @@ export function ReviewCommentItem({
     mutationFn: (status: ReviewStatus) => reviewCommentsApi.updateStatus(comment.id, status),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey });
+      // 未解決コメント一覧のキャッシュも更新
+      queryClient.invalidateQueries({ queryKey: ['unresolved-comments', targetType, targetId] });
       toast.success('ステータスを更新しました');
     },
     onError: (err) => {
