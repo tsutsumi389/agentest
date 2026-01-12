@@ -57,8 +57,8 @@ export function CommentableField({
   );
   const commentCount = fieldComments.length;
 
-  // 編集権限の判定
-  const canEdit = externalCanEdit !== undefined ? externalCanEdit : true;
+  // 編集権限の判定（デフォルトはfalseで安全側に倒す）
+  const canEdit = externalCanEdit ?? false;
 
   // コメント追加ハンドラ
   const handleAddComment = async (content: string) => {

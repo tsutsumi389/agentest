@@ -374,11 +374,11 @@ function MenuDropdown({ items, disabled }: { items: MenuItem[]; disabled?: boole
           className="absolute right-0 top-full mt-1 w-40 bg-background border border-border rounded-lg shadow-lg py-1 z-dropdown"
           role="menu"
         >
-          {items.map((item, index) => {
+          {items.map((item) => {
             const Icon = item.icon;
             return (
               <button
-                key={index}
+                key={item.label}
                 type="button"
                 className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
                   item.danger
