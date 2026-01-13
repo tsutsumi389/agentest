@@ -129,6 +129,35 @@ Authorization: Bearer <access_token>
 | PUT | `/test-cases/:id` | テストケース更新 |
 | DELETE | `/test-cases/:id` | テストケース削除 |
 
+### レビュー
+
+| メソッド | パス | 説明 |
+|---------|------|------|
+| POST | `/test-suites/:testSuiteId/reviews` | レビュー開始 |
+| GET | `/test-suites/:testSuiteId/reviews` | レビュー一覧取得 |
+| GET | `/reviews/drafts` | 下書き一覧 |
+| GET | `/reviews/:reviewId` | レビュー詳細 |
+| PATCH | `/reviews/:reviewId` | レビュー更新 |
+| POST | `/reviews/:reviewId/submit` | レビュー提出 |
+| PATCH | `/reviews/:reviewId/verdict` | 評価変更 |
+| DELETE | `/reviews/:reviewId` | レビュー削除（DRAFT のみ） |
+
+→ [レビュー API 詳細](./reviews.md)
+
+### レビューコメント
+
+| メソッド | パス | 説明 |
+|---------|------|------|
+| POST | `/reviews/:reviewId/comments` | コメント追加 |
+| PATCH | `/reviews/:reviewId/comments/:commentId` | コメント編集 |
+| PATCH | `/reviews/:reviewId/comments/:commentId/status` | ステータス変更 |
+| DELETE | `/reviews/:reviewId/comments/:commentId` | コメント削除 |
+| POST | `/reviews/:reviewId/comments/:commentId/replies` | 返信追加 |
+| PATCH | `/reviews/:reviewId/comments/:commentId/replies/:replyId` | 返信編集 |
+| DELETE | `/reviews/:reviewId/comments/:commentId/replies/:replyId` | 返信削除 |
+
+→ [レビュー API 詳細](./reviews.md#コメント操作)
+
 ### テスト実行
 
 | メソッド | パス | 説明 |
