@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import {
   ChevronDown,
   ChevronUp,
@@ -7,9 +7,7 @@ import {
   Trash2,
   CheckCircle2,
   RotateCcw,
-  MoreVertical,
 } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 import type { ReviewCommentWithReplies, ReviewReply } from '../../lib/api';
 import { useReviewSession } from '../../contexts/ReviewSessionContext';
 import { toast } from '../../stores/toast';
@@ -17,14 +15,7 @@ import { ReviewStatusBadge } from './ReviewStatusBadge';
 import { ReviewCommentForm } from './ReviewCommentForm';
 import { ReviewCommentEditor } from './ReviewCommentEditor';
 import { AuthorAvatar, AuthorName } from '../common/AuthorAvatar';
-
-/** メニュー項目の型 */
-interface MenuItem {
-  label: string;
-  icon: LucideIcon;
-  onClick: () => void;
-  danger?: boolean;
-}
+import { MarkdownPreview } from '../common/markdown';
 
 interface InlineCommentThreadProps {
   /** コメント一覧 */
@@ -195,36 +186,6 @@ function InlineCommentItem({
     }
   };
 
-  // アクションメニュー項目
-  const actionItems: MenuItem[] = [
-    ...(isAuthor ? [
-      {
-        label: '編集',
-        icon: Pencil,
-        onClick: () => setIsEditing(true),
-      },
-      {
-        label: '削除',
-        icon: Trash2,
-        onClick: handleDelete,
-        danger: true,
-      },
-    ] : []),
-    ...(canEdit ? [
-      comment.status === 'OPEN'
-        ? {
-            label: '解決済みにする',
-            icon: CheckCircle2,
-            onClick: () => handleStatusChange('RESOLVED'),
-          }
-        : {
-            label: '未解決に戻す',
-            icon: RotateCcw,
-            onClick: () => handleStatusChange('OPEN'),
-          },
-    ] : []),
-  ];
-
   const hasReplies = comment.replies.length > 0;
 
   return (
@@ -240,6 +201,7 @@ function InlineCommentItem({
           </span>
         </div>
         <div className="flex items-center gap-1">
+          {/* 返信ボタン */}
           {canEdit && (
             <button
               type="button"
@@ -251,8 +213,53 @@ function InlineCommentItem({
               <Reply className="w-4 h-4" />
             </button>
           )}
-          {actionItems.length > 0 && (
-            <MenuDropdown items={actionItems} disabled={isLoading || isSubmitting} />
+          {/* 編集ボタン（投稿者のみ） */}
+          {isAuthor && (
+            <button
+              type="button"
+              onClick={() => setIsEditing(true)}
+              disabled={isLoading || isSubmitting}
+              className="p-1 text-foreground-muted hover:text-foreground transition-colors disabled:opacity-50"
+              title="編集"
+            >
+              <Pencil className="w-4 h-4" />
+            </button>
+          )}
+          {/* 削除ボタン（投稿者のみ） */}
+          {isAuthor && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              disabled={isLoading || isSubmitting}
+              className="p-1 text-foreground-muted hover:text-danger transition-colors disabled:opacity-50"
+              title="削除"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+          {/* 解決済み/未解決ボタン（編集権限のみ） */}
+          {canEdit && (
+            comment.status === 'OPEN' ? (
+              <button
+                type="button"
+                onClick={() => handleStatusChange('RESOLVED')}
+                disabled={isLoading || isSubmitting}
+                className="p-1 text-foreground-muted hover:text-success transition-colors disabled:opacity-50"
+                title="解決済みにする"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => handleStatusChange('OPEN')}
+                disabled={isLoading || isSubmitting}
+                className="p-1 text-foreground-muted hover:text-warning transition-colors disabled:opacity-50"
+                title="未解決に戻す"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+            )
           )}
         </div>
       </div>
@@ -267,9 +274,9 @@ function InlineCommentItem({
             isUpdating={isSubmitting}
           />
         ) : (
-          <p className="text-sm text-foreground whitespace-pre-wrap break-words">
-            {comment.content}
-          </p>
+          <div className="text-sm">
+            <MarkdownPreview content={comment.content} />
+          </div>
         )}
       </div>
 
@@ -323,86 +330,6 @@ function InlineCommentItem({
 }
 
 /**
- * メニュードロップダウン
- */
-function MenuDropdown({ items, disabled }: { items: MenuItem[]; disabled?: boolean }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  // 外部クリックで閉じる
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen]);
-
-  if (items.length === 0) return null;
-
-  return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        disabled={disabled}
-        className="p-1 text-foreground-muted hover:text-foreground transition-colors disabled:opacity-50"
-        aria-label="操作メニュー"
-        aria-expanded={isOpen}
-        aria-haspopup="menu"
-      >
-        <MoreVertical className="w-4 h-4" />
-      </button>
-
-      {isOpen && (
-        <div
-          className="absolute right-0 top-full mt-1 w-40 bg-background border border-border rounded-lg shadow-lg py-1 z-dropdown"
-          role="menu"
-        >
-          {items.map((item) => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.label}
-                type="button"
-                className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
-                  item.danger
-                    ? 'text-danger hover:bg-danger-subtle'
-                    : 'text-foreground hover:bg-background-tertiary'
-                }`}
-                onClick={() => {
-                  item.onClick();
-                  setIsOpen(false);
-                }}
-                role="menuitem"
-              >
-                <Icon className="w-4 h-4" />
-                {item.label}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/**
  * インライン返信アイテム
  */
 interface InlineReplyItemProps {
@@ -428,13 +355,6 @@ function InlineReplyItem({
 }: InlineReplyItemProps) {
   const isAuthor = reply.authorUserId === currentUserId;
 
-  const actionItems: MenuItem[] = isAuthor
-    ? [
-        { label: '編集', icon: Pencil, onClick: onStartEdit },
-        { label: '削除', icon: Trash2, onClick: onDelete, danger: true },
-      ]
-    : [];
-
   return (
     <div className="px-3 py-2 bg-background-secondary/50">
       <div className="flex items-start justify-between gap-2">
@@ -445,8 +365,27 @@ function InlineReplyItem({
             {new Date(reply.createdAt).toLocaleString('ja-JP')}
           </span>
         </div>
-        {actionItems.length > 0 && !isEditing && (
-          <MenuDropdown items={actionItems} disabled={isSubmitting} />
+        {isAuthor && !isEditing && (
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={onStartEdit}
+              disabled={isSubmitting}
+              className="p-1 text-foreground-muted hover:text-foreground transition-colors disabled:opacity-50"
+              title="編集"
+            >
+              <Pencil className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={onDelete}
+              disabled={isSubmitting}
+              className="p-1 text-foreground-muted hover:text-danger transition-colors disabled:opacity-50"
+              title="削除"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
         )}
       </div>
 
@@ -459,9 +398,9 @@ function InlineReplyItem({
             isUpdating={isSubmitting}
           />
         ) : (
-          <p className="text-sm text-foreground whitespace-pre-wrap break-words">
-            {reply.content}
-          </p>
+          <div className="text-sm">
+            <MarkdownPreview content={reply.content} />
+          </div>
         )}
       </div>
     </div>
