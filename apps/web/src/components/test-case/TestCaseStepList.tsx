@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { testCasesApi, ApiError, type TestCaseStep, type ReviewCommentWithReplies } from '../../lib/api';
 import { MarkdownPreview } from '../common/markdown';
+import { CommentableField } from '../review/CommentableField';
 import { CommentableItem } from '../review/CommentableItem';
 
 interface TestCaseStepListProps {
@@ -14,6 +15,8 @@ interface TestCaseStepListProps {
   initialSteps?: TestCaseStep[];
   /** レビューコメント一覧 */
   comments?: ReviewCommentWithReplies[];
+  /** 編集権限があるか */
+  canEdit?: boolean;
   /** コメント追加時のコールバック */
   onCommentAdded?: () => void;
 }
@@ -26,6 +29,7 @@ export function TestCaseStepList({
   testCaseId,
   initialSteps,
   comments,
+  canEdit,
   onCommentAdded,
 }: TestCaseStepListProps) {
   const [steps, setSteps] = useState<TestCaseStep[]>(initialSteps || []);
@@ -89,44 +93,54 @@ export function TestCaseStepList({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">テスト手順</h3>
-      </div>
+      <CommentableField
+        targetType="CASE"
+        targetId={testCaseId}
+        targetField="STEP"
+        comments={comments}
+        canEdit={canEdit}
+        onCommentAdded={onCommentAdded}
+      >
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-foreground">テスト手順</h3>
+        </div>
 
-      {steps.length === 0 ? (
-        <div className="text-center py-6 border-2 border-dashed border-border rounded-lg">
-          <ListOrdered className="w-8 h-8 text-foreground-muted mx-auto mb-2" />
-          <p className="text-foreground-muted text-sm">テスト手順が設定されていません</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {steps.map((step, index) => (
-            <div
-              key={step.id}
-              className="flex items-start gap-3 p-3 bg-background-secondary rounded-lg"
-            >
-              {/* 番号（アクセントカラー） */}
-              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-accent/20 text-accent flex items-center justify-center text-xs font-medium">
-                {index + 1}
-              </span>
-              {/* 内容（CommentableItemでラップ） */}
-              <CommentableItem
-                targetType="CASE"
-                targetId={testCaseId}
-                targetField="STEP"
-                itemId={step.id}
-                itemContent={step.content}
-                comments={comments}
-                onCommentAdded={onCommentAdded}
+        {steps.length === 0 ? (
+          <div className="text-center py-6 border-2 border-dashed border-border rounded-lg">
+            <ListOrdered className="w-8 h-8 text-foreground-muted mx-auto mb-2" />
+            <p className="text-foreground-muted text-sm">テスト手順が設定されていません</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {steps.map((step, index) => (
+              <div
+                key={step.id}
+                className="flex items-start gap-3 p-3 bg-background-secondary rounded-lg"
               >
-                <div className="flex-1">
-                  <MarkdownPreview content={step.content} />
-                </div>
-              </CommentableItem>
-            </div>
-          ))}
-        </div>
-      )}
+                {/* 番号（アクセントカラー） */}
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-accent/20 text-accent flex items-center justify-center text-xs font-medium">
+                  {index + 1}
+                </span>
+                {/* 内容（CommentableItemでラップ） */}
+                <CommentableItem
+                  targetType="CASE"
+                  targetId={testCaseId}
+                  targetField="STEP"
+                  itemId={step.id}
+                  itemContent={step.content}
+                  comments={comments}
+                  canEdit={canEdit}
+                  onCommentAdded={onCommentAdded}
+                >
+                  <div className="flex-1">
+                    <MarkdownPreview content={step.content} />
+                  </div>
+                </CommentableItem>
+              </div>
+            ))}
+          </div>
+        )}
+      </CommentableField>
     </div>
   );
 }

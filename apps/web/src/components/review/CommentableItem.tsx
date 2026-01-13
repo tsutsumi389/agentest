@@ -139,7 +139,7 @@ export function CommentableItem({
       <div>
         {children}
         {/* 未解決コメント表示 */}
-        <div className="mt-2 ml-9 space-y-2">
+        <div className="mt-2 space-y-2">
           {unresolvedComments.map((comment) => (
             <ReviewCommentItem
               key={comment.id}
@@ -189,7 +189,7 @@ export function CommentableItem({
 
       {/* インラインフォーム */}
       {isFormOpen && (
-        <div className="mt-3 ml-9 p-3 bg-background-secondary rounded-lg border border-border">
+        <div className="mt-3 p-3 bg-background-secondary rounded-lg border border-border">
           <ReviewCommentForm
             onSubmit={handleAddComment}
             isSubmitting={isSubmitting}
@@ -203,7 +203,7 @@ export function CommentableItem({
 
       {/* インラインコメント表示 */}
       {commentCount > 0 && user && (
-        <div className="ml-9">
+        <div>
           <InlineCommentThread
             comments={itemComments}
             currentUserId={user.id}

@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { testCasesApi, ApiError, type TestCaseExpectedResult, type ReviewCommentWithReplies } from '../../lib/api';
 import { MarkdownPreview } from '../common/markdown';
+import { CommentableField } from '../review/CommentableField';
 import { CommentableItem } from '../review/CommentableItem';
 
 interface TestCaseExpectedResultListProps {
@@ -14,6 +15,8 @@ interface TestCaseExpectedResultListProps {
   initialExpectedResults?: TestCaseExpectedResult[];
   /** レビューコメント一覧 */
   comments?: ReviewCommentWithReplies[];
+  /** 編集権限があるか */
+  canEdit?: boolean;
   /** コメント追加時のコールバック */
   onCommentAdded?: () => void;
 }
@@ -26,6 +29,7 @@ export function TestCaseExpectedResultList({
   testCaseId,
   initialExpectedResults,
   comments,
+  canEdit,
   onCommentAdded,
 }: TestCaseExpectedResultListProps) {
   const [expectedResults, setExpectedResults] = useState<TestCaseExpectedResult[]>(initialExpectedResults || []);
@@ -89,44 +93,54 @@ export function TestCaseExpectedResultList({
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-foreground">期待結果</h3>
-      </div>
+      <CommentableField
+        targetType="CASE"
+        targetId={testCaseId}
+        targetField="EXPECTED_RESULT"
+        comments={comments}
+        canEdit={canEdit}
+        onCommentAdded={onCommentAdded}
+      >
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-foreground">期待結果</h3>
+        </div>
 
-      {expectedResults.length === 0 ? (
-        <div className="text-center py-6 border-2 border-dashed border-border rounded-lg">
-          <CheckCircle className="w-8 h-8 text-foreground-muted mx-auto mb-2" />
-          <p className="text-foreground-muted text-sm">期待結果が設定されていません</p>
-        </div>
-      ) : (
-        <div className="space-y-2">
-          {expectedResults.map((expectedResult, index) => (
-            <div
-              key={expectedResult.id}
-              className="flex items-start gap-3 p-3 bg-background-secondary rounded-lg"
-            >
-              {/* 番号（成功カラー） */}
-              <span className="flex-shrink-0 w-6 h-6 rounded-full bg-success/20 text-success flex items-center justify-center text-xs font-medium">
-                {index + 1}
-              </span>
-              {/* 内容（CommentableItemでラップ） */}
-              <CommentableItem
-                targetType="CASE"
-                targetId={testCaseId}
-                targetField="EXPECTED_RESULT"
-                itemId={expectedResult.id}
-                itemContent={expectedResult.content}
-                comments={comments}
-                onCommentAdded={onCommentAdded}
+        {expectedResults.length === 0 ? (
+          <div className="text-center py-6 border-2 border-dashed border-border rounded-lg">
+            <CheckCircle className="w-8 h-8 text-foreground-muted mx-auto mb-2" />
+            <p className="text-foreground-muted text-sm">期待結果が設定されていません</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {expectedResults.map((expectedResult, index) => (
+              <div
+                key={expectedResult.id}
+                className="flex items-start gap-3 p-3 bg-background-secondary rounded-lg"
               >
-                <div className="flex-1">
-                  <MarkdownPreview content={expectedResult.content} />
-                </div>
-              </CommentableItem>
-            </div>
-          ))}
-        </div>
-      )}
+                {/* 番号（成功カラー） */}
+                <span className="flex-shrink-0 w-6 h-6 rounded-full bg-success/20 text-success flex items-center justify-center text-xs font-medium">
+                  {index + 1}
+                </span>
+                {/* 内容（CommentableItemでラップ） */}
+                <CommentableItem
+                  targetType="CASE"
+                  targetId={testCaseId}
+                  targetField="EXPECTED_RESULT"
+                  itemId={expectedResult.id}
+                  itemContent={expectedResult.content}
+                  comments={comments}
+                  canEdit={canEdit}
+                  onCommentAdded={onCommentAdded}
+                >
+                  <div className="flex-1">
+                    <MarkdownPreview content={expectedResult.content} />
+                  </div>
+                </CommentableItem>
+              </div>
+            ))}
+          </div>
+        )}
+      </CommentableField>
     </div>
   );
 }
