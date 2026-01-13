@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ChevronDown,
@@ -8,9 +8,7 @@ import {
   Trash2,
   CheckCircle2,
   RotateCcw,
-  MoreVertical,
 } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 import {
   reviewCommentsApi,
   ApiError,
@@ -26,14 +24,6 @@ import { ReviewStatusBadge } from './ReviewStatusBadge';
 import { ReviewCommentForm } from './ReviewCommentForm';
 import { ReviewCommentEditor } from './ReviewCommentEditor';
 import { AuthorAvatar, AuthorName } from '../common/AuthorAvatar';
-
-/** メニュー項目の型 */
-interface MenuItem {
-  label: string;
-  icon: LucideIcon;
-  onClick: () => void;
-  danger?: boolean;
-}
 
 interface ReviewCommentItemProps {
   /** コメントデータ */
@@ -173,39 +163,12 @@ export function ReviewCommentItem({
     },
   });
 
-  // アクションメニュー項目
-  const actionItems: MenuItem[] = [
-    ...(isAuthor ? [
-      {
-        label: '編集',
-        icon: Pencil,
-        onClick: () => setIsEditing(true),
-      },
-      {
-        label: '削除',
-        icon: Trash2,
-        onClick: () => {
-          if (window.confirm('このコメントを削除しますか？返信もすべて削除されます。')) {
-            deleteMutation.mutate();
-          }
-        },
-        danger: true,
-      },
-    ] : []),
-    ...(canEdit ? [
-      comment.status === 'OPEN'
-        ? {
-            label: '解決済みにする',
-            icon: CheckCircle2,
-            onClick: () => updateStatusMutation.mutate('RESOLVED'),
-          }
-        : {
-            label: '未解決に戻す',
-            icon: RotateCcw,
-            onClick: () => updateStatusMutation.mutate('OPEN'),
-          },
-    ] : []),
-  ];
+  // 削除確認ハンドラ
+  const handleDelete = () => {
+    if (window.confirm('このコメントを削除しますか？返信もすべて削除されます。')) {
+      deleteMutation.mutate();
+    }
+  };
 
   const hasReplies = comment.replies.length > 0;
 
@@ -220,6 +183,7 @@ export function ReviewCommentItem({
           </span>
         </div>
         <div className="flex items-center gap-1">
+          {/* 返信ボタン */}
           {canEdit && (
             <button
               type="button"
@@ -230,8 +194,49 @@ export function ReviewCommentItem({
               <Reply className="w-4 h-4" />
             </button>
           )}
-          {actionItems.length > 0 && (
-            <MenuDropdown items={actionItems} />
+          {/* 編集ボタン（投稿者のみ） */}
+          {isAuthor && (
+            <button
+              type="button"
+              onClick={() => setIsEditing(true)}
+              className="p-1 text-foreground-muted hover:text-foreground transition-colors"
+              title="編集"
+            >
+              <Pencil className="w-4 h-4" />
+            </button>
+          )}
+          {/* 削除ボタン（投稿者のみ） */}
+          {isAuthor && (
+            <button
+              type="button"
+              onClick={handleDelete}
+              className="p-1 text-foreground-muted hover:text-danger transition-colors"
+              title="削除"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+          {/* 解決済み/未解決ボタン（編集権限のみ） */}
+          {canEdit && (
+            comment.status === 'OPEN' ? (
+              <button
+                type="button"
+                onClick={() => updateStatusMutation.mutate('RESOLVED')}
+                className="p-1 text-foreground-muted hover:text-success transition-colors"
+                title="解決済みにする"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => updateStatusMutation.mutate('OPEN')}
+                className="p-1 text-foreground-muted hover:text-warning transition-colors"
+                title="未解決に戻す"
+              >
+                <RotateCcw className="w-4 h-4" />
+              </button>
+            )
           )}
         </div>
       </div>
@@ -326,85 +331,6 @@ export function ReviewCommentItem({
 }
 
 /**
- * メニュードロップダウン
- */
-function MenuDropdown({ items }: { items: MenuItem[] }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  // 外部クリックで閉じる
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen]);
-
-  if (items.length === 0) return null;
-
-  return (
-    <div className="relative" ref={dropdownRef}>
-      <button
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className="p-1 text-foreground-muted hover:text-foreground transition-colors"
-        aria-label="操作メニュー"
-        aria-expanded={isOpen}
-        aria-haspopup="menu"
-      >
-        <MoreVertical className="w-4 h-4" />
-      </button>
-
-      {isOpen && (
-        <div
-          className="absolute right-0 top-full mt-1 w-40 bg-background border border-border rounded-lg shadow-lg py-1 z-dropdown"
-          role="menu"
-        >
-          {items.map((item, index) => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={index}
-                type="button"
-                className={`w-full flex items-center gap-2 px-3 py-2 text-sm transition-colors ${
-                  item.danger
-                    ? 'text-danger hover:bg-danger-subtle'
-                    : 'text-foreground hover:bg-background-tertiary'
-                }`}
-                onClick={() => {
-                  item.onClick();
-                  setIsOpen(false);
-                }}
-                role="menuitem"
-              >
-                <Icon className="w-4 h-4" />
-                {item.label}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/**
  * 返信アイテム
  */
 interface ReplyItemProps {
@@ -432,13 +358,6 @@ function ReplyItem({
 }: ReplyItemProps) {
   const isAuthor = reply.authorUserId === currentUserId;
 
-  const actionItems: MenuItem[] = isAuthor
-    ? [
-        { label: '編集', icon: Pencil, onClick: onStartEdit },
-        { label: '削除', icon: Trash2, onClick: onDelete, danger: true },
-      ]
-    : [];
-
   return (
     <div className="p-3 bg-background-secondary/50">
       <div className="flex items-start justify-between gap-2">
@@ -451,8 +370,25 @@ function ReplyItem({
             </span>
           </div>
         </div>
-        {actionItems.length > 0 && !isEditing && !isDeleting && (
-          <MenuDropdown items={actionItems} />
+        {isAuthor && !isEditing && !isDeleting && (
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={onStartEdit}
+              className="p-1 text-foreground-muted hover:text-foreground transition-colors"
+              title="編集"
+            >
+              <Pencil className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={onDelete}
+              className="p-1 text-foreground-muted hover:text-danger transition-colors"
+              title="削除"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
         )}
       </div>
 

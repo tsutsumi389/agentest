@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { Send, Loader2 } from 'lucide-react';
+import { MarkdownEditor } from '../common/markdown';
 
 /** 最大文字数 */
 const MAX_LENGTH = 2000;
@@ -32,34 +33,19 @@ export function ReviewCommentForm({
   compact = false,
 }: ReviewCommentFormProps) {
   const [content, setContent] = useState('');
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // 自動フォーカス
-  useEffect(() => {
-    if (autoFocus && textareaRef.current) {
-      textareaRef.current.focus();
-    }
-  }, [autoFocus]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = useCallback((e?: React.FormEvent) => {
+    e?.preventDefault();
     const trimmedContent = content.trim();
     if (!trimmedContent || isSubmitting) return;
     onSubmit(trimmedContent);
     setContent('');
-  };
+  }, [content, isSubmitting, onSubmit]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Ctrl/Cmd + Enterで送信
-    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-      e.preventDefault();
-      handleSubmit(e);
-    }
-    // Escapeでキャンセル（キャンセルハンドラがある場合）
-    if (e.key === 'Escape' && onCancel) {
-      onCancel();
-    }
-  };
+  // Ctrl/Cmd + Enterで送信
+  const handleMarkdownSubmit = useCallback(() => {
+    handleSubmit();
+  }, [handleSubmit]);
 
   const remainingChars = MAX_LENGTH - content.length;
   const isOverLimit = remainingChars < 0;
@@ -67,20 +53,15 @@ export function ReviewCommentForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-2">
-      <textarea
-        ref={textareaRef}
+      <MarkdownEditor
         value={content}
-        onChange={(e) => setContent(e.target.value)}
-        onKeyDown={handleKeyDown}
-        className={`
-          input resize-none
-          ${compact ? 'min-h-[60px]' : 'min-h-[80px]'}
-          ${isOverLimit ? 'border-danger focus:border-danger focus:ring-danger' : ''}
-        `}
+        onChange={setContent}
         placeholder={placeholder}
+        rows={compact ? 3 : 4}
+        error={isOverLimit}
         disabled={isSubmitting}
-        aria-label="コメント入力"
-        aria-describedby="comment-char-count"
+        autoFocus={autoFocus}
+        onSubmit={handleMarkdownSubmit}
       />
       <div className="flex items-center justify-between">
         <span

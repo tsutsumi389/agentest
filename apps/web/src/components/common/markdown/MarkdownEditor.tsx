@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo } from 'react';
+import { useState, useRef, useCallback, useMemo, useEffect } from 'react';
 import { MarkdownToolbar } from './MarkdownToolbar';
 import { MarkdownPreview } from './MarkdownPreview';
 
@@ -14,6 +14,12 @@ interface MarkdownEditorProps {
   className?: string;
   /** エラー状態（ボーダーを赤色に） */
   error?: boolean;
+  /** 自動フォーカス */
+  autoFocus?: boolean;
+  /** 無効化状態 */
+  disabled?: boolean;
+  /** Ctrl/Cmd+Enter送信用コールバック */
+  onSubmit?: () => void;
 }
 
 /**
@@ -28,9 +34,19 @@ export function MarkdownEditor({
   rows = 4,
   className = '',
   error = false,
+  autoFocus = false,
+  disabled = false,
+  onSubmit,
 }: MarkdownEditorProps) {
   const [mode, setMode] = useState<TabMode>('write');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // 自動フォーカス
+  useEffect(() => {
+    if (autoFocus && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [autoFocus]);
 
   // プレビューの最小高さをrowsと連動
   const previewMinHeight = useMemo(() => `${rows * 1.5}rem`, [rows]);
@@ -96,9 +112,15 @@ export function MarkdownEditor({
           e.preventDefault();
           handleInsert('[', '](url)');
           break;
+        case 'enter': // 送信: Ctrl/Cmd+Enter
+          if (onSubmit) {
+            e.preventDefault();
+            onSubmit();
+          }
+          break;
       }
     },
-    [handleInsert]
+    [handleInsert, onSubmit]
   );
 
   // エラー時のボーダー色
@@ -156,7 +178,8 @@ export function MarkdownEditor({
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             rows={rows}
-            className="w-full px-3 py-2 text-sm bg-transparent border-none resize-none focus:outline-none focus:ring-0 placeholder:text-foreground-subtle"
+            disabled={disabled}
+            className="w-full px-3 py-2 text-sm bg-transparent border-none resize-none focus:outline-none focus:ring-0 placeholder:text-foreground-subtle disabled:opacity-50 disabled:cursor-not-allowed"
           />
         </div>
       ) : (
