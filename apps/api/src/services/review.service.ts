@@ -200,9 +200,9 @@ export class ReviewService {
   async updateVerdict(reviewId: string, userId: string, data: { verdict: ReviewVerdict }) {
     const review = await this.findById(reviewId);
 
-    // 投稿者本人のみ編集可能
+    // 投稿者本人のみ変更可能
     if (review.authorUserId !== userId) {
-      throw new AuthorizationError('Only the author can edit this review');
+      throw new AuthorizationError('Only the author can change the verdict');
     }
 
     // SUBMITTEDのみ評価変更可能
