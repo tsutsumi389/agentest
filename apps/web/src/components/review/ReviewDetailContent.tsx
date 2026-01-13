@@ -14,6 +14,7 @@ import { ReviewVerdictBadge } from './ReviewVerdictBadge';
 import { ReviewStatusBadge } from './ReviewStatusBadge';
 import { ReviewVerdictEditModal } from './ReviewVerdictEditModal';
 import { AuthorAvatar, getAuthorDisplayName } from '../common/AuthorAvatar';
+import { MarkdownPreview } from '../common/markdown';
 
 interface ReviewDetailContentProps {
   /** レビュー詳細データ */
@@ -89,10 +90,8 @@ export function ReviewDetailContent({
 
         {/* サマリー */}
         {review.summary && (
-          <div className="p-3 bg-background-secondary rounded-lg">
-            <p className="text-sm text-foreground whitespace-pre-wrap">
-              {review.summary}
-            </p>
+          <div className="p-3 bg-background-secondary rounded-lg text-sm">
+            <MarkdownPreview content={review.summary} />
           </div>
         )}
       </div>
@@ -178,9 +177,9 @@ export function CommentCard({ comment }: CommentCardProps) {
         </div>
 
         {/* コメント内容 */}
-        <p className="text-sm text-foreground whitespace-pre-wrap break-words">
-          {comment.content}
-        </p>
+        <div className="text-sm">
+          <MarkdownPreview content={comment.content} />
+        </div>
       </div>
 
       {/* 返信セクション */}
@@ -218,9 +217,9 @@ export function CommentCard({ comment }: CommentCardProps) {
                       </span>
                     </div>
                   </div>
-                  <p className="text-sm text-foreground whitespace-pre-wrap break-words pl-7">
-                    {reply.content}
-                  </p>
+                  <div className="text-sm pl-7">
+                    <MarkdownPreview content={reply.content} />
+                  </div>
                 </div>
               ))}
             </div>
