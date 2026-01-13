@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { ChevronLeft, ChevronRight, X, Loader2, CheckCircle } from 'lucide-react';
 import type {
   ExecutionTestSuitePrecondition,
@@ -45,12 +45,20 @@ function PipStatusButtons<T extends string>({
   isEditable: boolean;
   isUpdating: boolean;
 }) {
+  // 遷移タイマーのID（連打時のクリーンアップ用）
+  const navigateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // ステータス変更と次へ遷移を組み合わせたハンドラ
   // 視覚的フィードバック（選択状態の表示）を見せてから遷移するため、少し遅延させる
   const handleClick = (newValue: T) => {
+    // 連打時は前のタイマーをキャンセル
+    if (navigateTimerRef.current) {
+      clearTimeout(navigateTimerRef.current);
+    }
     onChange(newValue);
-    setTimeout(() => {
+    navigateTimerRef.current = setTimeout(() => {
       onNavigateNext();
+      navigateTimerRef.current = null;
     }, NAVIGATE_DELAY_MS);
   };
 
