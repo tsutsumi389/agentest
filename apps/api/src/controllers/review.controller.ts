@@ -8,6 +8,7 @@ import {
   reviewCommentUpdateSchema,
   reviewStatusUpdateSchema,
   reviewReplyCreateSchema,
+  reviewVerdictUpdateSchema,
 } from '@agentest/shared';
 import { z } from 'zod';
 import { ReviewService } from '../services/review.service.js';
@@ -137,6 +138,22 @@ export class ReviewController {
       const { reviewId } = reviewIdSchema.parse(req.params);
       const data = reviewSubmitSchema.parse(req.body);
       const review = await this.reviewService.submit(reviewId, req.user!.id, data);
+
+      res.json({ review });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 提出済みレビューの評価変更
+   * PATCH /api/reviews/:reviewId/verdict
+   */
+  updateVerdict = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { reviewId } = reviewIdSchema.parse(req.params);
+      const data = reviewVerdictUpdateSchema.parse(req.body);
+      const review = await this.reviewService.updateVerdict(reviewId, req.user!.id, data);
 
       res.json({ review });
     } catch (error) {

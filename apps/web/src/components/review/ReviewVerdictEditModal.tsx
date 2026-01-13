@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { X, Loader2, CheckCircle, AlertTriangle, MessageSquare } from 'lucide-react';
-import { ApiError, type ReviewVerdict } from '../../lib/api';
-import { useReviewSession } from '../../contexts/ReviewSessionContext';
+import { ApiError, reviewsApi, type ReviewVerdict } from '../../lib/api';
 import { toast } from '../../stores/toast';
 import { VERDICT_OPTIONS } from '../../lib/constants';
 
@@ -14,39 +13,42 @@ const VERDICT_ICONS = {
   MessageSquare,
 } as const;
 
-interface ReviewSubmitModalProps {
+interface ReviewVerdictEditModalProps {
   /** モーダルの表示状態 */
   isOpen: boolean;
   /** 閉じる際のコールバック */
   onClose: () => void;
-  /** コメント数 */
-  commentCount: number;
+  /** レビューID */
+  reviewId: string;
+  /** 現在の評価 */
+  currentVerdict: ReviewVerdict;
+  /** 変更成功後のコールバック */
+  onSuccess: () => void;
 }
 
 /**
- * レビュー提出モーダルコンポーネント
- * 評価を選択してレビューを提出する
+ * レビュー評価変更モーダルコンポーネント
+ * 提出済みレビューの評価を変更する
  */
-export function ReviewSubmitModal({
+export function ReviewVerdictEditModal({
   isOpen,
   onClose,
-  commentCount,
-}: ReviewSubmitModalProps) {
-  const { submitReview, isLoading } = useReviewSession();
+  reviewId,
+  currentVerdict,
+  onSuccess,
+}: ReviewVerdictEditModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
-  const [selectedVerdict, setSelectedVerdict] = useState<ReviewVerdict | null>(null);
-  const [summary, setSummary] = useState('');
+  const [selectedVerdict, setSelectedVerdict] = useState<ReviewVerdict>(currentVerdict);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // モーダルが開いた時に状態をリセット
+  // モーダルが開いた時に現在の評価を初期値として設定
   useEffect(() => {
     if (isOpen) {
-      setSelectedVerdict(null);
-      setSummary('');
+      setSelectedVerdict(currentVerdict);
     }
-  }, [isOpen]);
+  }, [isOpen, currentVerdict]);
 
   // ESCキーでモーダルを閉じる + フォーカストラップ + 背景スクロール無効化
   useEffect(() => {
@@ -62,7 +64,7 @@ export function ReviewSubmitModal({
       }
       if (e.key === 'Tab' && modalRef.current) {
         const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
         );
         const firstElement = focusableElements[0];
         const lastElement = focusableElements[focusableElements.length - 1];
@@ -87,25 +89,27 @@ export function ReviewSubmitModal({
     };
   }, [isOpen, isSubmitting, onClose]);
 
-  // 提出処理
+  // 変更処理
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!selectedVerdict) {
-      toast.error('評価を選択してください');
+    // 評価が変更されていない場合は何もしない
+    if (selectedVerdict === currentVerdict) {
+      onClose();
       return;
     }
 
     setIsSubmitting(true);
     try {
-      await submitReview(selectedVerdict, summary || undefined);
-      toast.success('レビューを提出しました');
+      await reviewsApi.updateVerdict(reviewId, selectedVerdict);
+      toast.success('評価を変更しました');
+      onSuccess();
       onClose();
     } catch (err) {
       if (err instanceof ApiError) {
         toast.error(err.message);
       } else {
-        toast.error('レビューの提出に失敗しました');
+        toast.error('評価の変更に失敗しました');
       }
     } finally {
       setIsSubmitting(false);
@@ -128,16 +132,16 @@ export function ReviewSubmitModal({
         className="relative bg-background border border-border rounded-lg shadow-lg w-full max-w-lg"
         role="dialog"
         aria-modal="true"
-        aria-labelledby="submit-modal-title"
+        aria-labelledby="verdict-edit-modal-title"
         onClick={(e) => e.stopPropagation()}
       >
         {/* ヘッダー */}
         <div className="flex items-center justify-between p-4 border-b border-border">
           <h2
-            id="submit-modal-title"
+            id="verdict-edit-modal-title"
             className="text-lg font-semibold text-foreground"
           >
-            レビューを提出
+            評価を変更
           </h2>
           <button
             ref={closeButtonRef}
@@ -152,12 +156,6 @@ export function ReviewSubmitModal({
 
         {/* コンテンツ */}
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          {/* コメント数表示 */}
-          <div className="flex items-center gap-2 text-sm text-foreground-muted">
-            <MessageSquare className="w-4 h-4" />
-            <span>{commentCount}件のコメントを含むレビュー</span>
-          </div>
-
           {/* 評価選択 */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-foreground">
@@ -204,25 +202,6 @@ export function ReviewSubmitModal({
             </div>
           </div>
 
-          {/* サマリー入力 */}
-          <div className="space-y-2">
-            <label
-              htmlFor="review-summary"
-              className="block text-sm font-medium text-foreground"
-            >
-              サマリー（任意）
-            </label>
-            <textarea
-              id="review-summary"
-              value={summary}
-              onChange={(e) => setSummary(e.target.value)}
-              placeholder="レビューの概要を入力..."
-              rows={3}
-              disabled={isSubmitting}
-              className="input w-full resize-none"
-            />
-          </div>
-
           {/* ボタン */}
           <div className="flex justify-end gap-2 pt-2">
             <button
@@ -235,16 +214,16 @@ export function ReviewSubmitModal({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || isLoading || !selectedVerdict}
+              disabled={isSubmitting}
               className="btn btn-primary"
             >
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  提出中...
+                  変更中...
                 </>
               ) : (
-                '提出する'
+                '変更する'
               )}
             </button>
           </div>

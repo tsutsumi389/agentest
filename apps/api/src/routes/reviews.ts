@@ -33,6 +33,13 @@ router.patch('/:reviewId', requireAuth(authConfig), reviewController.update);
 router.post('/:reviewId/submit', requireAuth(authConfig), reviewController.submit);
 
 /**
+ * 提出済みレビューの評価変更
+ * PATCH /api/reviews/:reviewId/verdict
+ * 投稿者本人のみ（サービス層でチェック）
+ */
+router.patch('/:reviewId/verdict', requireAuth(authConfig), reviewController.updateVerdict);
+
+/**
  * レビュー削除（DRAFTのみ）
  * DELETE /api/reviews/:reviewId
  * 投稿者本人のみ（サービス層でチェック）

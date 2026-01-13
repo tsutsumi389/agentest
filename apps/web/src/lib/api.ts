@@ -1450,6 +1450,10 @@ export const reviewsApi = {
   submit: (reviewId: string, data: { verdict: ReviewVerdict; summary?: string }) =>
     api.post<{ review: ReviewWithDetails }>(`/api/reviews/${reviewId}/submit`, data),
 
+  // 提出済みレビューの評価変更
+  updateVerdict: (reviewId: string, verdict: ReviewVerdict) =>
+    api.patch<{ review: ReviewWithDetails }>(`/api/reviews/${reviewId}/verdict`, { verdict }),
+
   // レビュー削除（DRAFTのみ）
   delete: (reviewId: string) =>
     api.delete<void>(`/api/reviews/${reviewId}`),

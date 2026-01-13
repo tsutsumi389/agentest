@@ -50,3 +50,42 @@ export const TARGET_FIELD_LABELS: Record<string, string> = {
   STEP: 'ステップ',
   EXPECTED_RESULT: '期待結果',
 };
+
+/**
+ * レビュー評価オプションの型
+ */
+export interface VerdictOption {
+  value: 'APPROVED' | 'CHANGES_REQUESTED' | 'COMMENT_ONLY';
+  label: string;
+  description: string;
+  iconName: 'CheckCircle' | 'AlertTriangle' | 'MessageSquare';
+  className: string;
+}
+
+/**
+ * レビュー評価オプション
+ * 承認、要修正、コメントのみの3種類
+ */
+export const VERDICT_OPTIONS: VerdictOption[] = [
+  {
+    value: 'APPROVED',
+    label: '承認',
+    description: 'このテストスイートを承認します',
+    iconName: 'CheckCircle',
+    className: 'border-success text-success bg-success-subtle',
+  },
+  {
+    value: 'CHANGES_REQUESTED',
+    label: '要修正',
+    description: '修正が必要な箇所があります',
+    iconName: 'AlertTriangle',
+    className: 'border-warning text-warning bg-warning-subtle',
+  },
+  {
+    value: 'COMMENT_ONLY',
+    label: 'コメントのみ',
+    description: '承認・修正依頼なしでコメントを残します',
+    iconName: 'MessageSquare',
+    className: 'border-foreground-muted text-foreground-muted bg-background-tertiary',
+  },
+];

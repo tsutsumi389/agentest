@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, FileEdit, Loader2, ChevronLeft } from 'lucide-react';
 import { reviewsApi, type ReviewVerdict } from '../../lib/api';
 import { useReviewSession } from '../../contexts/ReviewSessionContext';
+import { useAuth } from '../../hooks/useAuth';
 import { ReviewList } from './ReviewList';
 import { ReviewDetailContent } from './ReviewDetailContent';
 
@@ -22,6 +23,8 @@ export function ReviewPanel({ testSuiteId }: ReviewPanelProps) {
     'ALL'
   );
 
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { isReviewing, startReview, isLoading: isStarting } = useReviewSession();
 
   // 提出済みレビュー一覧を取得
@@ -89,7 +92,15 @@ export function ReviewPanel({ testSuiteId }: ReviewPanelProps) {
             <Loader2 className="w-6 h-6 animate-spin text-foreground-muted" />
           </div>
         ) : reviewDetailData?.review ? (
-          <ReviewDetailContent review={reviewDetailData.review} />
+          <ReviewDetailContent
+            review={reviewDetailData.review}
+            currentUserId={user?.id}
+            onVerdictUpdated={() => {
+              // 評価変更後にレビュー詳細とレビュー一覧を再取得
+              queryClient.invalidateQueries({ queryKey: ['review-detail', selectedReviewId] });
+              queryClient.invalidateQueries({ queryKey: ['test-suite-reviews', testSuiteId] });
+            }}
+          />
         ) : (
           <div className="flex flex-col items-center justify-center py-12 text-foreground-muted">
             <p className="text-sm">レビューの読み込みに失敗しました</p>

@@ -195,6 +195,25 @@ export class ReviewService {
   }
 
   /**
+   * 提出済みレビューの評価を変更（投稿者本人のみ）
+   */
+  async updateVerdict(reviewId: string, userId: string, data: { verdict: ReviewVerdict }) {
+    const review = await this.findById(reviewId);
+
+    // 投稿者本人のみ編集可能
+    if (review.authorUserId !== userId) {
+      throw new AuthorizationError('Only the author can edit this review');
+    }
+
+    // SUBMITTEDのみ評価変更可能
+    if (review.status !== 'SUBMITTED') {
+      throw new BadRequestError('Only submitted reviews can have their verdict changed');
+    }
+
+    return this.reviewRepo.updateVerdict(reviewId, data.verdict);
+  }
+
+  /**
    * レビューを削除（DRAFTのみ、投稿者本人のみ）
    */
   async delete(reviewId: string, userId: string) {

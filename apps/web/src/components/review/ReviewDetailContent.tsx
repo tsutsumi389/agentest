@@ -3,6 +3,7 @@ import {
   ChevronDown,
   ChevronUp,
   MessageSquare,
+  Pencil,
 } from 'lucide-react';
 import {
   type ReviewWithDetails,
@@ -11,11 +12,16 @@ import {
 import { TARGET_FIELD_LABELS } from '../../lib/constants';
 import { ReviewVerdictBadge } from './ReviewVerdictBadge';
 import { ReviewStatusBadge } from './ReviewStatusBadge';
+import { ReviewVerdictEditModal } from './ReviewVerdictEditModal';
 import { AuthorAvatar, getAuthorDisplayName } from '../common/AuthorAvatar';
 
 interface ReviewDetailContentProps {
   /** レビュー詳細データ */
   review: ReviewWithDetails;
+  /** 現在のユーザーID（編集ボタン表示判定用） */
+  currentUserId?: string;
+  /** 評価変更後のコールバック */
+  onVerdictUpdated?: () => void;
 }
 
 /**
@@ -23,8 +29,19 @@ interface ReviewDetailContentProps {
  * レビューの著者情報、評価、サマリー、コメント一覧を表示
  * ReviewPanel（インライン表示）とReviewDetailModal（モーダル表示）の両方で使用
  */
-export function ReviewDetailContent({ review }: ReviewDetailContentProps) {
+export function ReviewDetailContent({
+  review,
+  currentUserId,
+  onVerdictUpdated,
+}: ReviewDetailContentProps) {
+  const [isVerdictEditModalOpen, setIsVerdictEditModalOpen] = useState(false);
   const authorName = getAuthorDisplayName(review.author, review.agentSession);
+
+  // 投稿者本人かつSUBMITTED状態の場合のみ編集可能
+  const canEditVerdict =
+    currentUserId &&
+    review.author?.id === currentUserId &&
+    review.status === 'SUBMITTED';
 
   const submittedAt = review.submittedAt
     ? new Date(review.submittedAt).toLocaleString('ja-JP', {
@@ -55,8 +72,18 @@ export function ReviewDetailContent({ review }: ReviewDetailContentProps) {
 
         {/* 評価バッジ */}
         {review.verdict && (
-          <div>
+          <div className="flex items-center gap-2">
             <ReviewVerdictBadge verdict={review.verdict} />
+            {canEditVerdict && (
+              <button
+                type="button"
+                onClick={() => setIsVerdictEditModalOpen(true)}
+                className="p-1 text-foreground-muted hover:text-foreground hover:bg-background-tertiary rounded transition-colors"
+                title="評価を変更"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+            )}
           </div>
         )}
 
@@ -89,6 +116,17 @@ export function ReviewDetailContent({ review }: ReviewDetailContentProps) {
           </div>
         )}
       </div>
+
+      {/* 評価変更モーダル */}
+      {review.verdict && (
+        <ReviewVerdictEditModal
+          isOpen={isVerdictEditModalOpen}
+          onClose={() => setIsVerdictEditModalOpen(false)}
+          reviewId={review.id}
+          currentVerdict={review.verdict}
+          onSuccess={() => onVerdictUpdated?.()}
+        />
+      )}
     </div>
   );
 }
