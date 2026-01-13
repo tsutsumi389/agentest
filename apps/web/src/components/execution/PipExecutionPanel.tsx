@@ -332,6 +332,8 @@ export function PipExecutionPanel({
       setCurrentIndex(currentIndex + 1);
     } else if (currentTestCaseIndex < totalTestCases - 1) {
       // 最後のアイテムで、次のテストケースがある場合
+      // 先にインデックスをリセットしてから遷移（レンダリング順序の問題を回避）
+      setCurrentIndex(0);
       onNavigateToTestCase('next');
     }
   }, [currentIndex, totalItems, currentTestCaseIndex, totalTestCases, onNavigateToTestCase]);
