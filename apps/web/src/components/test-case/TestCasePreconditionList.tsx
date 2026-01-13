@@ -15,6 +15,8 @@ interface TestCasePreconditionListProps {
   initialPreconditions?: TestCasePrecondition[];
   /** レビューコメント一覧 */
   comments?: ReviewCommentWithReplies[];
+  /** 編集権限があるか */
+  canEdit?: boolean;
   /** コメント追加時のコールバック */
   onCommentAdded?: () => void;
 }
@@ -27,6 +29,7 @@ export function TestCasePreconditionList({
   testCaseId,
   initialPreconditions,
   comments,
+  canEdit,
   onCommentAdded,
 }: TestCasePreconditionListProps) {
   const [preconditions, setPreconditions] = useState<TestCasePrecondition[]>(initialPreconditions || []);
@@ -94,6 +97,7 @@ export function TestCasePreconditionList({
       targetId={testCaseId}
       targetField="PRECONDITION"
       comments={comments}
+      canEdit={canEdit}
       onCommentAdded={onCommentAdded}
     >
       <div className="space-y-3">
@@ -125,6 +129,7 @@ export function TestCasePreconditionList({
                   itemId={precondition.id}
                   itemContent={precondition.content}
                   comments={comments}
+                  canEdit={canEdit}
                   onCommentAdded={onCommentAdded}
                 >
                   <div className="flex-1">

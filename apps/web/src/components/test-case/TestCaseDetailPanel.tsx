@@ -238,6 +238,7 @@ function OverviewTab({
         testCaseId={testCase.id}
         initialPreconditions={testCase.preconditions}
         comments={comments}
+        canEdit={canEdit}
         onCommentAdded={handleCommentAdded}
       />
 
@@ -246,6 +247,7 @@ function OverviewTab({
         testCaseId={testCase.id}
         initialSteps={testCase.steps}
         comments={comments}
+        canEdit={canEdit}
         onCommentAdded={handleCommentAdded}
       />
 
@@ -254,6 +256,7 @@ function OverviewTab({
         testCaseId={testCase.id}
         initialExpectedResults={testCase.expectedResults}
         comments={comments}
+        canEdit={canEdit}
         onCommentAdded={handleCommentAdded}
       />
     </div>
