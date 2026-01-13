@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, X, Loader2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Loader2, CheckCircle } from 'lucide-react';
 import type {
   ExecutionTestSuitePrecondition,
   ExecutionTestCasePrecondition,
@@ -20,6 +20,9 @@ import {
 } from '../../lib/execution-status';
 import { MarkdownPreview } from '../common/markdown';
 import { InlineNoteEditor } from './InlineNoteEditor';
+
+/** ステータス変更後の遷移遅延（ms） */
+const NAVIGATE_DELAY_MS = 150;
 
 /**
  * PiP用ステータスボタングループ
@@ -43,9 +46,12 @@ function PipStatusButtons<T extends string>({
   isUpdating: boolean;
 }) {
   // ステータス変更と次へ遷移を組み合わせたハンドラ
+  // 視覚的フィードバック（選択状態の表示）を見せてから遷移するため、少し遅延させる
   const handleClick = (newValue: T) => {
     onChange(newValue);
-    onNavigateNext();
+    setTimeout(() => {
+      onNavigateNext();
+    }, NAVIGATE_DELAY_MS);
   };
 
   if (isUpdating) {
@@ -524,9 +530,16 @@ export function PipExecutionPanel({
           前へ
         </button>
 
-        <span className="text-xs text-foreground-muted">
-          全体: {currentIndex + 1} / {totalItems}
-        </span>
+        {currentIndex === totalItems - 1 && currentTestCaseIndex === totalTestCases - 1 ? (
+          <span className="flex items-center gap-1 text-xs text-success font-medium">
+            <CheckCircle className="w-3.5 h-3.5" />
+            全て完了
+          </span>
+        ) : (
+          <span className="text-xs text-foreground-muted">
+            全体: {currentIndex + 1} / {totalItems}
+          </span>
+        )}
 
         <button
           onClick={goToNext}
