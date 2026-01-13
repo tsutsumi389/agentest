@@ -58,6 +58,7 @@ export function ReviewCommentEditor({
         disabled={isUpdating}
         autoFocus
         onSubmit={handleMarkdownSubmit}
+        onCancel={onCancel}
       />
       <div className="flex items-center justify-between">
         <span

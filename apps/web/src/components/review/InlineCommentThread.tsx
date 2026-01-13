@@ -15,6 +15,7 @@ import { ReviewStatusBadge } from './ReviewStatusBadge';
 import { ReviewCommentForm } from './ReviewCommentForm';
 import { ReviewCommentEditor } from './ReviewCommentEditor';
 import { AuthorAvatar, AuthorName } from '../common/AuthorAvatar';
+import { MarkdownPreview } from '../common/markdown';
 
 interface InlineCommentThreadProps {
   /** コメント一覧 */
@@ -273,9 +274,9 @@ function InlineCommentItem({
             isUpdating={isSubmitting}
           />
         ) : (
-          <p className="text-sm text-foreground whitespace-pre-wrap break-words">
-            {comment.content}
-          </p>
+          <div className="text-sm">
+            <MarkdownPreview content={comment.content} />
+          </div>
         )}
       </div>
 
@@ -397,9 +398,9 @@ function InlineReplyItem({
             isUpdating={isSubmitting}
           />
         ) : (
-          <p className="text-sm text-foreground whitespace-pre-wrap break-words">
-            {reply.content}
-          </p>
+          <div className="text-sm">
+            <MarkdownPreview content={reply.content} />
+          </div>
         )}
       </div>
     </div>

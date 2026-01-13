@@ -20,6 +20,8 @@ interface MarkdownEditorProps {
   disabled?: boolean;
   /** Ctrl/Cmd+Enter送信用コールバック */
   onSubmit?: () => void;
+  /** Escapeキーでのキャンセル用コールバック */
+  onCancel?: () => void;
 }
 
 /**
@@ -37,6 +39,7 @@ export function MarkdownEditor({
   autoFocus = false,
   disabled = false,
   onSubmit,
+  onCancel,
 }: MarkdownEditorProps) {
   const [mode, setMode] = useState<TabMode>('write');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -96,6 +99,12 @@ export function MarkdownEditor({
   // キーボードショートカットハンドラ
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      // Escapeでキャンセル
+      if (e.key === 'Escape' && onCancel) {
+        onCancel();
+        return;
+      }
+
       const isMod = e.metaKey || e.ctrlKey;
       if (!isMod) return;
 
@@ -120,7 +129,7 @@ export function MarkdownEditor({
           break;
       }
     },
-    [handleInsert, onSubmit]
+    [handleInsert, onSubmit, onCancel]
   );
 
   // エラー時のボーダー色

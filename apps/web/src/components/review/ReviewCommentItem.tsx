@@ -170,6 +170,15 @@ export function ReviewCommentItem({
     }
   };
 
+  // 処理中状態
+  const isSubmitting =
+    updateMutation.isPending ||
+    deleteMutation.isPending ||
+    updateStatusMutation.isPending ||
+    createReplyMutation.isPending ||
+    updateReplyMutation.isPending ||
+    deleteReplyMutation.isPending;
+
   const hasReplies = comment.replies.length > 0;
 
   return (
@@ -188,7 +197,8 @@ export function ReviewCommentItem({
             <button
               type="button"
               onClick={() => setIsReplying(!isReplying)}
-              className="p-1 text-foreground-muted hover:text-foreground transition-colors"
+              disabled={isSubmitting}
+              className="p-1 text-foreground-muted hover:text-foreground transition-colors disabled:opacity-50"
               title="返信"
             >
               <Reply className="w-4 h-4" />
@@ -199,7 +209,8 @@ export function ReviewCommentItem({
             <button
               type="button"
               onClick={() => setIsEditing(true)}
-              className="p-1 text-foreground-muted hover:text-foreground transition-colors"
+              disabled={isSubmitting}
+              className="p-1 text-foreground-muted hover:text-foreground transition-colors disabled:opacity-50"
               title="編集"
             >
               <Pencil className="w-4 h-4" />
@@ -210,7 +221,8 @@ export function ReviewCommentItem({
             <button
               type="button"
               onClick={handleDelete}
-              className="p-1 text-foreground-muted hover:text-danger transition-colors"
+              disabled={isSubmitting}
+              className="p-1 text-foreground-muted hover:text-danger transition-colors disabled:opacity-50"
               title="削除"
             >
               <Trash2 className="w-4 h-4" />
@@ -222,7 +234,8 @@ export function ReviewCommentItem({
               <button
                 type="button"
                 onClick={() => updateStatusMutation.mutate('RESOLVED')}
-                className="p-1 text-foreground-muted hover:text-success transition-colors"
+                disabled={isSubmitting}
+                className="p-1 text-foreground-muted hover:text-success transition-colors disabled:opacity-50"
                 title="解決済みにする"
               >
                 <CheckCircle2 className="w-4 h-4" />
@@ -231,7 +244,8 @@ export function ReviewCommentItem({
               <button
                 type="button"
                 onClick={() => updateStatusMutation.mutate('OPEN')}
-                className="p-1 text-foreground-muted hover:text-warning transition-colors"
+                disabled={isSubmitting}
+                className="p-1 text-foreground-muted hover:text-warning transition-colors disabled:opacity-50"
                 title="未解決に戻す"
               >
                 <RotateCcw className="w-4 h-4" />
@@ -270,9 +284,9 @@ export function ReviewCommentItem({
             isUpdating={updateMutation.isPending}
           />
         ) : (
-          <p className="text-sm text-foreground whitespace-pre-wrap break-words">
-            {comment.content}
-          </p>
+          <div className="text-sm">
+            <MarkdownPreview content={comment.content} />
+          </div>
         )}
       </div>
 
@@ -370,12 +384,13 @@ function ReplyItem({
             </span>
           </div>
         </div>
-        {isAuthor && !isEditing && !isDeleting && (
+        {isAuthor && !isEditing && (
           <div className="flex items-center gap-1">
             <button
               type="button"
               onClick={onStartEdit}
-              className="p-1 text-foreground-muted hover:text-foreground transition-colors"
+              disabled={isUpdating || isDeleting}
+              className="p-1 text-foreground-muted hover:text-foreground transition-colors disabled:opacity-50"
               title="編集"
             >
               <Pencil className="w-4 h-4" />
@@ -383,7 +398,8 @@ function ReplyItem({
             <button
               type="button"
               onClick={onDelete}
-              className="p-1 text-foreground-muted hover:text-danger transition-colors"
+              disabled={isUpdating || isDeleting}
+              className="p-1 text-foreground-muted hover:text-danger transition-colors disabled:opacity-50"
               title="削除"
             >
               <Trash2 className="w-4 h-4" />
@@ -401,9 +417,9 @@ function ReplyItem({
             isUpdating={isUpdating}
           />
         ) : (
-          <p className="text-sm text-foreground whitespace-pre-wrap break-words">
-            {reply.content}
-          </p>
+          <div className="text-sm">
+            <MarkdownPreview content={reply.content} />
+          </div>
         )}
       </div>
     </div>
