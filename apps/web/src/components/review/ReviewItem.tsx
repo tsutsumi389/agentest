@@ -2,6 +2,7 @@ import { MessageSquare, ChevronRight } from 'lucide-react';
 import type { ReviewWithAuthor } from '../../lib/api';
 import { ReviewVerdictBadge } from './ReviewVerdictBadge';
 import { AuthorAvatar, getAuthorDisplayName } from '../common/AuthorAvatar';
+import { MarkdownPreview } from '../common/markdown';
 
 interface ReviewItemProps {
   /** レビューデータ */
@@ -64,9 +65,9 @@ export function ReviewItem({ review, onClick }: ReviewItemProps) {
 
           {/* サマリー */}
           {review.summary && (
-            <p className="text-sm text-foreground-muted line-clamp-2 mb-2">
-              {review.summary}
-            </p>
+            <div className="text-sm text-foreground-muted line-clamp-2 mb-2">
+              <MarkdownPreview content={review.summary} />
+            </div>
           )}
 
           {/* コメント数 */}

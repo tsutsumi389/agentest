@@ -324,6 +324,11 @@ export const reviewStatusUpdateSchema = z.object({
   status: reviewStatusSchema,
 });
 
+// 提出済みレビューの評価変更スキーマ
+export const reviewVerdictUpdateSchema = z.object({
+  verdict: reviewVerdictSchema,
+});
+
 export const reviewReplyCreateSchema = z.object({
   content: z.string().min(1).max(2000),
 });
@@ -367,5 +372,6 @@ export type ReviewSearch = z.infer<typeof reviewSearchSchema>;
 export type ReviewCommentCreate = z.infer<typeof reviewCommentCreateSchema>;
 export type ReviewCommentUpdate = z.infer<typeof reviewCommentUpdateSchema>;
 export type ReviewStatusUpdate = z.infer<typeof reviewStatusUpdateSchema>;
+export type ReviewVerdictUpdate = z.infer<typeof reviewVerdictUpdateSchema>;
 export type ReviewReplyCreate = z.infer<typeof reviewReplyCreateSchema>;
 export type ReviewCommentSearch = z.infer<typeof reviewCommentSearchSchema>;

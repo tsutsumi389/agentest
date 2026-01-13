@@ -185,6 +185,17 @@ export class ReviewRepository {
   }
 
   /**
+   * 提出済みレビューの評価を更新
+   */
+  async updateVerdict(id: string, verdict: ReviewVerdict) {
+    return prisma.review.update({
+      where: { id },
+      data: { verdict },
+      include: reviewDetailInclude,
+    });
+  }
+
+  /**
    * レビューを提出（DRAFT → SUBMITTED）
    */
   async submit(id: string, data: { verdict: ReviewVerdict; summary?: string }) {
