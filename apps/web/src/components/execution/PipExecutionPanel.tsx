@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
-import { ChevronLeft, ChevronRight, X, Loader2 } from 'lucide-react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { ChevronLeft, ChevronRight, X, Loader2, CheckCircle } from 'lucide-react';
 import type {
   ExecutionTestSuitePrecondition,
   ExecutionTestCasePrecondition,
@@ -21,23 +21,47 @@ import {
 import { MarkdownPreview } from '../common/markdown';
 import { InlineNoteEditor } from './InlineNoteEditor';
 
+/** ステータス変更後の遷移遅延（ms） */
+const NAVIGATE_DELAY_MS = 150;
+
 /**
  * PiP用ステータスボタングループ
  * select要素の代わりにボタングループでステータスを選択する
+ * クリック時にステータスを変更し、次のアイテムへ遷移する
  */
 function PipStatusButtons<T extends string>({
   value,
   options,
   onChange,
+  onNavigateNext,
   isEditable,
   isUpdating,
 }: {
   value: T;
   options: StatusOption<T>[];
   onChange: (value: T) => void;
+  /** ステータス変更後に呼び出される次へ遷移のコールバック */
+  onNavigateNext: () => void;
   isEditable: boolean;
   isUpdating: boolean;
 }) {
+  // 遷移タイマーのID（連打時のクリーンアップ用）
+  const navigateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // ステータス変更と次へ遷移を組み合わせたハンドラ
+  // 視覚的フィードバック（選択状態の表示）を見せてから遷移するため、少し遅延させる
+  const handleClick = (newValue: T) => {
+    // 連打時は前のタイマーをキャンセル
+    if (navigateTimerRef.current) {
+      clearTimeout(navigateTimerRef.current);
+    }
+    onChange(newValue);
+    navigateTimerRef.current = setTimeout(() => {
+      onNavigateNext();
+      navigateTimerRef.current = null;
+    }, NAVIGATE_DELAY_MS);
+  };
+
   if (isUpdating) {
     return (
       <div className="flex items-center gap-1.5">
@@ -60,23 +84,23 @@ function PipStatusButtons<T extends string>({
   }
 
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className="flex flex-wrap gap-2">
       {options.map((option) => {
         const isSelected = option.value === value;
         const IconComponent = option.config.icon;
         return (
           <button
             key={option.value}
-            onClick={() => onChange(option.value)}
+            onClick={() => handleClick(option.value)}
             className={[
-              'flex items-center gap-1 px-2 py-1 text-xs rounded border transition-colors',
+              'flex items-center gap-1.5 px-3 py-2 text-sm rounded border transition-colors',
               isSelected
                 ? `${option.config.bgClass} border-current ${option.config.colorClass}`
                 : 'bg-background border-border text-foreground-muted hover:bg-background-tertiary',
             ].join(' ')}
             aria-pressed={isSelected}
           >
-            <IconComponent className="w-3 h-3" />
+            <IconComponent className="w-4 h-4" />
             {option.config.label}
           </button>
         );
@@ -301,6 +325,19 @@ export function PipExecutionPanel({
     }
   }, [currentIndex, totalItems]);
 
+  // 次のアイテムへ移動、最後のアイテムなら次のテストケースへ
+  const goToNextOrNextTestCase = useCallback(() => {
+    if (currentIndex < totalItems - 1) {
+      // まだ次のアイテムがある
+      setCurrentIndex(currentIndex + 1);
+    } else if (currentTestCaseIndex < totalTestCases - 1) {
+      // 最後のアイテムで、次のテストケースがある場合
+      // 先にインデックスをリセットしてから遷移（レンダリング順序の問題を回避）
+      setCurrentIndex(0);
+      onNavigateToTestCase('next');
+    }
+  }, [currentIndex, totalItems, currentTestCaseIndex, totalTestCases, onNavigateToTestCase]);
+
   // キーボードナビゲーション（左右矢印キー）
   useEffect(() => {
     const targetWindow = pipWindow ?? window;
@@ -349,7 +386,7 @@ export function PipExecutionPanel({
   // アイテムがない場合
   if (!currentItem) {
     return (
-      <div className="min-h-full bg-background p-4">
+      <div className="h-full bg-background p-4">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-sm font-medium text-foreground truncate">{testCaseTitle}</h1>
           <button
@@ -368,7 +405,7 @@ export function PipExecutionPanel({
   const itemTypeConfig = getItemTypeConfig(currentItem.type);
 
   return (
-    <div className="min-h-full bg-background flex flex-col">
+    <div className="h-full bg-background flex flex-col">
       {/* ヘッダー: テストケースナビゲーション */}
       <header className="flex items-center justify-between px-3 py-2 border-b border-border bg-background-secondary">
         <button
@@ -427,36 +464,6 @@ export function PipExecutionPanel({
           <MarkdownPreview content={currentItem.content} />
         </div>
 
-        {/* ステータス変更 */}
-        <div className="space-y-2">
-          <span className="text-xs text-foreground-muted">ステータス:</span>
-          {(currentItem.type === 'suite-precondition' || currentItem.type === 'case-precondition') && currentPreconditionResult ? (
-            <PipStatusButtons
-              value={currentPreconditionResult.status}
-              options={preconditionResultStatusOptions}
-              onChange={(status) => onPreconditionStatusChange(currentPreconditionResult.id, status)}
-              isEditable={isEditable}
-              isUpdating={updatingPreconditionStatusId === currentPreconditionResult.id}
-            />
-          ) : currentItem.type === 'step' && currentStepResult ? (
-            <PipStatusButtons
-              value={currentStepResult.status}
-              options={stepResultStatusOptions}
-              onChange={(status) => onStepStatusChange(currentStepResult.id, status)}
-              isEditable={isEditable}
-              isUpdating={updatingStepStatusId === currentStepResult.id}
-            />
-          ) : currentItem.type === 'expected' && currentExpectedResult ? (
-            <PipStatusButtons
-              value={currentExpectedResult.status}
-              options={expectedResultStatusOptions}
-              onChange={(status) => onExpectedStatusChange(currentExpectedResult.id, status)}
-              isEditable={isEditable}
-              isUpdating={updatingExpectedStatusId === currentExpectedResult.id}
-            />
-          ) : null}
-        </div>
-
         {/* ノート */}
         <div className="space-y-1">
           <span className="text-xs text-foreground-muted">ノート:</span>
@@ -486,6 +493,39 @@ export function PipExecutionPanel({
             />
           ) : null}
         </div>
+
+        {/* ステータス変更 */}
+        <div className="space-y-2">
+          <span className="text-xs text-foreground-muted">ステータス:</span>
+          {(currentItem.type === 'suite-precondition' || currentItem.type === 'case-precondition') && currentPreconditionResult ? (
+            <PipStatusButtons
+              value={currentPreconditionResult.status}
+              options={preconditionResultStatusOptions}
+              onChange={(status) => onPreconditionStatusChange(currentPreconditionResult.id, status)}
+              onNavigateNext={goToNextOrNextTestCase}
+              isEditable={isEditable}
+              isUpdating={updatingPreconditionStatusId === currentPreconditionResult.id}
+            />
+          ) : currentItem.type === 'step' && currentStepResult ? (
+            <PipStatusButtons
+              value={currentStepResult.status}
+              options={stepResultStatusOptions}
+              onChange={(status) => onStepStatusChange(currentStepResult.id, status)}
+              onNavigateNext={goToNextOrNextTestCase}
+              isEditable={isEditable}
+              isUpdating={updatingStepStatusId === currentStepResult.id}
+            />
+          ) : currentItem.type === 'expected' && currentExpectedResult ? (
+            <PipStatusButtons
+              value={currentExpectedResult.status}
+              options={expectedResultStatusOptions}
+              onChange={(status) => onExpectedStatusChange(currentExpectedResult.id, status)}
+              onNavigateNext={goToNextOrNextTestCase}
+              isEditable={isEditable}
+              isUpdating={updatingExpectedStatusId === currentExpectedResult.id}
+            />
+          ) : null}
+        </div>
       </main>
 
       {/* フッター: アイテムナビゲーション */}
@@ -500,9 +540,16 @@ export function PipExecutionPanel({
           前へ
         </button>
 
-        <span className="text-xs text-foreground-muted">
-          全体: {currentIndex + 1} / {totalItems}
-        </span>
+        {currentIndex === totalItems - 1 && currentTestCaseIndex === totalTestCases - 1 ? (
+          <span className="flex items-center gap-1 text-xs text-success font-medium">
+            <CheckCircle className="w-3.5 h-3.5" />
+            全て完了
+          </span>
+        ) : (
+          <span className="text-xs text-foreground-muted">
+            全体: {currentIndex + 1} / {totalItems}
+          </span>
+        )}
 
         <button
           onClick={goToNext}
