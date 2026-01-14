@@ -134,9 +134,6 @@ export function usePictureInPicture(
         onCloseRef.current?.();
       });
 
-      // 明示的にサイズを設定（ブラウザが前回サイズを記憶している場合に対応）
-      newPipWindow.resizeTo(width, height);
-
       setPipWindow(newPipWindow);
       onOpenRef.current?.();
     } catch (error) {
