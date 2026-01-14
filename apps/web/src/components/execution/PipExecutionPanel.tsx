@@ -326,17 +326,20 @@ export function PipExecutionPanel({
   }, [currentIndex, totalItems]);
 
   // 次のアイテムへ移動、最後のアイテムなら次のテストケースへ
+  // 関数形式のsetCurrentIndexを使用して、常に最新のインデックスを参照する
   const goToNextOrNextTestCase = useCallback(() => {
-    if (currentIndex < totalItems - 1) {
-      // まだ次のアイテムがある
-      setCurrentIndex(currentIndex + 1);
-    } else if (currentTestCaseIndex < totalTestCases - 1) {
-      // 最後のアイテムで、次のテストケースがある場合
-      // 先にインデックスをリセットしてから遷移（レンダリング順序の問題を回避）
-      setCurrentIndex(0);
-      onNavigateToTestCase('next');
-    }
-  }, [currentIndex, totalItems, currentTestCaseIndex, totalTestCases, onNavigateToTestCase]);
+    setCurrentIndex((prevIndex) => {
+      if (prevIndex < totalItems - 1) {
+        // まだ次のアイテムがある
+        return prevIndex + 1;
+      } else if (currentTestCaseIndex < totalTestCases - 1) {
+        // 最後のアイテムで、次のテストケースがある場合
+        onNavigateToTestCase('next');
+        return 0;
+      }
+      return prevIndex;
+    });
+  }, [totalItems, currentTestCaseIndex, totalTestCases, onNavigateToTestCase]);
 
   // キーボードナビゲーション（左右矢印キー）
   useEffect(() => {
