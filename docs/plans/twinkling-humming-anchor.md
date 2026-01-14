@@ -84,9 +84,14 @@ CORS_ORIGIN=http://192.168.1.42:3000,http://192.168.1.42:3003
 CORS_ORIGIN=http://localhost:3000,http://localhost:3003
 ```
 
-### 5. 外部ポート変数の整理
+### 5. 外部ポート変数の削除
 
-`WEB_EXTERNAL_PORT`, `ADMIN_EXTERNAL_PORT` はdocker-compose.override.ymlでWeb/Adminのポートマッピングに使用されるが、現状3004/3005にマップしている。これは意図的な設定か確認が必要。
+`WEB_EXTERNAL_PORT`, `ADMIN_EXTERNAL_PORT` を `.env` と `.env.example` から削除する。
+
+**理由**:
+- docker-compose.override.ymlではデフォルト値（3000/3003）が設定されており、現在もデフォルト値で動作している
+- `.env`の値（3004/3005）は実際には使用されていない
+- 削除してもデフォルト値が使われるため、動作に影響なし
 
 ---
 
@@ -170,8 +175,7 @@ API_PORT=3001
 WS_PORT=3002
 WEB_PORT=3000
 ADMIN_PORT=3003
-WEB_EXTERNAL_PORT=3004
-ADMIN_EXTERNAL_PORT=3005
+# 削除: WEB_EXTERNAL_PORT, ADMIN_EXTERNAL_PORT (docker-compose.override.ymlのデフォルト値を使用)
 
 # CORS (追加)
 CORS_ORIGIN=http://localhost:3000,http://localhost:3003
