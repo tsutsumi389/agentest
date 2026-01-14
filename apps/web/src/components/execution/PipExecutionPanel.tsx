@@ -295,8 +295,15 @@ export function PipExecutionPanel({
 
   // 現在のインデックス
   const [currentIndex, setCurrentIndex] = useState(0);
+  // 最新のcurrentIndexを保持するref（コールバック内で最新値を参照するため）
+  const currentIndexRef = useRef(currentIndex);
 
   const totalItems = navigableItems.length;
+
+  // currentIndexが変わるたびにrefを更新
+  useEffect(() => {
+    currentIndexRef.current = currentIndex;
+  }, [currentIndex]);
 
   // テストケースが切り替わったらcurrentIndexをリセット
   useEffect(() => {
@@ -326,19 +333,17 @@ export function PipExecutionPanel({
   }, [currentIndex, totalItems]);
 
   // 次のアイテムへ移動、最後のアイテムなら次のテストケースへ
-  // 関数形式のsetCurrentIndexを使用して、常に最新のインデックスを参照する
+  // refを使用して最新のcurrentIndexを参照し、setter内での副作用を回避
   const goToNextOrNextTestCase = useCallback(() => {
-    setCurrentIndex((prevIndex) => {
-      if (prevIndex < totalItems - 1) {
-        // まだ次のアイテムがある
-        return prevIndex + 1;
-      } else if (currentTestCaseIndex < totalTestCases - 1) {
-        // 最後のアイテムで、次のテストケースがある場合
-        onNavigateToTestCase('next');
-        return 0;
-      }
-      return prevIndex;
-    });
+    const prevIndex = currentIndexRef.current;
+    if (prevIndex < totalItems - 1) {
+      // まだ次のアイテムがある
+      setCurrentIndex(prevIndex + 1);
+    } else if (currentTestCaseIndex < totalTestCases - 1) {
+      // 最後のアイテムで、次のテストケースがある場合
+      setCurrentIndex(0);
+      onNavigateToTestCase('next');
+    }
   }, [totalItems, currentTestCaseIndex, totalTestCases, onNavigateToTestCase]);
 
   // キーボードナビゲーション（左右矢印キー）
