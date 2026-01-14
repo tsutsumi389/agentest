@@ -31,7 +31,7 @@ export function ExecutionPage() {
   // Picture-in-Picture機能
   const { pipWindow, isPipSupported, isPipActive, openPip, closePip } = usePictureInPicture({
     width: 450,
-    height: 600,
+    height: 650,
   });
 
   // URLパラメータから選択中のテストケースIDを取得

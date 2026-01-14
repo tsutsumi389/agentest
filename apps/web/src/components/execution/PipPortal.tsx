@@ -44,10 +44,17 @@ export function PipPortal({ pipWindow, children }: PipPortalProps) {
 
     // PiP ウィンドウの body をコンテナとして使用
     const pipBody = pipWindow.document.body;
+    const pipHtml = pipWindow.document.documentElement;
+
+    // html, bodyに高さを設定してh-fullが効くようにする
+    pipHtml.style.height = '100%';
+    pipBody.style.height = '100%';
+    pipBody.style.margin = '0';
 
     // コンテナ要素を作成してマウント
     const containerElement = pipWindow.document.createElement('div');
     containerElement.id = 'pip-portal-root';
+    containerElement.style.height = '100%';
     pipBody.appendChild(containerElement);
 
     setContainer(containerElement);
