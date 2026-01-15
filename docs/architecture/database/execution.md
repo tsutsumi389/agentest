@@ -317,11 +317,14 @@ model ExecutionTestCaseExpectedResult {
 | `executionCasePreconditionId` | UUID | YES | NULL | 実行ケース前提条件 ID（テストケース前提条件の場合） |
 | `status` | ENUM | NO | UNCHECKED | 確認ステータス |
 | `checkedAt` | TIMESTAMP | YES | NULL | 確認日時 |
+| `checkedByUserId` | UUID | YES | NULL | 確認者ユーザー ID（外部キー） |
+| `checkedByAgentName` | VARCHAR(100) | YES | NULL | 確認者 AI エージェント名 |
 | `note` | TEXT | YES | NULL | メモ |
 | `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
 | `updatedAt` | TIMESTAMP | NO | - | 更新日時 |
 
 ※ `executionSuitePreconditionId` と `executionCasePreconditionId` はどちらか一方のみ設定
+※ `checkedByUserId` と `checkedByAgentName` は Web 経由では userId のみ、MCP ツール経由では両方設定可能
 
 ### 確認ステータス（前提条件用）
 
@@ -348,6 +351,8 @@ model ExecutionPreconditionResult {
   executionCasePreconditionId  String?            @map("execution_case_precondition_id")
   status                       PreconditionStatus @default(UNCHECKED)
   checkedAt                    DateTime?          @map("checked_at")
+  checkedByUserId              String?            @map("checked_by_user_id")
+  checkedByAgentName           String?            @map("checked_by_agent_name") @db.VarChar(100)
   note                         String?            @db.Text
   createdAt                    DateTime           @default(now()) @map("created_at")
   updatedAt                    DateTime           @updatedAt @map("updated_at")
@@ -356,6 +361,7 @@ model ExecutionPreconditionResult {
   executionTestCase ExecutionTestCase?              @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
   suitePrecondition ExecutionTestSuitePrecondition? @relation(fields: [executionSuitePreconditionId], references: [id], onDelete: Cascade)
   casePrecondition  ExecutionTestCasePrecondition?  @relation(fields: [executionCasePreconditionId], references: [id], onDelete: Cascade)
+  checkedByUser     User?                           @relation("PreconditionResultChecker", fields: [checkedByUserId], references: [id])
 
   @@unique([executionId, executionSuitePreconditionId])
   @@unique([executionId, executionCasePreconditionId])
@@ -380,9 +386,13 @@ model ExecutionPreconditionResult {
 | `executionStepId` | UUID | NO | - | 実行ステップ ID（外部キー） |
 | `status` | ENUM | NO | PENDING | 実施ステータス |
 | `executedAt` | TIMESTAMP | YES | NULL | 実施日時 |
+| `executedByUserId` | UUID | YES | NULL | 実施者ユーザー ID（外部キー） |
+| `executedByAgentName` | VARCHAR(100) | YES | NULL | 実施者 AI エージェント名 |
 | `note` | TEXT | YES | NULL | メモ |
 | `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
 | `updatedAt` | TIMESTAMP | NO | - | 更新日時 |
+
+※ `executedByUserId` と `executedByAgentName` は Web 経由では userId のみ、MCP ツール経由では両方設定可能
 
 ### 実施ステータス（手順用）
 
@@ -408,6 +418,8 @@ model ExecutionStepResult {
   executionStepId     String     @map("execution_step_id")
   status              StepStatus @default(PENDING)
   executedAt          DateTime?  @map("executed_at")
+  executedByUserId    String?    @map("executed_by_user_id")
+  executedByAgentName String?    @map("executed_by_agent_name") @db.VarChar(100)
   note                String?    @db.Text
   createdAt           DateTime   @default(now()) @map("created_at")
   updatedAt           DateTime   @updatedAt @map("updated_at")
@@ -415,6 +427,7 @@ model ExecutionStepResult {
   execution         Execution             @relation(fields: [executionId], references: [id], onDelete: Cascade)
   executionTestCase ExecutionTestCase     @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
   executionStep     ExecutionTestCaseStep @relation(fields: [executionStepId], references: [id], onDelete: Cascade)
+  executedByUser    User?                 @relation("StepResultExecutor", fields: [executedByUserId], references: [id])
 
   @@unique([executionId, executionStepId])
   @@index([executionId])
@@ -438,9 +451,13 @@ model ExecutionStepResult {
 | `executionExpectedResultId` | UUID | NO | - | 実行期待結果 ID（外部キー） |
 | `status` | ENUM | NO | PENDING | 判定ステータス |
 | `judgedAt` | TIMESTAMP | YES | NULL | 判定日時 |
+| `judgedByUserId` | UUID | YES | NULL | 判定者ユーザー ID（外部キー） |
+| `judgedByAgentName` | VARCHAR(100) | YES | NULL | 判定者 AI エージェント名 |
 | `note` | TEXT | YES | NULL | メモ |
 | `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
 | `updatedAt` | TIMESTAMP | NO | - | 更新日時 |
+
+※ `judgedByUserId` と `judgedByAgentName` は Web 経由では userId のみ、MCP ツール経由では両方設定可能
 
 ### 判定ステータス（期待値用）
 
@@ -470,6 +487,8 @@ model ExecutionExpectedResult {
   executionExpectedResultId String         @map("execution_expected_result_id")
   status                    JudgmentStatus @default(PENDING)
   judgedAt                  DateTime?      @map("judged_at")
+  judgedByUserId            String?        @map("judged_by_user_id")
+  judgedByAgentName         String?        @map("judged_by_agent_name") @db.VarChar(100)
   note                      String?        @db.Text
   createdAt                 DateTime       @default(now()) @map("created_at")
   updatedAt                 DateTime       @updatedAt @map("updated_at")
@@ -478,6 +497,7 @@ model ExecutionExpectedResult {
   executionTestCase       ExecutionTestCase               @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
   executionExpectedResult ExecutionTestCaseExpectedResult @relation(fields: [executionExpectedResultId], references: [id], onDelete: Cascade)
   evidences               ExecutionEvidence[]
+  judgedByUser            User?                           @relation("ExpectedResultJudger", fields: [judgedByUserId], references: [id])
 
   @@unique([executionId, executionExpectedResultId])
   @@index([executionId])
