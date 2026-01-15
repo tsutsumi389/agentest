@@ -5,8 +5,8 @@ export function createAuthConfig(env: NodeJS.ProcessEnv): AuthConfig {
     jwt: {
       accessSecret: env.JWT_ACCESS_SECRET || 'dev-access-secret',
       refreshSecret: env.JWT_REFRESH_SECRET || 'dev-refresh-secret',
-      accessExpiry: env.JWT_ACCESS_EXPIRY || '15m',
-      refreshExpiry: env.JWT_REFRESH_EXPIRY || '7d',
+      accessExpiry: env.JWT_ACCESS_EXPIRES_IN || '15m',
+      refreshExpiry: env.JWT_REFRESH_EXPIRES_IN || '7d',
     },
     cookie: {
       httpOnly: true,

@@ -60,8 +60,8 @@ S3_BUCKET=evidence
 # 認証
 # ===========================================
 JWT_SECRET=dev-jwt-secret-change-in-production
-JWT_ACCESS_EXPIRY=15m
-JWT_REFRESH_EXPIRY=7d
+JWT_ACCESS_EXPIRES_IN=15m
+JWT_REFRESH_EXPIRES_IN=7d
 
 # OAuth - GitHub
 GITHUB_CLIENT_ID=
@@ -212,8 +212,8 @@ export const envSchema = z.object({
 
   // 認証
   JWT_SECRET: z.string().min(32),
-  JWT_ACCESS_EXPIRY: z.string().default('15m'),
-  JWT_REFRESH_EXPIRY: z.string().default('7d'),
+  JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
+  JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
 
   // OAuth
   GITHUB_CLIENT_ID: z.string().optional(),
