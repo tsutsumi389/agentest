@@ -10,6 +10,14 @@ import {
   Play,
   Ban,
   Loader2,
+  Calendar,
+  Timer,
+  Server,
+  Circle,
+  MinusCircle,
+  ListChecks,
+  ClipboardCheck,
+  Slash,
 } from 'lucide-react';
 import type {
   ExecutionWithDetails,
@@ -19,6 +27,7 @@ import type {
 } from '../../lib/api';
 import { MarkdownPreview } from '../common/markdown';
 import { ExecutionPreconditionList } from './ExecutionPreconditionList';
+import { formatDateTime, formatDuration } from '../../lib/date';
 
 interface ExecutionOverviewPanelProps {
   /** 実行詳細 */
@@ -73,13 +82,14 @@ function SummaryCard({
   icon: React.ElementType;
   label: string;
   value: number;
-  color: 'success' | 'danger' | 'warning' | 'muted';
+  color: 'success' | 'danger' | 'warning' | 'muted' | 'accent';
 }) {
   const colorClasses = {
     success: 'bg-success-subtle text-success',
     danger: 'bg-danger-subtle text-danger',
     warning: 'bg-warning-subtle text-warning',
     muted: 'bg-background-tertiary text-foreground-muted',
+    accent: 'bg-accent-subtle text-accent',
   };
 
   return (
@@ -91,6 +101,39 @@ function SummaryCard({
         <div>
           <p className="text-2xl font-bold text-foreground">{value}</p>
           <p className="text-sm text-foreground-muted">{label}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * メタデータカード
+ * 開始日時、終了日時/経過時間、環境を表示
+ */
+function MetadataCard({
+  icon: Icon,
+  label,
+  value,
+  subValue,
+}: {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  subValue?: string;
+}) {
+  return (
+    <div className="card p-4">
+      <div className="flex items-start gap-3">
+        <div className="w-10 h-10 rounded-lg bg-background-tertiary flex items-center justify-center flex-shrink-0">
+          <Icon className="w-5 h-5 text-foreground-muted" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-xs text-foreground-muted mb-1">{label}</p>
+          <p className="text-sm font-medium text-foreground truncate">{value}</p>
+          {subValue && (
+            <p className="text-xs text-foreground-muted mt-0.5">{subValue}</p>
+          )}
         </div>
       </div>
     </div>
@@ -115,19 +158,45 @@ export function ExecutionOverviewPanel({
   updatingPreconditionStatusId,
   updatingPreconditionNoteId,
 }: ExecutionOverviewPanelProps) {
-  // サマリー計算（期待結果から集計、一度の走査でまとめて計算）
-  const summary = useMemo(() => {
-    return execution.expectedResults.reduce(
+  // サマリー計算（前提条件・手順・期待結果を一度の走査でまとめて計算）
+  const { preconditionSummary, stepSummary, expectedSummary } = useMemo(() => {
+    // 前提条件サマリー
+    const preconditionSummary = execution.preconditionResults.reduce(
       (acc, r) => {
-        if (r.status === 'PASS') acc.pass++;
-        else if (r.status === 'FAIL') acc.fail++;
-        else if (r.status === 'SKIPPED' || r.status === 'NOT_EXECUTABLE') acc.skipped++;
+        if (r.status === 'MET') acc.met++;
+        else if (r.status === 'NOT_MET') acc.notMet++;
+        else if (r.status === 'UNCHECKED') acc.unchecked++;
+        return acc;
+      },
+      { met: 0, notMet: 0, unchecked: 0 }
+    );
+
+    // 手順サマリー
+    const stepSummary = execution.stepResults.reduce(
+      (acc, r) => {
+        if (r.status === 'DONE') acc.done++;
+        else if (r.status === 'SKIPPED') acc.skipped++;
         else if (r.status === 'PENDING') acc.pending++;
         return acc;
       },
-      { pass: 0, fail: 0, skipped: 0, pending: 0 }
+      { done: 0, skipped: 0, pending: 0 }
     );
-  }, [execution.expectedResults]);
+
+    // 期待結果サマリー（SKIPPEDとNOT_EXECUTABLEを分離）
+    const expectedSummary = execution.expectedResults.reduce(
+      (acc, r) => {
+        if (r.status === 'PASS') acc.pass++;
+        else if (r.status === 'FAIL') acc.fail++;
+        else if (r.status === 'SKIPPED') acc.skipped++;
+        else if (r.status === 'NOT_EXECUTABLE') acc.notExecutable++;
+        else if (r.status === 'PENDING') acc.pending++;
+        return acc;
+      },
+      { pass: 0, fail: 0, skipped: 0, notExecutable: 0, pending: 0 }
+    );
+
+    return { preconditionSummary, stepSummary, expectedSummary };
+  }, [execution.preconditionResults, execution.stepResults, execution.expectedResults]);
 
   return (
     <div className="space-y-6">
@@ -159,15 +228,6 @@ export function ExecutionOverviewPanel({
                   {statusLabel[execution.status]}
                 </span>
               </div>
-              <p className="text-foreground-muted">
-                開始: {new Date(execution.startedAt).toLocaleString('ja-JP')}
-                {execution.completedAt && (
-                  <> / 終了: {new Date(execution.completedAt).toLocaleString('ja-JP')}</>
-                )}
-                {execution.environment && (
-                  <> / 環境: {execution.environment.name}</>
-                )}
-              </p>
               {executionTestSuite?.description && (
                 <MarkdownPreview content={executionTestSuite.description} className="text-foreground-muted text-sm mt-2" />
               )}
@@ -205,32 +265,132 @@ export function ExecutionOverviewPanel({
         </div>
       </div>
 
-      {/* 実行サマリー */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <SummaryCard
-          icon={CheckCircle2}
-          label="成功"
-          value={summary.pass}
-          color="success"
+      {/* メタデータカード */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <MetadataCard
+          icon={Calendar}
+          label="開始日時"
+          value={formatDateTime(execution.startedAt)}
         />
-        <SummaryCard
-          icon={XCircle}
-          label="失敗"
-          value={summary.fail}
-          color="danger"
+        <MetadataCard
+          icon={Timer}
+          label={execution.completedAt ? '終了日時' : '経過時間'}
+          value={
+            execution.completedAt
+              ? formatDateTime(execution.completedAt)
+              : '実行中...'
+          }
+          subValue={
+            execution.completedAt
+              ? formatDuration(execution.startedAt, execution.completedAt)
+              : undefined
+          }
         />
-        <SummaryCard
-          icon={Ban}
-          label="スキップ"
-          value={summary.skipped}
-          color="warning"
+        <MetadataCard
+          icon={Server}
+          label="実行環境"
+          value={execution.environment?.name ?? '未設定'}
         />
-        <SummaryCard
-          icon={Clock}
-          label="未実行"
-          value={summary.pending}
-          color="muted"
-        />
+      </div>
+
+      {/* 前提条件サマリー */}
+      {execution.preconditionResults.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 text-sm font-medium text-foreground-muted mb-3">
+            <ClipboardCheck className="w-4 h-4" />
+            前提条件
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <SummaryCard
+              icon={CheckCircle2}
+              label="満たす"
+              value={preconditionSummary.met}
+              color="success"
+            />
+            <SummaryCard
+              icon={XCircle}
+              label="満たさない"
+              value={preconditionSummary.notMet}
+              color="danger"
+            />
+            <SummaryCard
+              icon={Circle}
+              label="未確認"
+              value={preconditionSummary.unchecked}
+              color="muted"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* 手順サマリー */}
+      {execution.stepResults.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 text-sm font-medium text-foreground-muted mb-3">
+            <ListChecks className="w-4 h-4" />
+            手順
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <SummaryCard
+              icon={CheckCircle2}
+              label="完了"
+              value={stepSummary.done}
+              color="success"
+            />
+            <SummaryCard
+              icon={MinusCircle}
+              label="スキップ"
+              value={stepSummary.skipped}
+              color="warning"
+            />
+            <SummaryCard
+              icon={Circle}
+              label="未実行"
+              value={stepSummary.pending}
+              color="muted"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* 期待結果サマリー */}
+      <div>
+        <div className="flex items-center gap-2 text-sm font-medium text-foreground-muted mb-3">
+          <AlertCircle className="w-4 h-4" />
+          期待結果
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <SummaryCard
+            icon={CheckCircle2}
+            label="成功"
+            value={expectedSummary.pass}
+            color="success"
+          />
+          <SummaryCard
+            icon={XCircle}
+            label="失敗"
+            value={expectedSummary.fail}
+            color="danger"
+          />
+          <SummaryCard
+            icon={Ban}
+            label="スキップ"
+            value={expectedSummary.skipped}
+            color="warning"
+          />
+          <SummaryCard
+            icon={Slash}
+            label="実行不可"
+            value={expectedSummary.notExecutable}
+            color="accent"
+          />
+          <SummaryCard
+            icon={Clock}
+            label="未実行"
+            value={expectedSummary.pending}
+            color="muted"
+          />
+        </div>
       </div>
 
       {/* スイートレベル前提条件 */}
@@ -248,13 +408,6 @@ export function ExecutionOverviewPanel({
           />
         </div>
       )}
-
-      {/* テストケース一覧へのガイド */}
-      <div className="card p-6 text-center">
-        <p className="text-foreground-muted">
-          サイドバーからテストケースを選択して詳細を表示
-        </p>
-      </div>
     </div>
   );
 }

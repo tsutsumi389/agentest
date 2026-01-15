@@ -31,6 +31,31 @@ export function formatDateTime(dateString: string): string {
 }
 
 /**
+ * 2つの日時の差分を経過時間としてフォーマット
+ * 例: 1時間23分45秒、5分30秒
+ */
+export function formatDuration(startDateString: string, endDateString: string): string {
+  const start = new Date(startDateString);
+  const end = new Date(endDateString);
+  const diffMs = end.getTime() - start.getTime();
+
+  if (diffMs < 0 || Number.isNaN(diffMs)) return '---';
+
+  const diffSec = Math.floor(diffMs / 1000);
+  const hours = Math.floor(diffSec / 3600);
+  const minutes = Math.floor((diffSec % 3600) / 60);
+  const seconds = diffSec % 60;
+
+  if (hours > 0) {
+    return `${hours}時間${minutes}分${seconds}秒`;
+  } else if (minutes > 0) {
+    return `${minutes}分${seconds}秒`;
+  } else {
+    return `${seconds}秒`;
+  }
+}
+
+/**
  * 相対的な時間表示
  * 例: 3分前、2時間前、1日前
  */
