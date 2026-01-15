@@ -103,6 +103,9 @@ export interface ExecutionPreconditionResult {
   status: PreconditionStatus;
   checkedAt: Date | null;
   note: string | null;
+  // 実施者情報
+  checkedByUserId: string | null;
+  checkedByAgentName: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -115,6 +118,9 @@ export interface ExecutionStepResult {
   status: StepStatus;
   executedAt: Date | null;
   note: string | null;
+  // 実施者情報
+  executedByUserId: string | null;
+  executedByAgentName: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -127,6 +133,9 @@ export interface ExecutionExpectedResult {
   status: JudgmentStatus;
   judgedAt: Date | null;
   note: string | null;
+  // 実施者情報
+  judgedByUserId: string | null;
+  judgedByAgentName: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

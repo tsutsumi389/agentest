@@ -159,7 +159,8 @@ describe('ExecutionController', () => {
       expect(mockExecutionService.updatePreconditionResult).toHaveBeenCalledWith(
         TEST_EXECUTION_ID,
         TEST_PRECOND_RESULT_ID,
-        { status: 'MET', note: 'All conditions met' }
+        { status: 'MET', note: 'All conditions met' },
+        { userId: TEST_USER_ID }
       );
       expect(res.json).toHaveBeenCalledWith({ result: mockResult });
     });
@@ -181,7 +182,8 @@ describe('ExecutionController', () => {
       expect(mockExecutionService.updateStepResult).toHaveBeenCalledWith(
         TEST_EXECUTION_ID,
         TEST_STEP_RESULT_ID,
-        { status: 'DONE' }
+        { status: 'DONE' },
+        { userId: TEST_USER_ID }
       );
       expect(res.json).toHaveBeenCalledWith({ result: mockResult });
     });
@@ -203,7 +205,8 @@ describe('ExecutionController', () => {
       expect(mockExecutionService.updateExpectedResult).toHaveBeenCalledWith(
         TEST_EXECUTION_ID,
         TEST_EXPECTED_RESULT_ID,
-        { status: 'PASS', note: 'Test passed successfully' }
+        { status: 'PASS', note: 'Test passed successfully' },
+        { userId: TEST_USER_ID }
       );
       expect(res.json).toHaveBeenCalledWith({ result: mockResult });
     });

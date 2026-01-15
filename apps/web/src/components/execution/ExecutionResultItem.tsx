@@ -3,6 +3,32 @@ import { MarkdownPreview } from '../common/markdown';
 import { StatusButton } from './StatusButton';
 import { InlineNoteEditor } from './InlineNoteEditor';
 
+/**
+ * 実施者情報の型
+ */
+export interface ExecutorInfo {
+  /** 実施したユーザー */
+  user: { id: string; name: string; avatarUrl: string | null } | null;
+  /** 実施したAIエージェント名 */
+  agentName: string | null;
+  /** 実施日時 */
+  executedAt: string | null;
+}
+
+/**
+ * 日時を簡易フォーマットで表示
+ * 例: 2025-01-15 10:30
+ */
+function formatDateTime(dateString: string): string {
+  const date = new Date(dateString);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
+}
+
 interface ExecutionResultItemProps<T extends string> {
   /** インデックス番号（1始まり） */
   index: number;
@@ -26,6 +52,8 @@ interface ExecutionResultItemProps<T extends string> {
   onStatusChange: (status: T) => void;
   /** ノート変更時のハンドラ */
   onNoteChange: (note: string | null) => void;
+  /** 実施者情報（オプション） */
+  executor?: ExecutorInfo;
 }
 
 /**
@@ -44,7 +72,13 @@ export function ExecutionResultItem<T extends string>({
   isNoteUpdating,
   onStatusChange,
   onNoteChange,
+  executor,
 }: ExecutionResultItemProps<T>) {
+  // 実施者表示名を取得（エージェント名優先、次にユーザー名）
+  const executorName = executor?.agentName || executor?.user?.name;
+  // 実施日時
+  const executedAt = executor?.executedAt;
+
   return (
     <div className="flex gap-3 py-3 border-b border-border last:border-b-0">
       {/* インデックス番号バッジ */}
@@ -71,6 +105,13 @@ export function ExecutionResultItem<T extends string>({
             />
           </div>
         </div>
+
+        {/* 実施者情報（ステータスが設定されている場合のみ表示） */}
+        {executorName && executedAt && (
+          <div className="text-xs text-foreground-muted">
+            {executorName} / {formatDateTime(executedAt)}
+          </div>
+        )}
 
         {/* 下段: ノートエディタ */}
         <InlineNoteEditor

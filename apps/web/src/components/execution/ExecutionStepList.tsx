@@ -95,6 +95,11 @@ export function ExecutionStepList({
               isNoteUpdating={updatingNoteId === result.id}
               onStatusChange={(status) => onStatusChange(result.id, status)}
               onNoteChange={(note) => onNoteChange(result.id, note)}
+              executor={{
+                user: result.executedByUser ?? null,
+                agentName: result.executedByAgentName ?? null,
+                executedAt: result.executedAt,
+              }}
             />
           );
         })}
