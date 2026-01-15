@@ -5,11 +5,11 @@ const isTest = process.env.NODE_ENV === 'test';
 
 /**
  * 一般API用レート制限
- * 15分間で100リクエストまで
+ * 15分間で300リクエストまで
  */
 export const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15分
-  max: 100, // IP毎に100リクエスト
+  max: 300, // IP毎に300リクエスト（Webフロント+MCP併用を考慮）
   standardHeaders: true, // RateLimit-* ヘッダーを返す
   legacyHeaders: false, // X-RateLimit-* ヘッダーを無効化
   message: {

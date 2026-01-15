@@ -141,8 +141,8 @@ throw new AppError(404, 'PROJECT_NOT_FOUND', 'Project not found');
 
 | エンドポイント | 制限 |
 |---------------|------|
-| 一般 API | 100 req / 15分 / IP |
-| 認証 API | 5 req / 1時間 / IP |
+| 一般 API | 300 req / 15分 / IP |
+| 認証 API | 10 req / 1時間 / IP |
 
 ## CORS 設定
 
