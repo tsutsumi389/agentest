@@ -186,6 +186,9 @@ describe('ExecutionRepository', () => {
               suitePrecondition: true,
               casePrecondition: true,
               executionTestCase: true,
+              checkedByUser: {
+                select: { id: true, name: true, avatarUrl: true },
+              },
             },
             orderBy: { id: 'asc' },
           },
@@ -193,6 +196,9 @@ describe('ExecutionRepository', () => {
             include: {
               executionStep: true,
               executionTestCase: true,
+              executedByUser: {
+                select: { id: true, name: true, avatarUrl: true },
+              },
             },
             orderBy: { id: 'asc' },
           },
@@ -201,6 +207,9 @@ describe('ExecutionRepository', () => {
               executionExpectedResult: true,
               executionTestCase: true,
               evidences: true,
+              judgedByUser: {
+                select: { id: true, name: true, avatarUrl: true },
+              },
             },
             orderBy: { id: 'asc' },
           },

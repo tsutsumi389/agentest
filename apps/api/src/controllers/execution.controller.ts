@@ -96,7 +96,8 @@ export class ExecutionController {
       const result = await this.executionService.updatePreconditionResult(
         executionId,
         preconditionResultId,
-        data
+        data,
+        { userId: req.user!.id }
       );
 
       res.json({ result });
@@ -115,7 +116,8 @@ export class ExecutionController {
       const result = await this.executionService.updateStepResult(
         executionId,
         stepResultId,
-        data
+        data,
+        { userId: req.user!.id }
       );
 
       res.json({ result });
@@ -134,7 +136,8 @@ export class ExecutionController {
       const result = await this.executionService.updateExpectedResult(
         executionId,
         expectedResultId,
-        data
+        data,
+        { userId: req.user!.id }
       );
 
       res.json({ result });

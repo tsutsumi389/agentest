@@ -1,7 +1,20 @@
 import type { StatusConfig, StatusOption } from '../../lib/execution-status';
+import { formatDateTimeCompact } from '../../lib/date';
 import { MarkdownPreview } from '../common/markdown';
 import { StatusButton } from './StatusButton';
 import { InlineNoteEditor } from './InlineNoteEditor';
+
+/**
+ * 実施者情報の型
+ */
+export interface ExecutorInfo {
+  /** 実施したユーザー */
+  user: { id: string; name: string; avatarUrl: string | null } | null;
+  /** 実施したAIエージェント名（MCPツール経由での実施時に設定される） */
+  agentName: string | null;
+  /** 実施日時 */
+  executedAt: string | null;
+}
 
 interface ExecutionResultItemProps<T extends string> {
   /** インデックス番号（1始まり） */
@@ -26,6 +39,8 @@ interface ExecutionResultItemProps<T extends string> {
   onStatusChange: (status: T) => void;
   /** ノート変更時のハンドラ */
   onNoteChange: (note: string | null) => void;
+  /** 実施者情報（オプション） */
+  executor?: ExecutorInfo;
 }
 
 /**
@@ -44,7 +59,15 @@ export function ExecutionResultItem<T extends string>({
   isNoteUpdating,
   onStatusChange,
   onNoteChange,
+  executor,
 }: ExecutionResultItemProps<T>) {
+  // 実施者表示名を取得
+  // MCPツール経由（AIエージェント）での実施時はagentNameを優先表示
+  // ブラウザ経由（ユーザー）での実施時はuser.nameを表示
+  // 両方設定されている場合はagentNameを優先（AIが代理実行したケース）
+  const executorName = executor?.agentName || executor?.user?.name;
+  const executedAt = executor?.executedAt;
+
   return (
     <div className="flex gap-3 py-3 border-b border-border last:border-b-0">
       {/* インデックス番号バッジ */}
@@ -71,6 +94,13 @@ export function ExecutionResultItem<T extends string>({
             />
           </div>
         </div>
+
+        {/* 実施者情報（ステータスが設定されている場合のみ表示） */}
+        {executorName && executedAt && (
+          <div className="text-xs text-foreground-muted">
+            {executorName} / {formatDateTimeCompact(executedAt)}
+          </div>
+        )}
 
         {/* 下段: ノートエディタ */}
         <InlineNoteEditor

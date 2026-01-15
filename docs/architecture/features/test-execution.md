@@ -390,6 +390,8 @@ erDiagram
         uuid executionCasePreconditionId FK "nullable"
         enum status "UNCHECKED, MET, NOT_MET"
         timestamp checkedAt "nullable"
+        uuid checkedByUserId FK "nullable, 確認者ユーザーID"
+        varchar checkedByAgentName "nullable, 確認者AIエージェント名"
         text note "nullable"
         timestamp createdAt
         timestamp updatedAt
@@ -402,6 +404,8 @@ erDiagram
         uuid executionStepId FK
         enum status "PENDING, DONE, SKIPPED"
         timestamp executedAt "nullable"
+        uuid executedByUserId FK "nullable, 実施者ユーザーID"
+        varchar executedByAgentName "nullable, 実施者AIエージェント名"
         text note "nullable"
         timestamp createdAt
         timestamp updatedAt
@@ -414,6 +418,8 @@ erDiagram
         uuid executionExpectedResultId FK
         enum status "PENDING, PASS, FAIL, SKIPPED, NOT_EXECUTABLE"
         timestamp judgedAt "nullable"
+        uuid judgedByUserId FK "nullable, 判定者ユーザーID"
+        varchar judgedByAgentName "nullable, 判定者AIエージェント名"
         text note "nullable"
         timestamp createdAt
         timestamp updatedAt
@@ -511,6 +517,33 @@ Execution
 - IN_PROGRESSの実行のみ完了/中止可能
 - 完了/中止後は結果の変更不可
 - 完了/中止後もエビデンスの閲覧は可能
+
+### 実施者情報の記録
+
+テスト実行中の各操作には、誰がいつ実施したかの情報が記録される。
+
+#### 記録タイミング
+
+| 操作 | 記録フィールド | 記録タイミング |
+|------|--------------|--------------|
+| 前提条件確認 | checkedByUserId, checkedByAgentName, checkedAt | ステータス変更時 |
+| 手順実施 | executedByUserId, executedByAgentName, executedAt | ステータス変更時 |
+| 期待結果判定 | judgedByUserId, judgedByAgentName, judgedAt | ステータス変更時 |
+
+#### 実施者の特定方法
+
+| 実施経路 | userId | agentName |
+|---------|--------|-----------|
+| Webブラウザ | ログインユーザーID | null |
+| MCPツール | 認証ユーザーID | ツールで指定した名前（例: "Claude Code Opus4.5"） |
+
+#### UI表示形式
+
+実施者情報は以下の形式で表示される:
+- ユーザー実施: `田中太郎 / 2025-01-15 10:30`
+- AIエージェント実施: `Claude Code Opus4.5 / 2025-01-15 10:30`
+
+エージェント名が設定されている場合はエージェント名を優先表示する。これにより、MCPツール経由でAIエージェントが実施した場合に、どのエージェントが作業したかを明確に識別できる。
 
 ### エビデンス管理
 
@@ -722,8 +755,14 @@ agentest/
         "executionTestCaseId": null,
         "executionSuitePreconditionId": "uuid",
         "executionCasePreconditionId": null,
-        "status": "UNCHECKED",
-        "checkedAt": null,
+        "status": "MET",
+        "checkedAt": "2024-01-01T00:00:00Z",
+        "checkedByUser": {
+          "id": "uuid",
+          "name": "田中太郎",
+          "avatarUrl": "https://..."
+        },
+        "checkedByAgentName": null,
         "note": null
       }
     ],
@@ -732,8 +771,10 @@ agentest/
         "id": "uuid",
         "executionTestCaseId": "uuid",
         "executionStepId": "uuid",
-        "status": "PENDING",
-        "executedAt": null,
+        "status": "DONE",
+        "executedAt": "2024-01-01T00:00:00Z",
+        "executedByUser": null,
+        "executedByAgentName": "Claude Code Opus4.5",
         "note": null
       }
     ],
@@ -742,8 +783,10 @@ agentest/
         "id": "uuid",
         "executionTestCaseId": "uuid",
         "executionExpectedResultId": "uuid",
-        "status": "PENDING",
-        "judgedAt": null,
+        "status": "PASS",
+        "judgedAt": "2024-01-01T00:00:00Z",
+        "judgedByUser": null,
+        "judgedByAgentName": "Claude Code Opus4.5",
         "note": null,
         "evidences": [
           {
@@ -863,7 +906,7 @@ agentest/
 | リスト | ExecutionExpectedResultList | `apps/web/src/components/execution/ExecutionExpectedResultList.tsx` | 期待結果一覧 |
 | エビデンス | ExecutionEvidenceList | `apps/web/src/components/execution/ExecutionEvidenceList.tsx` | エビデンス一覧・削除・ダウンロード |
 | エビデンス | ExecutionEvidenceUpload | `apps/web/src/components/execution/ExecutionEvidenceUpload.tsx` | ドラッグ&ドロップアップロード |
-| UI部品 | ExecutionResultItem | `apps/web/src/components/execution/ExecutionResultItem.tsx` | 結果項目（番号・内容・ステータス） |
+| UI部品 | ExecutionResultItem | `apps/web/src/components/execution/ExecutionResultItem.tsx` | 結果項目（番号・内容・ステータス・実施者情報） |
 | UI部品 | StatusButton | `apps/web/src/components/execution/StatusButton.tsx` | ステータス変更ドロップダウン |
 | PiP | PipPortal | `apps/web/src/components/execution/PipPortal.tsx` | PiPウィンドウへのポータル |
 | PiP | PipExecutionPanel | `apps/web/src/components/execution/PipExecutionPanel.tsx` | PiP用コンパクトUI |

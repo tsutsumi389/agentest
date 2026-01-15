@@ -217,6 +217,10 @@ model User {
   oauthAuthorizationCodes OAuthAuthorizationCode[]
   oauthAccessTokens       OAuthAccessToken[]
   oauthRefreshTokens      OAuthRefreshToken[]
+  // 実行結果の実施者リレーション
+  preconditionResultsChecked ExecutionPreconditionResult[] @relation("PreconditionResultChecker")
+  stepResultsExecuted        ExecutionStepResult[]         @relation("StepResultExecutor")
+  expectedResultsJudged      ExecutionExpectedResult[]     @relation("ExpectedResultJudger")
 
   @@index([email])
   @@index([deletedAt])
@@ -737,6 +741,9 @@ model ExecutionPreconditionResult {
   status                       PreconditionStatus @default(UNCHECKED)
   checkedAt                    DateTime?          @map("checked_at")
   note                         String?            @db.Text
+  // 実施者情報
+  checkedByUserId              String?            @map("checked_by_user_id")
+  checkedByAgentName           String?            @map("checked_by_agent_name") @db.VarChar(100)
   createdAt                    DateTime           @default(now()) @map("created_at")
   updatedAt                    DateTime           @updatedAt @map("updated_at")
 
@@ -744,6 +751,7 @@ model ExecutionPreconditionResult {
   executionTestCase ExecutionTestCase?              @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
   suitePrecondition ExecutionTestSuitePrecondition? @relation(fields: [executionSuitePreconditionId], references: [id], onDelete: Cascade)
   casePrecondition  ExecutionTestCasePrecondition?  @relation(fields: [executionCasePreconditionId], references: [id], onDelete: Cascade)
+  checkedByUser     User?                           @relation("PreconditionResultChecker", fields: [checkedByUserId], references: [id])
 
   @@unique([executionId, executionSuitePreconditionId])
   @@unique([executionId, executionCasePreconditionId])
@@ -759,12 +767,16 @@ model ExecutionStepResult {
   status              StepStatus @default(PENDING)
   executedAt          DateTime?  @map("executed_at")
   note                String?    @db.Text
+  // 実施者情報
+  executedByUserId    String?    @map("executed_by_user_id")
+  executedByAgentName String?    @map("executed_by_agent_name") @db.VarChar(100)
   createdAt           DateTime   @default(now()) @map("created_at")
   updatedAt           DateTime   @updatedAt @map("updated_at")
 
   execution         Execution             @relation(fields: [executionId], references: [id], onDelete: Cascade)
   executionTestCase ExecutionTestCase     @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
   executionStep     ExecutionTestCaseStep @relation(fields: [executionStepId], references: [id], onDelete: Cascade)
+  executedByUser    User?                 @relation("StepResultExecutor", fields: [executedByUserId], references: [id])
 
   @@unique([executionId, executionStepId])
   @@index([executionId])
@@ -779,6 +791,9 @@ model ExecutionExpectedResult {
   status                    JudgmentStatus @default(PENDING)
   judgedAt                  DateTime?      @map("judged_at")
   note                      String?        @db.Text
+  // 実施者情報
+  judgedByUserId            String?        @map("judged_by_user_id")
+  judgedByAgentName         String?        @map("judged_by_agent_name") @db.VarChar(100)
   createdAt                 DateTime       @default(now()) @map("created_at")
   updatedAt                 DateTime       @updatedAt @map("updated_at")
 
@@ -786,6 +801,7 @@ model ExecutionExpectedResult {
   executionTestCase       ExecutionTestCase               @relation(fields: [executionTestCaseId], references: [id], onDelete: Cascade)
   executionExpectedResult ExecutionTestCaseExpectedResult @relation(fields: [executionExpectedResultId], references: [id], onDelete: Cascade)
   evidences               ExecutionEvidence[]
+  judgedByUser            User?                           @relation("ExpectedResultJudger", fields: [judgedByUserId], references: [id])
 
   @@unique([executionId, executionExpectedResultId])
   @@index([executionId])

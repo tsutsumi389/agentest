@@ -102,6 +102,11 @@ export function ExecutionPreconditionList({
               isNoteUpdating={updatingNoteId === result.id}
               onStatusChange={(status) => onStatusChange(result.id, status)}
               onNoteChange={(note) => onNoteChange(result.id, note)}
+              executor={{
+                user: result.checkedByUser ?? null,
+                agentName: result.checkedByAgentName ?? null,
+                executedAt: result.checkedAt,
+              }}
             />
           );
         })}

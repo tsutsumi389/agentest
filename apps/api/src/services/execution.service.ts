@@ -6,6 +6,14 @@ import { ExecutionRepository } from '../repositories/execution.repository.js';
 import { MAX_EVIDENCES_PER_RESULT } from '../config/upload.js';
 
 /**
+ * 実施者情報のコンテキスト
+ */
+export interface ExecutorContext {
+  userId: string;         // 実施ユーザーID
+  agentName?: string;     // MCPエージェント名（例：Claude Code Opus4.5）
+}
+
+/**
  * 実行サービス
  */
 export class ExecutionService {
@@ -91,7 +99,8 @@ export class ExecutionService {
   async updatePreconditionResult(
     executionId: string,
     preconditionResultId: string,
-    data: { status: PreconditionStatus; note?: string }
+    data: { status: PreconditionStatus; note?: string },
+    executor?: ExecutorContext
   ) {
     await this.findById(executionId);
 
@@ -112,6 +121,14 @@ export class ExecutionService {
         status: data.status,
         note: data.note,
         checkedAt: data.status !== 'UNCHECKED' ? new Date() : null,
+        // 実施者情報を記録
+        checkedByUserId: executor?.userId,
+        checkedByAgentName: executor?.agentName,
+      },
+      include: {
+        checkedByUser: {
+          select: { id: true, name: true, avatarUrl: true },
+        },
       },
     });
   }
@@ -122,7 +139,8 @@ export class ExecutionService {
   async updateStepResult(
     executionId: string,
     stepResultId: string,
-    data: { status: StepStatus; note?: string }
+    data: { status: StepStatus; note?: string },
+    executor?: ExecutorContext
   ) {
     await this.findById(executionId);
 
@@ -143,6 +161,14 @@ export class ExecutionService {
         status: data.status,
         note: data.note,
         executedAt: data.status !== 'PENDING' ? new Date() : null,
+        // 実施者情報を記録
+        executedByUserId: executor?.userId,
+        executedByAgentName: executor?.agentName,
+      },
+      include: {
+        executedByUser: {
+          select: { id: true, name: true, avatarUrl: true },
+        },
       },
     });
   }
@@ -153,7 +179,8 @@ export class ExecutionService {
   async updateExpectedResult(
     executionId: string,
     expectedResultId: string,
-    data: { status: JudgmentStatus; note?: string }
+    data: { status: JudgmentStatus; note?: string },
+    executor?: ExecutorContext
   ) {
     await this.findById(executionId);
 
@@ -174,6 +201,14 @@ export class ExecutionService {
         status: data.status,
         note: data.note,
         judgedAt: data.status !== 'PENDING' ? new Date() : null,
+        // 実施者情報を記録
+        judgedByUserId: executor?.userId,
+        judgedByAgentName: executor?.agentName,
+      },
+      include: {
+        judgedByUser: {
+          select: { id: true, name: true, avatarUrl: true },
+        },
       },
     });
   }

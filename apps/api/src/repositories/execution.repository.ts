@@ -66,6 +66,9 @@ export class ExecutionRepository {
             suitePrecondition: true,
             casePrecondition: true,
             executionTestCase: true,
+            checkedByUser: {
+              select: { id: true, name: true, avatarUrl: true },
+            },
           },
           orderBy: { id: 'asc' },
         },
@@ -73,6 +76,9 @@ export class ExecutionRepository {
           include: {
             executionStep: true,
             executionTestCase: true,
+            executedByUser: {
+              select: { id: true, name: true, avatarUrl: true },
+            },
           },
           orderBy: { id: 'asc' },
         },
@@ -81,6 +87,9 @@ export class ExecutionRepository {
             executionExpectedResult: true,
             executionTestCase: true,
             evidences: true,
+            judgedByUser: {
+              select: { id: true, name: true, avatarUrl: true },
+            },
           },
           orderBy: { id: 'asc' },
         },

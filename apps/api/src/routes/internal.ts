@@ -731,6 +731,7 @@ const updateTestCaseBodySchema = z.object({
 const updatePreconditionResultBodySchema = z.object({
   status: z.enum(['MET', 'NOT_MET']),
   note: z.string().max(2000).optional(),
+  agentName: z.string().max(100).optional(),
 });
 
 /**
@@ -739,6 +740,7 @@ const updatePreconditionResultBodySchema = z.object({
 const updateStepResultBodySchema = z.object({
   status: z.enum(['DONE', 'SKIPPED']),
   note: z.string().max(2000).optional(),
+  agentName: z.string().max(100).optional(),
 });
 
 /**
@@ -747,6 +749,7 @@ const updateStepResultBodySchema = z.object({
 const updateExpectedResultBodySchema = z.object({
   status: z.enum(['PASS', 'FAIL', 'SKIPPED', 'NOT_EXECUTABLE']),
   note: z.string().max(2000).optional(),
+  agentName: z.string().max(100).optional(),
 });
 
 /**
@@ -969,7 +972,7 @@ router.patch('/executions/:executionId/precondition-results/:preconditionResultI
       return;
     }
 
-    const { status, note } = bodyResult.data;
+    const { status, note, agentName } = bodyResult.data;
 
     // 書き込み権限チェック（実行がIN_PROGRESSかつテストスイートへの書き込み権限）
     const canWrite = await authService.canWriteToExecution(userId, executionId);
@@ -981,11 +984,12 @@ router.patch('/executions/:executionId/precondition-results/:preconditionResultI
       return;
     }
 
-    // 事前条件結果更新
+    // 事前条件結果更新（実施者情報を含む）
     const preconditionResult = await executionService.updatePreconditionResult(
       executionId,
       preconditionResultId,
-      { status, note }
+      { status, note },
+      { userId, agentName }
     );
 
     res.json({ preconditionResult });
@@ -1026,7 +1030,7 @@ router.patch('/executions/:executionId/step-results/:stepResultId', async (req: 
       return;
     }
 
-    const { status, note } = bodyResult.data;
+    const { status, note, agentName } = bodyResult.data;
 
     // 書き込み権限チェック（実行がIN_PROGRESSかつテストスイートへの書き込み権限）
     const canWrite = await authService.canWriteToExecution(userId, executionId);
@@ -1038,11 +1042,12 @@ router.patch('/executions/:executionId/step-results/:stepResultId', async (req: 
       return;
     }
 
-    // ステップ結果更新
+    // ステップ結果更新（実施者情報を含む）
     const stepResult = await executionService.updateStepResult(
       executionId,
       stepResultId,
-      { status, note }
+      { status, note },
+      { userId, agentName }
     );
 
     res.json({ stepResult });
@@ -1083,7 +1088,7 @@ router.patch('/executions/:executionId/expected-results/:expectedResultId', asyn
       return;
     }
 
-    const { status, note } = bodyResult.data;
+    const { status, note, agentName } = bodyResult.data;
 
     // 書き込み権限チェック（実行がIN_PROGRESSかつテストスイートへの書き込み権限）
     const canWrite = await authService.canWriteToExecution(userId, executionId);
@@ -1095,11 +1100,12 @@ router.patch('/executions/:executionId/expected-results/:expectedResultId', asyn
       return;
     }
 
-    // 期待結果更新
+    // 期待結果更新（実施者情報を含む）
     const expectedResult = await executionService.updateExpectedResult(
       executionId,
       expectedResultId,
-      { status, note }
+      { status, note },
+      { userId, agentName }
     );
 
     res.json({ expectedResult });

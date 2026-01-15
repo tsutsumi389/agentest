@@ -31,6 +31,21 @@ export function formatDateTime(dateString: string): string {
 }
 
 /**
+ * 日付をコンパクトな形式でフォーマット（年-月-日 時:分）
+ * 例: 2024-01-15 14:30
+ * 主に実施者情報など、省スペースで表示したい場合に使用
+ */
+export function formatDateTimeCompact(dateString: string): string {
+  const date = new Date(dateString);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
+}
+
+/**
  * 2つの日時の差分を経過時間としてフォーマット
  * 例: 1時間23分45秒、5分30秒
  */

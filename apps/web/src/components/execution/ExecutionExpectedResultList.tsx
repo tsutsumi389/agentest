@@ -116,6 +116,11 @@ export function ExecutionExpectedResultList({
                 isNoteUpdating={updatingNoteId === result.id}
                 onStatusChange={(status) => onStatusChange(result.id, status)}
                 onNoteChange={(note) => onNoteChange(result.id, note)}
+                executor={{
+                  user: result.judgedByUser ?? null,
+                  agentName: result.judgedByAgentName ?? null,
+                  executedAt: result.judgedAt,
+                }}
               />
 
               {/* エビデンス一覧 */}

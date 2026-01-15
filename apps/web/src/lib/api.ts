@@ -665,6 +665,9 @@ export interface ExecutionPreconditionResult {
   status: 'UNCHECKED' | 'MET' | 'NOT_MET';
   checkedAt: string | null;
   note: string | null;
+  // 実施者情報
+  checkedByUser?: { id: string; name: string; avatarUrl: string | null } | null;
+  checkedByAgentName?: string | null;
   suitePrecondition?: ExecutionTestSuitePrecondition | null;
   casePrecondition?: ExecutionTestCasePrecondition | null;
   executionTestCase?: { id: string; title: string } | null;
@@ -679,6 +682,9 @@ export interface ExecutionStepResult {
   status: 'PENDING' | 'DONE' | 'SKIPPED';
   executedAt: string | null;
   note: string | null;
+  // 実施者情報
+  executedByUser?: { id: string; name: string; avatarUrl: string | null } | null;
+  executedByAgentName?: string | null;
   executionStep?: ExecutionTestCaseStepSnapshot;
   executionTestCase?: { id: string; title: string };
 }
@@ -704,6 +710,9 @@ export interface ExecutionExpectedResult {
   status: 'PENDING' | 'PASS' | 'FAIL' | 'SKIPPED' | 'NOT_EXECUTABLE';
   judgedAt: string | null;
   note: string | null;
+  // 実施者情報
+  judgedByUser?: { id: string; name: string; avatarUrl: string | null } | null;
+  judgedByAgentName?: string | null;
   evidences: ExecutionEvidence[];
   executionExpectedResult?: ExecutionTestCaseExpectedResultSnapshot;
   executionTestCase?: { id: string; title: string };
