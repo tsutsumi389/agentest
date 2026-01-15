@@ -5,6 +5,7 @@ vi.mock('../../../config/env.js', () => ({
   env: {
     MCP_SERVER_URL: 'http://localhost:3002',
     API_URL: 'http://localhost:3001',
+    API_INTERNAL_URL: 'http://localhost:3001',
     INTERNAL_API_SECRET: 'test-internal-secret',
     NODE_ENV: 'test',
   },
