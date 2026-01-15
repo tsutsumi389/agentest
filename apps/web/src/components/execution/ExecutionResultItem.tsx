@@ -1,4 +1,5 @@
 import type { StatusConfig, StatusOption } from '../../lib/execution-status';
+import { formatDateTimeCompact } from '../../lib/date';
 import { MarkdownPreview } from '../common/markdown';
 import { StatusButton } from './StatusButton';
 import { InlineNoteEditor } from './InlineNoteEditor';
@@ -9,24 +10,10 @@ import { InlineNoteEditor } from './InlineNoteEditor';
 export interface ExecutorInfo {
   /** 実施したユーザー */
   user: { id: string; name: string; avatarUrl: string | null } | null;
-  /** 実施したAIエージェント名 */
+  /** 実施したAIエージェント名（MCPツール経由での実施時に設定される） */
   agentName: string | null;
   /** 実施日時 */
   executedAt: string | null;
-}
-
-/**
- * 日時を簡易フォーマットで表示
- * 例: 2025-01-15 10:30
- */
-function formatDateTime(dateString: string): string {
-  const date = new Date(dateString);
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  return `${year}-${month}-${day} ${hours}:${minutes}`;
 }
 
 interface ExecutionResultItemProps<T extends string> {
@@ -74,9 +61,11 @@ export function ExecutionResultItem<T extends string>({
   onNoteChange,
   executor,
 }: ExecutionResultItemProps<T>) {
-  // 実施者表示名を取得（エージェント名優先、次にユーザー名）
+  // 実施者表示名を取得
+  // MCPツール経由（AIエージェント）での実施時はagentNameを優先表示
+  // ブラウザ経由（ユーザー）での実施時はuser.nameを表示
+  // 両方設定されている場合はagentNameを優先（AIが代理実行したケース）
   const executorName = executor?.agentName || executor?.user?.name;
-  // 実施日時
   const executedAt = executor?.executedAt;
 
   return (
@@ -109,7 +98,7 @@ export function ExecutionResultItem<T extends string>({
         {/* 実施者情報（ステータスが設定されている場合のみ表示） */}
         {executorName && executedAt && (
           <div className="text-xs text-foreground-muted">
-            {executorName} / {formatDateTime(executedAt)}
+            {executorName} / {formatDateTimeCompact(executedAt)}
           </div>
         )}
 
