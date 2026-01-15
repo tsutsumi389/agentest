@@ -2,6 +2,42 @@ import { prisma, type EntityStatus } from '@agentest/db';
 import { NotFoundError } from '@agentest/shared';
 import { UserRepository } from '../repositories/user.repository.js';
 
+/** ダッシュボード統計のレスポンス型 */
+export interface DashboardStats {
+  projects: {
+    total: number;
+    testSuites: number;
+  };
+  executions: {
+    passed: number;
+    failed: number;
+    total: number;
+    weeklyCount: number;
+    lastExecutedAt: Date | null;
+  };
+  recentExecutions: Array<{
+    id: string;
+    testSuiteId: string;
+    testSuiteName: string;
+    projectId: string;
+    projectName: string;
+    status: string;
+    startedAt: Date;
+    completedAt: Date | null;
+    summary: {
+      passed: number;
+      failed: number;
+      pending: number;
+      total: number;
+    };
+    executedBy: {
+      id: string;
+      name: string;
+      avatarUrl: string | null;
+    } | null;
+  }>;
+}
+
 /**
  * ユーザーサービス
  */
@@ -297,5 +333,174 @@ export class UserService {
   ) {
     const where = this.buildTestSuiteWhereCondition(userId, options);
     return prisma.testSuite.count({ where });
+  }
+
+  /**
+   * ダッシュボード統計を取得
+   * @param userId ユーザーID
+   */
+  async getDashboardStats(userId: string): Promise<DashboardStats> {
+    // ユーザーがアクセス可能なプロジェクトの条件
+    const projectAccessCondition = {
+      OR: [
+        { members: { some: { userId } } },
+        { organization: { members: { some: { userId } } } },
+      ],
+      deletedAt: null,
+    };
+
+    // 今週の開始日（月曜日）を計算
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - daysToMonday);
+    weekStart.setHours(0, 0, 0, 0);
+
+    // 30日前を計算
+    const thirtyDaysAgo = new Date(now);
+    thirtyDaysAgo.setDate(now.getDate() - 30);
+
+    // 並列でデータを取得
+    const [
+      projectCount,
+      testSuiteCount,
+      executionStats,
+      weeklyExecutions,
+      lastExecution,
+      recentExecutions,
+    ] = await Promise.all([
+      // プロジェクト数
+      prisma.project.count({
+        where: projectAccessCondition,
+      }),
+      // テストスイート数
+      prisma.testSuite.count({
+        where: {
+          deletedAt: null,
+          project: projectAccessCondition,
+        },
+      }),
+      // 過去30日の期待結果統計
+      prisma.executionExpectedResult.groupBy({
+        by: ['status'],
+        where: {
+          execution: {
+            testSuite: {
+              project: projectAccessCondition,
+            },
+            startedAt: { gte: thirtyDaysAgo },
+          },
+        },
+        _count: true,
+      }),
+      // 今週の実行回数
+      prisma.execution.count({
+        where: {
+          testSuite: {
+            project: projectAccessCondition,
+          },
+          startedAt: { gte: weekStart },
+        },
+      }),
+      // 最終実行日時
+      prisma.execution.findFirst({
+        where: {
+          testSuite: {
+            project: projectAccessCondition,
+          },
+        },
+        orderBy: { startedAt: 'desc' },
+        select: { startedAt: true },
+      }),
+      // 最近の実行（5件）
+      prisma.execution.findMany({
+        where: {
+          testSuite: {
+            project: projectAccessCondition,
+          },
+        },
+        orderBy: { startedAt: 'desc' },
+        take: 5,
+        include: {
+          testSuite: {
+            select: {
+              id: true,
+              name: true,
+              projectId: true,
+              project: {
+                select: { id: true, name: true },
+              },
+            },
+          },
+          executedByUser: {
+            select: { id: true, name: true, avatarUrl: true },
+          },
+          expectedResults: {
+            select: { status: true },
+          },
+        },
+      }),
+    ]);
+
+    // 期待結果統計を集計
+    let passed = 0;
+    let failed = 0;
+    let total = 0;
+    for (const stat of executionStats) {
+      const count = stat._count;
+      total += count;
+      if (stat.status === 'PASS') {
+        passed = count;
+      } else if (stat.status === 'FAIL') {
+        failed = count;
+      }
+    }
+
+    // 最近の実行を整形
+    const formattedRecentExecutions = recentExecutions.map((exec) => {
+      const summary = {
+        passed: 0,
+        failed: 0,
+        pending: 0,
+        total: exec.expectedResults.length,
+      };
+      for (const result of exec.expectedResults) {
+        if (result.status === 'PASS') {
+          summary.passed++;
+        } else if (result.status === 'FAIL') {
+          summary.failed++;
+        } else if (result.status === 'PENDING') {
+          summary.pending++;
+        }
+      }
+      return {
+        id: exec.id,
+        testSuiteId: exec.testSuite.id,
+        testSuiteName: exec.testSuite.name,
+        projectId: exec.testSuite.project.id,
+        projectName: exec.testSuite.project.name,
+        status: exec.status,
+        startedAt: exec.startedAt,
+        completedAt: exec.completedAt,
+        summary,
+        executedBy: exec.executedByUser,
+      };
+    });
+
+    return {
+      projects: {
+        total: projectCount,
+        testSuites: testSuiteCount,
+      },
+      executions: {
+        passed,
+        failed,
+        total,
+        weeklyCount: weeklyExecutions,
+        lastExecutedAt: lastExecution?.startedAt ?? null,
+      },
+      recentExecutions: formattedRecentExecutions,
+    };
   }
 }

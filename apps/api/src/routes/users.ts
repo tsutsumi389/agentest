@@ -37,6 +37,12 @@ router.get('/:userId/organizations', requireAuth(authConfig), userController.get
 router.get('/:userId/projects', requireAuth(authConfig), userController.getUserProjects);
 
 /**
+ * ダッシュボード統計取得
+ * GET /api/users/:userId/dashboard
+ */
+router.get('/:userId/dashboard', requireAuth(authConfig), userController.getDashboard);
+
+/**
  * OAuth連携一覧取得
  * GET /api/users/:userId/accounts
  */
