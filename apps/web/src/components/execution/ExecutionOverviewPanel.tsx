@@ -82,13 +82,14 @@ function SummaryCard({
   icon: React.ElementType;
   label: string;
   value: number;
-  color: 'success' | 'danger' | 'warning' | 'muted';
+  color: 'success' | 'danger' | 'warning' | 'muted' | 'accent';
 }) {
   const colorClasses = {
     success: 'bg-success-subtle text-success',
     danger: 'bg-danger-subtle text-danger',
     warning: 'bg-warning-subtle text-warning',
     muted: 'bg-background-tertiary text-foreground-muted',
+    accent: 'bg-accent-subtle text-accent',
   };
 
   return (
@@ -381,7 +382,7 @@ export function ExecutionOverviewPanel({
             icon={Slash}
             label="実行不可"
             value={expectedSummary.notExecutable}
-            color="muted"
+            color="accent"
           />
           <SummaryCard
             icon={Clock}

@@ -39,7 +39,7 @@ export function formatDuration(startDateString: string, endDateString: string): 
   const end = new Date(endDateString);
   const diffMs = end.getTime() - start.getTime();
 
-  if (diffMs < 0) return '---';
+  if (diffMs < 0 || Number.isNaN(diffMs)) return '---';
 
   const diffSec = Math.floor(diffMs / 1000);
   const hours = Math.floor(diffSec / 3600);
