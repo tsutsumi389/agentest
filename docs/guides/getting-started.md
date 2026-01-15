@@ -43,7 +43,13 @@ GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
 ```
 
-### 3. Docker を起動
+### 3. Docker用シンボリックリンクを作成
+
+```bash
+cd docker && ln -s ../.env .env && cd ..
+```
+
+### 4. Docker を起動
 
 ```bash
 cd docker
@@ -52,7 +58,7 @@ docker compose up -d
 
 初回はイメージのビルドに数分かかります。
 
-### 4. データベースをセットアップ
+### 5. データベースをセットアップ
 
 ```bash
 # 依存関係をインストール
@@ -67,7 +73,7 @@ docker compose exec dev pnpm --filter @agentest/db db:push
 
 > **Note:** テスト用データベース（agentest_test）は Docker 起動時に自動作成されます。テスト実行時にスキーマが自動同期されます。
 
-### 5. 動作確認
+### 6. 動作確認
 
 | サービス | URL | 確認内容 |
 |---------|-----|---------|

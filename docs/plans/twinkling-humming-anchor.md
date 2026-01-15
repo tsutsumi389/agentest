@@ -8,9 +8,13 @@
 
 ## 環境変数の整理
 
-### 1. `docker/.env` を削除
+### 1. `docker/.env` をシンボリックリンクに変更
 
-**理由**: docker-compose.ymlは `../.env`（プロジェクトルート）を参照しており、`docker/.env` は使用されていない重複ファイル。
+**理由**: docker-compose.ymlは `../.env`（プロジェクトルート）を参照しているが、docker compose自体の変数展開にはカレントディレクトリの.envが必要。重複を避けるためシンボリックリンクを使用。
+
+```bash
+cd docker && ln -s ../.env .env
+```
 
 ### 2. JWT変数名の統一
 
@@ -63,7 +67,7 @@ CORS_ORIGIN=http://localhost:3000,http://localhost:3003
 |---------|---------|
 | `.env` | JWT変数名統一、CORS_ORIGIN追加、重複変数削除 |
 | `.env.example` | JWT変数名統一、重複変数削除 |
-| `docker/.env` | **削除** |
+| `docker/.env` | **シンボリックリンク** (`../.env` へ) |
 | `apps/mcp-server/src/config/env.ts` | AUTH_SERVER_URLの参照をAPI_URLに変更（検討） |
 
 ---
