@@ -2,6 +2,9 @@ import { prisma, type EntityStatus } from '@agentest/db';
 import { NotFoundError } from '@agentest/shared';
 import { UserRepository } from '../repositories/user.repository.js';
 
+/** 実行ステータスの型 */
+export type ExecutionStatus = 'IN_PROGRESS' | 'COMPLETED' | 'ABORTED';
+
 /** ダッシュボード統計のレスポンス型 */
 export interface DashboardStats {
   projects: {
@@ -21,7 +24,7 @@ export interface DashboardStats {
     testSuiteName: string;
     projectId: string;
     projectName: string;
-    status: string;
+    status: ExecutionStatus;
     startedAt: Date;
     completedAt: Date | null;
     summary: {

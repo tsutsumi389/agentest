@@ -42,18 +42,18 @@ function formatRelativeTime(dateString: string | null): string {
 
 /**
  * 実行ステータスをStatusBadge用にマップ
+ * COMPLETEDでもテスト失敗がある場合はfailedとして表示
  */
-function mapExecutionStatus(status: string): 'passed' | 'failed' | 'running' | 'pending' {
-  switch (status) {
-    case 'COMPLETED':
-      return 'passed';
-    case 'ABORTED':
-      return 'failed';
-    case 'IN_PROGRESS':
-      return 'running';
-    default:
-      return 'pending';
+function mapExecutionStatus(
+  status: string,
+  summary: { passed: number; failed: number }
+): 'passed' | 'failed' | 'running' | 'pending' {
+  if (status === 'IN_PROGRESS') return 'running';
+  if (status === 'ABORTED') return 'failed';
+  if (status === 'COMPLETED') {
+    return summary.failed > 0 ? 'failed' : 'passed';
   }
+  return 'pending';
 }
 
 /**
@@ -64,7 +64,11 @@ export function DashboardPage() {
   const { setSidebarContent } = usePageSidebar();
 
   // ダッシュボード統計を取得
-  const { data: dashboardData, isLoading: dashboardLoading } = useQuery({
+  const {
+    data: dashboardData,
+    isLoading: dashboardLoading,
+    isError: dashboardError,
+  } = useQuery({
     queryKey: ['dashboard-stats', user?.id],
     queryFn: () => usersApi.getDashboardStats(user!.id),
     enabled: !!user?.id,
@@ -103,6 +107,15 @@ export function DashboardPage() {
           プロジェクトの状況を確認しましょう
         </p>
       </div>
+
+      {/* エラー表示 */}
+      {dashboardError && (
+        <div className="card p-4 border-danger/30 bg-danger-subtle/10">
+          <p className="text-sm text-danger">
+            統計情報の取得に失敗しました。ページを再読み込みしてください。
+          </p>
+        </div>
+      )}
 
       {/* 統計カード */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
@@ -222,7 +235,7 @@ export function DashboardPage() {
                 className="flex items-center justify-between p-4 hover:bg-background-tertiary transition-colors"
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <StatusBadge status={mapExecutionStatus(exec.status)} showLabel={false} />
+                  <StatusBadge status={mapExecutionStatus(exec.status, exec.summary)} showLabel={false} />
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-foreground truncate">
                       {exec.testSuiteName}
