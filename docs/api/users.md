@@ -111,6 +111,90 @@ Content-Type: application/json
 
 ---
 
+### ダッシュボード統計取得
+
+```
+GET /users/:id/dashboard
+```
+
+ユーザーのダッシュボード表示用の統計情報を取得。自分自身の統計のみ取得可能。
+
+**Path Parameters:**
+
+| パラメータ | 説明 |
+|-----------|------|
+| `id` | ユーザー ID |
+
+**Headers:**
+
+```
+Authorization: Bearer <access_token>
+```
+
+**Response:**
+
+```json
+{
+  "projects": {
+    "total": 5,
+    "testSuites": 12
+  },
+  "executions": {
+    "passed": 150,
+    "failed": 8,
+    "total": 158,
+    "weeklyCount": 24,
+    "lastExecutedAt": "2024-01-20T15:30:00Z"
+  },
+  "recentExecutions": [
+    {
+      "id": "exec_123",
+      "testSuiteId": "suite_456",
+      "testSuiteName": "ログインテスト",
+      "projectId": "proj_789",
+      "projectName": "ECサイト",
+      "status": "COMPLETED",
+      "startedAt": "2024-01-20T15:00:00Z",
+      "completedAt": "2024-01-20T15:30:00Z",
+      "summary": {
+        "passed": 8,
+        "failed": 2,
+        "pending": 0,
+        "total": 10
+      },
+      "executedBy": {
+        "id": "usr_123456",
+        "name": "John Doe",
+        "avatarUrl": "https://avatars.githubusercontent.com/u/..."
+      }
+    }
+  ]
+}
+```
+
+| フィールド | 型 | 説明 |
+|-----------|-----|------|
+| `projects.total` | number | アクセス可能なプロジェクト数 |
+| `projects.testSuites` | number | アクセス可能なテストスイート数 |
+| `executions.passed` | number | 過去30日の成功した期待結果数 |
+| `executions.failed` | number | 過去30日の失敗した期待結果数 |
+| `executions.total` | number | 過去30日の期待結果総数 |
+| `executions.weeklyCount` | number | 今週のテスト実行回数 |
+| `executions.lastExecutedAt` | string \| null | 最終実行日時（ISO 8601） |
+| `recentExecutions` | array | 最近の実行履歴（最大5件） |
+| `recentExecutions[].status` | string | `IN_PROGRESS` / `COMPLETED` / `ABORTED` |
+| `recentExecutions[].summary` | object | 期待結果の集計 |
+
+**Errors:**
+
+| コード | ステータス | 説明 |
+|-------|-----------|------|
+| `USER_NOT_FOUND` | 404 | ユーザーが存在しない |
+| `AUTH_UNAUTHORIZED` | 401 | 認証が必要 |
+| `AUTH_FORBIDDEN` | 403 | 他人のダッシュボードは取得不可 |
+
+---
+
 ## データモデル
 
 ### User

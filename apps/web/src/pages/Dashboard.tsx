@@ -13,8 +13,48 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
-import { usersApi } from '../lib/api';
+import { usersApi, type DashboardStats } from '../lib/api';
 import { usePageSidebar } from '../components/Layout';
+import { StatusBadge } from '../components/ui/StatusBadge';
+import { ProgressBar } from '../components/ui/ProgressBar';
+
+/**
+ * 相対時間をフォーマット
+ */
+function formatRelativeTime(dateString: string | null): string {
+  if (!dateString) return '-';
+
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+
+  if (diffSec < 60) return '数秒前';
+  if (diffMin < 60) return `${diffMin}分前`;
+  if (diffHour < 24) return `${diffHour}時間前`;
+  if (diffDay < 7) return `${diffDay}日前`;
+
+  return date.toLocaleDateString('ja-JP');
+}
+
+/**
+ * 実行ステータスをStatusBadge用にマップ
+ * COMPLETEDでもテスト失敗がある場合はfailedとして表示
+ */
+function mapExecutionStatus(
+  status: string,
+  summary: { passed: number; failed: number }
+): 'passed' | 'failed' | 'running' | 'pending' {
+  if (status === 'IN_PROGRESS') return 'running';
+  if (status === 'ABORTED') return 'failed';
+  if (status === 'COMPLETED') {
+    return summary.failed > 0 ? 'failed' : 'passed';
+  }
+  return 'pending';
+}
 
 /**
  * ダッシュボードページ
@@ -23,20 +63,38 @@ export function DashboardPage() {
   const { user } = useAuthStore();
   const { setSidebarContent } = usePageSidebar();
 
-  // プロジェクト一覧を取得
-  const { data: projectsData, isLoading } = useQuery({
+  // ダッシュボード統計を取得
+  const {
+    data: dashboardData,
+    isLoading: dashboardLoading,
+    isError: dashboardError,
+  } = useQuery({
+    queryKey: ['dashboard-stats', user?.id],
+    queryFn: () => usersApi.getDashboardStats(user!.id),
+    enabled: !!user?.id,
+    staleTime: 30 * 1000, // 30秒間キャッシュ
+  });
+
+  // プロジェクト一覧を取得（サイドバー用）
+  const { data: projectsData, isLoading: projectsLoading } = useQuery({
     queryKey: ['user-projects', user?.id],
     queryFn: () => usersApi.getProjects(user!.id),
     enabled: !!user?.id,
   });
 
   const projects = projectsData?.projects || [];
+  const isLoading = dashboardLoading || projectsLoading;
 
   // サイドバーコンテンツを設定
   useEffect(() => {
-    setSidebarContent(<DashboardSidebar projects={projects} />);
+    setSidebarContent(
+      <DashboardSidebar
+        projects={projects}
+        executions={dashboardData?.executions}
+      />
+    );
     return () => setSidebarContent(null);
-  }, [setSidebarContent, projects]);
+  }, [setSidebarContent, projects, dashboardData?.executions]);
 
   return (
     <div className="space-y-6">
@@ -50,31 +108,44 @@ export function DashboardPage() {
         </p>
       </div>
 
+      {/* エラー表示 */}
+      {dashboardError && (
+        <div className="card p-4 border-danger/30 bg-danger-subtle/10">
+          <p className="text-sm text-danger">
+            統計情報の取得に失敗しました。ページを再読み込みしてください。
+          </p>
+        </div>
+      )}
+
       {/* 統計カード */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard
           icon={FolderKanban}
           label="プロジェクト"
-          value={projects.length}
+          value={dashboardData?.projects.total ?? '-'}
           color="accent"
+          isLoading={dashboardLoading}
         />
         <StatCard
           icon={FileText}
           label="テストスイート"
-          value={projects.reduce((acc, p) => acc + (p._count?.testSuites || 0), 0)}
+          value={dashboardData?.projects.testSuites ?? '-'}
           color="accent"
+          isLoading={dashboardLoading}
         />
         <StatCard
           icon={CheckCircle2}
           label="成功"
-          value="-"
+          value={dashboardData?.executions.passed ?? '-'}
           color="success"
+          isLoading={dashboardLoading}
         />
         <StatCard
           icon={XCircle}
           label="失敗"
-          value="-"
+          value={dashboardData?.executions.failed ?? '-'}
           color="danger"
+          isLoading={dashboardLoading}
         />
       </div>
 
@@ -131,17 +202,62 @@ export function DashboardPage() {
         )}
       </div>
 
-      {/* 最近の実行（プレースホルダー） */}
+      {/* 最近の実行 */}
       <div className="card">
         <div className="flex items-center justify-between p-4 border-b border-border">
           <h2 className="font-semibold text-foreground">最近の実行</h2>
+          <Link
+            to="/executions"
+            className="text-sm text-accent hover:text-accent-hover flex items-center gap-1"
+          >
+            すべて表示
+            <ArrowRight className="w-4 h-4" />
+          </Link>
         </div>
-        <div className="p-8 text-center">
-          <Play className="w-12 h-12 text-foreground-subtle mx-auto mb-3" />
-          <p className="text-foreground-muted">
-            最近の実行はありません
-          </p>
-        </div>
+
+        {dashboardLoading ? (
+          <div className="p-8 text-center text-foreground-muted">
+            読み込み中...
+          </div>
+        ) : !dashboardData?.recentExecutions.length ? (
+          <div className="p-8 text-center">
+            <Play className="w-12 h-12 text-foreground-subtle mx-auto mb-3" />
+            <p className="text-foreground-muted">
+              最近の実行はありません
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {dashboardData.recentExecutions.map((exec) => (
+              <Link
+                key={exec.id}
+                to={`/executions/${exec.id}`}
+                className="flex items-center justify-between p-4 hover:bg-background-tertiary transition-colors"
+              >
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <StatusBadge status={mapExecutionStatus(exec.status, exec.summary)} showLabel={false} />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-foreground truncate">
+                      {exec.testSuiteName}
+                    </p>
+                    <p className="text-sm text-foreground-muted">
+                      {exec.projectName} • {formatRelativeTime(exec.startedAt)}
+                    </p>
+                  </div>
+                </div>
+                <div className="w-32 ml-4">
+                  <ProgressBar
+                    passed={exec.summary.passed}
+                    failed={exec.summary.failed}
+                    skipped={exec.summary.pending}
+                    total={exec.summary.total}
+                    size="sm"
+                  />
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -150,7 +266,13 @@ export function DashboardPage() {
 /**
  * ダッシュボード用サイドバー
  */
-function DashboardSidebar({ projects }: { projects: { id: string; name: string }[] }) {
+function DashboardSidebar({
+  projects,
+  executions,
+}: {
+  projects: { id: string; name: string }[];
+  executions?: DashboardStats['executions'];
+}) {
   return (
     <div className="h-full flex flex-col">
       {/* クイックアクション */}
@@ -204,11 +326,11 @@ function DashboardSidebar({ projects }: { projects: { id: string; name: string }
       <div className="p-4 border-t border-border bg-background-tertiary/50">
         <div className="flex items-center gap-2 text-xs text-foreground-muted">
           <TrendingUp className="w-3.5 h-3.5" />
-          <span>今週のテスト: 0回</span>
+          <span>今週のテスト: {executions?.weeklyCount ?? 0}回</span>
         </div>
         <div className="flex items-center gap-2 text-xs text-foreground-muted mt-1">
           <Clock className="w-3.5 h-3.5" />
-          <span>最終実行: -</span>
+          <span>最終実行: {formatRelativeTime(executions?.lastExecutedAt ?? null)}</span>
         </div>
       </div>
     </div>
@@ -223,11 +345,13 @@ function StatCard({
   label,
   value,
   color,
+  isLoading,
 }: {
   icon: React.ElementType;
   label: string;
   value: number | string;
   color: 'accent' | 'success' | 'danger';
+  isLoading?: boolean;
 }) {
   // ガイドライン準拠: subtle背景を使用
   const colorClasses = {
@@ -243,7 +367,11 @@ function StatCard({
           <Icon className="w-5 h-5" />
         </div>
         <div>
-          <p className="text-2xl font-bold text-foreground">{value}</p>
+          {isLoading ? (
+            <div className="h-8 w-12 bg-background-tertiary animate-pulse rounded" />
+          ) : (
+            <p className="text-2xl font-bold text-foreground">{value}</p>
+          )}
           <p className="text-sm text-foreground-muted">{label}</p>
         </div>
       </div>

@@ -752,6 +752,42 @@ export interface ProjectWithRole extends Project {
   role?: 'OWNER' | 'ADMIN' | 'WRITE' | 'READ';
 }
 
+/** ダッシュボード統計レスポンス型 */
+export interface DashboardStats {
+  projects: {
+    total: number;
+    testSuites: number;
+  };
+  executions: {
+    passed: number;
+    failed: number;
+    total: number;
+    weeklyCount: number;
+    lastExecutedAt: string | null;
+  };
+  recentExecutions: Array<{
+    id: string;
+    testSuiteId: string;
+    testSuiteName: string;
+    projectId: string;
+    projectName: string;
+    status: 'IN_PROGRESS' | 'COMPLETED' | 'ABORTED';
+    startedAt: string;
+    completedAt: string | null;
+    summary: {
+      passed: number;
+      failed: number;
+      pending: number;
+      total: number;
+    };
+    executedBy: {
+      id: string;
+      name: string;
+      avatarUrl: string | null;
+    } | null;
+  }>;
+}
+
 export const usersApi = {
   getOrganizations: (userId: string, options?: { includeDeleted?: boolean }) => {
     const query = new URLSearchParams();
@@ -776,6 +812,8 @@ export const usersApi = {
       `/api/users/${userId}/projects${queryString ? `?${queryString}` : ''}`
     );
   },
+  getDashboardStats: (userId: string) =>
+    api.get<DashboardStats>(`/api/users/${userId}/dashboard`),
   update: (userId: string, data: UpdateUserRequest) =>
     api.patch<{ user: User }>(`/api/users/${userId}`, data),
 };

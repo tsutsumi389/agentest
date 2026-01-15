@@ -204,4 +204,25 @@ export class UserController {
       next(error);
     }
   };
+
+  /**
+   * ダッシュボード統計取得
+   * GET /api/users/:userId/dashboard
+   */
+  getDashboard = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { userId } = req.params;
+
+      // 自分のダッシュボードのみ取得可能
+      if (req.user?.id !== userId) {
+        throw new AuthorizationError('自分のダッシュボードのみ取得できます');
+      }
+
+      const stats = await this.userService.getDashboardStats(userId);
+
+      res.json(stats);
+    } catch (error) {
+      next(error);
+    }
+  };
 }
