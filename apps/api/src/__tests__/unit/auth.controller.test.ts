@@ -56,6 +56,7 @@ vi.mock('../../config/env.js', () => ({
     JWT_REFRESH_EXPIRES_IN: '7d',
     NODE_ENV: 'test',
     CORS_ORIGIN: 'http://localhost:3000',
+    FRONTEND_URL: 'http://localhost:3000',
   },
 }));
 

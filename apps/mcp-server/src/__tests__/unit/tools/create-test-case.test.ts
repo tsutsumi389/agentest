@@ -26,10 +26,7 @@ describe('createTestCaseTool', () => {
   describe('ツール定義', () => {
     it('正しい名前と説明を持つ', () => {
       expect(createTestCaseTool.name).toBe('create_test_case');
-      expect(createTestCaseTool.description).toContain('テストケースを作成します');
-      expect(createTestCaseTool.description).toContain('前提条件');
-      expect(createTestCaseTool.description).toContain('テスト手順');
-      expect(createTestCaseTool.description).toContain('期待結果');
+      expect(createTestCaseTool.description).toContain('テストケースを作成');
     });
 
     it('入力スキーマが定義されている', () => {

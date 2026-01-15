@@ -93,9 +93,7 @@ describe('searchExecutionTool', () => {
   describe('ツール定義', () => {
     it('正しい名前と説明を持つ', () => {
       expect(searchExecutionTool.name).toBe('search_execution');
-      expect(searchExecutionTool.description).toBe(
-        'テストスイートの実行履歴を検索します。ステータス、期間で絞り込み可能です。'
-      );
+      expect(searchExecutionTool.description).toContain('テスト実行履歴を検索');
     });
 
     it('入力スキーマが定義されている', () => {

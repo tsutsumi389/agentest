@@ -141,6 +141,7 @@ describe('MCP Auth & Session Integration Tests', () => {
         .post('/mcp')
         .set('Cookie', 'access_token=valid-test-token')
         .set('Content-Type', 'application/json')
+        .set('Accept', 'application/json, text/event-stream')
         .send({
           jsonrpc: '2.0',
           method: 'initialize',
@@ -217,6 +218,7 @@ describe('MCP Auth & Session Integration Tests', () => {
         .set('X-MCP-Client-Name', clientName)
         .set('X-MCP-Project-Id', testProject.id)
         .set('Content-Type', 'application/json')
+        .set('Accept', 'application/json, text/event-stream')
         .send({
           jsonrpc: '2.0',
           method: 'initialize',
@@ -258,9 +260,15 @@ describe('MCP Auth & Session Integration Tests', () => {
         .set('X-MCP-Client-Id', clientId)
         .set('X-MCP-Project-Id', testProject.id)
         .set('Content-Type', 'application/json')
+        .set('Accept', 'application/json, text/event-stream')
         .send({
           jsonrpc: '2.0',
-          method: 'ping',
+          method: 'initialize',
+          params: {
+            protocolVersion: '2024-11-05',
+            clientInfo: { name: 'test-client', version: '1.0.0' },
+            capabilities: {},
+          },
           id: 1,
         });
 
@@ -284,6 +292,7 @@ describe('MCP Auth & Session Integration Tests', () => {
         .set('Cookie', 'access_token=valid-test-token')
         .set('X-MCP-Project-Id', testProject.id)
         .set('Content-Type', 'application/json')
+        .set('Accept', 'application/json, text/event-stream')
         .send({
           jsonrpc: '2.0',
           method: 'initialize',

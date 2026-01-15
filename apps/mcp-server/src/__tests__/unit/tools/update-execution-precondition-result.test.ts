@@ -29,7 +29,7 @@ describe('updateExecutionPreconditionResultTool', () => {
   describe('ツール定義', () => {
     it('正しい名前と説明を持つ', () => {
       expect(updateExecutionPreconditionResultTool.name).toBe('update_execution_precondition_result');
-      expect(updateExecutionPreconditionResultTool.description).toContain('事前条件結果を更新');
+      expect(updateExecutionPreconditionResultTool.description).toContain('前提条件チェック結果を記録');
     });
 
     it('入力スキーマが定義されている', () => {

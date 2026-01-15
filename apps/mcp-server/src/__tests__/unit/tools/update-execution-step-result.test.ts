@@ -29,7 +29,7 @@ describe('updateExecutionStepResultTool', () => {
   describe('ツール定義', () => {
     it('正しい名前と説明を持つ', () => {
       expect(updateExecutionStepResultTool.name).toBe('update_execution_step_result');
-      expect(updateExecutionStepResultTool.description).toContain('ステップ結果を更新');
+      expect(updateExecutionStepResultTool.description).toContain('ステップ実行結果を記録');
     });
 
     it('入力スキーマが定義されている', () => {

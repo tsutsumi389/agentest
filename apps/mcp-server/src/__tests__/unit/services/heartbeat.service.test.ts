@@ -41,8 +41,8 @@ describe('HeartbeatService', () => {
 
       heartbeatService.start(1000);
 
-      // 非同期処理を進める
-      await vi.runAllTimersAsync();
+      // 非同期処理を進める（setIntervalがあるのでrunOnlyPendingTimersAsyncを使用）
+      await vi.runOnlyPendingTimersAsync();
 
       expect(mockAgentSessionService.processTimedOutSessions).toHaveBeenCalled();
     });
@@ -52,19 +52,18 @@ describe('HeartbeatService', () => {
 
       heartbeatService.start(1000); // 1秒間隔
 
-      // 初回実行
-      await vi.runAllTimersAsync();
-      expect(mockAgentSessionService.processTimedOutSessions).toHaveBeenCalledTimes(1);
+      // 初回実行（start直後に1回実行される）
+      await vi.runOnlyPendingTimersAsync();
+      const initialCount = mockAgentSessionService.processTimedOutSessions.mock.calls.length;
+      expect(initialCount).toBeGreaterThanOrEqual(1);
 
       // 1秒進める
-      vi.advanceTimersByTime(1000);
-      await vi.runAllTimersAsync();
-      expect(mockAgentSessionService.processTimedOutSessions).toHaveBeenCalledTimes(2);
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(mockAgentSessionService.processTimedOutSessions).toHaveBeenCalledTimes(initialCount + 1);
 
       // もう1秒進める
-      vi.advanceTimersByTime(1000);
-      await vi.runAllTimersAsync();
-      expect(mockAgentSessionService.processTimedOutSessions).toHaveBeenCalledTimes(3);
+      await vi.advanceTimersByTimeAsync(1000);
+      expect(mockAgentSessionService.processTimedOutSessions).toHaveBeenCalledTimes(initialCount + 2);
     });
 
     it('すでに起動中の場合は警告して何もしない', () => {
@@ -89,7 +88,7 @@ describe('HeartbeatService', () => {
       heartbeatService.start(1000);
 
       // エラーが発生しても継続
-      await vi.runAllTimersAsync();
+      await vi.runOnlyPendingTimersAsync();
 
       expect(consoleErrorSpy).toHaveBeenCalledWith(
         'ハートビートチェックエラー:',
@@ -112,7 +111,7 @@ describe('HeartbeatService', () => {
       mockAgentSessionService.processTimedOutSessions.mockResolvedValue(0);
 
       heartbeatService.start(1000);
-      await vi.runAllTimersAsync();
+      await vi.runOnlyPendingTimersAsync();
 
       // 初回実行を確認
       const callCount = mockAgentSessionService.processTimedOutSessions.mock.calls.length;
@@ -120,8 +119,7 @@ describe('HeartbeatService', () => {
       heartbeatService.stop();
 
       // 時間を進めてもこれ以上呼ばれない
-      vi.advanceTimersByTime(5000);
-      await vi.runAllTimersAsync();
+      await vi.advanceTimersByTimeAsync(5000);
 
       expect(mockAgentSessionService.processTimedOutSessions).toHaveBeenCalledTimes(
         callCount

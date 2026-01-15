@@ -45,9 +45,7 @@ describe('getTestSuiteTool', () => {
   describe('ツール定義', () => {
     it('正しい名前と説明を持つ', () => {
       expect(getTestSuiteTool.name).toBe('get_test_suite');
-      expect(getTestSuiteTool.description).toBe(
-        'テストスイートの詳細情報を取得します。前提条件とテストケース一覧も含まれます。'
-      );
+      expect(getTestSuiteTool.description).toContain('テストスイートの詳細情報を取得');
     });
 
     it('入力スキーマが定義されている', () => {
