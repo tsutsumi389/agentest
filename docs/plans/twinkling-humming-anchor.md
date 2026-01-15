@@ -1,50 +1,12 @@
-# ローカルネットワーク接続対応 & 環境変数整理
+# 環境変数整理
 
 ## 概要
 
-ローカルIPアドレスで別PCから接続可能にし、環境変数を整理する。
+環境変数を整理する。
 
 ---
 
-## Part 1: ローカルネットワーク接続対応
-
-### 修正箇所
-
-#### 1. `apps/admin/vite.config.ts`
-- `host: true` を追加（0.0.0.0でバインド）
-
-```typescript
-server: {
-  port: 3002,
-  host: true,  // 追加
-  proxy: { ... }
-}
-```
-
-#### 2. `.env` のURL設定
-ローカルネットワークからアクセスする場合、以下の変数を開発マシンのIPアドレスに変更：
-
-```bash
-# 開発マシンのIP: 192.168.1.42
-API_URL=http://192.168.1.42:3001
-WEB_URL=http://192.168.1.42:3000
-ADMIN_URL=http://192.168.1.42:3003
-WS_URL=ws://192.168.1.42:3002
-MCP_SERVER_URL=http://192.168.1.42:3004
-
-VITE_API_URL=http://192.168.1.42:3001
-VITE_WS_URL=ws://192.168.1.42:3002
-
-CORS_ORIGIN=http://192.168.1.42:3000,http://192.168.1.42:3003
-
-# OAuth callbackはlocalhostのままにする（プロバイダー登録と一致させる必要があるため）
-```
-
-**注意**: OAuth認証（GitHub/Google）はコールバックURLがプロバイダーに登録されたURLと一致する必要があるため、ローカルネットワークテスト時はOAuth認証が動作しない。
-
----
-
-## Part 2: 環境変数の整理
+## 環境変数の整理
 
 ### 1. `docker/.env` を削除
 
@@ -99,7 +61,6 @@ CORS_ORIGIN=http://localhost:3000,http://localhost:3003
 
 | ファイル | 修正内容 |
 |---------|---------|
-| `apps/admin/vite.config.ts` | `host: true` 追加 |
 | `.env` | JWT変数名統一、CORS_ORIGIN追加、重複変数削除 |
 | `.env.example` | JWT変数名統一、重複変数削除 |
 | `docker/.env` | **削除** |
@@ -157,7 +118,7 @@ GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
 GOOGLE_CALLBACK_URL=http://localhost:3001/api/auth/google/callback
 
-# Application URLs (ローカルネットワーク時はlocalhostをIPに変更)
+# Application URLs
 API_URL=http://localhost:3001
 WEB_URL=http://localhost:3000
 ADMIN_URL=http://localhost:3003
@@ -193,13 +154,11 @@ LOG_LEVEL=debug
 cd docker && docker compose down && docker compose up
 ```
 
-2. ローカルIPアドレスで各サービスにアクセス
+2. 各サービスにアクセスして動作確認
 ```
-Web:   http://<IP>:3004
-API:   http://<IP>:3001
-Admin: http://<IP>:3005
-WS:    ws://<IP>:3002
-MCP:   http://<IP>:3004
+Web:   http://localhost:3000
+API:   http://localhost:3001
+Admin: http://localhost:3003
+WS:    ws://localhost:3002
+MCP:   http://localhost:3004
 ```
-
-3. 別PCのブラウザからアクセスして動作確認
