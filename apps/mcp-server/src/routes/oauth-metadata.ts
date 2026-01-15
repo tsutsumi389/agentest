@@ -14,7 +14,7 @@ const router: Router = Router();
 router.get('/.well-known/oauth-protected-resource', (_req: Request, res: Response) => {
   res.json({
     resource: env.MCP_SERVER_URL,
-    authorization_servers: [env.AUTH_SERVER_URL],
+    authorization_servers: [env.API_URL],
     scopes_supported: SUPPORTED_SCOPES,
     bearer_methods_supported: ['header'],
   });

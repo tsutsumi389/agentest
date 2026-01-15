@@ -157,7 +157,7 @@ services:
       PORT: 3004
       # OAuth 2.1 Resource Server (RFC 9728)
       MCP_SERVER_URL: ${MCP_SERVER_URL}
-      AUTH_SERVER_URL: ${AUTH_SERVER_URL}
+      API_URL: ${API_URL}
     ports:
       - "3004:3004"
     depends_on:

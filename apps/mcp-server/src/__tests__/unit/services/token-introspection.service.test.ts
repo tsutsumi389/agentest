@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 vi.mock('../../../config/env.js', () => ({
   env: {
     MCP_SERVER_URL: 'http://localhost:3002',
-    AUTH_SERVER_URL: 'http://localhost:3001',
+    API_URL: 'http://localhost:3001',
     INTERNAL_API_SECRET: 'test-internal-secret',
     NODE_ENV: 'test',
   },
