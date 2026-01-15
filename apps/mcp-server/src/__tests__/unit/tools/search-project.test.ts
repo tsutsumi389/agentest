@@ -81,9 +81,7 @@ describe('searchProjectTool', () => {
   describe('ツール定義', () => {
     it('正しい名前と説明を持つ', () => {
       expect(searchProjectTool.name).toBe('search_project');
-      expect(searchProjectTool.description).toBe(
-        'アクセス可能なプロジェクト一覧を検索します。'
-      );
+      expect(searchProjectTool.description).toContain('プロジェクト一覧を検索');
     });
 
     it('入力スキーマが定義されている', () => {

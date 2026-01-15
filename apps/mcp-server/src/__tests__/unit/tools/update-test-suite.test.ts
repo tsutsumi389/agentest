@@ -23,6 +23,7 @@ const TEST_SUITE_ID = '33333333-3333-3333-3333-333333333333';
 describe('updateTestSuiteTool', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockCheckLockStatus.mockResolvedValue(undefined);
   });
 
   describe('ツール定義', () => {

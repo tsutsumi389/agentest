@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // リポジトリのモック
 const mockAgentSessionRepository = vi.hoisted(() => ({
@@ -33,6 +33,10 @@ describe('agentSessionService', () => {
     // Date.nowをモック
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2024-01-01T12:00:00.000Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   describe('SESSION_CONFIG', () => {

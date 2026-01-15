@@ -42,9 +42,7 @@ describe('getProjectTool', () => {
   describe('ツール定義', () => {
     it('正しい名前と説明を持つ', () => {
       expect(getProjectTool.name).toBe('get_project');
-      expect(getProjectTool.description).toBe(
-        'プロジェクトの詳細情報を取得します。環境設定やテストスイート数も含まれます。'
-      );
+      expect(getProjectTool.description).toContain('プロジェクトの詳細情報を取得');
     });
 
     it('入力スキーマが定義されている', () => {

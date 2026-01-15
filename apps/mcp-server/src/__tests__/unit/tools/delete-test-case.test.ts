@@ -6,8 +6,11 @@ const mockApiClient = vi.hoisted(() => ({
   delete: vi.fn(),
 }));
 
+const mockCheckLockStatus = vi.hoisted(() => vi.fn());
+
 vi.mock('../../../clients/api-client.js', () => ({
   apiClient: mockApiClient,
+  checkLockStatus: mockCheckLockStatus,
 }));
 
 // モック設定後にインポート
@@ -20,6 +23,7 @@ const TEST_CASE_ID = '44444444-4444-4444-4444-444444444444';
 describe('deleteTestCaseTool', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockCheckLockStatus.mockResolvedValue(undefined);
   });
 
   describe('ツール定義', () => {

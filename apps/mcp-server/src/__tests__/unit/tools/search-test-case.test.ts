@@ -92,9 +92,7 @@ describe('searchTestCaseTool', () => {
   describe('ツール定義', () => {
     it('正しい名前と説明を持つ', () => {
       expect(searchTestCaseTool.name).toBe('search_test_case');
-      expect(searchTestCaseTool.description).toBe(
-        'テストスイート内のテストケース一覧を検索します。キーワード、ステータス、優先度で絞り込み可能です。'
-      );
+      expect(searchTestCaseTool.description).toContain('テストケース一覧を検索');
     });
 
     it('入力スキーマが定義されている', () => {

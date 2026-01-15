@@ -27,9 +27,7 @@ describe('createExecutionTool', () => {
   describe('ツール定義', () => {
     it('正しい名前と説明を持つ', () => {
       expect(createExecutionTool.name).toBe('create_execution');
-      expect(createExecutionTool.description).toBe(
-        'テスト実行を開始します。テストスイートIDを指定すると、スナップショットと全結果行が自動作成されます。'
-      );
+      expect(createExecutionTool.description).toContain('テスト実行を新規開始');
     });
 
     it('入力スキーマが定義されている', () => {

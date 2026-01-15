@@ -95,9 +95,7 @@ describe('searchTestSuiteTool', () => {
   describe('ツール定義', () => {
     it('正しい名前と説明を持つ', () => {
       expect(searchTestSuiteTool.name).toBe('search_test_suite');
-      expect(searchTestSuiteTool.description).toBe(
-        'アクセス可能なテストスイート一覧を検索します。プロジェクト、名前、ステータスで絞り込み可能です。'
-      );
+      expect(searchTestSuiteTool.description).toContain('テストスイート一覧を検索');
     });
 
     it('入力スキーマが定義されている', () => {

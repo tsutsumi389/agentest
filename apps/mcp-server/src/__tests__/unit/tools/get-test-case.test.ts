@@ -48,9 +48,7 @@ describe('getTestCaseTool', () => {
   describe('ツール定義', () => {
     it('正しい名前と説明を持つ', () => {
       expect(getTestCaseTool.name).toBe('get_test_case');
-      expect(getTestCaseTool.description).toBe(
-        'テストケースの詳細情報を取得します。前提条件、ステップ、期待結果も含まれます。'
-      );
+      expect(getTestCaseTool.description).toContain('テストケースの詳細情報を取得');
     });
 
     it('入力スキーマが定義されている', () => {

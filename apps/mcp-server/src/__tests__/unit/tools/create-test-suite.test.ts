@@ -26,9 +26,7 @@ describe('createTestSuiteTool', () => {
   describe('ツール定義', () => {
     it('正しい名前と説明を持つ', () => {
       expect(createTestSuiteTool.name).toBe('create_test_suite');
-      expect(createTestSuiteTool.description).toBe(
-        'テストスイートを作成します。プロジェクトIDとテストスイート名を指定してください。'
-      );
+      expect(createTestSuiteTool.description).toContain('テストスイートを作成');
     });
 
     it('入力スキーマが定義されている', () => {

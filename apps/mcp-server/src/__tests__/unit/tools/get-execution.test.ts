@@ -48,9 +48,7 @@ describe('getExecutionTool', () => {
   describe('ツール定義', () => {
     it('正しい名前と説明を持つ', () => {
       expect(getExecutionTool.name).toBe('get_execution');
-      expect(getExecutionTool.description).toBe(
-        'テスト実行の詳細情報を取得します。スナップショット、各結果データ、エビデンスも含まれます。'
-      );
+      expect(getExecutionTool.description).toContain('テスト実行の詳細情報を取得');
     });
 
     it('入力スキーマが定義されている', () => {

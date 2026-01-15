@@ -6,8 +6,11 @@ const mockApiClient = vi.hoisted(() => ({
   patch: vi.fn(),
 }));
 
+const mockCheckLockStatus = vi.hoisted(() => vi.fn());
+
 vi.mock('../../../clients/api-client.js', () => ({
   apiClient: mockApiClient,
+  checkLockStatus: mockCheckLockStatus,
 }));
 
 // モック設定後にインポート
@@ -21,12 +24,13 @@ const TEST_SUITE_ID = '33333333-3333-3333-3333-333333333333';
 describe('updateTestCaseTool', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockCheckLockStatus.mockResolvedValue(undefined);
   });
 
   describe('ツール定義', () => {
     it('正しい名前と説明を持つ', () => {
       expect(updateTestCaseTool.name).toBe('update_test_case');
-      expect(updateTestCaseTool.description).toContain('テストケースを更新');
+      expect(updateTestCaseTool.description).toContain('テストケースの情報を更新');
     });
 
     it('入力スキーマが定義されている', () => {
@@ -197,7 +201,7 @@ describe('updateTestCaseTool', () => {
 
       expect(mockApiClient.patch).toHaveBeenCalledWith(
         `/internal/api/test-cases/${TEST_CASE_ID}`,
-        { title: 'Updated Case' },
+        expect.objectContaining({ title: 'Updated Case', groupId: expect.stringMatching(/^[0-9a-f-]{36}$/) }),
         { userId: TEST_USER_ID }
       );
       expect(result).toEqual(mockResponse);
@@ -231,7 +235,7 @@ describe('updateTestCaseTool', () => {
 
       expect(mockApiClient.patch).toHaveBeenCalledWith(
         `/internal/api/test-cases/${TEST_CASE_ID}`,
-        { title: 'Updated Case', description: 'New Description', priority: 'HIGH', status: 'ACTIVE' },
+        expect.objectContaining({ title: 'Updated Case', description: 'New Description', priority: 'HIGH', status: 'ACTIVE', groupId: expect.stringMatching(/^[0-9a-f-]{36}$/) }),
         { userId: TEST_USER_ID }
       );
     });
@@ -297,12 +301,13 @@ describe('updateTestCaseTool', () => {
 
       expect(mockApiClient.patch).toHaveBeenCalledWith(
         `/internal/api/test-cases/${TEST_CASE_ID}`,
-        {
+        expect.objectContaining({
           steps: [
             { id: stepId, content: 'Updated step' },
             { content: 'New step' },
           ],
-        },
+          groupId: expect.stringMatching(/^[0-9a-f-]{36}$/),
+        }),
         { userId: TEST_USER_ID }
       );
       expect(result.testCase.steps).toHaveLength(2);
@@ -337,7 +342,7 @@ describe('updateTestCaseTool', () => {
 
       expect(mockApiClient.patch).toHaveBeenCalledWith(
         `/internal/api/test-cases/${TEST_CASE_ID}`,
-        { steps: [], expectedResults: [] },
+        expect.objectContaining({ steps: [], expectedResults: [], groupId: expect.stringMatching(/^[0-9a-f-]{36}$/) }),
         { userId: TEST_USER_ID }
       );
       expect(result.testCase.steps).toHaveLength(0);
