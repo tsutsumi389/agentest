@@ -159,7 +159,7 @@ services:
       PORT: 3004
       # OAuth 2.1 Resource Server (RFC 9728)
       MCP_SERVER_URL: ${MCP_SERVER_URL:-http://localhost:3004}
-      AUTH_SERVER_URL: ${AUTH_SERVER_URL:-http://localhost:3001}
+      API_URL: ${API_URL:-http://localhost:3001}
       API_INTERNAL_URL: http://api:3001
     ports:
       - "${MCP_EXTERNAL_PORT:-3004}:3004"

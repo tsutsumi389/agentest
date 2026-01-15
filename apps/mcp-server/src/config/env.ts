@@ -31,7 +31,8 @@ const envSchema = z.object({
 
   // OAuth 2.1 Resource Server (RFC 9728)
   MCP_SERVER_URL: z.string().url().default('http://localhost:3002'),
-  AUTH_SERVER_URL: z.string().url().default('http://localhost:3001'),
+  // AUTH_SERVER_URLはAPI_URLと同じ値のため、API_URLを使用
+  API_URL: z.string().url().default('http://localhost:3001'),
 });
 
 // 環境変数を検証

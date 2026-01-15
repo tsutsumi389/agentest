@@ -44,7 +44,10 @@ cd agentest
 cp .env.example .env
 # .envを編集（OAuthクレデンシャルはチームから取得）
 
-# 3. Docker起動
+# 3. Docker用シンボリックリンク作成
+cd docker && ln -s ../.env .env && cd ..
+
+# 4. Docker起動
 cd docker
 docker compose up --build
 
