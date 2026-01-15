@@ -248,12 +248,15 @@ describe('MCP Auth & Session Integration Tests', () => {
     it('同じクライアントIDで再リクエストすると既存セッションを使用', async () => {
       const clientId = 'test-client-existing';
 
-      // 既存セッションを作成
+      // 既存のAgentSession（DB上のセッション）を作成
       await createTestAgentSession(testProject.id, {
         clientId,
         status: 'ACTIVE',
       });
 
+      // 注: MCPプロトコルでは初期化が必要だが、AgentSession（DB）は
+      // X-MCP-Client-Id で識別されるため、initializeを呼んでも
+      // 既存のAgentSessionが再利用される（新規作成されない）
       const response = await request(app)
         .post('/mcp')
         .set('Cookie', 'access_token=valid-test-token')
@@ -274,7 +277,7 @@ describe('MCP Auth & Session Integration Tests', () => {
 
       expect(response.status).toBe(200);
 
-      // セッションは1つのみ
+      // AgentSessionは1つのみ（新規作成されていない）
       const sessions = await prisma.agentSession.findMany({
         where: {
           projectId: testProject.id,

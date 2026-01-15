@@ -52,16 +52,18 @@ describe('HeartbeatService', () => {
 
       heartbeatService.start(1000); // 1秒間隔
 
-      // 初回実行（start直後に1回実行される）
+      // 初回実行（start直後に即座に1回実行される）
+      // runOnlyPendingTimersAsyncはsetIntervalを1回分進めることがあるため、
+      // 厳密な回数ではなく相対的な増加をテストする
       await vi.runOnlyPendingTimersAsync();
       const initialCount = mockAgentSessionService.processTimedOutSessions.mock.calls.length;
       expect(initialCount).toBeGreaterThanOrEqual(1);
 
-      // 1秒進める
+      // 1秒進める → interval分の1回増加
       await vi.advanceTimersByTimeAsync(1000);
       expect(mockAgentSessionService.processTimedOutSessions).toHaveBeenCalledTimes(initialCount + 1);
 
-      // もう1秒進める
+      // もう1秒進める → さらに1回増加
       await vi.advanceTimersByTimeAsync(1000);
       expect(mockAgentSessionService.processTimedOutSessions).toHaveBeenCalledTimes(initialCount + 2);
     });
