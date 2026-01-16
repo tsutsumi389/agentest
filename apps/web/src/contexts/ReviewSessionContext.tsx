@@ -173,6 +173,10 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
           queryKey: ['unresolved-comments', targetType, targetId],
         });
       });
+      // レビュー一覧のキャッシュを無効化
+      queryClient.invalidateQueries({
+        queryKey: ['test-suite-reviews', testSuiteId],
+      });
       setCurrentReview(null);
       setTestSuiteId(null);
     } catch (err) {
@@ -182,7 +186,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [currentReview, queryClient]);
+  }, [currentReview, queryClient, testSuiteId]);
 
   // コメント追加
   const addComment = useCallback(async (data: Omit<CreateReviewCommentRequest, 'reviewId'>) => {
