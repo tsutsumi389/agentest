@@ -72,6 +72,19 @@
 
 - **サマリーセクション（3段構成）**
 
+  - **期待結果サマリー**（ExpectedResultsHighlightSummary、強調表示）← 最上部に配置
+    - カード内に以下を表示：
+      - ヘッダー（🎯 期待結果）
+      - プログレスバー（成功/失敗/スキップ/実行不可を色分け表示）
+      - 実行済み件数表示（例: 12/15 実行済み）
+    - 成功/失敗カード（2列、強調表示）：
+      - **成功**: PASSの件数（緑色背景+ボーダー）
+      - **失敗**: FAILの件数（赤色背景+ボーダー）
+    - その他ステータスカード（3列）：
+      - **スキップ**: SKIPPEDの件数（黄色）
+      - **実行不可**: NOT_EXECUTABLEの件数（紫色）
+      - **未実行**: PENDINGの件数（グレー）
+
   - **前提条件サマリー**（データがある場合のみ表示）
     - 3つのカードを横並び：
       - **満たす**: METの件数（緑色）
@@ -82,14 +95,6 @@
     - 3つのカードを横並び：
       - **完了**: DONEの件数（緑色）
       - **スキップ**: SKIPPEDの件数（黄色）
-      - **未実行**: PENDINGの件数（グレー）
-
-  - **期待結果サマリー**
-    - 5つのカードを横並び：
-      - **成功**: PASSの件数（緑色）
-      - **失敗**: FAILの件数（赤色）
-      - **スキップ**: SKIPPEDの件数（黄色）
-      - **実行不可**: NOT_EXECUTABLEの件数（紫色）
       - **未実行**: PENDINGの件数（グレー）
 
 - **スイート前提条件セクション**
@@ -900,6 +905,7 @@ agentest/
 | ページ | ExecutionPage | `apps/web/src/pages/Execution.tsx` | メインページ、状態管理・API連携 |
 | サイドバー | ExecutionSidebar | `apps/web/src/components/execution/ExecutionSidebar.tsx` | テストケース一覧・選択 |
 | 概要パネル | ExecutionOverviewPanel | `apps/web/src/components/execution/ExecutionOverviewPanel.tsx` | 実行概要・サマリー表示 |
+| 概要パネル | ExpectedResultsHighlightSummary | `apps/web/src/components/execution/ExpectedResultsHighlightSummary.tsx` | 期待結果の強調表示サマリー（プログレスバー付き） |
 | 詳細パネル | ExecutionTestCaseDetailPanel | `apps/web/src/components/execution/ExecutionTestCaseDetailPanel.tsx` | テストケース詳細表示 |
 | リスト | ExecutionPreconditionList | `apps/web/src/components/execution/ExecutionPreconditionList.tsx` | 前提条件一覧 |
 | リスト | ExecutionStepList | `apps/web/src/components/execution/ExecutionStepList.tsx` | ステップ一覧 |

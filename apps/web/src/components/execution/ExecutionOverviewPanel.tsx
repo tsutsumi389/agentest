@@ -18,6 +18,7 @@ import {
   ListChecks,
   ClipboardCheck,
   Slash,
+  Target,
 } from 'lucide-react';
 import type {
   ExecutionWithDetails,
@@ -27,6 +28,7 @@ import type {
 } from '../../lib/api';
 import { MarkdownPreview } from '../common/markdown';
 import { ExecutionPreconditionList } from './ExecutionPreconditionList';
+import { ProgressBar } from '../ui/ProgressBar';
 import { formatDateTime, formatDuration } from '../../lib/date';
 
 interface ExecutionOverviewPanelProps {
@@ -134,6 +136,122 @@ function MetadataCard({
           {subValue && (
             <p className="text-xs text-foreground-muted mt-0.5">{subValue}</p>
           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 期待結果の強調表示サマリーコンポーネント
+ * 成功/失敗を視覚的に強調し、プログレスバーを表示
+ */
+function ExpectedResultsHighlightSummary({
+  pass,
+  fail,
+  skipped,
+  notExecutable,
+  pending,
+}: {
+  pass: number;
+  fail: number;
+  skipped: number;
+  notExecutable: number;
+  pending: number;
+}) {
+  const total = pass + fail + skipped + notExecutable + pending;
+  const executed = pass + fail;
+
+  return (
+    <div className="card p-4 space-y-4">
+      {/* ヘッダー */}
+      <div className="flex items-center gap-2">
+        <Target className="w-4 h-4 text-foreground-muted" />
+        <span className="text-sm font-medium text-foreground-muted">期待結果</span>
+      </div>
+
+      {/* プログレスバー */}
+      <div className="space-y-1">
+        <ProgressBar
+          passed={pass}
+          failed={fail}
+          skipped={skipped}
+          notExecutable={notExecutable}
+          total={total}
+          size="lg"
+        />
+        <div className="text-xs text-foreground-muted text-right">
+          {executed} / {total} 実行済み
+        </div>
+      </div>
+
+      {/* ステータスカードグリッド: 成功/失敗を強調 */}
+      <div className="space-y-3">
+        {/* 成功/失敗 - 強調表示（2列） */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* 成功 */}
+          <div className="card p-3 bg-success-subtle border border-success/30">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-success" />
+              <div>
+                <p className="text-xl font-bold text-success">{pass}</p>
+                <p className="text-xs text-success/80">成功</p>
+              </div>
+            </div>
+          </div>
+
+          {/* 失敗 */}
+          <div className="card p-3 bg-danger-subtle border border-danger/30">
+            <div className="flex items-center gap-2">
+              <XCircle className="w-5 h-5 text-danger" />
+              <div>
+                <p className="text-xl font-bold text-danger">{fail}</p>
+                <p className="text-xs text-danger/80">失敗</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* その他のステータス（3列） */}
+        <div className="grid grid-cols-3 gap-3">
+          {/* スキップ */}
+          <div className="card p-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-warning-subtle flex items-center justify-center">
+                <Ban className="w-4 h-4 text-warning" />
+              </div>
+              <div>
+                <p className="text-lg font-bold text-foreground">{skipped}</p>
+                <p className="text-xs text-foreground-muted">スキップ</p>
+              </div>
+            </div>
+          </div>
+
+          {/* 実行不可 */}
+          <div className="card p-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-accent-subtle flex items-center justify-center">
+                <Slash className="w-4 h-4 text-accent" />
+              </div>
+              <div>
+                <p className="text-lg font-bold text-foreground">{notExecutable}</p>
+                <p className="text-xs text-foreground-muted">実行不可</p>
+              </div>
+            </div>
+          </div>
+
+          {/* 未実行 */}
+          <div className="card p-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-background-tertiary flex items-center justify-center">
+                <Clock className="w-4 h-4 text-foreground-muted" />
+              </div>
+              <div>
+                <p className="text-lg font-bold text-foreground">{pending}</p>
+                <p className="text-xs text-foreground-muted">未実行</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -293,6 +411,15 @@ export function ExecutionOverviewPanel({
         />
       </div>
 
+      {/* 期待結果サマリー（強調表示） */}
+      <ExpectedResultsHighlightSummary
+        pass={expectedSummary.pass}
+        fail={expectedSummary.fail}
+        skipped={expectedSummary.skipped}
+        notExecutable={expectedSummary.notExecutable}
+        pending={expectedSummary.pending}
+      />
+
       {/* 前提条件サマリー */}
       {execution.preconditionResults.length > 0 && (
         <div>
@@ -352,46 +479,6 @@ export function ExecutionOverviewPanel({
           </div>
         </div>
       )}
-
-      {/* 期待結果サマリー */}
-      <div>
-        <div className="flex items-center gap-2 text-sm font-medium text-foreground-muted mb-3">
-          <AlertCircle className="w-4 h-4" />
-          期待結果
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          <SummaryCard
-            icon={CheckCircle2}
-            label="成功"
-            value={expectedSummary.pass}
-            color="success"
-          />
-          <SummaryCard
-            icon={XCircle}
-            label="失敗"
-            value={expectedSummary.fail}
-            color="danger"
-          />
-          <SummaryCard
-            icon={Ban}
-            label="スキップ"
-            value={expectedSummary.skipped}
-            color="warning"
-          />
-          <SummaryCard
-            icon={Slash}
-            label="実行不可"
-            value={expectedSummary.notExecutable}
-            color="accent"
-          />
-          <SummaryCard
-            icon={Clock}
-            label="未実行"
-            value={expectedSummary.pending}
-            color="muted"
-          />
-        </div>
-      </div>
 
       {/* スイートレベル前提条件 */}
       {executionTestSuite && executionTestSuite.preconditions.length > 0 && (
