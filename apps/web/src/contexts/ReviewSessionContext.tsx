@@ -5,6 +5,7 @@ import {
   useCallback,
   type ReactNode,
 } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   reviewsApi,
   type ReviewWithDetails,
@@ -69,6 +70,7 @@ const ReviewSessionContext = createContext<ReviewSessionContextValue | null>(nul
  * - レビュー提出（SUBMITTED）
  */
 export function ReviewSessionProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [currentReview, setCurrentReview] = useState<ReviewWithDetails | null>(null);
   const [testSuiteId, setTestSuiteId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -123,6 +125,16 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     setError(null);
     try {
       await reviewsApi.submit(currentReview.id, { verdict, summary });
+      // レビューに含まれる全コメントのキャッシュを無効化
+      const uniqueTargets = new Set(
+        currentReview.comments.map((c) => `${c.targetType}:${c.targetId}`)
+      );
+      uniqueTargets.forEach((key) => {
+        const [targetType, targetId] = key.split(':');
+        queryClient.invalidateQueries({
+          queryKey: ['unresolved-comments', targetType, targetId],
+        });
+      });
       // 提出後はセッションをクリア
       setCurrentReview(null);
       setTestSuiteId(null);
@@ -133,7 +145,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [currentReview]);
+  }, [currentReview, queryClient]);
 
   // レビューをキャンセル（削除）
   const cancelReview = useCallback(async () => {
@@ -169,6 +181,10 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       // レビューを再取得してコメント一覧を更新
       const refreshed = await reviewsApi.getById(currentReview.id);
       setCurrentReview(refreshed.review);
+      // コメント対象のキャッシュを無効化
+      queryClient.invalidateQueries({
+        queryKey: ['unresolved-comments', data.targetType, data.targetId],
+      });
       return response.comment;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'コメントの追加に失敗しました';
@@ -177,7 +193,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [currentReview]);
+  }, [currentReview, queryClient]);
 
   // コメント更新
   const updateComment = useCallback(async (commentId: string, content: string) => {
