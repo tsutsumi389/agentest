@@ -144,7 +144,7 @@ function MetadataCard({
 
 /**
  * 期待結果の強調表示サマリーコンポーネント
- * 成功/失敗を視覚的に強調し、プログレスバーと成功率を表示
+ * 成功/失敗を視覚的に強調し、プログレスバーを表示
  */
 function ExpectedResultsHighlightSummary({
   pass,
