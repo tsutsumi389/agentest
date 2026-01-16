@@ -5,6 +5,7 @@ import {
   useCallback,
   type ReactNode,
 } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   reviewsApi,
   type ReviewWithDetails,
@@ -69,6 +70,7 @@ const ReviewSessionContext = createContext<ReviewSessionContextValue | null>(nul
  * - レビュー提出（SUBMITTED）
  */
 export function ReviewSessionProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [currentReview, setCurrentReview] = useState<ReviewWithDetails | null>(null);
   const [testSuiteId, setTestSuiteId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -123,6 +125,20 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     setError(null);
     try {
       await reviewsApi.submit(currentReview.id, { verdict, summary });
+      // レビューに含まれる全コメントのキャッシュを無効化
+      const uniqueTargets = new Set(
+        currentReview.comments.map((c) => `${c.targetType}:${c.targetId}`)
+      );
+      uniqueTargets.forEach((key) => {
+        const [targetType, targetId] = key.split(':');
+        queryClient.invalidateQueries({
+          queryKey: ['unresolved-comments', targetType, targetId],
+        });
+      });
+      // レビュー一覧のキャッシュを無効化
+      queryClient.invalidateQueries({
+        queryKey: ['test-suite-reviews', testSuiteId],
+      });
       // 提出後はセッションをクリア
       setCurrentReview(null);
       setTestSuiteId(null);
@@ -133,7 +149,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [currentReview]);
+  }, [currentReview, queryClient, testSuiteId]);
 
   // レビューをキャンセル（削除）
   const cancelReview = useCallback(async () => {
@@ -141,10 +157,26 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       throw new Error('レビューが開始されていません');
     }
 
+    // キャンセル前にコメント情報を取得しておく
+    const uniqueTargets = new Set(
+      currentReview.comments.map((c) => `${c.targetType}:${c.targetId}`)
+    );
+
     setIsLoading(true);
     setError(null);
     try {
       await reviewsApi.delete(currentReview.id);
+      // レビューに含まれていた全コメントのキャッシュを無効化
+      uniqueTargets.forEach((key) => {
+        const [targetType, targetId] = key.split(':');
+        queryClient.invalidateQueries({
+          queryKey: ['unresolved-comments', targetType, targetId],
+        });
+      });
+      // レビュー一覧のキャッシュを無効化
+      queryClient.invalidateQueries({
+        queryKey: ['test-suite-reviews', testSuiteId],
+      });
       setCurrentReview(null);
       setTestSuiteId(null);
     } catch (err) {
@@ -154,7 +186,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [currentReview]);
+  }, [currentReview, queryClient, testSuiteId]);
 
   // コメント追加
   const addComment = useCallback(async (data: Omit<CreateReviewCommentRequest, 'reviewId'>) => {
@@ -169,6 +201,10 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       // レビューを再取得してコメント一覧を更新
       const refreshed = await reviewsApi.getById(currentReview.id);
       setCurrentReview(refreshed.review);
+      // コメント対象のキャッシュを無効化
+      queryClient.invalidateQueries({
+        queryKey: ['unresolved-comments', data.targetType, data.targetId],
+      });
       return response.comment;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'コメントの追加に失敗しました';
@@ -177,7 +213,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [currentReview]);
+  }, [currentReview, queryClient]);
 
   // コメント更新
   const updateComment = useCallback(async (commentId: string, content: string) => {
@@ -208,6 +244,9 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       throw new Error('レビューが開始されていません');
     }
 
+    // 削除前にコメント情報を取得しておく
+    const comment = currentReview.comments.find((c) => c.id === commentId);
+
     setIsLoading(true);
     setError(null);
     try {
@@ -215,6 +254,12 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       // レビューを再取得してコメント一覧を更新
       const refreshed = await reviewsApi.getById(currentReview.id);
       setCurrentReview(refreshed.review);
+      // コメント対象のキャッシュを無効化
+      if (comment) {
+        queryClient.invalidateQueries({
+          queryKey: ['unresolved-comments', comment.targetType, comment.targetId],
+        });
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'コメントの削除に失敗しました';
       setError(message);
@@ -222,13 +267,16 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [currentReview]);
+  }, [currentReview, queryClient]);
 
   // コメントステータス変更
   const updateCommentStatus = useCallback(async (commentId: string, status: ReviewStatus) => {
     if (!currentReview) {
       throw new Error('レビューが開始されていません');
     }
+
+    // ステータス変更前にコメント情報を取得しておく
+    const comment = currentReview.comments.find((c) => c.id === commentId);
 
     setIsLoading(true);
     setError(null);
@@ -237,6 +285,12 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       // レビューを再取得してコメント一覧を更新
       const refreshed = await reviewsApi.getById(currentReview.id);
       setCurrentReview(refreshed.review);
+      // コメント対象のキャッシュを無効化（RESOLVED/OPENの切り替えで表示が変わるため）
+      if (comment) {
+        queryClient.invalidateQueries({
+          queryKey: ['unresolved-comments', comment.targetType, comment.targetId],
+        });
+      }
       return response.comment;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'ステータスの更新に失敗しました';
@@ -245,7 +299,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [currentReview]);
+  }, [currentReview, queryClient]);
 
   // 返信追加
   const addReply = useCallback(async (commentId: string, content: string) => {
