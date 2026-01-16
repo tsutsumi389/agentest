@@ -135,6 +135,10 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
           queryKey: ['unresolved-comments', targetType, targetId],
         });
       });
+      // レビュー一覧のキャッシュを無効化
+      queryClient.invalidateQueries({
+        queryKey: ['test-suite-reviews', testSuiteId],
+      });
       // 提出後はセッションをクリア
       setCurrentReview(null);
       setTestSuiteId(null);
@@ -145,7 +149,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [currentReview, queryClient]);
+  }, [currentReview, queryClient, testSuiteId]);
 
   // レビューをキャンセル（削除）
   const cancelReview = useCallback(async () => {
