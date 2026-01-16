@@ -153,10 +153,22 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       throw new Error('レビューが開始されていません');
     }
 
+    // キャンセル前にコメント情報を取得しておく
+    const uniqueTargets = new Set(
+      currentReview.comments.map((c) => `${c.targetType}:${c.targetId}`)
+    );
+
     setIsLoading(true);
     setError(null);
     try {
       await reviewsApi.delete(currentReview.id);
+      // レビューに含まれていた全コメントのキャッシュを無効化
+      uniqueTargets.forEach((key) => {
+        const [targetType, targetId] = key.split(':');
+        queryClient.invalidateQueries({
+          queryKey: ['unresolved-comments', targetType, targetId],
+        });
+      });
       setCurrentReview(null);
       setTestSuiteId(null);
     } catch (err) {
@@ -166,7 +178,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [currentReview]);
+  }, [currentReview, queryClient]);
 
   // コメント追加
   const addComment = useCallback(async (data: Omit<CreateReviewCommentRequest, 'reviewId'>) => {
@@ -224,6 +236,9 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       throw new Error('レビューが開始されていません');
     }
 
+    // 削除前にコメント情報を取得しておく
+    const comment = currentReview.comments.find((c) => c.id === commentId);
+
     setIsLoading(true);
     setError(null);
     try {
@@ -231,6 +246,12 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       // レビューを再取得してコメント一覧を更新
       const refreshed = await reviewsApi.getById(currentReview.id);
       setCurrentReview(refreshed.review);
+      // コメント対象のキャッシュを無効化
+      if (comment) {
+        queryClient.invalidateQueries({
+          queryKey: ['unresolved-comments', comment.targetType, comment.targetId],
+        });
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'コメントの削除に失敗しました';
       setError(message);
@@ -238,13 +259,16 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [currentReview]);
+  }, [currentReview, queryClient]);
 
   // コメントステータス変更
   const updateCommentStatus = useCallback(async (commentId: string, status: ReviewStatus) => {
     if (!currentReview) {
       throw new Error('レビューが開始されていません');
     }
+
+    // ステータス変更前にコメント情報を取得しておく
+    const comment = currentReview.comments.find((c) => c.id === commentId);
 
     setIsLoading(true);
     setError(null);
@@ -253,6 +277,12 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
       // レビューを再取得してコメント一覧を更新
       const refreshed = await reviewsApi.getById(currentReview.id);
       setCurrentReview(refreshed.review);
+      // コメント対象のキャッシュを無効化（RESOLVED/OPENの切り替えで表示が変わるため）
+      if (comment) {
+        queryClient.invalidateQueries({
+          queryKey: ['unresolved-comments', comment.targetType, comment.targetId],
+        });
+      }
       return response.comment;
     } catch (err) {
       const message = err instanceof Error ? err.message : 'ステータスの更新に失敗しました';
@@ -261,7 +291,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  }, [currentReview]);
+  }, [currentReview, queryClient]);
 
   // 返信追加
   const addReply = useCallback(async (commentId: string, content: string) => {
