@@ -5,6 +5,8 @@ interface ProgressBarProps {
   failed: number;
   /** スキップ数 */
   skipped?: number;
+  /** 実行不可数 */
+  notExecutable?: number;
   /** 合計数 */
   total: number;
   /** サイズ */
@@ -21,6 +23,7 @@ export function ProgressBar({
   passed,
   failed,
   skipped = 0,
+  notExecutable = 0,
   total,
   size = 'md',
   showLabel = false,
@@ -35,6 +38,7 @@ export function ProgressBar({
   const passedPercent = (passed / total) * 100;
   const failedPercent = (failed / total) * 100;
   const skippedPercent = (skipped / total) * 100;
+  const notExecutablePercent = (notExecutable / total) * 100;
 
   const sizeClass = {
     sm: 'h-1',
@@ -47,10 +51,10 @@ export function ProgressBar({
       <div
         className={`${sizeClass[size]} bg-background-tertiary rounded-full overflow-hidden flex`}
         role="progressbar"
-        aria-valuenow={passed + failed + skipped}
+        aria-valuenow={passed + failed + skipped + notExecutable}
         aria-valuemin={0}
         aria-valuemax={total}
-        aria-label={`テスト進捗: 成功 ${passed}件, 失敗 ${failed}件, スキップ ${skipped}件 / 全${total}件`}
+        aria-label={`テスト進捗: 成功 ${passed}件, 失敗 ${failed}件, スキップ ${skipped}件, 実行不可 ${notExecutable}件 / 全${total}件`}
       >
         {/* 成功 */}
         <div
@@ -66,6 +70,11 @@ export function ProgressBar({
         <div
           className="bg-foreground-subtle transition-all duration-300 ease-out"
           style={{ width: `${skippedPercent}%` }}
+        />
+        {/* 実行不可 */}
+        <div
+          className="bg-accent transition-all duration-300 ease-out"
+          style={{ width: `${notExecutablePercent}%` }}
         />
       </div>
 
@@ -83,6 +92,12 @@ export function ProgressBar({
             <span className="flex items-center gap-1">
               <span className="w-2 h-2 rounded-full bg-foreground-subtle" />
               スキップ {skipped}
+            </span>
+          )}
+          {notExecutable > 0 && (
+            <span className="flex items-center gap-1">
+              <span className="w-2 h-2 rounded-full bg-accent" />
+              実行不可 {notExecutable}
             </span>
           )}
         </div>
