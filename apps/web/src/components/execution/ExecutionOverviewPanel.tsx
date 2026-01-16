@@ -161,33 +161,13 @@ function ExpectedResultsHighlightSummary({
 }) {
   const total = pass + fail + skipped + notExecutable + pending;
   const executed = pass + fail;
-  // 成功率は実行済み（成功+失敗）に対する成功の割合。未実行時はnull
-  const passRate = executed > 0 ? Math.round((pass / executed) * 100) : null;
 
   return (
     <div className="card p-4 space-y-4">
-      {/* ヘッダー: ラベル + 成功率 */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Target className="w-4 h-4 text-foreground-muted" />
-          <span className="text-sm font-medium text-foreground-muted">期待結果</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span
-            className={`text-lg font-bold ${
-              passRate === null
-                ? 'text-foreground-muted'
-                : passRate >= 80
-                  ? 'text-success'
-                  : passRate >= 50
-                    ? 'text-warning'
-                    : 'text-danger'
-            }`}
-          >
-            {passRate !== null ? `${passRate}%` : '-'}
-          </span>
-          <span className="text-xs text-foreground-muted">成功率</span>
-        </div>
+      {/* ヘッダー */}
+      <div className="flex items-center gap-2">
+        <Target className="w-4 h-4 text-foreground-muted" />
+        <span className="text-sm font-medium text-foreground-muted">期待結果</span>
       </div>
 
       {/* プログレスバー */}
