@@ -18,6 +18,7 @@ import {
   ListChecks,
   ClipboardCheck,
   Slash,
+  Target,
 } from 'lucide-react';
 import type {
   ExecutionWithDetails,
@@ -160,24 +161,30 @@ function ExpectedResultsHighlightSummary({
 }) {
   const total = pass + fail + skipped + notExecutable + pending;
   const executed = pass + fail;
-  // 成功率は実行済み（成功+失敗）に対する成功の割合
-  const passRate = executed > 0 ? Math.round((pass / executed) * 100) : 0;
+  // 成功率は実行済み（成功+失敗）に対する成功の割合。未実行時はnull
+  const passRate = executed > 0 ? Math.round((pass / executed) * 100) : null;
 
   return (
     <div className="card p-4 space-y-4">
       {/* ヘッダー: ラベル + 成功率 */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <AlertCircle className="w-4 h-4 text-foreground-muted" />
+          <Target className="w-4 h-4 text-foreground-muted" />
           <span className="text-sm font-medium text-foreground-muted">期待結果</span>
         </div>
         <div className="flex items-center gap-2">
           <span
             className={`text-lg font-bold ${
-              passRate >= 80 ? 'text-success' : passRate >= 50 ? 'text-warning' : 'text-danger'
+              passRate === null
+                ? 'text-foreground-muted'
+                : passRate >= 80
+                  ? 'text-success'
+                  : passRate >= 50
+                    ? 'text-warning'
+                    : 'text-danger'
             }`}
           >
-            {passRate}%
+            {passRate !== null ? `${passRate}%` : '-'}
           </span>
           <span className="text-xs text-foreground-muted">成功率</span>
         </div>
@@ -199,64 +206,70 @@ function ExpectedResultsHighlightSummary({
       </div>
 
       {/* ステータスカードグリッド: 成功/失敗を強調 */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        {/* 成功 - 強調表示 */}
-        <div className="card p-3 bg-success-subtle border border-success/30">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-5 h-5 text-success" />
-            <div>
-              <p className="text-xl font-bold text-success">{pass}</p>
-              <p className="text-xs text-success/80">成功</p>
+      <div className="space-y-3">
+        {/* 成功/失敗 - 強調表示（2列） */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* 成功 */}
+          <div className="card p-3 bg-success-subtle border border-success/30">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-success" />
+              <div>
+                <p className="text-xl font-bold text-success">{pass}</p>
+                <p className="text-xs text-success/80">成功</p>
+              </div>
+            </div>
+          </div>
+
+          {/* 失敗 */}
+          <div className="card p-3 bg-danger-subtle border border-danger/30">
+            <div className="flex items-center gap-2">
+              <XCircle className="w-5 h-5 text-danger" />
+              <div>
+                <p className="text-xl font-bold text-danger">{fail}</p>
+                <p className="text-xs text-danger/80">失敗</p>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* 失敗 - 強調表示 */}
-        <div className="card p-3 bg-danger-subtle border border-danger/30">
-          <div className="flex items-center gap-2">
-            <XCircle className="w-5 h-5 text-danger" />
-            <div>
-              <p className="text-xl font-bold text-danger">{fail}</p>
-              <p className="text-xs text-danger/80">失敗</p>
+        {/* その他のステータス（3列） */}
+        <div className="grid grid-cols-3 gap-3">
+          {/* スキップ */}
+          <div className="card p-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-warning-subtle flex items-center justify-center">
+                <Ban className="w-4 h-4 text-warning" />
+              </div>
+              <div>
+                <p className="text-lg font-bold text-foreground">{skipped}</p>
+                <p className="text-xs text-foreground-muted">スキップ</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* スキップ - 通常表示 */}
-        <div className="card p-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-warning-subtle flex items-center justify-center">
-              <Ban className="w-4 h-4 text-warning" />
-            </div>
-            <div>
-              <p className="text-lg font-bold text-foreground">{skipped}</p>
-              <p className="text-xs text-foreground-muted">スキップ</p>
+          {/* 実行不可 */}
+          <div className="card p-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-accent-subtle flex items-center justify-center">
+                <Slash className="w-4 h-4 text-accent" />
+              </div>
+              <div>
+                <p className="text-lg font-bold text-foreground">{notExecutable}</p>
+                <p className="text-xs text-foreground-muted">実行不可</p>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* 実行不可 - 通常表示 */}
-        <div className="card p-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-accent-subtle flex items-center justify-center">
-              <Slash className="w-4 h-4 text-accent" />
-            </div>
-            <div>
-              <p className="text-lg font-bold text-foreground">{notExecutable}</p>
-              <p className="text-xs text-foreground-muted">実行不可</p>
-            </div>
-          </div>
-        </div>
-
-        {/* 未実行 - 通常表示 */}
-        <div className="card p-3">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-background-tertiary flex items-center justify-center">
-              <Clock className="w-4 h-4 text-foreground-muted" />
-            </div>
-            <div>
-              <p className="text-lg font-bold text-foreground">{pending}</p>
-              <p className="text-xs text-foreground-muted">未実行</p>
+          {/* 未実行 */}
+          <div className="card p-3">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-background-tertiary flex items-center justify-center">
+                <Clock className="w-4 h-4 text-foreground-muted" />
+              </div>
+              <div>
+                <p className="text-lg font-bold text-foreground">{pending}</p>
+                <p className="text-xs text-foreground-muted">未実行</p>
+              </div>
             </div>
           </div>
         </div>
