@@ -50,13 +50,16 @@ export function ProjectSettingsTab({
                 className={`
                   w-full flex items-center gap-2 px-3 py-2 text-sm font-medium rounded transition-colors
                   ${activeSection === tab.id
-                    ? 'bg-accent-subtle text-accent'
-                    : 'text-foreground-muted hover:text-foreground hover:bg-background-tertiary'
+                    ? tab.id === 'danger'
+                      ? 'bg-danger-subtle text-danger'
+                      : 'bg-accent-subtle text-accent'
+                    : tab.id === 'danger'
+                      ? 'text-danger hover:text-danger hover:bg-background-tertiary'
+                      : 'text-foreground-muted hover:text-foreground hover:bg-background-tertiary'
                   }
-                  ${tab.id === 'danger' ? 'text-danger hover:text-danger' : ''}
                 `}
               >
-                <tab.icon className={`w-4 h-4 ${tab.id === 'danger' && activeSection !== tab.id ? 'text-danger' : ''}`} />
+                <tab.icon className="w-4 h-4" />
                 {tab.label}
               </button>
             </li>

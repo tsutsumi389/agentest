@@ -14,7 +14,7 @@ import {
   Loader2,
   BarChart3,
 } from 'lucide-react';
-import { projectsApi, testSuitesApi, usersApi, type TestSuite, type TestSuiteSearchParams, type ProjectMemberRole } from '../lib/api';
+import { projectsApi, testSuitesApi, usersApi, type Project, type TestSuite, type TestSuiteSearchParams, type ProjectMemberRole } from '../lib/api';
 import { TestSuiteSearchFilter, type FilterMember } from '../components/test-suite/TestSuiteSearchFilter';
 import { useAuth } from '../hooks/useAuth';
 import { ProjectOverviewTab } from '../components/project/ProjectOverviewTab';
@@ -153,11 +153,9 @@ export function ProjectDetailPage() {
   }, []);
 
   // プロジェクト更新後のコールバック
-  const handleProjectUpdated = useCallback((updated: typeof project) => {
-    if (updated) {
-      queryClient.setQueryData(['project', projectId], { project: updated });
-      queryClient.invalidateQueries({ queryKey: ['user-projects-for-detail', user?.id, projectId] });
-    }
+  const handleProjectUpdated = useCallback((updated: Project) => {
+    queryClient.setQueryData(['project', projectId], { project: updated });
+    queryClient.invalidateQueries({ queryKey: ['user-projects-for-detail', user?.id, projectId] });
   }, [queryClient, projectId, user?.id]);
 
   // タブ定義
