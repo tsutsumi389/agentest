@@ -463,12 +463,18 @@ function OverviewTab({
         canEdit={canEdit}
         onCommentAdded={refreshReview}
       >
-        <div className="card p-6">
-          <h2 className="text-lg font-semibold text-foreground mb-4">説明</h2>
+        <div className="card">
+          <div className="p-4 border-b border-border">
+            <h2 className="font-semibold text-foreground">説明</h2>
+          </div>
           {description ? (
-            <MarkdownPreview content={description} />
+            <div className="p-4">
+              <MarkdownPreview content={description} />
+            </div>
           ) : (
-            <p className="text-foreground-muted">説明なし</p>
+            <div className="p-4 text-center text-foreground-muted">
+              説明なし
+            </div>
           )}
         </div>
       </CommentableField>
