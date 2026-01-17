@@ -291,116 +291,116 @@ export function TestSuiteCasesPage() {
           />
         )}
 
-      {/* メインコンテンツ */}
-      <div className="flex-1 overflow-hidden p-4">
-        {isCreateMode ? (
-          // 作成モード時: 作成フォームを表示
-          <div className="card h-full overflow-hidden">
-            <TestCaseForm
-              mode="create"
-              testSuiteId={testSuiteId}
-              projectId={suite.projectId}
-              onSave={handleExitCreateMode}
-              onCancel={handleExitCreateMode}
-            />
-          </div>
-        ) : selectedTestCaseId ? (
-          // テストケース選択時: 詳細パネルを表示
-          <div className="card h-full overflow-hidden">
-            <TestCaseDetailPanel
-              testCaseId={selectedTestCaseId}
-              testSuiteId={testSuiteId}
-              projectId={suite.projectId}
-              currentRole={currentRole}
-              onClose={() => handleSelectTestCase(null)}
-              onUpdated={() => {
-                queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
-                queryClient.invalidateQueries({ queryKey: ['test-case-details', selectedTestCaseId] });
-              }}
-              onDeleted={() => {
-                handleSelectTestCase(null);
-                queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
-              }}
-              currentTab={testCaseTab}
-              isEditMode={isTestCaseEditMode}
-              onEditModeChange={setIsTestCaseEditMode}
-            />
-          </div>
-        ) : (
-          // タブコンテンツを表示
-          <div className="h-full flex flex-col">
-            {/* タブコンテンツ */}
-            <div className="flex-1 overflow-y-auto">
-              {currentTab === 'overview' && (
-                <OverviewTab
-                  testSuiteId={testSuiteId}
-                  description={suite.description}
-                  executions={executions}
-                  currentRole={currentRole}
-                />
-              )}
-
-              {currentTab === 'executions' && (
-                <ExecutionHistoryList testSuiteId={testSuiteId!} />
-              )}
-
-              {currentTab === 'review' && (
-                <ReviewPanel testSuiteId={testSuiteId} />
-              )}
-
-              {currentTab === 'history' && (
-                <TestSuiteHistoryList testSuite={suite} />
-              )}
-
-              {currentTab === 'settings' && (
-                <SettingsTab
-                  testSuite={suite}
-                  currentRole={currentRole}
-                  onUpdated={(updated) => {
-                    queryClient.setQueryData(['test-suite', testSuiteId], { testSuite: updated });
-                  }}
-                />
-              )}
+        {/* メインコンテンツ */}
+        <div className="flex-1 overflow-hidden p-4">
+          {isCreateMode ? (
+            // 作成モード時: 作成フォームを表示
+            <div className="card h-full overflow-hidden">
+              <TestCaseForm
+                mode="create"
+                testSuiteId={testSuiteId}
+                projectId={suite.projectId}
+                onSave={handleExitCreateMode}
+                onCancel={handleExitCreateMode}
+              />
             </div>
-          </div>
+          ) : selectedTestCaseId ? (
+            // テストケース選択時: 詳細パネルを表示
+            <div className="card h-full overflow-hidden">
+              <TestCaseDetailPanel
+                testCaseId={selectedTestCaseId}
+                testSuiteId={testSuiteId}
+                projectId={suite.projectId}
+                currentRole={currentRole}
+                onClose={() => handleSelectTestCase(null)}
+                onUpdated={() => {
+                  queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
+                  queryClient.invalidateQueries({ queryKey: ['test-case-details', selectedTestCaseId] });
+                }}
+                onDeleted={() => {
+                  handleSelectTestCase(null);
+                  queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
+                }}
+                currentTab={testCaseTab}
+                isEditMode={isTestCaseEditMode}
+                onEditModeChange={setIsTestCaseEditMode}
+              />
+            </div>
+          ) : (
+            // タブコンテンツを表示
+            <div className="h-full flex flex-col">
+              {/* タブコンテンツ */}
+              <div className="flex-1 overflow-y-auto">
+                {currentTab === 'overview' && (
+                  <OverviewTab
+                    testSuiteId={testSuiteId}
+                    description={suite.description}
+                    executions={executions}
+                    currentRole={currentRole}
+                  />
+                )}
+
+                {currentTab === 'executions' && (
+                  <ExecutionHistoryList testSuiteId={testSuiteId!} />
+                )}
+
+                {currentTab === 'review' && (
+                  <ReviewPanel testSuiteId={testSuiteId} />
+                )}
+
+                {currentTab === 'history' && (
+                  <TestSuiteHistoryList testSuite={suite} />
+                )}
+
+                {currentTab === 'settings' && (
+                  <SettingsTab
+                    testSuite={suite}
+                    currentRole={currentRole}
+                    onUpdated={(updated) => {
+                      queryClient.setQueryData(['test-suite', testSuiteId], { testSuite: updated });
+                    }}
+                  />
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 実行開始モーダル */}
+        {isStartExecutionModalOpen && suite && (
+          <StartExecutionModal
+            isOpen={isStartExecutionModalOpen}
+            testSuiteId={testSuiteId!}
+            projectId={suite.projectId}
+            suiteName={suite.name}
+            testCaseCount={testCases.length}
+            preconditionCount={suite._count?.preconditions || 0}
+            onClose={() => setIsStartExecutionModalOpen(false)}
+            onStarted={(execution) => {
+              queryClient.invalidateQueries({ queryKey: ['test-suite-executions', testSuiteId] });
+              navigate(`/executions/${execution.id}`);
+            }}
+          />
         )}
+
+        {/* テストケースコピーモーダル */}
+        {isCopyModalOpen && selectedTestCaseDetail && (
+          <CopyTestCaseModal
+            isOpen={isCopyModalOpen}
+            testCase={selectedTestCaseDetail}
+            testSuiteId={testSuiteId!}
+            onClose={() => setIsCopyModalOpen(false)}
+            onCopied={() => {
+              queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
+              toast.success('テストケースをコピーしました');
+              setIsCopyModalOpen(false);
+            }}
+          />
+        )}
+
+        {/* レビューセッションバー（レビュー中に画面下部に表示） */}
+        <ReviewSessionBar />
       </div>
-
-      {/* 実行開始モーダル */}
-      {isStartExecutionModalOpen && suite && (
-        <StartExecutionModal
-          isOpen={isStartExecutionModalOpen}
-          testSuiteId={testSuiteId!}
-          projectId={suite.projectId}
-          suiteName={suite.name}
-          testCaseCount={testCases.length}
-          preconditionCount={suite._count?.preconditions || 0}
-          onClose={() => setIsStartExecutionModalOpen(false)}
-          onStarted={(execution) => {
-            queryClient.invalidateQueries({ queryKey: ['test-suite-executions', testSuiteId] });
-            navigate(`/executions/${execution.id}`);
-          }}
-        />
-      )}
-
-      {/* テストケースコピーモーダル */}
-      {isCopyModalOpen && selectedTestCaseDetail && (
-        <CopyTestCaseModal
-          isOpen={isCopyModalOpen}
-          testCase={selectedTestCaseDetail}
-          testSuiteId={testSuiteId!}
-          onClose={() => setIsCopyModalOpen(false)}
-          onCopied={() => {
-            queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
-            toast.success('テストケースをコピーしました');
-            setIsCopyModalOpen(false);
-          }}
-        />
-      )}
-
-      {/* レビューセッションバー（レビュー中に画面下部に表示） */}
-      <ReviewSessionBar />
-    </div>
     </ReviewSessionProvider>
   );
 }
