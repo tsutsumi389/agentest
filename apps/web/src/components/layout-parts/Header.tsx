@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { AgentestLogo } from '../ui/AgentestLogo';
 import { useAuthStore } from '../../stores/auth';
+import { useCurrentProject } from '../../hooks/useCurrentProject';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -31,18 +32,66 @@ export function Header({ onMenuClick }: HeaderProps) {
           >
             <Menu className="w-5 h-5" />
           </button>
-          <Link to="/dashboard" className="flex items-center gap-2">
-            <AgentestLogo className="w-6 h-6 text-accent" />
-            <span className="font-semibold text-foreground hidden sm:block">
-              Agentest
-            </span>
-          </Link>
+          <div className="flex items-center gap-2">
+            {/* ロゴ: 常にダッシュボードへ */}
+            <Link
+              to="/dashboard"
+              className="text-accent hover:text-accent-hover transition-colors"
+            >
+              <AgentestLogo className="w-6 h-6" />
+            </Link>
+
+            {/* テキスト: プロジェクト内ならプロジェクト名、それ以外はAgentest */}
+            <HeaderTitle />
+          </div>
         </div>
 
         {/* 右: ユーザードロップダウン */}
         <UserDropdown />
       </div>
     </header>
+  );
+}
+
+/**
+ * ヘッダータイトルコンポーネント
+ * プロジェクトコンテキストに応じてタイトルを表示
+ * - プロジェクト内: プロジェクト名を表示し、プロジェクト詳細へリンク
+ * - プロジェクト外: Agentestを表示し、ダッシュボードへリンク
+ */
+function HeaderTitle() {
+  const { project, isLoading } = useCurrentProject();
+
+  // ローディング中はプレースホルダー表示（レイアウトシフト防止）
+  if (isLoading) {
+    return (
+      <span className="font-semibold text-foreground-muted hidden sm:block">
+        ...
+      </span>
+    );
+  }
+
+  // プロジェクト内: プロジェクト名を表示しリンク
+  if (project) {
+    return (
+      <Link
+        to={`/projects/${project.id}`}
+        className="font-semibold text-foreground hover:text-accent transition-colors hidden sm:block truncate max-w-[200px]"
+        title={project.name}
+      >
+        {project.name}
+      </Link>
+    );
+  }
+
+  // プロジェクト外: Agentestを表示しダッシュボードへリンク
+  return (
+    <Link
+      to="/dashboard"
+      className="font-semibold text-foreground hover:text-accent transition-colors hidden sm:block"
+    >
+      Agentest
+    </Link>
   );
 }
 
