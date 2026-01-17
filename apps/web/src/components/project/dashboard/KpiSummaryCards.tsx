@@ -1,52 +1,16 @@
 import { FileText, Clock, TrendingUp, Play } from 'lucide-react';
-
-// ============================================================================
-// 型定義
-// ============================================================================
-
-/** プロジェクトダッシュボード統計のサマリー */
-export interface ProjectDashboardSummary {
-  /** テストケース総数 */
-  totalTestCases: number;
-  /** 最終実行日時 */
-  lastExecutionAt: Date | string | null;
-  /** 全体成功率（0-100） */
-  overallPassRate: number;
-  /** 実行中テスト数 */
-  inProgressExecutions: number;
-}
-
-/** プロジェクトダッシュボード統計 */
-export interface ProjectDashboardStats {
-  summary: ProjectDashboardSummary;
-}
+import type { ProjectDashboardStats } from '@agentest/shared';
+import { SummaryCard, type SummaryCardColor } from '../../ui';
+import { formatRelativeTimeOrDefault } from '../../../lib/date';
 
 // ============================================================================
 // ユーティリティ関数
 // ============================================================================
 
 /**
- * 相対時間をフォーマット
- */
-function formatRelativeTime(date: Date | string | null): string {
-  if (!date) return '--';
-  const now = new Date();
-  const diffMs = now.getTime() - new Date(date).getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMins / 60);
-  const diffDays = Math.floor(diffHours / 24);
-
-  if (diffMins < 1) return 'たった今';
-  if (diffMins < 60) return `${diffMins}分前`;
-  if (diffHours < 24) return `${diffHours}時間前`;
-  if (diffDays < 30) return `${diffDays}日前`;
-  return new Date(date).toLocaleDateString('ja-JP');
-}
-
-/**
  * 成功率に基づく色を取得
  */
-function getPassRateColor(rate: number): 'success' | 'warning' | 'danger' {
+function getPassRateColor(rate: number): SummaryCardColor {
   if (rate >= 80) return 'success';
   if (rate >= 50) return 'warning';
   return 'danger';
@@ -55,55 +19,8 @@ function getPassRateColor(rate: number): 'success' | 'warning' | 'danger' {
 /**
  * 実行中テスト数に基づく色を取得
  */
-function getRunningColor(count: number): 'running' | 'muted' {
+function getRunningColor(count: number): SummaryCardColor {
   return count > 0 ? 'running' : 'muted';
-}
-
-// ============================================================================
-// 内部コンポーネント
-// ============================================================================
-
-/**
- * KPIカード（内部コンポーネント）
- * SummaryCardパターンを拡張し、文字列値とrunning色をサポート
- */
-function KpiCard({
-  icon: Icon,
-  label,
-  value,
-  color,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: string | number;
-  color: 'success' | 'danger' | 'warning' | 'muted' | 'accent' | 'running';
-}) {
-  const colorClasses = {
-    success: 'bg-success-subtle text-success',
-    danger: 'bg-danger-subtle text-danger',
-    warning: 'bg-warning-subtle text-warning',
-    muted: 'bg-background-tertiary text-foreground-muted',
-    accent: 'bg-accent-subtle text-accent',
-    running: 'bg-running-subtle text-running',
-  };
-
-  const isRunning = color === 'running';
-
-  return (
-    <div className="card p-4">
-      <div className="flex items-center gap-3">
-        <div
-          className={`w-10 h-10 rounded-lg flex items-center justify-center ${colorClasses[color]}`}
-        >
-          <Icon className={`w-5 h-5 ${isRunning ? 'animate-pulse' : ''}`} />
-        </div>
-        <div>
-          <p className="text-2xl font-bold text-foreground">{value}</p>
-          <p className="text-sm text-foreground-muted">{label}</p>
-        </div>
-      </div>
-    </div>
-  );
 }
 
 // ============================================================================
@@ -125,7 +42,7 @@ export function KpiSummaryCards({ stats }: KpiSummaryCardsProps) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
       {/* テストケース総数 */}
-      <KpiCard
+      <SummaryCard
         icon={FileText}
         label="テストケース"
         value={summary.totalTestCases}
@@ -133,15 +50,15 @@ export function KpiSummaryCards({ stats }: KpiSummaryCardsProps) {
       />
 
       {/* 最終実行日時 */}
-      <KpiCard
+      <SummaryCard
         icon={Clock}
         label="最終実行"
-        value={formatRelativeTime(summary.lastExecutionAt)}
+        value={formatRelativeTimeOrDefault(summary.lastExecutionAt)}
         color="muted"
       />
 
       {/* 成功率 */}
-      <KpiCard
+      <SummaryCard
         icon={TrendingUp}
         label="成功率"
         value={`${Math.floor(summary.overallPassRate)}%`}
@@ -149,7 +66,7 @@ export function KpiSummaryCards({ stats }: KpiSummaryCardsProps) {
       />
 
       {/* 実行中テスト */}
-      <KpiCard
+      <SummaryCard
         icon={Play}
         label="実行中"
         value={summary.inProgressExecutions}

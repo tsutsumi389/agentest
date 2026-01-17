@@ -27,13 +27,13 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
         // const data = await projectsApi.getDashboard(projectId);
         // setStats(data);
 
-        // 仮のモックデータ
+        // 開発用モックデータ（API実装後は削除）
         const mockStats: ProjectDashboardStats = {
           summary: {
-            totalTestCases: 0,
-            lastExecutionAt: null,
-            overallPassRate: 0,
-            inProgressExecutions: 0,
+            totalTestCases: 42,
+            lastExecutionAt: new Date(Date.now() - 3600000), // 1時間前
+            overallPassRate: 85,
+            inProgressExecutions: 2,
           },
         };
         setStats(mockStats);

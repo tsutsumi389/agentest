@@ -1,2 +1,4 @@
 export { KpiSummaryCards } from './KpiSummaryCards';
-export type { ProjectDashboardStats, ProjectDashboardSummary } from './KpiSummaryCards';
+
+// 型は@agentest/sharedから再エクスポート
+export type { ProjectDashboardStats, ProjectDashboardSummary } from '@agentest/shared';
