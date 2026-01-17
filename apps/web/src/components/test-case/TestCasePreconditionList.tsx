@@ -71,7 +71,7 @@ export function TestCasePreconditionList({
         <div className="p-4 border-b border-border">
           <h2 className="font-semibold text-foreground">前提条件</h2>
         </div>
-        <div className="p-4 flex items-center justify-center py-8">
+        <div className="px-4 py-8 flex items-center justify-center">
           <Loader2 className="w-5 h-5 animate-spin text-foreground-muted" />
         </div>
       </div>
@@ -84,7 +84,7 @@ export function TestCasePreconditionList({
         <div className="p-4 border-b border-border">
           <h2 className="font-semibold text-foreground">前提条件</h2>
         </div>
-        <div className="p-4 text-center py-8">
+        <div className="px-4 py-8 text-center">
           <p className="text-danger text-sm">{error}</p>
         </div>
       </div>
