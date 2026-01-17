@@ -20,8 +20,8 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
       try {
         setIsLoading(true);
         setError(null);
-        const data = await projectsApi.getDashboard(projectId);
-        setStats(data);
+        const response = await projectsApi.getDashboard(projectId);
+        setStats(response.dashboard);
       } catch {
         setError('ダッシュボードの取得に失敗しました');
       } finally {

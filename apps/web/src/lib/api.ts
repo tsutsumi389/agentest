@@ -841,7 +841,7 @@ export const projectsApi = {
   getTestSuites: (projectId: string) =>
     api.get<{ testSuites: TestSuite[] }>(`/api/projects/${projectId}/test-suites`),
   getDashboard: (projectId: string) =>
-    api.get<ProjectDashboardStats>(`/api/projects/${projectId}/dashboard`),
+    api.get<{ dashboard: ProjectDashboardStats }>(`/api/projects/${projectId}/dashboard`),
 
   // メンバー管理
   getMembers: (projectId: string) =>
