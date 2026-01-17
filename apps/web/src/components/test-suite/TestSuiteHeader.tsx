@@ -62,7 +62,7 @@ interface TestSuiteHeaderProps {
 
 /**
  * テストスイートヘッダーコンポーネント（GitHub風）
- * パンくずリスト、ナビゲーションタブ、アクションボタンを含む
+ * タイトル、ナビゲーションタブ、アクションボタンを含む
  * テストケース選択時は表示が切り替わる
  */
 export function TestSuiteHeader({
