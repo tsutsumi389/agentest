@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { KpiSummaryCards, ResultDistributionChart, AttentionRequiredTable, type ProjectDashboardStats } from './dashboard';
+import { KpiSummaryCards, ResultDistributionChart, AttentionRequiredTable, RecentActivityTimeline, type ProjectDashboardStats } from './dashboard';
 import { projectsApi } from '../../lib/api';
 
 interface ProjectOverviewTabProps {
@@ -53,7 +53,9 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
 
       {/* 要注意テスト一覧 */}
       <AttentionRequiredTable stats={stats} />
-      {/* <RecentActivityTimeline stats={stats} /> */}
+
+      {/* 最近の活動タイムライン */}
+      <RecentActivityTimeline stats={stats} />
       {/* <SuiteCoverageList stats={stats} /> */}
     </div>
   );
