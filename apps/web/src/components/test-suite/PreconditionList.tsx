@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Loader2, ClipboardList } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { testSuitesApi, ApiError, type Precondition, type ReviewCommentWithReplies } from '../../lib/api';
 import { MarkdownPreview } from '../common/markdown/MarkdownPreview';
 import { CommentableField } from '../review/CommentableField';
@@ -57,9 +57,11 @@ export function PreconditionList({
 
   if (isLoading) {
     return (
-      <div className="card p-6">
-        <h2 className="text-lg font-semibold text-foreground mb-4">前提条件</h2>
-        <div className="flex items-center justify-center py-8">
+      <div className="card">
+        <div className="p-4 border-b border-border">
+          <h2 className="font-semibold text-foreground">前提条件</h2>
+        </div>
+        <div className="flex items-center justify-center p-6">
           <Loader2 className="w-6 h-6 animate-spin text-foreground-muted" />
         </div>
       </div>
@@ -68,9 +70,11 @@ export function PreconditionList({
 
   if (error) {
     return (
-      <div className="card p-6">
-        <h2 className="text-lg font-semibold text-foreground mb-4">前提条件</h2>
-        <div className="text-center py-8">
+      <div className="card">
+        <div className="p-4 border-b border-border">
+          <h2 className="font-semibold text-foreground">前提条件</h2>
+        </div>
+        <div className="text-center p-6">
           <p className="text-danger mb-4">{error}</p>
           <button className="btn btn-primary" onClick={fetchPreconditions}>
             再読み込み
@@ -81,7 +85,7 @@ export function PreconditionList({
   }
 
   return (
-    <div className="card p-6">
+    <div className="card">
       <CommentableField
         targetType="SUITE"
         targetId={testSuiteId}
@@ -90,20 +94,16 @@ export function PreconditionList({
         canEdit={canEdit}
         onCommentAdded={onCommentAdded}
       >
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold text-foreground">前提条件</h2>
-          <p className="text-sm text-foreground-muted mt-1">
-            テスト実行前に満たすべき条件
-          </p>
+        <div className="p-4 border-b border-border">
+          <h2 className="font-semibold text-foreground">前提条件</h2>
         </div>
 
         {preconditions.length === 0 ? (
-          <div className="text-center py-8 border-2 border-dashed border-border rounded-lg">
-            <ClipboardList className="w-12 h-12 text-foreground-muted mx-auto mb-4" />
-            <p className="text-foreground-muted">前提条件が設定されていません</p>
+          <div className="p-4 text-center text-foreground-muted">
+            前提条件が設定されていません
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="p-4 space-y-2">
             {preconditions.map((precondition, index) => (
               <div
                 key={precondition.id}
