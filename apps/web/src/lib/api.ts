@@ -840,6 +840,8 @@ export const projectsApi = {
   delete: (projectId: string) => api.delete<void>(`/api/projects/${projectId}`),
   getTestSuites: (projectId: string) =>
     api.get<{ testSuites: TestSuite[] }>(`/api/projects/${projectId}/test-suites`),
+  getDashboard: (projectId: string) =>
+    api.get<{ dashboard: ProjectDashboardStats }>(`/api/projects/${projectId}/dashboard`),
 
   // メンバー管理
   getMembers: (projectId: string) =>
@@ -1352,6 +1354,7 @@ export type {
   ReviewReply,
   ReviewCommentListResponse,
   ReviewListResponse,
+  ProjectDashboardStats,
 } from '@agentest/shared';
 
 // APIクライアント固有の型定義
@@ -1366,6 +1369,7 @@ import type {
   ReviewListResponse,
   ReviewWithDetails,
   DraftReview,
+  ProjectDashboardStats,
 } from '@agentest/shared';
 
 /** コメント作成リクエスト */

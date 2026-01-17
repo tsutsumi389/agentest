@@ -10,6 +10,7 @@ import {
   suggestionSearchSchema,
 } from '@agentest/shared';
 import { ProjectService } from '../services/project.service.js';
+import { ProjectDashboardService } from '../services/project-dashboard.service.js';
 
 const addMemberSchema = z.object({
   userId: z.string().uuid(),
@@ -25,6 +26,7 @@ const updateMemberRoleSchema = z.object({
  */
 export class ProjectController {
   private projectService = new ProjectService();
+  private dashboardService = new ProjectDashboardService();
 
   /**
    * プロジェクト作成
@@ -301,6 +303,20 @@ export class ProjectController {
       const project = await this.projectService.restore(projectId, req.user!.id);
 
       res.json({ project });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * プロジェクトダッシュボード統計取得
+   */
+  getDashboard = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { projectId } = req.params;
+      const dashboard = await this.dashboardService.getDashboard(projectId);
+
+      res.json({ dashboard });
     } catch (error) {
       next(error);
     }

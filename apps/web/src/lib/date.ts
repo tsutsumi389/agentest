@@ -95,3 +95,17 @@ export function formatRelativeTime(dateString: string): string {
     return formatDate(dateString);
   }
 }
+
+/**
+ * 相対的な時間表示（null対応版）
+ * nullまたはundefinedの場合は'--'を返す
+ * 例: 3分前、2時間前、1日前、--
+ */
+export function formatRelativeTimeOrDefault(
+  date: Date | string | null | undefined,
+  defaultValue = '--'
+): string {
+  if (!date) return defaultValue;
+  const dateString = typeof date === 'string' ? date : date.toISOString();
+  return formatRelativeTime(dateString);
+}

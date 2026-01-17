@@ -109,6 +109,7 @@ Authorization: Bearer <access_token>
 | GET | `/projects/:id` | プロジェクト詳細 |
 | PUT | `/projects/:id` | プロジェクト更新 |
 | DELETE | `/projects/:id` | プロジェクト削除 |
+| GET | `/projects/:id/dashboard` | プロジェクトダッシュボード |
 
 ### テストスイート
 
