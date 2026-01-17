@@ -1,19 +1,73 @@
-/**
- * プロジェクト概要タブ
- * テスト状況のサマリーを表示（別タスクで本実装予定）
- */
+import { useEffect, useState } from 'react';
+import { KpiSummaryCards, type ProjectDashboardStats } from './dashboard';
+
+// TODO: APIエンドポイント実装後に projectsApi.getDashboard を使用する
+// import { projectsApi } from '../../lib/api';
+
 interface ProjectOverviewTabProps {
   projectId: string;
 }
 
-export function ProjectOverviewTab({ projectId: _projectId }: ProjectOverviewTabProps) {
+/**
+ * プロジェクト概要タブ
+ * テスト状況のサマリーを表示
+ */
+export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
+  const [stats, setStats] = useState<ProjectDashboardStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchDashboard() {
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        // TODO: APIエンドポイント実装後に以下に置き換え
+        // const data = await projectsApi.getDashboard(projectId);
+        // setStats(data);
+
+        // 仮のモックデータ
+        const mockStats: ProjectDashboardStats = {
+          summary: {
+            totalTestCases: 0,
+            lastExecutionAt: null,
+            overallPassRate: 0,
+            inProgressExecutions: 0,
+          },
+        };
+        setStats(mockStats);
+      } catch {
+        setError('ダッシュボードの取得に失敗しました');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchDashboard();
+  }, [projectId]);
+
+  if (isLoading) {
+    return (
+      <div className="text-foreground-muted">読み込み中...</div>
+    );
+  }
+
+  if (error || !stats) {
+    return (
+      <div className="text-danger">{error || 'データの取得に失敗しました'}</div>
+    );
+  }
+
   return (
-    <div className="card p-6">
-      <h2 className="text-lg font-semibold text-foreground mb-4">テスト状況</h2>
-      <p className="text-foreground-muted">
-        プロジェクトのテスト状況がここに表示されます。
-      </p>
-      {/* サンプル: 後で実装 */}
+    <div className="space-y-6">
+      {/* KPIサマリーカード */}
+      <KpiSummaryCards stats={stats} />
+
+      {/* 以下、他のダッシュボードコンポーネント（別タスクで実装予定） */}
+      {/* <ResultDistributionChart stats={stats} /> */}
+      {/* <AttentionRequiredTable stats={stats} /> */}
+      {/* <RecentActivityTimeline stats={stats} /> */}
+      {/* <SuiteCoverageList stats={stats} /> */}
     </div>
   );
 }
