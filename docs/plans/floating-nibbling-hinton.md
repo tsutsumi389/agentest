@@ -1,88 +1,40 @@
-# テストケースレイアウト修正計画
+# テストケースコンテンツレイアウト修正
 
-## 概要
-テストケースのレイアウト（ヘッダーとコンテンツ）をテストスイートと同じ構造に統一する。
+## 問題
+1. カードの中にカードがある（外枠の`card`クラス + 内側の`bg-background-secondary rounded-lg`）
+2. 複数項目間に区切り線がない
 
----
+## 修正方針
+- 外枠の`card`クラスを維持（ヘッダーとコンテンツの区切りに必要）
+- 内側の各項目から`bg-background-secondary rounded-lg`を削除
+- 項目間に`border-b border-border`で区切り線を追加（最後の項目以外）
 
-## 1. ヘッダーレイアウトの修正
+## 修正ファイル
 
-### 対象ファイル
-- `apps/web/src/components/test-suite/TestSuiteHeader.tsx`
+### 1. TestCasePreconditionList.tsx
+- 各項目: `bg-background-secondary rounded-lg` → 削除
+- 項目間: `border-b border-border` 追加（最後以外）
 
-### 現状
+### 2. TestCaseStepList.tsx
+- 同上
+
+### 3. TestCaseExpectedResultList.tsx
+- 同上
+
+## 変更後のイメージ
 ```
-┌─ 1行目: パンくずリスト（プロジェクト > スイート > ケース名 + バッジ）
-└─ 2行目: タブ ─────────────────── アクションボタン
-```
-
-### 変更後
-```
-┌─ 1行目: タイトル + バッジ ─── アクションボタン
-└─ 2行目: タブのみ
-```
-
-### 修正箇所
-- L100-134: パンくずリスト → タイトル+バッジ+アクションボタン
-- L228-261: タブ行のアクションボタン削除（1行目に移動）
-
----
-
-## 2. コンテンツレイアウトの修正（カード形式に統一）
-
-### 対象ファイル
-1. `apps/web/src/components/test-case/TestCaseDetailPanel.tsx` - OverviewTab内の説明セクション
-2. `apps/web/src/components/test-case/TestCasePreconditionList.tsx`
-3. `apps/web/src/components/test-case/TestCaseStepList.tsx`
-4. `apps/web/src/components/test-case/TestCaseExpectedResultList.tsx`
-
-### 現状（テストケース）
-```tsx
-<div className="space-y-2">
-  <h3 className="text-sm font-semibold">説明</h3>
-  <MarkdownPreview ... />
-</div>
+┌─────────────────────────────────┐
+│ 前提条件                        │  ← ヘッダー（border-b）
+├─────────────────────────────────┤
+│ 1. 項目1の内容                  │
+├─────────────────────────────────┤  ← 区切り線
+│ 2. 項目2の内容                  │
+├─────────────────────────────────┤  ← 区切り線
+│ 3. 項目3の内容                  │  ← 最後は区切り線なし
+└─────────────────────────────────┘
 ```
 
-### 変更後（テストスイートと同じカード形式）
-```tsx
-<div className="card">
-  <div className="p-4 border-b border-border">
-    <h2 className="font-semibold text-foreground">説明</h2>
-  </div>
-  <div className="p-4">
-    <MarkdownPreview ... />
-  </div>
-</div>
-```
-
-### 各コンポーネントの修正内容
-
-#### TestCaseDetailPanel.tsx (OverviewTab内)
-- 説明セクション: cardクラス + border-bヘッダーに変更
-
-#### TestCasePreconditionList.tsx
-- 外側を`card`でラップ
-- ヘッダー行を`p-4 border-b border-border`に
-- コンテンツを`p-4`でラップ
-
-#### TestCaseStepList.tsx
-- 外側を`card`でラップ
-- ヘッダー行を`p-4 border-b border-border`に
-- コンテンツを`p-4`でラップ
-
-#### TestCaseExpectedResultList.tsx
-- 外側を`card`でラップ
-- ヘッダー行を`p-4 border-b border-border`に
-- コンテンツを`p-4`でラップ
-
----
-
-## 検証方法
-1. Docker開発環境を起動
-2. テストスイートページでテストケースを選択
-3. 確認項目:
-   - ヘッダーが「タイトル+アクション / タブ」構造になっている
-   - 説明、前提条件、手順、期待結果がカード形式になっている
-   - 項目名（ヘッダー）と内容が border で視覚的に区切られている
-   - 各アクションボタンが正常に動作する
+## 検証
+- テストケースを選択して概要タブを確認
+- 前提条件、手順、期待結果の各項目間に区切り線があること
+- カードの中にカードがない見た目になっていること
