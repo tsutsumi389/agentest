@@ -117,7 +117,7 @@ function ActivityItem({
       {/* コンテンツ */}
       <div className="flex-1 min-w-0">
         {/* 説明 */}
-        <p className="font-medium text-foreground">{activity.description}</p>
+        <p className="font-medium text-foreground truncate">{activity.description}</p>
 
         {/* アクター情報と時間 */}
         <div className="flex items-center gap-2 mt-1 text-sm text-foreground-muted">
@@ -173,7 +173,10 @@ function getActivityLink(activity: RecentActivityItem, projectId: string): strin
         return `/test-suites/${activity.testSuiteId}?tab=reviews`;
       }
       return `/projects/${projectId}`;
-    default:
-      return `/projects/${projectId}`;
+    default: {
+      // exhaustive check: 新しい活動タイプが追加された場合にコンパイルエラーになる
+      const exhaustiveCheck: never = activity.type;
+      throw new Error(`Unknown activity type: ${exhaustiveCheck}`);
+    }
   }
 }
