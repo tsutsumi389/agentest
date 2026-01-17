@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { Play, Plus, Pencil, ChevronRight, FileText, History, MessageSquare, Settings, Copy, X } from 'lucide-react';
+import { Play, Pencil, ChevronLeft, ChevronRight, FileText, History, MessageSquare, Settings, Copy, X } from 'lucide-react';
 import type { TestSuite, Project, ProjectMemberRole } from '../../lib/api';
 import { PRIORITY_COLORS, PRIORITY_LABELS, STATUS_COLORS, STATUS_LABELS } from '../../lib/constants';
 
@@ -44,7 +44,6 @@ interface TestSuiteHeaderProps {
   testCaseCount: number;
   currentRole?: 'OWNER' | ProjectMemberRole;
   onStartExecution: () => void;
-  onCreateTestCase: () => void;
   onEdit?: () => void;
   isExecutionPending?: boolean;
   // テストスイートタブ関連のprops
@@ -74,7 +73,6 @@ export function TestSuiteHeader({
   testCaseCount,
   currentRole,
   onStartExecution,
-  onCreateTestCase,
   onEdit,
   isExecutionPending = false,
   currentTab = 'overview',
@@ -97,57 +95,89 @@ export function TestSuiteHeader({
 
   return (
     <div className="border-b border-border bg-background-secondary">
-      {/* パンくずリスト（GitHub風） */}
+      {/* ヘッダー1行目: 戻るボタン + タイトル + アクションボタン */}
       <div className="px-4 py-3">
-        <div className="flex items-center gap-2 text-sm">
-          <Link
-            to={`/projects/${testSuite.projectId}`}
-            className="text-accent hover:text-accent-hover hover:underline"
-          >
-            {project?.name || 'プロジェクト'}
-          </Link>
-          <ChevronRight className="w-4 h-4 text-foreground-muted" />
-          {isTestCaseMode ? (
-            // テストケース選択時: テストスイート名はリンク、テストケース名を追加
-            <>
-              <Link
-                to={`/test-suites/${testSuite.id}`}
-                className="text-accent hover:text-accent-hover hover:underline"
-              >
-                {testSuite.name}
-              </Link>
-              <ChevronRight className="w-4 h-4 text-foreground-muted" />
-              <span className="text-foreground font-medium truncate max-w-[200px]">
-                {selectedTestCase.title}
-              </span>
-              {/* 優先度バッジ */}
-              <span className={`px-2 py-0.5 text-xs font-medium rounded ${PRIORITY_COLORS[selectedTestCase.priority]}`}>
-                {PRIORITY_LABELS[selectedTestCase.priority]}
-              </span>
-              {/* ステータスバッジ */}
-              <span className={`px-2 py-0.5 text-xs font-medium rounded ${STATUS_COLORS[selectedTestCase.status]}`}>
-                {STATUS_LABELS[selectedTestCase.status]}
-              </span>
-              {/* 削除予定バッジ */}
-              {selectedTestCase.deletedAt && (
-                <span className="px-2 py-0.5 text-xs font-medium rounded bg-danger/20 text-danger">
-                  削除予定
-                </span>
-              )}
-            </>
-          ) : (
-            // テストスイート表示時
+        {isTestCaseMode ? (
+          // テストケース選択時: パンくずリスト形式（従来どおり）
+          <div className="flex items-center gap-2 text-sm">
+            <Link
+              to={`/projects/${testSuite.projectId}`}
+              className="text-accent hover:text-accent-hover hover:underline"
+            >
+              {project?.name || 'プロジェクト'}
+            </Link>
+            <ChevronRight className="w-4 h-4 text-foreground-muted" />
             <Link
               to={`/test-suites/${testSuite.id}`}
-              className="text-accent hover:text-accent-hover hover:underline font-medium"
+              className="text-accent hover:text-accent-hover hover:underline"
             >
               {testSuite.name}
             </Link>
-          )}
-        </div>
+            <ChevronRight className="w-4 h-4 text-foreground-muted" />
+            <span className="text-foreground font-medium truncate max-w-[200px]">
+              {selectedTestCase.title}
+            </span>
+            {/* 優先度バッジ */}
+            <span className={`px-2 py-0.5 text-xs font-medium rounded ${PRIORITY_COLORS[selectedTestCase.priority]}`}>
+              {PRIORITY_LABELS[selectedTestCase.priority]}
+            </span>
+            {/* ステータスバッジ */}
+            <span className={`px-2 py-0.5 text-xs font-medium rounded ${STATUS_COLORS[selectedTestCase.status]}`}>
+              {STATUS_LABELS[selectedTestCase.status]}
+            </span>
+            {/* 削除予定バッジ */}
+            {selectedTestCase.deletedAt && (
+              <span className="px-2 py-0.5 text-xs font-medium rounded bg-danger/20 text-danger">
+                削除予定
+              </span>
+            )}
+          </div>
+        ) : (
+          // テストスイート表示時: 戻るボタン + タイトル + アクションボタン
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              {/* 戻るボタン */}
+              <Link
+                to={`/projects/${testSuite.projectId}`}
+                className="flex items-center gap-1 text-sm text-foreground-muted hover:text-foreground transition-colors"
+                aria-label={`${project?.name || 'プロジェクト'}に戻る`}
+              >
+                <ChevronLeft className="w-4 h-4" />
+                {project?.name || 'プロジェクト'}
+              </Link>
+              {/* テストスイート名（ページタイトル） */}
+              <h1 className="text-lg font-semibold text-foreground">
+                {testSuite.name}
+              </h1>
+            </div>
+            {/* アクションボタン（作成モード時は非表示） */}
+            {!isCreateMode && (
+              <div className="flex items-center gap-2">
+                {canEdit && onEdit && (
+                  <button
+                    onClick={onEdit}
+                    className="btn btn-secondary btn-sm"
+                    title="テストスイートを編集"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    編集
+                  </button>
+                )}
+                <button
+                  onClick={onStartExecution}
+                  disabled={isExecutionPending || testCaseCount === 0}
+                  className="btn btn-primary btn-sm"
+                >
+                  <Play className="w-4 h-4" />
+                  実行開始
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* ナビゲーションとアクション（作成モード時は非表示） */}
+      {/* ナビゲーションタブ（作成モード時は非表示） */}
       {!isCreateMode && (
       <div className="px-4 pb-0 flex items-center justify-between">
         {isTestCaseMode ? (
@@ -205,75 +235,41 @@ export function TestSuiteHeader({
           </nav>
         )}
 
-        {/* アクションボタン */}
-        <div className="flex items-center gap-2 pb-2">
-          {isTestCaseMode ? (
-            // テストケース選択時: 編集/コピー/閉じる
-            <>
-              {canEdit && onEditTestCase && (
-                <button
-                  onClick={onEditTestCase}
-                  className="btn btn-secondary btn-sm"
-                  title="テストケースを編集"
-                >
-                  <Pencil className="w-4 h-4" />
-                  編集
-                </button>
-              )}
-              {canEdit && onCopyTestCase && (
-                <button
-                  onClick={onCopyTestCase}
-                  className="btn btn-secondary btn-sm"
-                  title="テストケースをコピー"
-                >
-                  <Copy className="w-4 h-4" />
-                  コピー
-                </button>
-              )}
-              {onCloseTestCase && (
-                <button
-                  onClick={onCloseTestCase}
-                  className="btn btn-secondary btn-sm"
-                  title="閉じる"
-                >
-                  <X className="w-4 h-4" />
-                  閉じる
-                </button>
-              )}
-            </>
-          ) : (
-            // テストスイート表示時: 編集/+テストケース/実行開始
-            <>
-              {canEdit && onEdit && (
-                <button
-                  onClick={onEdit}
-                  className="btn btn-secondary btn-sm"
-                  title="テストスイートを編集"
-                >
-                  <Pencil className="w-4 h-4" />
-                  編集
-                </button>
-              )}
-              {canEdit && (
-                <button
-                  onClick={onCreateTestCase}
-                  className="btn btn-secondary btn-sm"
-                >
-                  <Plus className="w-4 h-4" />
-                  テストケース
-                </button>
-              )}
+        {/* テストケース選択時のアクションボタン */}
+        {isTestCaseMode && (
+          <div className="flex items-center gap-2 pb-2">
+            {canEdit && onEditTestCase && (
               <button
-                onClick={onStartExecution}
-                disabled={isExecutionPending || testCaseCount === 0}
-                className="btn btn-primary btn-sm"
+                onClick={onEditTestCase}
+                className="btn btn-secondary btn-sm"
+                title="テストケースを編集"
               >
-                <Play className="w-4 h-4" />
-                実行開始
+                <Pencil className="w-4 h-4" />
+                編集
               </button>
-            </>
-          )}
-        </div>
+            )}
+            {canEdit && onCopyTestCase && (
+              <button
+                onClick={onCopyTestCase}
+                className="btn btn-secondary btn-sm"
+                title="テストケースをコピー"
+              >
+                <Copy className="w-4 h-4" />
+                コピー
+              </button>
+            )}
+            {onCloseTestCase && (
+              <button
+                onClick={onCloseTestCase}
+                className="btn btn-secondary btn-sm"
+                title="閉じる"
+              >
+                <X className="w-4 h-4" />
+                閉じる
+              </button>
+            )}
+          </div>
+        )}
       </div>
       )}
     </div>
