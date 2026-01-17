@@ -74,17 +74,11 @@ interface DonutChartProps {
    - `ResultDistributionChart` をインポート
    - コメントアウトを解除（52行目）
 
-### Step 4: テスト作成
-1. `apps/web/src/components/ui/__tests__/DonutChart.test.tsx`
-2. `apps/web/src/components/project/dashboard/__tests__/ResultDistributionChart.test.tsx`
-
 ## 変更対象ファイル
 
 ### 新規作成
 - `apps/web/src/components/ui/DonutChart.tsx`
-- `apps/web/src/components/ui/__tests__/DonutChart.test.tsx`
 - `apps/web/src/components/project/dashboard/ResultDistributionChart.tsx`
-- `apps/web/src/components/project/dashboard/__tests__/ResultDistributionChart.test.tsx`
 
 ### 変更
 - `apps/web/src/components/ui/index.ts` - エクスポート追加
@@ -119,17 +113,12 @@ interface DonutChartProps {
 
 ## 検証方法
 
-1. **テスト実行**
-   ```bash
-   docker compose exec dev pnpm test
-   ```
-
-2. **リント確認**
+1. **リント確認**
    ```bash
    docker compose exec dev pnpm lint
    ```
 
-3. **手動確認**
+2. **手動確認**
    - プロジェクト詳細画面の概要タブを開く
    - ドーナツチャートが表示されることを確認
    - 各セグメントの色と凡例が正しいことを確認
