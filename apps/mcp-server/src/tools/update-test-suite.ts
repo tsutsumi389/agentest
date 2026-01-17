@@ -8,7 +8,7 @@ import { apiClient, checkLockStatus } from '../clients/api-client.js';
 export const updateTestSuiteInputSchema = z.object({
   testSuiteId: z.string().uuid().describe('更新するテストスイートのID。search_test_suiteで取得したIDを指定'),
   name: z.string().min(1).max(200).optional().describe('新しいテストスイート名（1-200文字）'),
-  description: z.string().max(2000).nullable().optional().describe('新しい説明（最大2000文字）。nullを指定すると説明を削除'),
+  description: z.string().max(2000).nullable().optional().describe('新しい説明（最大2000文字）。nullを指定すると説明を削除。Markdown記法対応'),
   status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).optional().describe('新しいステータス: DRAFT（下書き）, ACTIVE（有効）, ARCHIVED（アーカイブ済み）'),
 });
 

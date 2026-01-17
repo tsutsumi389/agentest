@@ -6,7 +6,7 @@ import { apiClient } from '../clients/api-client.js';
  * 子エンティティ作成用スキーマ
  */
 const childEntitySchema = z.object({
-  content: z.string().min(1).max(10000).describe('テキスト内容（1-10000文字）'),
+  content: z.string().min(1).max(10000).describe('テキスト内容（1-10000文字）。Markdown記法対応'),
 });
 
 /**
@@ -15,12 +15,12 @@ const childEntitySchema = z.object({
 export const createTestCaseInputSchema = z.object({
   testSuiteId: z.string().uuid().describe('テストケースを作成するテストスイートのID。search_test_suiteで取得したIDを指定'),
   title: z.string().min(1).max(200).describe('テストケースのタイトル（1-200文字）'),
-  description: z.string().max(2000).optional().describe('テストケースの説明（最大2000文字）。省略可'),
+  description: z.string().max(2000).optional().describe('テストケースの説明（最大2000文字）。省略可。Markdown記法対応'),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).default('MEDIUM').describe('優先度: LOW, MEDIUM（デフォルト）, HIGH, CRITICAL'),
   status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).default('DRAFT').describe('初期ステータス: DRAFT（下書き、デフォルト）, ACTIVE（有効）, ARCHIVED（アーカイブ済み）'),
-  preconditions: z.array(childEntitySchema).optional().describe('前提条件の配列。各要素は{content: "条件内容"}形式。テスト実行前に満たすべき条件を記述'),
-  steps: z.array(childEntitySchema).optional().describe('テスト手順の配列。各要素は{content: "手順内容"}形式。実行すべき操作を順番に記述'),
-  expectedResults: z.array(childEntitySchema).optional().describe('期待結果の配列。各要素は{content: "期待結果内容"}形式。各手順後に確認すべき結果を記述'),
+  preconditions: z.array(childEntitySchema).optional().describe('前提条件の配列。各要素は{content: "条件内容"}形式。テスト実行前に満たすべき条件を記述。contentはMarkdown記法対応'),
+  steps: z.array(childEntitySchema).optional().describe('テスト手順の配列。各要素は{content: "手順内容"}形式。実行すべき操作を順番に記述。contentはMarkdown記法対応'),
+  expectedResults: z.array(childEntitySchema).optional().describe('期待結果の配列。各要素は{content: "期待結果内容"}形式。各手順後に確認すべき結果を記述。contentはMarkdown記法対応'),
 });
 
 type CreateTestCaseInput = z.infer<typeof createTestCaseInputSchema>;
