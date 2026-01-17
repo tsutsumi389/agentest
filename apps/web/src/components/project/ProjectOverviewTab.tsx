@@ -1,8 +1,6 @@
 import { useEffect, useState } from 'react';
 import { KpiSummaryCards, type ProjectDashboardStats } from './dashboard';
-
-// TODO: APIエンドポイント実装後に projectsApi.getDashboard を使用する
-// import { projectsApi } from '../../lib/api';
+import { projectsApi } from '../../lib/api';
 
 interface ProjectOverviewTabProps {
   projectId: string;
@@ -22,35 +20,8 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
       try {
         setIsLoading(true);
         setError(null);
-
-        // TODO: APIエンドポイント実装後に以下に置き換え
-        // const data = await projectsApi.getDashboard(projectId);
-        // setStats(data);
-
-        // 開発用モックデータ（API実装後は削除）
-        const mockStats: ProjectDashboardStats = {
-          summary: {
-            totalTestCases: 42,
-            lastExecutionAt: new Date(Date.now() - 3600000), // 1時間前
-            overallPassRate: 85,
-            inProgressExecutions: 2,
-          },
-          resultDistribution: {
-            pass: 35,
-            fail: 5,
-            skipped: 2,
-            notExecutable: 0,
-            pending: 0,
-          },
-          attentionRequired: {
-            failingTests: [],
-            longNotExecuted: [],
-            flakyTests: [],
-          },
-          recentActivities: [],
-          suiteCoverage: [],
-        };
-        setStats(mockStats);
+        const data = await projectsApi.getDashboard(projectId);
+        setStats(data);
       } catch {
         setError('ダッシュボードの取得に失敗しました');
       } finally {
