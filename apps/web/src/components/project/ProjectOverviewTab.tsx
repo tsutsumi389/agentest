@@ -35,6 +35,20 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
             overallPassRate: 85,
             inProgressExecutions: 2,
           },
+          resultDistribution: {
+            pass: 35,
+            fail: 5,
+            skipped: 2,
+            notExecutable: 0,
+            pending: 0,
+          },
+          attentionRequired: {
+            failingTests: [],
+            longNotExecuted: [],
+            flakyTests: [],
+          },
+          recentActivities: [],
+          suiteCoverage: [],
         };
         setStats(mockStats);
       } catch {

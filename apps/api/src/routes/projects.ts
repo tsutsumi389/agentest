@@ -19,6 +19,12 @@ router.post('/', requireAuth(authConfig), projectController.create);
 router.get('/:projectId', requireAuth(authConfig), requireProjectRole(['ADMIN', 'WRITE', 'READ']), projectController.getById);
 
 /**
+ * プロジェクトダッシュボード統計取得
+ * GET /api/projects/:projectId/dashboard
+ */
+router.get('/:projectId/dashboard', requireAuth(authConfig), requireProjectRole(['ADMIN', 'WRITE', 'READ']), projectController.getDashboard);
+
+/**
  * プロジェクト更新
  * PATCH /api/projects/:projectId
  */
