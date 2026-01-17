@@ -140,6 +140,7 @@ export function TestSuiteHeader({
               <Link
                 to={`/projects/${testSuite.projectId}`}
                 className="flex items-center gap-1 text-sm text-foreground-muted hover:text-foreground transition-colors"
+                aria-label={`${project?.name || 'プロジェクト'}に戻る`}
               >
                 <ChevronLeft className="w-4 h-4" />
                 {project?.name || 'プロジェクト'}
