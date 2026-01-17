@@ -111,11 +111,11 @@ export function TestCaseStepList({
             <p className="text-foreground-muted text-sm">テスト手順が設定されていません</p>
           </div>
         ) : (
-          <div className="p-4 space-y-2">
+          <div>
             {steps.map((step, index) => (
               <div
                 key={step.id}
-                className="flex items-start gap-3 p-3 bg-background-secondary rounded-lg"
+                className={`flex items-start gap-3 p-4${index < steps.length - 1 ? ' border-b border-border' : ''}`}
               >
                 {/* 番号（アクセントカラー） */}
                 <span className="flex-shrink-0 w-6 h-6 rounded-full bg-accent/20 text-accent flex items-center justify-center text-xs font-medium">

@@ -111,11 +111,11 @@ export function TestCaseExpectedResultList({
             <p className="text-foreground-muted text-sm">期待結果が設定されていません</p>
           </div>
         ) : (
-          <div className="p-4 space-y-2">
+          <div>
             {expectedResults.map((expectedResult, index) => (
               <div
                 key={expectedResult.id}
-                className="flex items-start gap-3 p-3 bg-background-secondary rounded-lg"
+                className={`flex items-start gap-3 p-4${index < expectedResults.length - 1 ? ' border-b border-border' : ''}`}
               >
                 {/* 番号（成功カラー） */}
                 <span className="flex-shrink-0 w-6 h-6 rounded-full bg-success/20 text-success flex items-center justify-center text-xs font-medium">
