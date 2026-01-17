@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { KpiSummaryCards, type ProjectDashboardStats } from './dashboard';
+import { KpiSummaryCards, ResultDistributionChart, type ProjectDashboardStats } from './dashboard';
 import { projectsApi } from '../../lib/api';
 
 interface ProjectOverviewTabProps {
@@ -48,8 +48,10 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
       {/* KPIサマリーカード */}
       <KpiSummaryCards stats={stats} />
 
+      {/* 実行結果の分布（ドーナツチャート） */}
+      <ResultDistributionChart stats={stats} />
+
       {/* 以下、他のダッシュボードコンポーネント（別タスクで実装予定） */}
-      {/* <ResultDistributionChart stats={stats} /> */}
       {/* <AttentionRequiredTable stats={stats} /> */}
       {/* <RecentActivityTimeline stats={stats} /> */}
       {/* <SuiteCoverageList stats={stats} /> */}
