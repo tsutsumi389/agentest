@@ -62,12 +62,10 @@ export function Header({ onMenuClick }: HeaderProps) {
 function HeaderTitle() {
   const { project, isLoading } = useCurrentProject();
 
-  // ローディング中はプレースホルダー表示（レイアウトシフト防止）
+  // ローディング中はスケルトン表示（レイアウトシフト防止）
   if (isLoading) {
     return (
-      <span className="font-semibold text-foreground-muted hidden sm:block">
-        ...
-      </span>
+      <span className="hidden sm:block w-24 h-5 bg-background-tertiary rounded animate-pulse" />
     );
   }
 
