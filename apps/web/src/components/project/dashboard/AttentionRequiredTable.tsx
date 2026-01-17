@@ -32,6 +32,11 @@ export function AttentionRequiredTable({ stats }: AttentionRequiredTableProps) {
   const { projectId } = useParams<{ projectId: string }>();
   const [activeTab, setActiveTab] = useState<TabType>('failing');
 
+  // projectIdが取得できない場合は何も表示しない
+  if (!projectId) {
+    return null;
+  }
+
   const { attentionRequired } = stats;
 
   // 各タブの件数を取得
@@ -47,13 +52,17 @@ export function AttentionRequiredTable({ stats }: AttentionRequiredTableProps) {
     return null;
   }
 
+  // タブパネルのID生成
+  const getTabPanelId = (tab: TabType) => `attention-tabpanel-${tab}`;
+  const getTabId = (tab: TabType) => `attention-tab-${tab}`;
+
   return (
     <div className="card p-6">
       {/* ヘッダー */}
       <h2 className="text-lg font-semibold text-foreground mb-4">要注意テスト</h2>
 
       {/* タブボタン */}
-      <div className="flex border-b border-border mb-4">
+      <div role="tablist" aria-label="要注意テストのカテゴリ" className="flex border-b border-border mb-4">
         {(Object.keys(TAB_CONFIG) as TabType[]).map((tab) => {
           const { label, icon: Icon } = TAB_CONFIG[tab];
           const count = counts[tab];
@@ -62,6 +71,10 @@ export function AttentionRequiredTable({ stats }: AttentionRequiredTableProps) {
           return (
             <button
               key={tab}
+              id={getTabId(tab)}
+              role="tab"
+              aria-selected={isActive}
+              aria-controls={getTabPanelId(tab)}
               onClick={() => setActiveTab(tab)}
               className={`
                 flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors
@@ -89,23 +102,28 @@ export function AttentionRequiredTable({ stats }: AttentionRequiredTableProps) {
       </div>
 
       {/* リスト表示 */}
-      <div className="space-y-2">
+      <div
+        id={getTabPanelId(activeTab)}
+        role="tabpanel"
+        aria-labelledby={getTabId(activeTab)}
+        className="space-y-2"
+      >
         {activeTab === 'failing' && (
           <FailingTestsList
             items={attentionRequired.failingTests}
-            projectId={projectId!}
+            projectId={projectId}
           />
         )}
         {activeTab === 'longNotExecuted' && (
           <LongNotExecutedList
             items={attentionRequired.longNotExecuted}
-            projectId={projectId!}
+            projectId={projectId}
           />
         )}
         {activeTab === 'flaky' && (
           <FlakyTestsList
             items={attentionRequired.flakyTests}
-            projectId={projectId!}
+            projectId={projectId}
           />
         )}
       </div>
