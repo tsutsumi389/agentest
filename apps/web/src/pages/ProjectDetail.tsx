@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { useParams, Link } from 'react-router';
+import { useParams, Link, useSearchParams } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   FolderKanban,
@@ -12,14 +12,21 @@ import {
   ChevronRight,
   X,
   Loader2,
+  BarChart3,
 } from 'lucide-react';
-import { projectsApi, testSuitesApi, type TestSuite, type TestSuiteSearchParams, type ProjectMemberRole } from '../lib/api';
+import { projectsApi, testSuitesApi, usersApi, type Project, type TestSuite, type TestSuiteSearchParams, type ProjectMemberRole } from '../lib/api';
 import { TestSuiteSearchFilter, type FilterMember } from '../components/test-suite/TestSuiteSearchFilter';
 import { useAuth } from '../hooks/useAuth';
+import { ProjectOverviewTab } from '../components/project/ProjectOverviewTab';
+import { ProjectSettingsTab, type SettingsSection } from '../components/project/ProjectSettingsTab';
 
 /**
  * プロジェクト詳細ページ
  */
+
+// タブ型定義
+type ProjectTab = 'overview' | 'suites' | 'settings';
+
 /**
  * デフォルトの検索パラメータ
  */
@@ -33,8 +40,31 @@ const DEFAULT_SEARCH_PARAMS: TestSuiteSearchParams = {
 export function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const { user } = useAuth();
+  const [urlSearchParams, setUrlSearchParams] = useSearchParams();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [searchParams, setSearchParams] = useState<TestSuiteSearchParams>(DEFAULT_SEARCH_PARAMS);
+  const [suiteSearchParams, setSuiteSearchParams] = useState<TestSuiteSearchParams>(DEFAULT_SEARCH_PARAMS);
+  const queryClient = useQueryClient();
+
+  // URLクエリパラメータからタブ状態を取得
+  const currentTab = (urlSearchParams.get('tab') as ProjectTab) || 'overview';
+  const settingsSection = (urlSearchParams.get('section') as SettingsSection) || 'general';
+
+  // タブ変更ハンドラ
+  const handleTabChange = useCallback((tab: ProjectTab) => {
+    const newParams = new URLSearchParams(urlSearchParams);
+    newParams.set('tab', tab);
+    if (tab !== 'settings') {
+      newParams.delete('section');
+    }
+    setUrlSearchParams(newParams);
+  }, [urlSearchParams, setUrlSearchParams]);
+
+  // 設定セクション変更ハンドラ
+  const handleSettingsSectionChange = useCallback((section: SettingsSection) => {
+    const newParams = new URLSearchParams(urlSearchParams);
+    newParams.set('section', section);
+    setUrlSearchParams(newParams, { replace: true });
+  }, [urlSearchParams, setUrlSearchParams]);
 
   // プロジェクト情報を取得
   const { data: projectData, isLoading: isLoadingProject } = useQuery({
@@ -50,10 +80,25 @@ export function ProjectDetailPage() {
     enabled: !!projectId,
   });
 
+  // deletedAtを取得するためにプロジェクト一覧から取得
+  const { data: userProjectsData } = useQuery({
+    queryKey: ['user-projects-for-detail', user?.id, projectId],
+    queryFn: () => usersApi.getProjects(user!.id, { includeDeleted: true }),
+    enabled: !!user?.id,
+  });
+
+  // deletedAtを取得
+  const projectWithRole = useMemo(() => {
+    if (!userProjectsData?.projects || !projectId) return null;
+    return userProjectsData.projects.find((p) => p.id === projectId);
+  }, [userProjectsData?.projects, projectId]);
+
+  const deletedAt = projectWithRole?.deletedAt ?? null;
+
   // テストスイート一覧を検索・フィルタ付きで取得
   const { data: suitesData, isLoading: isLoadingSuites } = useQuery({
-    queryKey: ['project-test-suites', projectId, searchParams],
-    queryFn: () => projectsApi.searchTestSuites(projectId!, searchParams),
+    queryKey: ['project-test-suites', projectId, suiteSearchParams],
+    queryFn: () => projectsApi.searchTestSuites(projectId!, suiteSearchParams),
     enabled: !!projectId,
   });
 
@@ -68,8 +113,15 @@ export function ProjectDetailPage() {
     return member?.role;
   }, [user, membersData]);
 
-  // 管理者権限があるか（削除済み表示可能）
+  // 管理者権限があるか（設定タブ表示・削除済み表示可能）
   const isAdmin = currentRole === 'OWNER' || currentRole === 'ADMIN';
+
+  // 権限なしで設定タブにアクセスした場合は概要タブにリダイレクト
+  useEffect(() => {
+    if (currentTab === 'settings' && currentRole !== undefined && !isAdmin) {
+      handleTabChange('overview');
+    }
+  }, [currentTab, currentRole, isAdmin, handleTabChange]);
 
   // フィルタ用のメンバーリストを作成
   const filterMembers: FilterMember[] = useMemo(() => {
@@ -83,22 +135,35 @@ export function ProjectDetailPage() {
 
   // フィルタ変更ハンドラ
   const handleFiltersChange = useCallback((newFilters: TestSuiteSearchParams) => {
-    setSearchParams(newFilters);
+    setSuiteSearchParams(newFilters);
   }, []);
 
   // ページネーション計算
-  const limit = searchParams.limit || 20;
-  const offset = searchParams.offset || 0;
+  const limit = suiteSearchParams.limit || 20;
+  const offset = suiteSearchParams.offset || 0;
   const currentPage = Math.floor(offset / limit) + 1;
   const totalPages = totalCount ? Math.ceil(totalCount / limit) : 1;
 
   // ページ変更ハンドラ
   const handlePageChange = useCallback((page: number) => {
-    setSearchParams((prev) => ({
+    setSuiteSearchParams((prev) => ({
       ...prev,
       offset: (page - 1) * (prev.limit || 20),
     }));
   }, []);
+
+  // プロジェクト更新後のコールバック
+  const handleProjectUpdated = useCallback((updated: Project) => {
+    queryClient.setQueryData(['project', projectId], { project: updated });
+    queryClient.invalidateQueries({ queryKey: ['user-projects-for-detail', user?.id, projectId] });
+  }, [queryClient, projectId, user?.id]);
+
+  // タブ定義
+  const tabs = [
+    { id: 'overview' as const, label: '概要', icon: BarChart3 },
+    { id: 'suites' as const, label: 'テストスイート', icon: FileText },
+    ...(isAdmin ? [{ id: 'settings' as const, label: '設定', icon: Settings }] : []),
+  ];
 
   if (isLoadingProject) {
     return (
@@ -141,14 +206,8 @@ export function ProjectDetailPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Link
-              to={`/projects/${projectId}/settings`}
-              className="btn btn-ghost"
-            >
-              <Settings className="w-4 h-4" />
-              設定
-            </Link>
+          {/* テストスイートタブの時のみ作成ボタンを表示 */}
+          {currentTab === 'suites' && (
             <button
               onClick={() => setIsCreateModalOpen(true)}
               className="btn btn-primary"
@@ -156,144 +215,70 @@ export function ProjectDetailPage() {
               <Plus className="w-4 h-4" />
               テストスイート
             </button>
-          </div>
-        </div>
-      </div>
-
-      {/* テストスイート一覧 */}
-      <div className="card">
-        <div className="p-4 border-b border-border space-y-4">
-          <h2 className="font-semibold text-foreground">テストスイート</h2>
-          <TestSuiteSearchFilter
-            filters={searchParams}
-            onFiltersChange={handleFiltersChange}
-            totalCount={totalCount}
-            isAdmin={isAdmin}
-            members={filterMembers}
-          />
+          )}
         </div>
 
-        {isLoadingSuites ? (
-          <div className="p-8 text-center text-foreground-muted">
-            読み込み中...
-          </div>
-        ) : testSuites.length === 0 ? (
-          <div className="p-8 text-center">
-            <FileText className="w-12 h-12 text-foreground-subtle mx-auto mb-3" />
-            <p className="text-foreground-muted mb-4">
-              {searchParams.q || searchParams.status || searchParams.includeDeleted
-                ? '条件に一致するテストスイートがありません'
-                : 'テストスイートがありません'}
-            </p>
-            {!(searchParams.q || searchParams.status) && (
-              <button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="btn btn-primary"
-              >
-                <Plus className="w-4 h-4" />
-                テストスイートを作成
-              </button>
-            )}
-          </div>
-        ) : (
-          <>
-            <div className="divide-y divide-border">
-              {testSuites.map((suite) => (
-                <TestSuiteRow key={suite.id} suite={suite} />
-              ))}
-            </div>
-
-            {/* ページネーション */}
-            {totalPages > 1 && (
-              <div className="p-4 border-t border-border flex items-center justify-between">
-                <div className="text-sm text-foreground-muted">
-                  {totalCount}件中 {offset + 1}〜{Math.min(offset + limit, totalCount || 0)}件を表示
-                </div>
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage <= 1}
-                    className="btn btn-ghost p-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    aria-label="前のページ"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-
-                  {/* ページ番号 */}
-                  {(() => {
-                    const pages: (number | 'ellipsis')[] = [];
-                    const showEllipsisStart = currentPage > 3;
-                    const showEllipsisEnd = currentPage < totalPages - 2;
-
-                    if (totalPages <= 5) {
-                      // 5ページ以下の場合は全て表示
-                      for (let i = 1; i <= totalPages; i++) {
-                        pages.push(i);
-                      }
-                    } else {
-                      // 最初のページ
-                      pages.push(1);
-
-                      if (showEllipsisStart) {
-                        pages.push('ellipsis');
-                      }
-
-                      // 現在のページ周辺
-                      const start = Math.max(2, currentPage - 1);
-                      const end = Math.min(totalPages - 1, currentPage + 1);
-                      for (let i = start; i <= end; i++) {
-                        if (!pages.includes(i)) {
-                          pages.push(i);
-                        }
-                      }
-
-                      if (showEllipsisEnd) {
-                        pages.push('ellipsis');
-                      }
-
-                      // 最後のページ
-                      if (!pages.includes(totalPages)) {
-                        pages.push(totalPages);
-                      }
+        {/* タブナビゲーション */}
+        <div className="mt-4 border-b border-border">
+          <nav className="-mb-px flex gap-4" aria-label="タブ">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = currentTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabChange(tab.id)}
+                  className={`
+                    flex items-center gap-2 px-1 py-3 text-sm font-medium border-b-2 transition-colors
+                    ${isActive
+                      ? 'border-accent text-accent'
+                      : 'border-transparent text-foreground-muted hover:text-foreground hover:border-border'
                     }
-
-                    return pages.map((page, index) =>
-                      page === 'ellipsis' ? (
-                        <span key={`ellipsis-${index}`} className="px-2 text-foreground-muted">
-                          ...
-                        </span>
-                      ) : (
-                        <button
-                          key={page}
-                          onClick={() => handlePageChange(page)}
-                          className={`px-3 py-1 rounded text-sm transition-colors ${
-                            currentPage === page
-                              ? 'bg-accent text-background'
-                              : 'text-foreground-muted hover:text-foreground hover:bg-background-tertiary'
-                          }`}
-                          aria-label={`${page}ページ目`}
-                          aria-current={currentPage === page ? 'page' : undefined}
-                        >
-                          {page}
-                        </button>
-                      )
-                    );
-                  })()}
-
-                  <button
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage >= totalPages}
-                    className="btn btn-ghost p-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                    aria-label="次のページ"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            )}
-          </>
-        )}
+                  `}
+                  aria-current={isActive ? 'page' : undefined}
+                >
+                  <Icon className="w-4 h-4" />
+                  {tab.label}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
       </div>
+
+      {/* タブコンテンツ */}
+      {currentTab === 'overview' && (
+        <ProjectOverviewTab projectId={projectId!} />
+      )}
+
+      {currentTab === 'suites' && (
+        <TestSuiteListContent
+          testSuites={testSuites}
+          isLoadingSuites={isLoadingSuites}
+          suiteSearchParams={suiteSearchParams}
+          onFiltersChange={handleFiltersChange}
+          totalCount={totalCount}
+          isAdmin={isAdmin}
+          filterMembers={filterMembers}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          offset={offset}
+          limit={limit}
+          onPageChange={handlePageChange}
+          onCreateClick={() => setIsCreateModalOpen(true)}
+        />
+      )}
+
+      {currentTab === 'settings' && isAdmin && project && (
+        <ProjectSettingsTab
+          project={project}
+          currentRole={currentRole}
+          activeSection={settingsSection}
+          onSectionChange={handleSettingsSectionChange}
+          onProjectUpdated={handleProjectUpdated}
+          deletedAt={deletedAt}
+        />
+      )}
 
       {/* 作成モーダル */}
       {isCreateModalOpen && projectId && (
@@ -301,6 +286,177 @@ export function ProjectDetailPage() {
           projectId={projectId}
           onClose={() => setIsCreateModalOpen(false)}
         />
+      )}
+    </div>
+  );
+}
+
+/**
+ * テストスイート一覧コンテンツ
+ */
+interface TestSuiteListContentProps {
+  testSuites: TestSuite[];
+  isLoadingSuites: boolean;
+  suiteSearchParams: TestSuiteSearchParams;
+  onFiltersChange: (filters: TestSuiteSearchParams) => void;
+  totalCount: number | undefined;
+  isAdmin: boolean;
+  filterMembers: FilterMember[];
+  currentPage: number;
+  totalPages: number;
+  offset: number;
+  limit: number;
+  onPageChange: (page: number) => void;
+  onCreateClick: () => void;
+}
+
+function TestSuiteListContent({
+  testSuites,
+  isLoadingSuites,
+  suiteSearchParams,
+  onFiltersChange,
+  totalCount,
+  isAdmin,
+  filterMembers,
+  currentPage,
+  totalPages,
+  offset,
+  limit,
+  onPageChange,
+  onCreateClick,
+}: TestSuiteListContentProps) {
+  return (
+    <div className="card">
+      <div className="p-4 border-b border-border space-y-4">
+        <h2 className="font-semibold text-foreground">テストスイート</h2>
+        <TestSuiteSearchFilter
+          filters={suiteSearchParams}
+          onFiltersChange={onFiltersChange}
+          totalCount={totalCount}
+          isAdmin={isAdmin}
+          members={filterMembers}
+        />
+      </div>
+
+      {isLoadingSuites ? (
+        <div className="p-8 text-center text-foreground-muted">
+          読み込み中...
+        </div>
+      ) : testSuites.length === 0 ? (
+        <div className="p-8 text-center">
+          <FileText className="w-12 h-12 text-foreground-subtle mx-auto mb-3" />
+          <p className="text-foreground-muted mb-4">
+            {suiteSearchParams.q || suiteSearchParams.status || suiteSearchParams.includeDeleted
+              ? '条件に一致するテストスイートがありません'
+              : 'テストスイートがありません'}
+          </p>
+          {!(suiteSearchParams.q || suiteSearchParams.status) && (
+            <button
+              onClick={onCreateClick}
+              className="btn btn-primary"
+            >
+              <Plus className="w-4 h-4" />
+              テストスイートを作成
+            </button>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="divide-y divide-border">
+            {testSuites.map((suite) => (
+              <TestSuiteRow key={suite.id} suite={suite} />
+            ))}
+          </div>
+
+          {/* ページネーション */}
+          {totalPages > 1 && (
+            <div className="p-4 border-t border-border flex items-center justify-between">
+              <div className="text-sm text-foreground-muted">
+                {totalCount}件中 {offset + 1}〜{Math.min(offset + limit, totalCount || 0)}件を表示
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => onPageChange(currentPage - 1)}
+                  disabled={currentPage <= 1}
+                  className="btn btn-ghost p-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="前のページ"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+
+                {/* ページ番号 */}
+                {(() => {
+                  const pages: (number | 'ellipsis')[] = [];
+                  const showEllipsisStart = currentPage > 3;
+                  const showEllipsisEnd = currentPage < totalPages - 2;
+
+                  if (totalPages <= 5) {
+                    // 5ページ以下の場合は全て表示
+                    for (let i = 1; i <= totalPages; i++) {
+                      pages.push(i);
+                    }
+                  } else {
+                    // 最初のページ
+                    pages.push(1);
+
+                    if (showEllipsisStart) {
+                      pages.push('ellipsis');
+                    }
+
+                    // 現在のページ周辺
+                    const start = Math.max(2, currentPage - 1);
+                    const end = Math.min(totalPages - 1, currentPage + 1);
+                    for (let i = start; i <= end; i++) {
+                      if (!pages.includes(i)) {
+                        pages.push(i);
+                      }
+                    }
+
+                    if (showEllipsisEnd) {
+                      pages.push('ellipsis');
+                    }
+
+                    // 最後のページ
+                    if (!pages.includes(totalPages)) {
+                      pages.push(totalPages);
+                    }
+                  }
+
+                  return pages.map((page, index) =>
+                    page === 'ellipsis' ? (
+                      <span key={`ellipsis-${index}`} className="px-2 text-foreground-muted">
+                        ...
+                      </span>
+                    ) : (
+                      <button
+                        key={page}
+                        onClick={() => onPageChange(page)}
+                        className={`px-3 py-1 rounded text-sm transition-colors ${
+                          currentPage === page
+                            ? 'bg-accent text-background'
+                            : 'text-foreground-muted hover:text-foreground hover:bg-background-tertiary'
+                        }`}
+                        aria-label={`${page}ページ目`}
+                        aria-current={currentPage === page ? 'page' : undefined}
+                      >
+                        {page}
+                      </button>
+                    )
+                  );
+                })()}
+
+                <button
+                  onClick={() => onPageChange(currentPage + 1)}
+                  disabled={currentPage >= totalPages}
+                  className="btn btn-ghost p-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="次のページ"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
