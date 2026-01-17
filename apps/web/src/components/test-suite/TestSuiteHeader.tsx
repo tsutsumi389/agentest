@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { Play, Pencil, ChevronLeft, ChevronRight, FileText, History, MessageSquare, Settings, Copy, X } from 'lucide-react';
+import { Play, Pencil, ChevronRight, FileText, History, MessageSquare, Settings, Copy, X } from 'lucide-react';
 import type { TestSuite, Project, ProjectMemberRole } from '../../lib/api';
 import { PRIORITY_COLORS, PRIORITY_LABELS, STATUS_COLORS, STATUS_LABELS } from '../../lib/constants';
 
@@ -95,7 +95,7 @@ export function TestSuiteHeader({
 
   return (
     <div className="border-b border-border bg-background-secondary">
-      {/* ヘッダー1行目: 戻るボタン + タイトル + アクションボタン */}
+      {/* ヘッダー1行目: タイトル + アクションボタン */}
       <div className="px-4 py-3">
         {isTestCaseMode ? (
           // テストケース選択時: パンくずリスト形式（従来どおり）
@@ -133,23 +133,12 @@ export function TestSuiteHeader({
             )}
           </div>
         ) : (
-          // テストスイート表示時: 戻るボタン + タイトル + アクションボタン
+          // テストスイート表示時: タイトル + アクションボタン
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              {/* 戻るボタン */}
-              <Link
-                to={`/projects/${testSuite.projectId}`}
-                className="flex items-center gap-1 text-sm text-foreground-muted hover:text-foreground transition-colors"
-                aria-label={`${project?.name || 'プロジェクト'}に戻る`}
-              >
-                <ChevronLeft className="w-4 h-4" />
-                {project?.name || 'プロジェクト'}
-              </Link>
-              {/* テストスイート名（ページタイトル） */}
-              <h1 className="text-lg font-semibold text-foreground">
-                {testSuite.name}
-              </h1>
-            </div>
+            {/* テストスイート名（ページタイトル） */}
+            <h1 className="text-lg font-semibold text-foreground">
+              {testSuite.name}
+            </h1>
             {/* アクションボタン（作成モード時は非表示） */}
             {!isCreateMode && (
               <div className="flex items-center gap-2">
