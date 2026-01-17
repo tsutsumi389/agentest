@@ -245,18 +245,6 @@ export function TestSuiteCasesPage() {
 
     return (
       <div className="h-full flex flex-col">
-        <TestSuiteHeader
-          testSuite={suite}
-          testCaseCount={testCases.length}
-          currentRole={currentRole}
-          onStartExecution={handleStartExecution}
-          isExecutionPending={startExecutionMutation.isPending}
-          currentTab={currentTab}
-          onTabChange={handleTabChange}
-          hasSelectedTestCase={!!selectedTestCaseId}
-          isCreateMode={isCreateMode}
-        />
-
         {/* 編集フォーム */}
         <div className="flex-1 overflow-hidden p-4">
           <div className="card h-full overflow-hidden">
@@ -280,26 +268,28 @@ export function TestSuiteCasesPage() {
   return (
     <ReviewSessionProvider>
       <div className="h-full flex flex-col">
-        {/* ヘッダー */}
-        <TestSuiteHeader
-          testSuite={suite}
-          testCaseCount={testCases.length}
-          currentRole={currentRole}
-          onStartExecution={handleStartExecution}
-          onEdit={() => setIsEditMode(true)}
-          isExecutionPending={startExecutionMutation.isPending}
-          currentTab={currentTab}
-          onTabChange={handleTabChange}
-          hasSelectedTestCase={!!selectedTestCaseId || isCreateMode}
-          isCreateMode={isCreateMode}
-          // テストケース選択時のprops
-          selectedTestCase={selectedTestCaseInfo}
-          testCaseTab={testCaseTab}
-          onTestCaseTabChange={handleTestCaseTabChange}
-          onEditTestCase={() => setIsTestCaseEditMode(true)}
-          onCopyTestCase={() => setIsCopyModalOpen(true)}
-          onCloseTestCase={() => handleSelectTestCase(null)}
-        />
+        {/* ヘッダー（作成・編集モード時は非表示） */}
+        {!isCreateMode && !isTestCaseEditMode && (
+          <TestSuiteHeader
+            testSuite={suite}
+            testCaseCount={testCases.length}
+            currentRole={currentRole}
+            onStartExecution={handleStartExecution}
+            onEdit={() => setIsEditMode(true)}
+            isExecutionPending={startExecutionMutation.isPending}
+            currentTab={currentTab}
+            onTabChange={handleTabChange}
+            hasSelectedTestCase={!!selectedTestCaseId}
+            isCreateMode={isCreateMode}
+            // テストケース選択時のprops
+            selectedTestCase={selectedTestCaseInfo}
+            testCaseTab={testCaseTab}
+            onTestCaseTabChange={handleTestCaseTabChange}
+            onEditTestCase={() => setIsTestCaseEditMode(true)}
+            onCopyTestCase={() => setIsCopyModalOpen(true)}
+            onCloseTestCase={() => handleSelectTestCase(null)}
+          />
+        )}
 
       {/* メインコンテンツ */}
       <div className="flex-1 overflow-hidden p-4">
