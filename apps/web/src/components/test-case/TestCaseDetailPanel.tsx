@@ -221,14 +221,18 @@ function OverviewTab({
         canEdit={canEdit}
         onCommentAdded={handleCommentAdded}
       >
-        <div className="space-y-2">
-          <h3 className="text-sm font-semibold text-foreground">説明</h3>
+        <div className="card">
+          <div className="p-4 border-b border-border">
+            <h2 className="font-semibold text-foreground">説明</h2>
+          </div>
           {testCase.description ? (
-            <MarkdownPreview content={testCase.description} />
+            <div className="p-4">
+              <MarkdownPreview content={testCase.description} />
+            </div>
           ) : (
-            <p className="text-sm text-foreground-subtle italic">
+            <div className="p-4 text-center text-foreground-muted">
               説明なし
-            </p>
+            </div>
           )}
         </div>
       </CommentableField>

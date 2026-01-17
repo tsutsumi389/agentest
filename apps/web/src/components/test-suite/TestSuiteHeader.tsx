@@ -1,6 +1,5 @@
-import { Link } from 'react-router';
-import { Play, Pencil, ChevronRight, FileText, History, MessageSquare, Settings, Copy, X } from 'lucide-react';
-import type { TestSuite, Project, ProjectMemberRole } from '../../lib/api';
+import { Play, Pencil, FileText, History, MessageSquare, Settings, Copy, X } from 'lucide-react';
+import type { TestSuite, ProjectMemberRole } from '../../lib/api';
 import { PRIORITY_COLORS, PRIORITY_LABELS, STATUS_COLORS, STATUS_LABELS } from '../../lib/constants';
 
 /**
@@ -40,7 +39,6 @@ interface SelectedTestCaseInfo {
 
 interface TestSuiteHeaderProps {
   testSuite: TestSuite;
-  project?: Project;
   testCaseCount: number;
   currentRole?: 'OWNER' | ProjectMemberRole;
   onStartExecution: () => void;
@@ -64,12 +62,11 @@ interface TestSuiteHeaderProps {
 
 /**
  * テストスイートヘッダーコンポーネント（GitHub風）
- * パンくずリスト、ナビゲーションタブ、アクションボタンを含む
+ * タイトル、ナビゲーションタブ、アクションボタンを含む
  * テストケース選択時は表示が切り替わる
  */
 export function TestSuiteHeader({
   testSuite,
-  project,
   testCaseCount,
   currentRole,
   onStartExecution,
@@ -98,39 +95,60 @@ export function TestSuiteHeader({
       {/* ヘッダー1行目: タイトル + アクションボタン */}
       <div className="px-4 py-3">
         {isTestCaseMode ? (
-          // テストケース選択時: パンくずリスト形式（従来どおり）
-          <div className="flex items-center gap-2 text-sm">
-            <Link
-              to={`/projects/${testSuite.projectId}`}
-              className="text-accent hover:text-accent-hover hover:underline"
-            >
-              {project?.name || 'プロジェクト'}
-            </Link>
-            <ChevronRight className="w-4 h-4 text-foreground-muted" />
-            <Link
-              to={`/test-suites/${testSuite.id}`}
-              className="text-accent hover:text-accent-hover hover:underline"
-            >
-              {testSuite.name}
-            </Link>
-            <ChevronRight className="w-4 h-4 text-foreground-muted" />
-            <span className="text-foreground font-medium truncate max-w-[200px]">
-              {selectedTestCase.title}
-            </span>
-            {/* 優先度バッジ */}
-            <span className={`px-2 py-0.5 text-xs font-medium rounded ${PRIORITY_COLORS[selectedTestCase.priority]}`}>
-              {PRIORITY_LABELS[selectedTestCase.priority]}
-            </span>
-            {/* ステータスバッジ */}
-            <span className={`px-2 py-0.5 text-xs font-medium rounded ${STATUS_COLORS[selectedTestCase.status]}`}>
-              {STATUS_LABELS[selectedTestCase.status]}
-            </span>
-            {/* 削除予定バッジ */}
-            {selectedTestCase.deletedAt && (
-              <span className="px-2 py-0.5 text-xs font-medium rounded bg-danger/20 text-danger">
-                削除予定
+          // テストケース選択時: タイトル + アクションボタン（テストスイートと同じ構造）
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <h1 className="text-lg font-semibold text-foreground truncate max-w-[300px]">
+                {selectedTestCase.title}
+              </h1>
+              {/* 優先度バッジ */}
+              <span className={`px-2 py-0.5 text-xs font-medium rounded ${PRIORITY_COLORS[selectedTestCase.priority]}`}>
+                {PRIORITY_LABELS[selectedTestCase.priority]}
               </span>
-            )}
+              {/* ステータスバッジ */}
+              <span className={`px-2 py-0.5 text-xs font-medium rounded ${STATUS_COLORS[selectedTestCase.status]}`}>
+                {STATUS_LABELS[selectedTestCase.status]}
+              </span>
+              {/* 削除予定バッジ */}
+              {selectedTestCase.deletedAt && (
+                <span className="px-2 py-0.5 text-xs font-medium rounded bg-danger/20 text-danger">
+                  削除予定
+                </span>
+              )}
+            </div>
+            {/* アクションボタン */}
+            <div className="flex items-center gap-2">
+              {canEdit && onEditTestCase && (
+                <button
+                  onClick={onEditTestCase}
+                  className="btn btn-secondary btn-sm"
+                  title="テストケースを編集"
+                >
+                  <Pencil className="w-4 h-4" />
+                  編集
+                </button>
+              )}
+              {canEdit && onCopyTestCase && (
+                <button
+                  onClick={onCopyTestCase}
+                  className="btn btn-secondary btn-sm"
+                  title="テストケースをコピー"
+                >
+                  <Copy className="w-4 h-4" />
+                  コピー
+                </button>
+              )}
+              {onCloseTestCase && (
+                <button
+                  onClick={onCloseTestCase}
+                  className="btn btn-secondary btn-sm"
+                  title="閉じる"
+                >
+                  <X className="w-4 h-4" />
+                  閉じる
+                </button>
+              )}
+            </div>
           </div>
         ) : (
           // テストスイート表示時: タイトル + アクションボタン
@@ -222,42 +240,6 @@ export function TestSuiteHeader({
               );
             })}
           </nav>
-        )}
-
-        {/* テストケース選択時のアクションボタン */}
-        {isTestCaseMode && (
-          <div className="flex items-center gap-2 pb-2">
-            {canEdit && onEditTestCase && (
-              <button
-                onClick={onEditTestCase}
-                className="btn btn-secondary btn-sm"
-                title="テストケースを編集"
-              >
-                <Pencil className="w-4 h-4" />
-                編集
-              </button>
-            )}
-            {canEdit && onCopyTestCase && (
-              <button
-                onClick={onCopyTestCase}
-                className="btn btn-secondary btn-sm"
-                title="テストケースをコピー"
-              >
-                <Copy className="w-4 h-4" />
-                コピー
-              </button>
-            )}
-            {onCloseTestCase && (
-              <button
-                onClick={onCloseTestCase}
-                className="btn btn-secondary btn-sm"
-                title="閉じる"
-              >
-                <X className="w-4 h-4" />
-                閉じる
-              </button>
-            )}
-          </div>
         )}
       </div>
       )}

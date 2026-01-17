@@ -67,11 +67,11 @@ export function TestCasePreconditionList({
 
   if (isLoading) {
     return (
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-foreground">前提条件</h3>
+      <div className="card">
+        <div className="p-4 border-b border-border">
+          <h2 className="font-semibold text-foreground">前提条件</h2>
         </div>
-        <div className="flex items-center justify-center py-8">
+        <div className="px-4 py-8 flex items-center justify-center">
           <Loader2 className="w-5 h-5 animate-spin text-foreground-muted" />
         </div>
       </div>
@@ -80,11 +80,11 @@ export function TestCasePreconditionList({
 
   if (error) {
     return (
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-foreground">前提条件</h3>
+      <div className="card">
+        <div className="p-4 border-b border-border">
+          <h2 className="font-semibold text-foreground">前提条件</h2>
         </div>
-        <div className="text-center py-8">
+        <div className="px-4 py-8 text-center">
           <p className="text-danger text-sm">{error}</p>
         </div>
       </div>
@@ -100,22 +100,22 @@ export function TestCasePreconditionList({
       canEdit={canEdit}
       onCommentAdded={onCommentAdded}
     >
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-foreground">前提条件</h3>
+      <div className="card">
+        <div className="p-4 border-b border-border">
+          <h2 className="font-semibold text-foreground">前提条件</h2>
         </div>
 
         {preconditions.length === 0 ? (
-          <div className="text-center py-6 border-2 border-dashed border-border rounded-lg">
+          <div className="p-4 text-center py-6">
             <ClipboardList className="w-8 h-8 text-foreground-muted mx-auto mb-2" />
             <p className="text-foreground-muted text-sm">前提条件が設定されていません</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div>
             {preconditions.map((precondition, index) => (
               <div
                 key={precondition.id}
-                className="flex items-start gap-3 p-3 bg-background-secondary rounded-lg"
+                className={`flex items-start gap-3 p-4${index < preconditions.length - 1 ? ' border-b border-border' : ''}`}
               >
                 {/* 番号 */}
                 <span className="flex-shrink-0 w-6 h-6 rounded-full bg-background-tertiary flex items-center justify-center text-xs font-medium text-foreground-muted">

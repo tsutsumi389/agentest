@@ -67,11 +67,11 @@ export function TestCaseStepList({
 
   if (isLoading) {
     return (
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-foreground">テスト手順</h3>
+      <div className="card">
+        <div className="p-4 border-b border-border">
+          <h2 className="font-semibold text-foreground">テスト手順</h2>
         </div>
-        <div className="flex items-center justify-center py-8">
+        <div className="px-4 py-8 flex items-center justify-center">
           <Loader2 className="w-5 h-5 animate-spin text-foreground-muted" />
         </div>
       </div>
@@ -80,11 +80,11 @@ export function TestCaseStepList({
 
   if (error) {
     return (
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-foreground">テスト手順</h3>
+      <div className="card">
+        <div className="p-4 border-b border-border">
+          <h2 className="font-semibold text-foreground">テスト手順</h2>
         </div>
-        <div className="text-center py-8">
+        <div className="px-4 py-8 text-center">
           <p className="text-danger text-sm">{error}</p>
         </div>
       </div>
@@ -92,30 +92,30 @@ export function TestCaseStepList({
   }
 
   return (
-    <div className="space-y-3">
-      <CommentableField
-        targetType="CASE"
-        targetId={testCaseId}
-        targetField="STEP"
-        comments={comments}
-        canEdit={canEdit}
-        onCommentAdded={onCommentAdded}
-      >
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-foreground">テスト手順</h3>
+    <CommentableField
+      targetType="CASE"
+      targetId={testCaseId}
+      targetField="STEP"
+      comments={comments}
+      canEdit={canEdit}
+      onCommentAdded={onCommentAdded}
+    >
+      <div className="card">
+        <div className="p-4 border-b border-border">
+          <h2 className="font-semibold text-foreground">テスト手順</h2>
         </div>
 
         {steps.length === 0 ? (
-          <div className="text-center py-6 border-2 border-dashed border-border rounded-lg">
+          <div className="p-4 text-center py-6">
             <ListOrdered className="w-8 h-8 text-foreground-muted mx-auto mb-2" />
             <p className="text-foreground-muted text-sm">テスト手順が設定されていません</p>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div>
             {steps.map((step, index) => (
               <div
                 key={step.id}
-                className="flex items-start gap-3 p-3 bg-background-secondary rounded-lg"
+                className={`flex items-start gap-3 p-4${index < steps.length - 1 ? ' border-b border-border' : ''}`}
               >
                 {/* 番号（アクセントカラー） */}
                 <span className="flex-shrink-0 w-6 h-6 rounded-full bg-accent/20 text-accent flex items-center justify-center text-xs font-medium">
@@ -140,7 +140,7 @@ export function TestCaseStepList({
             ))}
           </div>
         )}
-      </CommentableField>
-    </div>
+      </div>
+    </CommentableField>
   );
 }

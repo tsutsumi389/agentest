@@ -114,15 +114,6 @@ export function TestSuiteCasesPage() {
 
   const suite = suiteData?.testSuite;
 
-  // プロジェクト情報を取得
-  const { data: projectData } = useQuery({
-    queryKey: ['project', suite?.projectId],
-    queryFn: () => projectsApi.getById(suite!.projectId),
-    enabled: !!suite?.projectId,
-  });
-
-  const project = projectData?.project;
-
   // 前提条件を取得（編集モード用）
   const { data: preconditionsData } = useQuery({
     queryKey: ['test-suite-preconditions', testSuiteId],
@@ -256,7 +247,6 @@ export function TestSuiteCasesPage() {
       <div className="h-full flex flex-col">
         <TestSuiteHeader
           testSuite={suite}
-          project={project}
           testCaseCount={testCases.length}
           currentRole={currentRole}
           onStartExecution={handleStartExecution}
@@ -293,7 +283,6 @@ export function TestSuiteCasesPage() {
         {/* ヘッダー */}
         <TestSuiteHeader
           testSuite={suite}
-          project={project}
           testCaseCount={testCases.length}
           currentRole={currentRole}
           onStartExecution={handleStartExecution}
