@@ -260,7 +260,6 @@ export function TestSuiteCasesPage() {
           testCaseCount={testCases.length}
           currentRole={currentRole}
           onStartExecution={handleStartExecution}
-          onCreateTestCase={handleStartCreateMode}
           isExecutionPending={startExecutionMutation.isPending}
           currentTab={currentTab}
           onTabChange={handleTabChange}
@@ -298,7 +297,6 @@ export function TestSuiteCasesPage() {
           testCaseCount={testCases.length}
           currentRole={currentRole}
           onStartExecution={handleStartExecution}
-          onCreateTestCase={handleStartCreateMode}
           onEdit={() => setIsEditMode(true)}
           isExecutionPending={startExecutionMutation.isPending}
           currentTab={currentTab}
