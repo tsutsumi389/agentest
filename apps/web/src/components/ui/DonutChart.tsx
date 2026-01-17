@@ -50,9 +50,8 @@ function buildConicGradient(segments: DonutSegment[], total: number): string {
     currentAngle = endAngle;
   }
 
-  return gradientParts.length > 0
-    ? `conic-gradient(${gradientParts.join(', ')})`
-    : '#6e7681';
+  // total > 0 が保証されているので、gradientParts は必ず1つ以上ある
+  return `conic-gradient(${gradientParts.join(', ')})`;
 }
 
 /**

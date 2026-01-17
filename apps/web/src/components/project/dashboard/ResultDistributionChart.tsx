@@ -12,6 +12,9 @@ const SEGMENT_CONFIG = {
 
 type SegmentKey = keyof typeof SEGMENT_CONFIG;
 
+/** セグメントの表示順序を明示的に定義 */
+const SEGMENT_ORDER: SegmentKey[] = ['pass', 'fail', 'pending', 'skipped', 'notExecutable'];
+
 interface LegendItemProps {
   color: string;
   label: string;
@@ -55,14 +58,12 @@ export function ResultDistributionChart({ stats }: ResultDistributionChartProps)
   const { resultDistribution } = stats;
 
   // セグメントデータを構築
-  const segments: DonutSegment[] = (Object.keys(SEGMENT_CONFIG) as SegmentKey[]).map(
-    (key) => ({
-      id: key,
-      label: SEGMENT_CONFIG[key].label,
-      value: resultDistribution[key],
-      color: SEGMENT_CONFIG[key].color,
-    })
-  );
+  const segments: DonutSegment[] = SEGMENT_ORDER.map((key) => ({
+    id: key,
+    label: SEGMENT_CONFIG[key].label,
+    value: resultDistribution[key],
+    color: SEGMENT_CONFIG[key].color,
+  }));
 
   // 合計を計算
   const total = segments.reduce((sum, s) => sum + s.value, 0);
