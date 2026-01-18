@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import type { Label } from '../../lib/api';
+import { getContrastTextColor } from '../../lib/color-utils';
 
 // プリセットカラー
 const PRESET_COLORS = [
@@ -154,21 +155,25 @@ export function LabelFormModal({ label, onClose, onSave, isOpen }: LabelFormModa
 
             {/* プリセットカラー */}
             <div className="flex flex-wrap gap-2 mb-3">
-              {PRESET_COLORS.map((presetColor) => (
-                <button
-                  key={presetColor}
-                  type="button"
-                  onClick={() => setColor(presetColor)}
-                  className={`w-6 h-6 rounded-full border-2 transition-transform ${
-                    color.toUpperCase() === presetColor
-                      ? 'border-foreground scale-110'
-                      : 'border-transparent hover:scale-110'
-                  }`}
-                  style={{ backgroundColor: presetColor }}
-                  aria-label={`色: ${presetColor}`}
-                  disabled={isSubmitting}
-                />
-              ))}
+              {PRESET_COLORS.map((presetColor) => {
+                // PRESET_COLORSは既に大文字なので、入力値のみ大文字変換
+                const isSelected = color.toUpperCase() === presetColor;
+                return (
+                  <button
+                    key={presetColor}
+                    type="button"
+                    onClick={() => setColor(presetColor)}
+                    className={`w-6 h-6 rounded-full border-2 transition-transform ${
+                      isSelected
+                        ? 'border-foreground scale-110'
+                        : 'border-transparent hover:scale-110'
+                    }`}
+                    style={{ backgroundColor: presetColor }}
+                    aria-label={`色: ${presetColor}`}
+                    disabled={isSubmitting}
+                  />
+                );
+              })}
             </div>
 
             {/* カスタムカラー入力 */}
@@ -228,19 +233,4 @@ export function LabelFormModal({ label, onClose, onSave, isOpen }: LabelFormModa
       </div>
     </div>
   );
-}
-
-/**
- * 色の明るさを計算して適切なテキスト色を返す
- */
-function getContrastTextColor(hexColor: string): string {
-  const hex = hexColor.replace('#', '');
-  if (hex.length !== 6) return '#FFFFFF';
-
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-
-  return luminance > 0.5 ? '#000000' : '#FFFFFF';
 }

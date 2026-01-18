@@ -1,14 +1,25 @@
-import { prisma } from '@agentest/db';
 import { NotFoundError, ConflictError, ValidationError } from '@agentest/shared';
 import { LabelRepository } from '../repositories/label.repository.js';
 import { ProjectRepository } from '../repositories/project.repository.js';
+import { TestSuiteRepository } from '../repositories/test-suite.repository.js';
 
 /**
  * ラベルサービス
  */
 export class LabelService {
-  private labelRepo = new LabelRepository();
-  private projectRepo = new ProjectRepository();
+  private labelRepo: LabelRepository;
+  private projectRepo: ProjectRepository;
+  private testSuiteRepo: TestSuiteRepository;
+
+  constructor(
+    labelRepo?: LabelRepository,
+    projectRepo?: ProjectRepository,
+    testSuiteRepo?: TestSuiteRepository
+  ) {
+    this.labelRepo = labelRepo ?? new LabelRepository();
+    this.projectRepo = projectRepo ?? new ProjectRepository();
+    this.testSuiteRepo = testSuiteRepo ?? new TestSuiteRepository();
+  }
 
   /**
    * プロジェクトのラベル一覧を取得
@@ -110,13 +121,8 @@ export class LabelService {
    * テストスイートに付与されているラベル一覧を取得
    */
   async getTestSuiteLabels(testSuiteId: string) {
-    // テストスイートの存在確認
-    const testSuite = await prisma.testSuite.findFirst({
-      where: {
-        id: testSuiteId,
-        deletedAt: null,
-      },
-    });
+    // テストスイートの存在確認（リポジトリ経由）
+    const testSuite = await this.testSuiteRepo.findById(testSuiteId);
     if (!testSuite) {
       throw new NotFoundError('TestSuite', testSuiteId);
     }
@@ -128,16 +134,8 @@ export class LabelService {
    * テストスイートのラベルを一括更新
    */
   async updateTestSuiteLabels(testSuiteId: string, labelIds: string[]) {
-    // テストスイートの存在確認
-    const testSuite = await prisma.testSuite.findFirst({
-      where: {
-        id: testSuiteId,
-        deletedAt: null,
-      },
-      include: {
-        project: true,
-      },
-    });
+    // テストスイートの存在確認（リポジトリ経由）
+    const testSuite = await this.testSuiteRepo.findById(testSuiteId);
     if (!testSuite) {
       throw new NotFoundError('TestSuite', testSuiteId);
     }

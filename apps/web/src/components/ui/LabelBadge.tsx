@@ -1,5 +1,6 @@
 import { X } from 'lucide-react';
 import type { Label } from '../../lib/api';
+import { getContrastTextColor } from '../../lib/color-utils';
 
 interface LabelBadgeProps {
   /** ラベルデータ */
@@ -10,24 +11,6 @@ interface LabelBadgeProps {
   onRemove?: () => void;
   /** カスタムクラス */
   className?: string;
-}
-
-/**
- * 色の明るさを計算して適切なテキスト色を返す
- * @param hexColor HEX形式の色（#FFFFFF）
- * @returns 白または黒
- */
-function getContrastTextColor(hexColor: string): string {
-  // #を除去して16進数をパース
-  const hex = hexColor.replace('#', '');
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
-
-  // 相対輝度を計算（WCAG基準）
-  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-
-  return luminance > 0.5 ? '#000000' : '#FFFFFF';
 }
 
 /**

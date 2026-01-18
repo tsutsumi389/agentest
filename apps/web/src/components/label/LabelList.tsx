@@ -37,6 +37,8 @@ export function LabelList({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLabel, setEditingLabel] = useState<Label | null>(null);
   const [deletingLabelId, setDeletingLabelId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // 新規作成モーダルを開く
   const handleOpenCreateModal = () => {
@@ -68,19 +70,29 @@ export function LabelList({
   // 削除確認
   const handleDeleteClick = (labelId: string) => {
     setDeletingLabelId(labelId);
+    setDeleteError(null);
   };
 
   // 削除実行
   const handleConfirmDelete = async () => {
     if (deletingLabelId) {
-      await onDelete(deletingLabelId);
-      setDeletingLabelId(null);
+      setIsDeleting(true);
+      setDeleteError(null);
+      try {
+        await onDelete(deletingLabelId);
+        setDeletingLabelId(null);
+      } catch (err) {
+        setDeleteError(err instanceof Error ? err.message : '削除に失敗しました');
+      } finally {
+        setIsDeleting(false);
+      }
     }
   };
 
   // 削除キャンセル
   const handleCancelDelete = () => {
     setDeletingLabelId(null);
+    setDeleteError(null);
   };
 
   return (
@@ -164,20 +176,27 @@ export function LabelList({
               このラベルを削除すると、すべてのテストスイートからこのラベルが削除されます。
               この操作は取り消せません。
             </p>
+            {deleteError && (
+              <div className="p-3 mb-4 bg-danger-subtle text-danger text-sm rounded">
+                {deleteError}
+              </div>
+            )}
             <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={handleCancelDelete}
-                className="px-4 py-2 text-sm border border-border rounded hover:bg-background-secondary"
+                disabled={isDeleting}
+                className="px-4 py-2 text-sm border border-border rounded hover:bg-background-secondary disabled:opacity-50"
               >
                 キャンセル
               </button>
               <button
                 type="button"
                 onClick={handleConfirmDelete}
-                className="px-4 py-2 text-sm bg-danger text-white rounded hover:bg-danger-hover"
+                disabled={isDeleting}
+                className="px-4 py-2 text-sm bg-danger text-white rounded hover:bg-danger-hover disabled:opacity-50"
               >
-                削除
+                {isDeleting ? '削除中...' : '削除'}
               </button>
             </div>
           </div>
