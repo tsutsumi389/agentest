@@ -335,7 +335,7 @@ export function TestSuiteSearchFilter({
         <select
           value={filters.sortBy || 'updatedAt'}
           onChange={(e) => handleSortChange(e.target.value)}
-          className="input py-1 px-2 text-sm"
+          className="input py-1 px-2 text-sm w-auto"
           aria-label="並び順"
         >
           {SORT_OPTIONS.map((option) => (
