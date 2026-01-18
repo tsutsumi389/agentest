@@ -1,4 +1,4 @@
-import { Circle, CheckCircle2, XCircle, MinusCircle, type LucideIcon } from 'lucide-react';
+import { Circle, CheckCircle2, XCircle, SkipForward, type LucideIcon } from 'lucide-react';
 import type {
   PreconditionResultStatus,
   StepResultStatus,
@@ -77,7 +77,7 @@ export const stepResultStatusConfig: Record<StepResultStatus, StatusConfig> = {
     label: '完了',
   },
   SKIPPED: {
-    icon: MinusCircle,
+    icon: SkipForward,
     colorClass: 'text-warning',
     bgClass: 'bg-warning-subtle',
     label: 'スキップ',
@@ -115,7 +115,7 @@ export const expectedResultStatusConfig: Record<ExpectedResultStatus, StatusConf
     label: '失敗',
   },
   SKIPPED: {
-    icon: MinusCircle,
+    icon: SkipForward,
     colorClass: 'text-warning',
     bgClass: 'bg-warning-subtle',
     label: 'スキップ',

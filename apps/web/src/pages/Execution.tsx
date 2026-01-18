@@ -418,6 +418,9 @@ export function ExecutionPage() {
         onPreconditionNoteChange={handlePreconditionNoteChange}
         updatingPreconditionStatusId={updatingPreconditionStatusId}
         updatingPreconditionNoteId={updatingPreconditionNoteId}
+        isPipSupported={isPipSupported}
+        isPipActive={isPipActive}
+        onOpenPip={openPip}
       />
     );
   }
