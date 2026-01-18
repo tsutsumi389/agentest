@@ -747,7 +747,7 @@ const updateStepResultBodySchema = z.object({
  * 期待結果更新リクエストボディのスキーマ
  */
 const updateExpectedResultBodySchema = z.object({
-  status: z.enum(['PASS', 'FAIL', 'SKIPPED', 'NOT_EXECUTABLE']),
+  status: z.enum(['PASS', 'FAIL', 'SKIPPED']),
   note: z.string().max(2000).optional(),
   agentName: z.string().max(100).optional(),
 });
