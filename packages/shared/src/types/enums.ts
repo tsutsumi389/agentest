@@ -72,7 +72,6 @@ export const JudgmentStatus = {
   PASS: 'PASS',
   FAIL: 'FAIL',
   SKIPPED: 'SKIPPED',
-  NOT_EXECUTABLE: 'NOT_EXECUTABLE',
 } as const;
 export type JudgmentStatus = (typeof JudgmentStatus)[keyof typeof JudgmentStatus];
 
