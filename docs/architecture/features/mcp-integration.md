@@ -907,19 +907,18 @@ interface SearchTestCaseResponse {
 
 ### 概要
 
-テストスイートの実行履歴を検索するMCPツール。ステータス、期間で絞り込み可能。
+テストスイートの実行履歴を検索するMCPツール。期間で絞り込み可能。
 
 ### 入力パラメータ
 
 | パラメータ | 型 | 必須 | デフォルト | 説明 |
 |-----------|-----|------|-----------|------|
 | testSuiteId | string(uuid) | **必須** | - | テストスイートID |
-| status | array | 任意 | - | ステータスで絞り込み（IN_PROGRESS/COMPLETED/ABORTED）複数選択可 |
-| from | string(datetime) | 任意 | - | 開始日時（ISO 8601形式） |
-| to | string(datetime) | 任意 | - | 終了日時（ISO 8601形式） |
+| from | string(datetime) | 任意 | - | 作成日時（開始）（ISO 8601形式） |
+| to | string(datetime) | 任意 | - | 作成日時（終了）（ISO 8601形式） |
 | limit | number | 任意 | 20 | 取得件数（1-50） |
 | offset | number | 任意 | 0 | オフセット |
-| sortBy | enum | 任意 | startedAt | ソート項目（startedAt/completedAt/status） |
+| sortBy | enum | 任意 | createdAt | ソート項目（createdAt） |
 | sortOrder | enum | 任意 | desc | ソート順（asc/desc） |
 
 ### レスポンス
@@ -929,9 +928,6 @@ interface SearchExecutionResponse {
   executions: Array<{
     id: string;
     testSuiteId: string;
-    status: string;              // IN_PROGRESS/COMPLETED/ABORTED
-    startedAt: string;
-    completedAt: string | null;
     executedByUser: {
       id: string;
       name: string;
@@ -962,11 +958,10 @@ interface SearchExecutionResponse {
   "name": "search_execution",
   "arguments": {
     "testSuiteId": "suite_xxx",
-    "status": ["COMPLETED"],
     "from": "2024-01-01T00:00:00.000Z",
     "to": "2024-01-31T23:59:59.999Z",
     "limit": 10,
-    "sortBy": "completedAt",
+    "sortBy": "createdAt",
     "sortOrder": "desc"
   }
 }
@@ -977,9 +972,6 @@ interface SearchExecutionResponse {
     {
       "id": "exec_xxx",
       "testSuiteId": "suite_xxx",
-      "status": "COMPLETED",
-      "startedAt": "2024-01-15T10:00:00.000Z",
-      "completedAt": "2024-01-15T11:30:00.000Z",
       "executedByUser": { "id": "user_xxx", "name": "田中太郎", "avatarUrl": null },
       "environment": { "id": "env_xxx", "name": "本番環境", "slug": "production" },
       "createdAt": "2024-01-15T10:00:00.000Z",
@@ -1410,9 +1402,6 @@ interface GetExecutionResponse {
       name: string;
       projectId: string;
     };
-    status: string;              // IN_PROGRESS/COMPLETED/ABORTED
-    startedAt: string;
-    completedAt: string | null;
     executedByUser: {
       id: string;
       name: string | null;
@@ -1550,9 +1539,6 @@ interface GetExecutionResponse {
       "name": "認証機能テスト",
       "projectId": "proj_xxx"
     },
-    "status": "COMPLETED",
-    "startedAt": "2024-01-15T10:00:00.000Z",
-    "completedAt": "2024-01-15T11:30:00.000Z",
     "executedByUser": { "id": "user_xxx", "name": "田中太郎", "avatarUrl": null },
     "environment": { "id": "env_xxx", "name": "本番環境", "slug": "production" },
     "executionTestSuite": { ... },
@@ -1868,8 +1854,6 @@ interface CreateExecutionResponse {
     id: string;
     testSuiteId: string;
     environmentId: string | null;
-    status: string;              // IN_PROGRESS
-    startedAt: string | null;
     createdAt: string;
     updatedAt: string;
   };
@@ -1894,8 +1878,6 @@ interface CreateExecutionResponse {
     "id": "exec_xxx",
     "testSuiteId": "suite_xxx",
     "environmentId": "env_xxx",
-    "status": "IN_PROGRESS",
-    "startedAt": "2024-01-15T10:00:00.000Z",
     "createdAt": "2024-01-15T10:00:00.000Z",
     "updatedAt": "2024-01-15T10:00:00.000Z"
   }
@@ -2680,12 +2662,6 @@ flowchart TD
 | ツール名 | 説明 | 状態 |
 |----------|------|------|
 | upload_execution_evidence | 期待結果にエビデンスをアップロード（Base64形式） | 実装済 |
-
-### 未実装ツール
-
-| ツール名 | 説明 | 状態 |
-|----------|------|------|
-| complete_execution | テスト実行完了 | 未実装 |
 
 ## 関連機能
 

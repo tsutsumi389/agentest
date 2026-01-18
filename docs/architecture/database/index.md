@@ -186,7 +186,6 @@ Coding Agent が理解しやすい英語の文字列を使用。
 |------|-----|------|
 | `EntityStatus` | DRAFT, ACTIVE, ARCHIVED | スイート/ケース共通のステータス |
 | `TestCasePriority` | CRITICAL, HIGH, MEDIUM, LOW | 優先度 |
-| `ExecutionStatus` | IN_PROGRESS, COMPLETED, ABORTED | 実行ステータス |
 | `PreconditionStatus` | UNCHECKED, MET, NOT_MET | 前提条件の確認状態 |
 | `StepStatus` | PENDING, DONE, SKIPPED | 手順の実施状態 |
 | `JudgmentStatus` | PENDING, PASS, FAIL, SKIPPED | 期待値の判定結果 |
@@ -260,8 +259,6 @@ CREATE INDEX idx_case_history_case_id ON "TestCaseHistory"("testCaseId");
 
 -- テスト実行
 CREATE INDEX idx_executions_suite_id ON "executions"("test_suite_id");
-CREATE INDEX idx_executions_status ON "executions"("status");
-CREATE INDEX idx_executions_started_at ON "executions"("started_at");
 
 -- 実行時スナップショット（正規化テーブル）
 CREATE INDEX idx_exec_suite_precond_suite_id ON "execution_test_suite_preconditions"("execution_test_suite_id");

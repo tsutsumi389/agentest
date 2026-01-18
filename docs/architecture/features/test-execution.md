@@ -60,14 +60,10 @@
 - **表示要素（ヘッダー）**
   - テストスイートに戻るリンク
   - テストスイート名（スナップショットから）
-  - ステータスバッジ（実行中/完了/中断）
   - テストスイート説明（Markdown表示）
-  - 中止ボタン（実行中のみ）
-  - 完了ボタン（実行中のみ）
 
-- **メタデータカード（3列）**
-  - **開始日時カード**: 実行開始日時を表示
-  - **終了日時カード**: 終了日時を表示（完了時は経過時間も表示、実行中は「実行中...」）
+- **メタデータカード（2列）**
+  - **作成日時カード**: 実行作成日時を表示
   - **環境カード**: 実行環境名を表示（未設定時は「未設定」）
 
 - **サマリーセクション（3段構成）**
@@ -170,16 +166,13 @@
 
 - **表示場所**: テストスイート詳細の「実行履歴」タブ
 - **表示要素**
-  - ステータスバッジ
-  - 開始日時
-  - 終了日時（完了時のみ）
+  - 作成日時
   - 実行者
   - 環境名
   - 結果サマリー（PASS/FAIL/SKIPPED/PENDING）
   - 詳細リンク
 - **フィルタリング**
-  - ステータス（IN_PROGRESS/COMPLETED/ABORTED）
-  - 日付範囲（開始日、終了日）
+  - 日付範囲（作成日基準）
 - **ページネーション**: 20件ずつ
 
 ## 業務フロー
@@ -228,7 +221,6 @@ sequenceDiagram
     F->>F: 楽観的更新（即座にUI反映）
     F->>B: PATCH /api/executions/{id}/...
     B->>B: 権限確認（WRITE以上）
-    B->>B: 実行ステータス確認（IN_PROGRESS）
     B->>DB: 結果レコード更新
     B->>F: 更新結果
     alt 成功
@@ -253,7 +245,6 @@ sequenceDiagram
     F->>F: ファイルサイズ・タイプ検証
     F->>B: POST /api/executions/{id}/expected-results/{id}/evidences
     B->>B: 権限確認（WRITE以上）
-    B->>B: 実行ステータス確認（IN_PROGRESS）
     B->>B: エビデンス数上限確認（10件）
     B->>S: ファイルアップロード
     B->>DB: ExecutionEvidence作成
@@ -277,25 +268,6 @@ sequenceDiagram
     B->>F: ダウンロードURL
     F->>U: 新しいタブでURLを開く
     U->>S: ファイルダウンロード
-```
-
-### 実行完了/中止フロー
-
-```mermaid
-sequenceDiagram
-    participant U as ユーザー
-    participant F as フロントエンド
-    participant B as バックエンド
-    participant DB as データベース
-
-    U->>F: 「完了」または「中止」ボタンをクリック
-    F->>B: POST /api/executions/{id}/complete または /abort
-    B->>B: 権限確認（WRITE以上）
-    B->>B: 実行ステータス確認（IN_PROGRESS）
-    B->>DB: status更新（COMPLETED/ABORTED）
-    B->>DB: completedAt設定
-    B->>F: 更新結果
-    F->>U: ステータス表示更新、編集無効化
 ```
 
 ## データモデル
@@ -323,9 +295,6 @@ erDiagram
         uuid environmentId FK "nullable"
         uuid executedByUserId FK "nullable"
         uuid executedByAgentSessionId FK "nullable"
-        enum status "IN_PROGRESS, COMPLETED, ABORTED"
-        timestamp startedAt
-        timestamp completedAt "nullable"
         timestamp createdAt
         timestamp updatedAt
     }
@@ -465,14 +434,6 @@ Execution
 
 ### ステータス定義
 
-#### 実行ステータス (ExecutionStatus)
-
-| ステータス | 説明 | 用途 |
-|-----------|------|------|
-| IN_PROGRESS | 実行中 | 結果入力可能、エビデンスアップロード可能 |
-| COMPLETED | 完了 | 結果確定、閲覧のみ |
-| ABORTED | 中断 | 途中終了、閲覧のみ |
-
 #### 前提条件ステータス (PreconditionStatus)
 
 | ステータス | 説明 |
@@ -510,16 +471,8 @@ Execution
 ### 結果更新
 
 - WRITE以上のロールが必要
-- ステータスがIN_PROGRESSの実行のみ更新可能
 - 楽観的更新によりUI遅延を最小化
 - ノートは任意入力
-
-### 実行完了/中止
-
-- WRITE以上のロールが必要
-- IN_PROGRESSの実行のみ完了/中止可能
-- 完了/中止後は結果の変更不可
-- 完了/中止後もエビデンスの閲覧は可能
 
 ### 実施者情報の記録
 
@@ -550,9 +503,9 @@ Execution
 
 ### エビデンス管理
 
-- アップロード: WRITE以上のロール、IN_PROGRESSの実行のみ
-- 削除: WRITE以上のロール、IN_PROGRESSの実行のみ
-- ダウンロード: READ以上のロール、どのステータスでも可能
+- アップロード: WRITE以上のロール
+- 削除: WRITE以上のロール
+- ダウンロード: READ以上のロール
 - 1期待結果あたり最大10ファイル
 
 #### アップロード方法
@@ -606,8 +559,6 @@ agentest/
 |------|:-----:|:-----:|:-----:|:----:|
 | 実行詳細閲覧 | ✓ | ✓ | ✓ | ✓ |
 | 実行開始 | ✓ | ✓ | ✓ | - |
-| 実行中止 | ✓ | ✓ | ✓ | - |
-| 実行完了 | ✓ | ✓ | ✓ | - |
 | 結果更新（前提条件/ステップ/期待値） | ✓ | ✓ | ✓ | - |
 | エビデンスアップロード | ✓ | ✓ | ✓ | - |
 | エビデンス削除 | ✓ | ✓ | ✓ | - |
@@ -634,8 +585,6 @@ agentest/
 | GET | /api/test-suites/:id/executions | 実行履歴一覧 | READ以上 |
 | GET | /api/executions/:id | 実行詳細取得（軽量） | READ以上 |
 | GET | /api/executions/:id/details | 実行詳細取得（全データ） | READ以上 |
-| POST | /api/executions/:id/abort | 実行中止 | WRITE以上 |
-| POST | /api/executions/:id/complete | 実行完了 | WRITE以上 |
 
 ### 結果更新
 
@@ -657,9 +606,8 @@ agentest/
 
 | パラメータ | 型 | 説明 | デフォルト |
 |-----------|-----|------|-----------|
-| status | enum | ステータスフィルタ（IN_PROGRESS/COMPLETED/ABORTED） | - |
-| fromDate | datetime | 開始日 | - |
-| toDate | datetime | 終了日 | - |
+| fromDate | datetime | 作成日（開始） | - |
+| toDate | datetime | 作成日（終了） | - |
 | limit | number | 取得件数（1-100） | 20 |
 | offset | number | オフセット | 0 |
 
@@ -681,9 +629,7 @@ agentest/
     "id": "uuid",
     "testSuiteId": "uuid",
     "environmentId": "uuid",
-    "status": "IN_PROGRESS",
-    "startedAt": "2024-01-01T00:00:00Z",
-    "completedAt": null
+    "createdAt": "2024-01-01T00:00:00Z"
   }
 }
 ```
@@ -697,9 +643,7 @@ agentest/
     "id": "uuid",
     "testSuiteId": "uuid",
     "environmentId": "uuid",
-    "status": "IN_PROGRESS",
-    "startedAt": "2024-01-01T00:00:00Z",
-    "completedAt": null,
+    "createdAt": "2024-01-01T00:00:00Z",
     "environment": {
       "id": "uuid",
       "name": "本番環境"
@@ -868,9 +812,7 @@ agentest/
       "id": "uuid",
       "testSuiteId": "uuid",
       "environmentId": "uuid",
-      "status": "COMPLETED",
-      "startedAt": "2024-01-01T00:00:00Z",
-      "completedAt": "2024-01-01T01:00:00Z",
+      "createdAt": "2024-01-01T00:00:00Z",
       "environment": {
         "id": "uuid",
         "name": "本番環境"
