@@ -104,18 +104,21 @@ describe('Test Suite Search API Integration Tests', () => {
   // ============================================================
   describe('GET /api/projects/:projectId/test-suites', () => {
     beforeEach(async () => {
-      // テストスイートを作成
+      // テストスイートを作成（デフォルトステータスがACTIVEになったため明示的に指定）
       await createTestSuite(project.id, {
         name: 'Login Test Suite',
         description: 'Tests for login functionality',
+        status: 'ACTIVE',
       });
       await createTestSuite(project.id, {
         name: 'Payment Test Suite',
         description: 'Tests for payment processing',
+        status: 'ACTIVE',
       });
       await createTestSuite(project.id, {
         name: 'User Management Suite',
         description: 'Tests for user management',
+        status: 'ACTIVE',
       });
     });
 
@@ -172,58 +175,95 @@ describe('Test Suite Search API Integration Tests', () => {
     });
 
     it('ステータスでフィルタできる', async () => {
-      // 1つのスイートをACTIVEに変更
+      // 1つのスイートをDRAFTに変更
       const suite = await prisma.testSuite.findFirst({
         where: { name: 'Login Test Suite' },
       });
       await prisma.testSuite.update({
         where: { id: suite!.id },
-        data: { status: 'ACTIVE' },
+        data: { status: 'DRAFT' },
       });
 
+      // DRAFTでフィルタ（デフォルトはACTIVE）
       const response = await request(app)
-        .get(`/api/projects/${project.id}/test-suites?status=ACTIVE`)
+        .get(`/api/projects/${project.id}/test-suites?status=DRAFT`)
         .expect(200);
 
       expect(response.body.testSuites).toHaveLength(1);
       expect(response.body.testSuites[0].name).toBe('Login Test Suite');
     });
 
-    it('作成者でフィルタできる', async () => {
-      // 別ユーザーでテストスイートを作成（直接DBに）
-      await prisma.testSuite.create({
+    it('ラベルでフィルタできる', async () => {
+      // ラベルを作成
+      const label = await prisma.label.create({
         data: {
           projectId: project.id,
-          name: 'Admin Suite',
-          createdByUserId: admin.id,
+          name: 'Bug',
+          color: '#FF0000',
+        },
+      });
+
+      // スイートにラベルを付ける
+      const suite = await prisma.testSuite.findFirst({
+        where: { name: 'Login Test Suite' },
+      });
+      await prisma.testSuiteLabel.create({
+        data: {
+          testSuiteId: suite!.id,
+          labelId: label.id,
         },
       });
 
       const response = await request(app)
-        .get(`/api/projects/${project.id}/test-suites?createdBy=${admin.id}`)
+        .get(`/api/projects/${project.id}/test-suites?labelIds=${label.id}`)
         .expect(200);
 
       expect(response.body.testSuites).toHaveLength(1);
-      expect(response.body.testSuites[0].name).toBe('Admin Suite');
+      expect(response.body.testSuites[0].name).toBe('Login Test Suite');
     });
 
-    it('日付範囲でフィルタできる', async () => {
-      // 過去のスイートを作成
-      const oldDate = new Date('2024-01-01T00:00:00Z');
-      await prisma.testSuite.create({
+    it('複数ラベルでOR条件フィルタできる', async () => {
+      // ラベルを作成
+      const label1 = await prisma.label.create({
         data: {
           projectId: project.id,
-          name: 'Old Suite',
-          createdAt: oldDate,
+          name: 'Bug',
+          color: '#FF0000',
+        },
+      });
+      const label2 = await prisma.label.create({
+        data: {
+          projectId: project.id,
+          name: 'Feature',
+          color: '#00FF00',
+        },
+      });
+
+      // スイートにラベルを付ける
+      const suite1 = await prisma.testSuite.findFirst({
+        where: { name: 'Login Test Suite' },
+      });
+      const suite2 = await prisma.testSuite.findFirst({
+        where: { name: 'Payment Test Suite' },
+      });
+      await prisma.testSuiteLabel.create({
+        data: {
+          testSuiteId: suite1!.id,
+          labelId: label1.id,
+        },
+      });
+      await prisma.testSuiteLabel.create({
+        data: {
+          testSuiteId: suite2!.id,
+          labelId: label2.id,
         },
       });
 
       const response = await request(app)
-        .get(`/api/projects/${project.id}/test-suites?from=2024-01-01T00:00:00Z&to=2024-01-02T00:00:00Z`)
+        .get(`/api/projects/${project.id}/test-suites?labelIds=${label1.id},${label2.id}`)
         .expect(200);
 
-      expect(response.body.testSuites).toHaveLength(1);
-      expect(response.body.testSuites[0].name).toBe('Old Suite');
+      expect(response.body.testSuites).toHaveLength(2);
     });
 
     it('limitパラメータで取得件数を制限できる', async () => {
@@ -308,19 +348,13 @@ describe('Test Suite Search API Integration Tests', () => {
     });
 
     it('複数条件を組み合わせて検索できる', async () => {
-      // 1つのスイートをACTIVEに変更
-      const suite = await prisma.testSuite.findFirst({
-        where: { name: 'Login Test Suite' },
-      });
-      await prisma.testSuite.update({
-        where: { id: suite!.id },
-        data: { status: 'ACTIVE' },
-      });
-
+      // 検索クエリ「Login」とステータス「ACTIVE」を組み合わせて検索
+      // beforeEachで作成されたスイートはすべてACTIVE
       const response = await request(app)
-        .get(`/api/projects/${project.id}/test-suites?q=Test&status=ACTIVE`)
+        .get(`/api/projects/${project.id}/test-suites?q=Login&status=ACTIVE`)
         .expect(200);
 
+      // 「Login」を含むのは「Login Test Suite」のみ
       expect(response.body.testSuites).toHaveLength(1);
       expect(response.body.testSuites[0].name).toBe('Login Test Suite');
     });
@@ -342,17 +376,9 @@ describe('Test Suite Search API Integration Tests', () => {
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
     });
 
-    it('無効なUUID（createdBy）は400エラー', async () => {
+    it('無効なUUID（labelIds）は400エラー', async () => {
       const response = await request(app)
-        .get(`/api/projects/${project.id}/test-suites?createdBy=invalid-uuid`)
-        .expect(400);
-
-      expect(response.body.error.code).toBe('VALIDATION_ERROR');
-    });
-
-    it('無効な日付形式は400エラー', async () => {
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/test-suites?from=invalid-date`)
+        .get(`/api/projects/${project.id}/test-suites?labelIds=invalid-uuid`)
         .expect(400);
 
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
@@ -416,7 +442,7 @@ describe('Test Suite Search API Integration Tests', () => {
   // ============================================================
   describe('Permission Matrix', () => {
     beforeEach(async () => {
-      await createTestSuite(project.id, { name: 'Test Suite' });
+      await createTestSuite(project.id, { name: 'Test Suite', status: 'ACTIVE' });
     });
 
     describe('テストスイート検索（READ以上）', () => {
@@ -469,7 +495,7 @@ describe('Test Suite Search API Integration Tests', () => {
     });
 
     it('空のqパラメータは全件取得と同じ', async () => {
-      await createTestSuite(project.id, { name: 'Test Suite' });
+      await createTestSuite(project.id, { name: 'Test Suite', status: 'ACTIVE' });
 
       const response = await request(app)
         .get(`/api/projects/${project.id}/test-suites?q=`)
@@ -479,7 +505,7 @@ describe('Test Suite Search API Integration Tests', () => {
     });
 
     it('特殊文字を含む検索もエスケープされる', async () => {
-      await createTestSuite(project.id, { name: 'Test % Suite' });
+      await createTestSuite(project.id, { name: 'Test % Suite', status: 'ACTIVE' });
 
       const response = await request(app)
         .get(`/api/projects/${project.id}/test-suites?q=%25`)
@@ -489,7 +515,7 @@ describe('Test Suite Search API Integration Tests', () => {
     });
 
     it('削除済みプロジェクトからは検索できない', async () => {
-      await createTestSuite(project.id, { name: 'Test Suite' });
+      await createTestSuite(project.id, { name: 'Test Suite', status: 'ACTIVE' });
 
       // プロジェクトを削除
       await prisma.project.update({

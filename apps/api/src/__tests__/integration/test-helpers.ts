@@ -334,6 +334,7 @@ export async function createTestSuite(
     id: string;
     name: string;
     description: string | null;
+    status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
   }> = {}
 ) {
   const id = overrides.id ?? randomUUID();
@@ -343,6 +344,7 @@ export async function createTestSuite(
       projectId,
       name: overrides.name ?? `Test Suite ${id.slice(0, 8)}`,
       description: overrides.description ?? null,
+      status: overrides.status ?? 'DRAFT',
     },
   });
 }

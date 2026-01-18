@@ -12,8 +12,8 @@ import {
   Loader2,
   BarChart3,
 } from 'lucide-react';
-import { projectsApi, testSuitesApi, usersApi, type Project, type TestSuite, type TestSuiteSearchParams, type ProjectMemberRole } from '../lib/api';
-import { TestSuiteSearchFilter, type FilterMember } from '../components/test-suite/TestSuiteSearchFilter';
+import { projectsApi, testSuitesApi, usersApi, labelsApi, type Project, type TestSuite, type TestSuiteSearchParams, type ProjectMemberRole, type Label } from '../lib/api';
+import { TestSuiteSearchFilter } from '../components/test-suite/TestSuiteSearchFilter';
 import { useAuth } from '../hooks/useAuth';
 import { ProjectOverviewTab } from '../components/project/ProjectOverviewTab';
 import { ProjectSettingsTab, type SettingsSection } from '../components/project/ProjectSettingsTab';
@@ -31,7 +31,8 @@ type ProjectTab = 'overview' | 'suites' | 'settings';
 const DEFAULT_SEARCH_PARAMS: TestSuiteSearchParams = {
   limit: 20,
   offset: 0,
-  sortBy: 'createdAt',
+  status: 'ACTIVE',
+  sortBy: 'updatedAt',
   sortOrder: 'desc',
 };
 
@@ -100,9 +101,17 @@ export function ProjectDetailPage() {
     enabled: !!projectId,
   });
 
+  // プロジェクトのラベル一覧を取得
+  const { data: labelsData } = useQuery({
+    queryKey: ['project-labels', projectId],
+    queryFn: () => labelsApi.getByProject(projectId!),
+    enabled: !!projectId,
+  });
+
   const project = projectData?.project;
   const testSuites = suitesData?.testSuites || [];
   const totalCount = suitesData?.total;
+  const labels = labelsData?.labels || [];
 
   // 現在のユーザーのロールを判定（OWNERもProjectMemberから取得）
   const currentRole: 'OWNER' | ProjectMemberRole | undefined = useMemo(() => {
@@ -120,16 +129,6 @@ export function ProjectDetailPage() {
       handleTabChange('overview');
     }
   }, [currentTab, currentRole, isAdmin, handleTabChange]);
-
-  // フィルタ用のメンバーリストを作成
-  const filterMembers: FilterMember[] = useMemo(() => {
-    if (!membersData?.members) return [];
-    return membersData.members.map((m) => ({
-      id: m.userId,
-      name: m.user.name,
-      email: m.user.email,
-    }));
-  }, [membersData]);
 
   // フィルタ変更ハンドラ
   const handleFiltersChange = useCallback((newFilters: TestSuiteSearchParams) => {
@@ -249,7 +248,7 @@ export function ProjectDetailPage() {
           onFiltersChange={handleFiltersChange}
           totalCount={totalCount}
           isAdmin={isAdmin}
-          filterMembers={filterMembers}
+          labels={labels}
           currentPage={currentPage}
           totalPages={totalPages}
           offset={offset}
@@ -291,7 +290,7 @@ interface TestSuiteListContentProps {
   onFiltersChange: (filters: TestSuiteSearchParams) => void;
   totalCount: number | undefined;
   isAdmin: boolean;
-  filterMembers: FilterMember[];
+  labels: Label[];
   currentPage: number;
   totalPages: number;
   offset: number;
@@ -307,7 +306,7 @@ function TestSuiteListContent({
   onFiltersChange,
   totalCount,
   isAdmin,
-  filterMembers,
+  labels,
   currentPage,
   totalPages,
   offset,
@@ -324,7 +323,8 @@ function TestSuiteListContent({
           onFiltersChange={onFiltersChange}
           totalCount={totalCount}
           isAdmin={isAdmin}
-          members={filterMembers}
+          labels={labels}
+          defaultFilters={DEFAULT_SEARCH_PARAMS}
         />
       </div>
 
@@ -336,11 +336,11 @@ function TestSuiteListContent({
         <div className="p-8 text-center">
           <FileText className="w-12 h-12 text-foreground-subtle mx-auto mb-3" />
           <p className="text-foreground-muted mb-4">
-            {suiteSearchParams.q || suiteSearchParams.status || suiteSearchParams.includeDeleted
+            {suiteSearchParams.q || suiteSearchParams.labelIds?.length || suiteSearchParams.includeDeleted || suiteSearchParams.status !== 'ACTIVE'
               ? '条件に一致するテストスイートがありません'
               : 'テストスイートがありません'}
           </p>
-          {!(suiteSearchParams.q || suiteSearchParams.status) && (
+          {!(suiteSearchParams.q || suiteSearchParams.labelIds?.length || suiteSearchParams.status !== 'ACTIVE') && (
             <button
               onClick={onCreateClick}
               className="btn btn-primary"
