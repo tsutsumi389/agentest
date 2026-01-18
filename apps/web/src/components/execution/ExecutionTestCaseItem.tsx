@@ -103,7 +103,7 @@ export function ExecutionTestCaseItem({
   const passCount = expectedResults.filter((r) => r.status === 'PASS').length;
   const failCount = expectedResults.filter((r) => r.status === 'FAIL').length;
   const pendingCount = expectedResults.filter(
-    (r) => r.status === 'PENDING' || r.status === 'SKIPPED' || r.status === 'NOT_EXECUTABLE'
+    (r) => r.status === 'PENDING' || r.status === 'SKIPPED'
   ).length;
   const totalCount = expectedResults.length;
 

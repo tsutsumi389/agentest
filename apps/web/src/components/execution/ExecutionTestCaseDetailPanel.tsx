@@ -108,8 +108,8 @@ export function ExecutionTestCaseDetailPanel({
       (acc, r) => {
         if (r.status === 'PASS') acc.pass++;
         else if (r.status === 'FAIL') acc.fail++;
-        // PENDING, SKIPPED, NOT_EXECUTABLE を未完了としてカウント
-        else if (r.status === 'PENDING' || r.status === 'SKIPPED' || r.status === 'NOT_EXECUTABLE') {
+        // PENDING, SKIPPED を未完了としてカウント
+        else if (r.status === 'PENDING' || r.status === 'SKIPPED') {
           acc.pending++;
         }
         return acc;

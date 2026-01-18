@@ -42,7 +42,7 @@ function calculateProgress(
   const passCount = results.filter((r) => r.status === 'PASS').length;
   const failCount = results.filter((r) => r.status === 'FAIL').length;
   const pendingCount = results.filter(
-    (r) => r.status === 'PENDING' || r.status === 'SKIPPED' || r.status === 'NOT_EXECUTABLE'
+    (r) => r.status === 'PENDING' || r.status === 'SKIPPED'
   ).length;
   const total = results.length;
 

@@ -460,16 +460,14 @@ const judgmentDisplayConfig = {
   FAIL: { label: '失敗', className: 'text-danger' },
   PENDING: { label: '未実施', className: 'text-foreground-muted' },
   SKIPPED: { label: 'スキップ', className: 'text-warning' },
-  NOT_EXECUTABLE: { label: '実施不可', className: 'text-foreground-subtle' },
 } as const;
 
-// 表示順（成功 → 失敗 → 未実施 → スキップ → 実施不可）
+// 表示順（成功 → 失敗 → 未実施 → スキップ）
 const judgmentDisplayOrder: Array<keyof typeof judgmentDisplayConfig> = [
   'PASS',
   'FAIL',
   'PENDING',
   'SKIPPED',
-  'NOT_EXECUTABLE',
 ];
 
 /**
