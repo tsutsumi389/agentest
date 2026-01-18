@@ -98,8 +98,7 @@ export interface JudgmentCounts {
  */
 export interface TestSuiteSearchExecution {
   id: string;
-  startedAt: Date;
-  completedAt: Date | null;
+  createdAt: Date;
   environment: { id: string; name: string } | null;
   expectedResults: Array<{ status: string }>;
 }
@@ -322,12 +321,11 @@ export class TestSuiteRepository {
           },
           // 最終実行情報（最新1件）
           executions: {
-            orderBy: { startedAt: 'desc' },
+            orderBy: { createdAt: 'desc' },
             take: 1,
             select: {
               id: true,
-              startedAt: true,
-              completedAt: true,
+              createdAt: true,
               environment: { select: { id: true, name: true } },
               expectedResults: { select: { status: true } },
             },

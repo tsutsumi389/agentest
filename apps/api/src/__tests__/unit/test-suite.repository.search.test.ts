@@ -101,12 +101,11 @@ describe('TestSuiteRepository - search', () => {
             orderBy: { label: { name: 'asc' } },
           },
           executions: {
-            orderBy: { startedAt: 'desc' },
+            orderBy: { createdAt: 'desc' },
             take: 1,
             select: {
               id: true,
-              startedAt: true,
-              completedAt: true,
+              createdAt: true,
               environment: { select: { id: true, name: true } },
               expectedResults: { select: { status: true } },
             },
@@ -601,12 +600,11 @@ describe('TestSuiteRepository - search', () => {
             orderBy: { label: { name: 'asc' } },
           },
           executions: {
-            orderBy: { startedAt: 'desc' },
+            orderBy: { createdAt: 'desc' },
             take: 1,
             select: {
               id: true,
-              startedAt: true,
-              completedAt: true,
+              createdAt: true,
               environment: { select: { id: true, name: true } },
               expectedResults: { select: { status: true } },
             },

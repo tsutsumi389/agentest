@@ -69,8 +69,8 @@ describe('Internal API Update Endpoints Integration Tests', () => {
     const testStep = await createTestCaseStep(testCase.id, { content: 'Step 1' });
     const testExpectedResult = await createTestCaseExpectedResult(testCase.id, { content: 'Expected result 1' });
 
-    // 実行を作成（IN_PROGRESS状態）
-    execution = await createTestExecution(testEnvironment.id, testSuite.id, { status: 'IN_PROGRESS' });
+    // 実行を作成
+    execution = await createTestExecution(testEnvironment.id, testSuite.id);
 
     // 実行時スナップショットを作成
     executionTestSuite = await createTestExecutionTestSuite(
@@ -424,26 +424,6 @@ describe('Internal API Update Endpoints Integration Tests', () => {
       });
     });
 
-    describe('異常系', () => {
-      it('完了済み実行は403を返す', async () => {
-        // 実行を完了状態にする
-        await prisma.execution.update({
-          where: { id: execution.id },
-          data: { status: 'COMPLETED', completedAt: new Date() },
-        });
-
-        const response = await request(app)
-          .patch(`/internal/api/executions/${execution.id}/precondition-results/${suitePreconditionResult.id}`)
-          .query({ userId: testUser.id })
-          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
-          .send({
-            status: 'MET',
-          });
-
-        expect(response.status).toBe(403);
-        expect(response.body.message).toContain('not in progress');
-      });
-    });
   });
 
   describe('PATCH /internal/api/executions/:executionId/step-results/:stepResultId', () => {
@@ -554,25 +534,6 @@ describe('Internal API Update Endpoints Integration Tests', () => {
           });
 
         expect(response.status).toBe(403);
-      });
-
-      it('中止済み実行は403を返す', async () => {
-        // 実行を中止状態にする
-        await prisma.execution.update({
-          where: { id: execution.id },
-          data: { status: 'ABORTED', completedAt: new Date() },
-        });
-
-        const response = await request(app)
-          .patch(`/internal/api/executions/${execution.id}/expected-results/${expectedResultResult.id}`)
-          .query({ userId: testUser.id })
-          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
-          .send({
-            status: 'PASS',
-          });
-
-        expect(response.status).toBe(403);
-        expect(response.body.message).toContain('not in progress');
       });
     });
   });

@@ -378,24 +378,11 @@ describe('Project Environments API Integration Tests', () => {
       expect(updatedStagingEnv?.isDefault).toBe(true);
     });
 
-    it('実行中のテストがある環境は削除できない', async () => {
+    it('テストがある環境も削除できる', async () => {
       // テストスイートを作成
       const testSuite = await createTestSuite(project.id);
-      // 実行中のテストを作成
-      await createTestExecution(devEnv.id, testSuite.id, { status: 'IN_PROGRESS' });
-
-      const response = await request(app)
-        .delete(`/api/projects/${project.id}/environments/${devEnv.id}`)
-        .expect(409);
-
-      expect(response.body.error.code).toBe('CONFLICT');
-    });
-
-    it('完了したテストがある環境は削除できる', async () => {
-      // テストスイートを作成
-      const testSuite = await createTestSuite(project.id);
-      // 完了したテストを作成
-      await createTestExecution(stagingEnv.id, testSuite.id, { status: 'COMPLETED' });
+      // テストを作成
+      await createTestExecution(stagingEnv.id, testSuite.id);
 
       await request(app)
         .delete(`/api/projects/${project.id}/environments/${stagingEnv.id}`)

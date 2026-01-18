@@ -41,18 +41,15 @@ function formatRelativeTime(dateString: string | null): string {
 }
 
 /**
- * 実行ステータスをStatusBadge用にマップ
- * COMPLETEDでもテスト失敗がある場合はfailedとして表示
+ * 実行サマリーからStatusBadge用ステータスを決定
+ * テスト失敗がある場合はfailed、全てパスならpassed、まだ結果があるならrunning
  */
 function mapExecutionStatus(
-  status: string,
-  summary: { passed: number; failed: number }
+  summary: { passed: number; failed: number; pending: number; total: number }
 ): 'passed' | 'failed' | 'running' | 'pending' {
-  if (status === 'IN_PROGRESS') return 'running';
-  if (status === 'ABORTED') return 'failed';
-  if (status === 'COMPLETED') {
-    return summary.failed > 0 ? 'failed' : 'passed';
-  }
+  if (summary.failed > 0) return 'failed';
+  if (summary.pending > 0) return 'running';
+  if (summary.passed > 0 && summary.total === summary.passed) return 'passed';
   return 'pending';
 }
 
@@ -235,13 +232,13 @@ export function DashboardPage() {
                 className="flex items-center justify-between p-4 hover:bg-background-tertiary transition-colors"
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
-                  <StatusBadge status={mapExecutionStatus(exec.status, exec.summary)} showLabel={false} />
+                  <StatusBadge status={mapExecutionStatus(exec.summary)} showLabel={false} />
                   <div className="min-w-0 flex-1">
                     <p className="font-medium text-foreground truncate">
                       {exec.testSuiteName}
                     </p>
                     <p className="text-sm text-foreground-muted">
-                      {exec.projectName} • {formatRelativeTime(exec.startedAt)}
+                      {exec.projectName} • {formatRelativeTime(exec.createdAt)}
                     </p>
                   </div>
                 </div>

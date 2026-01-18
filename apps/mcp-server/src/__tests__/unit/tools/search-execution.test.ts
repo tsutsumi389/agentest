@@ -6,9 +6,6 @@ interface SearchExecutionResponse {
   executions: Array<{
     id: string;
     testSuiteId: string;
-    status: string;
-    startedAt: string;
-    completedAt: string | null;
     executedByUser: {
       id: string;
       name: string;
@@ -66,9 +63,6 @@ function createMockExecution(overrides: Record<string, unknown> = {}) {
   return {
     id: TEST_EXECUTION_ID,
     testSuiteId: TEST_SUITE_ID,
-    status: 'COMPLETED',
-    startedAt: '2024-01-01T10:00:00.000Z',
-    completedAt: '2024-01-01T11:00:00.000Z',
     executedByUser: {
       id: TEST_USER_ID,
       name: 'Test User',
@@ -110,22 +104,13 @@ describe('searchExecutionTool', () => {
       const result = searchExecutionInputSchema.parse({ testSuiteId: TEST_SUITE_ID });
       expect(result).toEqual({
         testSuiteId: TEST_SUITE_ID,
-        status: undefined,
         from: undefined,
         to: undefined,
         limit: 20,
         offset: 0,
-        sortBy: 'startedAt',
+        sortBy: 'createdAt',
         sortOrder: 'desc',
       });
-    });
-
-    it('ステータス配列を受け付ける', () => {
-      const result = searchExecutionInputSchema.parse({
-        testSuiteId: TEST_SUITE_ID,
-        status: ['IN_PROGRESS', 'COMPLETED'],
-      });
-      expect(result.status).toEqual(['IN_PROGRESS', 'COMPLETED']);
     });
 
     it('日時フィルタを受け付ける', () => {
@@ -141,10 +126,10 @@ describe('searchExecutionTool', () => {
     it('ソート設定を受け付ける', () => {
       const result = searchExecutionInputSchema.parse({
         testSuiteId: TEST_SUITE_ID,
-        sortBy: 'completedAt',
+        sortBy: 'createdAt',
         sortOrder: 'asc',
       });
-      expect(result.sortBy).toBe('completedAt');
+      expect(result.sortBy).toBe('createdAt');
       expect(result.sortOrder).toBe('asc');
     });
 
@@ -158,10 +143,6 @@ describe('searchExecutionTool', () => {
 
     it('offsetが負の値だとエラー', () => {
       expect(() => searchExecutionInputSchema.parse({ testSuiteId: TEST_SUITE_ID, offset: -1 })).toThrow();
-    });
-
-    it('不正なステータスはエラー', () => {
-      expect(() => searchExecutionInputSchema.parse({ testSuiteId: TEST_SUITE_ID, status: ['INVALID'] })).toThrow();
     });
 
     it('不正な日時形式はエラー', () => {
@@ -180,7 +161,7 @@ describe('searchExecutionTool', () => {
   describe('ハンドラー', () => {
     it('認証されていない場合はエラーをスローする', async () => {
       const context: ToolContext = { userId: '' };
-      const input = { testSuiteId: TEST_SUITE_ID, limit: 20, offset: 0, sortBy: 'startedAt' as const, sortOrder: 'desc' as const };
+      const input = { testSuiteId: TEST_SUITE_ID, limit: 20, offset: 0, sortBy: 'createdAt' as const, sortOrder: 'desc' as const };
 
       await expect(searchExecutionTool.handler(input, context)).rejects.toThrow(
         '認証されていません'
@@ -194,7 +175,7 @@ describe('searchExecutionTool', () => {
       mockApiClient.get.mockResolvedValueOnce(mockResponse);
 
       const context: ToolContext = { userId: TEST_USER_ID };
-      const input = { testSuiteId: TEST_SUITE_ID, limit: 20, offset: 0, sortBy: 'startedAt' as const, sortOrder: 'desc' as const };
+      const input = { testSuiteId: TEST_SUITE_ID, limit: 20, offset: 0, sortBy: 'createdAt' as const, sortOrder: 'desc' as const };
 
       const result = await searchExecutionTool.handler(input, context);
 
@@ -202,30 +183,28 @@ describe('searchExecutionTool', () => {
         `/internal/api/test-suites/${TEST_SUITE_ID}/executions`,
         {
           userId: TEST_USER_ID,
-          status: undefined,
           from: undefined,
           to: undefined,
           limit: 20,
           offset: 0,
-          sortBy: 'startedAt',
+          sortBy: 'createdAt',
           sortOrder: 'desc',
         }
       );
       expect(result).toEqual(mockResponse);
     });
 
-    it('ステータスと日時フィルタを渡す', async () => {
+    it('日時フィルタを渡す', async () => {
       mockApiClient.get.mockResolvedValueOnce(createMockResponse([]));
 
       const context: ToolContext = { userId: TEST_USER_ID };
       const input = {
         testSuiteId: TEST_SUITE_ID,
-        status: ['IN_PROGRESS', 'COMPLETED'] as ('IN_PROGRESS' | 'COMPLETED' | 'ABORTED')[],
         from: '2024-01-01T00:00:00.000Z',
         to: '2024-01-31T23:59:59.999Z',
         limit: 10,
         offset: 5,
-        sortBy: 'completedAt' as const,
+        sortBy: 'createdAt' as const,
         sortOrder: 'asc' as const,
       };
 
@@ -235,12 +214,11 @@ describe('searchExecutionTool', () => {
         `/internal/api/test-suites/${TEST_SUITE_ID}/executions`,
         {
           userId: TEST_USER_ID,
-          status: ['IN_PROGRESS', 'COMPLETED'],
           from: '2024-01-01T00:00:00.000Z',
           to: '2024-01-31T23:59:59.999Z',
           limit: 10,
           offset: 5,
-          sortBy: 'completedAt',
+          sortBy: 'createdAt',
           sortOrder: 'asc',
         }
       );
@@ -252,7 +230,7 @@ describe('searchExecutionTool', () => {
       );
 
       const context: ToolContext = { userId: TEST_USER_ID };
-      const input = { testSuiteId: TEST_SUITE_ID, limit: 20, offset: 0, sortBy: 'startedAt' as const, sortOrder: 'desc' as const };
+      const input = { testSuiteId: TEST_SUITE_ID, limit: 20, offset: 0, sortBy: 'createdAt' as const, sortOrder: 'desc' as const };
 
       await expect(searchExecutionTool.handler(input, context)).rejects.toThrow(
         'Internal API error: 403 - Access denied'
@@ -261,15 +239,15 @@ describe('searchExecutionTool', () => {
 
     it('複数の実行履歴を返す', async () => {
       const executions = [
-        createMockExecution({ id: 'exec-1', status: 'COMPLETED' }),
-        createMockExecution({ id: 'exec-2', status: 'IN_PROGRESS' }),
-        createMockExecution({ id: 'exec-3', status: 'ABORTED' }),
+        createMockExecution({ id: 'exec-1' }),
+        createMockExecution({ id: 'exec-2' }),
+        createMockExecution({ id: 'exec-3' }),
       ];
       const mockResponse = createMockResponse(executions);
       mockApiClient.get.mockResolvedValueOnce(mockResponse);
 
       const context: ToolContext = { userId: TEST_USER_ID };
-      const input = { testSuiteId: TEST_SUITE_ID, limit: 20, offset: 0, sortBy: 'startedAt' as const, sortOrder: 'desc' as const };
+      const input = { testSuiteId: TEST_SUITE_ID, limit: 20, offset: 0, sortBy: 'createdAt' as const, sortOrder: 'desc' as const };
 
       const result = (await searchExecutionTool.handler(input, context)) as SearchExecutionResponse;
 
@@ -285,7 +263,7 @@ describe('searchExecutionTool', () => {
       mockApiClient.get.mockResolvedValueOnce(mockResponse);
 
       const context: ToolContext = { userId: TEST_USER_ID };
-      const input = { testSuiteId: TEST_SUITE_ID, limit: 20, offset: 0, sortBy: 'startedAt' as const, sortOrder: 'desc' as const };
+      const input = { testSuiteId: TEST_SUITE_ID, limit: 20, offset: 0, sortBy: 'createdAt' as const, sortOrder: 'desc' as const };
 
       const result = (await searchExecutionTool.handler(input, context)) as SearchExecutionResponse;
 
@@ -300,28 +278,11 @@ describe('searchExecutionTool', () => {
       mockApiClient.get.mockResolvedValueOnce(mockResponse);
 
       const context: ToolContext = { userId: TEST_USER_ID };
-      const input = { testSuiteId: TEST_SUITE_ID, limit: 20, offset: 0, sortBy: 'startedAt' as const, sortOrder: 'desc' as const };
+      const input = { testSuiteId: TEST_SUITE_ID, limit: 20, offset: 0, sortBy: 'createdAt' as const, sortOrder: 'desc' as const };
 
       const result = (await searchExecutionTool.handler(input, context)) as SearchExecutionResponse;
 
       expect(result.executions[0].environment).toBeNull();
-    });
-
-    it('進行中の実行履歴（completedAtがnull）を返す', async () => {
-      const inProgressExecution = createMockExecution({
-        status: 'IN_PROGRESS',
-        completedAt: null,
-      });
-      const mockResponse = createMockResponse([inProgressExecution]);
-      mockApiClient.get.mockResolvedValueOnce(mockResponse);
-
-      const context: ToolContext = { userId: TEST_USER_ID };
-      const input = { testSuiteId: TEST_SUITE_ID, status: ['IN_PROGRESS'] as ('IN_PROGRESS' | 'COMPLETED' | 'ABORTED')[], limit: 20, offset: 0, sortBy: 'startedAt' as const, sortOrder: 'desc' as const };
-
-      const result = (await searchExecutionTool.handler(input, context)) as SearchExecutionResponse;
-
-      expect(result.executions[0].status).toBe('IN_PROGRESS');
-      expect(result.executions[0].completedAt).toBeNull();
     });
 
     it('日時範囲フィルタのみを指定する', async () => {
@@ -333,7 +294,7 @@ describe('searchExecutionTool', () => {
         from: '2024-01-01T00:00:00.000Z',
         limit: 20,
         offset: 0,
-        sortBy: 'startedAt' as const,
+        sortBy: 'createdAt' as const,
         sortOrder: 'desc' as const,
       };
 

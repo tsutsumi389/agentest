@@ -5,24 +5,13 @@ import { AuthenticationError, AuthorizationError, NotFoundError, BadRequestError
 
 const executionIdSchema = z.string().uuid();
 
-export interface RequireExecutionRoleOptions {
-  /**
-   * 完了済み実行への操作を許可するか（デフォルト: true）
-   * falseの場合、完了済み・中止済みの実行では権限チェックを通過しない
-   */
-  allowCompletedExecution?: boolean;
-}
-
 /**
  * 実行権限チェックミドルウェア
  * 実行IDからテストスイート、親プロジェクトを取得し、プロジェクト権限をチェック
  *
  * @param roles - 必要なプロジェクトロールの配列
- * @param options - オプション設定
  */
-export function requireExecutionRole(roles: ProjectRole[], options: RequireExecutionRoleOptions = {}) {
-  const { allowCompletedExecution = true } = options;
-
+export function requireExecutionRole(roles: ProjectRole[]) {
   return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     try {
       if (!req.user) {
@@ -62,11 +51,6 @@ export function requireExecutionRole(roles: ProjectRole[], options: RequireExecu
 
       if (!execution) {
         throw new NotFoundError('Execution', executionId);
-      }
-
-      // 完了済み実行のチェック
-      if (!allowCompletedExecution && execution.status !== 'IN_PROGRESS') {
-        throw new AuthorizationError('Execution is not in progress');
       }
 
       const testSuite = execution.testSuite;

@@ -135,9 +135,7 @@ describe('Execution Evidence API Integration Tests', () => {
     });
 
     // 実行を作成
-    execution = await createTestExecution(environment.id, testSuite.id, {
-      status: 'IN_PROGRESS',
-    });
+    execution = await createTestExecution(environment.id, testSuite.id);
 
     // 正規化テーブルを作成
     const execTestSuite = await createTestExecutionTestSuite(execution.id, testSuite.id, {
@@ -212,22 +210,6 @@ describe('Execution Evidence API Integration Tests', () => {
       expect(response.status).toBe(403);
     });
 
-    it('完了済みの実行には409エラー', async () => {
-      // 実行を完了状態に更新
-      await prisma.execution.update({
-        where: { id: execution.id },
-        data: { status: 'COMPLETED', completedAt: new Date() },
-      });
-
-      setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
-
-      const response = await request(app)
-        .post(`/api/executions/${execution.id}/expected-results/${expectedResult.id}/evidences`)
-        .attach('file', Buffer.from('test'), { filename: 'test.png', contentType: 'image/png' });
-
-      expect(response.status).toBe(409);
-      expect(response.body.error.message).toBe('完了済みの実行にはエビデンスをアップロードできません');
-    });
 
     it('存在しない期待結果には404エラー', async () => {
       setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
@@ -310,19 +292,6 @@ describe('Execution Evidence API Integration Tests', () => {
       expect(response.status).toBe(403);
     });
 
-    it('完了済みの実行のエビデンスは削除できない', async () => {
-      await prisma.execution.update({
-        where: { id: execution.id },
-        data: { status: 'COMPLETED', completedAt: new Date() },
-      });
-
-      setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
-
-      const response = await request(app).delete(`/api/executions/${execution.id}/evidences/${evidence.id}`);
-
-      expect(response.status).toBe(409);
-      expect(response.body.error.message).toBe('完了済みの実行のエビデンスは削除できません');
-    });
 
     it('存在しないエビデンスは404エラー', async () => {
       setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
@@ -386,18 +355,5 @@ describe('Execution Evidence API Integration Tests', () => {
       expect(response.status).toBe(404);
     });
 
-    it('完了済みの実行でもダウンロードできる', async () => {
-      await prisma.execution.update({
-        where: { id: execution.id },
-        data: { status: 'COMPLETED', completedAt: new Date() },
-      });
-
-      setTestAuth({ id: reader.id, email: reader.email }, 'READ');
-
-      const response = await request(app).get(`/api/executions/${execution.id}/evidences/${evidence.id}/download-url`);
-
-      expect(response.status).toBe(200);
-      expect(response.body.downloadUrl).toBeDefined();
-    });
   });
 });

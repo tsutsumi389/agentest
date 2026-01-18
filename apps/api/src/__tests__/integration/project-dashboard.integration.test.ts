@@ -235,8 +235,6 @@ describe('Project Dashboard API Integration Tests', () => {
         data: {
           testSuiteId: testSuite.id,
           environmentId: env.id,
-          status: 'COMPLETED',
-          completedAt: new Date(),
         },
       });
 
@@ -286,8 +284,6 @@ describe('Project Dashboard API Integration Tests', () => {
           data: {
             testSuiteId: testSuite.id,
             environmentId: env.id,
-            status: 'COMPLETED',
-            completedAt: new Date(Date.now() - i * 86400000),
           },
         });
         const execTestSuite = await createTestExecutionTestSuite(execution.id, testSuite.id);
@@ -342,8 +338,6 @@ describe('Project Dashboard API Integration Tests', () => {
           data: {
             testSuiteId: testSuite.id,
             environmentId: env.id,
-            status: 'COMPLETED',
-            completedAt: new Date(Date.now() - i * 86400000),
           },
         });
         const execTestSuite = await createTestExecutionTestSuite(execution.id, testSuite.id);
@@ -424,8 +418,7 @@ describe('Project Dashboard API Integration Tests', () => {
         data: {
           testSuiteId: testSuite.id,
           environmentId: env.id,
-          status: 'COMPLETED',
-          completedAt: thirtyOneDaysAgo,
+          createdAt: thirtyOneDaysAgo,
         },
       });
 
@@ -470,8 +463,7 @@ describe('Project Dashboard API Integration Tests', () => {
         data: {
           testSuiteId: testSuite.id,
           environmentId: env.id,
-          status: 'COMPLETED',
-          completedAt: thirtyDaysAgo,
+          createdAt: thirtyDaysAgo,
         },
       });
 

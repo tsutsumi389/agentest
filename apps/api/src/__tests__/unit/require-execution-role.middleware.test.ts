@@ -43,7 +43,6 @@ function createMockResponse(): Partial<Response> {
 function createMockExecution(overrides: Record<string, unknown> = {}) {
   return {
     id: TEST_EXECUTION_ID,
-    status: 'IN_PROGRESS',
     testSuite: {
       id: TEST_SUITE_ID,
       deletedAt: null,
@@ -117,66 +116,6 @@ describe('requireExecutionRole', () => {
       await middleware(req as Request, res as Response, mockNext);
 
       expect(mockNext).toHaveBeenCalledWith(expect.any(NotFoundError));
-    });
-  });
-
-  describe('実行ステータスチェック', () => {
-    it('完了済み実行はデフォルトで通過する（allowCompletedExecution: true）', async () => {
-      mockPrisma.execution.findUnique.mockResolvedValue(
-        createMockExecution({ status: 'COMPLETED' })
-      );
-
-      const req = createMockRequest();
-      const res = createMockResponse();
-
-      const middleware = requireExecutionRole(['READ']);
-      await middleware(req as Request, res as Response, mockNext);
-
-      expect(mockNext).toHaveBeenCalledWith(); // エラーなし
-    });
-
-    it('完了済み実行でallowCompletedExecution: falseならAuthorizationErrorを投げる', async () => {
-      mockPrisma.execution.findUnique.mockResolvedValue(
-        createMockExecution({ status: 'COMPLETED' })
-      );
-
-      const req = createMockRequest();
-      const res = createMockResponse();
-
-      const middleware = requireExecutionRole(['READ'], { allowCompletedExecution: false });
-      await middleware(req as Request, res as Response, mockNext);
-
-      expect(mockNext).toHaveBeenCalledWith(expect.any(AuthorizationError));
-      const error = (mockNext as ReturnType<typeof vi.fn>).mock.calls[0][0];
-      expect(error.message).toBe('Execution is not in progress');
-    });
-
-    it('中止済み実行でallowCompletedExecution: falseならAuthorizationErrorを投げる', async () => {
-      mockPrisma.execution.findUnique.mockResolvedValue(
-        createMockExecution({ status: 'ABORTED' })
-      );
-
-      const req = createMockRequest();
-      const res = createMockResponse();
-
-      const middleware = requireExecutionRole(['READ'], { allowCompletedExecution: false });
-      await middleware(req as Request, res as Response, mockNext);
-
-      expect(mockNext).toHaveBeenCalledWith(expect.any(AuthorizationError));
-    });
-
-    it('進行中の実行はallowCompletedExecution: falseでも通過する', async () => {
-      mockPrisma.execution.findUnique.mockResolvedValue(
-        createMockExecution({ status: 'IN_PROGRESS' })
-      );
-
-      const req = createMockRequest();
-      const res = createMockResponse();
-
-      const middleware = requireExecutionRole(['READ'], { allowCompletedExecution: false });
-      await middleware(req as Request, res as Response, mockNext);
-
-      expect(mockNext).toHaveBeenCalledWith(); // エラーなし
     });
   });
 

@@ -63,12 +63,11 @@ const getTestCasesQuerySchema = z.object({
  */
 const getExecutionsQuerySchema = z.object({
   userId: z.string().uuid(),
-  status: z.array(z.enum(['IN_PROGRESS', 'COMPLETED', 'ABORTED'])).optional(),
   from: z.string().datetime().optional(),
   to: z.string().datetime().optional(),
   limit: z.coerce.number().int().min(1).max(50).default(20),
   offset: z.coerce.number().int().min(0).default(0),
-  sortBy: z.enum(['startedAt', 'completedAt', 'status']).default('startedAt'),
+  sortBy: z.enum(['createdAt']).default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
@@ -236,7 +235,6 @@ router.get('/test-suites/:testSuiteId/executions', async (req: Request, res: Res
 
     // 実行履歴検索
     const result = await testSuiteService.getExecutions(testSuiteId, {
-      status: query.status,
       from: query.from,
       to: query.to,
       limit: query.limit,

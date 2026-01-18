@@ -7,8 +7,6 @@ import { BadRequestError, NotFoundError } from '@agentest/shared';
 const mockExecutionService = {
   findById: vi.fn(),
   findByIdWithDetails: vi.fn(),
-  abort: vi.fn(),
-  complete: vi.fn(),
   updatePreconditionResult: vi.fn(),
   updateStepResult: vi.fn(),
   updateExpectedResult: vi.fn(),
@@ -66,7 +64,7 @@ describe('ExecutionController', () => {
 
   describe('getById', () => {
     it('実行詳細（軽量版）を取得できる', async () => {
-      const mockExecution = { id: TEST_EXECUTION_ID, status: 'IN_PROGRESS' };
+      const mockExecution = { id: TEST_EXECUTION_ID };
       mockExecutionService.findById.mockResolvedValue(mockExecution);
 
       const req = mockRequest() as Request;
@@ -95,7 +93,6 @@ describe('ExecutionController', () => {
     it('実行詳細（全データ）を取得できる', async () => {
       const mockExecution = {
         id: TEST_EXECUTION_ID,
-        status: 'IN_PROGRESS',
         executionTestSuite: {},
         preconditionResults: [],
         stepResults: [],
@@ -109,36 +106,6 @@ describe('ExecutionController', () => {
       await controller.getByIdWithDetails(req, res, mockNext);
 
       expect(mockExecutionService.findByIdWithDetails).toHaveBeenCalledWith(TEST_EXECUTION_ID);
-      expect(res.json).toHaveBeenCalledWith({ execution: mockExecution });
-    });
-  });
-
-  describe('abort', () => {
-    it('実行を中止できる', async () => {
-      const mockExecution = { id: TEST_EXECUTION_ID, status: 'ABORTED' };
-      mockExecutionService.abort.mockResolvedValue(mockExecution);
-
-      const req = mockRequest() as Request;
-      const res = mockResponse() as Response;
-
-      await controller.abort(req, res, mockNext);
-
-      expect(mockExecutionService.abort).toHaveBeenCalledWith(TEST_EXECUTION_ID);
-      expect(res.json).toHaveBeenCalledWith({ execution: mockExecution });
-    });
-  });
-
-  describe('complete', () => {
-    it('実行を完了できる', async () => {
-      const mockExecution = { id: TEST_EXECUTION_ID, status: 'COMPLETED' };
-      mockExecutionService.complete.mockResolvedValue(mockExecution);
-
-      const req = mockRequest() as Request;
-      const res = mockResponse() as Response;
-
-      await controller.complete(req, res, mockNext);
-
-      expect(mockExecutionService.complete).toHaveBeenCalledWith(TEST_EXECUTION_ID);
       expect(res.json).toHaveBeenCalledWith({ execution: mockExecution });
     });
   });

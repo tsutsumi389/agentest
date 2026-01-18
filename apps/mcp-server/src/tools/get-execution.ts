@@ -160,9 +160,6 @@ interface GetExecutionResponse {
       name: string;
       projectId: string;
     };
-    status: string;
-    startedAt: string;
-    completedAt: string | null;
     executedByUser: {
       id: string;
       name: string | null;
@@ -207,9 +204,9 @@ export const getExecutionTool: ToolDefinition<GetExecutionInput> = {
   name: 'get_execution',
   description: `テスト実行の詳細情報を取得します。
 
-返却情報: 実行ID・ステータス・開始/完了日時、実行者、実行環境、テストスイートスナップショット（実行時点のテスト内容）、前提条件結果一覧、ステップ結果一覧、期待結果一覧（エビデンス含む）。
+返却情報: 実行ID・作成日時、実行者、実行環境、テストスイートスナップショット（実行時点のテスト内容）、前提条件結果一覧、ステップ結果一覧、期待結果一覧（エビデンス含む）。
 
-使用場面: 実行中または完了したテストの進捗・結果を確認する際に使用します。各結果のIDはupdate_execution_*ツールで結果を記録する際に必要です。
+使用場面: テストの進捗・結果を確認する際に使用します。各結果のIDはupdate_execution_*ツールで結果を記録する際に必要です。
 関連ツール: update_execution_precondition_result, update_execution_step_result, update_execution_expected_result, upload_execution_evidence。`,
   inputSchema: getExecutionInputSchema,
   handler: getExecutionHandler,

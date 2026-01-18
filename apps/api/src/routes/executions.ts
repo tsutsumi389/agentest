@@ -32,74 +32,50 @@ router.get(
 );
 
 /**
- * 実行中止
- * POST /api/executions/:executionId/abort
- * 権限: WRITE以上
- */
-router.post(
-  '/:executionId/abort',
-  requireAuth(authConfig),
-  requireExecutionRole(['WRITE', 'ADMIN'], { allowCompletedExecution: false }),
-  executionController.abort
-);
-
-/**
- * 実行完了
- * POST /api/executions/:executionId/complete
- * 権限: WRITE以上
- */
-router.post(
-  '/:executionId/complete',
-  requireAuth(authConfig),
-  requireExecutionRole(['WRITE', 'ADMIN'], { allowCompletedExecution: false }),
-  executionController.complete
-);
-
-/**
  * 前提条件結果更新
  * PATCH /api/executions/:executionId/preconditions/:preconditionResultId
- * 権限: WRITE以上、進行中の実行のみ
+ * 権限: WRITE以上
  */
 router.patch(
   '/:executionId/preconditions/:preconditionResultId',
   requireAuth(authConfig),
-  requireExecutionRole(['WRITE', 'ADMIN'], { allowCompletedExecution: false }),
+  requireExecutionRole(['WRITE', 'ADMIN']),
   executionController.updatePreconditionResult
 );
 
 /**
  * ステップ結果更新
  * PATCH /api/executions/:executionId/steps/:stepResultId
- * 権限: WRITE以上、進行中の実行のみ
+ * 権限: WRITE以上
  */
 router.patch(
   '/:executionId/steps/:stepResultId',
   requireAuth(authConfig),
-  requireExecutionRole(['WRITE', 'ADMIN'], { allowCompletedExecution: false }),
+  requireExecutionRole(['WRITE', 'ADMIN']),
   executionController.updateStepResult
 );
 
 /**
  * 期待結果更新
  * PATCH /api/executions/:executionId/expected-results/:expectedResultId
- * 権限: WRITE以上、進行中の実行のみ
+ * 権限: WRITE以上
  */
 router.patch(
   '/:executionId/expected-results/:expectedResultId',
   requireAuth(authConfig),
-  requireExecutionRole(['WRITE', 'ADMIN'], { allowCompletedExecution: false }),
+  requireExecutionRole(['WRITE', 'ADMIN']),
   executionController.updateExpectedResult
 );
 
 /**
  * エビデンスアップロード
  * POST /api/executions/:executionId/expected-results/:expectedResultId/evidences
- * 権限: WRITE以上、進行中の実行のみ
+ * 権限: WRITE以上
  */
 router.post(
   '/:executionId/expected-results/:expectedResultId/evidences',
   requireAuth(authConfig),
-  requireExecutionRole(['WRITE', 'ADMIN'], { allowCompletedExecution: false }),
+  requireExecutionRole(['WRITE', 'ADMIN']),
   ExecutionController.evidenceUploadMiddleware,
   executionController.uploadEvidence
 );
@@ -107,12 +83,12 @@ router.post(
 /**
  * エビデンス削除
  * DELETE /api/executions/:executionId/evidences/:evidenceId
- * 権限: WRITE以上、進行中の実行のみ
+ * 権限: WRITE以上
  */
 router.delete(
   '/:executionId/evidences/:evidenceId',
   requireAuth(authConfig),
-  requireExecutionRole(['WRITE', 'ADMIN'], { allowCompletedExecution: false }),
+  requireExecutionRole(['WRITE', 'ADMIN']),
   executionController.deleteEvidence
 );
 

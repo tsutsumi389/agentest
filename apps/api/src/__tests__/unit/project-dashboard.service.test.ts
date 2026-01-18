@@ -220,12 +220,12 @@ describe('ProjectDashboardService', () => {
       mockPrisma.testCase.findMany.mockResolvedValue(testCases);
       mockPrisma.executionExpectedResult.findMany.mockResolvedValue([
         // tc-1の結果（3連続失敗）
-        { status: 'FAIL', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { completedAt: new Date('2024-01-03') } },
-        { status: 'FAIL', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { completedAt: new Date('2024-01-02') } },
-        { status: 'FAIL', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { completedAt: new Date('2024-01-01') } },
+        { status: 'FAIL', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { createdAt: new Date('2024-01-03') } },
+        { status: 'FAIL', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { createdAt: new Date('2024-01-02') } },
+        { status: 'FAIL', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { createdAt: new Date('2024-01-01') } },
         // tc-2の結果（1連続失敗）
-        { status: 'FAIL', executionTestCase: { originalTestCaseId: 'tc-2' }, execution: { completedAt: new Date('2024-01-03') } },
-        { status: 'PASS', executionTestCase: { originalTestCaseId: 'tc-2' }, execution: { completedAt: new Date('2024-01-02') } },
+        { status: 'FAIL', executionTestCase: { originalTestCaseId: 'tc-2' }, execution: { createdAt: new Date('2024-01-03') } },
+        { status: 'PASS', executionTestCase: { originalTestCaseId: 'tc-2' }, execution: { createdAt: new Date('2024-01-02') } },
       ]);
 
       const result = await service.getDashboard('project-1');
@@ -250,8 +250,8 @@ describe('ProjectDashboardService', () => {
       ];
       mockPrisma.testCase.findMany.mockResolvedValue(testCases);
       mockPrisma.executionExpectedResult.findMany.mockResolvedValue([
-        { status: 'PASS', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { completedAt: new Date('2024-01-03') } },
-        { status: 'FAIL', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { completedAt: new Date('2024-01-02') } },
+        { status: 'PASS', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { createdAt: new Date('2024-01-03') } },
+        { status: 'FAIL', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { createdAt: new Date('2024-01-02') } },
       ]);
 
       const result = await service.getDashboard('project-1');
@@ -290,7 +290,7 @@ describe('ProjectDashboardService', () => {
       mockPrisma.testCase.findMany.mockResolvedValue(testCases);
       mockPrisma.executionExpectedResult.findMany.mockResolvedValue([
         // tc-2は31日前に実行
-        { executionTestCase: { originalTestCaseId: 'tc-2' }, execution: { completedAt: thirtyOneDaysAgo } },
+        { executionTestCase: { originalTestCaseId: 'tc-2' }, execution: { createdAt: thirtyOneDaysAgo } },
       ]);
 
       const result = await service.getDashboard('project-1');
@@ -317,8 +317,8 @@ describe('ProjectDashboardService', () => {
       mockPrisma.executionExpectedResult.findMany
         .mockResolvedValueOnce([]) // getSummary用
         .mockResolvedValue([
-          { executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { completedAt: twentyNineDaysAgo } },
-          { executionTestCase: { originalTestCaseId: 'tc-2' }, execution: { completedAt: thirtyOneDaysAgo } },
+          { executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { createdAt: twentyNineDaysAgo } },
+          { executionTestCase: { originalTestCaseId: 'tc-2' }, execution: { createdAt: thirtyOneDaysAgo } },
         ]);
 
       const result = await service.getDashboard('project-1');
@@ -354,16 +354,16 @@ describe('ProjectDashboardService', () => {
       mockPrisma.testCase.findMany.mockResolvedValue(testCases);
       // 10回中6回成功 = 60%
       mockPrisma.executionExpectedResult.findMany.mockResolvedValue([
-        { status: 'PASS', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { completedAt: new Date() } },
-        { status: 'PASS', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { completedAt: new Date() } },
-        { status: 'PASS', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { completedAt: new Date() } },
-        { status: 'PASS', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { completedAt: new Date() } },
-        { status: 'PASS', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { completedAt: new Date() } },
-        { status: 'PASS', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { completedAt: new Date() } },
-        { status: 'FAIL', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { completedAt: new Date() } },
-        { status: 'FAIL', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { completedAt: new Date() } },
-        { status: 'FAIL', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { completedAt: new Date() } },
-        { status: 'FAIL', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { completedAt: new Date() } },
+        { status: 'PASS', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { createdAt: new Date() } },
+        { status: 'PASS', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { createdAt: new Date() } },
+        { status: 'PASS', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { createdAt: new Date() } },
+        { status: 'PASS', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { createdAt: new Date() } },
+        { status: 'PASS', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { createdAt: new Date() } },
+        { status: 'PASS', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { createdAt: new Date() } },
+        { status: 'FAIL', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { createdAt: new Date() } },
+        { status: 'FAIL', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { createdAt: new Date() } },
+        { status: 'FAIL', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { createdAt: new Date() } },
+        { status: 'FAIL', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { createdAt: new Date() } },
       ]);
 
       const result = await service.getDashboard('project-1');
@@ -384,10 +384,10 @@ describe('ProjectDashboardService', () => {
       const createResults = (testCaseId: string, passCount: number, total: number) => {
         const results = [];
         for (let i = 0; i < passCount; i++) {
-          results.push({ status: 'PASS', executionTestCase: { originalTestCaseId: testCaseId }, execution: { completedAt: new Date() } });
+          results.push({ status: 'PASS', executionTestCase: { originalTestCaseId: testCaseId }, execution: { createdAt: new Date() } });
         }
         for (let i = 0; i < total - passCount; i++) {
-          results.push({ status: 'FAIL', executionTestCase: { originalTestCaseId: testCaseId }, execution: { completedAt: new Date() } });
+          results.push({ status: 'FAIL', executionTestCase: { originalTestCaseId: testCaseId }, execution: { createdAt: new Date() } });
         }
         return results;
       };
@@ -418,8 +418,8 @@ describe('ProjectDashboardService', () => {
       ];
       mockPrisma.testCase.findMany.mockResolvedValue(testCases);
       mockPrisma.executionExpectedResult.findMany.mockResolvedValue([
-        { status: 'PASS', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { completedAt: new Date() } },
-        { status: 'FAIL', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { completedAt: new Date() } },
+        { status: 'PASS', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { createdAt: new Date() } },
+        { status: 'FAIL', executionTestCase: { originalTestCaseId: 'tc-1' }, execution: { createdAt: new Date() } },
       ]);
 
       const result = await service.getDashboard('project-1');
@@ -455,7 +455,7 @@ describe('ProjectDashboardService', () => {
       mockPrisma.execution.findMany.mockResolvedValue([
         {
           id: 'exec-1',
-          completedAt: now,
+          createdAt: now,
           testSuite: { id: 'suite-1', name: 'Suite 1' },
           executedByUser: { id: 'user-1', name: 'User 1', avatarUrl: null },
         },

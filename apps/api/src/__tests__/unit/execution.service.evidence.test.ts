@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { NotFoundError, ConflictError, BadRequestError } from '@agentest/shared';
+import { NotFoundError, BadRequestError } from '@agentest/shared';
 
 // vi.hoistedを使用してモック関数を事前定義
 const {
@@ -89,9 +89,7 @@ function createMockExecution(overrides: Record<string, unknown> = {}) {
   return {
     id: TEST_EXECUTION_ID,
     testSuiteId: 'suite-1',
-    status: 'IN_PROGRESS',
-    startedAt: new Date(),
-    completedAt: null,
+    createdAt: new Date(),
     ...overrides,
   };
 }
@@ -152,27 +150,6 @@ describe('ExecutionService - Evidence', () => {
       await expect(
         service.uploadEvidence(TEST_EXECUTION_ID, TEST_EXPECTED_RESULT_ID, TEST_USER_ID, createMockFile())
       ).rejects.toThrow(NotFoundError);
-    });
-
-    it('完了済みの実行にはアップロードできない', async () => {
-      const mockExecution = createMockExecution({ status: 'COMPLETED' });
-      mockFindById.mockResolvedValue(mockExecution);
-
-      await expect(
-        service.uploadEvidence(TEST_EXECUTION_ID, TEST_EXPECTED_RESULT_ID, TEST_USER_ID, createMockFile())
-      ).rejects.toThrow(ConflictError);
-      await expect(
-        service.uploadEvidence(TEST_EXECUTION_ID, TEST_EXPECTED_RESULT_ID, TEST_USER_ID, createMockFile())
-      ).rejects.toThrow('完了済みの実行にはエビデンスをアップロードできません');
-    });
-
-    it('中止済みの実行にはアップロードできない', async () => {
-      const mockExecution = createMockExecution({ status: 'ABORTED' });
-      mockFindById.mockResolvedValue(mockExecution);
-
-      await expect(
-        service.uploadEvidence(TEST_EXECUTION_ID, TEST_EXPECTED_RESULT_ID, TEST_USER_ID, createMockFile())
-      ).rejects.toThrow(ConflictError);
     });
 
     it('期待結果が存在しない場合はNotFoundErrorを投げる', async () => {
@@ -259,16 +236,6 @@ describe('ExecutionService - Evidence', () => {
       await expect(service.deleteEvidence(TEST_EXECUTION_ID, TEST_EVIDENCE_ID)).rejects.toThrow(NotFoundError);
     });
 
-    it('完了済みの実行のエビデンスは削除できない', async () => {
-      const mockExecution = createMockExecution({ status: 'COMPLETED' });
-      mockFindById.mockResolvedValue(mockExecution);
-
-      await expect(service.deleteEvidence(TEST_EXECUTION_ID, TEST_EVIDENCE_ID)).rejects.toThrow(ConflictError);
-      await expect(service.deleteEvidence(TEST_EXECUTION_ID, TEST_EVIDENCE_ID)).rejects.toThrow(
-        '完了済みの実行のエビデンスは削除できません'
-      );
-    });
-
     it('エビデンスが存在しない場合はNotFoundErrorを投げる', async () => {
       const mockExecution = createMockExecution();
       mockFindById.mockResolvedValue(mockExecution);
@@ -315,21 +282,5 @@ describe('ExecutionService - Evidence', () => {
       );
     });
 
-    it('完了済みの実行でもダウンロードURLは取得できる', async () => {
-      const mockExecution = createMockExecution({ status: 'COMPLETED' });
-      const mockEvidence = {
-        id: TEST_EVIDENCE_ID,
-        fileUrl: `evidences/${TEST_EXECUTION_ID}/${TEST_EXPECTED_RESULT_ID}/uuid_test.png`,
-      };
-      const expectedUrl = 'https://minio.example.com/signed-url';
-
-      mockFindById.mockResolvedValue(mockExecution);
-      mockEvidenceFindFirst.mockResolvedValue(mockEvidence);
-      mockStorageGetDownloadUrl.mockResolvedValue(expectedUrl);
-
-      const result = await service.getEvidenceDownloadUrl(TEST_EXECUTION_ID, TEST_EVIDENCE_ID);
-
-      expect(result).toBe(expectedUrl);
-    });
   });
 });

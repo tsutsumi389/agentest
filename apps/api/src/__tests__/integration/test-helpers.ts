@@ -357,7 +357,6 @@ export async function createTestExecution(
   testSuiteId: string,
   overrides: Partial<{
     id: string;
-    status: 'IN_PROGRESS' | 'COMPLETED' | 'ABORTED';
   }> = {}
 ) {
   const id = overrides.id ?? randomUUID();
@@ -366,7 +365,6 @@ export async function createTestExecution(
       id,
       environmentId,
       testSuiteId,
-      status: overrides.status ?? 'IN_PROGRESS',
     },
   });
 }

@@ -221,7 +221,7 @@ export class InternalAuthorizationService {
   /**
    * ユーザーが実行に書き込みできるか確認
    * 書き込み可能条件:
-   * 1. 実行が存在しIN_PROGRESSステータスである
+   * 1. 実行が存在する
    * 2. 実行のテストスイートへの書き込み権限を持つ
    *
    * @param userId ユーザーID
@@ -229,23 +229,17 @@ export class InternalAuthorizationService {
    * @returns 書き込み可能な場合true
    */
   async canWriteToExecution(userId: string, executionId: string): Promise<boolean> {
-    // 実行の存在確認とステータス・テストスイートID取得
+    // 実行の存在確認とテストスイートID取得
     const execution = await prisma.execution.findUnique({
       where: { id: executionId },
       select: {
         id: true,
-        status: true,
         testSuiteId: true,
       },
     });
 
     // 実行が存在しない場合は書き込み不可
     if (!execution) {
-      return false;
-    }
-
-    // IN_PROGRESS以外のステータスの場合は書き込み不可
-    if (execution.status !== 'IN_PROGRESS') {
       return false;
     }
 

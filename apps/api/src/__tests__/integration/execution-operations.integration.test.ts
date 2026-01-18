@@ -137,9 +137,7 @@ describe('Execution Operations API Integration Tests', () => {
     });
 
     // 実行を作成
-    execution = await createTestExecution(environment.id, testSuite.id, {
-      status: 'IN_PROGRESS',
-    });
+    execution = await createTestExecution(environment.id, testSuite.id);
   });
 
   describe('GET /api/executions/:executionId', () => {
@@ -151,7 +149,6 @@ describe('Execution Operations API Integration Tests', () => {
       expect(response.status).toBe(200);
       expect(response.body.execution).toBeDefined();
       expect(response.body.execution.id).toBe(execution.id);
-      expect(response.body.execution.status).toBe('IN_PROGRESS');
     });
 
     it('WRITE権限でも実行詳細を取得できる', async () => {
@@ -251,148 +248,6 @@ describe('Execution Operations API Integration Tests', () => {
       setTestAuth({ id: reader.id, email: reader.email }, 'READ');
 
       const response = await request(app).get('/api/executions/non-existent-id/details');
-
-      expect(response.status).toBe(404);
-    });
-  });
-
-  describe('POST /api/executions/:executionId/abort', () => {
-    it('WRITE権限で進行中の実行を中止できる', async () => {
-      setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
-
-      const response = await request(app).post(`/api/executions/${execution.id}/abort`);
-
-      expect(response.status).toBe(200);
-      expect(response.body.execution.status).toBe('ABORTED');
-      expect(response.body.execution.completedAt).toBeDefined();
-    });
-
-    it('中止後のステータスがABORTEDになる', async () => {
-      setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
-
-      await request(app).post(`/api/executions/${execution.id}/abort`);
-
-      const updatedExecution = await prisma.execution.findUnique({
-        where: { id: execution.id },
-      });
-
-      expect(updatedExecution?.status).toBe('ABORTED');
-      expect(updatedExecution?.completedAt).not.toBeNull();
-    });
-
-    it('未認証の場合は401エラー', async () => {
-      clearTestAuth();
-
-      const response = await request(app).post(`/api/executions/${execution.id}/abort`);
-
-      expect(response.status).toBe(401);
-    });
-
-    it('READ権限では403エラー', async () => {
-      setTestAuth({ id: reader.id, email: reader.email }, 'READ');
-
-      const response = await request(app).post(`/api/executions/${execution.id}/abort`);
-
-      expect(response.status).toBe(403);
-    });
-
-    it('完了済み実行は409エラー', async () => {
-      // 実行を完了状態に更新
-      await prisma.execution.update({
-        where: { id: execution.id },
-        data: { status: 'COMPLETED', completedAt: new Date() },
-      });
-
-      setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
-
-      const response = await request(app).post(`/api/executions/${execution.id}/abort`);
-
-      expect(response.status).toBe(409);
-      expect(response.body.error.message).toBe('進行中の実行のみ中止できます');
-    });
-
-    it('既に中止済みの実行は409エラー', async () => {
-      // 実行を中止状態に更新
-      await prisma.execution.update({
-        where: { id: execution.id },
-        data: { status: 'ABORTED', completedAt: new Date() },
-      });
-
-      setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
-
-      const response = await request(app).post(`/api/executions/${execution.id}/abort`);
-
-      expect(response.status).toBe(409);
-    });
-
-    it('存在しない実行IDは404エラー', async () => {
-      setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
-
-      const response = await request(app).post('/api/executions/non-existent-id/abort');
-
-      expect(response.status).toBe(404);
-    });
-  });
-
-  describe('POST /api/executions/:executionId/complete', () => {
-    it('WRITE権限で進行中の実行を完了できる', async () => {
-      setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
-
-      const response = await request(app).post(`/api/executions/${execution.id}/complete`);
-
-      expect(response.status).toBe(200);
-      expect(response.body.execution.status).toBe('COMPLETED');
-      expect(response.body.execution.completedAt).toBeDefined();
-    });
-
-    it('完了後のステータスがCOMPLETEDになる', async () => {
-      setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
-
-      await request(app).post(`/api/executions/${execution.id}/complete`);
-
-      const updatedExecution = await prisma.execution.findUnique({
-        where: { id: execution.id },
-      });
-
-      expect(updatedExecution?.status).toBe('COMPLETED');
-      expect(updatedExecution?.completedAt).not.toBeNull();
-    });
-
-    it('未認証の場合は401エラー', async () => {
-      clearTestAuth();
-
-      const response = await request(app).post(`/api/executions/${execution.id}/complete`);
-
-      expect(response.status).toBe(401);
-    });
-
-    it('READ権限では403エラー', async () => {
-      setTestAuth({ id: reader.id, email: reader.email }, 'READ');
-
-      const response = await request(app).post(`/api/executions/${execution.id}/complete`);
-
-      expect(response.status).toBe(403);
-    });
-
-    it('中止済み実行は409エラー', async () => {
-      // 実行を中止状態に更新
-      await prisma.execution.update({
-        where: { id: execution.id },
-        data: { status: 'ABORTED', completedAt: new Date() },
-      });
-
-      setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
-
-      const response = await request(app).post(`/api/executions/${execution.id}/complete`);
-
-      expect(response.status).toBe(409);
-      expect(response.body.error.message).toBe('進行中の実行のみ完了できます');
-    });
-
-    it('存在しない実行IDは404エラー', async () => {
-      setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
-
-      const response = await request(app).post('/api/executions/non-existent-id/complete');
 
       expect(response.status).toBe(404);
     });

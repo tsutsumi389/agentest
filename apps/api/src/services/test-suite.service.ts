@@ -1,4 +1,4 @@
-import { prisma, type EntityStatus, type ExecutionStatus, type Prisma } from '@agentest/db';
+import { prisma, type EntityStatus, type Prisma } from '@agentest/db';
 import { NotFoundError, BadRequestError, ConflictError, type TestSuiteChangeDetail } from '@agentest/shared';
 import { TestSuiteRepository } from '../repositories/test-suite.repository.js';
 import { TestCaseRepository, type TestCaseSearchOptions } from '../repositories/test-case.repository.js';
@@ -474,12 +474,11 @@ export class TestSuiteService {
   async getExecutions(
     testSuiteId: string,
     options: {
-      status?: ExecutionStatus[];
       from?: string;
       to?: string;
       limit: number;
       offset: number;
-      sortBy?: 'startedAt' | 'completedAt' | 'status';
+      sortBy?: 'createdAt';
       sortOrder?: 'asc' | 'desc';
     }
   ) {
@@ -487,9 +486,8 @@ export class TestSuiteService {
 
     const where: Prisma.ExecutionWhereInput = {
       testSuiteId,
-      ...(options.status?.length && { status: { in: options.status } }),
       ...((options.from || options.to) && {
-        startedAt: {
+        createdAt: {
           ...(options.from && { gte: new Date(options.from) }),
           ...(options.to && { lte: new Date(options.to) }),
         },
@@ -507,7 +505,7 @@ export class TestSuiteService {
             select: { id: true, name: true, slug: true },
           },
         },
-        orderBy: { [options.sortBy || 'startedAt']: options.sortOrder || 'desc' },
+        orderBy: { [options.sortBy || 'createdAt']: options.sortOrder || 'desc' },
         take: options.limit,
         skip: options.offset,
       }),
@@ -551,7 +549,6 @@ export class TestSuiteService {
           testSuiteId,
           environmentId: data.environmentId,
           executedByUserId: userId,
-          status: 'IN_PROGRESS',
         },
       });
 

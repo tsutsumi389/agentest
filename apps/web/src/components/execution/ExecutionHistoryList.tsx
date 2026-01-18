@@ -4,11 +4,7 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
-  Filter,
   Calendar,
-  Clock,
-  CheckCircle2,
-  AlertCircle,
   User,
   X,
 } from 'lucide-react';
@@ -24,26 +20,6 @@ interface ExecutionHistoryListProps {
   /** テストスイートID */
   testSuiteId: string;
 }
-
-/**
- * 実行ステータス定義
- */
-const EXECUTION_STATUS = {
-  IN_PROGRESS: { label: '実行中', icon: Clock, color: 'text-warning', bgColor: 'bg-warning/10' },
-  COMPLETED: { label: '完了', icon: CheckCircle2, color: 'text-success', bgColor: 'bg-success/10' },
-  ABORTED: { label: '中断', icon: AlertCircle, color: 'text-danger', bgColor: 'bg-danger/10' },
-} as const;
-
-type ExecutionStatusKey = keyof typeof EXECUTION_STATUS;
-
-/**
- * ステータスフィルタオプション
- */
-const STATUS_FILTER_OPTIONS: { value: ExecutionStatusKey; label: string }[] = [
-  { value: 'IN_PROGRESS', label: '実行中' },
-  { value: 'COMPLETED', label: '完了' },
-  { value: 'ABORTED', label: '中断' },
-];
 
 /**
  * ページサイズオプション
@@ -96,25 +72,6 @@ function getDateRange(rangeValue: string): { from?: string; to?: string } {
 }
 
 /**
- * ステータスバッジ
- */
-function StatusBadge({ status }: { status: string }) {
-  const statusConfig = EXECUTION_STATUS[status as ExecutionStatusKey];
-  if (!statusConfig) return null;
-
-  const Icon = statusConfig.icon;
-
-  return (
-    <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded ${statusConfig.color} ${statusConfig.bgColor}`}
-    >
-      <Icon className="w-3 h-3" />
-      {statusConfig.label}
-    </span>
-  );
-}
-
-/**
  * 実行履歴一覧コンポーネント
  */
 export function ExecutionHistoryList({ testSuiteId }: ExecutionHistoryListProps) {
@@ -128,7 +85,6 @@ export function ExecutionHistoryList({ testSuiteId }: ExecutionHistoryListProps)
   const [total, setTotal] = useState(0);
 
   // フィルタ状態
-  const [selectedStatuses, setSelectedStatuses] = useState<ExecutionStatusKey[]>([]);
   const [selectedDateRange, setSelectedDateRange] = useState<DateRangeValue>('all');
 
   // 現在のページ番号と総ページ数を計算
@@ -145,9 +101,8 @@ export function ExecutionHistoryList({ testSuiteId }: ExecutionHistoryListProps)
       const params: ExecutionSearchParams = {
         limit: pageSize,
         offset,
-        ...(selectedStatuses.length > 0 && { status: selectedStatuses }),
         ...dateRange,
-        sortBy: 'startedAt',
+        sortBy: 'createdAt',
         sortOrder: 'desc',
       };
 
@@ -163,12 +118,12 @@ export function ExecutionHistoryList({ testSuiteId }: ExecutionHistoryListProps)
     } finally {
       setIsLoading(false);
     }
-  }, [testSuiteId, offset, pageSize, selectedStatuses, selectedDateRange]);
+  }, [testSuiteId, offset, pageSize, selectedDateRange]);
 
   // フィルタ・ページサイズ変更時にオフセットをリセット
   useEffect(() => {
     setOffset(0);
-  }, [selectedStatuses, selectedDateRange, pageSize]);
+  }, [selectedDateRange, pageSize]);
 
   // データ取得
   useEffect(() => {
@@ -186,24 +141,15 @@ export function ExecutionHistoryList({ testSuiteId }: ExecutionHistoryListProps)
     setPageSize(newSize);
   };
 
-  // ステータスフィルタ変更ハンドラ
-  const handleStatusToggle = (status: ExecutionStatusKey) => {
-    setSelectedStatuses((prev) =>
-      prev.includes(status) ? prev.filter((s) => s !== status) : [...prev, status]
-    );
-  };
-
   // フィルタリセット
   const handleResetFilters = () => {
-    setSelectedStatuses([]);
     setSelectedDateRange('all');
     setPageSize(DEFAULT_PAGE_SIZE);
     setOffset(0);
   };
 
   // フィルタが適用されているか
-  const hasFilters =
-    selectedStatuses.length > 0 || selectedDateRange !== 'all' || pageSize !== DEFAULT_PAGE_SIZE;
+  const hasFilters = selectedDateRange !== 'all' || pageSize !== DEFAULT_PAGE_SIZE;
 
   // ローディング表示
   if (isLoading && executions.length === 0) {
@@ -230,29 +176,6 @@ export function ExecutionHistoryList({ testSuiteId }: ExecutionHistoryListProps)
     <div>
       {/* フィルタ */}
       <div className="flex flex-wrap items-center gap-3 mb-6 p-4 bg-background-secondary rounded-lg border border-border">
-        {/* ステータスフィルタ */}
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-foreground-muted" />
-          <div className="flex gap-1">
-            {STATUS_FILTER_OPTIONS.map((option) => {
-              const isSelected = selectedStatuses.includes(option.value);
-              return (
-                <button
-                  key={option.value}
-                  onClick={() => handleStatusToggle(option.value)}
-                  className={`px-3 py-1.5 text-sm rounded transition-colors ${
-                    isSelected
-                      ? 'bg-accent text-background'
-                      : 'bg-background-tertiary text-foreground-muted hover:text-foreground'
-                  }`}
-                >
-                  {option.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
         {/* 日付範囲フィルタ */}
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-foreground-muted" />
@@ -300,35 +223,18 @@ export function ExecutionHistoryList({ testSuiteId }: ExecutionHistoryListProps)
       </div>
 
       {/* 選択中のフィルタ表示 */}
-      {(selectedStatuses.length > 0 || selectedDateRange !== 'all') && (
+      {selectedDateRange !== 'all' && (
         <div className="flex flex-wrap items-center gap-2 mb-4 text-sm">
-          {selectedStatuses.map((status) => (
-            <span
-              key={status}
-              className="inline-flex items-center gap-1 px-2 py-1 bg-background-tertiary text-foreground rounded"
+          <span className="inline-flex items-center gap-1 px-2 py-1 bg-background-tertiary text-foreground rounded">
+            {DATE_RANGE_OPTIONS.find((o) => o.value === selectedDateRange)?.label}
+            <button
+              onClick={() => setSelectedDateRange('all')}
+              className="hover:text-foreground-muted"
+              aria-label="日付範囲フィルタを解除"
             >
-              {EXECUTION_STATUS[status].label}
-              <button
-                onClick={() => handleStatusToggle(status)}
-                className="hover:text-foreground-muted"
-                aria-label={`${EXECUTION_STATUS[status].label}フィルタを解除`}
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          ))}
-          {selectedDateRange !== 'all' && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 bg-background-tertiary text-foreground rounded">
-              {DATE_RANGE_OPTIONS.find((o) => o.value === selectedDateRange)?.label}
-              <button
-                onClick={() => setSelectedDateRange('all')}
-                className="hover:text-foreground-muted"
-                aria-label="日付範囲フィルタを解除"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          )}
+              <X className="w-3 h-3" />
+            </button>
+          </span>
         </div>
       )}
 
@@ -403,9 +309,6 @@ function ExecutionItem({ execution }: { execution: Execution }) {
       to={`/executions/${execution.id}`}
       className="flex items-center gap-4 p-4 rounded-lg border border-border bg-background-secondary hover:bg-background-tertiary transition-colors"
     >
-      {/* ステータスバッジ */}
-      <StatusBadge status={execution.status} />
-
       {/* 環境名 */}
       {execution.environment && (
         <span className="px-2 py-0.5 text-xs font-medium rounded bg-background-tertiary text-foreground-muted">
@@ -441,9 +344,9 @@ function ExecutionItem({ execution }: { execution: Execution }) {
       <div className="ml-auto text-right">
         <span
           className="text-sm text-foreground-muted"
-          title={formatDateTime(execution.startedAt)}
+          title={formatDateTime(execution.createdAt)}
         >
-          {formatRelativeTime(execution.startedAt)}
+          {formatRelativeTime(execution.createdAt)}
         </span>
       </div>
     </Link>
