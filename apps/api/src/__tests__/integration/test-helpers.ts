@@ -210,6 +210,8 @@ export async function cleanupTestData() {
   await prisma.executionTestSuite.deleteMany({});
   await prisma.execution.deleteMany({});
   await prisma.testSuiteHistory.deleteMany({});
+  await prisma.testSuiteLabel.deleteMany({});
+  await prisma.label.deleteMany({});
   await prisma.testSuitePrecondition.deleteMany({});
   await prisma.testCaseHistory.deleteMany({});
   await prisma.testCaseExpectedResult.deleteMany({});
@@ -1091,5 +1093,38 @@ export async function createTestOAuthRefreshToken(
       expiresAt: overrides.expiresAt ?? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30日
       revokedAt: overrides.revokedAt ?? null,
     },
+  });
+}
+
+/**
+ * テスト用ラベルを作成
+ */
+export async function createTestLabel(
+  projectId: string,
+  overrides: Partial<{
+    id: string;
+    name: string;
+    description: string | null;
+    color: string;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.label.create({
+    data: {
+      id,
+      projectId,
+      name: overrides.name ?? `Label ${id.slice(0, 8)}`,
+      description: overrides.description ?? null,
+      color: overrides.color ?? '#3B82F6',
+    },
+  });
+}
+
+/**
+ * テスト用テストスイートラベルを作成
+ */
+export async function createTestSuiteLabel(testSuiteId: string, labelId: string) {
+  return prisma.testSuiteLabel.create({
+    data: { testSuiteId, labelId },
   });
 }
