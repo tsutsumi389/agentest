@@ -4,14 +4,20 @@
 
 /** プロジェクトダッシュボード統計のサマリー */
 export interface ProjectDashboardSummary {
+  /** テストスイート総数 */
+  totalTestSuites: number;
   /** テストケース総数 */
   totalTestCases: number;
-  /** 最終実行日時 */
-  lastExecutionAt: Date | string | null;
-  /** 全体成功率（0-100） */
-  overallPassRate: number;
-  /** 実行中テスト数 */
-  inProgressExecutions: number;
+  /** 期待結果総数 */
+  totalExpectedResults: number;
+}
+
+/** ダッシュボードフィルターパラメータ */
+export interface DashboardFilterParams {
+  /** 環境ID */
+  environmentId?: string;
+  /** ラベルID一覧 */
+  labelIds?: string[];
 }
 
 /** 実行結果の分布 */
@@ -113,22 +119,6 @@ export interface RecentActivityItem {
   };
 }
 
-/** テストスイート別カバレッジ項目 */
-export interface SuiteCoverageItem {
-  /** テストスイートID */
-  testSuiteId: string;
-  /** テストスイート名 */
-  name: string;
-  /** テストケース数 */
-  testCaseCount: number;
-  /** 実行済みテストケース数 */
-  executedCount: number;
-  /** 成功率（0-100） */
-  passRate: number;
-  /** 最終実行日時 */
-  lastExecutedAt: Date | string | null;
-}
-
 /** プロジェクトダッシュボード統計 */
 export interface ProjectDashboardStats {
   /** サマリー */
@@ -139,6 +129,4 @@ export interface ProjectDashboardStats {
   attentionRequired: AttentionRequired;
   /** 最近の活動 */
   recentActivities: RecentActivityItem[];
-  /** テストスイート別カバレッジ */
-  suiteCoverage: SuiteCoverageItem[];
 }

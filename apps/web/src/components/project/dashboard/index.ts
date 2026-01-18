@@ -2,7 +2,7 @@ export { KpiSummaryCards } from './KpiSummaryCards';
 export { ResultDistributionChart } from './ResultDistributionChart';
 export { AttentionRequiredTable } from './AttentionRequiredTable';
 export { RecentActivityTimeline } from './RecentActivityTimeline';
-export { SuiteCoverageList } from './SuiteCoverageList';
+export { DashboardFilters } from './DashboardFilters';
 
 // 型は@agentest/sharedから再エクスポート
-export type { ProjectDashboardStats, ProjectDashboardSummary } from '@agentest/shared';
+export type { ProjectDashboardStats, ProjectDashboardSummary, DashboardFilterParams } from '@agentest/shared';

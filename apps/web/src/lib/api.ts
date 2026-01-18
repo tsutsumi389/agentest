@@ -854,8 +854,15 @@ export const projectsApi = {
   delete: (projectId: string) => api.delete<void>(`/api/projects/${projectId}`),
   getTestSuites: (projectId: string) =>
     api.get<{ testSuites: TestSuite[] }>(`/api/projects/${projectId}/test-suites`),
-  getDashboard: (projectId: string) =>
-    api.get<{ dashboard: ProjectDashboardStats }>(`/api/projects/${projectId}/dashboard`),
+  getDashboard: (projectId: string, params?: { environmentId?: string; labelIds?: string[] }) => {
+    const query = new URLSearchParams();
+    if (params?.environmentId) query.set('environmentId', params.environmentId);
+    if (params?.labelIds?.length) query.set('labelIds', params.labelIds.join(','));
+    const queryString = query.toString();
+    return api.get<{ dashboard: ProjectDashboardStats }>(
+      `/api/projects/${projectId}/dashboard${queryString ? `?${queryString}` : ''}`
+    );
+  },
 
   // メンバー管理
   getMembers: (projectId: string) =>

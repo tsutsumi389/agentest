@@ -9,7 +9,7 @@ import type {
   LongNotExecutedItem,
   FlakyTestItem,
   RecentActivityItem,
-  SuiteCoverageItem,
+  DashboardFilterParams,
 } from '@agentest/shared';
 
 // 統計対象の日数
@@ -33,7 +33,7 @@ export class ProjectDashboardService {
   /**
    * プロジェクトダッシュボード統計を取得
    */
-  async getDashboard(projectId: string): Promise<ProjectDashboardStats> {
+  async getDashboard(projectId: string, filters?: DashboardFilterParams): Promise<ProjectDashboardStats> {
     // プロジェクトの存在確認
     const project = await prisma.project.findFirst({
       where: { id: projectId, deletedAt: null },
@@ -43,14 +43,16 @@ export class ProjectDashboardService {
       throw new NotFoundError('Project', projectId);
     }
 
+    // フィルター条件からテストスイートIDを取得
+    const filteredTestSuiteIds = await this.getFilteredTestSuiteIds(projectId, filters);
+
     // 並行してデータを取得
-    const [summary, resultDistribution, attentionRequired, recentActivities, suiteCoverage] =
+    const [summary, resultDistribution, attentionRequired, recentActivities] =
       await Promise.all([
-        this.getSummary(projectId),
-        this.getResultDistribution(projectId),
-        this.getAttentionRequired(projectId),
-        this.getRecentActivities(projectId),
-        this.getSuiteCoverage(projectId),
+        this.getSummary(projectId, filteredTestSuiteIds),
+        this.getResultDistribution(projectId, filteredTestSuiteIds, filters?.environmentId),
+        this.getAttentionRequired(projectId, filteredTestSuiteIds, filters?.environmentId),
+        this.getRecentActivities(projectId, filteredTestSuiteIds, filters?.environmentId),
       ]);
 
     return {
@@ -58,101 +60,114 @@ export class ProjectDashboardService {
       resultDistribution,
       attentionRequired,
       recentActivities,
-      suiteCoverage,
     };
+  }
+
+  /**
+   * フィルター条件に基づいてテストスイートIDを取得
+   *
+   * フィルターの設計意図:
+   * - ラベルフィルター: テストスイート自体をフィルタリング（TestSuiteLabelを通じて）
+   *   → サマリー（テスト数）、要注意テスト、最近の活動すべてに適用
+   * - 環境フィルター: 実行データのみをフィルタリング（ExecutionのenvironmentId）
+   *   → 実行結果分布、要注意テスト、最近の活動に適用
+   *   → サマリー（テスト数）には適用しない（テストの定義数は環境に依存しないため）
+   */
+  private async getFilteredTestSuiteIds(
+    projectId: string,
+    filters?: DashboardFilterParams
+  ): Promise<string[] | undefined> {
+    // ラベルフィルターがない場合はundefinedを返す（全テストスイートを対象）
+    // 注: 環境フィルターはここでは処理せず、各メソッドで実行データに対して適用する
+    if (!filters?.labelIds || filters.labelIds.length === 0) {
+      return undefined;
+    }
+
+    // ラベルフィルターがある場合、該当するテストスイートを取得
+    const testSuites = await prisma.testSuite.findMany({
+      where: {
+        projectId,
+        deletedAt: null,
+        testSuiteLabels: {
+          some: {
+            labelId: { in: filters.labelIds },
+          },
+        },
+      },
+      select: { id: true },
+    });
+
+    return testSuites.map((ts) => ts.id);
   }
 
   /**
    * サマリー統計を取得
    */
-  private async getSummary(projectId: string): Promise<ProjectDashboardSummary> {
+  private async getSummary(
+    projectId: string,
+    filteredTestSuiteIds?: string[]
+  ): Promise<ProjectDashboardSummary> {
+    // テストスイートのwhere条件を構築
+    const testSuiteWhere = filteredTestSuiteIds
+      ? { id: { in: filteredTestSuiteIds }, projectId, deletedAt: null }
+      : { projectId, deletedAt: null };
+
+    // テストスイート総数
+    const totalTestSuites = await prisma.testSuite.count({
+      where: testSuiteWhere,
+    });
+
     // テストケース総数
     const totalTestCases = await prisma.testCase.count({
       where: {
-        testSuite: {
-          projectId,
-          deletedAt: null,
-        },
+        testSuite: testSuiteWhere,
         deletedAt: null,
       },
     });
 
-    // 実行中テスト数
-    const inProgressExecutions = await prisma.execution.count({
+    // 期待結果総数
+    const totalExpectedResults = await prisma.testCaseExpectedResult.count({
       where: {
-        testSuite: {
-          projectId,
+        testCase: {
+          testSuite: testSuiteWhere,
           deletedAt: null,
         },
-        status: 'IN_PROGRESS',
       },
     });
-
-    // 最終実行日時と成功率
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - STATS_DAYS);
-
-    // 最新の実行を取得
-    const lastExecution = await prisma.execution.findFirst({
-      where: {
-        testSuite: {
-          projectId,
-          deletedAt: null,
-        },
-        status: 'COMPLETED',
-      },
-      orderBy: { completedAt: 'desc' },
-      select: { completedAt: true },
-    });
-
-    // 過去30日間の成功率を計算
-    const expectedResults = await prisma.executionExpectedResult.findMany({
-      where: {
-        execution: {
-          testSuite: {
-            projectId,
-            deletedAt: null,
-          },
-          status: 'COMPLETED',
-          completedAt: { gte: thirtyDaysAgo },
-        },
-      },
-      select: { status: true },
-    });
-
-    let overallPassRate = 0;
-    if (expectedResults.length > 0) {
-      const passCount = expectedResults.filter((r) => r.status === 'PASS').length;
-      overallPassRate = Math.round((passCount / expectedResults.length) * 100);
-    }
 
     return {
+      totalTestSuites,
       totalTestCases,
-      lastExecutionAt: lastExecution?.completedAt ?? null,
-      overallPassRate,
-      inProgressExecutions,
+      totalExpectedResults,
     };
   }
 
   /**
    * 実行結果の分布を取得
    */
-  private async getResultDistribution(projectId: string): Promise<ResultDistribution> {
+  private async getResultDistribution(
+    projectId: string,
+    filteredTestSuiteIds?: string[],
+    environmentId?: string
+  ): Promise<ResultDistribution> {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - STATS_DAYS);
+
+    // 実行のwhere条件を構築
+    const executionWhere = {
+      testSuite: filteredTestSuiteIds
+        ? { id: { in: filteredTestSuiteIds }, projectId, deletedAt: null }
+        : { projectId, deletedAt: null },
+      status: 'COMPLETED' as const,
+      completedAt: { gte: thirtyDaysAgo },
+      ...(environmentId && { environmentId }),
+    };
 
     // 過去30日間の判定結果をカウント
     const results = await prisma.executionExpectedResult.groupBy({
       by: ['status'],
       where: {
-        execution: {
-          testSuite: {
-            projectId,
-            deletedAt: null,
-          },
-          status: 'COMPLETED',
-          completedAt: { gte: thirtyDaysAgo },
-        },
+        execution: executionWhere,
       },
       _count: { status: true },
     });
@@ -187,11 +202,15 @@ export class ProjectDashboardService {
   /**
    * 要注意テスト一覧を取得
    */
-  private async getAttentionRequired(projectId: string): Promise<AttentionRequired> {
+  private async getAttentionRequired(
+    projectId: string,
+    filteredTestSuiteIds?: string[],
+    environmentId?: string
+  ): Promise<AttentionRequired> {
     const [failingTests, longNotExecuted, flakyTests] = await Promise.all([
-      this.getFailingTests(projectId),
-      this.getLongNotExecutedTests(projectId),
-      this.getFlakyTests(projectId),
+      this.getFailingTests(projectId, filteredTestSuiteIds, environmentId),
+      this.getLongNotExecutedTests(projectId, filteredTestSuiteIds, environmentId),
+      this.getFlakyTests(projectId, filteredTestSuiteIds, environmentId),
     ]);
 
     return {
@@ -205,14 +224,20 @@ export class ProjectDashboardService {
    * 失敗中テスト（最新の実行でFAIL）を取得
    * N+1クエリを回避するため、一括でデータを取得してJavaScriptで処理
    */
-  private async getFailingTests(projectId: string): Promise<FailingTestItem[]> {
+  private async getFailingTests(
+    projectId: string,
+    filteredTestSuiteIds?: string[],
+    environmentId?: string
+  ): Promise<FailingTestItem[]> {
+    // テストスイートのwhere条件を構築
+    const testSuiteWhere = filteredTestSuiteIds
+      ? { id: { in: filteredTestSuiteIds }, projectId, deletedAt: null }
+      : { projectId, deletedAt: null };
+
     // プロジェクト内の全テストケースを取得
     const testCases = await prisma.testCase.findMany({
       where: {
-        testSuite: {
-          projectId,
-          deletedAt: null,
-        },
+        testSuite: testSuiteWhere,
         deletedAt: null,
       },
       select: {
@@ -241,6 +266,7 @@ export class ProjectDashboardService {
         },
         execution: {
           status: 'COMPLETED',
+          ...(environmentId && { environmentId }),
         },
       },
       select: {
@@ -321,18 +347,24 @@ export class ProjectDashboardService {
    * 長期未実行テスト（30日以上未実行）を取得
    * N+1クエリを回避するため、一括でデータを取得してJavaScriptで処理
    */
-  private async getLongNotExecutedTests(projectId: string): Promise<LongNotExecutedItem[]> {
+  private async getLongNotExecutedTests(
+    projectId: string,
+    filteredTestSuiteIds?: string[],
+    environmentId?: string
+  ): Promise<LongNotExecutedItem[]> {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - LONG_NOT_EXECUTED_DAYS);
     const now = new Date();
 
+    // テストスイートのwhere条件を構築
+    const testSuiteWhere = filteredTestSuiteIds
+      ? { id: { in: filteredTestSuiteIds }, projectId, deletedAt: null }
+      : { projectId, deletedAt: null };
+
     // プロジェクト内の全テストケースを取得
     const testCases = await prisma.testCase.findMany({
       where: {
-        testSuite: {
-          projectId,
-          deletedAt: null,
-        },
+        testSuite: testSuiteWhere,
         deletedAt: null,
       },
       select: {
@@ -362,6 +394,7 @@ export class ProjectDashboardService {
         },
         execution: {
           status: 'COMPLETED',
+          ...(environmentId && { environmentId }),
         },
       },
       select: {
@@ -434,14 +467,20 @@ export class ProjectDashboardService {
    * 不安定なテスト（過去10回の成功率50-90%）を取得
    * N+1クエリを回避するため、一括でデータを取得してJavaScriptで処理
    */
-  private async getFlakyTests(projectId: string): Promise<FlakyTestItem[]> {
+  private async getFlakyTests(
+    projectId: string,
+    filteredTestSuiteIds?: string[],
+    environmentId?: string
+  ): Promise<FlakyTestItem[]> {
+    // テストスイートのwhere条件を構築
+    const testSuiteWhere = filteredTestSuiteIds
+      ? { id: { in: filteredTestSuiteIds }, projectId, deletedAt: null }
+      : { projectId, deletedAt: null };
+
     // プロジェクト内の全テストケースを取得
     const testCases = await prisma.testCase.findMany({
       where: {
-        testSuite: {
-          projectId,
-          deletedAt: null,
-        },
+        testSuite: testSuiteWhere,
         deletedAt: null,
       },
       select: {
@@ -470,6 +509,7 @@ export class ProjectDashboardService {
         },
         execution: {
           status: 'COMPLETED',
+          ...(environmentId && { environmentId }),
         },
       },
       select: {
@@ -542,17 +582,24 @@ export class ProjectDashboardService {
   /**
    * 最近の活動を取得
    */
-  private async getRecentActivities(projectId: string): Promise<RecentActivityItem[]> {
+  private async getRecentActivities(
+    projectId: string,
+    filteredTestSuiteIds?: string[],
+    environmentId?: string
+  ): Promise<RecentActivityItem[]> {
     const activities: RecentActivityItem[] = [];
+
+    // テストスイートのwhere条件を構築
+    const testSuiteWhere = filteredTestSuiteIds
+      ? { id: { in: filteredTestSuiteIds }, projectId, deletedAt: null }
+      : { projectId, deletedAt: null };
 
     // 実行完了イベント
     const recentExecutions = await prisma.execution.findMany({
       where: {
-        testSuite: {
-          projectId,
-          deletedAt: null,
-        },
+        testSuite: testSuiteWhere,
         status: 'COMPLETED',
+        ...(environmentId && { environmentId }),
       },
       orderBy: { completedAt: 'desc' },
       take: RECENT_ACTIVITIES_LIMIT,
@@ -597,10 +644,7 @@ export class ProjectDashboardService {
     const recentTestCaseUpdates = await prisma.testCaseHistory.findMany({
       where: {
         testCase: {
-          testSuite: {
-            projectId,
-            deletedAt: null,
-          },
+          testSuite: testSuiteWhere,
         },
         changeType: 'UPDATE',
       },
@@ -654,10 +698,7 @@ export class ProjectDashboardService {
     // レビュー提出イベント
     const recentReviews = await prisma.review.findMany({
       where: {
-        testSuite: {
-          projectId,
-          deletedAt: null,
-        },
+        testSuite: testSuiteWhere,
         status: 'SUBMITTED',
       },
       orderBy: { submittedAt: 'desc' },
@@ -710,121 +751,5 @@ export class ProjectDashboardService {
     return activities
       .sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime())
       .slice(0, RECENT_ACTIVITIES_LIMIT);
-  }
-
-  /**
-   * テストスイート別カバレッジを取得
-   */
-  private async getSuiteCoverage(projectId: string): Promise<SuiteCoverageItem[]> {
-    // テストスイート一覧を取得
-    const testSuites = await prisma.testSuite.findMany({
-      where: {
-        projectId,
-        deletedAt: null,
-      },
-      select: {
-        id: true,
-        name: true,
-        _count: {
-          select: {
-            testCases: {
-              where: { deletedAt: null },
-            },
-          },
-        },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-
-    if (testSuites.length === 0) {
-      return [];
-    }
-
-    const testSuiteIds = testSuites.map((ts) => ts.id);
-
-    // 各テストスイートの最新実行を一括取得
-    const latestExecutions = await prisma.execution.findMany({
-      where: {
-        testSuiteId: { in: testSuiteIds },
-        status: 'COMPLETED',
-      },
-      orderBy: { completedAt: 'desc' },
-      select: {
-        id: true,
-        testSuiteId: true,
-        completedAt: true,
-      },
-    });
-
-    // テストスイートIDごとに最新の実行を取得
-    const latestExecutionByTestSuite = new Map<
-      string,
-      { id: string; completedAt: Date | null }
-    >();
-    for (const execution of latestExecutions) {
-      if (!latestExecutionByTestSuite.has(execution.testSuiteId)) {
-        latestExecutionByTestSuite.set(execution.testSuiteId, {
-          id: execution.id,
-          completedAt: execution.completedAt,
-        });
-      }
-    }
-
-    // 最新実行の結果を一括取得
-    const executionIds = Array.from(latestExecutionByTestSuite.values()).map((e) => e.id);
-
-    let resultsByExecutionId = new Map<string, Array<{ status: string }>>();
-
-    if (executionIds.length > 0) {
-      const allResults = await prisma.executionExpectedResult.findMany({
-        where: {
-          executionId: { in: executionIds },
-        },
-        select: {
-          executionId: true,
-          status: true,
-        },
-      });
-
-      // 実行IDごとにグループ化
-      for (const result of allResults) {
-        if (!resultsByExecutionId.has(result.executionId)) {
-          resultsByExecutionId.set(result.executionId, []);
-        }
-        resultsByExecutionId.get(result.executionId)!.push({ status: result.status });
-      }
-    }
-
-    // カバレッジデータを構築
-    const coverage: SuiteCoverageItem[] = [];
-
-    for (const suite of testSuites) {
-      const latestExecution = latestExecutionByTestSuite.get(suite.id);
-      let executedCount = 0;
-      let passRate = 0;
-
-      if (latestExecution) {
-        const results = resultsByExecutionId.get(latestExecution.id) ?? [];
-        // 実行されたテストケース数をカウント（PENDINGでないもの）
-        const executedResults = results.filter((r) => r.status !== 'PENDING');
-        executedCount = executedResults.length;
-
-        if (executedResults.length > 0) {
-          const passCount = executedResults.filter((r) => r.status === 'PASS').length;
-          passRate = Math.round((passCount / executedResults.length) * 100);
-        }
-      }
-
-      coverage.push({
-        testSuiteId: suite.id,
-        name: suite.name,
-        testCaseCount: suite._count.testCases,
-        executedCount,
-        passRate,
-        lastExecutedAt: latestExecution?.completedAt ?? null,
-      });
-    }
-
-    return coverage;
   }
 }

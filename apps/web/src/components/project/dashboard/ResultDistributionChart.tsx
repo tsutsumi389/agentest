@@ -48,12 +48,14 @@ function LegendItem({ color, label, count, percentage }: LegendItemProps) {
 
 interface ResultDistributionChartProps {
   stats: ProjectDashboardStats;
+  /** 追加のCSSクラス */
+  className?: string;
 }
 
 /**
  * 実行結果の分布を表示するドーナツチャート
  */
-export function ResultDistributionChart({ stats }: ResultDistributionChartProps) {
+export function ResultDistributionChart({ stats, className }: ResultDistributionChartProps) {
   const { resultDistribution } = stats;
 
   // セグメントデータを構築
@@ -76,15 +78,15 @@ export function ResultDistributionChart({ stats }: ResultDistributionChartProps)
   );
 
   return (
-    <div className="bg-background-secondary border border-border rounded-lg p-4">
+    <div className={`bg-background-secondary border border-border rounded-lg p-4 flex flex-col min-h-[420px] ${className ?? ''}`}>
       <h3 className="text-foreground font-medium mb-4">実行結果の分布</h3>
 
-      <div className="flex flex-col md:flex-row items-center gap-6">
+      <div className="flex-1 flex flex-col md:flex-row items-center justify-center gap-8">
         {/* ドーナツチャート */}
         <div className="shrink-0">
           <DonutChart
             segments={segments}
-            size={160}
+            size={200}
             thickness={0.25}
             centerContent={centerContent}
             emptyMessage="実行データがありません"
@@ -93,7 +95,7 @@ export function ResultDistributionChart({ stats }: ResultDistributionChartProps)
         </div>
 
         {/* 凡例 */}
-        <div className="flex-1 w-full space-y-2">
+        <div className="w-full md:w-auto md:min-w-[180px] space-y-3">
           {segments.map((segment) => (
             <LegendItem
               key={segment.id}

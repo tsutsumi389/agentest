@@ -363,7 +363,17 @@ export class ProjectController {
   getDashboard = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { projectId } = req.params;
-      const dashboard = await this.dashboardService.getDashboard(projectId);
+
+      // フィルターパラメータを取得
+      const environmentId = req.query.environmentId as string | undefined;
+      const labelIdsParam = req.query.labelIds as string | undefined;
+      const labelIds = labelIdsParam ? labelIdsParam.split(',').filter(Boolean) : undefined;
+
+      const filters = environmentId || labelIds
+        ? { environmentId, labelIds }
+        : undefined;
+
+      const dashboard = await this.dashboardService.getDashboard(projectId, filters);
 
       res.json({ dashboard });
     } catch (error) {
