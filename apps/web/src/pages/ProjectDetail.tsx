@@ -185,14 +185,6 @@ export function ProjectDetailPage() {
     <div className="space-y-6">
       {/* ヘッダー */}
       <div>
-        <Link
-          to="/projects"
-          className="inline-flex items-center gap-1 text-sm text-foreground-muted hover:text-foreground mb-4"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          プロジェクト一覧
-        </Link>
-
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-lg bg-accent-subtle flex items-center justify-center">
