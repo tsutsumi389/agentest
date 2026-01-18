@@ -526,18 +526,18 @@ describe('Internal API Update Endpoints Integration Tests', () => {
         expect(response.body.expectedResult.note).toBe('Button color is incorrect');
       });
 
-      it('期待結果をNOT_EXECUTABLEに更新できる', async () => {
+      it('期待結果をSKIPPEDに更新できる', async () => {
         const response = await request(app)
           .patch(`/internal/api/executions/${execution.id}/expected-results/${expectedResultResult.id}`)
           .query({ userId: testUser.id })
           .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
           .send({
-            status: 'NOT_EXECUTABLE',
+            status: 'SKIPPED',
             note: 'Feature not available',
           });
 
         expect(response.status).toBe(200);
-        expect(response.body.expectedResult.status).toBe('NOT_EXECUTABLE');
+        expect(response.body.expectedResult.status).toBe('SKIPPED');
       });
     });
 

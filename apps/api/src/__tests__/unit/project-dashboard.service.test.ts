@@ -194,12 +194,11 @@ describe('ProjectDashboardService', () => {
       mockPrisma.testSuite.findMany.mockResolvedValue([]);
     });
 
-    it('各ステータス(PASS/FAIL/SKIPPED/NOT_EXECUTABLE/PENDING)のカウント', async () => {
+    it('各ステータス(PASS/FAIL/SKIPPED/PENDING)のカウント', async () => {
       mockPrisma.executionExpectedResult.groupBy.mockResolvedValue([
         { status: 'PASS', _count: { status: 15 } },
         { status: 'FAIL', _count: { status: 3 } },
-        { status: 'SKIPPED', _count: { status: 2 } },
-        { status: 'NOT_EXECUTABLE', _count: { status: 1 } },
+        { status: 'SKIPPED', _count: { status: 3 } },
         { status: 'PENDING', _count: { status: 5 } },
       ]);
 
@@ -207,8 +206,7 @@ describe('ProjectDashboardService', () => {
 
       expect(result.resultDistribution.pass).toBe(15);
       expect(result.resultDistribution.fail).toBe(3);
-      expect(result.resultDistribution.skipped).toBe(2);
-      expect(result.resultDistribution.notExecutable).toBe(1);
+      expect(result.resultDistribution.skipped).toBe(3);
       expect(result.resultDistribution.pending).toBe(5);
     });
 
@@ -220,7 +218,6 @@ describe('ProjectDashboardService', () => {
       expect(result.resultDistribution.pass).toBe(0);
       expect(result.resultDistribution.fail).toBe(0);
       expect(result.resultDistribution.skipped).toBe(0);
-      expect(result.resultDistribution.notExecutable).toBe(0);
       expect(result.resultDistribution.pending).toBe(0);
     });
   });

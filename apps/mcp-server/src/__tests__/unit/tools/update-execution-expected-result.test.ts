@@ -60,20 +60,13 @@ describe('updateExecutionExpectedResultTool', () => {
       expect(result.note).toBe('Expected value did not match');
     });
 
-    it('SKIPPED and NOT_EXECUTABLEも受け付ける', () => {
+    it('SKIPPEDも受け付ける', () => {
       const skippedResult = updateExecutionExpectedResultInputSchema.parse({
         executionId: TEST_EXECUTION_ID,
         expectedResultId: TEST_EXPECTED_RESULT_ID,
         status: 'SKIPPED',
       });
       expect(skippedResult.status).toBe('SKIPPED');
-
-      const notExecResult = updateExecutionExpectedResultInputSchema.parse({
-        executionId: TEST_EXECUTION_ID,
-        expectedResultId: TEST_EXPECTED_RESULT_ID,
-        status: 'NOT_EXECUTABLE',
-      });
-      expect(notExecResult.status).toBe('NOT_EXECUTABLE');
     });
 
     it('executionIdとexpectedResultIdとstatusは必須', () => {
@@ -182,35 +175,6 @@ describe('updateExecutionExpectedResultTool', () => {
       expect(mockApiClient.patch).toHaveBeenCalledWith(
         `/internal/api/executions/${TEST_EXECUTION_ID}/expected-results/${TEST_EXPECTED_RESULT_ID}`,
         { status: 'FAIL', note: 'Button color is wrong' },
-        { userId: TEST_USER_ID }
-      );
-    });
-
-    it('正常に内部APIを呼び出す（NOT_EXECUTABLE）', async () => {
-      const mockResponse = {
-        expectedResult: {
-          id: TEST_EXPECTED_RESULT_ID,
-          executionId: TEST_EXECUTION_ID,
-          status: 'NOT_EXECUTABLE',
-          note: 'Feature not available in test environment',
-          judgedAt: '2024-01-02T00:00:00.000Z',
-        },
-      };
-      mockApiClient.patch.mockResolvedValueOnce(mockResponse);
-
-      const context: ToolContext = { userId: TEST_USER_ID };
-      const input = {
-        executionId: TEST_EXECUTION_ID,
-        expectedResultId: TEST_EXPECTED_RESULT_ID,
-        status: 'NOT_EXECUTABLE' as const,
-        note: 'Feature not available in test environment',
-      };
-
-      await updateExecutionExpectedResultTool.handler(input, context);
-
-      expect(mockApiClient.patch).toHaveBeenCalledWith(
-        `/internal/api/executions/${TEST_EXECUTION_ID}/expected-results/${TEST_EXPECTED_RESULT_ID}`,
-        { status: 'NOT_EXECUTABLE', note: 'Feature not available in test environment' },
         { userId: TEST_USER_ID }
       );
     });

@@ -121,7 +121,7 @@ export async function publishExpectedResultUpdated(
   resultId: string,
   snapshotTestCaseId: string,
   snapshotExpectedResultId: string,
-  status: 'PENDING' | 'PASS' | 'FAIL' | 'SKIPPED' | 'NOT_EXECUTABLE',
+  status: 'PENDING' | 'PASS' | 'FAIL' | 'SKIPPED',
   note: string | null
 ): Promise<void> {
   const event: ExecutionExpectedResultUpdatedEvent = {

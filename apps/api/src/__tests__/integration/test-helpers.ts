@@ -946,7 +946,7 @@ export async function createTestExecutionExpectedResult(
   executionExpectedResultId: string,
   overrides: Partial<{
     id: string;
-    status: 'PENDING' | 'PASS' | 'FAIL' | 'SKIPPED' | 'NOT_EXECUTABLE';
+    status: 'PENDING' | 'PASS' | 'FAIL' | 'SKIPPED';
     note: string | null;
     judgedAt: Date | null;
   }> = {}
