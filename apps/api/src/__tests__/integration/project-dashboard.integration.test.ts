@@ -173,10 +173,9 @@ describe('Project Dashboard API Integration Tests', () => {
         .expect(200);
 
       const { dashboard } = response.body;
+      expect(dashboard.summary.totalTestSuites).toBe(0);
       expect(dashboard.summary.totalTestCases).toBe(0);
-      expect(dashboard.summary.inProgressExecutions).toBe(0);
-      expect(dashboard.summary.lastExecutionAt).toBeNull();
-      expect(dashboard.summary.overallPassRate).toBe(0);
+      expect(dashboard.summary.totalExpectedResults).toBe(0);
       expect(dashboard.resultDistribution).toEqual({
         pass: 0,
         fail: 0,
@@ -187,87 +186,29 @@ describe('Project Dashboard API Integration Tests', () => {
       expect(dashboard.attentionRequired.longNotExecuted).toEqual([]);
       expect(dashboard.attentionRequired.flakyTests).toEqual([]);
       expect(dashboard.recentActivities).toEqual([]);
-      expect(dashboard.suiteCoverage).toEqual([]);
     });
 
     it('テストケースがある場合にサマリーを取得', async () => {
       const testSuite = await createTestSuite(project.id, { name: 'Test Suite' });
-      await createTestCase(testSuite.id, { title: 'Test Case 1' });
-      await createTestCase(testSuite.id, { title: 'Test Case 2' });
-      await createTestCase(testSuite.id, { title: 'Test Case 3' });
+      const tc1 = await createTestCase(testSuite.id, { title: 'Test Case 1' });
+      const tc2 = await createTestCase(testSuite.id, { title: 'Test Case 2' });
+      const tc3 = await createTestCase(testSuite.id, { title: 'Test Case 3' });
+
+      // 期待結果を追加
+      await prisma.testCaseExpectedResult.create({
+        data: { testCaseId: tc1.id, content: 'Expected 1', orderKey: 'a' },
+      });
+      await prisma.testCaseExpectedResult.create({
+        data: { testCaseId: tc2.id, content: 'Expected 2', orderKey: 'a' },
+      });
 
       const response = await request(app)
         .get(`/api/projects/${project.id}/dashboard`)
         .expect(200);
 
+      expect(response.body.dashboard.summary.totalTestSuites).toBe(1);
       expect(response.body.dashboard.summary.totalTestCases).toBe(3);
-    });
-
-    it('実行中テストがある場合にinProgressExecutions取得', async () => {
-      const testSuite = await createTestSuite(project.id);
-      // 環境を作成
-      const env = await prisma.projectEnvironment.create({
-        data: {
-          projectId: project.id,
-          name: 'Test Env',
-          slug: 'test-env',
-          isDefault: true,
-          sortOrder: 0,
-        },
-      });
-      await createTestExecution(env.id, testSuite.id, { status: 'IN_PROGRESS' });
-      await createTestExecution(env.id, testSuite.id, { status: 'IN_PROGRESS' });
-
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/dashboard`)
-        .expect(200);
-
-      expect(response.body.dashboard.summary.inProgressExecutions).toBe(2);
-    });
-
-    it('過去30日間の成功率を取得', async () => {
-      const testSuite = await createTestSuite(project.id);
-      const testCase = await createTestCase(testSuite.id);
-      const expectedResult = await prisma.testCaseExpectedResult.create({
-        data: { testCaseId: testCase.id, content: 'Expected', orderKey: 'a' },
-      });
-
-      const env = await prisma.projectEnvironment.create({
-        data: {
-          projectId: project.id,
-          name: 'Test Env',
-          slug: 'test-env',
-          isDefault: true,
-          sortOrder: 0,
-        },
-      });
-
-      // 完了した実行を作成
-      const execution = await prisma.execution.create({
-        data: {
-          testSuiteId: testSuite.id,
-          environmentId: env.id,
-          status: 'COMPLETED',
-          completedAt: new Date(),
-        },
-      });
-
-      // 実行時スナップショットを作成
-      const execTestSuite = await createTestExecutionTestSuite(execution.id, testSuite.id);
-      const execTestCase = await createTestExecutionTestCase(execTestSuite.id, testCase.id);
-      const execExpectedResult = await createTestExecutionTestCaseExpectedResult(
-        execTestCase.id,
-        expectedResult.id
-      );
-
-      // 実行結果を作成（3つPASS、1つFAIL）
-      await createTestExecutionExpectedResult(execution.id, execTestCase.id, execExpectedResult.id, { status: 'PASS' });
-
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/dashboard`)
-        .expect(200);
-
-      expect(response.body.dashboard.summary.overallPassRate).toBe(100);
+      expect(response.body.dashboard.summary.totalExpectedResults).toBe(2);
     });
 
     it('実行結果分布を取得', async () => {
@@ -453,27 +394,13 @@ describe('Project Dashboard API Integration Tests', () => {
 
       expect(response.body.dashboard.recentActivities.length).toBeGreaterThan(0);
     });
-
-    it('テストスイート別カバレッジを取得', async () => {
-      const testSuite1 = await createTestSuite(project.id, { name: 'Suite 1' });
-      const testSuite2 = await createTestSuite(project.id, { name: 'Suite 2' });
-      await createTestCase(testSuite1.id, { title: 'Test 1' });
-      await createTestCase(testSuite1.id, { title: 'Test 2' });
-      await createTestCase(testSuite2.id, { title: 'Test 3' });
-
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/dashboard`)
-        .expect(200);
-
-      expect(response.body.dashboard.suiteCoverage.length).toBe(2);
-    });
   });
 
   // ============================================================
   // 境界値
   // ============================================================
   describe('Boundary Cases', () => {
-    it('31日前の実行は成功率に含まれない', async () => {
+    it('31日前の実行は結果分布に含まれない', async () => {
       const testSuite = await createTestSuite(project.id);
       const testCase = await createTestCase(testSuite.id);
       const expectedResult = await prisma.testCaseExpectedResult.create({
@@ -515,8 +442,7 @@ describe('Project Dashboard API Integration Tests', () => {
         .get(`/api/projects/${project.id}/dashboard`)
         .expect(200);
 
-      // 31日前の実行は過去30日間の統計に含まれないため、成功率は0
-      expect(response.body.dashboard.summary.overallPassRate).toBe(0);
+      // 31日前の実行は過去30日間の統計に含まれない
       expect(response.body.dashboard.resultDistribution.pass).toBe(0);
     });
 

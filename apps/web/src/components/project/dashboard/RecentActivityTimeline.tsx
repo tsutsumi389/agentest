@@ -9,6 +9,8 @@ import { formatRelativeTimeOrDefault, formatDateTime } from '../../../lib/date';
 
 interface RecentActivityTimelineProps {
   stats: ProjectDashboardStats;
+  /** 追加のCSSクラス */
+  className?: string;
 }
 
 /**
@@ -43,7 +45,7 @@ const ACTIVITY_CONFIG: Record<
  * 最近の活動タイムラインコンポーネント
  * プロジェクトの最近のアクティビティをタイムライン形式で表示
  */
-export function RecentActivityTimeline({ stats }: RecentActivityTimelineProps) {
+export function RecentActivityTimeline({ stats, className }: RecentActivityTimelineProps) {
   const { projectId } = useParams<{ projectId: string }>();
 
   // projectIdが取得できない場合は何も表示しない
@@ -56,23 +58,25 @@ export function RecentActivityTimeline({ stats }: RecentActivityTimelineProps) {
   // 活動がない場合は空状態を表示
   if (recentActivities.length === 0) {
     return (
-      <div className="card p-6">
+      <div className={`card p-6 flex flex-col ${className ?? ''}`}>
         <h2 className="text-lg font-semibold text-foreground mb-4">最近の活動</h2>
-        <div className="text-center py-8">
-          <History className="w-8 h-8 text-foreground-subtle mx-auto mb-2" />
-          <p className="text-foreground-muted">まだ活動がありません</p>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center py-8">
+            <History className="w-8 h-8 text-foreground-subtle mx-auto mb-2" />
+            <p className="text-foreground-muted">まだ活動がありません</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="card p-6">
+    <div className={`card p-6 flex flex-col ${className ?? ''}`}>
       {/* ヘッダー */}
       <h2 className="text-lg font-semibold text-foreground mb-4">最近の活動</h2>
 
-      {/* アクティビティリスト */}
-      <div className="space-y-2">
+      {/* アクティビティリスト（スクロール対応） */}
+      <div className="flex-1 overflow-y-auto space-y-2">
         {recentActivities.map((activity) => (
           <ActivityItem
             key={activity.id}

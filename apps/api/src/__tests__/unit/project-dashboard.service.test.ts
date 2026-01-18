@@ -6,9 +6,16 @@ const mockPrisma = vi.hoisted(() => ({
   project: {
     findFirst: vi.fn(),
   },
+  testSuite: {
+    count: vi.fn(),
+    findMany: vi.fn(),
+  },
   testCase: {
     count: vi.fn(),
     findMany: vi.fn(),
+  },
+  testCaseExpectedResult: {
+    count: vi.fn(),
   },
   execution: {
     count: vi.fn(),
@@ -23,9 +30,6 @@ const mockPrisma = vi.hoisted(() => ({
     findMany: vi.fn(),
   },
   review: {
-    findMany: vi.fn(),
-  },
-  testSuite: {
     findMany: vi.fn(),
   },
 }));
@@ -61,16 +65,9 @@ describe('ProjectDashboardService', () => {
     it('プロジェクト存在時に統計を取得できる', async () => {
       mockPrisma.project.findFirst.mockResolvedValue(mockProject);
       // getSummary用のモック
+      mockPrisma.testSuite.count.mockResolvedValue(2);
       mockPrisma.testCase.count.mockResolvedValue(5);
-      mockPrisma.execution.count.mockResolvedValue(1);
-      mockPrisma.execution.findFirst.mockResolvedValue({
-        completedAt: new Date('2024-01-01'),
-      });
-      mockPrisma.executionExpectedResult.findMany.mockResolvedValue([
-        { status: 'PASS' },
-        { status: 'PASS' },
-        { status: 'FAIL' },
-      ]);
+      mockPrisma.testCaseExpectedResult.count.mockResolvedValue(10);
       // getResultDistribution用のモック
       mockPrisma.executionExpectedResult.groupBy.mockResolvedValue([
         { status: 'PASS', _count: { status: 10 } },
@@ -78,12 +75,11 @@ describe('ProjectDashboardService', () => {
       ]);
       // getFailingTests, getLongNotExecutedTests, getFlakyTests用のモック
       mockPrisma.testCase.findMany.mockResolvedValue([]);
+      mockPrisma.executionExpectedResult.findMany.mockResolvedValue([]);
       // getRecentActivities用のモック
       mockPrisma.execution.findMany.mockResolvedValue([]);
       mockPrisma.testCaseHistory.findMany.mockResolvedValue([]);
       mockPrisma.review.findMany.mockResolvedValue([]);
-      // getSuiteCoverage用のモック
-      mockPrisma.testSuite.findMany.mockResolvedValue([]);
 
       const result = await service.getDashboard('project-1');
 
@@ -94,7 +90,6 @@ describe('ProjectDashboardService', () => {
       expect(result).toHaveProperty('resultDistribution');
       expect(result).toHaveProperty('attentionRequired');
       expect(result).toHaveProperty('recentActivities');
-      expect(result).toHaveProperty('suiteCoverage');
     });
 
     it('存在しないプロジェクトはNotFoundError', async () => {
@@ -119,59 +114,37 @@ describe('ProjectDashboardService', () => {
   describe('getSummary', () => {
     beforeEach(() => {
       mockPrisma.project.findFirst.mockResolvedValue(mockProject);
-      // getResultDistribution, getAttentionRequired, getRecentActivities, getSuiteCoverage用のデフォルトモック
+      // getResultDistribution, getAttentionRequired, getRecentActivities用のデフォルトモック
       mockPrisma.executionExpectedResult.groupBy.mockResolvedValue([]);
       mockPrisma.testCase.findMany.mockResolvedValue([]);
+      mockPrisma.executionExpectedResult.findMany.mockResolvedValue([]);
       mockPrisma.execution.findMany.mockResolvedValue([]);
       mockPrisma.testCaseHistory.findMany.mockResolvedValue([]);
       mockPrisma.review.findMany.mockResolvedValue([]);
-      mockPrisma.testSuite.findMany.mockResolvedValue([]);
     });
 
-    it('テストケース総数/実行中数/最終実行日時/成功率を取得', async () => {
-      const lastExecutionDate = new Date('2024-01-15');
+    it('テストスイート数/テストケース数/期待結果数を取得', async () => {
+      mockPrisma.testSuite.count.mockResolvedValue(3);
       mockPrisma.testCase.count.mockResolvedValue(10);
-      mockPrisma.execution.count.mockResolvedValue(2);
-      mockPrisma.execution.findFirst.mockResolvedValue({
-        completedAt: lastExecutionDate,
-      });
-      mockPrisma.executionExpectedResult.findMany.mockResolvedValue([
-        { status: 'PASS' },
-        { status: 'PASS' },
-        { status: 'PASS' },
-        { status: 'FAIL' },
-      ]);
+      mockPrisma.testCaseExpectedResult.count.mockResolvedValue(25);
 
       const result = await service.getDashboard('project-1');
 
+      expect(result.summary.totalTestSuites).toBe(3);
       expect(result.summary.totalTestCases).toBe(10);
-      expect(result.summary.inProgressExecutions).toBe(2);
-      expect(result.summary.lastExecutionAt).toEqual(lastExecutionDate);
-      expect(result.summary.overallPassRate).toBe(75); // 3/4 = 75%
+      expect(result.summary.totalExpectedResults).toBe(25);
     });
 
-    it('テストケースがない場合は0', async () => {
+    it('データがない場合は全て0', async () => {
+      mockPrisma.testSuite.count.mockResolvedValue(0);
       mockPrisma.testCase.count.mockResolvedValue(0);
-      mockPrisma.execution.count.mockResolvedValue(0);
-      mockPrisma.execution.findFirst.mockResolvedValue(null);
-      mockPrisma.executionExpectedResult.findMany.mockResolvedValue([]);
+      mockPrisma.testCaseExpectedResult.count.mockResolvedValue(0);
 
       const result = await service.getDashboard('project-1');
 
+      expect(result.summary.totalTestSuites).toBe(0);
       expect(result.summary.totalTestCases).toBe(0);
-      expect(result.summary.inProgressExecutions).toBe(0);
-    });
-
-    it('実行がない場合はlastExecutionAt=null, passRate=0', async () => {
-      mockPrisma.testCase.count.mockResolvedValue(5);
-      mockPrisma.execution.count.mockResolvedValue(0);
-      mockPrisma.execution.findFirst.mockResolvedValue(null);
-      mockPrisma.executionExpectedResult.findMany.mockResolvedValue([]);
-
-      const result = await service.getDashboard('project-1');
-
-      expect(result.summary.lastExecutionAt).toBeNull();
-      expect(result.summary.overallPassRate).toBe(0);
+      expect(result.summary.totalExpectedResults).toBe(0);
     });
   });
 
@@ -182,16 +155,15 @@ describe('ProjectDashboardService', () => {
     beforeEach(() => {
       mockPrisma.project.findFirst.mockResolvedValue(mockProject);
       // getSummary用のモック
+      mockPrisma.testSuite.count.mockResolvedValue(0);
       mockPrisma.testCase.count.mockResolvedValue(0);
-      mockPrisma.execution.count.mockResolvedValue(0);
-      mockPrisma.execution.findFirst.mockResolvedValue(null);
-      mockPrisma.executionExpectedResult.findMany.mockResolvedValue([]);
-      // getAttentionRequired, getRecentActivities, getSuiteCoverage用のデフォルトモック
+      mockPrisma.testCaseExpectedResult.count.mockResolvedValue(0);
+      // getAttentionRequired, getRecentActivities用のデフォルトモック
       mockPrisma.testCase.findMany.mockResolvedValue([]);
+      mockPrisma.executionExpectedResult.findMany.mockResolvedValue([]);
       mockPrisma.execution.findMany.mockResolvedValue([]);
       mockPrisma.testCaseHistory.findMany.mockResolvedValue([]);
       mockPrisma.review.findMany.mockResolvedValue([]);
-      mockPrisma.testSuite.findMany.mockResolvedValue([]);
     });
 
     it('各ステータス(PASS/FAIL/SKIPPED/PENDING)のカウント', async () => {
@@ -229,17 +201,15 @@ describe('ProjectDashboardService', () => {
     beforeEach(() => {
       mockPrisma.project.findFirst.mockResolvedValue(mockProject);
       // getSummary用のモック
+      mockPrisma.testSuite.count.mockResolvedValue(0);
       mockPrisma.testCase.count.mockResolvedValue(0);
-      mockPrisma.execution.count.mockResolvedValue(0);
-      mockPrisma.execution.findFirst.mockResolvedValue(null);
+      mockPrisma.testCaseExpectedResult.count.mockResolvedValue(0);
       // getResultDistribution用のモック
       mockPrisma.executionExpectedResult.groupBy.mockResolvedValue([]);
       // getRecentActivities用のモック
       mockPrisma.execution.findMany.mockResolvedValue([]);
       mockPrisma.testCaseHistory.findMany.mockResolvedValue([]);
       mockPrisma.review.findMany.mockResolvedValue([]);
-      // getSuiteCoverage用のモック
-      mockPrisma.testSuite.findMany.mockResolvedValue([]);
     });
 
     it('最新がFAILのテストを連続失敗回数順で取得（最大10件）', async () => {
@@ -297,17 +267,15 @@ describe('ProjectDashboardService', () => {
     beforeEach(() => {
       mockPrisma.project.findFirst.mockResolvedValue(mockProject);
       // getSummary用のモック
+      mockPrisma.testSuite.count.mockResolvedValue(0);
       mockPrisma.testCase.count.mockResolvedValue(0);
-      mockPrisma.execution.count.mockResolvedValue(0);
-      mockPrisma.execution.findFirst.mockResolvedValue(null);
+      mockPrisma.testCaseExpectedResult.count.mockResolvedValue(0);
       // getResultDistribution用のモック
       mockPrisma.executionExpectedResult.groupBy.mockResolvedValue([]);
       // getRecentActivities用のモック
       mockPrisma.execution.findMany.mockResolvedValue([]);
       mockPrisma.testCaseHistory.findMany.mockResolvedValue([]);
       mockPrisma.review.findMany.mockResolvedValue([]);
-      // getSuiteCoverage用のモック
-      mockPrisma.testSuite.findMany.mockResolvedValue([]);
     });
 
     it('30日以上未実行/一度も未実行のテストを取得', async () => {
@@ -368,17 +336,15 @@ describe('ProjectDashboardService', () => {
     beforeEach(() => {
       mockPrisma.project.findFirst.mockResolvedValue(mockProject);
       // getSummary用のモック
+      mockPrisma.testSuite.count.mockResolvedValue(0);
       mockPrisma.testCase.count.mockResolvedValue(0);
-      mockPrisma.execution.count.mockResolvedValue(0);
-      mockPrisma.execution.findFirst.mockResolvedValue(null);
+      mockPrisma.testCaseExpectedResult.count.mockResolvedValue(0);
       // getResultDistribution用のモック
       mockPrisma.executionExpectedResult.groupBy.mockResolvedValue([]);
       // getRecentActivities用のモック
       mockPrisma.execution.findMany.mockResolvedValue([]);
       mockPrisma.testCaseHistory.findMany.mockResolvedValue([]);
       mockPrisma.review.findMany.mockResolvedValue([]);
-      // getSuiteCoverage用のモック
-      mockPrisma.testSuite.findMany.mockResolvedValue([]);
     });
 
     it('過去10回で成功率50-90%のテストを取得', async () => {
@@ -469,16 +435,14 @@ describe('ProjectDashboardService', () => {
     beforeEach(() => {
       mockPrisma.project.findFirst.mockResolvedValue(mockProject);
       // getSummary用のモック
+      mockPrisma.testSuite.count.mockResolvedValue(0);
       mockPrisma.testCase.count.mockResolvedValue(0);
-      mockPrisma.execution.count.mockResolvedValue(0);
-      mockPrisma.execution.findFirst.mockResolvedValue(null);
-      mockPrisma.executionExpectedResult.findMany.mockResolvedValue([]);
+      mockPrisma.testCaseExpectedResult.count.mockResolvedValue(0);
       // getResultDistribution用のモック
       mockPrisma.executionExpectedResult.groupBy.mockResolvedValue([]);
       // getFailingTests, getLongNotExecutedTests, getFlakyTests用のモック
       mockPrisma.testCase.findMany.mockResolvedValue([]);
-      // getSuiteCoverage用のモック
-      mockPrisma.testSuite.findMany.mockResolvedValue([]);
+      mockPrisma.executionExpectedResult.findMany.mockResolvedValue([]);
     });
 
     it('execution/testCaseUpdate/reviewを日時降順で取得（最大10件）', async () => {
@@ -534,87 +498,6 @@ describe('ProjectDashboardService', () => {
       const result = await service.getDashboard('project-1');
 
       expect(result.recentActivities).toEqual([]);
-    });
-  });
-
-  // ============================================================
-  // getSuiteCoverage
-  // ============================================================
-  describe('getSuiteCoverage', () => {
-    beforeEach(() => {
-      mockPrisma.project.findFirst.mockResolvedValue(mockProject);
-      // getSummary用のモック
-      mockPrisma.testCase.count.mockResolvedValue(0);
-      mockPrisma.execution.count.mockResolvedValue(0);
-      mockPrisma.execution.findFirst.mockResolvedValue(null);
-      mockPrisma.executionExpectedResult.findMany.mockResolvedValue([]);
-      // getResultDistribution用のモック
-      mockPrisma.executionExpectedResult.groupBy.mockResolvedValue([]);
-      // getFailingTests, getLongNotExecutedTests, getFlakyTests用のモック
-      mockPrisma.testCase.findMany.mockResolvedValue([]);
-      // getRecentActivities用のモック（execution.findManyはtestSuiteを含める）
-      mockPrisma.execution.findMany.mockResolvedValue([]);
-      mockPrisma.testCaseHistory.findMany.mockResolvedValue([]);
-      mockPrisma.review.findMany.mockResolvedValue([]);
-    });
-
-    it('各スイートのテスト数/実行済み数/成功率/最終実行日時', async () => {
-      const testSuites = [
-        { id: 'suite-1', name: 'Suite 1', _count: { testCases: 5 } },
-        { id: 'suite-2', name: 'Suite 2', _count: { testCases: 3 } },
-      ];
-      mockPrisma.testSuite.findMany.mockResolvedValue(testSuites);
-
-      // mockImplementationを使って、呼び出しごとに異なる応答を返す
-      // 並列実行されるため、引数に基づいて適切な値を返す
-      mockPrisma.execution.findMany.mockImplementation((query: any) => {
-        // getRecentActivitiesは { status: 'COMPLETED' } を含む
-        // getSuiteCoverageは { testSuiteId: { in: [...] } } を含む
-        if (query?.where?.testSuiteId?.in) {
-          return Promise.resolve([
-            { id: 'exec-1', testSuiteId: 'suite-1', completedAt: new Date('2024-01-15') },
-            { id: 'exec-2', testSuiteId: 'suite-2', completedAt: new Date('2024-01-10') },
-          ]);
-        }
-        // getRecentActivities用
-        return Promise.resolve([]);
-      });
-
-      // executionExpectedResult.findManyも引数に基づいて応答を分岐
-      mockPrisma.executionExpectedResult.findMany.mockImplementation((query: any) => {
-        // getSuiteCoverageは { executionId: { in: [...] } } を含む
-        if (query?.where?.executionId?.in) {
-          return Promise.resolve([
-            { executionId: 'exec-1', status: 'PASS' },
-            { executionId: 'exec-1', status: 'PASS' },
-            { executionId: 'exec-1', status: 'FAIL' },
-            { executionId: 'exec-2', status: 'PASS' },
-            { executionId: 'exec-2', status: 'PASS' },
-          ]);
-        }
-        // 他の用途は空配列
-        return Promise.resolve([]);
-      });
-
-      const result = await service.getDashboard('project-1');
-
-      expect(result.suiteCoverage).toHaveLength(2);
-      expect(result.suiteCoverage[0].testCaseCount).toBe(5);
-      expect(result.suiteCoverage[0].executedCount).toBe(3);
-      expect(result.suiteCoverage[0].passRate).toBe(67); // 2/3 = 67%
-      expect(result.suiteCoverage[1].testCaseCount).toBe(3);
-      expect(result.suiteCoverage[1].executedCount).toBe(2);
-      expect(result.suiteCoverage[1].passRate).toBe(100); // 2/2 = 100%
-    });
-
-    it('スイートがない場合は空配列', async () => {
-      mockPrisma.testSuite.findMany.mockResolvedValue([]);
-      // getRecentActivitiesでexecution.findManyが呼ばれるが、テストスイートがないのでgetSuiteCoverageは早期リターン
-      mockPrisma.execution.findMany.mockResolvedValue([]);
-
-      const result = await service.getDashboard('project-1');
-
-      expect(result.suiteCoverage).toEqual([]);
     });
   });
 });
