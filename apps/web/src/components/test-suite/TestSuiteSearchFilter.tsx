@@ -50,6 +50,10 @@ interface TestSuiteSearchFilterProps {
    * プロジェクトのラベル一覧
    */
   labels?: Label[];
+  /**
+   * デフォルトのフィルタ値（クリア時に使用）
+   */
+  defaultFilters?: TestSuiteSearchParams;
 }
 
 /**
@@ -60,12 +64,22 @@ interface TestSuiteSearchFilterProps {
  * - 並び順と削除済み表示オプションも常に表示
  * - 選択中のラベルがバッジで表示される
  */
+// デフォルトのフィルタ値
+const DEFAULT_FILTERS: TestSuiteSearchParams = {
+  limit: 20,
+  offset: 0,
+  status: 'ACTIVE',
+  sortBy: 'updatedAt',
+  sortOrder: 'desc',
+};
+
 export function TestSuiteSearchFilter({
   filters,
   onFiltersChange,
   totalCount,
   isAdmin = false,
   labels = [],
+  defaultFilters = DEFAULT_FILTERS,
 }: TestSuiteSearchFilterProps) {
   const [searchInput, setSearchInput] = useState(filters.q || '');
   const [isStatusOpen, setIsStatusOpen] = useState(false);
@@ -194,13 +208,11 @@ export function TestSuiteSearchFilter({
   const clearAllFilters = useCallback(() => {
     setSearchInput('');
     onFiltersChange({
+      ...defaultFilters,
       limit: filters.limit,
       offset: 0,
-      status: 'ACTIVE',
-      sortBy: 'updatedAt',
-      sortOrder: 'desc',
     });
-  }, [filters.limit, onFiltersChange]);
+  }, [filters.limit, defaultFilters, onFiltersChange]);
 
   // 現在のステータス表示ラベル
   const currentStatusLabel = STATUS_OPTIONS.find((o) => o.value === (filters.status || ''))?.label || 'すべて';
@@ -208,8 +220,8 @@ export function TestSuiteSearchFilter({
   // フィルタがデフォルトと異なるかどうか
   const hasActiveFilters = Boolean(
     filters.q ||
-    filters.labelIds?.length ||
-    filters.status !== 'ACTIVE' ||
+    (filters.labelIds && filters.labelIds.length > 0) ||
+    filters.status !== defaultFilters.status ||
     filters.includeDeleted
   );
 

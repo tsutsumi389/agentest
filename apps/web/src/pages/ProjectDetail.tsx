@@ -324,6 +324,7 @@ function TestSuiteListContent({
           totalCount={totalCount}
           isAdmin={isAdmin}
           labels={labels}
+          defaultFilters={DEFAULT_SEARCH_PARAMS}
         />
       </div>
 
