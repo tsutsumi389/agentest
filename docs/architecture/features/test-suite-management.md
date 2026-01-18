@@ -31,11 +31,13 @@
     - 削除済み含む
   - テストスイートカード一覧
     - テストスイート名
-    - 説明（あれば）
-    - ステータスバッジ
+    - ラベル（色付きバッジ、複数表示可）
+    - ステータスバッジ（DRAFT/ARCHIVEDのみ表示、ACTIVEは非表示）
     - テストケース数
-    - 前提条件数
-    - 作成日時
+    - 最終実行結果（環境名 + 判定結果カウント）
+      - 表示形式: `[環境名] X成功 Y失敗 Z未実施 ...`
+      - 0件の判定結果は非表示
+      - 表示順: 成功 → 失敗 → 未実施 → スキップ → 実施不可
     - 削除済みの場合はグレーアウト + 残り日数表示
   - 「テストスイートを作成」ボタン
   - ページネーション（20件ずつ）
@@ -666,11 +668,21 @@ after:  ["a", "b", "c"]  （b を新規生成）
       "id": "uuid",
       "projectId": "uuid",
       "name": "ログイン機能テスト",
-      "description": "ログイン関連の機能テスト群",
       "status": "ACTIVE",
-      "createdAt": "2024-01-01T00:00:00Z",
-      "updatedAt": "2024-01-01T00:00:00Z",
-      "deletedAt": null,
+      "labels": [
+        { "id": "uuid", "name": "重要", "color": "#FF0000" }
+      ],
+      "lastExecution": {
+        "id": "uuid",
+        "environment": { "id": "uuid", "name": "Production" },
+        "judgmentCounts": {
+          "PASS": 10,
+          "FAIL": 2,
+          "NOT_EXECUTED": 3,
+          "SKIPPED": 0,
+          "NOT_EXECUTABLE": 0
+        }
+      },
       "_count": {
         "testCases": 5,
         "preconditions": 2
