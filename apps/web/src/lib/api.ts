@@ -320,8 +320,7 @@ export interface TestSuite {
   labels?: Array<{ id: string; name: string; color: string }>;
   lastExecution?: {
     id: string;
-    startedAt: string;
-    completedAt: string | null;
+    createdAt: string;
     environment: { id: string; name: string } | null;
     judgmentCounts: {
       PASS: number;

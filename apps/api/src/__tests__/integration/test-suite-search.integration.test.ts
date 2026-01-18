@@ -104,21 +104,25 @@ describe('Test Suite Search API Integration Tests', () => {
   // ============================================================
   describe('GET /api/projects/:projectId/test-suites', () => {
     beforeEach(async () => {
-      // テストスイートを作成（デフォルトステータスがACTIVEになったため明示的に指定）
+      // テストスイートを作成（ソートテスト用にcreatedAtを明示的に設定）
+      const now = new Date();
       await createTestSuite(project.id, {
         name: 'Login Test Suite',
         description: 'Tests for login functionality',
         status: 'ACTIVE',
+        createdAt: new Date(now.getTime() - 2000), // 2秒前（最も古い）
       });
       await createTestSuite(project.id, {
         name: 'Payment Test Suite',
         description: 'Tests for payment processing',
         status: 'ACTIVE',
+        createdAt: new Date(now.getTime() - 1000), // 1秒前
       });
       await createTestSuite(project.id, {
         name: 'User Management Suite',
         description: 'Tests for user management',
         status: 'ACTIVE',
+        createdAt: now, // 現在（最も新しい）
       });
     });
 

@@ -25,9 +25,6 @@ function createMockExecution(overrides: Record<string, unknown> = {}) {
     id: TEST_EXECUTION_ID,
     testSuiteId: TEST_TEST_SUITE_ID,
     testSuite: { id: TEST_TEST_SUITE_ID, name: 'Test Suite', projectId: TEST_PROJECT_ID },
-    status: 'IN_PROGRESS',
-    startedAt: '2024-01-01T00:00:00.000Z',
-    completedAt: null,
     executedByUser: { id: TEST_USER_ID, name: 'Test User', avatarUrl: null },
     environment: null,
     executionTestSuite: null,
@@ -127,8 +124,6 @@ describe('getExecutionTool', () => {
 
     it('結果データとエビデンスを含む実行を返す', async () => {
       const executionWithResults = createMockExecution({
-        status: 'COMPLETED',
-        completedAt: '2024-01-01T01:00:00.000Z',
         preconditionResults: [
           { id: 'pr-1', status: 'OK', note: null },
         ],

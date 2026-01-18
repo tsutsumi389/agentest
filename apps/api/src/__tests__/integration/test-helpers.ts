@@ -335,6 +335,7 @@ export async function createTestSuite(
     name: string;
     description: string | null;
     status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
+    createdAt: Date;
   }> = {}
 ) {
   const id = overrides.id ?? randomUUID();
@@ -345,6 +346,7 @@ export async function createTestSuite(
       name: overrides.name ?? `Test Suite ${id.slice(0, 8)}`,
       description: overrides.description ?? null,
       status: overrides.status ?? 'DRAFT',
+      ...(overrides.createdAt && { createdAt: overrides.createdAt }),
     },
   });
 }
