@@ -394,9 +394,8 @@ export interface TestSuiteHistoriesGroupedResponse {
 export interface TestSuiteSearchParams {
   q?: string;
   status?: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
-  createdBy?: string;
-  from?: string;
-  to?: string;
+  // ラベルフィルター（OR条件）
+  labelIds?: string[];
   limit?: number;
   offset?: number;
   sortBy?: 'name' | 'createdAt' | 'updatedAt';
@@ -906,9 +905,7 @@ export const projectsApi = {
     const query = new URLSearchParams();
     if (params?.q) query.set('q', params.q);
     if (params?.status) query.set('status', params.status);
-    if (params?.createdBy) query.set('createdBy', params.createdBy);
-    if (params?.from) query.set('from', params.from);
-    if (params?.to) query.set('to', params.to);
+    if (params?.labelIds?.length) query.set('labelIds', params.labelIds.join(','));
     if (params?.limit !== undefined) query.set('limit', String(params.limit));
     if (params?.offset !== undefined) query.set('offset', String(params.offset));
     if (params?.sortBy) query.set('sortBy', params.sortBy);

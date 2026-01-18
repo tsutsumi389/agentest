@@ -271,103 +271,68 @@ describe('TestSuiteRepository - search', () => {
   });
 
   // ============================================================
-  // 作成者フィルタ
+  // ラベルフィルタ
   // ============================================================
-  describe('作成者フィルタ', () => {
-    it('作成者でフィルタできる', async () => {
+  describe('ラベルフィルタ', () => {
+    it('単一ラベルでフィルタできる', async () => {
       mockPrismaTestSuite.findMany.mockResolvedValue([mockTestSuites[0]]);
       mockPrismaTestSuite.count.mockResolvedValue(1);
 
       const result = await repository.search('project-1', {
         ...defaultOptions,
-        createdBy: 'user-1',
+        labelIds: ['label-1'],
       });
 
       expect(mockPrismaTestSuite.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            createdByUserId: 'user-1',
+            testSuiteLabels: {
+              some: {
+                labelId: { in: ['label-1'] },
+              },
+            },
           }),
         })
       );
       expect(result.items).toHaveLength(1);
     });
 
-    it('存在しない作成者でフィルタすると0件', async () => {
-      mockPrismaTestSuite.findMany.mockResolvedValue([]);
-      mockPrismaTestSuite.count.mockResolvedValue(0);
-
-      const result = await repository.search('project-1', {
-        ...defaultOptions,
-        createdBy: 'user-999',
-      });
-
-      expect(result.items).toEqual([]);
-      expect(result.total).toBe(0);
-    });
-  });
-
-  // ============================================================
-  // 日付フィルタ
-  // ============================================================
-  describe('日付フィルタ', () => {
-    it('開始日（from）でフィルタできる', async () => {
-      mockPrismaTestSuite.findMany.mockResolvedValue([mockTestSuites[0]]);
-      mockPrismaTestSuite.count.mockResolvedValue(1);
-
-      await repository.search('project-1', {
-        ...defaultOptions,
-        from: '2025-01-15T00:00:00Z',
-      });
-
-      expect(mockPrismaTestSuite.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            createdAt: {
-              gte: new Date('2025-01-15T00:00:00Z'),
-            },
-          }),
-        })
-      );
-    });
-
-    it('終了日（to）でフィルタできる', async () => {
-      mockPrismaTestSuite.findMany.mockResolvedValue([mockTestSuites[1]]);
-      mockPrismaTestSuite.count.mockResolvedValue(1);
-
-      await repository.search('project-1', {
-        ...defaultOptions,
-        to: '2025-01-14T23:59:59Z',
-      });
-
-      expect(mockPrismaTestSuite.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            createdAt: {
-              lte: new Date('2025-01-14T23:59:59Z'),
-            },
-          }),
-        })
-      );
-    });
-
-    it('日付範囲（from〜to）でフィルタできる', async () => {
+    it('複数ラベルでOR条件フィルタできる', async () => {
       mockPrismaTestSuite.findMany.mockResolvedValue(mockTestSuites);
       mockPrismaTestSuite.count.mockResolvedValue(2);
 
       await repository.search('project-1', {
         ...defaultOptions,
-        from: '2025-01-01T00:00:00Z',
-        to: '2025-01-31T23:59:59Z',
+        labelIds: ['label-1', 'label-2'],
       });
 
       expect(mockPrismaTestSuite.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            createdAt: {
-              gte: new Date('2025-01-01T00:00:00Z'),
-              lte: new Date('2025-01-31T23:59:59Z'),
+            testSuiteLabels: {
+              some: {
+                labelId: { in: ['label-1', 'label-2'] },
+              },
             },
+          }),
+        })
+      );
+    });
+
+    it('空配列のラベルIDはフィルタに含まれない', async () => {
+      mockPrismaTestSuite.findMany.mockResolvedValue(mockTestSuites);
+      mockPrismaTestSuite.count.mockResolvedValue(2);
+
+      await repository.search('project-1', {
+        ...defaultOptions,
+        labelIds: [],
+      });
+
+      // labelIds が空の場合、testSuiteLabels条件は設定されない
+      expect(mockPrismaTestSuite.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.not.objectContaining({
+            testSuiteLabels: expect.anything(),
           }),
         })
       );
@@ -558,7 +523,7 @@ describe('TestSuiteRepository - search', () => {
   // 複合条件
   // ============================================================
   describe('複合条件', () => {
-    it('キーワード + ステータス + 日付範囲で検索できる', async () => {
+    it('キーワード + ステータス + ラベルで検索できる', async () => {
       mockPrismaTestSuite.findMany.mockResolvedValue([mockTestSuites[0]]);
       mockPrismaTestSuite.count.mockResolvedValue(1);
 
@@ -566,8 +531,7 @@ describe('TestSuiteRepository - search', () => {
         ...defaultOptions,
         q: 'ログイン',
         status: 'ACTIVE',
-        from: '2025-01-01T00:00:00Z',
-        to: '2025-01-31T23:59:59Z',
+        labelIds: ['label-1'],
       });
 
       expect(mockPrismaTestSuite.findMany).toHaveBeenCalledWith(
@@ -576,9 +540,10 @@ describe('TestSuiteRepository - search', () => {
             projectId: 'project-1',
             status: 'ACTIVE',
             deletedAt: null,
-            createdAt: {
-              gte: new Date('2025-01-01T00:00:00Z'),
-              lte: new Date('2025-01-31T23:59:59Z'),
+            testSuiteLabels: {
+              some: {
+                labelId: { in: ['label-1'] },
+              },
             },
             OR: expect.any(Array),
           }),
@@ -593,9 +558,7 @@ describe('TestSuiteRepository - search', () => {
       await repository.search('project-1', {
         q: 'テスト',
         status: 'ACTIVE',
-        createdBy: 'user-1',
-        from: '2025-01-01T00:00:00Z',
-        to: '2025-01-31T23:59:59Z',
+        labelIds: ['label-1', 'label-2'],
         limit: 10,
         offset: 0,
         sortBy: 'name',
@@ -608,10 +571,10 @@ describe('TestSuiteRepository - search', () => {
           projectId: 'project-1',
           deletedAt: null,
           status: 'ACTIVE',
-          createdByUserId: 'user-1',
-          createdAt: {
-            gte: new Date('2025-01-01T00:00:00Z'),
-            lte: new Date('2025-01-31T23:59:59Z'),
+          testSuiteLabels: {
+            some: {
+              labelId: { in: ['label-1', 'label-2'] },
+            },
           },
           OR: [
             { name: { contains: 'テスト', mode: 'insensitive' } },

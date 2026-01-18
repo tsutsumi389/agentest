@@ -65,9 +65,8 @@ function getCategoryFromChangeDetail(snapshot: Record<string, unknown>): keyof T
 export interface TestSuiteSearchOptions {
   q?: string;
   status?: EntityStatus;
-  createdBy?: string;
-  from?: string;
-  to?: string;
+  // ラベルフィルター（OR条件）
+  labelIds?: string[];
   limit: number;
   offset: number;
   sortBy: 'name' | 'createdAt' | 'updatedAt';
@@ -261,7 +260,7 @@ export class TestSuiteRepository {
    * テストスイートを検索
    */
   async search(projectId: string, options: TestSuiteSearchOptions): Promise<{ items: TestSuiteSearchItem[]; total: number }> {
-    const { q, status, createdBy, from, to, limit, offset, sortBy, sortOrder, includeDeleted } = options;
+    const { q, status, labelIds, limit, offset, sortBy, sortOrder, includeDeleted } = options;
 
     // 検索条件を構築
     const where: Prisma.TestSuiteWhereInput = {
@@ -275,20 +274,13 @@ export class TestSuiteRepository {
       where.status = status;
     }
 
-    // 作成者フィルタ
-    if (createdBy) {
-      where.createdByUserId = createdBy;
-    }
-
-    // 日付フィルタ
-    if (from || to) {
-      where.createdAt = {};
-      if (from) {
-        where.createdAt.gte = new Date(from);
-      }
-      if (to) {
-        where.createdAt.lte = new Date(to);
-      }
+    // ラベルフィルター（OR条件）
+    if (labelIds && labelIds.length > 0) {
+      where.testSuiteLabels = {
+        some: {
+          labelId: { in: labelIds },
+        },
+      };
     }
 
     // キーワード検索（名前または前提条件内容）

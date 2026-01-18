@@ -221,13 +221,16 @@ export const executionResultUpdateSchema = z.object({
 // テストスイート検索スキーマ
 export const testSuiteSearchSchema = z.object({
   q: z.string().max(100).optional(),
-  status: entityStatusSchema.optional(),
-  createdBy: z.string().uuid().optional(),
-  from: z.string().datetime().optional(),
-  to: z.string().datetime().optional(),
+  status: entityStatusSchema.default(EntityStatus.ACTIVE),
+  // ラベルフィルター: カンマ区切り → 配列変換（OR条件）
+  labelIds: z
+    .string()
+    .optional()
+    .transform((val) => (val ? val.split(',').map((s) => s.trim()).filter((s) => s.length > 0) : undefined))
+    .pipe(z.array(z.string().uuid()).optional()),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   offset: z.coerce.number().int().min(0).default(0),
-  sortBy: z.enum(['name', 'createdAt', 'updatedAt']).default('createdAt'),
+  sortBy: z.enum(['name', 'createdAt', 'updatedAt']).default('updatedAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
   includeDeleted: z.coerce.boolean().default(false),
 });
