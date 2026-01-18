@@ -144,7 +144,8 @@ function LabelManagementSection({ project, currentRole }: LabelManagementSection
       queryClient.invalidateQueries({ queryKey: ['project-labels', project.id] });
       toast.success('ラベルを作成しました');
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('ラベル作成エラー:', error);
       toast.error('ラベルの作成に失敗しました');
     },
   });
@@ -157,7 +158,8 @@ function LabelManagementSection({ project, currentRole }: LabelManagementSection
       queryClient.invalidateQueries({ queryKey: ['project-labels', project.id] });
       toast.success('ラベルを更新しました');
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('ラベル更新エラー:', error);
       toast.error('ラベルの更新に失敗しました');
     },
   });
@@ -169,7 +171,8 @@ function LabelManagementSection({ project, currentRole }: LabelManagementSection
       queryClient.invalidateQueries({ queryKey: ['project-labels', project.id] });
       toast.success('ラベルを削除しました');
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('ラベル削除エラー:', error);
       toast.error('ラベルの削除に失敗しました');
     },
   });

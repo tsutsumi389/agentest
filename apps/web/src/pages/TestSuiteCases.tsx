@@ -576,7 +576,8 @@ function SettingsTab({ testSuite, currentRole, onUpdated, onLabelsUpdated }: Set
       toast.success('ラベルを更新しました');
       onLabelsUpdated?.();
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('テストスイートラベル更新エラー:', error);
       toast.error('ラベルの更新に失敗しました');
     },
   });
