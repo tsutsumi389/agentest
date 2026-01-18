@@ -94,6 +94,17 @@ describe('TestSuiteRepository - search', () => {
           _count: {
             select: { testCases: true, preconditions: true },
           },
+          testSuiteLabels: {
+            include: {
+              label: { select: { id: true, name: true, color: true } },
+            },
+            orderBy: { label: { name: 'asc' } },
+          },
+          executions: {
+            orderBy: { startedAt: 'desc' },
+            take: 1,
+            select: { id: true, status: true, startedAt: true, completedAt: true },
+          },
         },
         orderBy: { createdAt: 'desc' },
         take: 20,
@@ -613,6 +624,17 @@ describe('TestSuiteRepository - search', () => {
           },
           _count: {
             select: { testCases: true, preconditions: true },
+          },
+          testSuiteLabels: {
+            include: {
+              label: { select: { id: true, name: true, color: true } },
+            },
+            orderBy: { label: { name: 'asc' } },
+          },
+          executions: {
+            orderBy: { startedAt: 'desc' },
+            take: 1,
+            select: { id: true, status: true, startedAt: true, completedAt: true },
           },
         },
         orderBy: { name: 'asc' },

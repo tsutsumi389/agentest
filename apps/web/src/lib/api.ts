@@ -316,6 +316,14 @@ export interface TestSuite {
   updatedAt: string;
   deletedAt?: string | null;
   _count?: { testCases: number; preconditions: number };
+  // テストスイート一覧で取得される追加フィールド
+  labels?: Array<{ id: string; name: string; color: string }>;
+  lastExecution?: {
+    id: string;
+    status: 'IN_PROGRESS' | 'COMPLETED' | 'ABORTED';
+    startedAt: string;
+    completedAt: string | null;
+  } | null;
 }
 
 /** テストスイート前提条件 */

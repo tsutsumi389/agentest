@@ -306,7 +306,18 @@ describe('ProjectController', () => {
   describe('getTestSuites', () => {
     it('テストスイート一覧を検索できる', async () => {
       const mockResult = {
-        items: [{ id: 'suite-1', name: 'Test Suite' }],
+        items: [
+          {
+            id: 'suite-1',
+            name: 'Test Suite',
+            testSuiteLabels: [
+              { label: { id: 'label-1', name: 'Label 1', color: '#ff0000' } },
+            ],
+            executions: [
+              { id: 'exec-1', status: 'COMPLETED', startedAt: new Date(), completedAt: new Date() },
+            ],
+          },
+        ],
         total: 1,
       };
       mockProjectService.searchTestSuites.mockResolvedValue(mockResult);
@@ -321,7 +332,14 @@ describe('ProjectController', () => {
       expect(mockProjectService.searchTestSuites).toHaveBeenCalled();
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
-          testSuites: mockResult.items,
+          testSuites: [
+            expect.objectContaining({
+              id: 'suite-1',
+              name: 'Test Suite',
+              labels: [{ id: 'label-1', name: 'Label 1', color: '#ff0000' }],
+              lastExecution: expect.objectContaining({ id: 'exec-1', status: 'COMPLETED' }),
+            }),
+          ],
           total: 1,
         })
       );

@@ -272,6 +272,19 @@ export class TestSuiteRepository {
           _count: {
             select: { testCases: true, preconditions: true },
           },
+          // ラベル情報
+          testSuiteLabels: {
+            include: {
+              label: { select: { id: true, name: true, color: true } },
+            },
+            orderBy: { label: { name: 'asc' } },
+          },
+          // 最終実行情報（最新1件）
+          executions: {
+            orderBy: { startedAt: 'desc' },
+            take: 1,
+            select: { id: true, status: true, startedAt: true, completedAt: true },
+          },
         },
         orderBy,
         take: limit,

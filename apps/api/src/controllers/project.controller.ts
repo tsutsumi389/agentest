@@ -229,8 +229,31 @@ export class ProjectController {
       // 検索実行
       const { items, total } = await this.projectService.searchTestSuites(projectId, searchParams);
 
+      // レスポンス用に整形（ラベルと最終実行情報をフラット化）
+      const testSuites = items.map((item) => {
+        // testSuiteLabelsからlabels配列に変換
+        const labels = (item as { testSuiteLabels?: Array<{ label: { id: string; name: string; color: string } }> }).testSuiteLabels?.map(
+          (tsl) => tsl.label
+        );
+        // executions配列から最初の要素をlastExecutionとして取得
+        const executions = (item as { executions?: Array<{ id: string; status: string; startedAt: Date; completedAt: Date | null }> }).executions;
+        const lastExecution = executions?.[0] ?? null;
+
+        // 不要なプロパティを除外してレスポンスを構築
+        const { testSuiteLabels: _testSuiteLabels, executions: _executions, ...rest } = item as typeof item & {
+          testSuiteLabels?: unknown;
+          executions?: unknown;
+        };
+
+        return {
+          ...rest,
+          labels,
+          lastExecution,
+        };
+      });
+
       res.json({
-        testSuites: items,
+        testSuites,
         total,
         limit: searchParams.limit,
         offset: searchParams.offset,

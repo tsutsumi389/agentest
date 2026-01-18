@@ -5,14 +5,15 @@ import {
   FolderKanban,
   Plus,
   FileText,
-  Play,
-  MoreHorizontal,
   ChevronLeft,
   Settings,
   ChevronRight,
   X,
   Loader2,
   BarChart3,
+  CirclePlay,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react';
 import { projectsApi, testSuitesApi, usersApi, type Project, type TestSuite, type TestSuiteSearchParams, type ProjectMemberRole } from '../lib/api';
 import { TestSuiteSearchFilter, type FilterMember } from '../components/test-suite/TestSuiteSearchFilter';
@@ -460,16 +461,17 @@ function TestSuiteListContent({
 function TestSuiteRow({ suite }: { suite: TestSuite }) {
   const isDeleted = !!suite.deletedAt;
 
-  const statusColors = {
-    DRAFT: 'badge-warning',
-    ACTIVE: 'badge-success',
-    ARCHIVED: 'badge',
+  // ステータス表示設定（ACTIVEは非表示）
+  const statusConfig: Record<'DRAFT' | 'ARCHIVED', { className: string; label: string }> = {
+    DRAFT: { className: 'badge-warning', label: '下書き' },
+    ARCHIVED: { className: 'badge', label: 'アーカイブ' },
   };
 
-  const statusLabels = {
-    DRAFT: '下書き',
-    ACTIVE: '有効',
-    ARCHIVED: 'アーカイブ',
+  // 最終実行ステータスの表示設定
+  const executionStatusConfig = {
+    IN_PROGRESS: { icon: CirclePlay, className: 'text-accent', label: '実行中' },
+    COMPLETED: { icon: CheckCircle2, className: 'text-success', label: '完了' },
+    ABORTED: { icon: XCircle, className: 'text-danger', label: '中断' },
   };
 
   return (
@@ -484,46 +486,58 @@ function TestSuiteRow({ suite }: { suite: TestSuite }) {
           <FileText className={`w-5 h-5 ${isDeleted ? 'text-foreground-subtle' : 'text-foreground-muted'}`} />
         </div>
         <div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <p className={`font-medium ${isDeleted ? 'text-foreground-muted line-through' : 'text-foreground'}`}>
               {suite.name}
             </p>
             {isDeleted && (
               <span className="badge badge-danger">削除済み</span>
             )}
+            {/* ラベル表示 */}
+            {!isDeleted && suite.labels && suite.labels.length > 0 && (
+              <div className="flex items-center gap-1">
+                {suite.labels.map((label) => (
+                  <span
+                    key={label.id}
+                    className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                    style={{
+                      backgroundColor: `${label.color}20`,
+                      color: label.color,
+                      border: `1px solid ${label.color}40`,
+                    }}
+                  >
+                    {label.name}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
-          <p className="text-sm text-foreground-muted">
-            {suite._count?.testCases || 0} テストケース
-          </p>
+          <div className="flex items-center gap-3 text-sm text-foreground-muted">
+            <span>{suite._count?.testCases || 0} テストケース</span>
+            {/* 最終実行結果表示 */}
+            {!isDeleted && suite.lastExecution && (
+              <>
+                <span className="text-foreground-subtle">•</span>
+                <span className={`flex items-center gap-1 ${executionStatusConfig[suite.lastExecution.status].className}`}>
+                  {(() => {
+                    const Icon = executionStatusConfig[suite.lastExecution.status].icon;
+                    return <Icon className="w-3.5 h-3.5" />;
+                  })()}
+                  {executionStatusConfig[suite.lastExecution.status].label}
+                </span>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
       <div className="flex items-center gap-3">
-        {!isDeleted && (
-          <span className={`badge ${statusColors[suite.status]}`}>
-            {statusLabels[suite.status]}
+        {/* ステータスバッジ（DRAFT/ARCHIVEDのみ表示、ACTIVEは非表示） */}
+        {!isDeleted && suite.status !== 'ACTIVE' && (
+          <span className={`badge ${statusConfig[suite.status].className}`}>
+            {statusConfig[suite.status].label}
           </span>
         )}
-        {!isDeleted && (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              // 実行開始
-            }}
-            className="btn btn-ghost p-2"
-          >
-            <Play className="w-4 h-4" />
-          </button>
-        )}
-        <button
-          onClick={(e) => {
-            e.preventDefault();
-            // メニュー表示
-          }}
-          className="btn btn-ghost p-2"
-        >
-          <MoreHorizontal className="w-4 h-4" />
-        </button>
       </div>
     </Link>
   );
