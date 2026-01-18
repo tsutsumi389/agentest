@@ -5,15 +5,14 @@ import type { ProjectDashboardStats } from '@agentest/shared';
 const SEGMENT_CONFIG = {
   pass: { label: '成功', color: '#3fb950' },
   fail: { label: '失敗', color: '#f85149' },
-  pending: { label: '未判定', color: '#d29922' },
-  skipped: { label: 'スキップ', color: '#6e7681' },
-  notExecutable: { label: '実行不可', color: '#58a6ff' },
+  pending: { label: '未判定', color: '#8b949e' },
+  skipped: { label: 'スキップ', color: '#d29922' },
 } as const;
 
 type SegmentKey = keyof typeof SEGMENT_CONFIG;
 
 /** セグメントの表示順序を明示的に定義 */
-const SEGMENT_ORDER: SegmentKey[] = ['pass', 'fail', 'pending', 'skipped', 'notExecutable'];
+const SEGMENT_ORDER: SegmentKey[] = ['pass', 'fail', 'pending', 'skipped'];
 
 interface LegendItemProps {
   color: string;

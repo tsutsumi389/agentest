@@ -63,7 +63,6 @@ export const judgmentStatusSchema = z.enum([
   JudgmentStatus.PASS,
   JudgmentStatus.FAIL,
   JudgmentStatus.SKIPPED,
-  JudgmentStatus.NOT_EXECUTABLE,
 ]);
 
 // ユーザースキーマ

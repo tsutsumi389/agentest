@@ -70,7 +70,6 @@ enum JudgmentStatus {
   PASS
   FAIL
   SKIPPED
-  NOT_EXECUTABLE
 }
 
 enum ReviewStatus {

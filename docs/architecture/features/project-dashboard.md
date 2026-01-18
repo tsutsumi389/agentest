@@ -62,9 +62,8 @@
 - **表示カテゴリ**:
   - 成功（Pass）: 緑色
   - 失敗（Fail）: 赤色
-  - スキップ（Skipped）: 灰色
-  - 実行不可（Not Executable）: オレンジ色
-  - 未判定（Pending）: 青色
+  - スキップ（Skipped）: 黄色
+  - 未判定（Pending）: グレー
 
 ### 要注意テスト一覧
 
@@ -163,7 +162,6 @@ interface ResultDistribution {
   pass: number;
   fail: number;
   skipped: number;
-  notExecutable: number;
   pending: number;
 }
 
@@ -251,7 +249,6 @@ interface SuiteCoverageItem {
       "pass": 120,
       "fail": 15,
       "skipped": 10,
-      "notExecutable": 3,
       "pending": 2
     },
     "attentionRequired": {

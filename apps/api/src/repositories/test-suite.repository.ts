@@ -92,7 +92,6 @@ export interface JudgmentCounts {
   FAIL: number;
   PENDING: number;
   SKIPPED: number;
-  NOT_EXECUTABLE: number;
 }
 
 /**

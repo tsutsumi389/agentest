@@ -328,7 +328,6 @@ export interface TestSuite {
       FAIL: number;
       PENDING: number;
       SKIPPED: number;
-      NOT_EXECUTABLE: number;
     };
   } | null;
 }
@@ -722,7 +721,7 @@ export interface ExecutionExpectedResult {
   executionId: string;
   executionTestCaseId: string;
   executionExpectedResultId: string;
-  status: 'PENDING' | 'PASS' | 'FAIL' | 'SKIPPED' | 'NOT_EXECUTABLE';
+  status: 'PENDING' | 'PASS' | 'FAIL' | 'SKIPPED';
   judgedAt: string | null;
   note: string | null;
   // 実施者情報
@@ -1081,7 +1080,7 @@ export type PreconditionResultStatus = 'UNCHECKED' | 'MET' | 'NOT_MET';
 export type StepResultStatus = 'PENDING' | 'DONE' | 'SKIPPED';
 
 /** 期待結果ステータス */
-export type ExpectedResultStatus = 'PENDING' | 'PASS' | 'FAIL' | 'SKIPPED' | 'NOT_EXECUTABLE';
+export type ExpectedResultStatus = 'PENDING' | 'PASS' | 'FAIL' | 'SKIPPED';
 
 /** 前提条件結果更新リクエスト */
 export interface UpdatePreconditionResultRequest {

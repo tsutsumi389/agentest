@@ -15,7 +15,7 @@ const updateStepResultSchema = z.object({
 });
 
 const updateExpectedResultSchema = z.object({
-  status: z.enum(['PENDING', 'PASS', 'FAIL', 'SKIPPED', 'NOT_EXECUTABLE']),
+  status: z.enum(['PENDING', 'PASS', 'FAIL', 'SKIPPED']),
   note: z.string().max(2000).optional(),
 });
 

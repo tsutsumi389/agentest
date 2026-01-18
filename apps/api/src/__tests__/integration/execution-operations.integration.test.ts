@@ -675,15 +675,15 @@ describe('Execution Operations API Integration Tests', () => {
       expect(response.body.result.status).toBe('SKIPPED');
     });
 
-    it('期待結果のステータスをNOT_EXECUTABLEに更新できる', async () => {
+    it('期待結果のステータスをSKIPPEDに更新できる（別パターン）', async () => {
       setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
 
       const response = await request(app)
         .patch(`/api/executions/${execution.id}/expected-results/${expectedResult.id}`)
-        .send({ status: 'NOT_EXECUTABLE' });
+        .send({ status: 'SKIPPED', note: 'Feature not available' });
 
       expect(response.status).toBe(200);
-      expect(response.body.result.status).toBe('NOT_EXECUTABLE');
+      expect(response.body.result.status).toBe('SKIPPED');
     });
 
     it('期待結果のステータスをPENDINGに戻せる', async () => {

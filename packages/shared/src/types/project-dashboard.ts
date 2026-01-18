@@ -22,8 +22,6 @@ export interface ResultDistribution {
   fail: number;
   /** スキップ */
   skipped: number;
-  /** 実行不可 */
-  notExecutable: number;
   /** 未判定 */
   pending: number;
 }

@@ -1,4 +1,4 @@
-import { Circle, CheckCircle2, XCircle, MinusCircle, Ban, type LucideIcon } from 'lucide-react';
+import { Circle, CheckCircle2, XCircle, MinusCircle, type LucideIcon } from 'lucide-react';
 import type {
   PreconditionResultStatus,
   StepResultStatus,
@@ -106,25 +106,19 @@ export const expectedResultStatusConfig: Record<ExpectedResultStatus, StatusConf
     icon: CheckCircle2,
     colorClass: 'text-success',
     bgClass: 'bg-success-subtle',
-    label: 'PASS',
+    label: '成功',
   },
   FAIL: {
     icon: XCircle,
     colorClass: 'text-danger',
     bgClass: 'bg-danger-subtle',
-    label: 'FAIL',
+    label: '失敗',
   },
   SKIPPED: {
     icon: MinusCircle,
     colorClass: 'text-warning',
     bgClass: 'bg-warning-subtle',
     label: 'スキップ',
-  },
-  NOT_EXECUTABLE: {
-    icon: Ban,
-    colorClass: 'text-accent',
-    bgClass: 'bg-accent-subtle',
-    label: '実行不可',
   },
 };
 
@@ -134,7 +128,6 @@ export const expectedResultStatusOptions: StatusOption<ExpectedResultStatus>[] =
   { value: 'PASS', config: expectedResultStatusConfig.PASS },
   { value: 'FAIL', config: expectedResultStatusConfig.FAIL },
   { value: 'SKIPPED', config: expectedResultStatusConfig.SKIPPED },
-  { value: 'NOT_EXECUTABLE', config: expectedResultStatusConfig.NOT_EXECUTABLE },
 ];
 
 // ============================================

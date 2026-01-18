@@ -2357,7 +2357,7 @@ interface UpdateStepResultResponse {
 |-----------|-----|------|------|
 | executionId | string(uuid) | **必須** | 実行ID |
 | expectedResultId | string(uuid) | **必須** | 期待結果ID |
-| status | enum | **必須** | ステータス（PASS/FAIL/SKIPPED/NOT_EXECUTABLE） |
+| status | enum | **必須** | ステータス（PASS/FAIL/SKIPPED） |
 | note | string | 任意 | メモ（最大2000文字） |
 | agentName | string | 任意 | 実施AIエージェント名（最大100文字、例: "Claude Code Opus4.5"） |
 
@@ -2365,10 +2365,9 @@ interface UpdateStepResultResponse {
 
 | ステータス | 説明 |
 |-----------|------|
-| PASS | 期待結果と一致した |
-| FAIL | 期待結果と一致しなかった |
+| PASS | 期待結果と一致した（成功） |
+| FAIL | 期待結果と一致しなかった（失敗） |
 | SKIPPED | テストをスキップした |
-| NOT_EXECUTABLE | 実行不可能（環境問題等） |
 
 ### レスポンス
 
@@ -2379,7 +2378,7 @@ interface UpdateExpectedResultResponse {
     executionId: string;
     executionTestCaseId: string;
     executionExpectedResultId: string;
-    status: string;              // PASS/FAIL/SKIPPED/NOT_EXECUTABLE
+    status: string;              // PASS/FAIL/SKIPPED
     note: string | null;
     judgedAt: string;
     createdAt: string;
@@ -2667,7 +2666,7 @@ flowchart TD
 |----------|------|------|
 | update_execution_precondition_result | 事前条件結果更新（MET/NOT_MET） | 実装済 |
 | update_execution_step_result | ステップ結果更新（DONE/SKIPPED） | 実装済 |
-| update_execution_expected_result | 期待結果判定更新（PASS/FAIL/SKIPPED/NOT_EXECUTABLE） | 実装済 |
+| update_execution_expected_result | 期待結果判定更新（PASS/FAIL/SKIPPED） | 実装済 |
 
 ### 削除ツール
 

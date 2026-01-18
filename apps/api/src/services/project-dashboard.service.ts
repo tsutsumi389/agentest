@@ -161,7 +161,6 @@ export class ProjectDashboardService {
       pass: 0,
       fail: 0,
       skipped: 0,
-      notExecutable: 0,
       pending: 0,
     };
 
@@ -175,9 +174,6 @@ export class ProjectDashboardService {
           break;
         case 'SKIPPED':
           distribution.skipped = result._count.status;
-          break;
-        case 'NOT_EXECUTABLE':
-          distribution.notExecutable = result._count.status;
           break;
         case 'PENDING':
           distribution.pending = result._count.status;

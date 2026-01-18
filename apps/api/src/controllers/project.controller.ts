@@ -24,7 +24,6 @@ function countJudgmentStatuses(
     FAIL: 0,
     PENDING: 0,
     SKIPPED: 0,
-    NOT_EXECUTABLE: 0,
   };
 
   for (const result of expectedResults) {

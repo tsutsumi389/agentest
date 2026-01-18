@@ -678,9 +678,8 @@ after:  ["a", "b", "c"]  （b を新規生成）
         "judgmentCounts": {
           "PASS": 10,
           "FAIL": 2,
-          "NOT_EXECUTED": 3,
-          "SKIPPED": 0,
-          "NOT_EXECUTABLE": 0
+          "PENDING": 3,
+          "SKIPPED": 0
         }
       },
       "_count": {

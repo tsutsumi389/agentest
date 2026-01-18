@@ -17,7 +17,6 @@ import {
   MinusCircle,
   ListChecks,
   ClipboardCheck,
-  Slash,
   Target,
 } from 'lucide-react';
 import type {
@@ -113,16 +112,14 @@ function ExpectedResultsHighlightSummary({
   pass,
   fail,
   skipped,
-  notExecutable,
   pending,
 }: {
   pass: number;
   fail: number;
   skipped: number;
-  notExecutable: number;
   pending: number;
 }) {
-  const total = pass + fail + skipped + notExecutable + pending;
+  const total = pass + fail + skipped + pending;
   const executed = pass + fail;
 
   return (
@@ -139,7 +136,6 @@ function ExpectedResultsHighlightSummary({
           passed={pass}
           failed={fail}
           skipped={skipped}
-          notExecutable={notExecutable}
           total={total}
           size="lg"
         />
@@ -186,19 +182,6 @@ function ExpectedResultsHighlightSummary({
               <div>
                 <p className="text-lg font-bold text-foreground">{skipped}</p>
                 <p className="text-xs text-foreground-muted">スキップ</p>
-              </div>
-            </div>
-          </div>
-
-          {/* 実行不可 */}
-          <div className="card p-3">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-accent-subtle flex items-center justify-center">
-                <Slash className="w-4 h-4 text-accent" />
-              </div>
-              <div>
-                <p className="text-lg font-bold text-foreground">{notExecutable}</p>
-                <p className="text-xs text-foreground-muted">実行不可</p>
               </div>
             </div>
           </div>
@@ -263,17 +246,16 @@ export function ExecutionOverviewPanel({
       { done: 0, skipped: 0, pending: 0 }
     );
 
-    // 期待結果サマリー（SKIPPEDとNOT_EXECUTABLEを分離）
+    // 期待結果サマリー
     const expectedSummary = execution.expectedResults.reduce(
       (acc, r) => {
         if (r.status === 'PASS') acc.pass++;
         else if (r.status === 'FAIL') acc.fail++;
         else if (r.status === 'SKIPPED') acc.skipped++;
-        else if (r.status === 'NOT_EXECUTABLE') acc.notExecutable++;
         else if (r.status === 'PENDING') acc.pending++;
         return acc;
       },
-      { pass: 0, fail: 0, skipped: 0, notExecutable: 0, pending: 0 }
+      { pass: 0, fail: 0, skipped: 0, pending: 0 }
     );
 
     return { preconditionSummary, stepSummary, expectedSummary };
@@ -379,7 +361,6 @@ export function ExecutionOverviewPanel({
         pass={expectedSummary.pass}
         fail={expectedSummary.fail}
         skipped={expectedSummary.skipped}
-        notExecutable={expectedSummary.notExecutable}
         pending={expectedSummary.pending}
       />
 

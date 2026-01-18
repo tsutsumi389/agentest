@@ -103,7 +103,13 @@ describe('TestSuiteRepository - search', () => {
           executions: {
             orderBy: { startedAt: 'desc' },
             take: 1,
-            select: { id: true, status: true, startedAt: true, completedAt: true },
+            select: {
+              id: true,
+              startedAt: true,
+              completedAt: true,
+              environment: { select: { id: true, name: true } },
+              expectedResults: { select: { status: true } },
+            },
           },
         },
         orderBy: { createdAt: 'desc' },
@@ -634,7 +640,13 @@ describe('TestSuiteRepository - search', () => {
           executions: {
             orderBy: { startedAt: 'desc' },
             take: 1,
-            select: { id: true, status: true, startedAt: true, completedAt: true },
+            select: {
+              id: true,
+              startedAt: true,
+              completedAt: true,
+              environment: { select: { id: true, name: true } },
+              expectedResults: { select: { status: true } },
+            },
           },
         },
         orderBy: { name: 'asc' },

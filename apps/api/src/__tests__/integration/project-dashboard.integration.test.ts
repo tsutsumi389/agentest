@@ -181,7 +181,6 @@ describe('Project Dashboard API Integration Tests', () => {
         pass: 0,
         fail: 0,
         skipped: 0,
-        notExecutable: 0,
         pending: 0,
       });
       expect(dashboard.attentionRequired.failingTests).toEqual([]);

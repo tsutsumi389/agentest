@@ -463,11 +463,10 @@ model ExecutionStepResult {
 
 | ステータス | 説明 |
 |------------|------|
-| `PENDING` | 未実施 |
-| `PASS` | 合格 |
-| `FAIL` | 不合格 |
+| `PENDING` | 未判定 |
+| `PASS` | 成功 |
+| `FAIL` | 失敗 |
 | `SKIPPED` | スキップ |
-| `NOT_EXECUTABLE` | 実施不可（テストケースが間違っている場合に選択） |
 
 ### Prisma スキーマ
 
@@ -477,7 +476,6 @@ enum JudgmentStatus {
   PASS
   FAIL
   SKIPPED
-  NOT_EXECUTABLE
 }
 
 model ExecutionExpectedResult {
@@ -603,10 +601,9 @@ Execution
        - PENDING → DONE（実施済み）
        - PENDING → SKIPPED（スキップ）
    └─▶ 期待値判定 → ExecutionExpectedResult.status 更新
-       - PENDING → PASS（合格）
-       - PENDING → FAIL（不合格）
+       - PENDING → PASS（成功）
+       - PENDING → FAIL（失敗）
        - PENDING → SKIPPED（スキップ）
-       - PENDING → NOT_EXECUTABLE（実施不可）
    └─▶ エビデンス添付 → ExecutionEvidence 作成（期待値に紐づけ）
 
 3. テスト完了

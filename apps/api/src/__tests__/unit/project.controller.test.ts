@@ -314,7 +314,16 @@ describe('ProjectController', () => {
               { label: { id: 'label-1', name: 'Label 1', color: '#ff0000' } },
             ],
             executions: [
-              { id: 'exec-1', status: 'COMPLETED', startedAt: new Date(), completedAt: new Date() },
+              {
+                id: 'exec-1',
+                startedAt: new Date(),
+                completedAt: new Date(),
+                environment: { id: 'env-1', name: 'Production' },
+                expectedResults: [
+                  { status: 'PASS' },
+                  { status: 'FAIL' },
+                ],
+              },
             ],
           },
         ],
@@ -337,7 +346,11 @@ describe('ProjectController', () => {
               id: 'suite-1',
               name: 'Test Suite',
               labels: [{ id: 'label-1', name: 'Label 1', color: '#ff0000' }],
-              lastExecution: expect.objectContaining({ id: 'exec-1', status: 'COMPLETED' }),
+              lastExecution: expect.objectContaining({
+                id: 'exec-1',
+                environment: { id: 'env-1', name: 'Production' },
+                judgmentCounts: { PASS: 1, FAIL: 1, PENDING: 0, SKIPPED: 0 },
+              }),
             }),
           ],
           total: 1,
