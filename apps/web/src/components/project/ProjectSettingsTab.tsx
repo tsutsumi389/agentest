@@ -1,12 +1,16 @@
-import { Settings, Users, Server, History, AlertTriangle } from 'lucide-react';
+import { Settings, Users, Server, History, AlertTriangle, Tags } from 'lucide-react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Project, ProjectMemberRole } from '../../lib/api';
+import { labelsApi } from '../../lib/api';
 import { ProjectGeneralSettings } from './ProjectGeneralSettings';
 import { ProjectMemberList } from './ProjectMemberList';
 import { EnvironmentList } from './EnvironmentList';
 import { HistoryList } from './HistoryList';
 import { DeleteProjectSection } from './DeleteProjectSection';
+import { LabelList } from '../label/LabelList';
+import { toast } from '../../stores/toast';
 
-export type SettingsSection = 'general' | 'members' | 'environments' | 'history' | 'danger';
+export type SettingsSection = 'general' | 'members' | 'environments' | 'labels' | 'history' | 'danger';
 
 interface ProjectSettingsTabProps {
   project: Project;
@@ -34,6 +38,7 @@ export function ProjectSettingsTab({
     { id: 'general' as const, label: '一般', icon: Settings },
     { id: 'members' as const, label: 'メンバー', icon: Users },
     { id: 'environments' as const, label: '環境', icon: Server },
+    { id: 'labels' as const, label: 'ラベル', icon: Tags },
     { id: 'history' as const, label: '履歴', icon: History },
     { id: 'danger' as const, label: '危険な操作', icon: AlertTriangle },
   ];
@@ -87,6 +92,12 @@ export function ProjectSettingsTab({
             currentRole={currentRole}
           />
         )}
+        {activeSection === 'labels' && (
+          <LabelManagementSection
+            project={project}
+            currentRole={currentRole}
+          />
+        )}
         {activeSection === 'history' && (
           <HistoryList project={project} />
         )}
@@ -99,5 +110,85 @@ export function ProjectSettingsTab({
         )}
       </div>
     </div>
+  );
+}
+
+/**
+ * ラベル管理セクション
+ */
+interface LabelManagementSectionProps {
+  project: Project;
+  currentRole?: 'OWNER' | ProjectMemberRole;
+}
+
+function LabelManagementSection({ project, currentRole }: LabelManagementSectionProps) {
+  const queryClient = useQueryClient();
+
+  // 編集権限の判定
+  const canEdit = currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'WRITE';
+  const canDelete = currentRole === 'OWNER' || currentRole === 'ADMIN';
+
+  // ラベル一覧を取得
+  const { data: labelsData, isLoading } = useQuery({
+    queryKey: ['project-labels', project.id],
+    queryFn: () => labelsApi.getByProject(project.id),
+  });
+
+  const labels = labelsData?.labels || [];
+
+  // ラベル作成
+  const createMutation = useMutation({
+    mutationFn: (data: { name: string; description: string | null; color: string }) =>
+      labelsApi.create(project.id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-labels', project.id] });
+      toast.success('ラベルを作成しました');
+    },
+    onError: () => {
+      toast.error('ラベルの作成に失敗しました');
+    },
+  });
+
+  // ラベル更新
+  const updateMutation = useMutation({
+    mutationFn: ({ labelId, data }: { labelId: string; data: { name: string; description: string | null; color: string } }) =>
+      labelsApi.update(project.id, labelId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-labels', project.id] });
+      toast.success('ラベルを更新しました');
+    },
+    onError: () => {
+      toast.error('ラベルの更新に失敗しました');
+    },
+  });
+
+  // ラベル削除
+  const deleteMutation = useMutation({
+    mutationFn: (labelId: string) => labelsApi.delete(project.id, labelId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-labels', project.id] });
+      toast.success('ラベルを削除しました');
+    },
+    onError: () => {
+      toast.error('ラベルの削除に失敗しました');
+    },
+  });
+
+  return (
+    <LabelList
+      labels={labels}
+      isLoading={isLoading}
+      canEdit={canEdit}
+      canDelete={canDelete}
+      onCreate={async (data) => {
+        await createMutation.mutateAsync(data);
+      }}
+      onUpdate={async (labelId, data) => {
+        await updateMutation.mutateAsync({ labelId, data });
+      }}
+      onDelete={async (labelId) => {
+        await deleteMutation.mutateAsync(labelId);
+      }}
+    />
   );
 }

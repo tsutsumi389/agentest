@@ -1,6 +1,7 @@
 import { Play, Pencil, FileText, History, MessageSquare, Settings, Copy, X } from 'lucide-react';
-import type { TestSuite, ProjectMemberRole } from '../../lib/api';
+import type { TestSuite, ProjectMemberRole, Label } from '../../lib/api';
 import { PRIORITY_COLORS, PRIORITY_LABELS, STATUS_COLORS, STATUS_LABELS } from '../../lib/constants';
+import { LabelBadgeList } from '../ui/LabelBadge';
 
 /**
  * テストスイート用タブ定義
@@ -58,6 +59,8 @@ interface TestSuiteHeaderProps {
   onEditTestCase?: () => void;
   onCopyTestCase?: () => void;
   onCloseTestCase?: () => void;
+  // ラベル
+  labels?: Label[];
 }
 
 /**
@@ -83,6 +86,8 @@ export function TestSuiteHeader({
   onEditTestCase,
   onCopyTestCase,
   onCloseTestCase,
+  // ラベル
+  labels,
 }: TestSuiteHeaderProps) {
   // 編集権限チェック
   const canEdit = currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'WRITE';
@@ -153,10 +158,16 @@ export function TestSuiteHeader({
         ) : (
           // テストスイート表示時: タイトル + アクションボタン
           <div className="flex items-center justify-between">
-            {/* テストスイート名（ページタイトル） */}
-            <h1 className="text-lg font-semibold text-foreground">
-              {testSuite.name}
-            </h1>
+            {/* テストスイート名とラベル */}
+            <div className="flex items-center gap-3">
+              <h1 className="text-lg font-semibold text-foreground">
+                {testSuite.name}
+              </h1>
+              {/* ラベルバッジ */}
+              {labels && labels.length > 0 && (
+                <LabelBadgeList labels={labels} emptyText="" />
+              )}
+            </div>
             {/* アクションボタン（作成モード時は非表示） */}
             {!isCreateMode && (
               <div className="flex items-center gap-2">

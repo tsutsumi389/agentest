@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate, Link } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, AlertCircle, Clock } from 'lucide-react';
-import { testSuitesApi, projectsApi, type TestCase, type TestSuite, type ProjectMemberRole, type ReviewCommentWithReplies } from '../lib/api';
+import { testSuitesApi, projectsApi, labelsApi, type TestCase, type TestSuite, type ProjectMemberRole, type ReviewCommentWithReplies, type Label } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { usePageSidebar } from '../components/Layout';
 import { toast } from '../stores/toast';
@@ -22,6 +22,7 @@ import { ReviewSessionBar } from '../components/review/ReviewSessionBar';
 import { ReviewSessionProvider, useReviewSession } from '../contexts/ReviewSessionContext';
 import { CommentableField } from '../components/review/CommentableField';
 import { MarkdownPreview } from '../components/common/markdown/MarkdownPreview';
+import { LabelSelector } from '../components/label/LabelSelector';
 
 /**
  * テストスイート統合ページ
@@ -160,6 +161,15 @@ export function TestSuiteCasesPage() {
 
   const environments = environmentsData?.environments || [];
 
+  // テストスイートのラベルを取得
+  const { data: labelsData } = useQuery({
+    queryKey: ['test-suite-labels', testSuiteId],
+    queryFn: () => labelsApi.getByTestSuite(testSuiteId!),
+    enabled: !!testSuiteId,
+  });
+
+  const suiteLabels = labelsData?.labels || [];
+
   // 実行開始（環境なしの直接実行用）
   const startExecutionMutation = useMutation({
     mutationFn: () => testSuitesApi.startExecution(testSuiteId!),
@@ -288,6 +298,8 @@ export function TestSuiteCasesPage() {
             onEditTestCase={() => setIsTestCaseEditMode(true)}
             onCopyTestCase={() => setIsCopyModalOpen(true)}
             onCloseTestCase={() => handleSelectTestCase(null)}
+            // ラベル
+            labels={suiteLabels}
           />
         )}
 
@@ -358,6 +370,9 @@ export function TestSuiteCasesPage() {
                     currentRole={currentRole}
                     onUpdated={(updated) => {
                       queryClient.setQueryData(['test-suite', testSuiteId], { testSuite: updated });
+                    }}
+                    onLabelsUpdated={() => {
+                      queryClient.invalidateQueries({ queryKey: ['test-suite-labels', testSuiteId] });
                     }}
                   />
                 )}
@@ -519,18 +534,115 @@ interface SettingsTabProps {
   testSuite: TestSuite;
   currentRole: 'OWNER' | ProjectMemberRole | undefined;
   onUpdated?: (testSuite: TestSuite) => void;
+  onLabelsUpdated?: () => void;
 }
 
-function SettingsTab({ testSuite, currentRole, onUpdated }: SettingsTabProps) {
+function SettingsTab({ testSuite, currentRole, onUpdated, onLabelsUpdated }: SettingsTabProps) {
+  const queryClient = useQueryClient();
+  const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>([]);
+  const [initialLabelIds, setInitialLabelIds] = useState<string[]>([]);
+
   // ADMIN権限があるかどうか
   const canEdit = currentRole === 'OWNER' || currentRole === 'ADMIN';
+  const canEditLabels = currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'WRITE';
+
+  // プロジェクトのラベル一覧を取得
+  const { data: projectLabelsData, isLoading: isLoadingProjectLabels } = useQuery({
+    queryKey: ['project-labels', testSuite.projectId],
+    queryFn: () => labelsApi.getByProject(testSuite.projectId),
+  });
+
+  // テストスイートに付与されているラベル一覧を取得
+  const { data: suiteLabelsData, isLoading: isLoadingSuiteLabels } = useQuery({
+    queryKey: ['test-suite-labels', testSuite.id],
+    queryFn: () => labelsApi.getByTestSuite(testSuite.id),
+  });
+
+  // 初期値を設定
+  useEffect(() => {
+    if (suiteLabelsData) {
+      const ids = suiteLabelsData.labels.map((l: Label) => l.id);
+      setSelectedLabelIds(ids);
+      setInitialLabelIds(ids);
+    }
+  }, [suiteLabelsData]);
+
+  // ラベル更新mutation
+  const updateLabelsMutation = useMutation({
+    mutationFn: (labelIds: string[]) => labelsApi.updateTestSuiteLabels(testSuite.id, labelIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['test-suite-labels', testSuite.id] });
+      setInitialLabelIds(selectedLabelIds);
+      toast.success('ラベルを更新しました');
+      onLabelsUpdated?.();
+    },
+    onError: () => {
+      toast.error('ラベルの更新に失敗しました');
+    },
+  });
+
+  const projectLabels = projectLabelsData?.labels || [];
+  const isLoading = isLoadingProjectLabels || isLoadingSuiteLabels;
+
+  // 変更があるかどうか
+  const hasChanges =
+    selectedLabelIds.length !== initialLabelIds.length ||
+    selectedLabelIds.some((id) => !initialLabelIds.includes(id));
+
+  // 保存処理
+  const handleSave = () => {
+    updateLabelsMutation.mutate(selectedLabelIds);
+  };
 
   return (
-    <DeleteTestSuiteSection
-      testSuite={testSuite}
-      projectId={testSuite.projectId}
-      onUpdated={onUpdated}
-      canEdit={canEdit}
-    />
+    <div className="space-y-6">
+      {/* ラベルセクション */}
+      <div className="card">
+        <div className="p-4 border-b border-border">
+          <h2 className="font-semibold text-foreground">ラベル</h2>
+          <p className="text-sm text-foreground-muted mt-1">
+            このテストスイートに付与するラベルを選択してください
+          </p>
+        </div>
+        <div className="p-4">
+          {isLoading ? (
+            <div className="text-sm text-foreground-muted">読み込み中...</div>
+          ) : projectLabels.length === 0 ? (
+            <div className="text-sm text-foreground-muted">
+              プロジェクトにラベルが登録されていません。
+              プロジェクト設定からラベルを作成してください。
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <LabelSelector
+                availableLabels={projectLabels}
+                selectedLabelIds={selectedLabelIds}
+                onChange={setSelectedLabelIds}
+                disabled={!canEditLabels}
+                placeholder="ラベルを選択..."
+              />
+              {canEditLabels && (
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={!hasChanges || updateLabelsMutation.isPending}
+                  className="px-4 py-2 text-sm bg-accent text-white rounded hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {updateLabelsMutation.isPending ? '保存中...' : '保存'}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* 危険な操作セクション */}
+      <DeleteTestSuiteSection
+        testSuite={testSuite}
+        projectId={testSuite.projectId}
+        onUpdated={onUpdated}
+        canEdit={canEdit}
+      />
+    </div>
   );
 }
