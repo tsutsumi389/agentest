@@ -129,23 +129,27 @@ function ExpectedResultsHighlightSummary({
         {/* 成功/失敗 - 強調表示（2列） */}
         <div className="grid grid-cols-2 gap-3">
           {/* 成功 */}
-          <div className="card p-3 bg-success-subtle border border-success/30">
+          <div className="card p-3">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-success" />
+              <div className="w-8 h-8 rounded-lg bg-success-subtle flex items-center justify-center">
+                <CheckCircle2 className="w-4 h-4 text-success" />
+              </div>
               <div>
-                <p className="text-xl font-bold text-success">{pass}</p>
-                <p className="text-xs text-success/80">成功</p>
+                <p className="text-lg font-bold text-foreground">{pass}</p>
+                <p className="text-xs text-foreground-muted">成功</p>
               </div>
             </div>
           </div>
 
           {/* 失敗 */}
-          <div className="card p-3 bg-danger-subtle border border-danger/30">
+          <div className="card p-3">
             <div className="flex items-center gap-2">
-              <XCircle className="w-5 h-5 text-danger" />
+              <div className="w-8 h-8 rounded-lg bg-danger-subtle flex items-center justify-center">
+                <XCircle className="w-4 h-4 text-danger" />
+              </div>
               <div>
-                <p className="text-xl font-bold text-danger">{fail}</p>
-                <p className="text-xs text-danger/80">失敗</p>
+                <p className="text-lg font-bold text-foreground">{fail}</p>
+                <p className="text-xs text-foreground-muted">失敗</p>
               </div>
             </div>
           </div>
