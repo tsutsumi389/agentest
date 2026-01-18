@@ -382,6 +382,45 @@ export function ExecutionPage() {
     return execution.preconditionResults.filter((r) => r.executionTestCaseId === null);
   }, [execution]);
 
+  // PiP表示用のテストケース（選択中がなければ1番目を使用）
+  const pipTestCase = useMemo(() => {
+    return selectedTestCase ?? sortedTestCases[0] ?? null;
+  }, [selectedTestCase, sortedTestCases]);
+
+  // PiP表示用のテストケース結果
+  const pipTestCaseResults = useMemo(() => {
+    if (!pipTestCase || !execution) {
+      return { preconditionResults: [], stepResults: [], expectedResults: [] };
+    }
+    return {
+      preconditionResults: execution.preconditionResults.filter(
+        (r) => r.executionTestCaseId === pipTestCase.id
+      ),
+      stepResults: execution.stepResults.filter(
+        (r) => r.executionTestCaseId === pipTestCase.id
+      ),
+      expectedResults: execution.expectedResults.filter(
+        (r) => r.executionTestCaseId === pipTestCase.id
+      ),
+    };
+  }, [pipTestCase, execution]);
+
+  // PiP表示用のテストケースインデックス
+  const pipTestCaseIndex = useMemo(() => {
+    if (!pipTestCase) return -1;
+    return sortedTestCases.findIndex((tc) => tc.id === pipTestCase.id);
+  }, [pipTestCase, sortedTestCases]);
+
+  // PiP内でのテストケースナビゲーション（URLも更新）
+  const handlePipNavigateToTestCase = useCallback((direction: 'prev' | 'next') => {
+    const currentIndex = pipTestCaseIndex;
+    if (currentIndex < 0) return;
+    const newIndex = direction === 'prev' ? currentIndex - 1 : currentIndex + 1;
+    if (newIndex >= 0 && newIndex < sortedTestCases.length) {
+      handleTestCaseSelect(sortedTestCases[newIndex].id);
+    }
+  }, [pipTestCaseIndex, sortedTestCases, handleTestCaseSelect]);
+
   // ローディング表示
   if (isLoading) {
     return (
@@ -408,20 +447,61 @@ export function ExecutionPage() {
   // テストケース未選択 → 概要パネル
   // テストケース選択済み → 詳細パネル
   if (!selectedTestCase) {
+    // テストケースがない場合はPiPボタンを表示しない
+    const hasPipTarget = pipTestCase !== null;
+
     return (
-      <ExecutionOverviewPanel
-        execution={execution}
-        executionTestSuite={executionTestSuite}
-        suitePreconditionResults={suitePreconditionResults}
-        isEditable={isEditable}
-        onPreconditionStatusChange={handlePreconditionStatusChange}
-        onPreconditionNoteChange={handlePreconditionNoteChange}
-        updatingPreconditionStatusId={updatingPreconditionStatusId}
-        updatingPreconditionNoteId={updatingPreconditionNoteId}
-        isPipSupported={isPipSupported}
-        isPipActive={isPipActive}
-        onOpenPip={openPip}
-      />
+      <>
+        <ExecutionOverviewPanel
+          execution={execution}
+          executionTestSuite={executionTestSuite}
+          suitePreconditionResults={suitePreconditionResults}
+          isEditable={isEditable}
+          onPreconditionStatusChange={handlePreconditionStatusChange}
+          onPreconditionNoteChange={handlePreconditionNoteChange}
+          updatingPreconditionStatusId={updatingPreconditionStatusId}
+          updatingPreconditionNoteId={updatingPreconditionNoteId}
+          isPipSupported={hasPipTarget && isPipSupported}
+          isPipActive={isPipActive}
+          onOpenPip={openPip}
+        />
+
+        {/* 概要画面用 Picture-in-Picture ポータル（1番目のテストケースを表示） */}
+        {pipTestCase && (
+          <PipPortal pipWindow={pipWindow}>
+            <PipExecutionPanel
+              pipWindow={pipWindow}
+              testCaseId={pipTestCase.id}
+              testCaseTitle={pipTestCase.title}
+              suitePreconditions={executionTestSuite?.preconditions ?? []}
+              casePreconditions={pipTestCase.preconditions}
+              steps={pipTestCase.steps}
+              expectedResults={pipTestCase.expectedResults}
+              preconditionResults={[...suitePreconditionResults, ...pipTestCaseResults.preconditionResults]}
+              stepResults={pipTestCaseResults.stepResults}
+              expectedResultResults={pipTestCaseResults.expectedResults}
+              isEditable={isEditable}
+              updatingPreconditionStatusId={updatingPreconditionStatusId}
+              updatingPreconditionNoteId={updatingPreconditionNoteId}
+              updatingStepStatusId={updatingStepStatusId}
+              updatingStepNoteId={updatingStepNoteId}
+              updatingExpectedStatusId={updatingExpectedStatusId}
+              updatingExpectedNoteId={updatingExpectedNoteId}
+              onPreconditionStatusChange={handlePreconditionStatusChange}
+              onPreconditionNoteChange={handlePreconditionNoteChange}
+              onStepStatusChange={handleStepStatusChange}
+              onStepNoteChange={handleStepNoteChange}
+              onExpectedStatusChange={handleExpectedStatusChange}
+              onExpectedNoteChange={handleExpectedNoteChange}
+              isFirstTestCase={pipTestCaseIndex === 0}
+              currentTestCaseIndex={pipTestCaseIndex}
+              totalTestCases={sortedTestCases.length}
+              onNavigateToTestCase={handlePipNavigateToTestCase}
+              onClose={closePip}
+            />
+          </PipPortal>
+        )}
+      </>
     );
   }
 
