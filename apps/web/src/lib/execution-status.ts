@@ -106,13 +106,13 @@ export const expectedResultStatusConfig: Record<ExpectedResultStatus, StatusConf
     icon: CheckCircle2,
     colorClass: 'text-success',
     bgClass: 'bg-success-subtle',
-    label: 'PASS',
+    label: '成功',
   },
   FAIL: {
     icon: XCircle,
     colorClass: 'text-danger',
     bgClass: 'bg-danger-subtle',
-    label: 'FAIL',
+    label: '失敗',
   },
   SKIPPED: {
     icon: MinusCircle,
