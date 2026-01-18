@@ -16,6 +16,7 @@
 | PRJ-006 | プロジェクト検索 | 名前、組織でフィルタリング | 実装済 |
 | PRJ-007 | 環境設定 | 実行環境の作成・編集・削除・並替 | 実装済 |
 | PRJ-008 | メンバー管理 | メンバーの追加・削除・ロール変更 | 実装済 |
+| PRJ-009 | ラベル管理 | プロジェクト内のラベルマスタ管理 | 実装済 |
 
 ## 画面仕様
 
@@ -94,7 +95,7 @@
 
 - **URL**: `?tab=settings`
 - **権限**: OWNER, ADMIN のみ表示
-- **サブセクション**: 一般 / メンバー / 環境 / 履歴 / 危険な操作
+- **サブセクション**: 一般 / メンバー / 環境 / ラベル / 履歴 / 危険な操作
 - **セクション状態管理**: `?tab=settings&section=general`
 
 ##### 一般サブセクション
@@ -136,6 +137,23 @@
   - 編集 → 環境編集モーダル表示
   - デフォルト設定 → 該当環境をデフォルトに変更
   - 削除 → 確認ダイアログ → 環境削除
+
+##### ラベルサブセクション
+
+- **表示要素**
+  - ラベル一覧テーブル
+    - ラベル名（色付きバッジ）
+    - 説明
+    - 使用中テストスイート数
+    - アクションメニュー（編集/削除）
+  - 「ラベルを追加」ボタン
+- **操作**
+  - 追加ボタン → ラベル作成/編集モーダル表示
+  - 編集 → ラベル作成/編集モーダル表示
+  - 削除 → 確認ダイアログ → ラベル削除
+- **権限**
+  - ラベル作成・編集: WRITE 以上
+  - ラベル削除: ADMIN 以上
 
 ##### 履歴サブセクション
 
@@ -318,6 +336,7 @@ erDiagram
     Project ||--o{ ProjectEnvironment : "has"
     Project ||--o{ ProjectHistory : "logs"
     Project ||--o{ TestSuite : "contains"
+    Project ||--o{ Label : "has"
     Organization ||--o{ Project : "owns"
     User ||--o{ ProjectMember : "belongs to"
 
@@ -361,6 +380,16 @@ erDiagram
         json snapshot
         string reason "nullable"
         timestamp changedAt
+    }
+
+    Label {
+        uuid id PK
+        uuid projectId FK
+        string name "VARCHAR(50)"
+        string description "VARCHAR(200), nullable"
+        string color "VARCHAR(7), HEX format"
+        timestamp createdAt
+        timestamp updatedAt
     }
 ```
 
@@ -498,8 +527,20 @@ erDiagram
 | DELETE | /api/projects/:id/environments/:envId | 環境削除 | ADMIN以上 |
 | POST | /api/projects/:id/environments/reorder | 環境並替 | WRITE以上 |
 
+### ラベル
+
+| メソッド | パス | 説明 | 権限 |
+|----------|------|------|------|
+| GET | /api/projects/:id/labels | ラベル一覧取得 | READ以上 |
+| POST | /api/projects/:id/labels | ラベル作成 | WRITE以上 |
+| PATCH | /api/projects/:id/labels/:labelId | ラベル更新 | WRITE以上 |
+| DELETE | /api/projects/:id/labels/:labelId | ラベル削除 | ADMIN以上 |
+
 ## 関連機能
 
 - [組織管理](./organization.md) - プロジェクトの所有者となる組織
 - [メンバー管理](./member-management.md) - 組織メンバーの招待・削除
 - [監査ログ](./audit-log.md) - プロジェクト操作の記録
+- [テストスイート管理](./test-suite-management.md) - ラベルを付与するテストスイート
+- [ラベル API](../../api/labels.md) - ラベル管理 API の詳細
+- [ラベル データベース](../database/label.md) - ラベルテーブルの設計

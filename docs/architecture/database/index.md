@@ -82,6 +82,13 @@ PostgreSQL を使用。Prisma ORM でスキーマ管理。
 | `TestSuitePrecondition` | テストスイートの前提条件 | [test-suite.md](./test-suite.md#testsuiteprecondition) |
 | `TestSuiteHistory` | テストスイートの変更履歴 | [test-suite.md](./test-suite.md#testsuitehistory) |
 
+### ラベル
+
+| テーブル | 説明 | 詳細 |
+|---------|------|------|
+| `Label` | ラベル（プロジェクト単位） | [label.md](./label.md#label) |
+| `TestSuiteLabel` | テストスイート-ラベル中間テーブル | [label.md](./label.md#testsuitelabel) |
+
 ### テストケース
 
 | テーブル | 説明 | 詳細 |
@@ -237,6 +244,12 @@ CREATE INDEX idx_suite_preconditions_suite_id ON "TestSuitePrecondition"("testSu
 CREATE INDEX idx_suite_preconditions_order ON "TestSuitePrecondition"("testSuiteId", "orderKey");
 CREATE INDEX idx_suite_history_suite_id ON "TestSuiteHistory"("testSuiteId");
 
+-- ラベル
+CREATE INDEX idx_labels_project_id ON "labels"("project_id");
+CREATE UNIQUE INDEX idx_labels_project_name ON "labels"("project_id", "name");
+CREATE INDEX idx_test_suite_labels_test_suite_id ON "test_suite_labels"("test_suite_id");
+CREATE INDEX idx_test_suite_labels_label_id ON "test_suite_labels"("label_id");
+
 -- テストケース
 CREATE INDEX idx_test_cases_suite_id ON "TestCase"("testSuiteId");
 CREATE INDEX idx_test_cases_order ON "TestCase"("testSuiteId", "orderKey");
@@ -364,6 +377,7 @@ docker compose exec api pnpm --filter @agentest/db prisma migrate deploy
 - [組織・プロジェクト](./organization.md)
 - [Agent セッション](./agent-session.md)
 - [テストスイート](./test-suite.md)
+- [ラベル](./label.md)
 - [テストケース](./test-case.md)
 - [テスト実行](./execution.md)
 - [レビュー](./review.md)

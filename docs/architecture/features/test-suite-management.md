@@ -15,6 +15,7 @@
 | TS-006 | 論理削除・復元 | テストスイートを論理削除（30日猶予期間）、復元 | 実装済 |
 | TS-007 | 検索 | 名前・前提条件内容でテストスイートを検索 | 実装済 |
 | TS-008 | フィルタ | ステータス・作成者・日付でフィルタリング | 実装済 |
+| TS-009 | ラベル管理 | テストスイートへのラベル付与・管理 | 実装済 |
 
 ## 画面仕様
 
@@ -72,6 +73,9 @@
 #### 概要タブ
 
 - **表示要素**
+  - ラベルセクション
+    - 付与済みラベル一覧（色付きバッジ）
+    - ラベル編集ボタン（ラベル選択モーダルを開く）
   - 前提条件セクション
     - 前提条件一覧（ドラッグ&ドロップ可能）
     - 前提条件追加ボタン
@@ -281,10 +285,13 @@ sequenceDiagram
 ```mermaid
 erDiagram
     Project ||--o{ TestSuite : "contains"
+    Project ||--o{ Label : "has"
     TestSuite ||--o{ TestSuitePrecondition : "has"
     TestSuite ||--o{ TestSuiteHistory : "logs"
     TestSuite ||--o{ TestCase : "contains"
     TestSuite ||--o{ Execution : "runs"
+    TestSuite ||--o{ TestSuiteLabel : "has"
+    Label ||--o{ TestSuiteLabel : "assigned to"
     User ||--o{ TestSuite : "creates"
     AgentSession ||--o{ TestSuite : "creates"
 
@@ -319,6 +326,23 @@ erDiagram
         json snapshot
         text changeReason "nullable"
         varchar(36) groupId "nullable, 変更グループID"
+        timestamp createdAt
+    }
+
+    Label {
+        uuid id PK
+        uuid projectId FK
+        string name "VARCHAR(50)"
+        string description "VARCHAR(200), nullable"
+        string color "VARCHAR(7), HEX format"
+        timestamp createdAt
+        timestamp updatedAt
+    }
+
+    TestSuiteLabel {
+        uuid id PK
+        uuid testSuiteId FK
+        uuid labelId FK
         timestamp createdAt
     }
 ```
@@ -457,6 +481,13 @@ after:  ["a", "b", "c"]  （b を新規生成）
 | PATCH | /api/test-suites/:id/preconditions/:preconditionId | 前提条件更新 | WRITE以上 |
 | DELETE | /api/test-suites/:id/preconditions/:preconditionId | 前提条件削除 | WRITE以上 |
 | POST | /api/test-suites/:id/preconditions/reorder | 前提条件並替 | WRITE以上 |
+
+### ラベル
+
+| メソッド | パス | 説明 | 権限 |
+|----------|------|------|------|
+| GET | /api/test-suites/:id/labels | ラベル一覧取得 | READ以上 |
+| PUT | /api/test-suites/:id/labels | ラベル一括更新 | WRITE以上 |
 
 ### 検索（プロジェクト経由）
 
@@ -654,7 +685,9 @@ after:  ["a", "b", "c"]  （b を新規生成）
 
 ## 関連機能
 
-- [プロジェクト管理](./project-management.md) - テストスイートの親リソース
+- [プロジェクト管理](./project-management.md) - テストスイートの親リソース、ラベルマスタの管理
 - [テストケース管理](./test-case-management.md) - テストスイートに属するテストケース
 - [テスト実行](./test-execution.md) - テストスイート単位での実行
 - [監査ログ](./audit-log.md) - 操作の記録
+- [ラベル API](../../api/labels.md) - ラベル管理 API の詳細
+- [ラベル データベース](../database/label.md) - ラベルテーブルの設計

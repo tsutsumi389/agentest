@@ -6,3 +6,4 @@ export * from './test-case.js';
 export * from './execution.js';
 export * from './review.js';
 export * from './project-dashboard.js';
+export * from './label.js';

@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import { requireAuth, requireProjectRole } from '@agentest/auth';
 import { ProjectController } from '../controllers/project.controller.js';
+import { LabelController } from '../controllers/label.controller.js';
 import { authConfig } from '../config/auth.js';
 
 const router: Router = Router();
 const projectController = new ProjectController();
+const labelController = new LabelController();
 
 /**
  * プロジェクト作成
@@ -113,5 +115,33 @@ router.get('/:projectId/histories', requireAuth(authConfig), requireProjectRole(
  * POST /api/projects/:projectId/restore
  */
 router.post('/:projectId/restore', requireAuth(authConfig), requireProjectRole(['ADMIN'], { allowDeletedProject: true }), projectController.restore);
+
+// ============================================
+// ラベル管理ルート
+// ============================================
+
+/**
+ * ラベル一覧取得
+ * GET /api/projects/:projectId/labels
+ */
+router.get('/:projectId/labels', requireAuth(authConfig), requireProjectRole(['ADMIN', 'WRITE', 'READ']), labelController.getLabels);
+
+/**
+ * ラベル作成
+ * POST /api/projects/:projectId/labels
+ */
+router.post('/:projectId/labels', requireAuth(authConfig), requireProjectRole(['ADMIN', 'WRITE']), labelController.createLabel);
+
+/**
+ * ラベル更新
+ * PATCH /api/projects/:projectId/labels/:labelId
+ */
+router.patch('/:projectId/labels/:labelId', requireAuth(authConfig), requireProjectRole(['ADMIN', 'WRITE']), labelController.updateLabel);
+
+/**
+ * ラベル削除
+ * DELETE /api/projects/:projectId/labels/:labelId
+ */
+router.delete('/:projectId/labels/:labelId', requireAuth(authConfig), requireProjectRole(['ADMIN']), labelController.deleteLabel);
 
 export default router;

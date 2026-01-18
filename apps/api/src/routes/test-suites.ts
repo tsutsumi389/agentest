@@ -3,6 +3,7 @@ import { requireAuth, requireProjectRole } from '@agentest/auth';
 import { TestSuiteController } from '../controllers/test-suite.controller.js';
 import { ReviewCommentController } from '../controllers/review-comment.controller.js';
 import { ReviewController } from '../controllers/review.controller.js';
+import { LabelController } from '../controllers/label.controller.js';
 import { requireTestSuiteRole } from '../middleware/require-test-suite-role.js';
 import { authConfig } from '../config/auth.js';
 
@@ -10,6 +11,7 @@ const router: Router = Router();
 const testSuiteController = new TestSuiteController();
 const reviewCommentController = new ReviewCommentController();
 const reviewController = new ReviewController();
+const labelController = new LabelController();
 
 /**
  * テストスイート作成
@@ -127,5 +129,21 @@ router.get('/:testSuiteId/reviews', requireAuth(authConfig), requireTestSuiteRol
  * POST /api/test-suites/:testSuiteId/reviews
  */
 router.post('/:testSuiteId/reviews', requireAuth(authConfig), requireTestSuiteRole(['ADMIN', 'WRITE']), reviewController.startReview);
+
+// ============================================
+// テストスイートラベルルート
+// ============================================
+
+/**
+ * テストスイートのラベル一覧取得
+ * GET /api/test-suites/:testSuiteId/labels
+ */
+router.get('/:testSuiteId/labels', requireAuth(authConfig), requireTestSuiteRole(['ADMIN', 'WRITE', 'READ']), labelController.getTestSuiteLabels);
+
+/**
+ * テストスイートのラベル一括更新
+ * PUT /api/test-suites/:testSuiteId/labels
+ */
+router.put('/:testSuiteId/labels', requireAuth(authConfig), requireTestSuiteRole(['ADMIN', 'WRITE']), labelController.updateTestSuiteLabels);
 
 export default router;

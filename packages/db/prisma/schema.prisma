@@ -366,6 +366,7 @@ model Project {
   testSuites    TestSuite[]
   histories     ProjectHistory[]
   agentSessions AgentSession[]
+  labels        Label[]
 
   @@index([organizationId])
   @@index([deletedAt])
@@ -443,14 +444,15 @@ model TestSuite {
   updatedAt               DateTime     @updatedAt @map("updated_at")
   deletedAt               DateTime?    @map("deleted_at")
 
-  project       Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  createdByUser User?                  @relation("TestSuiteCreator", fields: [createdByUserId], references: [id])
-  agentSession  AgentSession?          @relation(fields: [createdByAgentSessionId], references: [id])
-  preconditions TestSuitePrecondition[]
-  testCases     TestCase[]
-  histories     TestSuiteHistory[]
-  executions    Execution[]
-  reviews       Review[]
+  project         Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdByUser   User?                  @relation("TestSuiteCreator", fields: [createdByUserId], references: [id])
+  agentSession    AgentSession?          @relation(fields: [createdByAgentSessionId], references: [id])
+  preconditions   TestSuitePrecondition[]
+  testCases       TestCase[]
+  histories       TestSuiteHistory[]
+  executions      Execution[]
+  reviews         Review[]
+  testSuiteLabels TestSuiteLabel[]
 
   @@index([projectId])
   @@index([status])
@@ -1243,4 +1245,42 @@ model OAuthRefreshToken {
 
   @@index([userId])
   @@map("oauth_refresh_tokens")
+}
+
+// ============================================
+// ラベルモデル
+// ============================================
+
+// ラベルマスタ（プロジェクトごとに管理）
+model Label {
+  id          String   @id @default(uuid())
+  projectId   String   @map("project_id")
+  name        String   @db.VarChar(50)
+  description String?  @db.VarChar(200)
+  color       String   @db.VarChar(7) // HEX形式 (#FFFFFF)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  project         Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  testSuiteLabels TestSuiteLabel[]
+
+  @@unique([projectId, name])
+  @@index([projectId])
+  @@map("labels")
+}
+
+// テストスイートとラベルの中間テーブル
+model TestSuiteLabel {
+  id          String   @id @default(uuid())
+  testSuiteId String   @map("test_suite_id")
+  labelId     String   @map("label_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  testSuite TestSuite @relation(fields: [testSuiteId], references: [id], onDelete: Cascade)
+  label     Label     @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@unique([testSuiteId, labelId])
+  @@index([testSuiteId])
+  @@index([labelId])
+  @@map("test_suite_labels")
 }
