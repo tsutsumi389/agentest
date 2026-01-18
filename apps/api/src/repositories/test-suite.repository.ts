@@ -76,6 +76,44 @@ export interface TestSuiteSearchOptions {
 }
 
 /**
+ * テストスイート検索結果のラベル情報
+ */
+export interface TestSuiteSearchLabel {
+  id: string;
+  name: string;
+  color: string;
+}
+
+/**
+ * テストスイート検索結果の最終実行情報
+ */
+export interface TestSuiteSearchExecution {
+  id: string;
+  status: string;
+  startedAt: Date;
+  completedAt: Date | null;
+}
+
+/**
+ * テストスイート検索結果アイテム
+ */
+export interface TestSuiteSearchItem {
+  id: string;
+  projectId: string;
+  name: string;
+  description: string | null;
+  status: EntityStatus;
+  createdByUserId: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
+  createdByUser: { id: string; name: string; avatarUrl: string | null } | null;
+  _count: { testCases: number; preconditions: number };
+  testSuiteLabels: Array<{ label: TestSuiteSearchLabel }>;
+  executions: TestSuiteSearchExecution[];
+}
+
+/**
  * テストスイートリポジトリ
  */
 export class TestSuiteRepository {
@@ -211,7 +249,7 @@ export class TestSuiteRepository {
   /**
    * テストスイートを検索
    */
-  async search(projectId: string, options: TestSuiteSearchOptions) {
+  async search(projectId: string, options: TestSuiteSearchOptions): Promise<{ items: TestSuiteSearchItem[]; total: number }> {
     const { q, status, createdBy, from, to, limit, offset, sortBy, sortOrder, includeDeleted } = options;
 
     // 検索条件を構築

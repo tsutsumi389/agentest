@@ -11,6 +11,7 @@ import {
 } from '@agentest/shared';
 import { ProjectService } from '../services/project.service.js';
 import { ProjectDashboardService } from '../services/project-dashboard.service.js';
+import type { TestSuiteSearchItem } from '../repositories/test-suite.repository.js';
 
 const addMemberSchema = z.object({
   userId: z.string().uuid(),
@@ -230,20 +231,14 @@ export class ProjectController {
       const { items, total } = await this.projectService.searchTestSuites(projectId, searchParams);
 
       // レスポンス用に整形（ラベルと最終実行情報をフラット化）
-      const testSuites = items.map((item) => {
+      const testSuites = (items as TestSuiteSearchItem[]).map((item) => {
         // testSuiteLabelsからlabels配列に変換
-        const labels = (item as { testSuiteLabels?: Array<{ label: { id: string; name: string; color: string } }> }).testSuiteLabels?.map(
-          (tsl) => tsl.label
-        );
+        const labels = item.testSuiteLabels.map((tsl) => tsl.label);
         // executions配列から最初の要素をlastExecutionとして取得
-        const executions = (item as { executions?: Array<{ id: string; status: string; startedAt: Date; completedAt: Date | null }> }).executions;
-        const lastExecution = executions?.[0] ?? null;
+        const lastExecution = item.executions[0] ?? null;
 
         // 不要なプロパティを除外してレスポンスを構築
-        const { testSuiteLabels: _testSuiteLabels, executions: _executions, ...rest } = item as typeof item & {
-          testSuiteLabels?: unknown;
-          executions?: unknown;
-        };
+        const { testSuiteLabels: _testSuiteLabels, executions: _executions, ...rest } = item;
 
         return {
           ...rest,

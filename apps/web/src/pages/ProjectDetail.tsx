@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { createElement, useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -519,10 +519,7 @@ function TestSuiteRow({ suite }: { suite: TestSuite }) {
               <>
                 <span className="text-foreground-subtle">•</span>
                 <span className={`flex items-center gap-1 ${executionStatusConfig[suite.lastExecution.status].className}`}>
-                  {(() => {
-                    const Icon = executionStatusConfig[suite.lastExecution.status].icon;
-                    return <Icon className="w-3.5 h-3.5" />;
-                  })()}
+                  {createElement(executionStatusConfig[suite.lastExecution.status].icon, { className: 'w-3.5 h-3.5' })}
                   {executionStatusConfig[suite.lastExecution.status].label}
                 </span>
               </>
