@@ -1,4 +1,4 @@
-import { createElement, useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -11,9 +11,6 @@ import {
   X,
   Loader2,
   BarChart3,
-  CirclePlay,
-  CheckCircle2,
-  XCircle,
 } from 'lucide-react';
 import { projectsApi, testSuitesApi, usersApi, type Project, type TestSuite, type TestSuiteSearchParams, type ProjectMemberRole } from '../lib/api';
 import { TestSuiteSearchFilter, type FilterMember } from '../components/test-suite/TestSuiteSearchFilter';
@@ -456,6 +453,26 @@ function TestSuiteListContent({
 }
 
 /**
+ * 判定結果カウントの表示設定
+ */
+const judgmentDisplayConfig = {
+  PASS: { label: '成功', className: 'text-success' },
+  FAIL: { label: '失敗', className: 'text-danger' },
+  PENDING: { label: '未実施', className: 'text-foreground-muted' },
+  SKIPPED: { label: 'スキップ', className: 'text-warning' },
+  NOT_EXECUTABLE: { label: '実施不可', className: 'text-foreground-subtle' },
+} as const;
+
+// 表示順（成功 → 失敗 → 未実施 → スキップ → 実施不可）
+const judgmentDisplayOrder: Array<keyof typeof judgmentDisplayConfig> = [
+  'PASS',
+  'FAIL',
+  'PENDING',
+  'SKIPPED',
+  'NOT_EXECUTABLE',
+];
+
+/**
  * テストスイート行
  */
 function TestSuiteRow({ suite }: { suite: TestSuite }) {
@@ -465,13 +482,6 @@ function TestSuiteRow({ suite }: { suite: TestSuite }) {
   const statusConfig: Record<'DRAFT' | 'ARCHIVED', { className: string; label: string }> = {
     DRAFT: { className: 'badge-warning', label: '下書き' },
     ARCHIVED: { className: 'badge', label: 'アーカイブ' },
-  };
-
-  // 最終実行ステータスの表示設定
-  const executionStatusConfig = {
-    IN_PROGRESS: { icon: CirclePlay, className: 'text-accent', label: '実行中' },
-    COMPLETED: { icon: CheckCircle2, className: 'text-success', label: '完了' },
-    ABORTED: { icon: XCircle, className: 'text-danger', label: '中断' },
   };
 
   return (
@@ -514,13 +524,27 @@ function TestSuiteRow({ suite }: { suite: TestSuite }) {
           </div>
           <div className="flex items-center gap-3 text-sm text-foreground-muted">
             <span>{suite._count?.testCases || 0} テストケース</span>
-            {/* 最終実行結果表示 */}
+            {/* 最終実行結果表示（環境名 + 判定結果カウント） */}
             {!isDeleted && suite.lastExecution && (
               <>
                 <span className="text-foreground-subtle">•</span>
-                <span className={`flex items-center gap-1 ${executionStatusConfig[suite.lastExecution.status].className}`}>
-                  {createElement(executionStatusConfig[suite.lastExecution.status].icon, { className: 'w-3.5 h-3.5' })}
-                  {executionStatusConfig[suite.lastExecution.status].label}
+                <span className="flex items-center gap-2">
+                  {suite.lastExecution.environment && (
+                    <span className="text-foreground-muted">
+                      {suite.lastExecution.environment.name}
+                    </span>
+                  )}
+                  {/* 判定結果カウント（0件は非表示） */}
+                  {judgmentDisplayOrder.map((status) => {
+                    const count = suite.lastExecution!.judgmentCounts[status];
+                    if (count === 0) return null;
+                    const config = judgmentDisplayConfig[status];
+                    return (
+                      <span key={status} className={config.className}>
+                        {count}{config.label}
+                      </span>
+                    );
+                  })}
                 </span>
               </>
             )}

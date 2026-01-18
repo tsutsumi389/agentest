@@ -85,13 +85,25 @@ export interface TestSuiteSearchLabel {
 }
 
 /**
+ * 判定結果のカウント情報
+ */
+export interface JudgmentCounts {
+  PASS: number;
+  FAIL: number;
+  PENDING: number;
+  SKIPPED: number;
+  NOT_EXECUTABLE: number;
+}
+
+/**
  * テストスイート検索結果の最終実行情報
  */
 export interface TestSuiteSearchExecution {
   id: string;
-  status: string;
   startedAt: Date;
   completedAt: Date | null;
+  environment: { id: string; name: string } | null;
+  expectedResults: Array<{ status: string }>;
 }
 
 /**
@@ -321,7 +333,13 @@ export class TestSuiteRepository {
           executions: {
             orderBy: { startedAt: 'desc' },
             take: 1,
-            select: { id: true, status: true, startedAt: true, completedAt: true },
+            select: {
+              id: true,
+              startedAt: true,
+              completedAt: true,
+              environment: { select: { id: true, name: true } },
+              expectedResults: { select: { status: true } },
+            },
           },
         },
         orderBy,

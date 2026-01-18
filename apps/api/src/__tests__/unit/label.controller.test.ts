@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
 import { LabelController } from '../../controllers/label.controller.js';
-import { NotFoundError, ValidationError } from '@agentest/shared';
+import { NotFoundError } from '@agentest/shared';
 
 // LabelService のモック
 const mockLabelService = {
@@ -115,7 +115,7 @@ describe('LabelController', () => {
 
       expect(mockNext).toHaveBeenCalled();
       // ZodErrorがnextに渡されることを確認
-      expect((mockNext as vi.Mock).mock.calls[0][0]).toBeDefined();
+      expect((mockNext as Mock).mock.calls[0][0]).toBeDefined();
     });
   });
 

@@ -11,7 +11,30 @@ import {
 } from '@agentest/shared';
 import { ProjectService } from '../services/project.service.js';
 import { ProjectDashboardService } from '../services/project-dashboard.service.js';
-import type { TestSuiteSearchItem } from '../repositories/test-suite.repository.js';
+import type { TestSuiteSearchItem, JudgmentCounts } from '../repositories/test-suite.repository.js';
+
+/**
+ * 期待結果のステータスを集計して判定カウントを返す
+ */
+function countJudgmentStatuses(
+  expectedResults: Array<{ status: string }>
+): JudgmentCounts {
+  const counts: JudgmentCounts = {
+    PASS: 0,
+    FAIL: 0,
+    PENDING: 0,
+    SKIPPED: 0,
+    NOT_EXECUTABLE: 0,
+  };
+
+  for (const result of expectedResults) {
+    if (result.status in counts) {
+      counts[result.status as keyof JudgmentCounts]++;
+    }
+  }
+
+  return counts;
+}
 
 const addMemberSchema = z.object({
   userId: z.string().uuid(),
@@ -234,8 +257,17 @@ export class ProjectController {
       const testSuites = (items as TestSuiteSearchItem[]).map((item) => {
         // testSuiteLabelsからlabels配列に変換
         const labels = item.testSuiteLabels.map((tsl) => tsl.label);
-        // executions配列から最初の要素をlastExecutionとして取得
-        const lastExecution = item.executions[0] ?? null;
+        // executions配列から最初の要素をlastExecutionとして取得し、judgmentCountsを計算
+        const rawExecution = item.executions[0];
+        const lastExecution = rawExecution
+          ? {
+              id: rawExecution.id,
+              startedAt: rawExecution.startedAt,
+              completedAt: rawExecution.completedAt,
+              environment: rawExecution.environment ?? null,
+              judgmentCounts: countJudgmentStatuses(rawExecution.expectedResults),
+            }
+          : null;
 
         // 不要なプロパティを除外してレスポンスを構築
         const { testSuiteLabels: _testSuiteLabels, executions: _executions, ...rest } = item;

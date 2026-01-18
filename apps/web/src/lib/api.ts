@@ -320,9 +320,16 @@ export interface TestSuite {
   labels?: Array<{ id: string; name: string; color: string }>;
   lastExecution?: {
     id: string;
-    status: 'IN_PROGRESS' | 'COMPLETED' | 'ABORTED';
     startedAt: string;
     completedAt: string | null;
+    environment: { id: string; name: string } | null;
+    judgmentCounts: {
+      PASS: number;
+      FAIL: number;
+      PENDING: number;
+      SKIPPED: number;
+      NOT_EXECUTABLE: number;
+    };
   } | null;
 }
 
