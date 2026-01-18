@@ -6,14 +6,14 @@ import {
   XCircle,
   Clock,
   Play,
-  Ban,
+  SkipForward,
   Calendar,
   Server,
   Circle,
-  MinusCircle,
   ListChecks,
   ClipboardCheck,
   Target,
+  PictureInPicture2,
 } from 'lucide-react';
 import type {
   ExecutionWithDetails,
@@ -43,6 +43,12 @@ interface ExecutionOverviewPanelProps {
   updatingPreconditionStatusId: string | null;
   /** 更新中の前提条件ID（ノート） */
   updatingPreconditionNoteId: string | null;
+  /** PiPがサポートされているか */
+  isPipSupported?: boolean;
+  /** PiPがアクティブか */
+  isPipActive?: boolean;
+  /** PiP開始ハンドラ */
+  onOpenPip?: () => void;
 }
 
 /**
@@ -123,35 +129,39 @@ function ExpectedResultsHighlightSummary({
         {/* 成功/失敗 - 強調表示（2列） */}
         <div className="grid grid-cols-2 gap-3">
           {/* 成功 */}
-          <div className="card p-3 bg-success-subtle border border-success/30">
+          <div className="card p-3">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-5 h-5 text-success" />
+              <div className="w-8 h-8 rounded-lg bg-success-subtle flex items-center justify-center">
+                <CheckCircle2 className="w-4 h-4 text-success" />
+              </div>
               <div>
-                <p className="text-xl font-bold text-success">{pass}</p>
-                <p className="text-xs text-success/80">成功</p>
+                <p className="text-lg font-bold text-foreground">{pass}</p>
+                <p className="text-xs text-foreground-muted">成功</p>
               </div>
             </div>
           </div>
 
           {/* 失敗 */}
-          <div className="card p-3 bg-danger-subtle border border-danger/30">
+          <div className="card p-3">
             <div className="flex items-center gap-2">
-              <XCircle className="w-5 h-5 text-danger" />
+              <div className="w-8 h-8 rounded-lg bg-danger-subtle flex items-center justify-center">
+                <XCircle className="w-4 h-4 text-danger" />
+              </div>
               <div>
-                <p className="text-xl font-bold text-danger">{fail}</p>
-                <p className="text-xs text-danger/80">失敗</p>
+                <p className="text-lg font-bold text-foreground">{fail}</p>
+                <p className="text-xs text-foreground-muted">失敗</p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* その他のステータス（3列） */}
-        <div className="grid grid-cols-3 gap-3">
+        {/* その他のステータス（2列） */}
+        <div className="grid grid-cols-2 gap-3">
           {/* スキップ */}
           <div className="card p-3">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-warning-subtle flex items-center justify-center">
-                <Ban className="w-4 h-4 text-warning" />
+                <SkipForward className="w-4 h-4 text-warning" />
               </div>
               <div>
                 <p className="text-lg font-bold text-foreground">{skipped}</p>
@@ -191,6 +201,9 @@ export function ExecutionOverviewPanel({
   onPreconditionNoteChange,
   updatingPreconditionStatusId,
   updatingPreconditionNoteId,
+  isPipSupported = false,
+  isPipActive = false,
+  onOpenPip,
 }: ExecutionOverviewPanelProps) {
   // サマリー計算（前提条件・手順・期待結果を一度の走査でまとめて計算）
   const { preconditionSummary, stepSummary, expectedSummary } = useMemo(() => {
@@ -243,18 +256,34 @@ export function ExecutionOverviewPanel({
           テストスイートに戻る
         </Link>
 
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-lg bg-background-tertiary flex items-center justify-center">
-            <Play className="w-6 h-6 text-foreground-muted" />
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-lg bg-background-tertiary flex items-center justify-center">
+              <Play className="w-6 h-6 text-foreground-muted" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">
+                {executionTestSuite?.name ?? 'テスト実行'}
+              </h1>
+              {executionTestSuite?.description && (
+                <MarkdownPreview content={executionTestSuite.description} className="text-foreground-muted text-sm mt-2" />
+              )}
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">
-              {executionTestSuite?.name ?? 'テスト実行'}
-            </h1>
-            {executionTestSuite?.description && (
-              <MarkdownPreview content={executionTestSuite.description} className="text-foreground-muted text-sm mt-2" />
-            )}
-          </div>
+
+          {/* PiPボタン */}
+          {isPipSupported && onOpenPip && (
+            <button
+              onClick={onOpenPip}
+              disabled={isPipActive}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded border border-border hover:bg-background-tertiary transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+              title={isPipActive ? 'PiPウィンドウは既に開いています' : 'Picture-in-Pictureで開く'}
+              aria-label={isPipActive ? 'PiPウィンドウは既に開いています' : 'Picture-in-Pictureで開く'}
+            >
+              <PictureInPicture2 className="w-4 h-4" />
+              <span className="hidden sm:inline">PiP</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -325,7 +354,7 @@ export function ExecutionOverviewPanel({
               color="success"
             />
             <SummaryCard
-              icon={MinusCircle}
+              icon={SkipForward}
               label="スキップ"
               value={stepSummary.skipped}
               color="warning"
