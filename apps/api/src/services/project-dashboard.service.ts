@@ -65,12 +65,20 @@ export class ProjectDashboardService {
 
   /**
    * フィルター条件に基づいてテストスイートIDを取得
+   *
+   * フィルターの設計意図:
+   * - ラベルフィルター: テストスイート自体をフィルタリング（TestSuiteLabelを通じて）
+   *   → サマリー（テスト数）、要注意テスト、最近の活動すべてに適用
+   * - 環境フィルター: 実行データのみをフィルタリング（ExecutionのenvironmentId）
+   *   → 実行結果分布、要注意テスト、最近の活動に適用
+   *   → サマリー（テスト数）には適用しない（テストの定義数は環境に依存しないため）
    */
   private async getFilteredTestSuiteIds(
     projectId: string,
     filters?: DashboardFilterParams
   ): Promise<string[] | undefined> {
-    // フィルターがない場合はundefinedを返す（全テストスイートを対象）
+    // ラベルフィルターがない場合はundefinedを返す（全テストスイートを対象）
+    // 注: 環境フィルターはここでは処理せず、各メソッドで実行データに対して適用する
     if (!filters?.labelIds || filters.labelIds.length === 0) {
       return undefined;
     }

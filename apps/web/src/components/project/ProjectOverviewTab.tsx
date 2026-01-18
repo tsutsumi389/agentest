@@ -93,7 +93,7 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
 
       {/* 実行結果の分布 + 最近の活動（横並び・高さ揃え） */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ResultDistributionChart stats={stats} />
+        <ResultDistributionChart stats={stats} className="h-full" />
         <RecentActivityTimeline stats={stats} className="h-full" />
       </div>
 

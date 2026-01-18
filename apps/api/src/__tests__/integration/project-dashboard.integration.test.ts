@@ -8,7 +8,6 @@ import {
   createTestProjectMember,
   createTestSuite,
   createTestCase,
-  createTestExecution,
   createTestExecutionTestSuite,
   createTestExecutionTestCase,
   createTestExecutionTestCaseExpectedResult,
@@ -192,7 +191,7 @@ describe('Project Dashboard API Integration Tests', () => {
       const testSuite = await createTestSuite(project.id, { name: 'Test Suite' });
       const tc1 = await createTestCase(testSuite.id, { title: 'Test Case 1' });
       const tc2 = await createTestCase(testSuite.id, { title: 'Test Case 2' });
-      const tc3 = await createTestCase(testSuite.id, { title: 'Test Case 3' });
+      await createTestCase(testSuite.id, { title: 'Test Case 3' });
 
       // 期待結果を追加
       await prisma.testCaseExpectedResult.create({
