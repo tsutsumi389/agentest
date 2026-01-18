@@ -76,7 +76,7 @@ export function RecentActivityTimeline({ stats, className }: RecentActivityTimel
       <h2 className="text-lg font-semibold text-foreground mb-4">最近の活動</h2>
 
       {/* アクティビティリスト（スクロール対応） */}
-      <div className="flex-1 overflow-y-auto space-y-2">
+      <div className="overflow-y-auto space-y-2 max-h-[372px]">
         {recentActivities.map((activity) => (
           <ActivityItem
             key={activity.id}
