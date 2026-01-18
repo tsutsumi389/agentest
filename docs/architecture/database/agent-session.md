@@ -183,7 +183,7 @@ ENUM 値は意味のある英語の文字列を使用しており、Coding Agent
 | `TestSuiteStatus` | `DRAFT`, `ACTIVE`, `ARCHIVED` | 下書き、有効、アーカイブ済み |
 | `TestCasePriority` | `CRITICAL`, `HIGH`, `MEDIUM`, `LOW` | 優先度を直感的に理解 |
 | `PreconditionStatus` | `UNCHECKED`, `MET`, `NOT_MET` | 未確認、満たしている、満たしていない |
-| `JudgmentStatus` | `PENDING`, `PASS`, `FAIL`, `SKIPPED`, `NOT_EXECUTABLE` | 未実施、合格、不合格、スキップ、実施不可 |
+| `JudgmentStatus` | `PENDING`, `PASS`, `FAIL`, `SKIPPED` | 未判定、成功、失敗、スキップ |
 
 MCP ツールでもこれらの値をそのまま使用するため、Agent は自然言語的に解釈可能。
 

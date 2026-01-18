@@ -75,14 +75,13 @@
   - **期待結果サマリー**（ExpectedResultsHighlightSummary、強調表示）← 最上部に配置
     - カード内に以下を表示：
       - ヘッダー（🎯 期待結果）
-      - プログレスバー（成功/失敗/スキップ/実行不可を色分け表示）
+      - プログレスバー（成功/失敗/スキップを色分け表示）
       - 実行済み件数表示（例: 12/15 実行済み）
     - 成功/失敗カード（2列、強調表示）：
       - **成功**: PASSの件数（緑色背景+ボーダー）
       - **失敗**: FAILの件数（赤色背景+ボーダー）
-    - その他ステータスカード（3列）：
+    - その他ステータスカード（2列）：
       - **スキップ**: SKIPPEDの件数（黄色）
-      - **実行不可**: NOT_EXECUTABLEの件数（紫色）
       - **未実行**: PENDINGの件数（グレー）
 
   - **前提条件サマリー**（データがある場合のみ表示）
@@ -128,7 +127,7 @@
 
 - **期待結果一覧**
   - 期待結果の内容（マークダウン対応）
-  - ステータス（PENDING/PASS/FAIL/SKIPPED/NOT_EXECUTABLE）
+  - ステータス（PENDING/PASS/FAIL/SKIPPED）
   - ノート入力
   - エビデンスアップロード領域
   - エビデンス一覧
@@ -421,7 +420,7 @@ erDiagram
         uuid executionId FK
         uuid executionTestCaseId FK
         uuid executionExpectedResultId FK
-        enum status "PENDING, PASS, FAIL, SKIPPED, NOT_EXECUTABLE"
+        enum status "PENDING, PASS, FAIL, SKIPPED"
         timestamp judgedAt "nullable"
         uuid judgedByUserId FK "nullable, 判定者ユーザーID"
         varchar judgedByAgentName "nullable, 判定者AIエージェント名"
@@ -495,10 +494,9 @@ Execution
 | ステータス | 説明 |
 |-----------|------|
 | PENDING | 未判定 |
-| PASS | 合格 |
-| FAIL | 不合格 |
+| PASS | 成功 |
+| FAIL | 失敗 |
 | SKIPPED | スキップ |
-| NOT_EXECUTABLE | 実行不可 |
 
 ## ビジネスルール
 

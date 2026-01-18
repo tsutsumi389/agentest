@@ -189,7 +189,7 @@ Coding Agent が理解しやすい英語の文字列を使用。
 | `ExecutionStatus` | IN_PROGRESS, COMPLETED, ABORTED | 実行ステータス |
 | `PreconditionStatus` | UNCHECKED, MET, NOT_MET | 前提条件の確認状態 |
 | `StepStatus` | PENDING, DONE, SKIPPED | 手順の実施状態 |
-| `JudgmentStatus` | PENDING, PASS, FAIL, SKIPPED, NOT_EXECUTABLE | 期待値の判定結果 |
+| `JudgmentStatus` | PENDING, PASS, FAIL, SKIPPED | 期待値の判定結果 |
 | `ReviewStatus` | OPEN, RESOLVED | レビューコメントのステータス |
 | `AgentSessionStatus` | ACTIVE, IDLE, ENDED, TIMEOUT | Agent セッションのステータス |
 | `SubscriptionStatus` | ACTIVE, PAST_DUE, CANCELED, TRIALING | サブスクリプションステータス |
