@@ -316,8 +316,7 @@ describe('ProjectController', () => {
             executions: [
               {
                 id: 'exec-1',
-                startedAt: new Date(),
-                completedAt: new Date(),
+                createdAt: new Date(),
                 environment: { id: 'env-1', name: 'Production' },
                 expectedResults: [
                   { status: 'PASS' },

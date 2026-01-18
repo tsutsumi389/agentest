@@ -2,9 +2,6 @@ import { prisma, type EntityStatus } from '@agentest/db';
 import { NotFoundError } from '@agentest/shared';
 import { UserRepository } from '../repositories/user.repository.js';
 
-/** 実行ステータスの型 */
-export type ExecutionStatus = 'IN_PROGRESS' | 'COMPLETED' | 'ABORTED';
-
 /** ダッシュボード統計のレスポンス型 */
 export interface DashboardStats {
   projects: {
@@ -24,9 +21,7 @@ export interface DashboardStats {
     testSuiteName: string;
     projectId: string;
     projectName: string;
-    status: ExecutionStatus;
-    startedAt: Date;
-    completedAt: Date | null;
+    createdAt: Date;
     summary: {
       passed: number;
       failed: number;
@@ -392,7 +387,7 @@ export class UserService {
             testSuite: {
               project: projectAccessCondition,
             },
-            startedAt: { gte: thirtyDaysAgo },
+            createdAt: { gte: thirtyDaysAgo },
           },
         },
         _count: true,
@@ -403,7 +398,7 @@ export class UserService {
           testSuite: {
             project: projectAccessCondition,
           },
-          startedAt: { gte: weekStart },
+          createdAt: { gte: weekStart },
         },
       }),
       // 最終実行日時
@@ -413,8 +408,8 @@ export class UserService {
             project: projectAccessCondition,
           },
         },
-        orderBy: { startedAt: 'desc' },
-        select: { startedAt: true },
+        orderBy: { createdAt: 'desc' },
+        select: { createdAt: true },
       }),
       // 最近の実行（5件）
       prisma.execution.findMany({
@@ -423,7 +418,7 @@ export class UserService {
             project: projectAccessCondition,
           },
         },
-        orderBy: { startedAt: 'desc' },
+        orderBy: { createdAt: 'desc' },
         take: 5,
         include: {
           testSuite: {
@@ -483,9 +478,7 @@ export class UserService {
         testSuiteName: exec.testSuite.name,
         projectId: exec.testSuite.project.id,
         projectName: exec.testSuite.project.name,
-        status: exec.status,
-        startedAt: exec.startedAt,
-        completedAt: exec.completedAt,
+        createdAt: exec.createdAt,
         summary,
         executedBy: exec.executedByUser,
       };
@@ -501,7 +494,7 @@ export class UserService {
         failed,
         total,
         weeklyCount: weeklyExecutions,
-        lastExecutedAt: lastExecution?.startedAt ?? null,
+        lastExecutedAt: lastExecution?.createdAt ?? null,
       },
       recentExecutions: formattedRecentExecutions,
     };

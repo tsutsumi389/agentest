@@ -158,8 +158,7 @@ export class ProjectDashboardService {
       testSuite: filteredTestSuiteIds
         ? { id: { in: filteredTestSuiteIds }, projectId, deletedAt: null }
         : { projectId, deletedAt: null },
-      status: 'COMPLETED' as const,
-      completedAt: { gte: thirtyDaysAgo },
+      createdAt: { gte: thirtyDaysAgo },
       ...(environmentId && { environmentId }),
     };
 
@@ -258,14 +257,13 @@ export class ProjectDashboardService {
 
     const testCaseIds = testCases.map((tc) => tc.id);
 
-    // 全テストケースの実行結果を一括取得（完了済みの実行のみ）
+    // 全テストケースの実行結果を一括取得
     const allExpectedResults = await prisma.executionExpectedResult.findMany({
       where: {
         executionTestCase: {
           originalTestCaseId: { in: testCaseIds },
         },
         execution: {
-          status: 'COMPLETED',
           ...(environmentId && { environmentId }),
         },
       },
@@ -278,13 +276,13 @@ export class ProjectDashboardService {
         },
         execution: {
           select: {
-            completedAt: true,
+            createdAt: true,
           },
         },
       },
       orderBy: {
         execution: {
-          completedAt: 'desc',
+          createdAt: 'desc',
         },
       },
     });
@@ -292,7 +290,7 @@ export class ProjectDashboardService {
     // テストケースIDごとに実行結果をグループ化
     const resultsByTestCase = new Map<
       string,
-      Array<{ status: string; completedAt: Date | null }>
+      Array<{ status: string; createdAt: Date }>
     >();
 
     for (const result of allExpectedResults) {
@@ -302,7 +300,7 @@ export class ProjectDashboardService {
       }
       resultsByTestCase.get(testCaseId)!.push({
         status: result.status,
-        completedAt: result.execution.completedAt,
+        createdAt: result.execution.createdAt,
       });
     }
 
@@ -332,7 +330,7 @@ export class ProjectDashboardService {
         title: testCase.title,
         testSuiteId: testCase.testSuite.id,
         testSuiteName: testCase.testSuite.name,
-        lastExecutedAt: latestResult.completedAt ?? new Date(),
+        lastExecutedAt: latestResult.createdAt,
         consecutiveFailures,
       });
     }
@@ -393,7 +391,6 @@ export class ProjectDashboardService {
           originalTestCaseId: { in: testCaseIds },
         },
         execution: {
-          status: 'COMPLETED',
           ...(environmentId && { environmentId }),
         },
       },
@@ -405,13 +402,13 @@ export class ProjectDashboardService {
         },
         execution: {
           select: {
-            completedAt: true,
+            createdAt: true,
           },
         },
       },
       orderBy: {
         execution: {
-          completedAt: 'desc',
+          createdAt: 'desc',
         },
       },
     });
@@ -422,7 +419,7 @@ export class ProjectDashboardService {
       const testCaseId = result.executionTestCase.originalTestCaseId;
       // 最初に見つかったものが最新（orderByでソート済み）
       if (!lastExecutedByTestCase.has(testCaseId)) {
-        lastExecutedByTestCase.set(testCaseId, result.execution.completedAt);
+        lastExecutedByTestCase.set(testCaseId, result.execution.createdAt);
       }
     }
 
@@ -501,14 +498,13 @@ export class ProjectDashboardService {
 
     const testCaseIds = testCases.map((tc) => tc.id);
 
-    // 全テストケースの実行結果を一括取得（完了済みの実行のみ）
+    // 全テストケースの実行結果を一括取得
     const allExpectedResults = await prisma.executionExpectedResult.findMany({
       where: {
         executionTestCase: {
           originalTestCaseId: { in: testCaseIds },
         },
         execution: {
-          status: 'COMPLETED',
           ...(environmentId && { environmentId }),
         },
       },
@@ -521,13 +517,13 @@ export class ProjectDashboardService {
         },
         execution: {
           select: {
-            completedAt: true,
+            createdAt: true,
           },
         },
       },
       orderBy: {
         execution: {
-          completedAt: 'desc',
+          createdAt: 'desc',
         },
       },
     });
@@ -594,18 +590,17 @@ export class ProjectDashboardService {
       ? { id: { in: filteredTestSuiteIds }, projectId, deletedAt: null }
       : { projectId, deletedAt: null };
 
-    // 実行完了イベント
+    // 実行イベント
     const recentExecutions = await prisma.execution.findMany({
       where: {
         testSuite: testSuiteWhere,
-        status: 'COMPLETED',
         ...(environmentId && { environmentId }),
       },
-      orderBy: { completedAt: 'desc' },
+      orderBy: { createdAt: 'desc' },
       take: RECENT_ACTIVITIES_LIMIT,
       select: {
         id: true,
-        completedAt: true,
+        createdAt: true,
         testSuite: {
           select: {
             id: true,
@@ -626,8 +621,8 @@ export class ProjectDashboardService {
       activities.push({
         id: execution.id,
         type: 'execution',
-        occurredAt: execution.completedAt ?? new Date(),
-        description: `「${execution.testSuite.name}」のテスト実行が完了`,
+        occurredAt: execution.createdAt,
+        description: `「${execution.testSuite.name}」のテスト実行を開始`,
         testSuiteId: execution.testSuite.id,
         testSuiteName: execution.testSuite.name,
         actor: execution.executedByUser

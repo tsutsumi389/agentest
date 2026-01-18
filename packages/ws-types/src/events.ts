@@ -1,5 +1,4 @@
 import type {
-  ExecutionStatus,
   PreconditionStatus,
   StepStatus,
   JudgmentStatus,
@@ -99,13 +98,6 @@ export interface ExecutionStartedEvent extends BaseEvent {
   };
 }
 
-export interface ExecutionStatusChangedEvent extends BaseEvent {
-  type: 'execution:status_changed';
-  executionId: string;
-  status: ExecutionStatus;
-  completedAt?: string;
-}
-
 export interface ExecutionPreconditionUpdatedEvent extends BaseEvent {
   type: 'execution:precondition_updated';
   executionId: string;
@@ -149,7 +141,6 @@ export interface ExecutionEvidenceAddedEvent extends BaseEvent {
 
 export type ExecutionEvent =
   | ExecutionStartedEvent
-  | ExecutionStatusChangedEvent
   | ExecutionPreconditionUpdatedEvent
   | ExecutionStepUpdatedEvent
   | ExecutionExpectedResultUpdatedEvent

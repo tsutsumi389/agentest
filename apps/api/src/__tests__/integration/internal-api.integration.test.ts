@@ -372,9 +372,6 @@ describe('Internal API Integration Tests', () => {
           data: {
             testSuiteId: testSuite.id,
             executedByUserId: testUser.id,
-            status: 'COMPLETED',
-            startedAt: new Date('2024-01-01T10:00:00.000Z'),
-            completedAt: new Date('2024-01-01T11:00:00.000Z'),
           },
         });
 
@@ -388,47 +385,33 @@ describe('Internal API Integration Tests', () => {
         expect(response.body).toHaveProperty('pagination');
         expect(response.body.executions).toBeInstanceOf(Array);
         expect(response.body.executions.length).toBe(1);
-        expect(response.body.executions[0].status).toBe('COMPLETED');
       });
 
-      it('配列パラメータでステータスフィルタできる', async () => {
-        // 複数ステータスの実行履歴を作成
+      it('実行履歴を複数作成して一覧取得できる', async () => {
+        // 複数の実行履歴を作成
         await prisma.execution.createMany({
           data: [
             {
               testSuiteId: testSuite.id,
               executedByUserId: testUser.id,
-              status: 'IN_PROGRESS',
-              startedAt: new Date('2024-01-01T10:00:00.000Z'),
             },
             {
               testSuiteId: testSuite.id,
               executedByUserId: testUser.id,
-              status: 'COMPLETED',
-              startedAt: new Date('2024-01-01T11:00:00.000Z'),
-              completedAt: new Date('2024-01-01T12:00:00.000Z'),
             },
             {
               testSuiteId: testSuite.id,
               executedByUserId: testUser.id,
-              status: 'ABORTED',
-              startedAt: new Date('2024-01-01T13:00:00.000Z'),
-              completedAt: new Date('2024-01-01T13:30:00.000Z'),
             },
           ],
         });
 
-        // 複数ステータスでフィルタ（?status=IN_PROGRESS&status=COMPLETED形式）
         const response = await request(app)
-          .get(`/internal/api/test-suites/${testSuite.id}/executions?userId=${testUser.id}&status=IN_PROGRESS&status=COMPLETED`)
+          .get(`/internal/api/test-suites/${testSuite.id}/executions?userId=${testUser.id}`)
           .set('X-Internal-API-Key', env.INTERNAL_API_SECRET);
 
         expect(response.status).toBe(200);
-        expect(response.body.executions.length).toBe(2);
-        const statuses = response.body.executions.map((e: { status: string }) => e.status);
-        expect(statuses).toContain('IN_PROGRESS');
-        expect(statuses).toContain('COMPLETED');
-        expect(statuses).not.toContain('ABORTED');
+        expect(response.body.executions.length).toBe(3);
       });
 
       it('日時範囲でフィルタできる', async () => {
@@ -438,23 +421,17 @@ describe('Internal API Integration Tests', () => {
             {
               testSuiteId: testSuite.id,
               executedByUserId: testUser.id,
-              status: 'COMPLETED',
-              startedAt: new Date('2024-01-01T10:00:00.000Z'),
-              completedAt: new Date('2024-01-01T11:00:00.000Z'),
+              createdAt: new Date('2024-01-01T10:00:00.000Z'),
             },
             {
               testSuiteId: testSuite.id,
               executedByUserId: testUser.id,
-              status: 'COMPLETED',
-              startedAt: new Date('2024-01-15T10:00:00.000Z'),
-              completedAt: new Date('2024-01-15T11:00:00.000Z'),
+              createdAt: new Date('2024-01-15T10:00:00.000Z'),
             },
             {
               testSuiteId: testSuite.id,
               executedByUserId: testUser.id,
-              status: 'COMPLETED',
-              startedAt: new Date('2024-02-01T10:00:00.000Z'),
-              completedAt: new Date('2024-02-01T11:00:00.000Z'),
+              createdAt: new Date('2024-02-01T10:00:00.000Z'),
             },
           ],
         });
@@ -480,16 +457,12 @@ describe('Internal API Integration Tests', () => {
             {
               testSuiteId: testSuite.id,
               executedByUserId: testUser.id,
-              status: 'COMPLETED',
-              startedAt: new Date('2024-01-01T10:00:00.000Z'),
-              completedAt: new Date('2024-01-01T11:00:00.000Z'),
+              createdAt: new Date('2024-01-01T10:00:00.000Z'),
             },
             {
               testSuiteId: testSuite.id,
               executedByUserId: testUser.id,
-              status: 'COMPLETED',
-              startedAt: new Date('2024-01-02T10:00:00.000Z'),
-              completedAt: new Date('2024-01-02T11:00:00.000Z'),
+              createdAt: new Date('2024-01-02T10:00:00.000Z'),
             },
           ],
         });
@@ -503,8 +476,8 @@ describe('Internal API Integration Tests', () => {
         expect(response.status).toBe(200);
         expect(response.body.executions.length).toBe(2);
         // 昇順なので最初が古い日付
-        expect(new Date(response.body.executions[0].startedAt).getTime())
-          .toBeLessThan(new Date(response.body.executions[1].startedAt).getTime());
+        expect(new Date(response.body.executions[0].createdAt).getTime())
+          .toBeLessThan(new Date(response.body.executions[1].createdAt).getTime());
       });
 
       it('実行者がnullの実行履歴を返す', async () => {
@@ -513,9 +486,6 @@ describe('Internal API Integration Tests', () => {
           data: {
             testSuiteId: testSuite.id,
             executedByUserId: null,
-            status: 'COMPLETED',
-            startedAt: new Date('2024-01-01T10:00:00.000Z'),
-            completedAt: new Date('2024-01-01T11:00:00.000Z'),
           },
         });
 
@@ -572,14 +542,6 @@ describe('Internal API Integration Tests', () => {
         expect(response.body.error).toBe('Bad Request');
       });
 
-      it('不正なステータスは400を返す', async () => {
-        const response = await request(app)
-          .get(`/internal/api/test-suites/${testSuite.id}/executions?userId=${testUser.id}&status=INVALID`)
-          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET);
-
-        expect(response.status).toBe(400);
-        expect(response.body.error).toBe('Bad Request');
-      });
     });
 
     describe('実行履歴なし', () => {
@@ -934,8 +896,6 @@ describe('Internal API Integration Tests', () => {
         data: {
           testSuiteId: testSuite.id,
           executedByUserId: testUser.id,
-          status: 'IN_PROGRESS',
-          startedAt: new Date(),
         },
       });
     });
@@ -950,7 +910,6 @@ describe('Internal API Integration Tests', () => {
         expect(response.status).toBe(200);
         expect(response.body).toHaveProperty('execution');
         expect(response.body.execution.id).toBe(testExecution.id);
-        expect(response.body.execution.status).toBe('IN_PROGRESS');
       });
 
       it('テストスイート情報を含む実行を返す', async () => {

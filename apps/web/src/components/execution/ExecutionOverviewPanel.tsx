@@ -5,13 +5,9 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  AlertCircle,
-  Square,
   Play,
   Ban,
-  Loader2,
   Calendar,
-  Timer,
   Server,
   Circle,
   MinusCircle,
@@ -28,7 +24,7 @@ import type {
 import { MarkdownPreview } from '../common/markdown';
 import { ExecutionPreconditionList } from './ExecutionPreconditionList';
 import { ProgressBar, SummaryCard } from '../ui';
-import { formatDateTime, formatDuration } from '../../lib/date';
+import { formatDateTime } from '../../lib/date';
 
 interface ExecutionOverviewPanelProps {
   /** 実行詳細 */
@@ -39,14 +35,6 @@ interface ExecutionOverviewPanelProps {
   suitePreconditionResults: ExecutionPreconditionResult[];
   /** 編集可能か */
   isEditable: boolean;
-  /** 中止ハンドラ */
-  onAbort: () => void;
-  /** 完了ハンドラ */
-  onComplete: () => void;
-  /** 中止処理中 */
-  isAborting: boolean;
-  /** 完了処理中 */
-  isCompleting: boolean;
   /** 前提条件ステータス変更ハンドラ */
   onPreconditionStatusChange: (resultId: string, status: PreconditionResultStatus) => void;
   /** 前提条件ノート変更ハンドラ */
@@ -56,20 +44,6 @@ interface ExecutionOverviewPanelProps {
   /** 更新中の前提条件ID（ノート） */
   updatingPreconditionNoteId: string | null;
 }
-
-/** ステータスアイコンマップ */
-const statusIcon = {
-  IN_PROGRESS: <Clock className="w-5 h-5 text-warning" />,
-  COMPLETED: <CheckCircle2 className="w-5 h-5 text-success" />,
-  ABORTED: <AlertCircle className="w-5 h-5 text-danger" />,
-};
-
-/** ステータスラベルマップ */
-const statusLabel = {
-  IN_PROGRESS: '実行中',
-  COMPLETED: '完了',
-  ABORTED: '中断',
-};
 
 /**
  * メタデータカード
@@ -213,10 +187,6 @@ export function ExecutionOverviewPanel({
   executionTestSuite,
   suitePreconditionResults,
   isEditable,
-  onAbort,
-  onComplete,
-  isAborting,
-  isCompleting,
   onPreconditionStatusChange,
   onPreconditionNoteChange,
   updatingPreconditionStatusId,
@@ -273,81 +243,27 @@ export function ExecutionOverviewPanel({
           テストスイートに戻る
         </Link>
 
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-lg bg-background-tertiary flex items-center justify-center">
-              <Play className="w-6 h-6 text-foreground-muted" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-foreground">
-                  {executionTestSuite?.name ?? 'テスト実行'}
-                </h1>
-                <span
-                  className="flex items-center gap-1 badge"
-                  aria-label={`ステータス: ${statusLabel[execution.status]}`}
-                >
-                  {statusIcon[execution.status]}
-                  {statusLabel[execution.status]}
-                </span>
-              </div>
-              {executionTestSuite?.description && (
-                <MarkdownPreview content={executionTestSuite.description} className="text-foreground-muted text-sm mt-2" />
-              )}
-            </div>
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-lg bg-background-tertiary flex items-center justify-center">
+            <Play className="w-6 h-6 text-foreground-muted" />
           </div>
-
-          {execution.status === 'IN_PROGRESS' && (
-            <div className="flex items-center gap-2">
-              <button
-                onClick={onAbort}
-                disabled={isAborting || isCompleting}
-                className="btn btn-danger"
-              >
-                {isAborting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Square className="w-4 h-4" />
-                )}
-                {isAborting ? '中止中...' : '中止'}
-              </button>
-              <button
-                onClick={onComplete}
-                disabled={isCompleting || isAborting}
-                className="btn btn-primary"
-              >
-                {isCompleting ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <CheckCircle2 className="w-4 h-4" />
-                )}
-                {isCompleting ? '完了中...' : '完了'}
-              </button>
-            </div>
-          )}
+          <div>
+            <h1 className="text-2xl font-bold text-foreground">
+              {executionTestSuite?.name ?? 'テスト実行'}
+            </h1>
+            {executionTestSuite?.description && (
+              <MarkdownPreview content={executionTestSuite.description} className="text-foreground-muted text-sm mt-2" />
+            )}
+          </div>
         </div>
       </div>
 
       {/* メタデータカード */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <MetadataCard
           icon={Calendar}
-          label="開始日時"
-          value={formatDateTime(execution.startedAt)}
-        />
-        <MetadataCard
-          icon={Timer}
-          label={execution.completedAt ? '終了日時' : '経過時間'}
-          value={
-            execution.completedAt
-              ? formatDateTime(execution.completedAt)
-              : '実行中...'
-          }
-          subValue={
-            execution.completedAt
-              ? formatDuration(execution.startedAt, execution.completedAt)
-              : undefined
-          }
+          label="作成日時"
+          value={formatDateTime(execution.createdAt)}
         />
         <MetadataCard
           icon={Server}

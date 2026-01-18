@@ -75,8 +75,8 @@ describe('Internal API Evidence Upload Integration Tests', () => {
     testCase = await createTestCase(testSuite.id, { title: 'Test Case for Evidence' });
     const testExpectedResult = await createTestCaseExpectedResult(testCase.id, { content: 'Expected result 1' });
 
-    // 実行を作成（IN_PROGRESS状態）
-    execution = await createTestExecution(testEnvironment.id, testSuite.id, { status: 'IN_PROGRESS' });
+    // 実行を作成
+    execution = await createTestExecution(testEnvironment.id, testSuite.id);
 
     // 実行時スナップショットを作成
     const executionTestSuite = await createTestExecutionTestSuite(
@@ -233,25 +233,6 @@ describe('Internal API Evidence Upload Integration Tests', () => {
         expect(response.status).toBe(403);
       });
 
-      it('完了済みの実行にはアップロードできない', async () => {
-        // 実行を完了状態に更新
-        await prisma.execution.update({
-          where: { id: execution.id },
-          data: { status: 'COMPLETED', completedAt: new Date() },
-        });
-
-        const response = await request(app)
-          .post(`/internal/api/executions/${execution.id}/expected-results/${expectedResultResult.id}/evidences`)
-          .query({ userId: testUser.id })
-          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
-          .send({
-            fileName: 'screenshot.png',
-            fileData: TEST_BASE64_PNG,
-            fileType: 'image/png',
-          });
-
-        expect(response.status).toBe(403);
-      });
 
       it('許可されていないMIMEタイプは400を返す', async () => {
         const response = await request(app)

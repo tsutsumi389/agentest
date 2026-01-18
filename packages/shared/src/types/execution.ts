@@ -1,5 +1,4 @@
 import type {
-  ExecutionStatus,
   PreconditionStatus,
   StepStatus,
   JudgmentStatus,
@@ -12,9 +11,6 @@ export interface Execution {
   environmentId: string | null;
   executedByUserId: string | null;
   executedByAgentSessionId: string | null;
-  status: ExecutionStatus;
-  startedAt: Date;
-  completedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -163,9 +159,7 @@ export interface ExecutionPublic {
   id: string;
   testSuiteId: string;
   environmentId: string | null;
-  status: ExecutionStatus;
-  startedAt: Date;
-  completedAt: Date | null;
+  createdAt: Date;
 }
 
 export interface ExecutionWithResults extends ExecutionPublic {

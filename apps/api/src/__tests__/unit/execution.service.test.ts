@@ -54,9 +54,7 @@ function createMockExecution(overrides: Record<string, unknown> = {}) {
   return {
     id: TEST_EXECUTION_ID,
     testSuiteId: TEST_SUITE_ID,
-    status: 'IN_PROGRESS',
-    startedAt: new Date(),
-    completedAt: null,
+    createdAt: new Date(),
     testSuite: {
       id: TEST_SUITE_ID,
       name: 'Test Suite',

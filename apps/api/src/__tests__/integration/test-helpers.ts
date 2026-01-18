@@ -335,6 +335,7 @@ export async function createTestSuite(
     name: string;
     description: string | null;
     status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
+    createdAt: Date;
   }> = {}
 ) {
   const id = overrides.id ?? randomUUID();
@@ -345,6 +346,7 @@ export async function createTestSuite(
       name: overrides.name ?? `Test Suite ${id.slice(0, 8)}`,
       description: overrides.description ?? null,
       status: overrides.status ?? 'DRAFT',
+      ...(overrides.createdAt && { createdAt: overrides.createdAt }),
     },
   });
 }
@@ -357,7 +359,6 @@ export async function createTestExecution(
   testSuiteId: string,
   overrides: Partial<{
     id: string;
-    status: 'IN_PROGRESS' | 'COMPLETED' | 'ABORTED';
   }> = {}
 ) {
   const id = overrides.id ?? randomUUID();
@@ -366,7 +367,6 @@ export async function createTestExecution(
       id,
       environmentId,
       testSuiteId,
-      status: overrides.status ?? 'IN_PROGRESS',
     },
   });
 }

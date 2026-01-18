@@ -209,20 +209,6 @@ describe('ProjectService - Environment Management', () => {
       });
     });
 
-    it('実行中のテストがある環境は削除できない', async () => {
-      mockProjectRepo.findById.mockResolvedValue(mockProject);
-      mockPrisma.projectEnvironment.findUnique.mockResolvedValue(mockEnvironment);
-      mockPrisma.execution.findFirst.mockResolvedValue({
-        id: 'exec-1',
-        environmentId: 'env-1',
-        status: 'IN_PROGRESS',
-      });
-
-      await expect(service.deleteEnvironment('project-1', 'env-1'))
-        .rejects.toThrow(ConflictError);
-      expect(mockPrisma.projectEnvironment.delete).not.toHaveBeenCalled();
-    });
-
     it('デフォルト環境を削除すると次の環境が昇格する', async () => {
       const nextEnv = { id: 'env-2', sortOrder: 1 };
       mockProjectRepo.findById.mockResolvedValue(mockProject);

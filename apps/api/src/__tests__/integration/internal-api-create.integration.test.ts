@@ -511,7 +511,6 @@ describe('Internal API Create Endpoints Integration Tests', () => {
         expect(response.status).toBe(201);
         expect(response.body).toHaveProperty('execution');
         expect(response.body.execution.testSuiteId).toBe(testSuite.id);
-        expect(response.body.execution.status).toBe('IN_PROGRESS');
       });
 
       it('environmentIdを指定して実行できる', async () => {

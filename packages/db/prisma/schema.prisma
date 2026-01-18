@@ -47,12 +47,6 @@ enum TestCasePriority {
   LOW
 }
 
-enum ExecutionStatus {
-  IN_PROGRESS
-  COMPLETED
-  ABORTED
-}
-
 enum PreconditionStatus {
   UNCHECKED
   MET
@@ -599,16 +593,13 @@ model TestCaseHistory {
 // ============================================
 
 model Execution {
-  id                      String          @id @default(uuid())
-  testSuiteId             String          @map("test_suite_id")
-  environmentId           String?         @map("environment_id")
-  executedByUserId        String?         @map("executed_by_user_id")
-  executedByAgentSessionId String?        @map("executed_by_agent_session_id")
-  status                  ExecutionStatus @default(IN_PROGRESS)
-  startedAt               DateTime        @default(now()) @map("started_at")
-  completedAt             DateTime?       @map("completed_at")
-  createdAt               DateTime        @default(now()) @map("created_at")
-  updatedAt               DateTime        @updatedAt @map("updated_at")
+  id                      String   @id @default(uuid())
+  testSuiteId             String   @map("test_suite_id")
+  environmentId           String?  @map("environment_id")
+  executedByUserId        String?  @map("executed_by_user_id")
+  executedByAgentSessionId String? @map("executed_by_agent_session_id")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
 
   testSuite           TestSuite                     @relation(fields: [testSuiteId], references: [id], onDelete: Cascade)
   environment         ProjectEnvironment?           @relation(fields: [environmentId], references: [id])
@@ -620,8 +611,7 @@ model Execution {
   expectedResults     ExecutionExpectedResult[]
 
   @@index([testSuiteId])
-  @@index([status])
-  @@index([startedAt])
+  @@index([createdAt])
   @@map("executions")
 }
 

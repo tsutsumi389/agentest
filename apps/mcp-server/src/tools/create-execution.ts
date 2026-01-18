@@ -20,8 +20,6 @@ interface CreateExecutionResponse {
     id: string;
     testSuiteId: string;
     environmentId: string | null;
-    status: string;
-    startedAt: string | null;
     createdAt: string;
     updatedAt: string;
   };
@@ -59,7 +57,7 @@ export const createExecutionTool: ToolDefinition<CreateExecutionInput> = {
 必須: testSuiteId
 オプション: environmentId
 
-返却情報: 作成された実行ID・ステータス（IN_PROGRESS）・開始日時。
+返却情報: 作成された実行ID・作成日時。
 
 動作: テストスイートの現時点の内容（テストケース・前提条件・ステップ・期待結果）がスナップショットとして保存され、各項目の結果行が自動作成されます。
 

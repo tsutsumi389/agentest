@@ -339,18 +339,6 @@ export class ProjectService {
       throw new NotFoundError('Environment', environmentId);
     }
 
-    // 実行中のテストで使用されていないかチェック
-    const inProgressExecution = await prisma.execution.findFirst({
-      where: {
-        environmentId,
-        status: 'IN_PROGRESS',
-      },
-    });
-
-    if (inProgressExecution) {
-      throw new ConflictError('この環境は実行中のテストで使用されているため削除できません');
-    }
-
     // トランザクションで削除とデフォルト昇格を実行
     return prisma.$transaction(async (tx) => {
       // 環境を削除

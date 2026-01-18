@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useSearchParams, useNavigate, Link } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, AlertCircle, Clock } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { testSuitesApi, projectsApi, labelsApi, type TestCase, type TestSuite, type ProjectMemberRole, type ReviewCommentWithReplies, type Label } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { usePageSidebar } from '../components/Layout';
@@ -426,7 +426,7 @@ export function TestSuiteCasesPage() {
 interface OverviewTabProps {
   testSuiteId: string;
   description: string | null;
-  executions: { id: string; status: string; startedAt: string }[];
+  executions: { id: string; createdAt: string }[];
   currentRole: 'OWNER' | ProjectMemberRole | undefined;
 }
 
@@ -499,25 +499,12 @@ function OverviewTab({
                 to={`/executions/${execution.id}`}
                 className="block p-4 hover:bg-background-tertiary transition-colors"
               >
-                <div className="flex items-center gap-2 mb-1">
-                  {execution.status === 'COMPLETED' && (
-                    <CheckCircle2 className="w-4 h-4 text-success" />
-                  )}
-                  {execution.status === 'IN_PROGRESS' && (
-                    <Clock className="w-4 h-4 text-warning" />
-                  )}
-                  {execution.status === 'ABORTED' && (
-                    <AlertCircle className="w-4 h-4 text-danger" />
-                  )}
-                  <span className="text-sm font-medium text-foreground">
-                    {execution.status === 'COMPLETED' && '完了'}
-                    {execution.status === 'IN_PROGRESS' && '実行中'}
-                    {execution.status === 'ABORTED' && '中断'}
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-foreground-muted" />
+                  <span className="text-sm text-foreground">
+                    {new Date(execution.createdAt).toLocaleString('ja-JP')}
                   </span>
                 </div>
-                <p className="text-xs text-foreground-muted">
-                  {new Date(execution.startedAt).toLocaleString('ja-JP')}
-                </p>
               </Link>
             ))}
           </div>

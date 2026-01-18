@@ -59,34 +59,6 @@ export class ExecutionController {
   };
 
   /**
-   * 実行中止
-   */
-  abort = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { executionId } = req.params;
-      const execution = await this.executionService.abort(executionId);
-
-      res.json({ execution });
-    } catch (error) {
-      next(error);
-    }
-  };
-
-  /**
-   * 実行完了
-   */
-  complete = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const { executionId } = req.params;
-      const execution = await this.executionService.complete(executionId);
-
-      res.json({ execution });
-    } catch (error) {
-      next(error);
-    }
-  };
-
-  /**
    * 前提条件結果更新
    */
   updatePreconditionResult = async (req: Request, res: Response, next: NextFunction): Promise<void> => {

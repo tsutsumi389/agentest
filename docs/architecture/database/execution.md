@@ -17,40 +17,20 @@
 | `environmentId` | UUID | YES | NULL | 実行対象環境 ID（外部キー） |
 | `executedByUserId` | UUID | YES | NULL | 実行者ユーザー ID（外部キー）※1 |
 | `executedByAgentSessionId` | UUID | YES | NULL | 実行者 Agent セッション ID（外部キー）※1 |
-| `status` | ENUM | NO | IN_PROGRESS | 実行ステータス |
-| `startedAt` | TIMESTAMP | NO | now() | 開始日時 |
-| `completedAt` | TIMESTAMP | YES | NULL | 完了日時 |
 | `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
 | `updatedAt` | TIMESTAMP | NO | - | 更新日時 |
 
 ※1: `executedByUserId` と `executedByAgentSessionId` は両方 NULL または一方のみ設定可
 
-### 実行ステータス
-
-| ステータス | 説明 |
-|------------|------|
-| `IN_PROGRESS` | 実行中 |
-| `COMPLETED` | 完了 |
-| `ABORTED` | 中断 |
-
 ### Prisma スキーマ
 
 ```prisma
-enum ExecutionStatus {
-  IN_PROGRESS
-  COMPLETED
-  ABORTED
-}
-
 model Execution {
   id                       String          @id @default(uuid())
   testSuiteId              String          @map("test_suite_id")
   environmentId            String?         @map("environment_id")
   executedByUserId         String?         @map("executed_by_user_id")
   executedByAgentSessionId String?         @map("executed_by_agent_session_id")
-  status                   ExecutionStatus @default(IN_PROGRESS)
-  startedAt                DateTime        @default(now()) @map("started_at")
-  completedAt              DateTime?       @map("completed_at")
   createdAt                DateTime        @default(now()) @map("created_at")
   updatedAt                DateTime        @updatedAt @map("updated_at")
 
@@ -64,8 +44,6 @@ model Execution {
   expectedResults     ExecutionExpectedResult[]
 
   @@index([testSuiteId])
-  @@index([status])
-  @@index([startedAt])
   @@map("executions")
 }
 ```
@@ -582,7 +560,7 @@ Execution
 
 ```
 1. テスト実行開始
-   └─▶ Execution レコード作成（status: IN_PROGRESS）
+   └─▶ Execution レコード作成
    └─▶ ExecutionTestSuite 作成（テストスイートのスナップショット）
    └─▶ ExecutionTestSuitePrecondition 作成（スイート前提条件のスナップショット）
    └─▶ ExecutionTestCase 作成（各テストケースのスナップショット）
@@ -605,10 +583,6 @@ Execution
        - PENDING → FAIL（失敗）
        - PENDING → SKIPPED（スキップ）
    └─▶ エビデンス添付 → ExecutionEvidence 作成（期待値に紐づけ）
-
-3. テスト完了
-   └─▶ Execution.status → COMPLETED
-   └─▶ Execution.completedAt 設定
 ```
 
 ---

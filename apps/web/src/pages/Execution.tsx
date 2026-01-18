@@ -54,11 +54,6 @@ export function ExecutionPage() {
     queryKey: ['execution', executionId, 'details'],
     queryFn: () => executionsApi.getByIdWithDetails(executionId!),
     enabled: !!executionId,
-    refetchInterval: (query) => {
-      // 実行中の場合は10秒ごとに更新
-      const data = query.state.data;
-      return data?.execution?.status === 'IN_PROGRESS' ? 10000 : false;
-    },
   });
 
   const execution = data?.execution;
@@ -97,30 +92,6 @@ export function ExecutionPage() {
       setSidebarContent(null);
     };
   }, [execution, selectedTestCaseId, isLoading, setSidebarContent, handleTestCaseSelect]);
-
-  // 実行中止
-  const abortMutation = useMutation({
-    mutationFn: () => executionsApi.abort(executionId!),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['execution', executionId] });
-      toast.success('実行を中止しました');
-    },
-    onError: () => {
-      toast.error('実行の中止に失敗しました');
-    },
-  });
-
-  // 実行完了
-  const completeMutation = useMutation({
-    mutationFn: () => executionsApi.complete(executionId!),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['execution', executionId] });
-      toast.success('実行を完了しました');
-    },
-    onError: () => {
-      toast.error('実行の完了に失敗しました');
-    },
-  });
 
   // 前提条件結果更新（楽観的更新）
   const updatePreconditionMutation = useMutation({
@@ -429,8 +400,8 @@ export function ExecutionPage() {
     );
   }
 
-  // 編集可否判定
-  const isEditable = execution.status === 'IN_PROGRESS';
+  // 編集可否判定（statusフィールド廃止により常に編集可能）
+  const isEditable = true;
   const executionTestSuite = execution.executionTestSuite;
 
   // メインコンテンツの条件分岐
@@ -443,10 +414,6 @@ export function ExecutionPage() {
         executionTestSuite={executionTestSuite}
         suitePreconditionResults={suitePreconditionResults}
         isEditable={isEditable}
-        onAbort={() => abortMutation.mutate()}
-        onComplete={() => completeMutation.mutate()}
-        isAborting={abortMutation.isPending}
-        isCompleting={completeMutation.isPending}
         onPreconditionStatusChange={handlePreconditionStatusChange}
         onPreconditionNoteChange={handlePreconditionNoteChange}
         updatingPreconditionStatusId={updatingPreconditionStatusId}

@@ -1,6 +1,5 @@
 import type {
   ExecutionStartedEvent,
-  ExecutionStatusChangedEvent,
   ExecutionPreconditionUpdatedEvent,
   ExecutionStepUpdatedEvent,
   ExecutionExpectedResultUpdatedEvent,
@@ -30,32 +29,6 @@ export async function publishExecutionStarted(
   };
 
   // プロジェクトチャンネルと実行チャンネルにパブリッシュ
-  await Promise.all([
-    publishEvent(Channels.project(projectId), event),
-    publishEvent(Channels.testSuite(testSuiteId), event),
-    publishEvent(Channels.execution(executionId), event),
-  ]);
-}
-
-/**
- * 実行ステータス変更イベントをパブリッシュ
- */
-export async function publishExecutionStatusChanged(
-  executionId: string,
-  testSuiteId: string,
-  projectId: string,
-  status: 'IN_PROGRESS' | 'COMPLETED' | 'ABORTED',
-  completedAt?: Date
-): Promise<void> {
-  const event: ExecutionStatusChangedEvent = {
-    type: 'execution:status_changed',
-    eventId: crypto.randomUUID(),
-    timestamp: Date.now(),
-    executionId,
-    status,
-    completedAt: completedAt?.toISOString(),
-  };
-
   await Promise.all([
     publishEvent(Channels.project(projectId), event),
     publishEvent(Channels.testSuite(testSuiteId), event),

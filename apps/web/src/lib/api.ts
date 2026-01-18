@@ -320,8 +320,7 @@ export interface TestSuite {
   labels?: Array<{ id: string; name: string; color: string }>;
   lastExecution?: {
     id: string;
-    startedAt: string;
-    completedAt: string | null;
+    createdAt: string;
     environment: { id: string; name: string } | null;
     judgmentCounts: {
       PASS: number;
@@ -405,12 +404,11 @@ export interface TestSuiteSearchParams {
 
 /** 実行履歴検索パラメータ */
 export interface ExecutionSearchParams {
-  status?: string[];
   from?: string;
   to?: string;
   limit?: number;
   offset?: number;
-  sortBy?: 'startedAt' | 'completedAt' | 'status';
+  sortBy?: 'createdAt';
   sortOrder?: 'asc' | 'desc';
 }
 
@@ -594,9 +592,7 @@ export interface Execution {
   id: string;
   testSuiteId: string;
   environmentId: string | null;
-  status: 'IN_PROGRESS' | 'COMPLETED' | 'ABORTED';
-  startedAt: string;
-  completedAt: string | null;
+  createdAt: string;
   executedByUser?: { id: string; name: string; avatarUrl: string | null };
   environment?: { id: string; name: string; slug: string };
 }
@@ -793,9 +789,7 @@ export interface DashboardStats {
     testSuiteName: string;
     projectId: string;
     projectName: string;
-    status: 'IN_PROGRESS' | 'COMPLETED' | 'ABORTED';
-    startedAt: string;
-    completedAt: string | null;
+    createdAt: string;
     summary: {
       passed: number;
       failed: number;
@@ -945,7 +939,6 @@ export const testSuitesApi = {
     api.get<{ testCases: TestCase[] }>(`/api/test-suites/${testSuiteId}/test-cases`),
   getExecutions: (testSuiteId: string, params?: ExecutionSearchParams) => {
     const query = new URLSearchParams();
-    if (params?.status?.length) query.set('status', params.status.join(','));
     if (params?.from) query.set('from', params.from);
     if (params?.to) query.set('to', params.to);
     if (params?.limit !== undefined) query.set('limit', String(params.limit));
@@ -1108,8 +1101,6 @@ export const executionsApi = {
   getById: (executionId: string) => api.get<{ execution: Execution }>(`/api/executions/${executionId}`),
   getByIdWithDetails: (executionId: string) =>
     api.get<{ execution: ExecutionWithDetails }>(`/api/executions/${executionId}/details`),
-  abort: (executionId: string) => api.post<{ execution: Execution }>(`/api/executions/${executionId}/abort`),
-  complete: (executionId: string) => api.post<{ execution: Execution }>(`/api/executions/${executionId}/complete`),
 
   // 結果更新
   updatePreconditionResult: (executionId: string, resultId: string, data: UpdatePreconditionResultRequest) =>

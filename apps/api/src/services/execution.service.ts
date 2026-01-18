@@ -1,5 +1,5 @@
 import { prisma, type PreconditionStatus, type StepStatus, type JudgmentStatus } from '@agentest/db';
-import { NotFoundError, ConflictError, BadRequestError } from '@agentest/shared';
+import { NotFoundError, BadRequestError } from '@agentest/shared';
 import { createStorageClient } from '@agentest/storage';
 import { v4 as uuidv4 } from 'uuid';
 import { ExecutionRepository } from '../repositories/execution.repository.js';
@@ -53,44 +53,6 @@ export class ExecutionService {
       ...execution,
       expectedResults,
     };
-  }
-
-  /**
-   * 実行を中止
-   */
-  async abort(executionId: string) {
-    const execution = await this.findById(executionId);
-
-    if (execution.status !== 'IN_PROGRESS') {
-      throw new ConflictError('進行中の実行のみ中止できます');
-    }
-
-    return prisma.execution.update({
-      where: { id: executionId },
-      data: {
-        status: 'ABORTED',
-        completedAt: new Date(),
-      },
-    });
-  }
-
-  /**
-   * 実行を完了
-   */
-  async complete(executionId: string) {
-    const execution = await this.findById(executionId);
-
-    if (execution.status !== 'IN_PROGRESS') {
-      throw new ConflictError('進行中の実行のみ完了できます');
-    }
-
-    return prisma.execution.update({
-      where: { id: executionId },
-      data: {
-        status: 'COMPLETED',
-        completedAt: new Date(),
-      },
-    });
   }
 
   /**
@@ -223,12 +185,7 @@ export class ExecutionService {
     file: Express.Multer.File,
     description?: string
   ) {
-    const execution = await this.findById(executionId);
-
-    // 完了済み実行チェック
-    if (execution.status !== 'IN_PROGRESS') {
-      throw new ConflictError('完了済みの実行にはエビデンスをアップロードできません');
-    }
+    await this.findById(executionId);
 
     const expectedResult = await prisma.executionExpectedResult.findFirst({
       where: {
@@ -272,12 +229,7 @@ export class ExecutionService {
    * エビデンスを削除
    */
   async deleteEvidence(executionId: string, evidenceId: string) {
-    const execution = await this.findById(executionId);
-
-    // 完了済み実行チェック
-    if (execution.status !== 'IN_PROGRESS') {
-      throw new ConflictError('完了済みの実行のエビデンスは削除できません');
-    }
+    await this.findById(executionId);
 
     const evidence = await prisma.executionEvidence.findFirst({
       where: {

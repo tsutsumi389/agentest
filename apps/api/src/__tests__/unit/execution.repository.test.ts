@@ -26,8 +26,7 @@ describe('ExecutionRepository', () => {
       const mockExecution = {
         id: 'execution-1',
         testSuiteId: 'suite-1',
-        status: 'IN_PROGRESS',
-        startedAt: new Date(),
+        createdAt: new Date(),
         testSuite: {
           id: 'suite-1',
           name: 'Test Suite',
@@ -107,7 +106,7 @@ describe('ExecutionRepository', () => {
       const mockExecution = {
         id: 'execution-1',
         testSuiteId: 'suite-1',
-        status: 'COMPLETED',
+        createdAt: new Date(),
         testSuite: {
           id: 'suite-1',
           name: 'Test Suite',
@@ -271,8 +270,7 @@ describe('ExecutionRepository', () => {
         {
           id: 'execution-1',
           testSuiteId: 'suite-1',
-          status: 'COMPLETED',
-          startedAt: new Date('2024-01-02'),
+          createdAt: new Date('2024-01-02'),
           executedByUser: {
             id: 'user-1',
             name: 'User 1',
@@ -287,8 +285,7 @@ describe('ExecutionRepository', () => {
         {
           id: 'execution-2',
           testSuiteId: 'suite-1',
-          status: 'IN_PROGRESS',
-          startedAt: new Date('2024-01-01'),
+          createdAt: new Date('2024-01-01'),
           executedByUser: {
             id: 'user-2',
             name: 'User 2',
@@ -315,7 +312,7 @@ describe('ExecutionRepository', () => {
             select: { id: true, name: true, slug: true },
           },
         },
-        orderBy: { startedAt: 'desc' },
+        orderBy: { createdAt: 'desc' },
         take: 10,
         skip: 0,
       });
@@ -335,14 +332,14 @@ describe('ExecutionRepository', () => {
       );
     });
 
-    it('startedAtの降順でソートされる', async () => {
+    it('createdAtの降順でソートされる', async () => {
       mockPrismaExecution.findMany.mockResolvedValue([]);
 
       await repository.findByTestSuiteId('suite-1', { limit: 10, offset: 0 });
 
       expect(mockPrismaExecution.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          orderBy: { startedAt: 'desc' },
+          orderBy: { createdAt: 'desc' },
         })
       );
     });

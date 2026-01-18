@@ -44,14 +44,6 @@ export const TestCasePriority = {
 } as const;
 export type TestCasePriority = (typeof TestCasePriority)[keyof typeof TestCasePriority];
 
-// 実行ステータス
-export const ExecutionStatus = {
-  IN_PROGRESS: 'IN_PROGRESS',
-  COMPLETED: 'COMPLETED',
-  ABORTED: 'ABORTED',
-} as const;
-export type ExecutionStatus = (typeof ExecutionStatus)[keyof typeof ExecutionStatus];
-
 // 実行結果ステータス
 export const PreconditionStatus = {
   UNCHECKED: 'UNCHECKED',

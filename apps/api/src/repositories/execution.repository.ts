@@ -111,7 +111,7 @@ export class ExecutionRepository {
           select: { id: true, name: true, slug: true },
         },
       },
-      orderBy: { startedAt: 'desc' },
+      orderBy: { createdAt: 'desc' },
       take: options.limit,
       skip: options.offset,
     });

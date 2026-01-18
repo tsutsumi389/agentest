@@ -6,7 +6,6 @@ import {
   ProjectRole,
   EntityStatus,
   TestCasePriority,
-  ExecutionStatus,
   PreconditionStatus,
   StepStatus,
   JudgmentStatus,
@@ -46,11 +45,6 @@ export const testCasePrioritySchema = z.enum([
   TestCasePriority.HIGH,
   TestCasePriority.MEDIUM,
   TestCasePriority.LOW,
-]);
-export const executionStatusSchema = z.enum([
-  ExecutionStatus.IN_PROGRESS,
-  ExecutionStatus.COMPLETED,
-  ExecutionStatus.ABORTED,
 ]);
 export const preconditionStatusSchema = z.enum([
   PreconditionStatus.UNCHECKED,
@@ -258,16 +252,11 @@ export const testCaseSearchSchema = z.object({
 
 // 実行履歴検索スキーマ
 export const executionSearchSchema = z.object({
-  status: z
-    .string()
-    .optional()
-    .transform((val) => val?.split(',').map((s) => s.trim()))
-    .pipe(z.array(executionStatusSchema).optional()),
   from: z.string().datetime().optional(),
   to: z.string().datetime().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   offset: z.coerce.number().int().min(0).default(0),
-  sortBy: z.enum(['startedAt', 'completedAt', 'status']).default('startedAt'),
+  sortBy: z.enum(['createdAt']).default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 

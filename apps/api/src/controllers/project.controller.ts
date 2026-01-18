@@ -261,8 +261,7 @@ export class ProjectController {
         const lastExecution = rawExecution
           ? {
               id: rawExecution.id,
-              startedAt: rawExecution.startedAt,
-              completedAt: rawExecution.completedAt,
+              createdAt: rawExecution.createdAt,
               environment: rawExecution.environment ?? null,
               judgmentCounts: countJudgmentStatuses(rawExecution.expectedResults),
             }
