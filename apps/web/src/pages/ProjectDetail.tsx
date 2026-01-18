@@ -525,29 +525,32 @@ function TestSuiteRow({ suite }: { suite: TestSuite }) {
           <div className="flex items-center gap-3 text-sm text-foreground-muted">
             <span>{suite._count?.testCases || 0} テストケース</span>
             {/* 最終実行結果表示（環境名 + 判定結果カウント） */}
-            {!isDeleted && suite.lastExecution && (
-              <>
-                <span className="text-foreground-subtle">•</span>
-                <span className="flex items-center gap-2">
-                  {suite.lastExecution.environment && (
-                    <span className="text-foreground-muted">
-                      {suite.lastExecution.environment.name}
-                    </span>
-                  )}
-                  {/* 判定結果カウント（0件は非表示） */}
-                  {judgmentDisplayOrder.map((status) => {
-                    const count = suite.lastExecution!.judgmentCounts[status];
-                    if (count === 0) return null;
-                    const config = judgmentDisplayConfig[status];
-                    return (
-                      <span key={status} className={config.className}>
-                        {count}{config.label}
+            {!isDeleted && suite.lastExecution && (() => {
+              const { environment, judgmentCounts } = suite.lastExecution;
+              return (
+                <>
+                  <span className="text-foreground-subtle">•</span>
+                  <span className="flex items-center gap-2">
+                    {environment && (
+                      <span className="text-foreground-muted">
+                        {environment.name}
                       </span>
-                    );
-                  })}
-                </span>
-              </>
-            )}
+                    )}
+                    {/* 判定結果カウント（0件は非表示） */}
+                    {judgmentDisplayOrder.map((status) => {
+                      const count = judgmentCounts[status];
+                      if (count === 0) return null;
+                      const config = judgmentDisplayConfig[status];
+                      return (
+                        <span key={status} className={config.className}>
+                          {count}{config.label}
+                        </span>
+                      );
+                    })}
+                  </span>
+                </>
+              );
+            })()}
           </div>
         </div>
       </div>
