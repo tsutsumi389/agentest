@@ -78,7 +78,7 @@ export function ResultDistributionChart({ stats, className }: ResultDistribution
   );
 
   return (
-    <div className={`bg-background-secondary border border-border rounded-lg p-4 flex flex-col ${className ?? ''}`}>
+    <div className={`bg-background-secondary border border-border rounded-lg p-4 flex flex-col min-h-[420px] ${className ?? ''}`}>
       <h3 className="text-foreground font-medium mb-4">実行結果の分布</h3>
 
       <div className="flex-1 flex flex-col md:flex-row items-center justify-center gap-6">

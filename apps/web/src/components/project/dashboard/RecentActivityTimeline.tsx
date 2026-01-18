@@ -58,7 +58,7 @@ export function RecentActivityTimeline({ stats, className }: RecentActivityTimel
   // 活動がない場合は空状態を表示
   if (recentActivities.length === 0) {
     return (
-      <div className={`card p-6 flex flex-col ${className ?? ''}`}>
+      <div className={`card p-6 flex flex-col min-h-[420px] ${className ?? ''}`}>
         <h2 className="text-lg font-semibold text-foreground mb-4">最近の活動</h2>
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center py-8">
