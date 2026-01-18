@@ -111,6 +111,17 @@ Authorization: Bearer <access_token>
 | DELETE | `/projects/:id` | プロジェクト削除 |
 | GET | `/projects/:id/dashboard` | プロジェクトダッシュボード |
 
+### ラベル
+
+| メソッド | パス | 説明 |
+|---------|------|------|
+| GET | `/projects/:projectId/labels` | ラベル一覧取得 |
+| POST | `/projects/:projectId/labels` | ラベル作成 |
+| PATCH | `/projects/:projectId/labels/:labelId` | ラベル更新 |
+| DELETE | `/projects/:projectId/labels/:labelId` | ラベル削除 |
+
+→ [ラベル API 詳細](./labels.md)
+
 ### テストスイート
 
 | メソッド | パス | 説明 |
@@ -120,6 +131,15 @@ Authorization: Bearer <access_token>
 | GET | `/test-suites/:id` | テストスイート詳細 |
 | PUT | `/test-suites/:id` | テストスイート更新 |
 | DELETE | `/test-suites/:id` | テストスイート削除 |
+
+### テストスイートラベル
+
+| メソッド | パス | 説明 |
+|---------|------|------|
+| GET | `/test-suites/:testSuiteId/labels` | テストスイートのラベル取得 |
+| PUT | `/test-suites/:testSuiteId/labels` | テストスイートのラベル一括更新 |
+
+→ [ラベル API 詳細](./labels.md)
 
 ### テストケース
 
