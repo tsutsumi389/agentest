@@ -340,6 +340,26 @@ export const reviewCommentSearchSchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
+// ラベルスキーマ
+const hexColorRegex = /^#[0-9A-Fa-f]{6}$/;
+
+export const labelCreateSchema = z.object({
+  name: z.string().min(1).max(50),
+  description: z.string().max(200).nullish(),
+  color: z.string().regex(hexColorRegex, '色はHEX形式（例: #FF5733）で指定してください'),
+});
+
+export const labelUpdateSchema = z.object({
+  name: z.string().min(1).max(50).optional(),
+  description: z.string().max(200).nullish(),
+  color: z.string().regex(hexColorRegex, '色はHEX形式（例: #FF5733）で指定してください').optional(),
+});
+
+// テストスイートラベル一括更新スキーマ
+export const testSuiteLabelsUpdateSchema = z.object({
+  labelIds: z.array(z.string().uuid()),
+});
+
 // 型エクスポート
 export type UserCreate = z.infer<typeof userCreateSchema>;
 export type UserUpdate = z.infer<typeof userUpdateSchema>;
@@ -375,3 +395,6 @@ export type ReviewStatusUpdate = z.infer<typeof reviewStatusUpdateSchema>;
 export type ReviewVerdictUpdate = z.infer<typeof reviewVerdictUpdateSchema>;
 export type ReviewReplyCreate = z.infer<typeof reviewReplyCreateSchema>;
 export type ReviewCommentSearch = z.infer<typeof reviewCommentSearchSchema>;
+export type LabelCreate = z.infer<typeof labelCreateSchema>;
+export type LabelUpdate = z.infer<typeof labelUpdateSchema>;
+export type TestSuiteLabelsUpdate = z.infer<typeof testSuiteLabelsUpdateSchema>;
