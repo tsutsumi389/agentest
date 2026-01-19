@@ -40,9 +40,10 @@ export function InlineNoteEditor({
     if (isEditing && textareaRef.current) {
       textareaRef.current.focus();
       // カーソルを末尾に移動
-      textareaRef.current.setSelectionRange(draft.length, draft.length);
+      const len = textareaRef.current.value.length;
+      textareaRef.current.setSelectionRange(len, len);
     }
-  }, [isEditing, draft.length]);
+  }, [isEditing]);
 
   // 外部からvalueが変更された場合にdraftを同期
   useEffect(() => {
@@ -57,28 +58,29 @@ export function InlineNoteEditor({
       const textarea = textareaRef.current;
       if (!textarea) return;
 
+      const currentValue = textarea.value;
       const start = textarea.selectionStart;
       const end = textarea.selectionEnd;
-      const selectedText = draft.substring(start, end);
+      const selectedText = currentValue.substring(start, end);
 
       let newText: string;
       let newCursorPos: number;
 
       if (block) {
         // 行頭に挿入するタイプ（リスト、引用、見出しなど）
-        const lineStart = draft.lastIndexOf('\n', start - 1) + 1;
-        const beforeLine = draft.substring(0, lineStart);
-        const afterLineStart = draft.substring(lineStart);
+        const lineStart = currentValue.lastIndexOf('\n', start - 1) + 1;
+        const beforeLine = currentValue.substring(0, lineStart);
+        const afterLineStart = currentValue.substring(lineStart);
 
         newText = beforeLine + prefix + afterLineStart;
         newCursorPos = lineStart + prefix.length + (start - lineStart);
       } else if (selectedText) {
         // テキストが選択されている場合：選択範囲を囲む
-        newText = draft.substring(0, start) + prefix + selectedText + suffix + draft.substring(end);
+        newText = currentValue.substring(0, start) + prefix + selectedText + suffix + currentValue.substring(end);
         newCursorPos = start + prefix.length + selectedText.length + suffix.length;
       } else {
         // 選択されていない場合：カーソル位置に挿入
-        newText = draft.substring(0, start) + prefix + suffix + draft.substring(end);
+        newText = currentValue.substring(0, start) + prefix + suffix + currentValue.substring(end);
         newCursorPos = start + prefix.length;
       }
 
@@ -90,7 +92,7 @@ export function InlineNoteEditor({
         textarea.setSelectionRange(newCursorPos, newCursorPos);
       });
     },
-    [draft]
+    []
   );
 
   const handleStartEdit = () => {
