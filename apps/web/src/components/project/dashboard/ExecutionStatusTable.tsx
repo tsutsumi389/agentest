@@ -114,24 +114,28 @@ export function ExecutionStatusTable({ stats }: ExecutionStatusTableProps) {
         {activeTab === 'failing' && (
           <FailingSuitesList
             items={executionStatusSuites.failingSuites.items}
+            total={executionStatusSuites.failingSuites.total}
             projectId={projectId}
           />
         )}
         {activeTab === 'skipped' && (
           <SkippedSuitesList
             items={executionStatusSuites.skippedSuites.items}
+            total={executionStatusSuites.skippedSuites.total}
             projectId={projectId}
           />
         )}
         {activeTab === 'neverExecuted' && (
           <NeverExecutedSuitesList
             items={executionStatusSuites.neverExecutedSuites.items}
+            total={executionStatusSuites.neverExecutedSuites.total}
             projectId={projectId}
           />
         )}
         {activeTab === 'inProgress' && (
           <InProgressSuitesList
             items={executionStatusSuites.inProgressSuites.items}
+            total={executionStatusSuites.inProgressSuites.total}
             projectId={projectId}
           />
         )}
@@ -145,9 +149,11 @@ export function ExecutionStatusTable({ stats }: ExecutionStatusTableProps) {
  */
 function FailingSuitesList({
   items,
+  total,
   projectId,
 }: {
   items: FailingTestSuiteItem[];
+  total: number;
   projectId: string;
 }) {
   if (items.length === 0) {
@@ -172,6 +178,7 @@ function FailingSuitesList({
           }
         />
       ))}
+      <PaginationInfo displayed={items.length} total={total} />
     </>
   );
 }
@@ -181,9 +188,11 @@ function FailingSuitesList({
  */
 function SkippedSuitesList({
   items,
+  total,
   projectId,
 }: {
   items: SkippedTestSuiteItem[];
+  total: number;
   projectId: string;
 }) {
   if (items.length === 0) {
@@ -208,6 +217,7 @@ function SkippedSuitesList({
           }
         />
       ))}
+      <PaginationInfo displayed={items.length} total={total} />
     </>
   );
 }
@@ -217,9 +227,11 @@ function SkippedSuitesList({
  */
 function NeverExecutedSuitesList({
   items,
+  total,
   projectId,
 }: {
   items: NeverExecutedTestSuiteItem[];
+  total: number;
   projectId: string;
 }) {
   if (items.length === 0) {
@@ -244,6 +256,7 @@ function NeverExecutedSuitesList({
           }
         />
       ))}
+      <PaginationInfo displayed={items.length} total={total} />
     </>
   );
 }
@@ -253,9 +266,11 @@ function NeverExecutedSuitesList({
  */
 function InProgressSuitesList({
   items,
+  total,
   projectId,
 }: {
   items: InProgressTestSuiteItem[];
+  total: number;
   projectId: string;
 }) {
   if (items.length === 0) {
@@ -268,7 +283,7 @@ function InProgressSuitesList({
         <TestSuiteListItem
           key={item.testSuiteId}
           linkTo={`/projects/${projectId}/executions/${item.lastExecutionId}`}
-          icon={<Loader2 className="w-4 h-4 text-accent" />}
+          icon={<Loader2 className="w-4 h-4 text-accent animate-spin" />}
           name={item.testSuiteName}
           environment={item.environment}
           details={
@@ -280,6 +295,7 @@ function InProgressSuitesList({
           }
         />
       ))}
+      <PaginationInfo displayed={items.length} total={total} />
     </>
   );
 }
@@ -324,6 +340,22 @@ function TestSuiteListItem({
         <ChevronRight className="w-4 h-4 text-foreground-muted" />
       </div>
     </Link>
+  );
+}
+
+/**
+ * ページネーション情報表示
+ */
+function PaginationInfo({ displayed, total }: { displayed: number; total: number }) {
+  // 表示件数と総数が同じ場合は表示しない
+  if (displayed >= total) {
+    return null;
+  }
+
+  return (
+    <div className="text-center py-3 text-sm text-foreground-muted border-t border-border mt-2">
+      表示中: {displayed}件 / 全{total}件
+    </div>
   );
 }
 
