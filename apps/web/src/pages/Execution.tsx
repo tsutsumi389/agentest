@@ -29,7 +29,7 @@ export function ExecutionPage() {
   const { setSidebarContent } = usePageSidebar();
 
   // Picture-in-Picture機能
-  const { pipWindow, isPipSupported, isPipActive, openPip, closePip } = usePictureInPicture({
+  const { pipWindow, isPipSupported, isPipActive, openPip } = usePictureInPicture({
     width: 450,
     height: 650,
   });
@@ -515,6 +515,7 @@ export function ExecutionPage() {
               pipWindow={pipWindow}
               testCaseId={pipTestCase.id}
               testCaseTitle={pipTestCase.title}
+              testCaseDescription={pipTestCase.description}
               suitePreconditions={executionTestSuite?.preconditions ?? []}
               casePreconditions={pipTestCase.preconditions}
               steps={pipTestCase.steps}
@@ -539,7 +540,6 @@ export function ExecutionPage() {
               currentTestCaseIndex={pipTestCaseIndex}
               totalTestCases={sortedTestCases.length}
               onNavigateToTestCase={handlePipNavigateToTestCase}
-              onClose={closePip}
             />
           </PipPortal>
         )}
@@ -585,6 +585,7 @@ export function ExecutionPage() {
           pipWindow={pipWindow}
           testCaseId={selectedTestCase.id}
           testCaseTitle={selectedTestCase.title}
+          testCaseDescription={selectedTestCase.description}
           suitePreconditions={executionTestSuite?.preconditions ?? []}
           casePreconditions={selectedTestCase.preconditions}
           steps={selectedTestCase.steps}
@@ -609,7 +610,6 @@ export function ExecutionPage() {
           currentTestCaseIndex={currentTestCaseIndex}
           totalTestCases={sortedTestCases.length}
           onNavigateToTestCase={handleNavigateToTestCase}
-          onClose={closePip}
         />
       </PipPortal>
     </>

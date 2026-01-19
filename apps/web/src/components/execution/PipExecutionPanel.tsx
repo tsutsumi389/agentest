@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { ChevronLeft, ChevronRight, X, Loader2, CheckCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2 } from 'lucide-react';
 import type {
   ExecutionTestSuitePrecondition,
   ExecutionTestCasePrecondition,
@@ -133,6 +133,8 @@ interface PipExecutionPanelProps {
   testCaseId: string;
   /** テストケースタイトル */
   testCaseTitle: string;
+  /** テストケース説明 */
+  testCaseDescription: string | null;
   /** スイートレベル前提条件スナップショット */
   suitePreconditions: ExecutionTestSuitePrecondition[];
   /** テストケースレベル前提条件スナップショット */
@@ -181,8 +183,6 @@ interface PipExecutionPanelProps {
   totalTestCases: number;
   /** テストケース切り替えハンドラ */
   onNavigateToTestCase: (direction: 'prev' | 'next') => void;
-  /** PiPを閉じるハンドラ */
-  onClose: () => void;
 }
 
 /**
@@ -194,6 +194,7 @@ export function PipExecutionPanel({
   pipWindow,
   testCaseId,
   testCaseTitle,
+  testCaseDescription,
   suitePreconditions,
   casePreconditions,
   steps,
@@ -218,7 +219,6 @@ export function PipExecutionPanel({
   currentTestCaseIndex,
   totalTestCases,
   onNavigateToTestCase,
-  onClose,
 }: PipExecutionPanelProps) {
   // ナビゲーション可能なアイテムのリストを構築
   const navigableItems = useMemo((): NavigableItem[] => {
@@ -297,6 +297,9 @@ export function PipExecutionPanel({
   const [currentIndex, setCurrentIndex] = useState(0);
   // 最新のcurrentIndexを保持するref（コールバック内で最新値を参照するため）
   const currentIndexRef = useRef(currentIndex);
+  // 説明アコーディオンの開閉状態
+  const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  const hasDescription = !!testCaseDescription;
 
   const totalItems = navigableItems.length;
 
@@ -305,9 +308,10 @@ export function PipExecutionPanel({
     currentIndexRef.current = currentIndex;
   }, [currentIndex]);
 
-  // テストケースが切り替わったらcurrentIndexをリセット
+  // テストケースが切り替わったらcurrentIndexとアコーディオンをリセット
   useEffect(() => {
     setCurrentIndex(0);
+    setIsDescriptionExpanded(false);
   }, [testCaseId]);
 
   // navigableItems が変更された時に currentIndex が範囲外にならないよう調整
@@ -395,16 +399,7 @@ export function PipExecutionPanel({
   if (!currentItem) {
     return (
       <div className="h-full bg-background p-4">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-sm font-medium text-foreground truncate">{testCaseTitle}</h1>
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-background-tertiary rounded transition-colors"
-            aria-label="閉じる"
-          >
-            <X className="w-4 h-4 text-foreground-muted" />
-          </button>
-        </div>
+        <h1 className="text-sm font-medium text-foreground truncate mb-4">{testCaseTitle}</h1>
         <p className="text-foreground-muted text-sm">表示するアイテムがありません</p>
       </div>
     );
@@ -414,45 +409,83 @@ export function PipExecutionPanel({
 
   return (
     <div className="h-full bg-background flex flex-col">
-      {/* ヘッダー: テストケースナビゲーション */}
+      {/* ヘッダー: 4方向ナビゲーション */}
       <header className="flex items-center justify-between px-3 py-2 border-b border-border bg-background-secondary">
-        <button
-          onClick={() => onNavigateToTestCase('prev')}
-          disabled={currentTestCaseIndex === 0}
-          className="flex items-center gap-0.5 px-2 py-1 text-xs rounded border border-border hover:bg-background-tertiary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          aria-label="前のテストケース"
-        >
-          <ChevronLeft className="w-3 h-3" />
-          前へ
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => onNavigateToTestCase('prev')}
+            disabled={currentTestCaseIndex === 0}
+            className="p-1.5 rounded border border-border hover:bg-background-tertiary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            aria-label="前のテストケース"
+            title="前のテストケース"
+          >
+            <ChevronsLeft className="w-4 h-4" />
+          </button>
+          <button
+            onClick={goToPrevious}
+            disabled={currentIndex === 0}
+            className="p-1.5 rounded border border-border hover:bg-background-tertiary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            aria-label="前のアイテム"
+            title="前のアイテム"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+        </div>
 
         <span className="text-xs text-foreground-muted font-medium">
           テストケース {currentTestCaseIndex + 1} / {totalTestCases}
         </span>
 
-        <button
-          onClick={() => onNavigateToTestCase('next')}
-          disabled={currentTestCaseIndex === totalTestCases - 1}
-          className="flex items-center gap-0.5 px-2 py-1 text-xs rounded border border-border hover:bg-background-tertiary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          aria-label="次のテストケース"
-        >
-          次へ
-          <ChevronRight className="w-3 h-3" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={goToNext}
+            disabled={currentIndex === totalItems - 1}
+            className="p-1.5 rounded border border-border hover:bg-background-tertiary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            aria-label="次のアイテム"
+            title="次のアイテム"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => onNavigateToTestCase('next')}
+            disabled={currentTestCaseIndex === totalTestCases - 1}
+            className="p-1.5 rounded border border-border hover:bg-background-tertiary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            aria-label="次のテストケース"
+            title="次のテストケース"
+          >
+            <ChevronsRight className="w-4 h-4" />
+          </button>
+        </div>
       </header>
 
-      {/* テストケースタイトル + 閉じるボタン */}
-      <div className="flex items-center justify-between px-4 py-2 border-b border-border">
-        <h1 className="text-sm font-medium text-foreground truncate flex-1 mr-2">
-          {testCaseTitle}
-        </h1>
-        <button
-          onClick={onClose}
-          className="p-1.5 hover:bg-background-tertiary rounded transition-colors"
-          aria-label="閉じる"
-        >
-          <X className="w-4 h-4 text-foreground-muted" />
-        </button>
+      {/* テストケースタイトル（アコーディオン） */}
+      <div className="border-b border-border">
+        {hasDescription ? (
+          <button
+            onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+            className="w-full flex items-center gap-2 px-4 py-2 text-left hover:bg-background-tertiary transition-colors"
+            aria-expanded={isDescriptionExpanded}
+          >
+            <ChevronRight
+              className={`w-4 h-4 text-foreground-muted transition-transform ${isDescriptionExpanded ? 'rotate-90' : ''}`}
+            />
+            <h1 className="text-sm font-medium text-foreground truncate flex-1">
+              {testCaseTitle}
+            </h1>
+          </button>
+        ) : (
+          <div className="px-4 py-2">
+            <h1 className="text-sm font-medium text-foreground truncate">
+              {testCaseTitle}
+            </h1>
+          </div>
+        )}
+        {/* 説明の展開表示 */}
+        {isDescriptionExpanded && testCaseDescription && (
+          <div className="px-4 pb-3 pt-1 text-sm text-foreground-muted">
+            <MarkdownPreview content={testCaseDescription} />
+          </div>
+        )}
       </div>
 
       {/* メインコンテンツ */}
@@ -501,73 +534,38 @@ export function PipExecutionPanel({
             />
           ) : null}
         </div>
-
-        {/* ステータス変更 */}
-        <div className="space-y-2">
-          <span className="text-xs text-foreground-muted">ステータス:</span>
-          {(currentItem.type === 'suite-precondition' || currentItem.type === 'case-precondition') && currentPreconditionResult ? (
-            <PipStatusButtons
-              value={currentPreconditionResult.status}
-              options={preconditionResultStatusOptions}
-              onChange={(status) => onPreconditionStatusChange(currentPreconditionResult.id, status)}
-              onNavigateNext={goToNextOrNextTestCase}
-              isEditable={isEditable}
-              isUpdating={updatingPreconditionStatusId === currentPreconditionResult.id}
-            />
-          ) : currentItem.type === 'step' && currentStepResult ? (
-            <PipStatusButtons
-              value={currentStepResult.status}
-              options={stepResultStatusOptions}
-              onChange={(status) => onStepStatusChange(currentStepResult.id, status)}
-              onNavigateNext={goToNextOrNextTestCase}
-              isEditable={isEditable}
-              isUpdating={updatingStepStatusId === currentStepResult.id}
-            />
-          ) : currentItem.type === 'expected' && currentExpectedResult ? (
-            <PipStatusButtons
-              value={currentExpectedResult.status}
-              options={expectedResultStatusOptions}
-              onChange={(status) => onExpectedStatusChange(currentExpectedResult.id, status)}
-              onNavigateNext={goToNextOrNextTestCase}
-              isEditable={isEditable}
-              isUpdating={updatingExpectedStatusId === currentExpectedResult.id}
-            />
-          ) : null}
-        </div>
       </main>
 
-      {/* フッター: アイテムナビゲーション */}
-      <footer className="flex items-center justify-between px-4 py-3 border-t border-border bg-background-secondary">
-        <button
-          onClick={goToPrevious}
-          disabled={currentIndex === 0}
-          className="flex items-center gap-1 px-3 py-1.5 text-sm rounded border border-border hover:bg-background-tertiary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          aria-label="前へ"
-        >
-          <ChevronLeft className="w-4 h-4" />
-          前へ
-        </button>
-
-        {currentIndex === totalItems - 1 && currentTestCaseIndex === totalTestCases - 1 ? (
-          <span className="flex items-center gap-1 text-xs text-success font-medium">
-            <CheckCircle className="w-3.5 h-3.5" />
-            全て完了
-          </span>
-        ) : (
-          <span className="text-xs text-foreground-muted">
-            全体: {currentIndex + 1} / {totalItems}
-          </span>
-        )}
-
-        <button
-          onClick={goToNext}
-          disabled={currentIndex === totalItems - 1}
-          className="flex items-center gap-1 px-3 py-1.5 text-sm rounded border border-border hover:bg-background-tertiary transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          aria-label="次へ"
-        >
-          次へ
-          <ChevronRight className="w-4 h-4" />
-        </button>
+      {/* フッター: ステータスボタン */}
+      <footer className="flex items-center justify-center px-4 py-3 border-t border-border bg-background-secondary">
+        {(currentItem.type === 'suite-precondition' || currentItem.type === 'case-precondition') && currentPreconditionResult ? (
+          <PipStatusButtons
+            value={currentPreconditionResult.status}
+            options={preconditionResultStatusOptions}
+            onChange={(status) => onPreconditionStatusChange(currentPreconditionResult.id, status)}
+            onNavigateNext={goToNextOrNextTestCase}
+            isEditable={isEditable}
+            isUpdating={updatingPreconditionStatusId === currentPreconditionResult.id}
+          />
+        ) : currentItem.type === 'step' && currentStepResult ? (
+          <PipStatusButtons
+            value={currentStepResult.status}
+            options={stepResultStatusOptions}
+            onChange={(status) => onStepStatusChange(currentStepResult.id, status)}
+            onNavigateNext={goToNextOrNextTestCase}
+            isEditable={isEditable}
+            isUpdating={updatingStepStatusId === currentStepResult.id}
+          />
+        ) : currentItem.type === 'expected' && currentExpectedResult ? (
+          <PipStatusButtons
+            value={currentExpectedResult.status}
+            options={expectedResultStatusOptions}
+            onChange={(status) => onExpectedStatusChange(currentExpectedResult.id, status)}
+            onNavigateNext={goToNextOrNextTestCase}
+            isEditable={isEditable}
+            isUpdating={updatingExpectedStatusId === currentExpectedResult.id}
+          />
+        ) : null}
       </footer>
     </div>
   );
