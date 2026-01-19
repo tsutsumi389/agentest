@@ -65,6 +65,8 @@ export function ExecutionResultItem<T extends string>({
   const executedAt = executor?.executedAt;
 
   // アバター表示用のヘルパー
+  // 注: AuthorAvatarコンポーネントは「agentSessionがあればBotアイコン」という挙動だが、
+  // ここでは「ユーザーがいればエージェント経由でもユーザーアバター」という異なる要件のため独自実装
   const renderAvatar = () => {
     // ユーザーがいる場合はユーザーアバター
     if (executor?.user) {
@@ -87,8 +89,12 @@ export function ExecutionResultItem<T extends string>({
     // エージェントのみの場合はBotアイコン
     if (executor?.agentName) {
       return (
-        <div className="w-5 h-5 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0">
-          <Bot className="w-3 h-3 text-accent" />
+        <div
+          className="w-5 h-5 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0"
+          role="img"
+          aria-label={`AIエージェント: ${executor.agentName}`}
+        >
+          <Bot className="w-3 h-3 text-accent" aria-hidden="true" />
         </div>
       );
     }
