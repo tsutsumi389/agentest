@@ -1,3 +1,4 @@
+import { Bot } from 'lucide-react';
 import type { StatusConfig, StatusOption } from '../../lib/execution-status';
 import { formatDateTimeCompact } from '../../lib/date';
 import { MarkdownPreview } from '../common/markdown';
@@ -61,12 +62,62 @@ export function ExecutionResultItem<T extends string>({
   onNoteChange,
   executor,
 }: ExecutionResultItemProps<T>) {
-  // 実施者表示名を取得
-  // MCPツール経由（AIエージェント）での実施時はagentNameを優先表示
-  // ブラウザ経由（ユーザー）での実施時はuser.nameを表示
-  // 両方設定されている場合はagentNameを優先（AIが代理実行したケース）
-  const executorName = executor?.agentName || executor?.user?.name;
   const executedAt = executor?.executedAt;
+
+  // アバター表示用のヘルパー
+  // 注: AuthorAvatarコンポーネントは「agentSessionがあればBotアイコン」という挙動だが、
+  // ここでは「ユーザーがいればエージェント経由でもユーザーアバター」という異なる要件のため独自実装
+  const renderAvatar = () => {
+    // ユーザーがいる場合はユーザーアバター
+    if (executor?.user) {
+      if (executor.user.avatarUrl) {
+        return (
+          <img
+            src={executor.user.avatarUrl}
+            alt={executor.user.name}
+            className="w-5 h-5 rounded-full flex-shrink-0"
+          />
+        );
+      }
+      // アバター画像がない場合（イニシャル表示）
+      return (
+        <div className="w-5 h-5 rounded-full bg-foreground-muted/20 flex items-center justify-center flex-shrink-0 text-xs font-medium text-foreground-muted">
+          {executor.user.name?.[0]?.toUpperCase() || '?'}
+        </div>
+      );
+    }
+    // エージェントのみの場合はBotアイコン
+    if (executor?.agentName) {
+      return (
+        <div
+          className="w-5 h-5 rounded-full bg-accent/20 flex items-center justify-center flex-shrink-0"
+          role="img"
+          aria-label={`AIエージェント: ${executor.agentName}`}
+        >
+          <Bot className="w-3 h-3 text-accent" aria-hidden="true" />
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // 表示名を取得
+  // ユーザーがいる場合: ユーザー名 (エージェント経由の場合は「ユーザー名 (エージェント名経由)」)
+  // ユーザーがいない場合: エージェント名のみ
+  const getDisplayName = () => {
+    if (executor?.user) {
+      if (executor.agentName) {
+        return `${executor.user.name} (${executor.agentName}経由)`;
+      }
+      return executor.user.name;
+    }
+    if (executor?.agentName) {
+      return executor.agentName;
+    }
+    return null;
+  };
+
+  const displayName = getDisplayName();
 
   return (
     <div className="flex gap-3 py-3 border-b border-border last:border-b-0">
@@ -96,9 +147,13 @@ export function ExecutionResultItem<T extends string>({
         </div>
 
         {/* 実施者情報（ステータスが設定されている場合のみ表示） */}
-        {executorName && executedAt && (
-          <div className="text-xs text-foreground-muted">
-            {executorName} / {formatDateTimeCompact(executedAt)}
+        {displayName && executedAt && (
+          <div className="flex items-center justify-between text-xs text-foreground-muted">
+            <div className="flex items-center gap-1.5">
+              {renderAvatar()}
+              <span>{displayName}</span>
+            </div>
+            <span>{formatDateTimeCompact(executedAt)}</span>
           </div>
         )}
 

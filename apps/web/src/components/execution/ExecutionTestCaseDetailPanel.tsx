@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
-import { CheckCircle2, XCircle, Clock, PictureInPicture2 } from 'lucide-react';
+import { Link } from 'react-router';
+import { CheckCircle2, XCircle, Clock, PictureInPicture2, ChevronLeft } from 'lucide-react';
 import type {
   ExecutionTestCaseSnapshot,
   ExecutionPreconditionResult,
@@ -16,6 +17,8 @@ import { ExecutionExpectedResultList } from './ExecutionExpectedResultList';
 import { priorityColors, priorityLabels } from './constants';
 
 interface ExecutionTestCaseDetailPanelProps {
+  /** テストスイートID（戻るリンク用） */
+  testSuiteId: string;
   /** 実行時テストケース */
   testCase: ExecutionTestCaseSnapshot;
   /** 前提条件結果一覧（このテストケースに紐づくもの） */
@@ -75,6 +78,7 @@ interface ExecutionTestCaseDetailPanelProps {
  * 選択されたテストケースの詳細をフルパネルで表示
  */
 export function ExecutionTestCaseDetailPanel({
+  testSuiteId,
   testCase,
   preconditionResults,
   stepResults,
@@ -120,6 +124,15 @@ export function ExecutionTestCaseDetailPanel({
 
   return (
     <div className="space-y-6">
+      {/* テストスイートに戻るリンク */}
+      <Link
+        to={`/test-suites/${testSuiteId}?tab=executions`}
+        className="inline-flex items-center gap-1 text-sm text-foreground-muted hover:text-foreground"
+      >
+        <ChevronLeft className="w-4 h-4" />
+        テストスイートに戻る
+      </Link>
+
       {/* ヘッダー */}
       <div className="card p-4">
         <div className="flex items-start justify-between gap-4">
