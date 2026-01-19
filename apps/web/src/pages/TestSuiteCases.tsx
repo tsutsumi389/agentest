@@ -353,7 +353,7 @@ export function TestSuiteCasesPage() {
                 )}
 
                 {currentTab === 'executions' && (
-                  <ExecutionHistoryList testSuiteId={testSuiteId!} />
+                  <ExecutionHistoryList testSuiteId={testSuiteId!} projectId={suite.projectId} />
                 )}
 
                 {currentTab === 'review' && (

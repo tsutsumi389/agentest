@@ -406,6 +406,7 @@ export interface TestSuiteSearchParams {
 export interface ExecutionSearchParams {
   from?: string;
   to?: string;
+  environmentId?: string;
   limit?: number;
   offset?: number;
   sortBy?: 'createdAt';
@@ -595,6 +596,12 @@ export interface Execution {
   createdAt: string;
   executedByUser?: { id: string; name: string; avatarUrl: string | null };
   environment?: { id: string; name: string; slug: string };
+  judgmentCounts?: {
+    PASS: number;
+    FAIL: number;
+    PENDING: number;
+    SKIPPED: number;
+  };
 }
 
 /** 実行時テストスイート事前条件 */
@@ -941,6 +948,7 @@ export const testSuitesApi = {
     const query = new URLSearchParams();
     if (params?.from) query.set('from', params.from);
     if (params?.to) query.set('to', params.to);
+    if (params?.environmentId) query.set('environmentId', params.environmentId);
     if (params?.limit !== undefined) query.set('limit', String(params.limit));
     if (params?.offset !== undefined) query.set('offset', String(params.offset));
     if (params?.sortBy) query.set('sortBy', params.sortBy);
