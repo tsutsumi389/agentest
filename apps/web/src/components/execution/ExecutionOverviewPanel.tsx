@@ -249,7 +249,7 @@ export function ExecutionOverviewPanel({
       {/* ヘッダー */}
       <div>
         <Link
-          to={`/test-suites/${execution.testSuiteId}`}
+          to={`/test-suites/${execution.testSuiteId}?tab=executions`}
           className="inline-flex items-center gap-1 text-sm text-foreground-muted hover:text-foreground mb-4"
         >
           <ChevronLeft className="w-4 h-4" />

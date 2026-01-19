@@ -508,6 +508,7 @@ export function ExecutionPage() {
   return (
     <>
       <ExecutionTestCaseDetailPanel
+        testSuiteId={execution.testSuiteId}
         testCase={selectedTestCase}
         preconditionResults={selectedTestCaseResults.preconditionResults}
         stepResults={selectedTestCaseResults.stepResults}
