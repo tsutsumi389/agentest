@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link } from 'react-router';
 import { AlertTriangle, SkipForward, Clock, Loader2, ChevronRight } from 'lucide-react';
 import type {
   ProjectDashboardStats,
@@ -31,14 +31,7 @@ const TAB_CONFIG: Record<TabType, { label: string; icon: React.ComponentType<{ c
  * 失敗中・スキップ中・テスト未実施・テスト実行中のテストスイートをタブ切り替えで表示
  */
 export function ExecutionStatusTable({ stats }: ExecutionStatusTableProps) {
-  const { projectId } = useParams<{ projectId: string }>();
   const [activeTab, setActiveTab] = useState<TabType>('failing');
-
-  // projectIdが取得できない場合は何も表示しない
-  if (!projectId) {
-    return null;
-  }
-
   const { executionStatusSuites } = stats;
 
   // 各タブの件数を取得
