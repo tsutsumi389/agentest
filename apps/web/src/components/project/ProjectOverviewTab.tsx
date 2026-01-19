@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { KpiSummaryCards, ResultDistributionChart, AttentionRequiredTable, RecentActivityTimeline, DashboardFilters, type ProjectDashboardStats } from './dashboard';
+import { KpiSummaryCards, ResultDistributionChart, ExecutionStatusTable, RecentActivityTimeline, DashboardFilters, type ProjectDashboardStats } from './dashboard';
 import { projectsApi, labelsApi, type Label, type ProjectEnvironment } from '../../lib/api';
 
 interface ProjectOverviewTabProps {
@@ -97,8 +97,8 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
         <RecentActivityTimeline stats={stats} className="h-full" />
       </div>
 
-      {/* 要注意テスト一覧 */}
-      <AttentionRequiredTable stats={stats} />
+      {/* テスト実行状況 */}
+      <ExecutionStatusTable stats={stats} />
     </div>
   );
 }

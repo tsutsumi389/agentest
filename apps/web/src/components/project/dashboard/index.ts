@@ -1,6 +1,6 @@
 export { KpiSummaryCards } from './KpiSummaryCards';
 export { ResultDistributionChart } from './ResultDistributionChart';
-export { AttentionRequiredTable } from './AttentionRequiredTable';
+export { ExecutionStatusTable } from './ExecutionStatusTable';
 export { RecentActivityTimeline } from './RecentActivityTimeline';
 export { DashboardFilters } from './DashboardFilters';
 

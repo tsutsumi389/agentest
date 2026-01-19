@@ -80,6 +80,8 @@ describe('ProjectDashboardService', () => {
       mockPrisma.execution.findMany.mockResolvedValue([]);
       mockPrisma.testCaseHistory.findMany.mockResolvedValue([]);
       mockPrisma.review.findMany.mockResolvedValue([]);
+      // getExecutionStatusSuites用のモック
+      mockPrisma.testSuite.findMany.mockResolvedValue([]);
 
       const result = await service.getDashboard('project-1');
 
@@ -89,6 +91,7 @@ describe('ProjectDashboardService', () => {
       expect(result).toHaveProperty('summary');
       expect(result).toHaveProperty('resultDistribution');
       expect(result).toHaveProperty('attentionRequired');
+      expect(result).toHaveProperty('executionStatusSuites');
       expect(result).toHaveProperty('recentActivities');
     });
 
@@ -121,6 +124,8 @@ describe('ProjectDashboardService', () => {
       mockPrisma.execution.findMany.mockResolvedValue([]);
       mockPrisma.testCaseHistory.findMany.mockResolvedValue([]);
       mockPrisma.review.findMany.mockResolvedValue([]);
+      // getExecutionStatusSuites用のモック
+      mockPrisma.testSuite.findMany.mockResolvedValue([]);
     });
 
     it('テストスイート数/テストケース数/期待結果数を取得', async () => {
@@ -164,6 +169,8 @@ describe('ProjectDashboardService', () => {
       mockPrisma.execution.findMany.mockResolvedValue([]);
       mockPrisma.testCaseHistory.findMany.mockResolvedValue([]);
       mockPrisma.review.findMany.mockResolvedValue([]);
+      // getExecutionStatusSuites用のモック
+      mockPrisma.testSuite.findMany.mockResolvedValue([]);
     });
 
     it('各ステータス(PASS/FAIL/SKIPPED/PENDING)のカウント', async () => {
@@ -210,6 +217,8 @@ describe('ProjectDashboardService', () => {
       mockPrisma.execution.findMany.mockResolvedValue([]);
       mockPrisma.testCaseHistory.findMany.mockResolvedValue([]);
       mockPrisma.review.findMany.mockResolvedValue([]);
+      // getExecutionStatusSuites用のモック
+      mockPrisma.testSuite.findMany.mockResolvedValue([]);
     });
 
     it('最新がFAILのテストを連続失敗回数順で取得（最大10件）', async () => {
@@ -276,6 +285,8 @@ describe('ProjectDashboardService', () => {
       mockPrisma.execution.findMany.mockResolvedValue([]);
       mockPrisma.testCaseHistory.findMany.mockResolvedValue([]);
       mockPrisma.review.findMany.mockResolvedValue([]);
+      // getExecutionStatusSuites用のモック
+      mockPrisma.testSuite.findMany.mockResolvedValue([]);
     });
 
     it('30日以上未実行/一度も未実行のテストを取得', async () => {
@@ -345,6 +356,8 @@ describe('ProjectDashboardService', () => {
       mockPrisma.execution.findMany.mockResolvedValue([]);
       mockPrisma.testCaseHistory.findMany.mockResolvedValue([]);
       mockPrisma.review.findMany.mockResolvedValue([]);
+      // getExecutionStatusSuites用のモック
+      mockPrisma.testSuite.findMany.mockResolvedValue([]);
     });
 
     it('過去10回で成功率50-90%のテストを取得', async () => {
@@ -443,6 +456,8 @@ describe('ProjectDashboardService', () => {
       // getFailingTests, getLongNotExecutedTests, getFlakyTests用のモック
       mockPrisma.testCase.findMany.mockResolvedValue([]);
       mockPrisma.executionExpectedResult.findMany.mockResolvedValue([]);
+      // getExecutionStatusSuites用のモック
+      mockPrisma.testSuite.findMany.mockResolvedValue([]);
     });
 
     it('execution/testCaseUpdate/reviewを日時降順で取得（最大10件）', async () => {
@@ -498,6 +513,179 @@ describe('ProjectDashboardService', () => {
       const result = await service.getDashboard('project-1');
 
       expect(result.recentActivities).toEqual([]);
+    });
+  });
+
+  // ============================================================
+  // getExecutionStatusSuites（テストスイート単位のテスト実行状況）
+  // ============================================================
+  describe('getExecutionStatusSuites', () => {
+    beforeEach(() => {
+      mockPrisma.project.findFirst.mockResolvedValue(mockProject);
+      // getSummary用のモック
+      mockPrisma.testSuite.count.mockResolvedValue(0);
+      mockPrisma.testCase.count.mockResolvedValue(0);
+      mockPrisma.testCaseExpectedResult.count.mockResolvedValue(0);
+      // getResultDistribution用のモック
+      mockPrisma.executionExpectedResult.groupBy.mockResolvedValue([]);
+      // getAttentionRequired用のモック
+      mockPrisma.testCase.findMany.mockResolvedValue([]);
+      mockPrisma.executionExpectedResult.findMany.mockResolvedValue([]);
+      // getRecentActivities用のモック
+      mockPrisma.execution.findMany.mockResolvedValue([]);
+      mockPrisma.testCaseHistory.findMany.mockResolvedValue([]);
+      mockPrisma.review.findMany.mockResolvedValue([]);
+    });
+
+    it('失敗中テストスイート: 最終実行にFAILを含むスイートを取得', async () => {
+      mockPrisma.testSuite.findMany.mockResolvedValue([
+        {
+          id: 'suite-1',
+          name: 'Suite 1',
+          createdAt: new Date(),
+          _count: { executions: 1, testCases: 5 },
+          executions: [
+            {
+              id: 'exec-1',
+              createdAt: new Date(),
+              environment: { id: 'env-1', name: 'Production' },
+              expectedResults: [
+                { status: 'PASS' },
+                { status: 'FAIL' },
+                { status: 'FAIL' },
+              ],
+            },
+          ],
+        },
+        {
+          id: 'suite-2',
+          name: 'Suite 2',
+          createdAt: new Date(),
+          _count: { executions: 1, testCases: 3 },
+          executions: [
+            {
+              id: 'exec-2',
+              createdAt: new Date(),
+              environment: null,
+              expectedResults: [
+                { status: 'PASS' },
+                { status: 'PASS' },
+              ],
+            },
+          ],
+        },
+      ]);
+
+      const result = await service.getDashboard('project-1');
+
+      expect(result.executionStatusSuites.failingSuites.items).toHaveLength(1);
+      expect(result.executionStatusSuites.failingSuites.items[0].testSuiteId).toBe('suite-1');
+      expect(result.executionStatusSuites.failingSuites.items[0].failCount).toBe(2);
+      expect(result.executionStatusSuites.failingSuites.total).toBe(1);
+    });
+
+    it('スキップ中テストスイート: 最終実行にSKIPPEDを含むスイートを取得', async () => {
+      mockPrisma.testSuite.findMany.mockResolvedValue([
+        {
+          id: 'suite-1',
+          name: 'Suite 1',
+          createdAt: new Date(),
+          _count: { executions: 1, testCases: 5 },
+          executions: [
+            {
+              id: 'exec-1',
+              createdAt: new Date(),
+              environment: { id: 'env-1', name: 'Staging' },
+              expectedResults: [
+                { status: 'PASS' },
+                { status: 'SKIPPED' },
+                { status: 'SKIPPED' },
+                { status: 'SKIPPED' },
+              ],
+            },
+          ],
+        },
+      ]);
+
+      const result = await service.getDashboard('project-1');
+
+      expect(result.executionStatusSuites.skippedSuites.items).toHaveLength(1);
+      expect(result.executionStatusSuites.skippedSuites.items[0].skippedCount).toBe(3);
+    });
+
+    it('未実行テストスイート: 実行が0件のスイートを取得', async () => {
+      mockPrisma.testSuite.findMany.mockResolvedValue([
+        {
+          id: 'suite-1',
+          name: 'Never Executed Suite',
+          createdAt: new Date('2024-01-01'),
+          _count: { executions: 0, testCases: 10 },
+          executions: [],
+        },
+        {
+          id: 'suite-2',
+          name: 'Executed Suite',
+          createdAt: new Date('2024-01-02'),
+          _count: { executions: 1, testCases: 5 },
+          executions: [
+            {
+              id: 'exec-1',
+              createdAt: new Date(),
+              environment: null,
+              expectedResults: [{ status: 'PASS' }],
+            },
+          ],
+        },
+      ]);
+
+      const result = await service.getDashboard('project-1');
+
+      expect(result.executionStatusSuites.neverExecutedSuites.items).toHaveLength(1);
+      expect(result.executionStatusSuites.neverExecutedSuites.items[0].testSuiteId).toBe('suite-1');
+      expect(result.executionStatusSuites.neverExecutedSuites.items[0].testCaseCount).toBe(10);
+    });
+
+    it('実行中テストスイート: 最終実行にPENDINGを含むスイートを取得', async () => {
+      mockPrisma.testSuite.findMany.mockResolvedValue([
+        {
+          id: 'suite-1',
+          name: 'In Progress Suite',
+          createdAt: new Date(),
+          _count: { executions: 1, testCases: 5 },
+          executions: [
+            {
+              id: 'exec-1',
+              createdAt: new Date(),
+              environment: { id: 'env-1', name: 'Development' },
+              expectedResults: [
+                { status: 'PASS' },
+                { status: 'PENDING' },
+                { status: 'PENDING' },
+              ],
+            },
+          ],
+        },
+      ]);
+
+      const result = await service.getDashboard('project-1');
+
+      expect(result.executionStatusSuites.inProgressSuites.items).toHaveLength(1);
+      expect(result.executionStatusSuites.inProgressSuites.items[0].pendingCount).toBe(2);
+    });
+
+    it('テストスイートがない場合は全て空配列', async () => {
+      mockPrisma.testSuite.findMany.mockResolvedValue([]);
+
+      const result = await service.getDashboard('project-1');
+
+      expect(result.executionStatusSuites.failingSuites.items).toEqual([]);
+      expect(result.executionStatusSuites.failingSuites.total).toBe(0);
+      expect(result.executionStatusSuites.skippedSuites.items).toEqual([]);
+      expect(result.executionStatusSuites.skippedSuites.total).toBe(0);
+      expect(result.executionStatusSuites.neverExecutedSuites.items).toEqual([]);
+      expect(result.executionStatusSuites.neverExecutedSuites.total).toBe(0);
+      expect(result.executionStatusSuites.inProgressSuites.items).toEqual([]);
+      expect(result.executionStatusSuites.inProgressSuites.total).toBe(0);
     });
   });
 });
