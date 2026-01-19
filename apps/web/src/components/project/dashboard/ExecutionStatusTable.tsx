@@ -115,28 +115,24 @@ export function ExecutionStatusTable({ stats }: ExecutionStatusTableProps) {
           <FailingSuitesList
             items={executionStatusSuites.failingSuites.items}
             total={executionStatusSuites.failingSuites.total}
-            projectId={projectId}
           />
         )}
         {activeTab === 'skipped' && (
           <SkippedSuitesList
             items={executionStatusSuites.skippedSuites.items}
             total={executionStatusSuites.skippedSuites.total}
-            projectId={projectId}
           />
         )}
         {activeTab === 'neverExecuted' && (
           <NeverExecutedSuitesList
             items={executionStatusSuites.neverExecutedSuites.items}
             total={executionStatusSuites.neverExecutedSuites.total}
-            projectId={projectId}
           />
         )}
         {activeTab === 'inProgress' && (
           <InProgressSuitesList
             items={executionStatusSuites.inProgressSuites.items}
             total={executionStatusSuites.inProgressSuites.total}
-            projectId={projectId}
           />
         )}
       </div>
@@ -150,11 +146,9 @@ export function ExecutionStatusTable({ stats }: ExecutionStatusTableProps) {
 function FailingSuitesList({
   items,
   total,
-  projectId,
 }: {
   items: FailingTestSuiteItem[];
   total: number;
-  projectId: string;
 }) {
   if (items.length === 0) {
     return <EmptyState message="失敗中のテストスイートはありません" />;
@@ -165,7 +159,7 @@ function FailingSuitesList({
       {items.map((item) => (
         <TestSuiteListItem
           key={item.testSuiteId}
-          linkTo={`/projects/${projectId}/executions/${item.lastExecutionId}`}
+          linkTo={`/executions/${item.lastExecutionId}`}
           icon={<AlertTriangle className="w-4 h-4 text-danger" />}
           name={item.testSuiteName}
           environment={item.environment}
@@ -189,11 +183,9 @@ function FailingSuitesList({
 function SkippedSuitesList({
   items,
   total,
-  projectId,
 }: {
   items: SkippedTestSuiteItem[];
   total: number;
-  projectId: string;
 }) {
   if (items.length === 0) {
     return <EmptyState message="スキップ中のテストスイートはありません" />;
@@ -204,7 +196,7 @@ function SkippedSuitesList({
       {items.map((item) => (
         <TestSuiteListItem
           key={item.testSuiteId}
-          linkTo={`/projects/${projectId}/executions/${item.lastExecutionId}`}
+          linkTo={`/executions/${item.lastExecutionId}`}
           icon={<SkipForward className="w-4 h-4 text-warning" />}
           name={item.testSuiteName}
           environment={item.environment}
@@ -228,11 +220,9 @@ function SkippedSuitesList({
 function NeverExecutedSuitesList({
   items,
   total,
-  projectId,
 }: {
   items: NeverExecutedTestSuiteItem[];
   total: number;
-  projectId: string;
 }) {
   if (items.length === 0) {
     return <EmptyState message="未実施のテストスイートはありません" />;
@@ -243,7 +233,7 @@ function NeverExecutedSuitesList({
       {items.map((item) => (
         <TestSuiteListItem
           key={item.testSuiteId}
-          linkTo={`/projects/${projectId}/test-suites/${item.testSuiteId}`}
+          linkTo={`/test-suites/${item.testSuiteId}`}
           icon={<Clock className="w-4 h-4 text-foreground-muted" />}
           name={item.testSuiteName}
           environment={null}
@@ -267,11 +257,9 @@ function NeverExecutedSuitesList({
 function InProgressSuitesList({
   items,
   total,
-  projectId,
 }: {
   items: InProgressTestSuiteItem[];
   total: number;
-  projectId: string;
 }) {
   if (items.length === 0) {
     return <EmptyState message="実行中のテストスイートはありません" />;
@@ -282,7 +270,7 @@ function InProgressSuitesList({
       {items.map((item) => (
         <TestSuiteListItem
           key={item.testSuiteId}
-          linkTo={`/projects/${projectId}/executions/${item.lastExecutionId}`}
+          linkTo={`/executions/${item.lastExecutionId}`}
           icon={<Loader2 className="w-4 h-4 text-accent animate-spin" />}
           name={item.testSuiteName}
           environment={item.environment}
