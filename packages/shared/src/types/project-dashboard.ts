@@ -80,7 +80,9 @@ export interface FlakyTestItem {
   totalExecutions: number;
 }
 
-/** 要注意テスト一覧 */
+/**
+ * @deprecated 要注意テスト一覧（テストケース単位）。ExecutionStatusSuitesを使用してください。
+ */
 export interface AttentionRequired {
   /** 失敗中テスト */
   failingTests: FailingTestItem[];
@@ -88,6 +90,96 @@ export interface AttentionRequired {
   longNotExecuted: LongNotExecutedItem[];
   /** 不安定なテスト */
   flakyTests: FlakyTestItem[];
+}
+
+// ============================================================
+// テスト実行状況（テストスイート単位）
+// ============================================================
+
+/** 失敗中テストスイートの項目 */
+export interface FailingTestSuiteItem {
+  /** テストスイートID */
+  testSuiteId: string;
+  /** テストスイート名 */
+  testSuiteName: string;
+  /** 最終実行ID */
+  lastExecutionId: string;
+  /** 最終実行日時 */
+  lastExecutedAt: Date | string;
+  /** 環境情報 */
+  environment: { id: string; name: string } | null;
+  /** 失敗件数 */
+  failCount: number;
+  /** 期待結果総数 */
+  totalExpectedResults: number;
+}
+
+/** スキップ中テストスイートの項目 */
+export interface SkippedTestSuiteItem {
+  /** テストスイートID */
+  testSuiteId: string;
+  /** テストスイート名 */
+  testSuiteName: string;
+  /** 最終実行ID */
+  lastExecutionId: string;
+  /** 最終実行日時 */
+  lastExecutedAt: Date | string;
+  /** 環境情報 */
+  environment: { id: string; name: string } | null;
+  /** スキップ件数 */
+  skippedCount: number;
+  /** 期待結果総数 */
+  totalExpectedResults: number;
+}
+
+/** 未実行テストスイートの項目 */
+export interface NeverExecutedTestSuiteItem {
+  /** テストスイートID */
+  testSuiteId: string;
+  /** テストスイート名 */
+  testSuiteName: string;
+  /** 作成日時 */
+  createdAt: Date | string;
+  /** テストケース数 */
+  testCaseCount: number;
+}
+
+/** 実行中テストスイートの項目 */
+export interface InProgressTestSuiteItem {
+  /** テストスイートID */
+  testSuiteId: string;
+  /** テストスイート名 */
+  testSuiteName: string;
+  /** 最終実行ID */
+  lastExecutionId: string;
+  /** 最終実行日時 */
+  lastExecutedAt: Date | string;
+  /** 環境情報 */
+  environment: { id: string; name: string } | null;
+  /** 未判定件数 */
+  pendingCount: number;
+  /** 期待結果総数 */
+  totalExpectedResults: number;
+}
+
+/** ページネーション付きリスト */
+export interface PaginatedList<T> {
+  /** 項目リスト */
+  items: T[];
+  /** 総件数 */
+  total: number;
+}
+
+/** テスト実行状況（テストスイート単位） */
+export interface ExecutionStatusSuites {
+  /** 失敗中テストスイート */
+  failingSuites: PaginatedList<FailingTestSuiteItem>;
+  /** スキップ中テストスイート */
+  skippedSuites: PaginatedList<SkippedTestSuiteItem>;
+  /** 未実行テストスイート */
+  neverExecutedSuites: PaginatedList<NeverExecutedTestSuiteItem>;
+  /** 実行中テストスイート */
+  inProgressSuites: PaginatedList<InProgressTestSuiteItem>;
 }
 
 /** 最近の活動種別 */
@@ -125,8 +217,12 @@ export interface ProjectDashboardStats {
   summary: ProjectDashboardSummary;
   /** 実行結果の分布 */
   resultDistribution: ResultDistribution;
-  /** 要注意テスト一覧 */
+  /**
+   * @deprecated 要注意テスト一覧（テストケース単位）。executionStatusSuitesを使用してください。
+   */
   attentionRequired: AttentionRequired;
+  /** テスト実行状況（テストスイート単位） */
+  executionStatusSuites: ExecutionStatusSuites;
   /** 最近の活動 */
   recentActivities: RecentActivityItem[];
 }
