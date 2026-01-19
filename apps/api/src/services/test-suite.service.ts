@@ -476,6 +476,7 @@ export class TestSuiteService {
     options: {
       from?: string;
       to?: string;
+      environmentId?: string;
       limit: number;
       offset: number;
       sortBy?: 'createdAt';
@@ -492,6 +493,10 @@ export class TestSuiteService {
           ...(options.to && { lte: new Date(options.to) }),
         },
       }),
+      // 'none'の場合は環境未設定（null）でフィルタ、それ以外はUUIDでフィルタ
+      ...(options.environmentId && {
+        environmentId: options.environmentId === 'none' ? null : options.environmentId,
+      }),
     };
 
     const [executions, total] = await Promise.all([
@@ -504,6 +509,9 @@ export class TestSuiteService {
           environment: {
             select: { id: true, name: true, slug: true },
           },
+          expectedResults: {
+            select: { status: true },
+          },
         },
         orderBy: { [options.sortBy || 'createdAt']: options.sortOrder || 'desc' },
         take: options.limit,
@@ -512,7 +520,30 @@ export class TestSuiteService {
       prisma.execution.count({ where }),
     ]);
 
-    return { executions, total };
+    // 各実行のjudgmentCounts（期待結果のステータス集計）を計算
+    const executionsWithCounts = executions.map((execution) => {
+      const counts = {
+        PASS: 0,
+        FAIL: 0,
+        PENDING: 0,
+        SKIPPED: 0,
+      };
+      for (const result of execution.expectedResults) {
+        // Prismaのenumにより常にマッチするが、型安全性のためチェック
+        if (result.status in counts) {
+          counts[result.status as keyof typeof counts]++;
+        }
+      }
+
+      // expectedResultsをレスポンスから除外してjudgmentCountsを追加
+      const { expectedResults: _expectedResults, ...executionWithoutResults } = execution;
+      return {
+        ...executionWithoutResults,
+        judgmentCounts: counts,
+      };
+    });
+
+    return { executions: executionsWithCounts, total };
   }
 
   /**

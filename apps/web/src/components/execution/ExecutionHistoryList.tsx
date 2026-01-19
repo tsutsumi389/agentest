@@ -7,18 +7,24 @@ import {
   Calendar,
   User,
   X,
+  Server,
 } from 'lucide-react';
 import {
   testSuitesApi,
+  projectsApi,
   ApiError,
   type Execution,
   type ExecutionSearchParams,
+  type ProjectEnvironment,
 } from '../../lib/api';
 import { formatDateTime, formatRelativeTime } from '../../lib/date';
+import { ProgressBar } from '../ui/ProgressBar';
 
 interface ExecutionHistoryListProps {
   /** テストスイートID */
   testSuiteId: string;
+  /** プロジェクトID（環境一覧取得用） */
+  projectId: string;
 }
 
 /**
@@ -74,8 +80,9 @@ function getDateRange(rangeValue: string): { from?: string; to?: string } {
 /**
  * 実行履歴一覧コンポーネント
  */
-export function ExecutionHistoryList({ testSuiteId }: ExecutionHistoryListProps) {
+export function ExecutionHistoryList({ testSuiteId, projectId }: ExecutionHistoryListProps) {
   const [executions, setExecutions] = useState<Execution[]>([]);
+  const [environments, setEnvironments] = useState<ProjectEnvironment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -86,10 +93,25 @@ export function ExecutionHistoryList({ testSuiteId }: ExecutionHistoryListProps)
 
   // フィルタ状態
   const [selectedDateRange, setSelectedDateRange] = useState<DateRangeValue>('all');
+  const [selectedEnvironmentId, setSelectedEnvironmentId] = useState<string>('');
 
   // 現在のページ番号と総ページ数を計算
   const currentPage = Math.floor(offset / pageSize) + 1;
   const totalPages = Math.ceil(total / pageSize);
+
+  // 環境一覧を取得
+  useEffect(() => {
+    const fetchEnvironments = async () => {
+      try {
+        const response = await projectsApi.getEnvironments(projectId);
+        setEnvironments(response.environments);
+      } catch (err) {
+        // エラーは無視（環境がなくても問題ない）
+        console.error('環境一覧の取得に失敗しました', err);
+      }
+    };
+    fetchEnvironments();
+  }, [projectId]);
 
   // 実行履歴を取得
   const fetchExecutions = useCallback(async () => {
@@ -102,6 +124,7 @@ export function ExecutionHistoryList({ testSuiteId }: ExecutionHistoryListProps)
         limit: pageSize,
         offset,
         ...dateRange,
+        ...(selectedEnvironmentId && { environmentId: selectedEnvironmentId }),
         sortBy: 'createdAt',
         sortOrder: 'desc',
       };
@@ -118,12 +141,12 @@ export function ExecutionHistoryList({ testSuiteId }: ExecutionHistoryListProps)
     } finally {
       setIsLoading(false);
     }
-  }, [testSuiteId, offset, pageSize, selectedDateRange]);
+  }, [testSuiteId, offset, pageSize, selectedDateRange, selectedEnvironmentId]);
 
   // フィルタ・ページサイズ変更時にオフセットをリセット
   useEffect(() => {
     setOffset(0);
-  }, [selectedDateRange, pageSize]);
+  }, [selectedDateRange, selectedEnvironmentId, pageSize]);
 
   // データ取得
   useEffect(() => {
@@ -144,12 +167,13 @@ export function ExecutionHistoryList({ testSuiteId }: ExecutionHistoryListProps)
   // フィルタリセット
   const handleResetFilters = () => {
     setSelectedDateRange('all');
+    setSelectedEnvironmentId('');
     setPageSize(DEFAULT_PAGE_SIZE);
     setOffset(0);
   };
 
   // フィルタが適用されているか
-  const hasFilters = selectedDateRange !== 'all' || pageSize !== DEFAULT_PAGE_SIZE;
+  const hasFilters = selectedDateRange !== 'all' || selectedEnvironmentId !== '' || pageSize !== DEFAULT_PAGE_SIZE;
 
   // ローディング表示
   if (isLoading && executions.length === 0) {
@@ -192,6 +216,26 @@ export function ExecutionHistoryList({ testSuiteId }: ExecutionHistoryListProps)
           </select>
         </div>
 
+        {/* 環境フィルタ */}
+        {environments.length > 0 && (
+          <div className="flex items-center gap-2">
+            <Server className="w-4 h-4 text-foreground-muted" />
+            <select
+              value={selectedEnvironmentId}
+              onChange={(e) => setSelectedEnvironmentId(e.target.value)}
+              className="input text-sm py-1.5"
+            >
+              <option value="">すべての環境</option>
+              <option value="none">環境未設定</option>
+              {environments.map((env) => (
+                <option key={env.id} value={env.id}>
+                  {env.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* ページサイズ選択 */}
         <div className="flex items-center gap-2">
           <span className="text-sm text-foreground-muted">表示件数:</span>
@@ -223,18 +267,34 @@ export function ExecutionHistoryList({ testSuiteId }: ExecutionHistoryListProps)
       </div>
 
       {/* 選択中のフィルタ表示 */}
-      {selectedDateRange !== 'all' && (
+      {(selectedDateRange !== 'all' || selectedEnvironmentId) && (
         <div className="flex flex-wrap items-center gap-2 mb-4 text-sm">
-          <span className="inline-flex items-center gap-1 px-2 py-1 bg-background-tertiary text-foreground rounded">
-            {DATE_RANGE_OPTIONS.find((o) => o.value === selectedDateRange)?.label}
-            <button
-              onClick={() => setSelectedDateRange('all')}
-              className="hover:text-foreground-muted"
-              aria-label="日付範囲フィルタを解除"
-            >
-              <X className="w-3 h-3" />
-            </button>
-          </span>
+          {selectedDateRange !== 'all' && (
+            <span className="inline-flex items-center gap-1 px-2 py-1 bg-background-tertiary text-foreground rounded">
+              {DATE_RANGE_OPTIONS.find((o) => o.value === selectedDateRange)?.label}
+              <button
+                onClick={() => setSelectedDateRange('all')}
+                className="hover:text-foreground-muted"
+                aria-label="日付範囲フィルタを解除"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          )}
+          {selectedEnvironmentId && (
+            <span className="inline-flex items-center gap-1 px-2 py-1 bg-background-tertiary text-foreground rounded">
+              {selectedEnvironmentId === 'none'
+                ? '環境未設定'
+                : environments.find((e) => e.id === selectedEnvironmentId)?.name}
+              <button
+                onClick={() => setSelectedEnvironmentId('')}
+                className="hover:text-foreground-muted"
+                aria-label="環境フィルタを解除"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </span>
+          )}
         </div>
       )}
 
@@ -304,6 +364,10 @@ export function ExecutionHistoryList({ testSuiteId }: ExecutionHistoryListProps)
  * 実行履歴アイテム
  */
 function ExecutionItem({ execution }: { execution: Execution }) {
+  // judgmentCountsから値を取得
+  const counts = execution.judgmentCounts || { PASS: 0, FAIL: 0, PENDING: 0, SKIPPED: 0 };
+  const total = counts.PASS + counts.FAIL + counts.PENDING + counts.SKIPPED;
+
   return (
     <Link
       to={`/executions/${execution.id}`}
@@ -311,13 +375,13 @@ function ExecutionItem({ execution }: { execution: Execution }) {
     >
       {/* 環境名 */}
       {execution.environment && (
-        <span className="px-2 py-0.5 text-xs font-medium rounded bg-background-tertiary text-foreground-muted">
+        <span className="px-2 py-0.5 text-xs font-medium rounded bg-background-tertiary text-foreground-muted shrink-0">
           {execution.environment.name}
         </span>
       )}
 
       {/* 実行者 */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 shrink-0">
         {execution.executedByUser?.avatarUrl ? (
           <img
             src={execution.executedByUser.avatarUrl}
@@ -340,8 +404,21 @@ function ExecutionItem({ execution }: { execution: Execution }) {
         </span>
       </div>
 
+      {/* 期待結果の状況バー */}
+      {total > 0 && (
+        <div className="flex-1 min-w-0 max-w-48">
+          <ProgressBar
+            passed={counts.PASS}
+            failed={counts.FAIL}
+            skipped={counts.SKIPPED}
+            total={total}
+            size="sm"
+          />
+        </div>
+      )}
+
       {/* 日時（右寄せ） */}
-      <div className="ml-auto text-right">
+      <div className="ml-auto text-right shrink-0">
         <span
           className="text-sm text-foreground-muted"
           title={formatDateTime(execution.createdAt)}

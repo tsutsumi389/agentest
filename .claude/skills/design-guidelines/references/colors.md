@@ -124,7 +124,7 @@
 | Failed | `#f85149` | `#2d1619` | ✗ XCircle |
 | Running | `#a371f7` | `#271d3d` | ◐ Spinner |
 | Pending | `#d29922` | `#2e2111` | ◷ Clock |
-| Skipped | `#6e7681` | `#21262d` | ⊘ Skip |
+| Skipped | `#d29922` | `#2e2111` | ⊘ Skip |
 | Flaky | `#db6d28` | `#2c1d11` | ⚡ Zap |
 
 ### Implementation Example
@@ -152,8 +152,8 @@ const statusConfig = {
     icon: Clock,
   },
   skipped: {
-    color: 'var(--text-muted)',
-    bg: 'var(--bg-tertiary)',
+    color: 'var(--warning-emphasis)',
+    bg: 'var(--warning-subtle)',
     icon: SkipForward,
   },
 };

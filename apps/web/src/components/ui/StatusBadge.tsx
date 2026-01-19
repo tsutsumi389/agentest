@@ -35,7 +35,7 @@ const statusConfig: Record<TestStatus, {
   },
   skipped: {
     icon: SkipForward,
-    className: 'bg-background-tertiary text-foreground-subtle',
+    className: 'bg-warning-subtle text-warning',
     label: 'スキップ',
   },
 };

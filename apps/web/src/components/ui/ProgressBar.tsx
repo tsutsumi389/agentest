@@ -64,7 +64,7 @@ export function ProgressBar({
         />
         {/* スキップ */}
         <div
-          className="bg-foreground-subtle transition-all duration-300 ease-out"
+          className="bg-warning transition-all duration-300 ease-out"
           style={{ width: `${skippedPercent}%` }}
         />
       </div>
@@ -81,7 +81,7 @@ export function ProgressBar({
           </span>
           {skipped > 0 && (
             <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-foreground-subtle" />
+              <span className="w-2 h-2 rounded-full bg-warning" />
               スキップ {skipped}
             </span>
           )}

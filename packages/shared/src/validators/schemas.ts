@@ -254,6 +254,8 @@ export const testCaseSearchSchema = z.object({
 export const executionSearchSchema = z.object({
   from: z.string().datetime().optional(),
   to: z.string().datetime().optional(),
+  // 'none'は環境未設定の実行をフィルタするための特殊値
+  environmentId: z.union([z.string().uuid(), z.literal('none')]).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   offset: z.coerce.number().int().min(0).default(0),
   sortBy: z.enum(['createdAt']).default('createdAt'),

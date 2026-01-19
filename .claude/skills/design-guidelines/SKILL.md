@@ -43,7 +43,7 @@ Terminal/CLI風のミニマルで機能的なデザインシステム。GitHub/L
 - ❌ Failed → `--error-*`（赤）
 - 🔄 Running → `#a371f7`（紫）
 - ⏳ Pending → `--warning-*`（黄）
-- ⏭️ Skipped → `--text-muted`（グレー）
+- ⏭️ Skipped → `--warning-*`（オレンジ）
 
 ### Typography Philosophy
 
@@ -119,7 +119,7 @@ Terminal/CLI風のミニマルで機能的なデザインシステム。GitHub/L
 <Badge status="failed">  // 赤 + ×アイコン
 <Badge status="running"> // 紫 + スピナー
 <Badge status="pending"> // 黄 + 時計アイコン
-<Badge status="skipped"> // グレー + スキップアイコン
+<Badge status="skipped"> // オレンジ + スキップアイコン
 ```
 
 ### Data Table
