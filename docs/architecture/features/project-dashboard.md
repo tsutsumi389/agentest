@@ -2,7 +2,7 @@
 
 ## 概要
 
-プロジェクト詳細画面の「概要」タブで表示されるダッシュボード機能。プロジェクト内のテスト状況を一目で把握できるKPI、結果分布、要注意テスト、最近の活動を提供する。環境・ラベルによるフィルター機能でデータを絞り込める。
+プロジェクト詳細画面の「概要」タブで表示されるダッシュボード機能。プロジェクト内のテスト状況を一目で把握できるKPI、結果分布、テスト実行状況、最近の活動を提供する。環境・ラベルによるフィルター機能でデータを絞り込める。
 
 ## 機能一覧
 
@@ -10,7 +10,7 @@
 |----|--------|------|------|
 | PDB-001 | KPIサマリーカード | テストスイート数、テストケース数、期待結果数を表示（3枚） | 実装済 |
 | PDB-002 | 実行結果の分布 | 過去30日間の実行結果をドーナツチャートで表示 | 実装済 |
-| PDB-003 | 要注意テスト一覧 | 失敗中・長期未実行・不安定なテストを一覧表示 | 実装済 |
+| PDB-003 | テスト実行状況 | 失敗中・スキップ中・テスト未実施・テスト実行中のテストスイートを一覧表示 | 実装済 |
 | PDB-004 | 最近の活動 | 実行完了・テストケース更新・レビューをタイムラインで表示 | 実装済 |
 | PDB-005 | フィルター機能 | 環境・ラベルによるダッシュボードデータの絞り込み | 実装済 |
 
@@ -40,10 +40,10 @@
 │  └───────────────────────────┘ │  └─────────────────────────────┘  │
 │  （高さ揃え）                    │  （高さ揃え）                      │
 ├─────────────────────────────────┴───────────────────────────────────┤
-│  要注意テスト                                                        │
+│  テスト実行状況                                                      │
 │  ┌─────────────────────────────────────────────────────────────────┐│
-│  │  タブ: 失敗中 | 長期未実行 | 不安定                              ││
-│  │  テーブル形式の一覧                                              ││
+│  │  タブ: 失敗中 | スキップ中 | テスト未実施 | テスト実行中          ││
+│  │  テーブル形式の一覧（ページネーション付き）                       ││
 │  └─────────────────────────────────────────────────────────────────┘│
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -55,7 +55,7 @@
 | 環境 | 実行環境でフィルタリング（単一選択） |
 | ラベル | ラベルでフィルタリング（複数選択可） |
 
-- フィルターを設定すると、KPI・結果分布・要注意テスト・最近の活動すべてに反映される
+- フィルターを設定すると、KPI・結果分布・テスト実行状況・最近の活動すべてに反映される
 - 環境フィルター: 選択した環境での実行結果のみを集計
 - ラベルフィルター: 選択したラベルが付与されたテストスイートのデータのみを集計
 
@@ -76,27 +76,37 @@
   - スキップ（Skipped）: 黄色
   - 未判定（Pending）: グレー
 
-### 要注意テスト一覧
+### テスト実行状況
 
-3つのタブで構成：
+4つのタブで構成（テストスイート単位）：
 
-#### 失敗中テスト
-- **条件**: 最新の実行結果がFAILのテストケース
-- **表示項目**: テストケース名、テストスイート名、連続失敗回数、最終実行日時
+#### 失敗中タブ
+- **条件**: 最新の実行結果がFAILのテストスイート
+- **表示項目**: テストスイート名、環境名、連続失敗回数、最終実行日時
 - **ソート**: 連続失敗回数の多い順
-- **最大件数**: 10件
+- **リンク**: 行クリックで実行詳細画面（`/executions/{id}`）に遷移
+- **ページネーション**: 10件ずつ
 
-#### 長期未実行テスト
-- **条件**: 30日以上実行されていない、または一度も実行されていないテストケース
-- **表示項目**: テストケース名、テストスイート名、未実行日数、最終実行日時
-- **ソート**: 未実行日数の多い順（未実行は先頭）
-- **最大件数**: 10件
+#### スキップ中タブ
+- **条件**: 最新の実行結果がSKIPPEDのテストスイート
+- **表示項目**: テストスイート名、環境名、連続スキップ回数、最終実行日時
+- **ソート**: 連続スキップ回数の多い順
+- **リンク**: 行クリックで実行詳細画面（`/executions/{id}`）に遷移
+- **ページネーション**: 10件ずつ
 
-#### 不安定なテスト（Flaky）
-- **条件**: 過去10回の実行で成功率が50%〜90%のテストケース
-- **表示項目**: テストケース名、テストスイート名、成功率、実行回数
-- **ソート**: 成功率が50%に近い順（より不安定な順）
-- **最大件数**: 10件
+#### テスト未実施タブ
+- **条件**: 一度も実行されていないテストスイート
+- **表示項目**: テストスイート名、作成日時
+- **ソート**: 作成日時の古い順
+- **リンク**: 行クリックでテストスイート詳細画面（`/test-suites/{id}`）に遷移
+- **ページネーション**: 10件ずつ
+
+#### テスト実行中タブ
+- **条件**: ステータスがIN_PROGRESSのテストスイート
+- **表示項目**: テストスイート名、環境名、開始日時
+- **ソート**: 開始日時の古い順
+- **リンク**: 行クリックで実行詳細画面（`/executions/{id}`）に遷移
+- **ページネーション**: 10件ずつ
 
 ### 最近の活動
 
@@ -124,7 +134,7 @@ sequenceDiagram
     par 並行取得（フィルター適用）
         B->>DB: サマリー統計取得
         B->>DB: 結果分布取得
-        B->>DB: 要注意テスト取得
+        B->>DB: テスト実行状況取得
         B->>DB: 最近の活動取得
     end
 
@@ -151,8 +161,8 @@ interface ProjectDashboardStats {
   summary: ProjectDashboardSummary;
   /** 実行結果の分布 */
   resultDistribution: ResultDistribution;
-  /** 要注意テスト一覧 */
-  attentionRequired: AttentionRequired;
+  /** テスト実行状況 */
+  executionStatus: ExecutionStatusSuites;
   /** 最近の活動 */
   recentActivities: RecentActivityItem[];
 }
@@ -175,11 +185,25 @@ interface ResultDistribution {
   pending: number;
 }
 
-/** 要注意テスト一覧 */
-interface AttentionRequired {
-  failingTests: FailingTestItem[];
-  longNotExecuted: LongNotExecutedItem[];
-  flakyTests: FlakyTestItem[];
+/** テスト実行状況（テストスイート単位） */
+interface ExecutionStatusSuites {
+  /** 失敗中のテストスイート */
+  failing: PaginatedResult<FailingTestSuiteItem>;
+  /** スキップ中のテストスイート */
+  skipped: PaginatedResult<SkippedTestSuiteItem>;
+  /** テスト未実施のテストスイート */
+  neverExecuted: PaginatedResult<NeverExecutedTestSuiteItem>;
+  /** テスト実行中のテストスイート */
+  inProgress: PaginatedResult<InProgressTestSuiteItem>;
+}
+
+/** ページネーション付きの結果 */
+interface PaginatedResult<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
 
 /** 最近の活動種別 */
@@ -194,15 +218,15 @@ type RecentActivityType = 'execution' | 'testCaseUpdate' | 'review';
 |------|----------|
 | 成功率計算 | 過去30日間の完了した実行 |
 | 結果分布 | 過去30日間の完了した実行 |
-| 長期未実行判定 | 30日以上前 |
 
-### 要注意テスト判定基準
+### テスト実行状況の判定基準
 
 | 種別 | 判定条件 |
 |------|----------|
-| 失敗中 | 最新の実行結果がFAIL |
-| 長期未実行 | 30日以上実行されていない、または未実行 |
-| 不安定（Flaky） | 過去10回の成功率が50%〜90%（最低3回の実行が必要） |
+| 失敗中 | 最新の実行結果がFAILのテストスイート |
+| スキップ中 | 最新の実行結果がSKIPPEDのテストスイート |
+| テスト未実施 | 一度も実行されていないテストスイート |
+| テスト実行中 | ステータスがIN_PROGRESSのテストスイート |
 
 ### データ集計ルール
 
@@ -221,12 +245,8 @@ type RecentActivityType = 'execution' | 'testCaseUpdate' | 'review';
 | 項目 | 値 | 説明 |
 |------|-----|------|
 | STATS_DAYS | 30 | 統計対象の日数 |
-| LONG_NOT_EXECUTED_DAYS | 30 | 長期未実行とみなす日数 |
-| FLAKY_EXECUTION_COUNT | 10 | 不安定テスト判定用の実行回数 |
-| FLAKY_PASS_RATE_MIN | 50 | 不安定テストの成功率下限（%） |
-| FLAKY_PASS_RATE_MAX | 90 | 不安定テストの成功率上限（%） |
 | RECENT_ACTIVITIES_LIMIT | 10 | 最近の活動取得件数 |
-| ATTENTION_LIMIT | 10 | 要注意テストの取得件数（各カテゴリ） |
+| PAGE_SIZE | 10 | テスト実行状況のページサイズ（各タブ共通） |
 
 ## API エンドポイント
 
@@ -257,10 +277,11 @@ type RecentActivityType = 'execution' | 'testCaseUpdate' | 'review';
       "skipped": 10,
       "pending": 2
     },
-    "attentionRequired": {
-      "failingTests": [...],
-      "longNotExecuted": [...],
-      "flakyTests": [...]
+    "executionStatus": {
+      "failing": { "items": [...], "total": 5, "page": 1, "pageSize": 10, "totalPages": 1 },
+      "skipped": { "items": [...], "total": 3, "page": 1, "pageSize": 10, "totalPages": 1 },
+      "neverExecuted": { "items": [...], "total": 12, "page": 1, "pageSize": 10, "totalPages": 2 },
+      "inProgress": { "items": [...], "total": 2, "page": 1, "pageSize": 10, "totalPages": 1 }
     },
     "recentActivities": [...]
   }
@@ -274,7 +295,7 @@ type RecentActivityType = 'execution' | 'testCaseUpdate' | 'review';
 | `apps/web/src/components/project/dashboard/DashboardFilters.tsx` | フィルター（環境・ラベル選択） |
 | `apps/web/src/components/project/dashboard/KpiSummaryCards.tsx` | KPIサマリーカード |
 | `apps/web/src/components/project/dashboard/ResultDistributionChart.tsx` | 実行結果分布ドーナツチャート |
-| `apps/web/src/components/project/dashboard/AttentionRequiredTable.tsx` | 要注意テスト一覧（タブ付きテーブル） |
+| `apps/web/src/components/project/dashboard/ExecutionStatusTable.tsx` | テスト実行状況（タブ付きテーブル、ページネーション対応） |
 | `apps/web/src/components/project/dashboard/RecentActivityTimeline.tsx` | 最近の活動タイムライン |
 
 ## バックエンド実装
