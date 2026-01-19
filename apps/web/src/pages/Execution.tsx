@@ -218,14 +218,14 @@ export function ExecutionPage() {
       return { previousData };
     },
     onSuccess: (data, { resultId }) => {
-      // APIレスポンスの実施者情報でキャッシュを更新
+      // APIレスポンスの実施者情報でキャッシュを更新（evidencesは既存を保持）
       const previousData = queryClient.getQueryData<{ execution: ExecutionWithDetails }>(['execution', executionId, 'details']);
       if (previousData) {
         queryClient.setQueryData(['execution', executionId, 'details'], {
           execution: {
             ...previousData.execution,
             expectedResults: previousData.execution.expectedResults.map((r) =>
-              r.id === resultId ? data.result : r
+              r.id === resultId ? { ...data.result, evidences: r.evidences } : r
             ),
           },
         });
