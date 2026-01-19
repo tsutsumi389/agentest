@@ -226,6 +226,7 @@ export function ExecutionHistoryList({ testSuiteId, projectId }: ExecutionHistor
               className="input text-sm py-1.5"
             >
               <option value="">すべての環境</option>
+              <option value="none">環境未設定</option>
               {environments.map((env) => (
                 <option key={env.id} value={env.id}>
                   {env.name}
@@ -282,7 +283,9 @@ export function ExecutionHistoryList({ testSuiteId, projectId }: ExecutionHistor
           )}
           {selectedEnvironmentId && (
             <span className="inline-flex items-center gap-1 px-2 py-1 bg-background-tertiary text-foreground rounded">
-              {environments.find((e) => e.id === selectedEnvironmentId)?.name}
+              {selectedEnvironmentId === 'none'
+                ? '環境未設定'
+                : environments.find((e) => e.id === selectedEnvironmentId)?.name}
               <button
                 onClick={() => setSelectedEnvironmentId('')}
                 className="hover:text-foreground-muted"

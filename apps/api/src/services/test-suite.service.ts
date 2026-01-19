@@ -493,7 +493,10 @@ export class TestSuiteService {
           ...(options.to && { lte: new Date(options.to) }),
         },
       }),
-      ...(options.environmentId && { environmentId: options.environmentId }),
+      // 'none'の場合は環境未設定（null）でフィルタ、それ以外はUUIDでフィルタ
+      ...(options.environmentId && {
+        environmentId: options.environmentId === 'none' ? null : options.environmentId,
+      }),
     };
 
     const [executions, total] = await Promise.all([
@@ -526,6 +529,7 @@ export class TestSuiteService {
         SKIPPED: 0,
       };
       for (const result of execution.expectedResults) {
+        // Prismaのenumにより常にマッチするが、型安全性のためチェック
         if (result.status in counts) {
           counts[result.status as keyof typeof counts]++;
         }

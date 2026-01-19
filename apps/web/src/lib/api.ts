@@ -406,6 +406,7 @@ export interface TestSuiteSearchParams {
 export interface ExecutionSearchParams {
   from?: string;
   to?: string;
+  /** UUID または 'none'（環境未設定でフィルタ） */
   environmentId?: string;
   limit?: number;
   offset?: number;
