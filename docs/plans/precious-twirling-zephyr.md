@@ -10,12 +10,26 @@
 - **トライアル**: なし（FREEプランで基本機能を提供）
 
 ### プラン体系
-| プラン | 対象 | 月額 | MCP上限 | 同時接続 |
-|--------|------|------|---------|----------|
-| FREE | 個人 | ¥0 | 100/月 | 1 |
-| PRO | 個人 | ¥1,000 | 1,000/月 | 3 |
-| TEAM | 組織 | ¥600/ユーザー(最低10名) | 5,000×ユーザー数/月 | 5×ユーザー数 |
-| ENTERPRISE | 組織 | 要問合せ | 無制限 | 無制限 |
+| プラン | 対象 | 月額 | 年額 | MCP実行 | プロジェクト | 履歴保持 |
+|--------|------|------|------|---------|-------------|----------|
+| FREE | 個人 | ¥0 | - | 無制限 | 3 | 変更:30日 / 実行:直近1件 |
+| PRO | 個人 | ¥980 | ¥9,800 | 無制限 | 無制限 | 無制限 |
+| TEAM | 組織 | ¥1,200/user | ¥12,000/user | 無制限 | 無制限 | 無制限 |
+| ENTERPRISE | 組織 | 要問合せ | 要問合せ | 無制限 | 無制限 | 無制限 |
+
+### 制限の詳細
+| 制限項目 | FREE | PRO | TEAM |
+|----------|------|-----|------|
+| **変更履歴** | 30日で全削除 | 無制限 | 無制限 |
+| **実行履歴** | 直近1件のみ永久 | 無制限 | 無制限 |
+| **プロジェクト数** | 3 | 無制限 | 無制限 |
+| **メンバー招待** | ❌ 不可 | ❌ 不可 | ✅ 無制限 |
+| 公開レポート | ウォーターマーク有 | なし | なし |
+| 優先サポート | ❌ | ✅ | ✅ |
+| SSO/SAML | ❌ | ❌ | ✅ |
+| 監査ログ | ❌ | ❌ | ✅ |
+
+※ REST APIは初期リリースでは非公開（Web UI + MCPのみ提供）
 
 ---
 
@@ -50,9 +64,12 @@
 | TEAM→ENTERPRISE | 問い合わせフォーム → 営業経由契約 → 管理画面からプラン変更 |
 
 **ビジネスルール**:
-- TEAMプランの最低料金は10ユーザー分（月額¥6,000〜）
+- TEAMプランは1名から契約可能（月額¥1,200〜）
 - ENTERPRISEプランは営業経由での契約（API直接変更不可）
 - 組織プラン変更は組織のOWNER/ADMINのみ実行可能
+- 課金単位: Organization.members.count × ¥1,200/月
+- メンバー追加時: 日割り即時請求
+- メンバー削除時: 次回更新時に反映
 
 ---
 
@@ -66,8 +83,7 @@
 3. 日割り差額を計算
 4. 即座に新プランを適用
 5. 差額請求のInvoiceを作成
-6. UsageRecordのmcpSessionLimitを新プラン値に更新
-7. 監査ログを記録・通知送信
+6. 監査ログを記録・通知送信
 
 **日割り計算ロジック**:
 ```
@@ -92,7 +108,8 @@
 - ダウングレード予約時: `cancelAtPeriodEnd = true`、`scheduledPlan`に次回プラン保存
 - 期間終了時のバッチ処理でプラン変更を実行
 - ダウングレード予約中でもキャンセル可能
-- ダウングレード後に使用量が上限超過時はMCP新規セッション不可
+- ダウングレード後、プロジェクト数が制限を超える場合は新規プロジェクト作成不可
+- ダウングレード後、履歴保持期間を超えた履歴は次回バッチで削除
 
 ---
 
@@ -149,11 +166,11 @@
 
 **計算式**:
 ```
-年額 = 月額 × 10ヶ月（2ヶ月分無料）
+年額 = 月額 × 10ヶ月（2ヶ月分無料 = 17%OFF）
 
 例:
-- PRO: ¥1,000/月 → ¥10,000/年（¥2,000お得）
-- TEAM: ¥6,000/月(10名) → ¥60,000/年（¥12,000お得）
+- PRO: ¥980/月 → ¥9,800/年（¥1,960お得）
+- TEAM: ¥1,200/user/月 → ¥12,000/user/年（¥2,400お得）
 ```
 
 **変更ルール**:
@@ -162,26 +179,32 @@
 
 ---
 
-### 1.10 BIL-008: MCP使用量表示
+### 1.10 BIL-008: 履歴使用量表示
 
 **表示内容**:
-- 現在の使用量 / 月間上限
-- 使用率（%）、プログレスバー（80%超で警告色）
-- 期間、リセット日
+- 現在のプラン名、プロジェクト数（FREE: x/3、PRO以上: 無制限）
+- 履歴保持状況
+  - FREE: 「変更履歴: 30日で削除」「実行履歴: 直近1件のみ保持」
+  - PRO以上: 「履歴: 無制限」
+- 次回更新日
 
 ---
 
-### 1.11 BIL-009: 80%到達時のメール通知
+### 1.11 BIL-009: 履歴削除予告通知（FREEプラン向け）
 
 **トリガー条件**:
-- `mcpSessions >= mcpSessionLimit × 0.8`
-- `alertSentAt`がnull（まだ送信していない）
-- `mcpSessionLimit > 0`（無制限でない）
+- FREEプランユーザー
+- 30日経過で削除される履歴がある場合（削除7日前）
+- 同じ通知を今月送信していない
 
 **処理**:
-1. UsageRecordの`alertSentAt`に現在時刻を設定
-2. Notificationレコードを作成（type: USAGE_ALERT）
-3. メール送信
+1. Notificationレコードを作成（type: HISTORY_EXPIRY_ALERT）
+2. メール送信（履歴保持のためのアップグレード案内を含む）
+
+**通知内容**:
+- 削除予定の履歴件数
+- 削除予定日
+- PRO/TEAMプランへのアップグレード案内
 
 ---
 
@@ -230,13 +253,31 @@
 | currency | String | 通貨（JPY） |
 | amount | Decimal | 金額 |
 | perUser | Boolean | ユーザー単価かどうか |
-| minUsers | Int? | 最小ユーザー数（TEAM用） |
 | features | Json? | 機能リスト |
 | isActive | Boolean | 有効フラグ |
 | effectiveFrom | DateTime | 適用開始日 |
 | effectiveTo | DateTime? | 適用終了日 |
 
-### 2.3 新規モデル: PaymentEvent（決済イベント履歴）
+### 2.3 新規モデル: HistoryRetentionPolicy（履歴保持ポリシー）
+
+| 属性 | 型 | 説明 |
+|------|----|------|
+| id | String | UUID |
+| plan | SubscriptionPlan | プラン種別 |
+| changeHistoryDays | Int? | 変更履歴保持日数（null=無制限） |
+| executionHistoryDays | Int? | 実行履歴保持日数（null=無制限） |
+| executionHistoryKeepLatest | Int? | 実行履歴の永久保持件数（FREEは1） |
+| projectLimit | Int? | プロジェクト数上限（null=無制限） |
+
+**初期データ**:
+| プラン | changeHistoryDays | executionHistoryDays | executionHistoryKeepLatest | projectLimit |
+|--------|-------------------|----------------------|---------------------------|--------------|
+| FREE | 30 | 30 | 1 | 3 |
+| PRO | null | null | null | null |
+| TEAM | null | null | null | null |
+| ENTERPRISE | null | null | null | null |
+
+### 2.4 新規モデル: PaymentEvent（決済イベント履歴）
 
 | 属性 | 型 | 説明 |
 |------|----|------|
@@ -274,9 +315,9 @@ GET    /api/users/me/invoices              # 一覧取得
 GET    /api/users/me/invoices/:id          # 詳細取得
 GET    /api/users/me/invoices/:id/pdf      # PDFダウンロード
 
-# 使用量
-GET    /api/users/me/usage                 # 現在の使用量
-GET    /api/users/me/usage/history         # 使用量履歴
+# プラン情報
+GET    /api/users/me/plan                  # 現在のプラン・制限情報
+GET    /api/users/me/projects/count        # プロジェクト数
 ```
 
 ### 3.2 組織向け
@@ -285,7 +326,7 @@ GET    /api/users/me/usage/history         # 使用量履歴
 GET/POST/PUT/DELETE /api/organizations/:orgId/subscription
 GET/POST/DELETE     /api/organizations/:orgId/payment-methods
 GET                 /api/organizations/:orgId/invoices
-GET                 /api/organizations/:orgId/usage
+GET                 /api/organizations/:orgId/plan    # プラン・制限情報
 ```
 
 ### 3.3 プラン情報・Webhook
@@ -306,7 +347,7 @@ POST /api/webhooks/payment         # 決済Webhook受信
 
 **構成**:
 - **現在のプラン**: プラン名、金額、次回更新日、[プラン変更][解約]ボタン
-- **MCP使用量**: 使用量/上限、プログレスバー、リセット日
+- **プラン制限**: プロジェクト数（x/3 or 無制限）、履歴保持状況
 - **支払い方法**: カード一覧（brand、last4、expiry）、[デフォルト][削除][追加]
 - **請求履歴**: 請求書番号、金額、期間、状態、PDFダウンロード
 
@@ -423,7 +464,7 @@ interface IPaymentGateway {
 
 最終失敗後:
 - status = 'PAST_DUE'
-- 7日後: サービス制限（MCP接続不可）
+- 7日後: サービス制限（新規プロジェクト作成不可）
 - 14日後: サブスクリプション自動キャンセル
 ```
 
@@ -433,7 +474,8 @@ interface IPaymentGateway {
 |--------|-----------|------|
 | SubscriptionRenewal | 毎日 0:00 | 期間終了サブスクリプションの更新 |
 | DowngradeApply | 毎日 0:00 | ダウングレード予約の適用 |
-| UsageRecordCreate | 毎月1日 | 新規UsageRecord作成 |
+| HistoryCleanup | 毎日 3:00 | FREEプランの30日経過履歴削除 |
+| HistoryExpiryNotify | 毎日 9:00 | 削除7日前のFREEユーザーへ通知 |
 | PaymentRetry | 毎日 6:00 | 失敗支払いのリトライ |
 | WebhookRetry | 毎時 | 未処理Webhookの再処理 |
 
@@ -456,8 +498,8 @@ interface IPaymentGateway {
 
 ### Phase 11-C
 1. PDF請求書生成
-2. 使用量表示
-3. 80%通知
+2. プラン制限表示（プロジェクト数・履歴保持状況）
+3. 履歴削除バッチ・削除予告通知
 4. 組織向け課金画面
 
 ### Phase 11-D
@@ -472,8 +514,46 @@ interface IPaymentGateway {
 
 | ファイル | 変更内容 |
 |----------|----------|
-| `packages/db/prisma/schema.prisma` | Subscription、Invoice拡張、PlanPricing、PaymentEvent追加 |
+| `packages/db/prisma/schema.prisma` | Subscription、Invoice拡張、PlanPricing、PaymentEvent、HistoryRetentionPolicy追加 |
 | `apps/api/src/services/billing/` | BillingService、SubscriptionService、ProrationService新規作成 |
+| `apps/api/src/services/history/` | HistoryCleanupService、HistoryRetentionService新規作成 |
+| `apps/api/src/middleware/rate-limiter.ts` | レート制限の環境変数化（未認証:100req、認証済:500req/15分） |
 | `packages/shared/src/interfaces/payment-gateway.ts` | IPaymentGatewayインターフェース定義 |
 | `apps/web/src/pages/Settings.tsx` | 「プラン・課金」タブ追加 |
 | `apps/web/src/pages/OrganizationSettings.tsx` | 「課金」タブ追加 |
+
+---
+
+## 10. レート制限設計
+
+### 10.1 API レート制限
+
+| 項目 | 値 |
+|------|-----|
+| 一般API（未認証） | 15分/100req |
+| 一般API（認証済） | 15分/500req |
+| 認証API | 1時間/10req |
+| 厳格制限 | 1時間/3req |
+
+### 10.2 環境変数
+
+```bash
+# 一般API
+RATE_LIMIT_API_WINDOW_MS=900000          # 15分
+RATE_LIMIT_API_MAX_ANONYMOUS=100         # 未認証
+RATE_LIMIT_API_MAX_AUTHENTICATED=500     # 認証済み
+
+# 認証API
+RATE_LIMIT_AUTH_WINDOW_MS=3600000        # 1時間
+RATE_LIMIT_AUTH_MAX=10
+
+# 厳格制限
+RATE_LIMIT_STRICT_WINDOW_MS=3600000
+RATE_LIMIT_STRICT_MAX=3
+```
+
+### 10.3 実装方針
+
+- 認証済み判定: `req.user` の存在で判定
+- 環境変数未設定時はデフォルト値を使用
+- プラン連動は将来API公開時に検討
