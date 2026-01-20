@@ -2,6 +2,7 @@ import { prisma, type EntityStatus, type Prisma } from '@agentest/db';
 import { NotFoundError, BadRequestError, ConflictError, type TestSuiteChangeDetail } from '@agentest/shared';
 import { TestSuiteRepository } from '../repositories/test-suite.repository.js';
 import { TestCaseRepository, type TestCaseSearchOptions } from '../repositories/test-case.repository.js';
+import { publishDashboardUpdated } from '../lib/redis-publisher.js';
 
 /**
  * テストスイートのスナップショット型（基本情報）
@@ -68,7 +69,7 @@ export class TestSuiteService {
       throw new NotFoundError('Project', data.projectId);
     }
 
-    return prisma.testSuite.create({
+    const testSuite = await prisma.testSuite.create({
       data: {
         projectId: data.projectId,
         name: data.name,
@@ -77,6 +78,11 @@ export class TestSuiteService {
         createdByUserId: userId,
       },
     });
+
+    // ダッシュボード更新イベント発行
+    await publishDashboardUpdated(data.projectId, 'test_suite', testSuite.id);
+
+    return testSuite;
   }
 
   /**
@@ -136,7 +142,12 @@ export class TestSuiteService {
       },
     });
 
-    return this.testSuiteRepo.update(testSuiteId, data);
+    const result = await this.testSuiteRepo.update(testSuiteId, data);
+
+    // ダッシュボード更新イベント発行
+    await publishDashboardUpdated(testSuite.projectId, 'test_suite', testSuiteId);
+
+    return result;
   }
 
   /**
@@ -164,7 +175,12 @@ export class TestSuiteService {
       },
     });
 
-    return this.testSuiteRepo.softDelete(testSuiteId);
+    const result = await this.testSuiteRepo.softDelete(testSuiteId);
+
+    // ダッシュボード更新イベント発行
+    await publishDashboardUpdated(testSuite.projectId, 'test_suite', testSuiteId);
+
+    return result;
   }
 
   /**
@@ -573,9 +589,9 @@ export class TestSuiteService {
     });
 
     // トランザクションで実行と正規化テーブルを作成
-    return prisma.$transaction(async (tx) => {
+    const execution = await prisma.$transaction(async (tx) => {
       // 1. Executionを作成
-      const execution = await tx.execution.create({
+      const newExecution = await tx.execution.create({
         data: {
           testSuiteId,
           environmentId: data.environmentId,
@@ -586,7 +602,7 @@ export class TestSuiteService {
       // 2. ExecutionTestSuiteを作成（テストスイートのスナップショット）
       const executionTestSuite = await tx.executionTestSuite.create({
         data: {
-          executionId: execution.id,
+          executionId: newExecution.id,
           originalTestSuiteId: testSuite.id,
           name: testSuite.name,
           description: testSuite.description,
@@ -672,7 +688,7 @@ export class TestSuiteService {
         for (let i = 0; i < testCase.preconditions.length; i++) {
           await tx.executionPreconditionResult.create({
             data: {
-              executionId: execution.id,
+              executionId: newExecution.id,
               executionTestCaseId: executionTestCase.id,
               executionCasePreconditionId: execCasePreconditions[i].id,
               status: 'UNCHECKED',
@@ -684,7 +700,7 @@ export class TestSuiteService {
         for (let i = 0; i < testCase.steps.length; i++) {
           await tx.executionStepResult.create({
             data: {
-              executionId: execution.id,
+              executionId: newExecution.id,
               executionTestCaseId: executionTestCase.id,
               executionStepId: execSteps[i].id,
               status: 'PENDING',
@@ -696,7 +712,7 @@ export class TestSuiteService {
         for (let i = 0; i < testCase.expectedResults.length; i++) {
           await tx.executionExpectedResult.create({
             data: {
-              executionId: execution.id,
+              executionId: newExecution.id,
               executionTestCaseId: executionTestCase.id,
               executionExpectedResultId: execExpectedResults[i].id,
               status: 'PENDING',
@@ -709,15 +725,20 @@ export class TestSuiteService {
       for (const precondition of suitePreconditions) {
         await tx.executionPreconditionResult.create({
           data: {
-            executionId: execution.id,
+            executionId: newExecution.id,
             executionSuitePreconditionId: suitePreconditionMap.get(precondition.id),
             status: 'UNCHECKED',
           },
         });
       }
 
-      return execution;
+      return newExecution;
     });
+
+    // ダッシュボード更新イベント発行（トランザクション外）
+    await publishDashboardUpdated(testSuite.projectId, 'execution', execution.id);
+
+    return execution;
   }
 
   /**
@@ -768,7 +789,7 @@ export class TestSuiteService {
     };
 
     // 復元と履歴保存をトランザクションで実行
-    return prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       // 履歴を保存
       await tx.testSuiteHistory.create({
         data: {
@@ -783,6 +804,11 @@ export class TestSuiteService {
       // リポジトリを使用して復元
       return this.testSuiteRepo.restore(testSuiteId);
     });
+
+    // ダッシュボード更新イベント発行
+    await publishDashboardUpdated(testSuite.projectId, 'test_suite', testSuiteId);
+
+    return result;
   }
 
   /**

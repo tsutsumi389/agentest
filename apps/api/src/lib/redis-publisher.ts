@@ -1,0 +1,80 @@
+import { Redis } from 'ioredis';
+import { v4 as uuidv4 } from 'uuid';
+import { Channels, type DashboardUpdatedEvent } from '@agentest/ws-types';
+import { env } from '../config/env.js';
+
+// Redis Publisherインスタンス（遅延初期化）
+let publisher: Redis | null = null;
+
+/**
+ * Redis Publisherを取得（未設定時はnull）
+ */
+function getPublisher(): Redis | null {
+  if (!env.REDIS_URL) {
+    return null;
+  }
+
+  if (!publisher) {
+    publisher = new Redis(env.REDIS_URL);
+
+    publisher.on('connect', () => {
+      console.log('✅ Redis Publisher (API) に接続しました');
+    });
+
+    publisher.on('error', (error: Error) => {
+      console.error('❌ Redis Publisher (API) エラー:', error);
+    });
+  }
+
+  return publisher;
+}
+
+/**
+ * イベントをパブリッシュ
+ * Redis未設定時はスキップ
+ */
+async function publishEvent(channel: string, event: object): Promise<void> {
+  const redis = getPublisher();
+  if (!redis) {
+    return;
+  }
+
+  try {
+    await redis.publish(channel, JSON.stringify(event));
+  } catch (error) {
+    console.error('❌ Redis publish エラー:', error);
+  }
+}
+
+/**
+ * ダッシュボード更新イベントを発行
+ * @param projectId プロジェクトID
+ * @param trigger トリガー種別
+ * @param resourceId リソースID（オプション）
+ */
+export async function publishDashboardUpdated(
+  projectId: string,
+  trigger: DashboardUpdatedEvent['trigger'],
+  resourceId?: string
+): Promise<void> {
+  const event: DashboardUpdatedEvent = {
+    type: 'dashboard:updated',
+    eventId: uuidv4(),
+    timestamp: Date.now(),
+    projectId,
+    trigger,
+    resourceId,
+  };
+
+  await publishEvent(Channels.project(projectId), event);
+}
+
+/**
+ * Redis接続をクリーンアップ
+ */
+export async function closeRedisPublisher(): Promise<void> {
+  if (publisher) {
+    await publisher.quit();
+    publisher = null;
+  }
+}
