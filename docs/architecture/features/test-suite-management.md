@@ -282,6 +282,56 @@ sequenceDiagram
     F->>U: 結果一覧を表示
 ```
 
+## リアルタイム更新
+
+### 概要
+
+テストスイート詳細画面は WebSocket を通じてリアルタイムに更新される。前提条件の操作、テストケースの並び替え時に自動で画面が更新される。
+
+### WebSocket イベント
+
+| イベント | 説明 |
+|----------|------|
+| `test_suite:updated` | テストスイートデータの更新通知 |
+| `test_case:updated` | テストケースデータの更新通知（テストスイートチャンネル経由） |
+| `execution:started` | テスト実行開始通知 |
+
+### 更新トリガー
+
+| 操作 | 発火イベント | 無効化されるクエリキー |
+|------|-------------|---------------------|
+| 前提条件追加 | `test_suite:updated` | `test-suite`, `test-suite-preconditions`, `test-suite-histories` |
+| 前提条件更新 | `test_suite:updated` | `test-suite`, `test-suite-preconditions`, `test-suite-histories` |
+| 前提条件削除 | `test_suite:updated` | `test-suite`, `test-suite-preconditions`, `test-suite-histories` |
+| 前提条件並び替え | `test_suite:updated` | `test-suite`, `test-suite-preconditions`, `test-suite-histories` |
+| テストケース並び替え | `test_suite:updated` | `test-suite`, `test-suite-cases`, `test-suite-histories` |
+| テストケース更新 | `test_case:updated` | `test-case-details`, `test-suite-cases`, `test-suite-histories`, `test-case-histories` |
+| 実行開始 | `execution:started` | `test-suite-executions` |
+
+### 更新の仕組み
+
+1. バックエンドで前提条件/テストケースの操作が発生
+2. Redis Pub/Sub 経由でイベントを発行（プロジェクト・テストスイートチャンネル）
+3. WebSocket サーバーが購読者に配信
+4. フロントエンドの `useTestSuiteRealtime` フックがイベントを受信
+5. React Query のキャッシュを無効化
+6. UI が自動更新
+
+### フロントエンド実装
+
+| ファイル | 説明 |
+|----------|------|
+| `apps/web/src/hooks/useTestSuiteRealtime.ts` | テストスイートリアルタイム更新フック |
+| `apps/web/src/pages/TestSuiteCases.tsx` | フック統合 |
+
+### バックエンド実装
+
+| ファイル | 説明 |
+|----------|------|
+| `apps/api/src/lib/events.ts` | イベント発行ヘルパー関数 |
+| `apps/api/src/services/test-suite.service.ts` | イベント発行を含むサービス |
+| `packages/ws-types/src/events.ts` | TestSuiteUpdatedEvent 型定義 |
+
 ## データモデル
 
 ```mermaid

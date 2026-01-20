@@ -299,6 +299,52 @@ sequenceDiagram
     F->>U: 成功トースト表示
 ```
 
+## リアルタイム更新
+
+### 概要
+
+テストケース詳細パネルは WebSocket を通じてリアルタイムに更新される。前提条件・手順・期待結果の操作時に自動で画面が更新される。
+
+### WebSocket イベント
+
+| イベント | 説明 |
+|----------|------|
+| `test_case:updated` | テストケースデータの更新通知 |
+
+### 更新トリガー
+
+| 操作 | 発火イベント | 無効化されるクエリキー |
+|------|-------------|---------------------|
+| 前提条件追加/更新/削除/並び替え | `test_case:updated` | `test-case-details`, `test-case-histories` |
+| 手順追加/更新/削除/並び替え | `test_case:updated` | `test-case-details`, `test-case-histories` |
+| 期待結果追加/更新/削除/並び替え | `test_case:updated` | `test-case-details`, `test-case-histories` |
+| テストケースコピー | `test_case:updated` | `test-case-details`, `test-case-histories` |
+| 一括更新 | `test_case:updated` | `test-case-details`, `test-case-histories` |
+
+### 更新の仕組み
+
+1. バックエンドで前提条件/手順/期待結果の操作が発生
+2. Redis Pub/Sub 経由でイベントを発行（プロジェクト・テストスイート・テストケースチャンネル）
+3. WebSocket サーバーが購読者に配信
+4. フロントエンドの `useTestCaseRealtime` フックがイベントを受信
+5. React Query のキャッシュを無効化
+6. UI が自動更新
+
+### フロントエンド実装
+
+| ファイル | 説明 |
+|----------|------|
+| `apps/web/src/hooks/useTestCaseRealtime.ts` | テストケースリアルタイム更新フック |
+| `apps/web/src/pages/TestSuiteCases.tsx` | フック統合 |
+
+### バックエンド実装
+
+| ファイル | 説明 |
+|----------|------|
+| `apps/api/src/lib/events.ts` | イベント発行ヘルパー関数 |
+| `apps/api/src/services/test-case.service.ts` | イベント発行を含むサービス |
+| `packages/ws-types/src/events.ts` | TestCaseUpdatedEvent 型定義 |
+
 ## データモデル
 
 ```mermaid

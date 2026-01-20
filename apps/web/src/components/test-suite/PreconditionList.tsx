@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
 import { Loader2 } from 'lucide-react';
-import { testSuitesApi, ApiError, type Precondition, type ReviewCommentWithReplies } from '../../lib/api';
+import { useQuery } from '@tanstack/react-query';
+import { testSuitesApi, type ReviewCommentWithReplies } from '../../lib/api';
 import { MarkdownPreview } from '../common/markdown/MarkdownPreview';
 import { CommentableField } from '../review/CommentableField';
 import { CommentableItem } from '../review/CommentableItem';
@@ -26,34 +26,19 @@ export function PreconditionList({
   canEdit,
   onCommentAdded,
 }: PreconditionListProps) {
-  const [preconditions, setPreconditions] = useState<Precondition[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // 前提条件一覧を取得
-  const fetchPreconditions = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
+  // React Queryで前提条件一覧を取得
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['test-suite-preconditions', testSuiteId],
+    queryFn: async () => {
       const response = await testSuitesApi.getPreconditions(testSuiteId);
-      // orderKeyでソート
-      const sorted = response.preconditions.sort((a, b) => a.orderKey.localeCompare(b.orderKey));
-      setPreconditions(sorted);
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError('前提条件一覧の取得に失敗しました');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [testSuiteId]);
+      // 防御的にnullチェックしてorderKeyでソート
+      const items = response?.preconditions ?? [];
+      return items.sort((a, b) => a.orderKey.localeCompare(b.orderKey));
+    },
+  });
 
-  useEffect(() => {
-    fetchPreconditions();
-  }, [fetchPreconditions]);
+  // キャッシュに古い形式のデータがある場合に備えて、配列であることを保証
+  const preconditions = Array.isArray(data) ? data : [];
 
   if (isLoading) {
     return (
@@ -75,8 +60,8 @@ export function PreconditionList({
           <h2 className="font-semibold text-foreground">前提条件</h2>
         </div>
         <div className="text-center p-6">
-          <p className="text-danger mb-4">{error}</p>
-          <button className="btn btn-primary" onClick={fetchPreconditions}>
+          <p className="text-danger mb-4">{error instanceof Error ? error.message : '前提条件一覧の取得に失敗しました'}</p>
+          <button className="btn btn-primary" onClick={() => refetch()}>
             再読み込み
           </button>
         </div>

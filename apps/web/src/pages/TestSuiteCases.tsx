@@ -5,6 +5,8 @@ import { Calendar } from 'lucide-react';
 import { testSuitesApi, projectsApi, labelsApi, type TestCase, type TestSuite, type ProjectMemberRole, type ReviewCommentWithReplies, type Label } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { usePageSidebar } from '../components/Layout';
+import { useTestSuiteRealtime } from '../hooks/useTestSuiteRealtime';
+import { useTestCaseRealtime } from '../hooks/useTestCaseRealtime';
 import { toast } from '../stores/toast';
 import { TestSuiteHeader, type TabType, type TestCaseTabType } from '../components/test-suite/TestSuiteHeader';
 import { TestCaseSidebar } from '../components/test-suite/TestCaseSidebar';
@@ -51,6 +53,10 @@ export function TestSuiteCasesPage() {
 
   // URLクエリパラメータからテストケースタブを取得
   const testCaseTab = (searchParams.get('testCaseTab') as TestCaseTabType) || 'overview';
+
+  // WebSocketリアルタイム更新を有効化
+  useTestSuiteRealtime(testSuiteId);
+  useTestCaseRealtime(selectedTestCaseId ?? undefined);
 
   // タブ変更ハンドラ
   const handleTabChange = useCallback((tab: TabType) => {
@@ -116,13 +122,18 @@ export function TestSuiteCasesPage() {
   const suite = suiteData?.testSuite;
 
   // 前提条件を取得（編集モード用）
+  // PreconditionList.tsx と同じクエリキー・データ形式を使用
   const { data: preconditionsData } = useQuery({
     queryKey: ['test-suite-preconditions', testSuiteId],
-    queryFn: () => testSuitesApi.getPreconditions(testSuiteId!),
+    queryFn: async () => {
+      const response = await testSuitesApi.getPreconditions(testSuiteId!);
+      const items = response?.preconditions ?? [];
+      return items.sort((a, b) => a.orderKey.localeCompare(b.orderKey));
+    },
     enabled: !!testSuiteId,
   });
 
-  const preconditions = preconditionsData?.preconditions || [];
+  const preconditions = Array.isArray(preconditionsData) ? preconditionsData : [];
 
   // プロジェクトメンバー情報を取得して権限を判定
   const { data: membersData } = useQuery({

@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import {
   Loader2,
   ChevronLeft,
@@ -16,7 +17,6 @@ import {
 } from 'lucide-react';
 import {
   testSuitesApi,
-  ApiError,
   type TestSuite,
   type TestSuiteHistory,
   type TestSuiteHistoryGroupedItem,
@@ -91,46 +91,22 @@ function getFirstHistory(categorizedHistories: TestSuiteCategorizedHistories): T
  * テストスイート変更履歴一覧コンポーネント
  */
 export function TestSuiteHistoryList({ testSuite }: TestSuiteHistoryListProps) {
-  // バックエンドからグループ化済みのアイテムを受け取る
-  const [groupedItems, setGroupedItems] = useState<TestSuiteHistoryGroupedItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
   // ページネーション状態（グループ単位）
   const [page, setPage] = useState(1);
-  const [totalGroups, setTotalGroups] = useState(0);
-  const [total, setTotal] = useState(0); // 履歴レコード総数（表示用）
 
+  // React Queryで履歴を取得（グループ化済み）
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ['test-suite-histories', testSuite.id, page],
+    queryFn: () => testSuitesApi.getHistories(testSuite.id, {
+      limit: PAGE_SIZE,
+      offset: (page - 1) * PAGE_SIZE,
+    }),
+  });
+
+  const groupedItems = data?.items || [];
+  const totalGroups = data?.totalGroups || 0;
+  const total = data?.total || 0;
   const totalPages = Math.ceil(totalGroups / PAGE_SIZE);
-
-  // 履歴を取得（グループ化済み）
-  const fetchHistories = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await testSuitesApi.getHistories(testSuite.id, {
-        limit: PAGE_SIZE,
-        offset: (page - 1) * PAGE_SIZE,
-      });
-      setGroupedItems(response.items);
-      setTotalGroups(response.totalGroups);
-      setTotal(response.total);
-    } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError('履歴の取得に失敗しました');
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [testSuite.id, page]);
-
-  // データ取得
-  useEffect(() => {
-    fetchHistories();
-  }, [fetchHistories]);
 
   // ページ変更ハンドラ
   const handlePageChange = (newPage: number) => {
@@ -156,8 +132,8 @@ export function TestSuiteHistoryList({ testSuite }: TestSuiteHistoryListProps) {
       <div className="card p-6">
         <h2 className="text-lg font-semibold text-foreground mb-4">変更履歴</h2>
         <div className="text-center py-12">
-          <p className="text-danger mb-4">{error}</p>
-          <button className="btn btn-primary" onClick={fetchHistories}>
+          <p className="text-danger mb-4">{error instanceof Error ? error.message : '履歴の取得に失敗しました'}</p>
+          <button className="btn btn-primary" onClick={() => refetch()}>
             再読み込み
           </button>
         </div>

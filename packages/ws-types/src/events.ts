@@ -283,6 +283,7 @@ export interface TestCaseUpdatedEvent extends BaseEvent {
   type: 'test_case:updated';
   testCaseId: string;
   testSuiteId: string;
+  projectId: string;
   changes: {
     field: string;
     oldValue: unknown;
