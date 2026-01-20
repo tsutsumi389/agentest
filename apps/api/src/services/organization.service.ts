@@ -2,6 +2,7 @@ import { prisma } from '@agentest/db';
 import { NotFoundError, ConflictError, AuthorizationError, DELETION_GRACE_PERIOD_DAYS } from '@agentest/shared';
 import { OrganizationRepository } from '../repositories/organization.repository.js';
 import { auditLogService } from './audit-log.service.js';
+import { notificationService } from './notification.service.js';
 
 /**
  * 組織サービス
@@ -202,6 +203,24 @@ export class OrganizationService {
       details: { email: data.email, role: data.role },
     });
 
+    // 既存ユーザーに通知を送信
+    if (existingUser) {
+      const inviter = await prisma.user.findUnique({
+        where: { id: invitedByUserId },
+        select: { name: true },
+      });
+      const org = await this.findById(organizationId);
+
+      await notificationService.send({
+        userId: existingUser.id,
+        type: 'ORG_INVITATION',
+        title: `${org.name}への招待`,
+        body: `${inviter?.name || 'メンバー'}さんから組織「${org.name}」への招待が届いています`,
+        data: { organizationId, inviteToken: token },
+        organizationId,
+      });
+    }
+
     return invitation;
   }
 
@@ -316,6 +335,23 @@ export class OrganizationService {
       targetId: member.id,
       details: { email: invitation.email, role: invitation.role },
     });
+
+    // 招待した人に通知を送信
+    if (invitation.invitedByUserId) {
+      const acceptedUser = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true },
+      });
+
+      await notificationService.send({
+        userId: invitation.invitedByUserId,
+        type: 'INVITATION_ACCEPTED',
+        title: '招待が承諾されました',
+        body: `${acceptedUser?.name || 'ユーザー'}さんが組織「${invitation.organization.name}」への招待を承諾しました`,
+        data: { organizationId: invitation.organizationId, userId },
+        organizationId: invitation.organizationId,
+      });
+    }
 
     return member;
   }

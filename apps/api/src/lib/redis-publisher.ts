@@ -33,7 +33,7 @@ function getPublisher(): Redis | null {
  * イベントをパブリッシュ
  * Redis未設定時はスキップ
  */
-async function publishEvent(channel: string, event: object): Promise<void> {
+export async function publishEvent(channel: string, event: object): Promise<void> {
   const redis = getPublisher();
   if (!redis) {
     return;

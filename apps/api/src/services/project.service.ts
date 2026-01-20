@@ -2,6 +2,7 @@ import { prisma, type ProjectRole, type ChangeType, type Prisma } from '@agentes
 import { NotFoundError, ConflictError, ValidationError } from '@agentest/shared';
 import { ProjectRepository } from '../repositories/project.repository.js';
 import { TestSuiteRepository, type TestSuiteSearchOptions } from '../repositories/test-suite.repository.js';
+import { notificationService } from './notification.service.js';
 
 // 復元可能な期間（30日）
 const RESTORE_LIMIT_DAYS = 30;
@@ -128,8 +129,8 @@ export class ProjectService {
   /**
    * メンバーを追加
    */
-  async addMember(projectId: string, userId: string, role: ProjectRole) {
-    await this.findById(projectId);
+  async addMember(projectId: string, userId: string, role: ProjectRole, addedByUserId?: string) {
+    const project = await this.findById(projectId);
 
     // 既にメンバーかチェック
     const existing = await prisma.projectMember.findUnique({
@@ -142,7 +143,7 @@ export class ProjectService {
       throw new ConflictError('このユーザーは既にメンバーです');
     }
 
-    return prisma.projectMember.create({
+    const member = await prisma.projectMember.create({
       data: { projectId, userId, role },
       include: {
         user: {
@@ -150,6 +151,25 @@ export class ProjectService {
         },
       },
     });
+
+    // 追加されたユーザーに通知を送信（自分自身を追加した場合は除外）
+    if (addedByUserId && addedByUserId !== userId) {
+      const addedByUser = await prisma.user.findUnique({
+        where: { id: addedByUserId },
+        select: { name: true },
+      });
+
+      await notificationService.send({
+        userId,
+        type: 'PROJECT_ADDED',
+        title: 'プロジェクトに追加されました',
+        body: `${addedByUser?.name || 'メンバー'}さんがあなたをプロジェクト「${project.name}」に追加しました`,
+        data: { projectId, role },
+        organizationId: project.organizationId ?? undefined,
+      });
+    }
+
+    return member;
   }
 
   /**

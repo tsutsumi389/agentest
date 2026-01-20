@@ -12,6 +12,7 @@ import reviewCommentRoutes from './review-comments.js';
 import reviewRoutes from './reviews.js';
 import apiTokenRoutes from './api-tokens.js';
 import editLockRoutes from './edit-locks.js';
+import notificationRoutes from './notifications.js';
 import internalRoutes from './internal.js';
 import oauthRoutes from './oauth.js';
 import { oauthController } from '../controllers/oauth.controller.js';
@@ -37,6 +38,7 @@ router.use('/api/review-comments', reviewCommentRoutes);
 router.use('/api/reviews', reviewRoutes);
 router.use('/api/api-tokens', apiTokenRoutes);
 router.use('/api/locks', editLockRoutes);
+router.use('/api/notifications', notificationRoutes);
 
 // OAuth 2.1 エンドポイント (RFC 9728)
 router.use('/oauth', oauthRoutes);

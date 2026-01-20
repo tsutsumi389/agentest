@@ -333,6 +333,37 @@ export interface DashboardUpdatedEvent extends BaseEvent {
 export type DashboardEvent = DashboardUpdatedEvent;
 
 // ============================================
+// 通知イベント
+// ============================================
+
+export interface NotificationReceivedEvent extends BaseEvent {
+  type: 'notification:received';
+  notification: {
+    id: string;
+    type: string;  // NotificationType
+    title: string;
+    body: string;
+    data: Record<string, unknown> | null;
+    createdAt: string;
+  };
+}
+
+export interface NotificationReadEvent extends BaseEvent {
+  type: 'notification:read';
+  notificationId: string;
+}
+
+export interface NotificationUnreadCountEvent extends BaseEvent {
+  type: 'notification:unread_count';
+  count: number;
+}
+
+export type NotificationEvent =
+  | NotificationReceivedEvent
+  | NotificationReadEvent
+  | NotificationUnreadCountEvent;
+
+// ============================================
 // 統合型
 // ============================================
 
@@ -349,7 +380,8 @@ export type ServerEvent =
   | ReviewEvent
   | TestUpdateEvent
   | AgentEvent
-  | DashboardEvent;
+  | DashboardEvent
+  | NotificationEvent;
 
 export type WebSocketMessage = ClientMessage | ServerMessage | ServerEvent;
 

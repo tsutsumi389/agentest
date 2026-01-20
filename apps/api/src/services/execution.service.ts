@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { ExecutionRepository } from '../repositories/execution.repository.js';
 import { MAX_EVIDENCES_PER_RESULT } from '../config/upload.js';
 import { publishDashboardUpdated } from '../lib/redis-publisher.js';
+import { notificationService } from './notification.service.js';
 
 /**
  * 実施者情報のコンテキスト
@@ -188,7 +189,77 @@ export class ExecutionService {
     // ダッシュボード更新イベント発行
     await publishDashboardUpdated(execution.testSuite.projectId, 'execution', executionId);
 
+    // テスト完了通知の送信チェック
+    await this.checkAndSendCompletionNotification(executionId, execution.testSuite, executor?.userId);
+
     return updated;
+  }
+
+  /**
+   * テスト完了通知の送信チェック
+   * 全ての期待結果が判定された場合に通知を送信
+   */
+  private async checkAndSendCompletionNotification(
+    executionId: string,
+    testSuite: { name: string; projectId: string },
+    judgedByUserId?: string
+  ) {
+    // 実行データを取得して実行者IDを確認
+    const executionData = await prisma.execution.findUnique({
+      where: { id: executionId },
+      select: { executedByUserId: true },
+    });
+
+    if (!executionData?.executedByUserId) {
+      return; // 実行者がいない場合は通知しない
+    }
+
+    // 判定者と実行者が同じ場合は通知しない
+    if (executionData.executedByUserId === judgedByUserId) {
+      return;
+    }
+
+    // 全ての期待結果を取得
+    const allResults = await prisma.executionExpectedResult.findMany({
+      where: { executionId },
+      select: { status: true },
+    });
+
+    // 全て判定済みかチェック（PENDINGが残っていない）
+    const pendingCount = allResults.filter((r) => r.status === 'PENDING').length;
+    if (pendingCount > 0) {
+      return; // まだ未判定がある
+    }
+
+    // 失敗があるかチェック
+    const failedCount = allResults.filter((r) => r.status === 'FAIL').length;
+    const hasFailure = failedCount > 0;
+
+    // プロジェクト情報を取得
+    const project = await prisma.project.findUnique({
+      where: { id: testSuite.projectId },
+      select: { organizationId: true },
+    });
+
+    if (hasFailure) {
+      await notificationService.send({
+        userId: executionData.executedByUserId,
+        type: 'TEST_FAILED',
+        title: 'テスト実行が失敗しました',
+        body: `「${testSuite.name}」のテスト実行で${failedCount}件の失敗がありました`,
+        data: { executionId, testSuiteName: testSuite.name, failedCount, totalCount: allResults.length },
+        organizationId: project?.organizationId ?? undefined,
+      });
+    } else {
+      await notificationService.send({
+        userId: executionData.executedByUserId,
+        type: 'TEST_COMPLETED',
+        title: 'テスト実行が完了しました',
+        body: `「${testSuite.name}」のテスト実行が完了しました（${allResults.length}件全て成功）`,
+        data: { executionId, testSuiteName: testSuite.name, totalCount: allResults.length },
+        organizationId: project?.organizationId ?? undefined,
+      });
+    }
   }
 
   /**

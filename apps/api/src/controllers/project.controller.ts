@@ -129,7 +129,7 @@ export class ProjectController {
     try {
       const { projectId } = req.params;
       const data = addMemberSchema.parse(req.body);
-      const member = await this.projectService.addMember(projectId, data.userId, data.role);
+      const member = await this.projectService.addMember(projectId, data.userId, data.role, req.user!.id);
 
       res.status(201).json({ member });
     } catch (error) {
