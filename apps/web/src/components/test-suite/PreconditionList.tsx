@@ -31,12 +31,14 @@ export function PreconditionList({
     queryKey: ['test-suite-preconditions', testSuiteId],
     queryFn: async () => {
       const response = await testSuitesApi.getPreconditions(testSuiteId);
-      // orderKeyでソート
-      return response.preconditions.sort((a, b) => a.orderKey.localeCompare(b.orderKey));
+      // 防御的にnullチェックしてorderKeyでソート
+      const items = response?.preconditions ?? [];
+      return items.sort((a, b) => a.orderKey.localeCompare(b.orderKey));
     },
   });
 
-  const preconditions = data || [];
+  // キャッシュに古い形式のデータがある場合に備えて、配列であることを保証
+  const preconditions = Array.isArray(data) ? data : [];
 
   if (isLoading) {
     return (

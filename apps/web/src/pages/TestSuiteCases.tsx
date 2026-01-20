@@ -122,13 +122,18 @@ export function TestSuiteCasesPage() {
   const suite = suiteData?.testSuite;
 
   // 前提条件を取得（編集モード用）
+  // PreconditionList.tsx と同じクエリキー・データ形式を使用
   const { data: preconditionsData } = useQuery({
     queryKey: ['test-suite-preconditions', testSuiteId],
-    queryFn: () => testSuitesApi.getPreconditions(testSuiteId!),
+    queryFn: async () => {
+      const response = await testSuitesApi.getPreconditions(testSuiteId!);
+      const items = response?.preconditions ?? [];
+      return items.sort((a, b) => a.orderKey.localeCompare(b.orderKey));
+    },
     enabled: !!testSuiteId,
   });
 
-  const preconditions = preconditionsData?.preconditions || [];
+  const preconditions = Array.isArray(preconditionsData) ? preconditionsData : [];
 
   // プロジェクトメンバー情報を取得して権限を判定
   const { data: membersData } = useQuery({
