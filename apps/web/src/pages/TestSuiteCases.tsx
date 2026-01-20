@@ -5,6 +5,8 @@ import { Calendar } from 'lucide-react';
 import { testSuitesApi, projectsApi, labelsApi, type TestCase, type TestSuite, type ProjectMemberRole, type ReviewCommentWithReplies, type Label } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { usePageSidebar } from '../components/Layout';
+import { useTestSuiteRealtime } from '../hooks/useTestSuiteRealtime';
+import { useTestCaseRealtime } from '../hooks/useTestCaseRealtime';
 import { toast } from '../stores/toast';
 import { TestSuiteHeader, type TabType, type TestCaseTabType } from '../components/test-suite/TestSuiteHeader';
 import { TestCaseSidebar } from '../components/test-suite/TestCaseSidebar';
@@ -51,6 +53,10 @@ export function TestSuiteCasesPage() {
 
   // URLクエリパラメータからテストケースタブを取得
   const testCaseTab = (searchParams.get('testCaseTab') as TestCaseTabType) || 'overview';
+
+  // WebSocketリアルタイム更新を有効化
+  useTestSuiteRealtime(testSuiteId);
+  useTestCaseRealtime(selectedTestCaseId ?? undefined);
 
   // タブ変更ハンドラ
   const handleTabChange = useCallback((tab: TabType) => {

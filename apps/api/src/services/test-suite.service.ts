@@ -3,6 +3,7 @@ import { NotFoundError, BadRequestError, ConflictError, type TestSuiteChangeDeta
 import { TestSuiteRepository } from '../repositories/test-suite.repository.js';
 import { TestCaseRepository, type TestCaseSearchOptions } from '../repositories/test-case.repository.js';
 import { publishDashboardUpdated } from '../lib/redis-publisher.js';
+import { publishTestSuiteUpdated } from '../lib/events.js';
 
 /**
  * テストスイートのスナップショット型（基本情報）
@@ -291,6 +292,19 @@ export class TestSuiteService {
       },
     });
 
+    // テストスイート更新イベント発行（エラー時も処理継続）
+    try {
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      await publishTestSuiteUpdated(
+        testSuiteId,
+        testSuite.projectId,
+        [{ field: 'precondition:add', oldValue: null, newValue: precondition.id }],
+        { type: 'user', id: userId, name: user?.name || 'Unknown' }
+      );
+    } catch (error) {
+      console.error('イベント発行エラー:', error);
+    }
+
     return precondition;
   }
 
@@ -340,10 +354,25 @@ export class TestSuiteService {
       },
     });
 
-    return prisma.testSuitePrecondition.update({
+    const result = await prisma.testSuitePrecondition.update({
       where: { id: preconditionId },
       data: { content: data.content },
     });
+
+    // テストスイート更新イベント発行（エラー時も処理継続）
+    try {
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      await publishTestSuiteUpdated(
+        testSuiteId,
+        testSuite.projectId,
+        [{ field: 'precondition:update', oldValue: precondition.content, newValue: data.content }],
+        { type: 'user', id: userId, name: user?.name || 'Unknown' }
+      );
+    } catch (error) {
+      console.error('イベント発行エラー:', error);
+    }
+
+    return result;
   }
 
   /**
@@ -405,6 +434,19 @@ export class TestSuiteService {
         });
       }
     });
+
+    // テストスイート更新イベント発行（エラー時も処理継続）
+    try {
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      await publishTestSuiteUpdated(
+        testSuiteId,
+        testSuite.projectId,
+        [{ field: 'precondition:delete', oldValue: preconditionId, newValue: null }],
+        { type: 'user', id: userId, name: user?.name || 'Unknown' }
+      );
+    } catch (error) {
+      console.error('イベント発行エラー:', error);
+    }
   }
 
   /**
@@ -476,6 +518,19 @@ export class TestSuiteService {
         })
       )
     );
+
+    // テストスイート更新イベント発行（エラー時も処理継続）
+    try {
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      await publishTestSuiteUpdated(
+        testSuiteId,
+        testSuite.projectId,
+        [{ field: 'precondition:reorder', oldValue: preconditions.map((p) => p.id), newValue: preconditionIds }],
+        { type: 'user', id: userId, name: user?.name || 'Unknown' }
+      );
+    } catch (error) {
+      console.error('イベント発行エラー:', error);
+    }
 
     // 更新後の前提条件一覧を返す
     return prisma.testSuitePrecondition.findMany({
@@ -898,6 +953,19 @@ export class TestSuiteService {
         )
       );
     });
+
+    // テストスイート更新イベント発行（エラー時も処理継続）
+    try {
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      await publishTestSuiteUpdated(
+        testSuiteId,
+        testSuite.projectId,
+        [{ field: 'testCases:reorder', oldValue: existingIds, newValue: testCaseIds }],
+        { type: 'user', id: userId, name: user?.name || 'Unknown' }
+      );
+    } catch (error) {
+      console.error('イベント発行エラー:', error);
+    }
 
     // 更新後のテストケース一覧を返却
     return prisma.testCase.findMany({
