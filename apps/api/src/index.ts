@@ -3,6 +3,7 @@ import { env } from './config/env.js';
 import { prisma } from '@agentest/db';
 import { startLockCleanupJob, stopLockCleanupJob } from './jobs/lock-cleanup.job.js';
 import { closeRedisPublisher } from './lib/redis-publisher.js';
+import { closeEventsPublisher } from './lib/events.js';
 
 /**
  * サーバー起動
@@ -43,6 +44,13 @@ async function main() {
         console.log('Redis Publisher接続を終了しました');
       } catch (error) {
         console.error('Redis Publisher切断エラー:', error);
+      }
+
+      try {
+        await closeEventsPublisher();
+        console.log('Redis Events Publisher接続を終了しました');
+      } catch (error) {
+        console.error('Redis Events Publisher切断エラー:', error);
       }
 
       try {
