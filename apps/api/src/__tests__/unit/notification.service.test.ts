@@ -22,21 +22,25 @@ vi.mock('../../repositories/notification.repository.js', () => ({
   NotificationRepository: vi.fn().mockImplementation(() => mockNotificationRepo),
 }));
 
+const mockEmailService = vi.hoisted(() => ({
+  send: vi.fn(),
+}));
+
 vi.mock('../../services/email.service.js', () => ({
-  emailService: {
-    send: vi.fn(),
-  },
+  emailService: mockEmailService,
 }));
 
 vi.mock('../../lib/redis-publisher.js', () => ({
   publishEvent: mockPublishEvent,
 }));
 
+const mockPrismaUser = vi.hoisted(() => ({
+  findUnique: vi.fn(),
+}));
+
 vi.mock('@agentest/db', () => ({
   prisma: {
-    user: {
-      findUnique: vi.fn(),
-    },
+    user: mockPrismaUser,
   },
 }));
 
@@ -187,6 +191,136 @@ describe('NotificationService', () => {
         { emailEnabled: false }
       );
       expect(result).toEqual(mockPreference);
+    });
+  });
+
+  describe('send', () => {
+    const baseSendParams = {
+      userId: 'user-1',
+      type: 'ORG_INVITATION' as const,
+      title: 'テスト通知',
+      body: 'テスト本文',
+    };
+
+    beforeEach(() => {
+      // デフォルトのモック設定
+      mockNotificationRepo.getPreference.mockResolvedValue(null); // デフォルト設定を使用
+      mockNotificationRepo.getOrganizationSetting.mockResolvedValue(null);
+      mockNotificationRepo.create.mockResolvedValue({
+        id: 'notif-1',
+        ...baseSendParams,
+        createdAt: new Date(),
+      });
+      mockNotificationRepo.countUnread.mockResolvedValue(1);
+      mockPrismaUser.findUnique.mockResolvedValue({
+        email: 'user@example.com',
+        name: 'Test User',
+      });
+      mockEmailService.send.mockResolvedValue(undefined);
+      mockPublishEvent.mockResolvedValue(undefined);
+    });
+
+    it('通知を送信できる（アプリ内通知とメール）', async () => {
+      await service.send(baseSendParams);
+
+      // アプリ内通知が作成される
+      expect(mockNotificationRepo.create).toHaveBeenCalledWith({
+        userId: 'user-1',
+        type: 'ORG_INVITATION',
+        title: 'テスト通知',
+        body: 'テスト本文',
+        data: undefined,
+      });
+
+      // WebSocket通知が発行される
+      expect(mockPublishEvent).toHaveBeenCalled();
+
+      // メールが送信される
+      expect(mockEmailService.send).toHaveBeenCalled();
+    });
+
+    it('ユーザー設定でアプリ内通知が無効の場合、通知を作成しない', async () => {
+      mockNotificationRepo.getPreference.mockResolvedValue({
+        inAppEnabled: false,
+        emailEnabled: true,
+      });
+
+      await service.send(baseSendParams);
+
+      expect(mockNotificationRepo.create).not.toHaveBeenCalled();
+      expect(mockEmailService.send).toHaveBeenCalled();
+    });
+
+    it('ユーザー設定でメール通知が無効の場合、メールを送信しない', async () => {
+      mockNotificationRepo.getPreference.mockResolvedValue({
+        inAppEnabled: true,
+        emailEnabled: false,
+      });
+
+      await service.send(baseSendParams);
+
+      expect(mockNotificationRepo.create).toHaveBeenCalled();
+      expect(mockEmailService.send).not.toHaveBeenCalled();
+    });
+
+    it('組織設定でアプリ内通知が無効の場合、ユーザー設定に関わらず通知を作成しない', async () => {
+      mockNotificationRepo.getPreference.mockResolvedValue({
+        inAppEnabled: true,
+        emailEnabled: true,
+      });
+      mockNotificationRepo.getOrganizationSetting.mockResolvedValue({
+        inAppEnabled: false,
+        emailEnabled: true,
+      });
+
+      await service.send({ ...baseSendParams, organizationId: 'org-1' });
+
+      expect(mockNotificationRepo.create).not.toHaveBeenCalled();
+      expect(mockEmailService.send).toHaveBeenCalled();
+    });
+
+    it('組織設定でメール通知が無効の場合、ユーザー設定に関わらずメールを送信しない', async () => {
+      mockNotificationRepo.getPreference.mockResolvedValue({
+        inAppEnabled: true,
+        emailEnabled: true,
+      });
+      mockNotificationRepo.getOrganizationSetting.mockResolvedValue({
+        inAppEnabled: true,
+        emailEnabled: false,
+      });
+
+      await service.send({ ...baseSendParams, organizationId: 'org-1' });
+
+      expect(mockNotificationRepo.create).toHaveBeenCalled();
+      expect(mockEmailService.send).not.toHaveBeenCalled();
+    });
+
+    it('メール送信に失敗してもアプリ内通知は成功する', async () => {
+      mockEmailService.send.mockRejectedValue(new Error('SMTP error'));
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+      // エラーが投げられないことを確認
+      await expect(service.send(baseSendParams)).resolves.not.toThrow();
+
+      // アプリ内通知は作成される
+      expect(mockNotificationRepo.create).toHaveBeenCalled();
+
+      // エラーがログに記録される
+      expect(consoleSpy).toHaveBeenCalledWith(
+        'メール通知の送信に失敗しました:',
+        expect.any(Error)
+      );
+
+      consoleSpy.mockRestore();
+    });
+
+    it('ユーザーが見つからない場合、メールを送信しない', async () => {
+      mockPrismaUser.findUnique.mockResolvedValue(null);
+
+      await service.send(baseSendParams);
+
+      expect(mockNotificationRepo.create).toHaveBeenCalled();
+      expect(mockEmailService.send).not.toHaveBeenCalled();
     });
   });
 });
