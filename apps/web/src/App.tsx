@@ -17,6 +17,7 @@ import { OrganizationSettingsPage } from './pages/OrganizationSettings';
 import { ProjectSettingsPage } from './pages/ProjectSettings';
 import { InvitationAcceptPage } from './pages/InvitationAccept';
 import { OAuthConsentPage } from './pages/OAuthConsent';
+import NotificationsPage from './pages/Notifications';
 
 /**
  * 認証が必要なルートをラップするコンポーネント
@@ -79,6 +80,8 @@ export function App() {
             <Route path="test-suites/:testSuiteId" element={<TestSuiteCasesPage />} />
             <Route path="executions/:executionId" element={<ExecutionPage />} />
             <Route path="settings" element={<SettingsPage />} />
+            <Route path="settings/notifications" element={<SettingsPage />} />
+            <Route path="notifications" element={<NotificationsPage />} />
             <Route path="organizations" element={<OrganizationsPage />} />
             <Route path="organizations/:organizationId/settings" element={<OrganizationSettingsPage />} />
           </Route>

@@ -200,6 +200,20 @@ Authorization: Bearer <access_token>
 
 → [編集ロック API 詳細](./edit-locks.md)
 
+### 通知
+
+| メソッド | パス | 説明 |
+|---------|------|------|
+| GET | `/notifications` | 通知一覧取得 |
+| GET | `/notifications/unread-count` | 未読数取得 |
+| PATCH | `/notifications/:id/read` | 既読にする |
+| POST | `/notifications/mark-all-read` | 全て既読にする |
+| DELETE | `/notifications/:id` | 通知を削除 |
+| GET | `/notifications/preferences` | 通知設定取得 |
+| PATCH | `/notifications/preferences/:type` | 通知設定更新 |
+
+→ [通知 API 詳細](./notifications.md)
+
 ## レスポンス形式
 
 ### 成功

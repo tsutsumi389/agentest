@@ -5,7 +5,6 @@ import { prisma } from '@agentest/db';
 import {
   createTestUser,
   createTestProject,
-  createTestProjectMember,
   createTestSuite,
   createTestCase,
   createTestCasePrecondition,

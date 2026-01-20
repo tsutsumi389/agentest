@@ -9,6 +9,7 @@ import {
 import { AgentestLogo } from '../ui/AgentestLogo';
 import { useAuthStore } from '../../stores/auth';
 import { useCurrentProject } from '../../hooks/useCurrentProject';
+import { NotificationCenter } from '../notification';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -46,8 +47,11 @@ export function Header({ onMenuClick }: HeaderProps) {
           </div>
         </div>
 
-        {/* 右: ユーザードロップダウン */}
-        <UserDropdown />
+        {/* 右: 通知 + ユーザードロップダウン */}
+        <div className="flex items-center gap-2">
+          <NotificationCenter />
+          <UserDropdown />
+        </div>
       </div>
     </header>
   );

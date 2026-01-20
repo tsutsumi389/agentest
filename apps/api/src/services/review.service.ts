@@ -8,6 +8,7 @@ import {
 import { NotFoundError, AuthorizationError, BadRequestError } from '@agentest/shared';
 import { ReviewRepository, type ReviewSearchOptions } from '../repositories/review.repository.js';
 import { authorizationService } from './authorization.service.js';
+import { notificationService } from './notification.service.js';
 
 /**
  * レビュー作成データ
@@ -256,7 +257,7 @@ export class ReviewService {
     // 対象アイテムの存在確認
     await this.validateTargetItem(data.targetType, data.targetId, data.targetField, data.targetItemId);
 
-    return this.reviewRepo.addComment({
+    const comment = await this.reviewRepo.addComment({
       reviewId,
       targetType: data.targetType,
       targetId: data.targetId,
@@ -266,6 +267,29 @@ export class ReviewService {
       authorUserId: userId,
       content: data.content,
     });
+
+    // レビュー作成者（自分以外）に通知を送信
+    if (review.authorUserId && review.authorUserId !== userId) {
+      const commenter = await prisma.user.findUnique({
+        where: { id: userId },
+        select: { name: true },
+      });
+      const testSuite = await prisma.testSuite.findUnique({
+        where: { id: review.testSuiteId },
+        select: { name: true, project: { select: { id: true, organizationId: true } } },
+      });
+
+      await notificationService.send({
+        userId: review.authorUserId,
+        type: 'REVIEW_COMMENT',
+        title: 'レビューにコメントが追加されました',
+        body: `${commenter?.name || 'メンバー'}さんが「${testSuite?.name || 'テストスイート'}」のレビューにコメントを追加しました`,
+        data: { reviewId, testSuiteId: review.testSuiteId, commentId: comment.id },
+        organizationId: testSuite?.project?.organizationId ?? undefined,
+      });
+    }
+
+    return comment;
   }
 
   /**

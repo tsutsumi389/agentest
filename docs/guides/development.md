@@ -60,6 +60,32 @@ docker compose exec dev pnpm -r build
 - `apps/api` - tsx watch
 - `apps/ws` - tsx watch
 
+## メール送信テスト（Mailpit）
+
+開発環境では Mailpit を使用してメール送信をテストできます。
+
+### アクセス
+
+| サービス | URL |
+|---------|-----|
+| Web UI | http://localhost:8025 |
+| SMTP | localhost:1025 |
+
+### 環境変数（apps/api）
+
+```env
+SMTP_HOST=mailpit
+SMTP_PORT=1025
+SMTP_FROM=noreply@agentest.local
+```
+
+### 確認方法
+
+1. 通知トリガー（組織招待など）を実行
+2. http://localhost:8025 でメールを確認
+
+Mailpit は送信されたメールを全てキャプチャし、Web UI で確認できます。実際のメール送信は行われません。
+
 ## ブランチ戦略
 
 ```

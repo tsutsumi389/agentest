@@ -188,6 +188,8 @@ services:
       NODE_ENV: development
       VITE_API_URL: ${VITE_API_URL:-http://localhost:3001}
       VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:3002}
+      # Docker内部でのAPIプロキシ先
+      VITE_API_PROXY_TARGET: http://api:3001
     ports:
       - "${WEB_EXTERNAL_PORT:-3000}:3000"
     restart: "no"
@@ -222,6 +224,25 @@ services:
       timeout: 5s
       retries: 10
       start_period: 30s
+
+  # ===========================================
+  # Mailpit（開発・ステージング用メールサーバー）
+  # ===========================================
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: agentest-mailpit
+    restart: unless-stopped
+    ports:
+      - "${MAILPIT_WEB_PORT:-8025}:8025"   # Web UI
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"  # SMTP
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8025/api/v1/info"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 volumes:
   pnpm_store:

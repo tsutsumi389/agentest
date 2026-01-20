@@ -54,6 +54,14 @@ const envSchema = z.object({
   S3_SECRET_KEY: z.string().optional(),
   S3_BUCKET: z.string().default('agentest'),
   S3_REGION: z.string().default('us-east-1'),
+
+  // SMTP（メール送信）
+  SMTP_HOST: z.string().default('mailpit'),       // dev/staging: mailpit
+  SMTP_PORT: z.coerce.number().default(1025),     // dev/staging: 1025
+  SMTP_USER: z.string().optional(),               // mailpitでは不要
+  SMTP_PASS: z.string().optional(),               // mailpitでは不要
+  SMTP_FROM: z.string().email().default('noreply@agentest.local'),
+  SMTP_SECURE: z.coerce.boolean().default(false), // 本番: true
 });
 
 // 環境変数を検証
