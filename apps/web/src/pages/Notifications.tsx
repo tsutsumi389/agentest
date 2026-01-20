@@ -1,8 +1,11 @@
 import { useEffect } from 'react';
 import { Link } from 'react-router';
-import { Bell, Check, Settings, ArrowLeft } from 'lucide-react';
+import { Bell, Check, Settings, ArrowLeft, Loader2 } from 'lucide-react';
 import { useNotifications } from '../hooks/useNotifications';
 import { NotificationItem } from '../components/notification';
+
+const INITIAL_LIMIT = 20;
+const LOAD_MORE_LIMIT = 20;
 
 /**
  * 通知一覧ページ
@@ -12,7 +15,10 @@ export default function Notifications() {
     notifications,
     unreadCount,
     isLoading,
+    isLoadingMore,
+    hasMore,
     fetchNotifications,
+    fetchMoreNotifications,
     markAsRead,
     markAllAsRead,
     deleteNotification,
@@ -20,8 +26,13 @@ export default function Notifications() {
 
   // ページ読み込み時に通知を取得
   useEffect(() => {
-    fetchNotifications({ limit: 50 });
+    fetchNotifications({ limit: INITIAL_LIMIT });
   }, [fetchNotifications]);
+
+  // もっと読み込む
+  const handleLoadMore = () => {
+    fetchMoreNotifications(LOAD_MORE_LIMIT);
+  };
 
   return (
     <div className="max-w-3xl mx-auto py-8 px-4">
@@ -76,16 +87,37 @@ export default function Notifications() {
             <p className="text-sm mt-1">新しい通知が届くとここに表示されます</p>
           </div>
         ) : (
-          <div className="divide-y divide-border">
-            {notifications.map((notification) => (
-              <NotificationItem
-                key={notification.id}
-                notification={notification}
-                onMarkAsRead={markAsRead}
-                onDelete={deleteNotification}
-              />
-            ))}
-          </div>
+          <>
+            <div className="divide-y divide-border">
+              {notifications.map((notification) => (
+                <NotificationItem
+                  key={notification.id}
+                  notification={notification}
+                  onMarkAsRead={markAsRead}
+                  onDelete={deleteNotification}
+                />
+              ))}
+            </div>
+            {/* もっと読み込む */}
+            {hasMore && notifications.length > 0 && (
+              <div className="p-4 border-t border-border">
+                <button
+                  onClick={handleLoadMore}
+                  disabled={isLoadingMore}
+                  className="w-full flex items-center justify-center gap-2 py-2 text-sm text-accent hover:bg-accent-subtle rounded transition-colors disabled:opacity-50"
+                >
+                  {isLoadingMore ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      読み込み中...
+                    </>
+                  ) : (
+                    'もっと読み込む'
+                  )}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

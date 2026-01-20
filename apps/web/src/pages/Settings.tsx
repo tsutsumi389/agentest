@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router';
+import { useSearchParams, useLocation } from 'react-router';
 import { User, Bell, Shield, Key, Loader2, Monitor, Smartphone, Tablet, X, AlertTriangle, Github, Link2, Unlink, Plus, Copy, Check, Trash2, Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { toast } from '../stores/toast';
@@ -11,13 +11,24 @@ type SettingsTab = 'profile' | 'notifications' | 'security' | 'api-tokens';
  * 設定ページ
  */
 export function SettingsPage() {
+  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const tabParam = searchParams.get('tab') as SettingsTab | null;
-  const [activeTab, setActiveTab] = useState<SettingsTab>(
-    tabParam && ['profile', 'notifications', 'security', 'api-tokens'].includes(tabParam)
-      ? tabParam
-      : 'profile'
-  );
+
+  // パス /settings/notifications からタブを判定
+  const getInitialTab = (): SettingsTab => {
+    // パスが /settings/notifications の場合は notifications タブ
+    if (location.pathname === '/settings/notifications') {
+      return 'notifications';
+    }
+    // クエリパラメータからタブを取得
+    if (tabParam && ['profile', 'notifications', 'security', 'api-tokens'].includes(tabParam)) {
+      return tabParam;
+    }
+    return 'profile';
+  };
+
+  const [activeTab, setActiveTab] = useState<SettingsTab>(getInitialTab());
 
   // OAuth連携結果のハンドリング
   useEffect(() => {

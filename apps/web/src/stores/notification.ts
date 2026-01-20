@@ -12,10 +12,13 @@ interface NotificationState {
   unreadCount: number;
   preferences: NotificationPreference[];
   isLoading: boolean;
+  isLoadingMore: boolean;
+  hasMore: boolean;
   error: string | null;
 
   // アクション
   fetchNotifications: (params?: GetNotificationsParams) => Promise<void>;
+  fetchMoreNotifications: (limit?: number) => Promise<void>;
   fetchUnreadCount: () => Promise<void>;
   fetchPreferences: () => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
@@ -43,21 +46,52 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   unreadCount: 0,
   preferences: [],
   isLoading: false,
+  isLoadingMore: false,
+  hasMore: true,
   error: null,
 
   /**
-   * 通知一覧を取得
+   * 通知一覧を取得（リストを置き換え）
    */
   fetchNotifications: async (params?: GetNotificationsParams) => {
     try {
       set({ isLoading: true, error: null });
+      const limit = params?.limit ?? 20;
       const { notifications } = await notificationsApi.list(params);
-      set({ notifications, isLoading: false });
+      set({
+        notifications,
+        isLoading: false,
+        hasMore: notifications.length >= limit,
+      });
     } catch (error) {
       set({
         error: error instanceof Error ? error.message : '通知の取得に失敗しました',
         isLoading: false,
       });
+    }
+  },
+
+  /**
+   * 追加の通知を取得（リストに追加）
+   */
+  fetchMoreNotifications: async (limit = 20) => {
+    const { notifications: currentNotifications, isLoadingMore, hasMore } = get();
+    if (isLoadingMore || !hasMore) return;
+
+    try {
+      set({ isLoadingMore: true });
+      const { notifications: newNotifications } = await notificationsApi.list({
+        limit,
+        offset: currentNotifications.length,
+      });
+      set({
+        notifications: [...currentNotifications, ...newNotifications],
+        isLoadingMore: false,
+        hasMore: newNotifications.length >= limit,
+      });
+    } catch (error) {
+      console.error('追加通知の取得に失敗:', error);
+      set({ isLoadingMore: false });
     }
   },
 
@@ -180,6 +214,8 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       unreadCount: 0,
       preferences: [],
       isLoading: false,
+      isLoadingMore: false,
+      hasMore: true,
       error: null,
     });
   },

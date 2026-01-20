@@ -17,10 +17,13 @@ export function useNotifications() {
   const unreadCount = useNotificationStore((state) => state.unreadCount);
   const preferences = useNotificationStore((state) => state.preferences);
   const isLoading = useNotificationStore((state) => state.isLoading);
+  const isLoadingMore = useNotificationStore((state) => state.isLoadingMore);
+  const hasMore = useNotificationStore((state) => state.hasMore);
   const error = useNotificationStore((state) => state.error);
 
   // アクションは安定した参照なので一度だけ取得
   const fetchNotifications = useNotificationStore((state) => state.fetchNotifications);
+  const fetchMoreNotifications = useNotificationStore((state) => state.fetchMoreNotifications);
   const fetchUnreadCount = useNotificationStore((state) => state.fetchUnreadCount);
   const fetchPreferences = useNotificationStore((state) => state.fetchPreferences);
   const markAsRead = useNotificationStore((state) => state.markAsRead);
@@ -74,11 +77,14 @@ export function useNotifications() {
     unreadCount,
     preferences,
     isLoading,
+    isLoadingMore,
+    hasMore,
     error,
 
     // アクション
     initialize,
     fetchNotifications,
+    fetchMoreNotifications,
     fetchUnreadCount,
     fetchPreferences,
     markAsRead,

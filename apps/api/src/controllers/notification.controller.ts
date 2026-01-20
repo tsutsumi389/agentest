@@ -4,6 +4,8 @@ import { NotificationType } from '@agentest/db';
 import { NotificationService } from '../services/notification.service.js';
 
 // NotificationTypeの値を配列として取得
+// 注意: Prismaが生成するenumなので空になることはないが、
+// TypeScriptの型チェックのため非空配列としてキャストしている
 const notificationTypes = Object.values(NotificationType) as [string, ...string[]];
 
 // バリデーションスキーマ

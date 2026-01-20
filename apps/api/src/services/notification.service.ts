@@ -27,26 +27,29 @@ export class NotificationService {
   /**
    * 通知を送信
    * ユーザー設定と組織設定をチェックし、アプリ内通知とメール通知を行う
+   * 組織設定が無効の場合は、ユーザー設定に関わらず通知をスキップ
    */
   async send(params: SendNotificationParams): Promise<void> {
     const { userId, type, title, body, data, organizationId } = params;
 
     // ユーザーの通知設定を取得
     const userPreference = await this.notificationRepo.getPreference(userId, type);
-    const inAppEnabled = userPreference?.inAppEnabled ?? true;
-    const emailEnabled = userPreference?.emailEnabled ?? true;
+    let inAppEnabled = userPreference?.inAppEnabled ?? true;
+    let emailEnabled = userPreference?.emailEnabled ?? true;
 
-    // 組織設定をチェック（該当時）
+    // 組織設定をチェック（組織レベルで無効化されている場合はユーザー設定を上書き）
     if (organizationId) {
       const orgSetting = await this.notificationRepo.getOrganizationSetting(
         organizationId,
         type
       );
-      // 組織設定で無効になっている場合はスキップ
       if (orgSetting) {
-        if (!orgSetting.inAppEnabled && inAppEnabled) {
-          // 組織設定がfalseならアプリ内通知を無効化
-          // ただし、ユーザー設定が優先されるため、これはオプション
+        // 組織設定がfalseの場合、ユーザー設定に関わらず無効化
+        if (!orgSetting.inAppEnabled) {
+          inAppEnabled = false;
+        }
+        if (!orgSetting.emailEnabled) {
+          emailEnabled = false;
         }
       }
     }
@@ -73,9 +76,14 @@ export class NotificationService {
       });
     }
 
-    // メール通知
+    // メール通知（失敗してもアプリ内通知に影響しないようにする）
     if (emailEnabled) {
-      await this.sendEmailNotification(userId, type, title, body, data);
+      try {
+        await this.sendEmailNotification(userId, type, title, body, data);
+      } catch (error) {
+        // メール送信失敗はログに記録するが、アプリ内通知は既に完了しているため例外を投げない
+        console.error('メール通知の送信に失敗しました:', error);
+      }
     }
   }
 

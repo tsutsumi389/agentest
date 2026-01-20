@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router';
-import { Bell, Check, Settings } from 'lucide-react';
+import { Bell, Check, Settings, AlertCircle, RefreshCw } from 'lucide-react';
 import { useNotifications } from '../../hooks/useNotifications';
 import { NotificationItem } from './NotificationItem';
 
@@ -12,6 +12,7 @@ export function NotificationCenter() {
     notifications,
     unreadCount,
     isLoading,
+    error,
     initialize,
     markAsRead,
     markAllAsRead,
@@ -117,6 +118,18 @@ export function NotificationCenter() {
             {isLoading ? (
               <div className="flex items-center justify-center py-8">
                 <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : error ? (
+              <div className="flex flex-col items-center justify-center py-8 text-foreground-muted">
+                <AlertCircle className="w-8 h-8 mb-2 text-danger opacity-70" />
+                <p className="text-sm text-danger mb-2">通知の取得に失敗しました</p>
+                <button
+                  onClick={() => initialize()}
+                  className="flex items-center gap-1 text-xs text-accent hover:text-accent-hover transition-colors"
+                >
+                  <RefreshCw className="w-3 h-3" />
+                  再試行
+                </button>
               </div>
             ) : notifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-8 text-foreground-muted">
