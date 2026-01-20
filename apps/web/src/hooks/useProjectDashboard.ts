@@ -45,7 +45,8 @@ export function useProjectDashboard(options: UseProjectDashboardOptions): UsePro
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // labelIdsの依存を安定化（配列の参照が変わらないようにする）
-  const stableLabelIds = useMemo(() => labelIds, [labelIds.join(',')]);
+  const labelIdsKey = labelIds.join(',');
+  const stableLabelIds = useMemo(() => labelIds, [labelIdsKey]);
 
   /**
    * ダッシュボードデータを取得

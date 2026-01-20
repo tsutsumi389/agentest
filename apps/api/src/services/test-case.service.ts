@@ -1434,7 +1434,7 @@ export class TestCaseService {
 
     // 復元と履歴保存をトランザクションで実行
     const groupId = crypto.randomUUID();
-    return prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       // 履歴を保存
       await tx.testCaseHistory.create({
         data: {
@@ -1449,6 +1449,11 @@ export class TestCaseService {
       // リポジトリを使用して復元
       return this.testCaseRepo.restore(testCaseId);
     });
+
+    // ダッシュボード更新イベント発行
+    await publishDashboardUpdated(testSuite.projectId, 'test_case', testCaseId);
+
+    return result;
   }
 
   /**

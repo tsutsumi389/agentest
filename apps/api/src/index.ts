@@ -2,6 +2,7 @@ import { createApp } from './app.js';
 import { env } from './config/env.js';
 import { prisma } from '@agentest/db';
 import { startLockCleanupJob, stopLockCleanupJob } from './jobs/lock-cleanup.job.js';
+import { closeRedisPublisher } from './lib/redis-publisher.js';
 
 /**
  * サーバー起動
@@ -36,6 +37,13 @@ async function main() {
 
     server.close(async () => {
       console.log('HTTPサーバーを終了しました');
+
+      try {
+        await closeRedisPublisher();
+        console.log('Redis Publisher接続を終了しました');
+      } catch (error) {
+        console.error('Redis Publisher切断エラー:', error);
+      }
 
       try {
         await prisma.$disconnect();
