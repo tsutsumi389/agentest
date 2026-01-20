@@ -8,6 +8,7 @@ import {
   type TestCaseChangeDetail,
 } from '@agentest/shared';
 import { TestCaseRepository } from '../repositories/test-case.repository.js';
+import { publishDashboardUpdated } from '../lib/redis-publisher.js';
 
 // orderKey関連の定数
 const ORDER_KEY_INITIAL = '00001';
@@ -142,7 +143,7 @@ export class TestCaseService {
 
     // 子エンティティがある場合はトランザクションで一括作成
     if (data.preconditions?.length || data.steps?.length || data.expectedResults?.length) {
-      return prisma.$transaction(async (tx) => {
+      const result = await prisma.$transaction(async (tx) => {
         const testCase = await tx.testCase.create({
           data: {
             testSuiteId: data.testSuiteId,
@@ -196,9 +197,14 @@ export class TestCaseService {
           },
         });
       });
+
+      // ダッシュボード更新イベント発行
+      await publishDashboardUpdated(testSuite.project.id, 'test_case', result?.id);
+
+      return result;
     }
 
-    return prisma.testCase.create({
+    const newTestCase = await prisma.testCase.create({
       data: {
         testSuiteId: data.testSuiteId,
         title: data.title,
@@ -209,6 +215,11 @@ export class TestCaseService {
         createdByUserId: userId,
       },
     });
+
+    // ダッシュボード更新イベント発行
+    await publishDashboardUpdated(testSuite.project.id, 'test_case', newTestCase.id);
+
+    return newTestCase;
   }
 
   /**
@@ -281,7 +292,7 @@ export class TestCaseService {
 
     // 履歴保存と更新を同じトランザクションで実行
     const effectiveGroupId = groupId ?? crypto.randomUUID();
-    return prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       await tx.testCaseHistory.create({
         data: {
           testCaseId,
@@ -297,6 +308,11 @@ export class TestCaseService {
         data,
       });
     });
+
+    // ダッシュボード更新イベント発行
+    await publishDashboardUpdated(testCase.testSuite.projectId, 'test_case', testCaseId);
+
+    return result;
   }
 
   /**
@@ -307,7 +323,7 @@ export class TestCaseService {
 
     // 履歴保存と論理削除を同じトランザクションで実行
     const groupId = crypto.randomUUID();
-    return prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       await tx.testCaseHistory.create({
         data: {
           testCaseId,
@@ -323,6 +339,11 @@ export class TestCaseService {
         data: { deletedAt: new Date() },
       });
     });
+
+    // ダッシュボード更新イベント発行
+    await publishDashboardUpdated(testCase.testSuite.projectId, 'test_case', testCaseId);
+
+    return result;
   }
 
   /**
@@ -1413,7 +1434,7 @@ export class TestCaseService {
 
     // 復元と履歴保存をトランザクションで実行
     const groupId = crypto.randomUUID();
-    return prisma.$transaction(async (tx) => {
+    const result = await prisma.$transaction(async (tx) => {
       // 履歴を保存
       await tx.testCaseHistory.create({
         data: {
@@ -1428,6 +1449,11 @@ export class TestCaseService {
       // リポジトリを使用して復元
       return this.testCaseRepo.restore(testCaseId);
     });
+
+    // ダッシュボード更新イベント発行
+    await publishDashboardUpdated(testSuite.projectId, 'test_case', testCaseId);
+
+    return result;
   }
 
   /**

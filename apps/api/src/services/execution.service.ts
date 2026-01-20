@@ -4,6 +4,7 @@ import { createStorageClient } from '@agentest/storage';
 import { v4 as uuidv4 } from 'uuid';
 import { ExecutionRepository } from '../repositories/execution.repository.js';
 import { MAX_EVIDENCES_PER_RESULT } from '../config/upload.js';
+import { publishDashboardUpdated } from '../lib/redis-publisher.js';
 
 /**
  * 実施者情報のコンテキスト
@@ -64,7 +65,7 @@ export class ExecutionService {
     data: { status: PreconditionStatus; note?: string },
     executor?: ExecutorContext
   ) {
-    await this.findById(executionId);
+    const execution = await this.findById(executionId);
 
     const result = await prisma.executionPreconditionResult.findFirst({
       where: {
@@ -77,7 +78,7 @@ export class ExecutionService {
       throw new NotFoundError('ExecutionPreconditionResult', preconditionResultId);
     }
 
-    return prisma.executionPreconditionResult.update({
+    const updated = await prisma.executionPreconditionResult.update({
       where: { id: preconditionResultId },
       data: {
         status: data.status,
@@ -93,6 +94,11 @@ export class ExecutionService {
         },
       },
     });
+
+    // ダッシュボード更新イベント発行
+    await publishDashboardUpdated(execution.testSuite.projectId, 'execution', executionId);
+
+    return updated;
   }
 
   /**
@@ -104,7 +110,7 @@ export class ExecutionService {
     data: { status: StepStatus; note?: string },
     executor?: ExecutorContext
   ) {
-    await this.findById(executionId);
+    const execution = await this.findById(executionId);
 
     const result = await prisma.executionStepResult.findFirst({
       where: {
@@ -117,7 +123,7 @@ export class ExecutionService {
       throw new NotFoundError('ExecutionStepResult', stepResultId);
     }
 
-    return prisma.executionStepResult.update({
+    const updated = await prisma.executionStepResult.update({
       where: { id: stepResultId },
       data: {
         status: data.status,
@@ -133,6 +139,11 @@ export class ExecutionService {
         },
       },
     });
+
+    // ダッシュボード更新イベント発行
+    await publishDashboardUpdated(execution.testSuite.projectId, 'execution', executionId);
+
+    return updated;
   }
 
   /**
@@ -144,7 +155,7 @@ export class ExecutionService {
     data: { status: JudgmentStatus; note?: string },
     executor?: ExecutorContext
   ) {
-    await this.findById(executionId);
+    const execution = await this.findById(executionId);
 
     const result = await prisma.executionExpectedResult.findFirst({
       where: {
@@ -157,7 +168,7 @@ export class ExecutionService {
       throw new NotFoundError('ExecutionExpectedResult', expectedResultId);
     }
 
-    return prisma.executionExpectedResult.update({
+    const updated = await prisma.executionExpectedResult.update({
       where: { id: expectedResultId },
       data: {
         status: data.status,
@@ -173,6 +184,11 @@ export class ExecutionService {
         },
       },
     });
+
+    // ダッシュボード更新イベント発行
+    await publishDashboardUpdated(execution.testSuite.projectId, 'execution', executionId);
+
+    return updated;
   }
 
   /**

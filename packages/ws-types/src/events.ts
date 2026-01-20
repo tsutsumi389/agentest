@@ -319,6 +319,19 @@ export interface AgentSessionEndedEvent extends BaseEvent {
 export type AgentEvent = AgentSessionStartedEvent | AgentSessionEndedEvent;
 
 // ============================================
+// ダッシュボードイベント
+// ============================================
+
+export interface DashboardUpdatedEvent extends BaseEvent {
+  type: 'dashboard:updated';
+  projectId: string;
+  trigger: 'execution' | 'test_suite' | 'test_case' | 'review';
+  resourceId?: string;
+}
+
+export type DashboardEvent = DashboardUpdatedEvent;
+
+// ============================================
 // 統合型
 // ============================================
 
@@ -334,7 +347,8 @@ export type ServerEvent =
   | PresenceEvent
   | ReviewEvent
   | TestUpdateEvent
-  | AgentEvent;
+  | AgentEvent
+  | DashboardEvent;
 
 export type WebSocketMessage = ClientMessage | ServerMessage | ServerEvent;
 

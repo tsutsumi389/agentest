@@ -17,6 +17,7 @@
     "@agentest/db": "workspace:*",
     "@agentest/shared": "workspace:*",
     "@agentest/storage": "workspace:*",
+    "@agentest/ws-types": "workspace:*",
     "cookie-parser": "catalog:",
     "cors": "catalog:",
     "express": "catalog:",

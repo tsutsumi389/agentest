@@ -13,6 +13,7 @@
 | PDB-003 | テスト実行状況 | 失敗中・スキップ中・テスト未実施・テスト実行中のテストスイートを一覧表示 | 実装済 |
 | PDB-004 | 最近の活動 | 実行完了・テストケース更新・レビューをタイムラインで表示 | 実装済 |
 | PDB-005 | フィルター機能 | 環境・ラベルによるダッシュボードデータの絞り込み | 実装済 |
+| PDB-006 | リアルタイム更新 | WebSocketによるダッシュボードの自動更新 | 実装済 |
 
 ## 画面仕様
 
@@ -141,6 +142,55 @@ sequenceDiagram
     B->>F: ProjectDashboardStats
     F->>F: 各コンポーネントにデータを配布
 ```
+
+### リアルタイム更新フロー
+
+```mermaid
+sequenceDiagram
+    participant B as バックエンド
+    participant R as Redis Pub/Sub
+    participant WS as WebSocket Server
+    participant F as フロントエンド
+
+    B->>B: テストスイート/ケース/実行の操作
+    B->>R: dashboard:updated イベント発行
+    R->>WS: メッセージ配信
+    WS->>F: プロジェクトチャンネルに通知
+    F->>F: 500ms デバウンス
+    F->>B: GET /api/projects/:id/dashboard
+    B->>F: 最新のダッシュボードデータ
+    F->>F: UI 自動更新
+```
+
+## リアルタイム更新
+
+### 概要
+
+プロジェクトダッシュボードは WebSocket を通じてリアルタイムに更新される。テスト実行結果の変更、テストスイート・テストケースの追加・更新時に自動で画面が更新される。
+
+### WebSocket イベント
+
+| イベント | 説明 |
+|----------|------|
+| `dashboard:updated` | ダッシュボードデータの更新通知 |
+
+### トリガー種別
+
+| trigger | 発火タイミング |
+|---------|----------------|
+| `execution` | テスト実行開始、結果更新時 |
+| `test_suite` | テストスイート作成・更新・削除・復元時 |
+| `test_case` | テストケース作成・更新・削除・復元時 |
+| `review` | レビュー関連操作時 |
+
+### 更新の仕組み
+
+1. バックエンドでテストスイート/ケース/実行の操作が発生
+2. Redis Pub/Sub 経由で `dashboard:updated` イベントを発行
+3. WebSocket サーバーがプロジェクトチャンネルに配信
+4. フロントエンドの `useProjectDashboard` フックがイベントを受信
+5. 500ms のデバウンス後、ダッシュボード API をリフェッチ
+6. UI が自動更新
 
 ## データモデル
 
@@ -292,6 +342,7 @@ type RecentActivityType = 'execution' | 'testCaseUpdate' | 'review';
 
 | ファイル | 説明 |
 |----------|------|
+| `apps/web/src/hooks/useProjectDashboard.ts` | ダッシュボードデータ取得・WebSocket購読フック |
 | `apps/web/src/components/project/dashboard/DashboardFilters.tsx` | フィルター（環境・ラベル選択） |
 | `apps/web/src/components/project/dashboard/KpiSummaryCards.tsx` | KPIサマリーカード |
 | `apps/web/src/components/project/dashboard/ResultDistributionChart.tsx` | 実行結果分布ドーナツチャート |
@@ -303,7 +354,9 @@ type RecentActivityType = 'execution' | 'testCaseUpdate' | 'review';
 | ファイル | 説明 |
 |----------|------|
 | `apps/api/src/services/project-dashboard.service.ts` | ダッシュボードサービス |
+| `apps/api/src/lib/redis-publisher.ts` | Redis Pub/Sub イベント発行 |
 | `packages/shared/src/types/project-dashboard.ts` | 共有型定義 |
+| `packages/ws-types/src/events.ts` | DashboardUpdatedEvent 型定義 |
 
 ## 関連機能
 
