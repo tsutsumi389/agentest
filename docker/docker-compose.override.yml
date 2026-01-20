@@ -188,6 +188,8 @@ services:
       NODE_ENV: development
       VITE_API_URL: ${VITE_API_URL:-http://localhost:3001}
       VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:3002}
+      # Docker内部でのAPIプロキシ先
+      VITE_API_PROXY_TARGET: http://api:3001
     ports:
       - "${WEB_EXTERNAL_PORT:-3000}:3000"
     restart: "no"
