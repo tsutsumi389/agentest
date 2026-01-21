@@ -100,6 +100,15 @@ Authorization: Bearer <access_token>
 | PUT | `/organizations/:id` | 組織更新 |
 | DELETE | `/organizations/:id` | 組織削除 |
 
+### 監査ログ
+
+| メソッド | パス | 説明 |
+|---------|------|------|
+| GET | `/organizations/:organizationId/audit-logs` | 監査ログ一覧 |
+| GET | `/organizations/:organizationId/audit-logs/export` | 監査ログエクスポート |
+
+→ [監査ログ API 詳細](./audit-logs.md)
+
 ### プロジェクト
 
 | メソッド | パス | 説明 |
