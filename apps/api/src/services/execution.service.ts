@@ -231,9 +231,11 @@ export class ExecutionService {
       return; // まだ未判定がある
     }
 
-    // 失敗があるかチェック
-    const failedCount = allResults.filter((r) => r.status === 'FAIL').length;
-    const hasFailure = failedCount > 0;
+    // 内訳を計算
+    const passCount = allResults.filter((r) => r.status === 'PASS').length;
+    const failCount = allResults.filter((r) => r.status === 'FAIL').length;
+    const skippedCount = allResults.filter((r) => r.status === 'SKIPPED').length;
+    const totalCount = allResults.length;
 
     // プロジェクト情報を取得
     const project = await prisma.project.findUnique({
@@ -241,13 +243,16 @@ export class ExecutionService {
       select: { organizationId: true },
     });
 
-    if (hasFailure) {
+    // 通知本文を生成
+    const body = this.buildNotificationBody(testSuite.name, { passCount, failCount, skippedCount, totalCount });
+
+    if (failCount > 0) {
       await notificationService.send({
         userId: executionData.executedByUserId,
         type: 'TEST_FAILED',
         title: 'テスト実行が失敗しました',
-        body: `「${testSuite.name}」のテスト実行で${failedCount}件の失敗がありました`,
-        data: { executionId, testSuiteName: testSuite.name, failedCount, totalCount: allResults.length },
+        body,
+        data: { executionId, testSuiteName: testSuite.name, passCount, failCount, skippedCount, totalCount },
         organizationId: project?.organizationId ?? undefined,
       });
     } else {
@@ -255,11 +260,28 @@ export class ExecutionService {
         userId: executionData.executedByUserId,
         type: 'TEST_COMPLETED',
         title: 'テスト実行が完了しました',
-        body: `「${testSuite.name}」のテスト実行が完了しました（${allResults.length}件全て成功）`,
-        data: { executionId, testSuiteName: testSuite.name, totalCount: allResults.length },
+        body,
+        data: { executionId, testSuiteName: testSuite.name, passCount, failCount, skippedCount, totalCount },
         organizationId: project?.organizationId ?? undefined,
       });
     }
+  }
+
+  /**
+   * 通知本文を生成
+   */
+  private buildNotificationBody(
+    testSuiteName: string,
+    counts: { passCount: number; failCount: number; skippedCount: number; totalCount: number }
+  ): string {
+    const { passCount, failCount, skippedCount, totalCount } = counts;
+    const parts: string[] = [];
+
+    if (passCount > 0) parts.push(`成功: ${passCount}件`);
+    if (failCount > 0) parts.push(`失敗: ${failCount}件`);
+    if (skippedCount > 0) parts.push(`スキップ: ${skippedCount}件`);
+
+    return `「${testSuiteName}」のテスト実行が完了しました（${parts.join('、')}／合計${totalCount}件）`;
   }
 
   /**
