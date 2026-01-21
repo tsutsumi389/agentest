@@ -3,6 +3,7 @@ import {
   AuditLogRepository,
   AUDIT_LOG_DEFAULT_LIMIT,
   AUDIT_LOG_MAX_LIMIT,
+  AUDIT_LOG_EXPORT_MAX_LIMIT,
 } from '../../repositories/audit-log.repository.js';
 
 // Prisma のモック（vi.hoistedでホイスティング問題を回避）
@@ -367,6 +368,191 @@ describe('AuditLogRepository', () => {
         skip: 0,
         take: AUDIT_LOG_MAX_LIMIT,
       });
+    });
+  });
+
+  describe('findForExport', () => {
+    const mockLogsWithUser = [
+      {
+        id: 'log-1',
+        organizationId: 'org-1',
+        category: 'ORGANIZATION',
+        action: 'organization.update',
+        createdAt: new Date('2024-01-15'),
+        user: { id: 'user-1', email: 'user1@example.com', name: 'User 1' },
+      },
+      {
+        id: 'log-2',
+        organizationId: 'org-1',
+        category: 'MEMBER',
+        action: 'member.add',
+        createdAt: new Date('2024-01-10'),
+        user: { id: 'user-2', email: 'user2@example.com', name: 'User 2' },
+      },
+    ];
+
+    it('指定された組織の監査ログを取得する', async () => {
+      mockPrismaAuditLog.findMany.mockResolvedValue(mockLogsWithUser);
+
+      const result = await repository.findForExport('org-1');
+
+      expect(mockPrismaAuditLog.findMany).toHaveBeenCalledWith({
+        where: { organizationId: 'org-1' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: AUDIT_LOG_EXPORT_MAX_LIMIT,
+      });
+      expect(result).toEqual(mockLogsWithUser);
+    });
+
+    it('カテゴリでフィルタリングできる', async () => {
+      mockPrismaAuditLog.findMany.mockResolvedValue([mockLogsWithUser[1]]);
+
+      const result = await repository.findForExport('org-1', { category: 'MEMBER' });
+
+      expect(mockPrismaAuditLog.findMany).toHaveBeenCalledWith({
+        where: {
+          organizationId: 'org-1',
+          category: 'MEMBER',
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: AUDIT_LOG_EXPORT_MAX_LIMIT,
+      });
+      expect(result).toEqual([mockLogsWithUser[1]]);
+    });
+
+    it('startDateでフィルタリングできる', async () => {
+      const startDate = new Date('2024-01-01');
+      mockPrismaAuditLog.findMany.mockResolvedValue(mockLogsWithUser);
+
+      await repository.findForExport('org-1', { startDate });
+
+      expect(mockPrismaAuditLog.findMany).toHaveBeenCalledWith({
+        where: {
+          organizationId: 'org-1',
+          createdAt: {
+            gte: startDate,
+          },
+        },
+        include: expect.any(Object),
+        orderBy: { createdAt: 'desc' },
+        take: AUDIT_LOG_EXPORT_MAX_LIMIT,
+      });
+    });
+
+    it('endDateでフィルタリングできる', async () => {
+      const endDate = new Date('2024-01-31');
+      mockPrismaAuditLog.findMany.mockResolvedValue(mockLogsWithUser);
+
+      await repository.findForExport('org-1', { endDate });
+
+      expect(mockPrismaAuditLog.findMany).toHaveBeenCalledWith({
+        where: {
+          organizationId: 'org-1',
+          createdAt: {
+            lte: endDate,
+          },
+        },
+        include: expect.any(Object),
+        orderBy: { createdAt: 'desc' },
+        take: AUDIT_LOG_EXPORT_MAX_LIMIT,
+      });
+    });
+
+    it('startDateとendDateの両方でフィルタリングできる', async () => {
+      const startDate = new Date('2024-01-01');
+      const endDate = new Date('2024-01-31');
+      mockPrismaAuditLog.findMany.mockResolvedValue(mockLogsWithUser);
+
+      await repository.findForExport('org-1', { startDate, endDate });
+
+      expect(mockPrismaAuditLog.findMany).toHaveBeenCalledWith({
+        where: {
+          organizationId: 'org-1',
+          createdAt: {
+            gte: startDate,
+            lte: endDate,
+          },
+        },
+        include: expect.any(Object),
+        orderBy: { createdAt: 'desc' },
+        take: AUDIT_LOG_EXPORT_MAX_LIMIT,
+      });
+    });
+
+    it('ユーザー情報（id, name, email）を含める', async () => {
+      mockPrismaAuditLog.findMany.mockResolvedValue(mockLogsWithUser);
+
+      const result = await repository.findForExport('org-1');
+
+      expect(mockPrismaAuditLog.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          include: {
+            user: {
+              select: {
+                id: true,
+                email: true,
+                name: true,
+              },
+            },
+          },
+        })
+      );
+      expect(result[0].user).toEqual({
+        id: 'user-1',
+        email: 'user1@example.com',
+        name: 'User 1',
+      });
+    });
+
+    it('AUDIT_LOG_EXPORT_MAX_LIMIT（10000件）まで取得する', async () => {
+      mockPrismaAuditLog.findMany.mockResolvedValue([]);
+
+      await repository.findForExport('org-1');
+
+      expect(mockPrismaAuditLog.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          take: AUDIT_LOG_EXPORT_MAX_LIMIT,
+        })
+      );
+      expect(AUDIT_LOG_EXPORT_MAX_LIMIT).toBe(10000);
+    });
+
+    it('createdAtの降順でソートされる', async () => {
+      mockPrismaAuditLog.findMany.mockResolvedValue(mockLogsWithUser);
+
+      await repository.findForExport('org-1');
+
+      expect(mockPrismaAuditLog.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderBy: { createdAt: 'desc' },
+        })
+      );
+    });
+
+    it('ログが存在しない場合は空配列を返す', async () => {
+      mockPrismaAuditLog.findMany.mockResolvedValue([]);
+
+      const result = await repository.findForExport('org-1');
+
+      expect(result).toEqual([]);
     });
   });
 });

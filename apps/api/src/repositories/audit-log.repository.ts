@@ -6,12 +6,24 @@ export const AUDIT_LOG_DEFAULT_LIMIT = 50;
 /** 監査ログ取得の上限件数 */
 export const AUDIT_LOG_MAX_LIMIT = 100;
 
+/** 監査ログエクスポートの上限件数 */
+export const AUDIT_LOG_EXPORT_MAX_LIMIT = 10000;
+
 /**
  * 監査ログのクエリオプション
  */
 export interface AuditLogQueryOptions {
   page?: number;
   limit?: number;
+  category?: AuditLogCategory;
+  startDate?: Date;
+  endDate?: Date;
+}
+
+/**
+ * 監査ログのエクスポートオプション
+ */
+export interface AuditLogExportOptions {
   category?: AuditLogCategory;
   startDate?: Date;
   endDate?: Date;
@@ -148,5 +160,43 @@ export class AuditLogRepository {
     ]);
 
     return { logs, total };
+  }
+
+  /**
+   * エクスポート用に組織の監査ログを取得（上限: 10,000件）
+   */
+  async findForExport(
+    organizationId: string,
+    options: AuditLogExportOptions = {}
+  ) {
+    const { category, startDate, endDate } = options;
+
+    const where: Prisma.AuditLogWhereInput = {
+      organizationId,
+      ...(category && { category }),
+      ...(startDate || endDate
+        ? {
+            createdAt: {
+              ...(startDate && { gte: startDate }),
+              ...(endDate && { lte: endDate }),
+            },
+          }
+        : {}),
+    };
+
+    return prisma.auditLog.findMany({
+      where,
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: AUDIT_LOG_EXPORT_MAX_LIMIT,
+    });
   }
 }

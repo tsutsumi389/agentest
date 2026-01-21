@@ -118,4 +118,10 @@ router.get('/:organizationId/projects', requireAuth(authConfig), orgController.g
  */
 router.get('/:organizationId/audit-logs', requireAuth(authConfig), requireOrgRole(['OWNER', 'ADMIN']), orgController.getAuditLogs);
 
+/**
+ * 監査ログエクスポート
+ * GET /api/organizations/:organizationId/audit-logs/export
+ */
+router.get('/:organizationId/audit-logs/export', requireAuth(authConfig), requireOrgRole(['OWNER', 'ADMIN']), orgController.exportAuditLogs);
+
 export default router;

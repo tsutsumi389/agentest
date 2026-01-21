@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { AuditLogCategory } from '@agentest/db';
+import { auditLogExportSchema, generateTimestamp } from '@agentest/shared';
 import { OrganizationService } from '../services/organization.service.js';
 import { auditLogService, AUDIT_LOG_DEFAULT_LIMIT, AUDIT_LOG_MAX_LIMIT } from '../services/audit-log.service.js';
 
@@ -318,6 +319,39 @@ export class OrganizationController {
         limit: query.limit,
         totalPages: Math.ceil(result.total / query.limit),
       });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 監査ログエクスポート
+   */
+  exportAuditLogs = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { organizationId } = req.params;
+      const query = auditLogExportSchema.parse(req.query);
+
+      const logs = await auditLogService.getForExport(organizationId, {
+        category: query.category as AuditLogCategory | undefined,
+        startDate: query.startDate,
+        endDate: query.endDate,
+      });
+
+      // ファイル名生成
+      const filename = `audit-logs-${generateTimestamp()}.${query.format}`;
+
+      if (query.format === 'csv') {
+        const csvContent = auditLogService.formatAsCSV(logs);
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.send(csvContent);
+      } else {
+        const jsonContent = auditLogService.formatAsJSON(logs);
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.send(jsonContent);
+      }
     } catch (error) {
       next(error);
     }

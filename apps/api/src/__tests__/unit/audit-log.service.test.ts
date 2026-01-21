@@ -5,6 +5,7 @@ const mockAuditLogRepo = vi.hoisted(() => ({
   create: vi.fn(),
   findByOrganization: vi.fn(),
   findByUser: vi.fn(),
+  findForExport: vi.fn(),
 }));
 
 vi.mock('../../repositories/audit-log.repository.js', () => ({
@@ -234,6 +235,310 @@ describe('AuditLogService', () => {
       const result = await service.getByUser('user-1');
 
       expect(result).toEqual({ logs: [], total: 0 });
+    });
+  });
+
+  describe('getForExport', () => {
+    const mockLogsWithUser = [
+      {
+        id: 'log-1',
+        organizationId: 'org-1',
+        category: 'ORGANIZATION',
+        action: 'organization.update',
+        createdAt: new Date('2024-01-15'),
+        targetType: 'organization',
+        targetId: 'org-1',
+        ipAddress: '192.168.1.1',
+        details: { name: 'テスト組織' },
+        user: { id: 'user-1', email: 'user1@example.com', name: 'User 1' },
+      },
+    ];
+
+    it('リポジトリのfindForExportを呼び出す', async () => {
+      mockAuditLogRepo.findForExport.mockResolvedValue(mockLogsWithUser);
+
+      const result = await service.getForExport('org-1');
+
+      expect(mockAuditLogRepo.findForExport).toHaveBeenCalledWith('org-1', {});
+      expect(result).toEqual(mockLogsWithUser);
+    });
+
+    it('オプションを正しく渡す', async () => {
+      const options = {
+        category: 'MEMBER' as const,
+        startDate: new Date('2024-01-01'),
+        endDate: new Date('2024-12-31'),
+      };
+      mockAuditLogRepo.findForExport.mockResolvedValue([]);
+
+      await service.getForExport('org-1', options);
+
+      expect(mockAuditLogRepo.findForExport).toHaveBeenCalledWith('org-1', options);
+    });
+  });
+
+  describe('formatAsCSV', () => {
+    const BOM = '\uFEFF';
+
+    it('UTF-8 BOM付きで出力する', () => {
+      const result = service.formatAsCSV([]);
+
+      expect(result.startsWith(BOM)).toBe(true);
+    });
+
+    it('正しいCSVヘッダーを出力する', () => {
+      const result = service.formatAsCSV([]);
+
+      const headerLine = result.replace(BOM, '').split('\n')[0];
+      expect(headerLine).toBe('ID,日時,カテゴリ,アクション,ユーザー,対象タイプ,対象ID,IPアドレス,詳細');
+    });
+
+    it('日時をISO形式で出力する', () => {
+      const createdAt = new Date('2024-01-15T10:30:00.000Z');
+      const logs = [
+        {
+          id: 'log-1',
+          organizationId: 'org-1',
+          category: 'ORGANIZATION' as const,
+          action: 'organization.update',
+          createdAt,
+          targetType: null,
+          targetId: null,
+          ipAddress: null,
+          details: null,
+          user: { id: 'user-1', email: 'user1@example.com', name: 'User 1' },
+        },
+      ];
+
+      const result = service.formatAsCSV(logs);
+
+      expect(result).toContain(createdAt.toISOString());
+    });
+
+    it('detailsをJSON文字列で出力する', () => {
+      const details = { key: 'value', nested: { a: 1 } };
+      const logs = [
+        {
+          id: 'log-1',
+          organizationId: 'org-1',
+          category: 'ORGANIZATION' as const,
+          action: 'organization.update',
+          createdAt: new Date(),
+          targetType: null,
+          targetId: null,
+          ipAddress: null,
+          details,
+          user: { id: 'user-1', email: 'user1@example.com', name: 'User 1' },
+        },
+      ];
+
+      const result = service.formatAsCSV(logs);
+
+      // JSON文字列をエスケープした形式で含まれている
+      expect(result).toContain('"{""key"":""value""');
+    });
+
+    it('ユーザーのメールを出力する', () => {
+      const logs = [
+        {
+          id: 'log-1',
+          organizationId: 'org-1',
+          category: 'ORGANIZATION' as const,
+          action: 'organization.update',
+          createdAt: new Date(),
+          targetType: null,
+          targetId: null,
+          ipAddress: null,
+          details: null,
+          user: { id: 'user-1', email: 'user1@example.com', name: 'User 1' },
+        },
+      ];
+
+      const result = service.formatAsCSV(logs);
+
+      expect(result).toContain('user1@example.com');
+    });
+
+    it('カンマを含む値をダブルクォートで囲む', () => {
+      const logs = [
+        {
+          id: 'log-1',
+          organizationId: 'org-1',
+          category: 'ORGANIZATION' as const,
+          action: 'action,with,commas',
+          createdAt: new Date(),
+          targetType: null,
+          targetId: null,
+          ipAddress: null,
+          details: null,
+          user: null,
+        },
+      ];
+
+      const result = service.formatAsCSV(logs);
+
+      expect(result).toContain('"action,with,commas"');
+    });
+
+    it('ダブルクォートを含む値をエスケープする', () => {
+      const logs = [
+        {
+          id: 'log-1',
+          organizationId: 'org-1',
+          category: 'ORGANIZATION' as const,
+          action: 'action"with"quotes',
+          createdAt: new Date(),
+          targetType: null,
+          targetId: null,
+          ipAddress: null,
+          details: null,
+          user: null,
+        },
+      ];
+
+      const result = service.formatAsCSV(logs);
+
+      expect(result).toContain('"action""with""quotes"');
+    });
+
+    it('改行を含む値を正しく処理する', () => {
+      const logs = [
+        {
+          id: 'log-1',
+          organizationId: 'org-1',
+          category: 'ORGANIZATION' as const,
+          action: 'action\nwith\nnewlines',
+          createdAt: new Date(),
+          targetType: null,
+          targetId: null,
+          ipAddress: null,
+          details: null,
+          user: null,
+        },
+      ];
+
+      const result = service.formatAsCSV(logs);
+
+      expect(result).toContain('"action\nwith\nnewlines"');
+    });
+
+    it('空配列の場合はヘッダーのみ出力する', () => {
+      const result = service.formatAsCSV([]);
+
+      const lines = result.replace(BOM, '').split('\n');
+      // ヘッダー + 改行後の空行（rowsが空なので）
+      expect(lines).toHaveLength(2);
+      expect(lines[0]).toBe('ID,日時,カテゴリ,アクション,ユーザー,対象タイプ,対象ID,IPアドレス,詳細');
+      expect(lines[1]).toBe(''); // 空のデータ行
+    });
+
+    it('userがnullの場合は「システム」を出力する', () => {
+      const logs = [
+        {
+          id: 'log-1',
+          organizationId: 'org-1',
+          category: 'ORGANIZATION' as const,
+          action: 'organization.update',
+          createdAt: new Date(),
+          targetType: null,
+          targetId: null,
+          ipAddress: null,
+          details: null,
+          user: null,
+        },
+      ];
+
+      const result = service.formatAsCSV(logs);
+
+      expect(result).toContain('システム');
+    });
+  });
+
+  describe('formatAsJSON', () => {
+    it('整形されたJSONを出力する', () => {
+      const createdAt = new Date('2024-01-15T10:30:00.000Z');
+      const logs = [
+        {
+          id: 'log-1',
+          organizationId: 'org-1',
+          category: 'ORGANIZATION' as const,
+          action: 'organization.update',
+          createdAt,
+          targetType: 'organization',
+          targetId: 'org-1',
+          ipAddress: '192.168.1.1',
+          details: { name: 'テスト組織' },
+          user: { id: 'user-1', email: 'user1@example.com', name: 'User 1' },
+        },
+      ];
+
+      const result = service.formatAsJSON(logs);
+      const parsed = JSON.parse(result);
+
+      expect(parsed).toHaveLength(1);
+      expect(parsed[0]).toEqual({
+        id: 'log-1',
+        createdAt: createdAt.toISOString(),
+        category: 'ORGANIZATION',
+        action: 'organization.update',
+        user: { id: 'user-1', email: 'user1@example.com', name: 'User 1' },
+        targetType: 'organization',
+        targetId: 'org-1',
+        ipAddress: '192.168.1.1',
+        details: { name: 'テスト組織' },
+      });
+    });
+
+    it('空配列を正しく処理する', () => {
+      const result = service.formatAsJSON([]);
+      const parsed = JSON.parse(result);
+
+      expect(parsed).toEqual([]);
+    });
+
+    it('userがnullの場合はnullを出力する', () => {
+      const logs = [
+        {
+          id: 'log-1',
+          organizationId: 'org-1',
+          category: 'ORGANIZATION' as const,
+          action: 'organization.update',
+          createdAt: new Date(),
+          targetType: null,
+          targetId: null,
+          ipAddress: null,
+          details: null,
+          user: null,
+        },
+      ];
+
+      const result = service.formatAsJSON(logs);
+      const parsed = JSON.parse(result);
+
+      expect(parsed[0].user).toBeNull();
+    });
+
+    it('整形されたJSON（インデント2）で出力する', () => {
+      const logs = [
+        {
+          id: 'log-1',
+          organizationId: 'org-1',
+          category: 'ORGANIZATION' as const,
+          action: 'organization.update',
+          createdAt: new Date(),
+          targetType: null,
+          targetId: null,
+          ipAddress: null,
+          details: null,
+          user: null,
+        },
+      ];
+
+      const result = service.formatAsJSON(logs);
+
+      // 整形されているか確認（改行とインデントがある）
+      expect(result).toContain('\n');
+      expect(result).toContain('  '); // インデント2
     });
   });
 });

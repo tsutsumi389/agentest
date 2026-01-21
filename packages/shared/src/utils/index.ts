@@ -118,3 +118,17 @@ export function pick<T extends object, K extends keyof T>(obj: T, keys: K[]): Pi
   }
   return result;
 }
+
+/**
+ * タイムスタンプ文字列を生成（ファイル名用）
+ * 形式: YYYYMMDD-HHmmss
+ */
+export function generateTimestamp(date: Date = new Date()): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${year}${month}${day}-${hours}${minutes}${seconds}`;
+}

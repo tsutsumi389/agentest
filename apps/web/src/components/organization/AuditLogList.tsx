@@ -1,57 +1,41 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Loader2,
   ChevronLeft,
   ChevronRight,
   User,
-  Shield,
-  Building2,
-  Users,
-  FolderKanban,
-  Key,
-  CreditCard,
   Filter,
   Calendar,
-  HelpCircle,
+  Download,
+  Check,
 } from 'lucide-react';
 import {
   organizationsApi,
   ApiError,
   type AuditLog,
   type AuditLogQueryParams,
+  type AuditLogExportFormat,
 } from '../../lib/api';
 import { formatDateTime, formatRelativeTime } from '../../lib/date';
+import {
+  AUDIT_LOG_CATEGORIES,
+  type AuditLogCategoryKey,
+  getAuditLogCategoryInfo,
+  EXCLUDED_DETAIL_FIELDS,
+  KNOWN_FIELD_LABELS,
+  formatDetailValue,
+  generateTimestamp,
+} from '../../lib/audit-log';
+import { AuditLogDetailModal } from './AuditLogDetailModal';
 
 interface AuditLogListProps {
   /** 組織ID */
   organizationId: string;
 }
 
-/**
- * 監査ログのカテゴリ定義
- */
-const AUDIT_LOG_CATEGORIES = {
-  AUTH: { label: '認証', icon: Shield, color: 'text-blue-500' },
-  USER: { label: 'ユーザー', icon: User, color: 'text-green-500' },
-  ORGANIZATION: { label: '組織', icon: Building2, color: 'text-purple-500' },
-  MEMBER: { label: 'メンバー', icon: Users, color: 'text-orange-500' },
-  PROJECT: { label: 'プロジェクト', icon: FolderKanban, color: 'text-cyan-500' },
-  API_TOKEN: { label: 'APIトークン', icon: Key, color: 'text-yellow-500' },
-  BILLING: { label: '課金', icon: CreditCard, color: 'text-pink-500' },
-} as const;
-
-type CategoryKey = keyof typeof AUDIT_LOG_CATEGORIES;
-
-/**
- * カテゴリキーかどうかを判定する型ガード
- */
-function isCategoryKey(key: string): key is CategoryKey {
-  return key in AUDIT_LOG_CATEGORIES;
-}
-
 /** カテゴリフィルタの「すべて」を表す定数 */
 const CATEGORY_FILTER_ALL = 'all' as const;
-type CategoryFilter = CategoryKey | typeof CATEGORY_FILTER_ALL;
+type CategoryFilter = AuditLogCategoryKey | typeof CATEGORY_FILTER_ALL;
 
 /**
  * カテゴリに対応するアイコンを取得
@@ -63,32 +47,22 @@ function CategoryIcon({
   category: string;
   className?: string;
 }) {
-  // 型ガードを使用して安全にアクセス
-  if (isCategoryKey(category)) {
-    const Icon = AUDIT_LOG_CATEGORIES[category].icon;
-    return <Icon className={className} />;
-  }
-  // 未知のカテゴリの場合はヘルプアイコンを表示
-  return <HelpCircle className={className} />;
+  const categoryInfo = getAuditLogCategoryInfo(category);
+  const Icon = categoryInfo.icon;
+  return <Icon className={className} />;
 }
 
 /**
  * カテゴリバッジ
  */
 function CategoryBadge({ category }: { category: string }) {
-  // 型ガードを使用して安全にアクセス
-  const isKnownCategory = isCategoryKey(category);
-  const label = isKnownCategory ? AUDIT_LOG_CATEGORIES[category].label : category;
-  const colorClass = isKnownCategory
-    ? AUDIT_LOG_CATEGORIES[category].color
-    : 'text-foreground-muted';
-
+  const categoryInfo = getAuditLogCategoryInfo(category);
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded ${colorClass} bg-background-tertiary`}
+      className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded ${categoryInfo.color} bg-background-tertiary`}
     >
       <CategoryIcon category={category} className="w-3 h-3" />
-      {label}
+      {categoryInfo.label}
     </span>
   );
 }
@@ -167,6 +141,15 @@ export function AuditLogList({ organizationId }: AuditLogListProps) {
   const [selectedCategory, setSelectedCategory] = useState<CategoryFilter>(CATEGORY_FILTER_ALL);
   const [selectedDateRange, setSelectedDateRange] = useState<DateRangeValue>('all');
 
+  // 詳細モーダル状態
+  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+
+  // エクスポートメニュー状態
+  const [showExportMenu, setShowExportMenu] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportSuccess, setExportSuccess] = useState<AuditLogExportFormat | null>(null);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
   // 監査ログを取得
   const fetchLogs = useCallback(async () => {
     setIsLoading(true);
@@ -227,6 +210,69 @@ export function AuditLogList({ organizationId }: AuditLogListProps) {
     setPageSize(DEFAULT_PAGE_SIZE);
     setPage(1);
   };
+
+  // ログクリックハンドラ
+  const handleLogClick = (log: AuditLog) => {
+    setSelectedLog(log);
+  };
+
+  // モーダルを閉じる
+  const handleCloseModal = () => {
+    setSelectedLog(null);
+  };
+
+  // エクスポート処理
+  const handleExport = async (format: AuditLogExportFormat) => {
+    setIsExporting(true);
+    setExportSuccess(null);
+
+    try {
+      const dateRange = getDateRange(selectedDateRange);
+      const blob = await organizationsApi.exportAuditLogs(organizationId, {
+        format,
+        ...(selectedCategory !== CATEGORY_FILTER_ALL && { category: selectedCategory }),
+        ...dateRange,
+      });
+
+      // ファイルダウンロード
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `audit-logs-${generateTimestamp()}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      setExportSuccess(format);
+      setTimeout(() => setExportSuccess(null), 2000);
+    } catch (err) {
+      if (err instanceof ApiError) {
+        setError(err.message);
+      } else {
+        setError('エクスポートに失敗しました');
+      }
+    } finally {
+      setIsExporting(false);
+      setShowExportMenu(false);
+    }
+  };
+
+  // エクスポートメニューを外側クリックで閉じる
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+        setShowExportMenu(false);
+      }
+    };
+
+    if (showExportMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showExportMenu]);
 
   // フィルタが適用されているか
   const hasFilters =
@@ -329,6 +375,43 @@ export function AuditLogList({ organizationId }: AuditLogListProps) {
             フィルタをリセット
           </button>
         )}
+
+        {/* スペーサー */}
+        <div className="flex-1" />
+
+        {/* エクスポートボタン */}
+        <div className="relative" ref={exportMenuRef}>
+          <button
+            onClick={() => setShowExportMenu(!showExportMenu)}
+            disabled={isExporting || total === 0}
+            className="btn btn-secondary flex items-center gap-1.5 text-sm py-1.5"
+          >
+            {isExporting ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : exportSuccess ? (
+              <Check className="w-4 h-4 text-success" />
+            ) : (
+              <Download className="w-4 h-4" />
+            )}
+            {exportSuccess ? 'エクスポート完了' : 'エクスポート'}
+          </button>
+          {showExportMenu && (
+            <div className="absolute right-0 mt-1 py-1 bg-background border border-border rounded-lg shadow-lg z-10 min-w-[140px]">
+              <button
+                onClick={() => handleExport('csv')}
+                className="w-full px-4 py-2 text-sm text-left text-foreground hover:bg-background-secondary transition-colors"
+              >
+                CSV形式
+              </button>
+              <button
+                onClick={() => handleExport('json')}
+                className="w-full px-4 py-2 text-sm text-left text-foreground hover:bg-background-secondary transition-colors"
+              >
+                JSON形式
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ログ一覧 */}
@@ -346,7 +429,7 @@ export function AuditLogList({ organizationId }: AuditLogListProps) {
           <div className={`relative ${isLoading ? 'opacity-50' : ''}`}>
             <div className="space-y-2">
               {logs.map((log) => (
-                <AuditLogItem key={log.id} log={log} />
+                <AuditLogItem key={log.id} log={log} onClick={() => handleLogClick(log)} />
               ))}
             </div>
 
@@ -392,42 +475,26 @@ export function AuditLogList({ organizationId }: AuditLogListProps) {
           )}
         </>
       )}
+
+      {/* 詳細モーダル */}
+      <AuditLogDetailModal
+        isOpen={selectedLog !== null}
+        log={selectedLog}
+        onClose={handleCloseModal}
+      />
     </div>
   );
 }
 
-/** 詳細表示から除外するフィールド */
-const EXCLUDED_DETAIL_FIELDS = new Set(['id', 'userId', 'organizationId', 'createdAt', 'updatedAt']);
-
-/** 既知のフィールドラベルマッピング */
-const KNOWN_FIELD_LABELS: Record<string, string> = {
-  email: 'メール',
-  name: '名前',
-  role: 'ロール',
-  oldRole: '変更前ロール',
-  newRole: '変更後ロール',
-  targetName: '対象',
-  reason: '理由',
-  description: '説明',
-  ipAddress: 'IPアドレス',
-};
-
-/**
- * 値を表示用文字列に変換
- */
-function formatValue(value: unknown): string {
-  if (value === null || value === undefined) return '';
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-  if (Array.isArray(value)) return value.map(formatValue).join(', ');
-  if (typeof value === 'object') return JSON.stringify(value);
-  return String(value);
+interface AuditLogItemProps {
+  log: AuditLog;
+  onClick: () => void;
 }
 
 /**
  * 監査ログアイテム
  */
-function AuditLogItem({ log }: { log: AuditLog }) {
+function AuditLogItem({ log, onClick }: AuditLogItemProps) {
   // 詳細情報をフォーマット
   const formatDetails = (details: Record<string, unknown> | null): string => {
     if (!details) return '';
@@ -446,7 +513,7 @@ function AuditLogItem({ log }: { log: AuditLog }) {
     const priorityFields = ['email', 'name', 'targetName', 'role', 'reason'];
     for (const field of priorityFields) {
       if (details[field] && !processedFields.has(field)) {
-        const value = formatValue(details[field]);
+        const value = formatDetailValue(details[field]);
         if (value) {
           // email, name, targetNameはラベルなしで表示
           if (['email', 'name', 'targetName'].includes(field)) {
@@ -463,7 +530,7 @@ function AuditLogItem({ log }: { log: AuditLog }) {
     // 残りのフィールドをフォールバックとして処理
     for (const [key, value] of Object.entries(details)) {
       if (processedFields.has(key) || EXCLUDED_DETAIL_FIELDS.has(key)) continue;
-      const formattedValue = formatValue(value);
+      const formattedValue = formatDetailValue(value);
       if (formattedValue) {
         const label = KNOWN_FIELD_LABELS[key] || key;
         parts.push(`${label}: ${formattedValue}`);
@@ -476,7 +543,18 @@ function AuditLogItem({ log }: { log: AuditLog }) {
   const detailsText = formatDetails(log.details);
 
   return (
-    <div className="flex items-start gap-4 p-3 rounded-lg border border-border bg-background-secondary hover:bg-background-tertiary transition-colors">
+    <div
+      onClick={onClick}
+      className="flex items-start gap-4 p-3 rounded-lg border border-border bg-background-secondary hover:bg-background-tertiary transition-colors cursor-pointer"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+    >
       {/* ユーザーアバター */}
       <div className="flex-shrink-0">
         {log.user?.avatarUrl ? (

@@ -157,6 +157,62 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
 }
 
 /**
+ * Blob レスポンス用APIクライアント（トークンリフレッシュ対応）
+ */
+async function requestBlob(endpoint: string, options: RequestOptions = {}): Promise<Blob> {
+  const { body, headers: customHeaders, ...rest } = options;
+
+  const headers: Record<string, string> = {
+    ...customHeaders as Record<string, string>,
+  };
+
+  const config: RequestInit = {
+    ...rest,
+    headers,
+    credentials: 'include',
+  };
+
+  if (body) {
+    config.body = JSON.stringify(body);
+    headers['Content-Type'] = 'application/json';
+  }
+
+  const url = `${API_BASE_URL}${endpoint}`;
+  let response = await fetch(url, config);
+
+  // 401エラー時の自動リフレッシュ処理
+  if (response.status === 401) {
+    const refreshSuccess = await refreshAccessToken();
+
+    if (refreshSuccess) {
+      response = await fetch(url, config);
+
+      if (response.status === 401) {
+        return handleSessionExpired();
+      }
+    } else {
+      return handleSessionExpired();
+    }
+  }
+
+  // エラーレスポンスの場合
+  if (!response.ok) {
+    const contentType = response.headers.get('content-type');
+    const isJson = contentType?.includes('application/json');
+    const data = isJson ? await response.json() : null;
+    const error = data?.error || {};
+    throw new ApiError(
+      response.status,
+      error.code || 'UNKNOWN_ERROR',
+      error.message || 'リクエストに失敗しました',
+      error.details
+    );
+  }
+
+  return response.blob();
+}
+
+/**
  * APIクライアントインスタンス
  */
 export const api = {
@@ -174,6 +230,9 @@ export const api = {
 
   delete: <T>(endpoint: string, body?: unknown, options?: RequestOptions) =>
     request<T>(endpoint, { ...options, method: 'DELETE', body }),
+
+  getBlob: (endpoint: string, options?: RequestOptions) =>
+    requestBlob(endpoint, { ...options, method: 'GET' }),
 };
 
 // ============================================
@@ -1259,6 +1318,15 @@ export interface AuditLogQueryParams {
   endDate?: string;
 }
 
+export type AuditLogExportFormat = 'csv' | 'json';
+
+export interface AuditLogExportParams {
+  format: AuditLogExportFormat;
+  category?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
 export interface AuditLogResponse {
   logs: AuditLog[];
   total: number;
@@ -1336,6 +1404,17 @@ export const organizationsApi = {
     return api.get<AuditLogResponse>(
       `/api/organizations/${organizationId}/audit-logs${queryString ? `?${queryString}` : ''}`
     );
+  },
+
+  // 監査ログをエクスポート
+  exportAuditLogs: (organizationId: string, params: AuditLogExportParams): Promise<Blob> => {
+    const query = new URLSearchParams();
+    query.set('format', params.format);
+    if (params.category) query.set('category', params.category);
+    if (params.startDate) query.set('startDate', params.startDate);
+    if (params.endDate) query.set('endDate', params.endDate);
+    const queryString = query.toString();
+    return api.getBlob(`/api/organizations/${organizationId}/audit-logs/export?${queryString}`);
   },
 
   // 組織のプロジェクト一覧を取得
