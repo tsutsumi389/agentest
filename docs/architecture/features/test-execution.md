@@ -865,3 +865,4 @@ agentest/
 - [テストケース管理](./test-case-management.md) - 実行対象のテストケース
 - [プロジェクト管理](./project-management.md) - 環境設定の参照元
 - [監査ログ](./audit-log.md) - 実行操作の記録
+- [通知機能](./notification.md) - テスト完了/失敗通知

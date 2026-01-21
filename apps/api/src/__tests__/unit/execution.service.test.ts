@@ -1,21 +1,34 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NotFoundError } from '@agentest/shared';
 
-// ExecutionRepository のモック
-const mockExecutionRepo = {
-  findById: vi.fn(),
-  findByIdWithDetails: vi.fn(),
-  findByTestSuiteId: vi.fn(),
-};
+// vi.mockはホイスティングされるため、ファクトリ内で直接定義する
 
+// ExecutionRepository のモック
 vi.mock('../../repositories/execution.repository.js', () => ({
-  ExecutionRepository: vi.fn().mockImplementation(() => mockExecutionRepo),
+  ExecutionRepository: vi.fn().mockImplementation(() => ({
+    findById: vi.fn(),
+    findByIdWithDetails: vi.fn(),
+    findByTestSuiteId: vi.fn(),
+  })),
+}));
+
+// notificationServiceのモック
+vi.mock('../../services/notification.service.js', () => ({
+  notificationService: {
+    send: vi.fn(),
+  },
+}));
+
+// redis-publisherのモック
+vi.mock('../../lib/redis-publisher.js', () => ({
+  publishDashboardUpdated: vi.fn(),
 }));
 
 // prismaのモック
 vi.mock('@agentest/db', () => ({
   prisma: {
     execution: {
+      findUnique: vi.fn(),
       update: vi.fn(),
     },
     executionPreconditionResult: {
@@ -29,9 +42,13 @@ vi.mock('@agentest/db', () => ({
     executionExpectedResult: {
       findFirst: vi.fn(),
       update: vi.fn(),
+      findMany: vi.fn(),
     },
     executionEvidence: {
       create: vi.fn(),
+    },
+    project: {
+      findUnique: vi.fn(),
     },
   },
 }));
@@ -39,6 +56,8 @@ vi.mock('@agentest/db', () => ({
 // モック設定後にインポート
 import { ExecutionService } from '../../services/execution.service.js';
 import { prisma } from '@agentest/db';
+import { notificationService } from '../../services/notification.service.js';
+import { ExecutionRepository } from '../../repositories/execution.repository.js';
 
 // テスト用の固定ID
 const TEST_EXECUTION_ID = '11111111-1111-1111-1111-111111111111';
@@ -154,12 +173,20 @@ function createMockExecutionWithDetails(overrides: Record<string, unknown> = {})
   };
 }
 
+// モック参照を取得するヘルパー
+const getMockedExecutionRepo = () => {
+  const mockInstance = vi.mocked(ExecutionRepository).mock.results[0]?.value;
+  return mockInstance;
+};
+
 describe('ExecutionService', () => {
   let service: ExecutionService;
+  let mockExecutionRepo: ReturnType<typeof getMockedExecutionRepo>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     service = new ExecutionService();
+    mockExecutionRepo = getMockedExecutionRepo();
   });
 
   describe('findById', () => {
@@ -285,6 +312,10 @@ describe('ExecutionService', () => {
   });
 
   describe('updatePreconditionResult', () => {
+    beforeEach(() => {
+      mockExecutionRepo.findById.mockResolvedValue(createMockExecution());
+    });
+
     it('実施者情報（ユーザーID）が記録される', async () => {
       const mockResult = { id: TEST_PRECOND_RESULT_ID, executionId: TEST_EXECUTION_ID };
       (prisma.executionPreconditionResult.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(mockResult);
@@ -341,6 +372,10 @@ describe('ExecutionService', () => {
   });
 
   describe('updateStepResult', () => {
+    beforeEach(() => {
+      mockExecutionRepo.findById.mockResolvedValue(createMockExecution());
+    });
+
     it('実施者情報（ユーザーID）が記録される', async () => {
       const mockResult = { id: TEST_STEP_RESULT_ID, executionId: TEST_EXECUTION_ID };
       (prisma.executionStepResult.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(mockResult);
@@ -397,6 +432,16 @@ describe('ExecutionService', () => {
   });
 
   describe('updateExpectedResult', () => {
+    beforeEach(() => {
+      // 実行データのモック（通知送信をスキップするため実行者なし）
+      mockExecutionRepo.findById.mockResolvedValue(createMockExecution({
+        executedByUserId: null,
+      }));
+      (prisma.execution.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+        executedByUserId: null,
+      });
+    });
+
     it('実施者情報（ユーザーID）が記録される', async () => {
       const mockResult = { id: TEST_EXPECTED_RESULT_ID, executionId: TEST_EXECUTION_ID };
       (prisma.executionExpectedResult.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(mockResult);
@@ -449,6 +494,270 @@ describe('ExecutionService', () => {
           }),
         })
       );
+    });
+  });
+
+  describe('テスト完了通知', () => {
+    const EXECUTOR_USER_ID = 'executor-user-id';
+    const JUDGER_USER_ID = 'judger-user-id';
+    const ORG_ID = 'org-id';
+
+    beforeEach(() => {
+      // 共通のモック設定
+      const mockResult = { id: TEST_EXPECTED_RESULT_ID, executionId: TEST_EXECUTION_ID };
+      (prisma.executionExpectedResult.findFirst as ReturnType<typeof vi.fn>).mockResolvedValue(mockResult);
+      (prisma.executionExpectedResult.update as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ...mockResult,
+        status: 'PASS',
+        judgedByUserId: JUDGER_USER_ID,
+        judgedByUser: { id: JUDGER_USER_ID, name: 'Judger', avatarUrl: null },
+      });
+      (prisma.project.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
+        id: TEST_PROJECT_ID,
+        organizationId: ORG_ID,
+      });
+    });
+
+    it('全てPASSで完了した場合、TEST_COMPLETED通知を送信する', async () => {
+      mockExecutionRepo.findById.mockResolvedValue(createMockExecution({
+        executedByUserId: EXECUTOR_USER_ID,
+      }));
+      (prisma.executionExpectedResult.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { status: 'PASS' },
+        { status: 'PASS' },
+        { status: 'PASS' },
+      ]);
+
+      await service.updateExpectedResult(
+        TEST_EXECUTION_ID,
+        TEST_EXPECTED_RESULT_ID,
+        { status: 'PASS' },
+        { userId: JUDGER_USER_ID }
+      );
+
+      expect(notificationService.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: EXECUTOR_USER_ID,
+          type: 'TEST_COMPLETED',
+          title: 'テスト実行が完了しました',
+          body: expect.stringContaining('成功: 3件'),
+          data: expect.objectContaining({
+            executionId: TEST_EXECUTION_ID,
+            testSuiteId: TEST_SUITE_ID,
+            passCount: 3,
+            failCount: 0,
+            skippedCount: 0,
+            totalCount: 3,
+          }),
+        })
+      );
+    });
+
+    it('FAILが1件以上ある場合、TEST_FAILED通知を送信する', async () => {
+      mockExecutionRepo.findById.mockResolvedValue(createMockExecution({
+        executedByUserId: EXECUTOR_USER_ID,
+      }));
+      (prisma.executionExpectedResult.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { status: 'PASS' },
+        { status: 'FAIL' },
+        { status: 'PASS' },
+      ]);
+
+      await service.updateExpectedResult(
+        TEST_EXECUTION_ID,
+        TEST_EXPECTED_RESULT_ID,
+        { status: 'PASS' },
+        { userId: JUDGER_USER_ID }
+      );
+
+      expect(notificationService.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: EXECUTOR_USER_ID,
+          type: 'TEST_FAILED',
+          title: 'テスト実行が失敗しました',
+          body: expect.stringContaining('失敗: 1件'),
+          data: expect.objectContaining({
+            executionId: TEST_EXECUTION_ID,
+            testSuiteId: TEST_SUITE_ID,
+            passCount: 2,
+            failCount: 1,
+            skippedCount: 0,
+            totalCount: 3,
+          }),
+        })
+      );
+    });
+
+    it('全てSKIPPEDで完了した場合、TEST_COMPLETED通知を送信する', async () => {
+      mockExecutionRepo.findById.mockResolvedValue(createMockExecution({
+        executedByUserId: EXECUTOR_USER_ID,
+      }));
+      (prisma.executionExpectedResult.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { status: 'SKIPPED' },
+        { status: 'SKIPPED' },
+      ]);
+
+      await service.updateExpectedResult(
+        TEST_EXECUTION_ID,
+        TEST_EXPECTED_RESULT_ID,
+        { status: 'SKIPPED' },
+        { userId: JUDGER_USER_ID }
+      );
+
+      expect(notificationService.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: EXECUTOR_USER_ID,
+          type: 'TEST_COMPLETED',
+          title: 'テスト実行が完了しました',
+          body: expect.stringContaining('スキップ: 2件'),
+          data: expect.objectContaining({
+            testSuiteId: TEST_SUITE_ID,
+            passCount: 0,
+            failCount: 0,
+            skippedCount: 2,
+            totalCount: 2,
+          }),
+        })
+      );
+    });
+
+    it('PENDINGが残っている場合、通知を送信しない', async () => {
+      mockExecutionRepo.findById.mockResolvedValue(createMockExecution({
+        executedByUserId: EXECUTOR_USER_ID,
+      }));
+      (prisma.executionExpectedResult.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { status: 'PASS' },
+        { status: 'PENDING' },
+        { status: 'PASS' },
+      ]);
+
+      await service.updateExpectedResult(
+        TEST_EXECUTION_ID,
+        TEST_EXPECTED_RESULT_ID,
+        { status: 'PASS' },
+        { userId: JUDGER_USER_ID }
+      );
+
+      expect(notificationService.send).not.toHaveBeenCalled();
+    });
+
+    it('判定者と実行者が同じ場合、通知を送信しない', async () => {
+      mockExecutionRepo.findById.mockResolvedValue(createMockExecution({
+        executedByUserId: EXECUTOR_USER_ID,
+      }));
+      (prisma.executionExpectedResult.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { status: 'PASS' },
+        { status: 'PASS' },
+      ]);
+
+      // 判定者と実行者が同じ
+      await service.updateExpectedResult(
+        TEST_EXECUTION_ID,
+        TEST_EXPECTED_RESULT_ID,
+        { status: 'PASS' },
+        { userId: EXECUTOR_USER_ID }
+      );
+
+      expect(notificationService.send).not.toHaveBeenCalled();
+    });
+
+    it('実行者がいない場合、通知を送信しない', async () => {
+      mockExecutionRepo.findById.mockResolvedValue(createMockExecution({
+        executedByUserId: null,
+      }));
+      (prisma.executionExpectedResult.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { status: 'PASS' },
+      ]);
+
+      await service.updateExpectedResult(
+        TEST_EXECUTION_ID,
+        TEST_EXPECTED_RESULT_ID,
+        { status: 'PASS' },
+        { userId: JUDGER_USER_ID }
+      );
+
+      expect(notificationService.send).not.toHaveBeenCalled();
+    });
+
+    it('PASS/FAIL/SKIPPEDが混在する場合、正しい内訳が通知される', async () => {
+      mockExecutionRepo.findById.mockResolvedValue(createMockExecution({
+        executedByUserId: EXECUTOR_USER_ID,
+      }));
+      (prisma.executionExpectedResult.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { status: 'PASS' },
+        { status: 'PASS' },
+        { status: 'FAIL' },
+        { status: 'SKIPPED' },
+      ]);
+
+      await service.updateExpectedResult(
+        TEST_EXECUTION_ID,
+        TEST_EXPECTED_RESULT_ID,
+        { status: 'PASS' },
+        { userId: JUDGER_USER_ID }
+      );
+
+      expect(notificationService.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'TEST_FAILED',
+          body: expect.stringMatching(/成功: 2件.*失敗: 1件.*スキップ: 1件/),
+          data: expect.objectContaining({
+            testSuiteId: TEST_SUITE_ID,
+            passCount: 2,
+            failCount: 1,
+            skippedCount: 1,
+            totalCount: 4,
+          }),
+        })
+      );
+    });
+
+    it('organizationIdが通知に含まれる', async () => {
+      mockExecutionRepo.findById.mockResolvedValue(createMockExecution({
+        executedByUserId: EXECUTOR_USER_ID,
+      }));
+      (prisma.executionExpectedResult.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { status: 'PASS' },
+      ]);
+
+      await service.updateExpectedResult(
+        TEST_EXECUTION_ID,
+        TEST_EXPECTED_RESULT_ID,
+        { status: 'PASS' },
+        { userId: JUDGER_USER_ID }
+      );
+
+      expect(notificationService.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          organizationId: ORG_ID,
+        })
+      );
+    });
+
+    it('通知送信に失敗しても期待結果の更新は成功する', async () => {
+      mockExecutionRepo.findById.mockResolvedValue(createMockExecution({
+        executedByUserId: EXECUTOR_USER_ID,
+      }));
+      (prisma.executionExpectedResult.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { status: 'PASS' },
+      ]);
+      // 通知送信を失敗させる
+      (notificationService.send as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new Error('通知送信エラー')
+      );
+
+      // エラーがスローされないことを確認
+      await expect(
+        service.updateExpectedResult(
+          TEST_EXECUTION_ID,
+          TEST_EXPECTED_RESULT_ID,
+          { status: 'PASS' },
+          { userId: JUDGER_USER_ID }
+        )
+      ).resolves.not.toThrow();
+
+      // 期待結果の更新は呼ばれている
+      expect(prisma.executionExpectedResult.update).toHaveBeenCalled();
     });
   });
 });

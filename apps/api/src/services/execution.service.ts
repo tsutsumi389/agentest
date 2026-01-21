@@ -189,8 +189,17 @@ export class ExecutionService {
     // ダッシュボード更新イベント発行
     await publishDashboardUpdated(execution.testSuite.projectId, 'execution', executionId);
 
-    // テスト完了通知の送信チェック
-    await this.checkAndSendCompletionNotification(executionId, execution.testSuite, executor?.userId);
+    // テスト完了通知の送信チェック（失敗しても期待結果の更新は成功させる）
+    try {
+      await this.checkAndSendCompletionNotification(
+        executionId,
+        execution.testSuite,
+        execution.executedByUserId,
+        executor?.userId
+      );
+    } catch (error) {
+      console.error('テスト完了通知の送信に失敗しました:', error);
+    }
 
     return updated;
   }
@@ -201,21 +210,17 @@ export class ExecutionService {
    */
   private async checkAndSendCompletionNotification(
     executionId: string,
-    testSuite: { name: string; projectId: string },
+    testSuite: { id: string; name: string; projectId: string },
+    executedByUserId: string | null,
     judgedByUserId?: string
   ) {
-    // 実行データを取得して実行者IDを確認
-    const executionData = await prisma.execution.findUnique({
-      where: { id: executionId },
-      select: { executedByUserId: true },
-    });
-
-    if (!executionData?.executedByUserId) {
-      return; // 実行者がいない場合は通知しない
+    // 実行者がいない場合は通知しない
+    if (!executedByUserId) {
+      return;
     }
 
     // 判定者と実行者が同じ場合は通知しない
-    if (executionData.executedByUserId === judgedByUserId) {
+    if (executedByUserId === judgedByUserId) {
       return;
     }
 
@@ -231,9 +236,11 @@ export class ExecutionService {
       return; // まだ未判定がある
     }
 
-    // 失敗があるかチェック
-    const failedCount = allResults.filter((r) => r.status === 'FAIL').length;
-    const hasFailure = failedCount > 0;
+    // 内訳を計算
+    const passCount = allResults.filter((r) => r.status === 'PASS').length;
+    const failCount = allResults.filter((r) => r.status === 'FAIL').length;
+    const skippedCount = allResults.filter((r) => r.status === 'SKIPPED').length;
+    const totalCount = allResults.length;
 
     // プロジェクト情報を取得
     const project = await prisma.project.findUnique({
@@ -241,25 +248,56 @@ export class ExecutionService {
       select: { organizationId: true },
     });
 
-    if (hasFailure) {
+    // 通知本文を生成
+    const body = this.buildNotificationBody(testSuite.name, { passCount, failCount, skippedCount, totalCount });
+
+    // 通知データ
+    const notificationData = {
+      executionId,
+      testSuiteId: testSuite.id,
+      testSuiteName: testSuite.name,
+      passCount,
+      failCount,
+      skippedCount,
+      totalCount,
+    };
+
+    if (failCount > 0) {
       await notificationService.send({
-        userId: executionData.executedByUserId,
+        userId: executedByUserId,
         type: 'TEST_FAILED',
         title: 'テスト実行が失敗しました',
-        body: `「${testSuite.name}」のテスト実行で${failedCount}件の失敗がありました`,
-        data: { executionId, testSuiteName: testSuite.name, failedCount, totalCount: allResults.length },
+        body,
+        data: notificationData,
         organizationId: project?.organizationId ?? undefined,
       });
     } else {
       await notificationService.send({
-        userId: executionData.executedByUserId,
+        userId: executedByUserId,
         type: 'TEST_COMPLETED',
         title: 'テスト実行が完了しました',
-        body: `「${testSuite.name}」のテスト実行が完了しました（${allResults.length}件全て成功）`,
-        data: { executionId, testSuiteName: testSuite.name, totalCount: allResults.length },
+        body,
+        data: notificationData,
         organizationId: project?.organizationId ?? undefined,
       });
     }
+  }
+
+  /**
+   * 通知本文を生成
+   */
+  private buildNotificationBody(
+    testSuiteName: string,
+    counts: { passCount: number; failCount: number; skippedCount: number; totalCount: number }
+  ): string {
+    const { passCount, failCount, skippedCount, totalCount } = counts;
+    const parts: string[] = [];
+
+    if (passCount > 0) parts.push(`成功: ${passCount}件`);
+    if (failCount > 0) parts.push(`失敗: ${failCount}件`);
+    if (skippedCount > 0) parts.push(`スキップ: ${skippedCount}件`);
+
+    return `「${testSuiteName}」のテスト実行が完了しました（${parts.join('、')}／合計${totalCount}件）`;
   }
 
   /**
