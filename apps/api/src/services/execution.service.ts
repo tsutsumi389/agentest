@@ -189,8 +189,17 @@ export class ExecutionService {
     // ダッシュボード更新イベント発行
     await publishDashboardUpdated(execution.testSuite.projectId, 'execution', executionId);
 
-    // テスト完了通知の送信チェック
-    await this.checkAndSendCompletionNotification(executionId, execution.testSuite, executor?.userId);
+    // テスト完了通知の送信チェック（失敗しても期待結果の更新は成功させる）
+    try {
+      await this.checkAndSendCompletionNotification(
+        executionId,
+        execution.testSuite,
+        execution.executedByUserId,
+        executor?.userId
+      );
+    } catch (error) {
+      console.error('テスト完了通知の送信に失敗しました:', error);
+    }
 
     return updated;
   }
@@ -201,21 +210,17 @@ export class ExecutionService {
    */
   private async checkAndSendCompletionNotification(
     executionId: string,
-    testSuite: { name: string; projectId: string },
+    testSuite: { id: string; name: string; projectId: string },
+    executedByUserId: string | null,
     judgedByUserId?: string
   ) {
-    // 実行データを取得して実行者IDを確認
-    const executionData = await prisma.execution.findUnique({
-      where: { id: executionId },
-      select: { executedByUserId: true },
-    });
-
-    if (!executionData?.executedByUserId) {
-      return; // 実行者がいない場合は通知しない
+    // 実行者がいない場合は通知しない
+    if (!executedByUserId) {
+      return;
     }
 
     // 判定者と実行者が同じ場合は通知しない
-    if (executionData.executedByUserId === judgedByUserId) {
+    if (executedByUserId === judgedByUserId) {
       return;
     }
 
@@ -246,22 +251,33 @@ export class ExecutionService {
     // 通知本文を生成
     const body = this.buildNotificationBody(testSuite.name, { passCount, failCount, skippedCount, totalCount });
 
+    // 通知データ
+    const notificationData = {
+      executionId,
+      testSuiteId: testSuite.id,
+      testSuiteName: testSuite.name,
+      passCount,
+      failCount,
+      skippedCount,
+      totalCount,
+    };
+
     if (failCount > 0) {
       await notificationService.send({
-        userId: executionData.executedByUserId,
+        userId: executedByUserId,
         type: 'TEST_FAILED',
         title: 'テスト実行が失敗しました',
         body,
-        data: { executionId, testSuiteName: testSuite.name, passCount, failCount, skippedCount, totalCount },
+        data: notificationData,
         organizationId: project?.organizationId ?? undefined,
       });
     } else {
       await notificationService.send({
-        userId: executionData.executedByUserId,
+        userId: executedByUserId,
         type: 'TEST_COMPLETED',
         title: 'テスト実行が完了しました',
         body,
-        data: { executionId, testSuiteName: testSuite.name, passCount, failCount, skippedCount, totalCount },
+        data: notificationData,
         organizationId: project?.organizationId ?? undefined,
       });
     }

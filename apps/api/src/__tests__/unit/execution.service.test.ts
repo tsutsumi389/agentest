@@ -522,9 +522,6 @@ describe('ExecutionService', () => {
       mockExecutionRepo.findById.mockResolvedValue(createMockExecution({
         executedByUserId: EXECUTOR_USER_ID,
       }));
-      (prisma.execution.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
-        executedByUserId: EXECUTOR_USER_ID,
-      });
       (prisma.executionExpectedResult.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
         { status: 'PASS' },
         { status: 'PASS' },
@@ -546,6 +543,7 @@ describe('ExecutionService', () => {
           body: expect.stringContaining('成功: 3件'),
           data: expect.objectContaining({
             executionId: TEST_EXECUTION_ID,
+            testSuiteId: TEST_SUITE_ID,
             passCount: 3,
             failCount: 0,
             skippedCount: 0,
@@ -559,9 +557,6 @@ describe('ExecutionService', () => {
       mockExecutionRepo.findById.mockResolvedValue(createMockExecution({
         executedByUserId: EXECUTOR_USER_ID,
       }));
-      (prisma.execution.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
-        executedByUserId: EXECUTOR_USER_ID,
-      });
       (prisma.executionExpectedResult.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
         { status: 'PASS' },
         { status: 'FAIL' },
@@ -583,6 +578,7 @@ describe('ExecutionService', () => {
           body: expect.stringContaining('失敗: 1件'),
           data: expect.objectContaining({
             executionId: TEST_EXECUTION_ID,
+            testSuiteId: TEST_SUITE_ID,
             passCount: 2,
             failCount: 1,
             skippedCount: 0,
@@ -596,9 +592,6 @@ describe('ExecutionService', () => {
       mockExecutionRepo.findById.mockResolvedValue(createMockExecution({
         executedByUserId: EXECUTOR_USER_ID,
       }));
-      (prisma.execution.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
-        executedByUserId: EXECUTOR_USER_ID,
-      });
       (prisma.executionExpectedResult.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
         { status: 'SKIPPED' },
         { status: 'SKIPPED' },
@@ -618,6 +611,7 @@ describe('ExecutionService', () => {
           title: 'テスト実行が完了しました',
           body: expect.stringContaining('スキップ: 2件'),
           data: expect.objectContaining({
+            testSuiteId: TEST_SUITE_ID,
             passCount: 0,
             failCount: 0,
             skippedCount: 2,
@@ -631,9 +625,6 @@ describe('ExecutionService', () => {
       mockExecutionRepo.findById.mockResolvedValue(createMockExecution({
         executedByUserId: EXECUTOR_USER_ID,
       }));
-      (prisma.execution.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
-        executedByUserId: EXECUTOR_USER_ID,
-      });
       (prisma.executionExpectedResult.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
         { status: 'PASS' },
         { status: 'PENDING' },
@@ -654,9 +645,6 @@ describe('ExecutionService', () => {
       mockExecutionRepo.findById.mockResolvedValue(createMockExecution({
         executedByUserId: EXECUTOR_USER_ID,
       }));
-      (prisma.execution.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
-        executedByUserId: EXECUTOR_USER_ID,
-      });
       (prisma.executionExpectedResult.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
         { status: 'PASS' },
         { status: 'PASS' },
@@ -677,9 +665,6 @@ describe('ExecutionService', () => {
       mockExecutionRepo.findById.mockResolvedValue(createMockExecution({
         executedByUserId: null,
       }));
-      (prisma.execution.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
-        executedByUserId: null,
-      });
       (prisma.executionExpectedResult.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
         { status: 'PASS' },
       ]);
@@ -698,9 +683,6 @@ describe('ExecutionService', () => {
       mockExecutionRepo.findById.mockResolvedValue(createMockExecution({
         executedByUserId: EXECUTOR_USER_ID,
       }));
-      (prisma.execution.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
-        executedByUserId: EXECUTOR_USER_ID,
-      });
       (prisma.executionExpectedResult.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
         { status: 'PASS' },
         { status: 'PASS' },
@@ -720,6 +702,7 @@ describe('ExecutionService', () => {
           type: 'TEST_FAILED',
           body: expect.stringMatching(/成功: 2件.*失敗: 1件.*スキップ: 1件/),
           data: expect.objectContaining({
+            testSuiteId: TEST_SUITE_ID,
             passCount: 2,
             failCount: 1,
             skippedCount: 1,
@@ -733,9 +716,6 @@ describe('ExecutionService', () => {
       mockExecutionRepo.findById.mockResolvedValue(createMockExecution({
         executedByUserId: EXECUTOR_USER_ID,
       }));
-      (prisma.execution.findUnique as ReturnType<typeof vi.fn>).mockResolvedValue({
-        executedByUserId: EXECUTOR_USER_ID,
-      });
       (prisma.executionExpectedResult.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
         { status: 'PASS' },
       ]);
@@ -752,6 +732,32 @@ describe('ExecutionService', () => {
           organizationId: ORG_ID,
         })
       );
+    });
+
+    it('通知送信に失敗しても期待結果の更新は成功する', async () => {
+      mockExecutionRepo.findById.mockResolvedValue(createMockExecution({
+        executedByUserId: EXECUTOR_USER_ID,
+      }));
+      (prisma.executionExpectedResult.findMany as ReturnType<typeof vi.fn>).mockResolvedValue([
+        { status: 'PASS' },
+      ]);
+      // 通知送信を失敗させる
+      (notificationService.send as ReturnType<typeof vi.fn>).mockRejectedValue(
+        new Error('通知送信エラー')
+      );
+
+      // エラーがスローされないことを確認
+      await expect(
+        service.updateExpectedResult(
+          TEST_EXECUTION_ID,
+          TEST_EXPECTED_RESULT_ID,
+          { status: 'PASS' },
+          { userId: JUDGER_USER_ID }
+        )
+      ).resolves.not.toThrow();
+
+      // 期待結果の更新は呼ばれている
+      expect(prisma.executionExpectedResult.update).toHaveBeenCalled();
     });
   });
 });
