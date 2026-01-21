@@ -11,6 +11,7 @@ import {
   JudgmentStatus,
   ReviewSessionStatus,
   ReviewVerdict,
+  AuditLogCategory,
 } from '../types/enums.js';
 
 // 共通スキーマ
@@ -353,6 +354,22 @@ export const testSuiteLabelsUpdateSchema = z.object({
   labelIds: z.array(z.string().uuid()),
 });
 
+// 監査ログエクスポートスキーマ
+export const auditLogExportSchema = z.object({
+  format: z.enum(['csv', 'json']),
+  category: z.enum([
+    AuditLogCategory.AUTH,
+    AuditLogCategory.USER,
+    AuditLogCategory.ORGANIZATION,
+    AuditLogCategory.MEMBER,
+    AuditLogCategory.PROJECT,
+    AuditLogCategory.API_TOKEN,
+    AuditLogCategory.BILLING,
+  ]).optional(),
+  startDate: z.string().datetime().optional(),
+  endDate: z.string().datetime().optional(),
+});
+
 // 型エクスポート
 export type UserCreate = z.infer<typeof userCreateSchema>;
 export type UserUpdate = z.infer<typeof userUpdateSchema>;
@@ -391,3 +408,4 @@ export type ReviewCommentSearch = z.infer<typeof reviewCommentSearchSchema>;
 export type LabelCreate = z.infer<typeof labelCreateSchema>;
 export type LabelUpdate = z.infer<typeof labelUpdateSchema>;
 export type TestSuiteLabelsUpdate = z.infer<typeof testSuiteLabelsUpdateSchema>;
+export type AuditLogExport = z.infer<typeof auditLogExportSchema>;

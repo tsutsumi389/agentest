@@ -3,13 +3,26 @@ import {
   AuditLogRepository,
   AUDIT_LOG_DEFAULT_LIMIT,
   AUDIT_LOG_MAX_LIMIT,
+  AUDIT_LOG_EXPORT_MAX_LIMIT,
   type AuditLogQueryOptions,
   type AuditLogCreateParams,
+  type AuditLogExportOptions,
 } from '../repositories/audit-log.repository.js';
 
 // 型と定数をre-export（外部から利用しやすくする）
-export type { AuditLogQueryOptions, AuditLogCreateParams };
-export { AUDIT_LOG_DEFAULT_LIMIT, AUDIT_LOG_MAX_LIMIT };
+export type { AuditLogQueryOptions, AuditLogCreateParams, AuditLogExportOptions };
+export { AUDIT_LOG_DEFAULT_LIMIT, AUDIT_LOG_MAX_LIMIT, AUDIT_LOG_EXPORT_MAX_LIMIT };
+
+/**
+ * ユーザー情報付き監査ログ（エクスポート用）
+ */
+interface AuditLogWithUser extends AuditLog {
+  user: {
+    id: string;
+    email: string;
+    name: string;
+  } | null;
+}
 
 /**
  * 監査ログサービス
@@ -70,6 +83,85 @@ export class AuditLogService {
     options: AuditLogQueryOptions = {}
   ): Promise<{ logs: AuditLog[]; total: number }> {
     return this.auditLogRepo.findByUser(userId, options);
+  }
+
+  /**
+   * 組織の監査ログをエクスポート用に取得
+   *
+   * @param organizationId - 組織ID
+   * @param options - エクスポートオプション（フィルタリング）
+   */
+  async getForExport(
+    organizationId: string,
+    options: AuditLogExportOptions = {}
+  ): Promise<AuditLogWithUser[]> {
+    // リポジトリはuser情報を含めて取得するため、型をキャスト
+    return this.auditLogRepo.findForExport(organizationId, options) as Promise<AuditLogWithUser[]>;
+  }
+
+  /**
+   * 監査ログをCSV形式に変換
+   *
+   * @param logs - 監査ログ配列
+   */
+  formatAsCSV(logs: AuditLogWithUser[]): string {
+    // BOM付きUTF-8（Excel対応）
+    const BOM = '\uFEFF';
+    const headers = ['ID', '日時', 'カテゴリ', 'アクション', 'ユーザー', '対象タイプ', '対象ID', 'IPアドレス', '詳細'];
+
+    const escapeCSV = (value: string | null | undefined): string => {
+      if (value === null || value === undefined) return '';
+      const str = String(value);
+      // ダブルクォートを含む場合やカンマ・改行を含む場合はエスケープ
+      if (str.includes('"') || str.includes(',') || str.includes('\n') || str.includes('\r')) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    const rows = logs.map((log) => {
+      const userEmail = log.user?.email || 'システム';
+      const details = log.details ? JSON.stringify(log.details) : '';
+
+      return [
+        log.id,
+        log.createdAt instanceof Date ? log.createdAt.toISOString() : log.createdAt,
+        log.category,
+        log.action,
+        userEmail,
+        log.targetType || '',
+        log.targetId || '',
+        log.ipAddress || '',
+        details,
+      ].map(escapeCSV).join(',');
+    });
+
+    return BOM + headers.join(',') + '\n' + rows.join('\n');
+  }
+
+  /**
+   * 監査ログをJSON形式に変換
+   *
+   * @param logs - 監査ログ配列
+   */
+  formatAsJSON(logs: AuditLogWithUser[]): string {
+    const exportData = logs.map((log) => ({
+      id: log.id,
+      createdAt: log.createdAt instanceof Date ? log.createdAt.toISOString() : log.createdAt,
+      category: log.category,
+      action: log.action,
+      user: log.user ? {
+        id: log.user.id,
+        email: log.user.email,
+        name: log.user.name,
+      } : null,
+      targetType: log.targetType,
+      targetId: log.targetId,
+      ipAddress: log.ipAddress,
+      details: log.details,
+    }));
+
+    return JSON.stringify(exportData, null, 2);
   }
 }
 

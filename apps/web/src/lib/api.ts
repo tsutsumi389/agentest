@@ -1259,6 +1259,15 @@ export interface AuditLogQueryParams {
   endDate?: string;
 }
 
+export type AuditLogExportFormat = 'csv' | 'json';
+
+export interface AuditLogExportParams {
+  format: AuditLogExportFormat;
+  category?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
 export interface AuditLogResponse {
   logs: AuditLog[];
   total: number;
@@ -1336,6 +1345,39 @@ export const organizationsApi = {
     return api.get<AuditLogResponse>(
       `/api/organizations/${organizationId}/audit-logs${queryString ? `?${queryString}` : ''}`
     );
+  },
+
+  // 監査ログをエクスポート
+  exportAuditLogs: async (organizationId: string, params: AuditLogExportParams): Promise<Blob> => {
+    const query = new URLSearchParams();
+    query.set('format', params.format);
+    if (params.category) query.set('category', params.category);
+    if (params.startDate) query.set('startDate', params.startDate);
+    if (params.endDate) query.set('endDate', params.endDate);
+    const queryString = query.toString();
+
+    const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+    const url = `${API_BASE_URL}/api/organizations/${organizationId}/audit-logs/export?${queryString}`;
+
+    const response = await fetch(url, {
+      method: 'GET',
+      credentials: 'include',
+    });
+
+    if (!response.ok) {
+      const contentType = response.headers.get('content-type');
+      const isJson = contentType?.includes('application/json');
+      const data = isJson ? await response.json() : null;
+      const error = data?.error || {};
+      throw new ApiError(
+        response.status,
+        error.code || 'UNKNOWN_ERROR',
+        error.message || '監査ログのエクスポートに失敗しました',
+        error.details
+      );
+    }
+
+    return response.blob();
   },
 
   // 組織のプロジェクト一覧を取得

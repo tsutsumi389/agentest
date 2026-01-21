@@ -32,6 +32,9 @@ const transferOwnershipSchema = z.object({
 // AuditLogCategoryの値を配列として取得
 const auditLogCategories = Object.values(AuditLogCategory) as [string, ...string[]];
 
+// エクスポート形式
+const exportFormats = ['csv', 'json'] as const;
+
 const auditLogQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(AUDIT_LOG_MAX_LIMIT).optional().default(AUDIT_LOG_DEFAULT_LIMIT),
@@ -41,6 +44,24 @@ const auditLogQuerySchema = z.object({
 }).refine(
   (data) => {
     // startDateとendDateの両方が指定されている場合のみチェック
+    if (data.startDate && data.endDate) {
+      return data.startDate <= data.endDate;
+    }
+    return true;
+  },
+  {
+    message: 'startDateはendDate以前の日付を指定してください',
+    path: ['startDate'],
+  }
+);
+
+const auditLogExportSchema = z.object({
+  format: z.enum(exportFormats),
+  category: z.enum(auditLogCategories).optional(),
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
+}).refine(
+  (data) => {
     if (data.startDate && data.endDate) {
       return data.startDate <= data.endDate;
     }
@@ -318,6 +339,41 @@ export class OrganizationController {
         limit: query.limit,
         totalPages: Math.ceil(result.total / query.limit),
       });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 監査ログエクスポート
+   */
+  exportAuditLogs = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { organizationId } = req.params;
+      const query = auditLogExportSchema.parse(req.query);
+
+      const logs = await auditLogService.getForExport(organizationId, {
+        category: query.category as AuditLogCategory | undefined,
+        startDate: query.startDate,
+        endDate: query.endDate,
+      });
+
+      // ファイル名生成
+      const now = new Date();
+      const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+      const filename = `audit-logs-${timestamp}.${query.format}`;
+
+      if (query.format === 'csv') {
+        const csvContent = auditLogService.formatAsCSV(logs);
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.send(csvContent);
+      } else {
+        const jsonContent = auditLogService.formatAsJSON(logs);
+        res.setHeader('Content-Type', 'application/json');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.send(jsonContent);
+      }
     } catch (error) {
       next(error);
     }
