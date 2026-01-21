@@ -354,21 +354,35 @@ export const testSuiteLabelsUpdateSchema = z.object({
   labelIds: z.array(z.string().uuid()),
 });
 
+// 監査ログカテゴリの配列（バリデーション用）
+const auditLogCategories = [
+  AuditLogCategory.AUTH,
+  AuditLogCategory.USER,
+  AuditLogCategory.ORGANIZATION,
+  AuditLogCategory.MEMBER,
+  AuditLogCategory.PROJECT,
+  AuditLogCategory.API_TOKEN,
+  AuditLogCategory.BILLING,
+] as const;
+
 // 監査ログエクスポートスキーマ
 export const auditLogExportSchema = z.object({
   format: z.enum(['csv', 'json']),
-  category: z.enum([
-    AuditLogCategory.AUTH,
-    AuditLogCategory.USER,
-    AuditLogCategory.ORGANIZATION,
-    AuditLogCategory.MEMBER,
-    AuditLogCategory.PROJECT,
-    AuditLogCategory.API_TOKEN,
-    AuditLogCategory.BILLING,
-  ]).optional(),
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
-});
+  category: z.enum(auditLogCategories).optional(),
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
+}).refine(
+  (data) => {
+    if (data.startDate && data.endDate) {
+      return data.startDate <= data.endDate;
+    }
+    return true;
+  },
+  {
+    message: 'startDateはendDate以前の日付を指定してください',
+    path: ['startDate'],
+  }
+);
 
 // 型エクスポート
 export type UserCreate = z.infer<typeof userCreateSchema>;

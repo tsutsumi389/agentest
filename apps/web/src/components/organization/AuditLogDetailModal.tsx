@@ -2,13 +2,6 @@ import { useEffect, useRef } from 'react';
 import {
   X,
   User,
-  Shield,
-  Building2,
-  Users,
-  FolderKanban,
-  Key,
-  CreditCard,
-  HelpCircle,
   Globe,
   Monitor,
   Calendar,
@@ -16,6 +9,12 @@ import {
 } from 'lucide-react';
 import type { AuditLog } from '../../lib/api';
 import { formatDateTime } from '../../lib/date';
+import {
+  getAuditLogCategoryInfo,
+  EXCLUDED_DETAIL_FIELDS,
+  KNOWN_FIELD_LABELS,
+  formatDetailValue,
+} from '../../lib/audit-log';
 
 interface AuditLogDetailModalProps {
   /** モーダルの表示状態 */
@@ -24,59 +23,6 @@ interface AuditLogDetailModalProps {
   log: AuditLog | null;
   /** 閉じる際のコールバック */
   onClose: () => void;
-}
-
-/**
- * 監査ログのカテゴリ定義
- */
-const AUDIT_LOG_CATEGORIES = {
-  AUTH: { label: '認証', icon: Shield, color: 'text-blue-500', bgColor: 'bg-blue-500/10' },
-  USER: { label: 'ユーザー', icon: User, color: 'text-green-500', bgColor: 'bg-green-500/10' },
-  ORGANIZATION: { label: '組織', icon: Building2, color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
-  MEMBER: { label: 'メンバー', icon: Users, color: 'text-orange-500', bgColor: 'bg-orange-500/10' },
-  PROJECT: { label: 'プロジェクト', icon: FolderKanban, color: 'text-cyan-500', bgColor: 'bg-cyan-500/10' },
-  API_TOKEN: { label: 'APIトークン', icon: Key, color: 'text-yellow-500', bgColor: 'bg-yellow-500/10' },
-  BILLING: { label: '課金', icon: CreditCard, color: 'text-pink-500', bgColor: 'bg-pink-500/10' },
-} as const;
-
-type CategoryKey = keyof typeof AUDIT_LOG_CATEGORIES;
-
-/**
- * カテゴリキーかどうかを判定する型ガード
- */
-function isCategoryKey(key: string): key is CategoryKey {
-  return key in AUDIT_LOG_CATEGORIES;
-}
-
-/**
- * 既知のフィールドラベルマッピング
- */
-const KNOWN_FIELD_LABELS: Record<string, string> = {
-  email: 'メールアドレス',
-  name: '名前',
-  role: 'ロール',
-  oldRole: '変更前ロール',
-  newRole: '変更後ロール',
-  targetName: '対象名',
-  reason: '理由',
-  description: '説明',
-  ipAddress: 'IPアドレス',
-  provider: 'プロバイダー',
-  tokenName: 'トークン名',
-  planFrom: '変更前プラン',
-  planTo: '変更後プラン',
-};
-
-/**
- * 値を表示用文字列に変換
- */
-function formatValue(value: unknown): string {
-  if (value === null || value === undefined) return '-';
-  if (typeof value === 'string') return value || '-';
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-  if (Array.isArray(value)) return value.map(formatValue).join(', ') || '-';
-  if (typeof value === 'object') return JSON.stringify(value, null, 2);
-  return String(value);
 }
 
 /**
@@ -132,15 +78,12 @@ export function AuditLogDetailModal({
   if (!isOpen || !log) return null;
 
   // カテゴリ情報の取得
-  const categoryInfo = isCategoryKey(log.category)
-    ? AUDIT_LOG_CATEGORIES[log.category]
-    : { label: log.category, icon: HelpCircle, color: 'text-foreground-muted' as const, bgColor: 'bg-background-tertiary' as const };
+  const categoryInfo = getAuditLogCategoryInfo(log.category);
   const CategoryIcon = categoryInfo.icon;
 
   // 詳細情報のフィルタリング（除外フィールド）
-  const excludedFields = new Set(['id', 'userId', 'organizationId', 'createdAt', 'updatedAt']);
   const detailEntries = log.details
-    ? Object.entries(log.details).filter(([key]) => !excludedFields.has(key))
+    ? Object.entries(log.details).filter(([key]) => !EXCLUDED_DETAIL_FIELDS.has(key))
     : [];
 
   return (
@@ -300,7 +243,7 @@ export function AuditLogDetailModal({
                             {JSON.stringify(value, null, 2)}
                           </pre>
                         ) : (
-                          formatValue(value)
+                          formatDetailValue(value)
                         )}
                       </dd>
                     </div>

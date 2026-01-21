@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { AuditLogCategory } from '@agentest/db';
+import { auditLogExportSchema, generateTimestamp } from '@agentest/shared';
 import { OrganizationService } from '../services/organization.service.js';
 import { auditLogService, AUDIT_LOG_DEFAULT_LIMIT, AUDIT_LOG_MAX_LIMIT } from '../services/audit-log.service.js';
 
@@ -32,9 +33,6 @@ const transferOwnershipSchema = z.object({
 // AuditLogCategoryの値を配列として取得
 const auditLogCategories = Object.values(AuditLogCategory) as [string, ...string[]];
 
-// エクスポート形式
-const exportFormats = ['csv', 'json'] as const;
-
 const auditLogQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(AUDIT_LOG_MAX_LIMIT).optional().default(AUDIT_LOG_DEFAULT_LIMIT),
@@ -44,24 +42,6 @@ const auditLogQuerySchema = z.object({
 }).refine(
   (data) => {
     // startDateとendDateの両方が指定されている場合のみチェック
-    if (data.startDate && data.endDate) {
-      return data.startDate <= data.endDate;
-    }
-    return true;
-  },
-  {
-    message: 'startDateはendDate以前の日付を指定してください',
-    path: ['startDate'],
-  }
-);
-
-const auditLogExportSchema = z.object({
-  format: z.enum(exportFormats),
-  category: z.enum(auditLogCategories).optional(),
-  startDate: z.coerce.date().optional(),
-  endDate: z.coerce.date().optional(),
-}).refine(
-  (data) => {
     if (data.startDate && data.endDate) {
       return data.startDate <= data.endDate;
     }
@@ -359,9 +339,7 @@ export class OrganizationController {
       });
 
       // ファイル名生成
-      const now = new Date();
-      const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
-      const filename = `audit-logs-${timestamp}.${query.format}`;
+      const filename = `audit-logs-${generateTimestamp()}.${query.format}`;
 
       if (query.format === 'csv') {
         const csvContent = auditLogService.formatAsCSV(logs);

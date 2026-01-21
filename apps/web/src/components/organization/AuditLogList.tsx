@@ -4,15 +4,8 @@ import {
   ChevronLeft,
   ChevronRight,
   User,
-  Shield,
-  Building2,
-  Users,
-  FolderKanban,
-  Key,
-  CreditCard,
   Filter,
   Calendar,
-  HelpCircle,
   Download,
   Check,
 } from 'lucide-react';
@@ -24,6 +17,15 @@ import {
   type AuditLogExportFormat,
 } from '../../lib/api';
 import { formatDateTime, formatRelativeTime } from '../../lib/date';
+import {
+  AUDIT_LOG_CATEGORIES,
+  type AuditLogCategoryKey,
+  getAuditLogCategoryInfo,
+  EXCLUDED_DETAIL_FIELDS,
+  KNOWN_FIELD_LABELS,
+  formatDetailValue,
+  generateTimestamp,
+} from '../../lib/audit-log';
 import { AuditLogDetailModal } from './AuditLogDetailModal';
 
 interface AuditLogListProps {
@@ -31,31 +33,9 @@ interface AuditLogListProps {
   organizationId: string;
 }
 
-/**
- * 監査ログのカテゴリ定義
- */
-const AUDIT_LOG_CATEGORIES = {
-  AUTH: { label: '認証', icon: Shield, color: 'text-blue-500' },
-  USER: { label: 'ユーザー', icon: User, color: 'text-green-500' },
-  ORGANIZATION: { label: '組織', icon: Building2, color: 'text-purple-500' },
-  MEMBER: { label: 'メンバー', icon: Users, color: 'text-orange-500' },
-  PROJECT: { label: 'プロジェクト', icon: FolderKanban, color: 'text-cyan-500' },
-  API_TOKEN: { label: 'APIトークン', icon: Key, color: 'text-yellow-500' },
-  BILLING: { label: '課金', icon: CreditCard, color: 'text-pink-500' },
-} as const;
-
-type CategoryKey = keyof typeof AUDIT_LOG_CATEGORIES;
-
-/**
- * カテゴリキーかどうかを判定する型ガード
- */
-function isCategoryKey(key: string): key is CategoryKey {
-  return key in AUDIT_LOG_CATEGORIES;
-}
-
 /** カテゴリフィルタの「すべて」を表す定数 */
 const CATEGORY_FILTER_ALL = 'all' as const;
-type CategoryFilter = CategoryKey | typeof CATEGORY_FILTER_ALL;
+type CategoryFilter = AuditLogCategoryKey | typeof CATEGORY_FILTER_ALL;
 
 /**
  * カテゴリに対応するアイコンを取得
@@ -67,32 +47,22 @@ function CategoryIcon({
   category: string;
   className?: string;
 }) {
-  // 型ガードを使用して安全にアクセス
-  if (isCategoryKey(category)) {
-    const Icon = AUDIT_LOG_CATEGORIES[category].icon;
-    return <Icon className={className} />;
-  }
-  // 未知のカテゴリの場合はヘルプアイコンを表示
-  return <HelpCircle className={className} />;
+  const categoryInfo = getAuditLogCategoryInfo(category);
+  const Icon = categoryInfo.icon;
+  return <Icon className={className} />;
 }
 
 /**
  * カテゴリバッジ
  */
 function CategoryBadge({ category }: { category: string }) {
-  // 型ガードを使用して安全にアクセス
-  const isKnownCategory = isCategoryKey(category);
-  const label = isKnownCategory ? AUDIT_LOG_CATEGORIES[category].label : category;
-  const colorClass = isKnownCategory
-    ? AUDIT_LOG_CATEGORIES[category].color
-    : 'text-foreground-muted';
-
+  const categoryInfo = getAuditLogCategoryInfo(category);
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded ${colorClass} bg-background-tertiary`}
+      className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded ${categoryInfo.color} bg-background-tertiary`}
     >
       <CategoryIcon category={category} className="w-3 h-3" />
-      {label}
+      {categoryInfo.label}
     </span>
   );
 }
@@ -268,9 +238,7 @@ export function AuditLogList({ organizationId }: AuditLogListProps) {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const now = new Date();
-      const timestamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
-      a.download = `audit-logs-${timestamp}.${format}`;
+      a.download = `audit-logs-${generateTimestamp()}.${format}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -518,34 +486,6 @@ export function AuditLogList({ organizationId }: AuditLogListProps) {
   );
 }
 
-/** 詳細表示から除外するフィールド */
-const EXCLUDED_DETAIL_FIELDS = new Set(['id', 'userId', 'organizationId', 'createdAt', 'updatedAt']);
-
-/** 既知のフィールドラベルマッピング */
-const KNOWN_FIELD_LABELS: Record<string, string> = {
-  email: 'メール',
-  name: '名前',
-  role: 'ロール',
-  oldRole: '変更前ロール',
-  newRole: '変更後ロール',
-  targetName: '対象',
-  reason: '理由',
-  description: '説明',
-  ipAddress: 'IPアドレス',
-};
-
-/**
- * 値を表示用文字列に変換
- */
-function formatValue(value: unknown): string {
-  if (value === null || value === undefined) return '';
-  if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
-  if (Array.isArray(value)) return value.map(formatValue).join(', ');
-  if (typeof value === 'object') return JSON.stringify(value);
-  return String(value);
-}
-
 interface AuditLogItemProps {
   log: AuditLog;
   onClick: () => void;
@@ -573,7 +513,7 @@ function AuditLogItem({ log, onClick }: AuditLogItemProps) {
     const priorityFields = ['email', 'name', 'targetName', 'role', 'reason'];
     for (const field of priorityFields) {
       if (details[field] && !processedFields.has(field)) {
-        const value = formatValue(details[field]);
+        const value = formatDetailValue(details[field]);
         if (value) {
           // email, name, targetNameはラベルなしで表示
           if (['email', 'name', 'targetName'].includes(field)) {
@@ -590,7 +530,7 @@ function AuditLogItem({ log, onClick }: AuditLogItemProps) {
     // 残りのフィールドをフォールバックとして処理
     for (const [key, value] of Object.entries(details)) {
       if (processedFields.has(key) || EXCLUDED_DETAIL_FIELDS.has(key)) continue;
-      const formattedValue = formatValue(value);
+      const formattedValue = formatDetailValue(value);
       if (formattedValue) {
         const label = KNOWN_FIELD_LABELS[key] || key;
         parts.push(`${label}: ${formattedValue}`);
