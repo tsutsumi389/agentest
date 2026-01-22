@@ -243,6 +243,40 @@ describe('Admin TOTP API Integration Tests', () => {
       expect(response.status).toBe(401);
     });
 
+    it('同じコードを2回使用するとリプレイ攻撃として拒否される', async () => {
+      const validCode = generateSync({ secret: totpSecret });
+
+      // 1回目は成功
+      const response1 = await request(app)
+        .post('/admin/auth/2fa/verify')
+        .set('Cookie', sessionCookie)
+        .send({ code: validCode });
+
+      expect(response1.status).toBe(200);
+
+      // 2回目は同じコードでリプレイ攻撃として拒否
+      const response2 = await request(app)
+        .post('/admin/auth/2fa/verify')
+        .set('Cookie', sessionCookie)
+        .send({ code: validCode });
+
+      expect(response2.status).toBe(401);
+      expect(response2.body.error.message).toContain('既に使用');
+
+      // 監査ログで拒否が記録されていることを確認
+      const logs = await prisma.adminAuditLog.findMany({
+        where: {
+          adminUserId: testAdminUser.id,
+          action: 'TOTP_VERIFY_FAILED',
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      expect(logs.length).toBeGreaterThan(0);
+      const latestLog = logs[0];
+      expect(latestLog.details).toEqual({ reason: 'code_already_used' });
+    });
+
     it('TOTP未設定の場合は401エラー', async () => {
       // TOTPを無効化
       await prisma.adminUser.update({

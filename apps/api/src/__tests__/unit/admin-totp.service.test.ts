@@ -25,6 +25,7 @@ vi.mock('bcryptjs', () => ({
 // AdminUserRepository のモック
 const mockUserRepo = vi.hoisted(() => ({
   findById: vi.fn(),
+  findByIdWithPassword: vi.fn(),
   findByEmailWithPassword: vi.fn(),
   enableTotp: vi.fn(),
   disableTotp: vi.fn(),
@@ -111,6 +112,7 @@ describe('AdminTotpService', () => {
       const code = '123456';
       const tempSecret = 'JBSWY3DPEHPK3PXP';
 
+      mockUserRepo.getTotpSecret.mockResolvedValue(null); // まだ2FA未設定
       mockRedisStore.getTotpSetupSecret.mockResolvedValue(tempSecret);
       mockOtplib.verifySync.mockReturnValue({ valid: true });
       mockUserRepo.enableTotp.mockResolvedValue(undefined);
@@ -130,6 +132,7 @@ describe('AdminTotpService', () => {
     });
 
     it('一時秘密鍵が期限切れの場合はValidationError', async () => {
+      mockUserRepo.getTotpSecret.mockResolvedValue(null);
       mockRedisStore.getTotpSetupSecret.mockResolvedValue(null);
 
       await expect(
@@ -138,6 +141,7 @@ describe('AdminTotpService', () => {
     });
 
     it('不正なコードの場合はValidationError', async () => {
+      mockUserRepo.getTotpSecret.mockResolvedValue(null);
       mockRedisStore.getTotpSetupSecret.mockResolvedValue('JBSWY3DPEHPK3PXP');
       mockOtplib.verifySync.mockReturnValue({ valid: false });
 
@@ -152,6 +156,14 @@ describe('AdminTotpService', () => {
         ipAddress: '127.0.0.1',
         userAgent: 'Test Browser',
       });
+    });
+
+    it('既に2FAが有効な場合はValidationError', async () => {
+      mockUserRepo.getTotpSecret.mockResolvedValue('EXISTING_SECRET');
+
+      await expect(
+        service.enableTotp('admin-1', '123456', '127.0.0.1', 'Test Browser')
+      ).rejects.toThrow(ValidationError);
     });
   });
 
@@ -236,16 +248,12 @@ describe('AdminTotpService', () => {
       const password = 'correct-password';
       const passwordHash = '$2b$12$hash';
 
-      mockUserRepo.findById.mockResolvedValue({
+      mockUserRepo.findByIdWithPassword.mockResolvedValue({
         id: adminUserId,
         email: 'admin@example.com',
         name: 'Test Admin',
         role: 'ADMIN',
         totpEnabled: true,
-      });
-      mockUserRepo.findByEmailWithPassword.mockResolvedValue({
-        id: adminUserId,
-        email: 'admin@example.com',
         passwordHash,
       });
       (bcrypt.compare as ReturnType<typeof vi.fn>).mockResolvedValue(true);
@@ -264,7 +272,7 @@ describe('AdminTotpService', () => {
     });
 
     it('ユーザーが見つからない場合はAuthenticationError', async () => {
-      mockUserRepo.findById.mockResolvedValue(null);
+      mockUserRepo.findByIdWithPassword.mockResolvedValue(null);
 
       await expect(
         service.disableTotp('admin-1', 'password')
@@ -272,16 +280,12 @@ describe('AdminTotpService', () => {
     });
 
     it('パスワードが間違っている場合はAuthenticationError', async () => {
-      mockUserRepo.findById.mockResolvedValue({
+      mockUserRepo.findByIdWithPassword.mockResolvedValue({
         id: 'admin-1',
         email: 'admin@example.com',
         name: 'Test Admin',
         role: 'ADMIN',
         totpEnabled: true,
-      });
-      mockUserRepo.findByEmailWithPassword.mockResolvedValue({
-        id: 'admin-1',
-        email: 'admin@example.com',
         passwordHash: '$2b$12$hash',
       });
       (bcrypt.compare as ReturnType<typeof vi.fn>).mockResolvedValue(false);

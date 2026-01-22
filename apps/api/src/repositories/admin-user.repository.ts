@@ -40,6 +40,27 @@ export class AdminUserRepository {
   }
 
   /**
+   * IDで管理者を検索（パスワードハッシュ含む）
+   * TOTP無効化時のパスワード検証用
+   */
+  async findByIdWithPassword(id: string) {
+    return prisma.adminUser.findFirst({
+      where: {
+        id,
+        deletedAt: null,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        totpEnabled: true,
+        passwordHash: true,
+      },
+    });
+  }
+
+  /**
    * ログイン失敗回数をインクリメント
    * @returns 更新後の failedAttempts を含むオブジェクト
    */

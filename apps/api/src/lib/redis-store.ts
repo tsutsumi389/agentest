@@ -4,17 +4,48 @@ import { env } from '../config/env.js';
 // Redis接続インスタンス（遅延初期化）
 let redisClient: Redis | null = null;
 
+// 本番環境かどうか
+const isProduction = env.NODE_ENV === 'production';
+
 // Redisキーのプレフィックス
 const KEY_PREFIX = {
   TOTP_SETUP: 'totp:setup:',
   TOTP_USED: 'totp:used:',
 } as const;
 
+// Redis未設定時の警告メッセージ（開発環境用）
+const REDIS_NOT_CONFIGURED_WARNING =
+  '[WARNING] Redis未設定: TOTPのセキュリティ機能（リプレイ攻撃対策、セットアップタイムアウト）が無効です。本番環境では必ずRedisを設定してください。';
+
+// 警告表示フラグ（1回だけ表示）
+let redisWarningShown = false;
+
+/**
+ * Redis未設定時の警告を表示（開発環境のみ、1回のみ）
+ */
+function warnRedisNotConfigured(): void {
+  if (!redisWarningShown && !isProduction) {
+    console.warn(REDIS_NOT_CONFIGURED_WARNING);
+    redisWarningShown = true;
+  }
+}
+
+/**
+ * 本番環境でRedis必須をチェック
+ * @throws Error 本番環境でRedis未設定の場合
+ */
+function requireRedisInProduction(): void {
+  if (isProduction && !env.REDIS_URL) {
+    throw new Error('本番環境ではRedisの設定が必須です（REDIS_URL環境変数）');
+  }
+}
+
 /**
  * Redisクライアントを取得（未設定時はnull）
  */
 export function getRedisClient(): Redis | null {
   if (!env.REDIS_URL) {
+    warnRedisNotConfigured();
     return null;
   }
 
@@ -22,11 +53,11 @@ export function getRedisClient(): Redis | null {
     redisClient = new Redis(env.REDIS_URL);
 
     redisClient.on('connect', () => {
-      console.log('✅ Redis Store に接続しました');
+      console.log('[Redis Store] 接続しました');
     });
 
     redisClient.on('error', (error: Error) => {
-      console.error('❌ Redis Store エラー:', error);
+      console.error('[Redis Store] エラー:', error);
     });
   }
 
@@ -38,15 +69,19 @@ export function getRedisClient(): Redis | null {
  * @param adminUserId 管理者ユーザーID
  * @param secret TOTP秘密鍵
  * @param ttlSeconds 有効期限（秒）、デフォルト5分
+ * @throws Error 本番環境でRedis未設定の場合
  */
 export async function setTotpSetupSecret(
   adminUserId: string,
   secret: string,
   ttlSeconds: number = 300
 ): Promise<boolean> {
+  // 本番環境ではRedis必須
+  requireRedisInProduction();
+
   const redis = getRedisClient();
   if (!redis) {
-    console.warn('Redis未設定のため、TOTPセットアップ秘密鍵を保存できません');
+    // 開発環境ではフォールバック（セキュリティ低下の警告は表示済み）
     return false;
   }
 
@@ -108,16 +143,19 @@ export async function deleteTotpSetupSecret(
  * @param adminUserId 管理者ユーザーID
  * @param code TOTPコード
  * @param ttlSeconds 有効期限（秒）、デフォルト90秒
+ * @throws Error 本番環境でRedis未設定の場合
  */
 export async function markTotpCodeUsed(
   adminUserId: string,
   code: string,
   ttlSeconds: number = 90
 ): Promise<boolean> {
+  // 本番環境ではRedis必須
+  requireRedisInProduction();
+
   const redis = getRedisClient();
   if (!redis) {
-    // Redis未設定時は常にfalseを返す（リプレイ対策なし）
-    console.warn('Redis未設定のため、TOTPコードの使用済みマークをスキップ');
+    // 開発環境ではフォールバック（セキュリティ低下の警告は表示済み）
     return false;
   }
 
@@ -137,14 +175,18 @@ export async function markTotpCodeUsed(
  * TOTPコードが使用済みかどうかを確認
  * @param adminUserId 管理者ユーザーID
  * @param code TOTPコード
+ * @throws Error 本番環境でRedis未設定の場合
  */
 export async function isTotpCodeUsed(
   adminUserId: string,
   code: string
 ): Promise<boolean> {
+  // 本番環境ではRedis必須
+  requireRedisInProduction();
+
   const redis = getRedisClient();
   if (!redis) {
-    // Redis未設定時は未使用として扱う
+    // 開発環境ではフォールバック（セキュリティ低下の警告は表示済み）
     return false;
   }
 

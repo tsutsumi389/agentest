@@ -105,6 +105,12 @@ export class AdminTotpService {
     ipAddress?: string,
     userAgent?: string
   ): Promise<void> {
+    // 既に2FAが有効な場合はエラー
+    const existingSecret = await this.userRepo.getTotpSecret(adminUserId);
+    if (existingSecret) {
+      throw new ValidationError('2要素認証は既に有効です');
+    }
+
     // Redisから一時秘密鍵を取得
     const tempSecret = await getTotpSetupSecret(adminUserId);
     if (!tempSecret) {
@@ -225,20 +231,14 @@ export class AdminTotpService {
     ipAddress?: string,
     userAgent?: string
   ): Promise<void> {
-    // ユーザー情報を取得してパスワードを検証
-    const user = await this.userRepo.findById(adminUserId);
+    // ユーザー情報をパスワード付きで取得（1クエリで完結）
+    const user = await this.userRepo.findByIdWithPassword(adminUserId);
     if (!user) {
       throw new AuthenticationError('ユーザーが見つかりません');
     }
 
-    // パスワードハッシュを取得（findByIdはパスワードを含まないため別途取得）
-    const userWithPassword = await this.userRepo.findByEmailWithPassword(user.email);
-    if (!userWithPassword) {
-      throw new AuthenticationError('ユーザーが見つかりません');
-    }
-
     // パスワード検証
-    const isPasswordValid = await bcrypt.compare(password, userWithPassword.passwordHash);
+    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
     if (!isPasswordValid) {
       await this.auditLogService.log({
         adminUserId,

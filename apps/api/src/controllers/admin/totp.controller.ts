@@ -6,13 +6,27 @@ import { extractClientInfo } from '../../middleware/session.middleware.js';
 
 // TOTPコードのバリデーション（6桁の数字）
 const totpCodeSchema = z.object({
-  code: z.string().length(6, 'TOTPコードは6桁で入力してください').regex(/^\d+$/, 'TOTPコードは数字のみで入力してください'),
+  code: z.string().length(6, 'TOTPコードは6桁で入力してください').regex(/^\d{6}$/, 'TOTPコードは数字のみで入力してください'),
 });
 
 // TOTP無効化のバリデーション
 const disableTotpSchema = z.object({
   password: z.string().min(1, 'パスワードを入力してください'),
 });
+
+/**
+ * Zodパース結果からValidationErrorを生成するヘルパー
+ */
+function createValidationError(error: z.ZodError): ValidationError {
+  const fieldErrors = error.flatten().fieldErrors;
+  const details: Record<string, string[]> = {};
+  for (const [key, value] of Object.entries(fieldErrors)) {
+    if (value) {
+      details[key] = value;
+    }
+  }
+  return new ValidationError('入力内容に誤りがあります', details);
+}
 
 /**
  * 管理者TOTP（2要素認証）コントローラー
@@ -66,14 +80,7 @@ export class AdminTotpController {
       // バリデーション
       const parsed = totpCodeSchema.safeParse(req.body);
       if (!parsed.success) {
-        const fieldErrors = parsed.error.flatten().fieldErrors;
-        const details: Record<string, string[]> = {};
-        for (const [key, value] of Object.entries(fieldErrors)) {
-          if (value) {
-            details[key] = value;
-          }
-        }
-        throw new ValidationError('入力内容に誤りがあります', details);
+        throw createValidationError(parsed.error);
       }
 
       const { code } = parsed.data;
@@ -109,14 +116,7 @@ export class AdminTotpController {
       // バリデーション
       const parsed = totpCodeSchema.safeParse(req.body);
       if (!parsed.success) {
-        const fieldErrors = parsed.error.flatten().fieldErrors;
-        const details: Record<string, string[]> = {};
-        for (const [key, value] of Object.entries(fieldErrors)) {
-          if (value) {
-            details[key] = value;
-          }
-        }
-        throw new ValidationError('入力内容に誤りがあります', details);
+        throw createValidationError(parsed.error);
       }
 
       const { code } = parsed.data;
@@ -153,14 +153,7 @@ export class AdminTotpController {
       // バリデーション
       const parsed = disableTotpSchema.safeParse(req.body);
       if (!parsed.success) {
-        const fieldErrors = parsed.error.flatten().fieldErrors;
-        const details: Record<string, string[]> = {};
-        for (const [key, value] of Object.entries(fieldErrors)) {
-          if (value) {
-            details[key] = value;
-          }
-        }
-        throw new ValidationError('入力内容に誤りがあります', details);
+        throw createValidationError(parsed.error);
       }
 
       const { password } = parsed.data;
