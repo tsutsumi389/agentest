@@ -60,6 +60,7 @@ export function LoginForm() {
       {/* エラーメッセージ */}
       {errorMessage && (
         <div
+          role="alert"
           className={`flex items-start gap-3 p-3 rounded-md ${
             isLockedError
               ? 'bg-warning-muted text-warning'
@@ -67,9 +68,9 @@ export function LoginForm() {
           }`}
         >
           {isLockedError ? (
-            <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" aria-hidden="true" />
           ) : (
-            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" aria-hidden="true" />
           )}
           <div className="text-sm">
             <p>{errorMessage}</p>
@@ -90,7 +91,7 @@ export function LoginForm() {
         </label>
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Mail className="w-5 h-5 text-foreground-subtle" />
+            <Mail className="w-5 h-5 text-foreground-subtle" aria-hidden="true" />
           </div>
           <input
             id="email"
@@ -116,7 +117,7 @@ export function LoginForm() {
         </label>
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Lock className="w-5 h-5 text-foreground-subtle" />
+            <Lock className="w-5 h-5 text-foreground-subtle" aria-hidden="true" />
           </div>
           <input
             id="password"
@@ -137,10 +138,11 @@ export function LoginForm() {
         type="submit"
         className="btn btn-primary w-full"
         disabled={isLoading || !email || !password}
+        aria-busy={isLoading}
       >
         {isLoading ? (
           <>
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
             ログイン中...
           </>
         ) : (

@@ -95,13 +95,15 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
 
   // エラーレスポンスの場合
   if (!response.ok) {
-    const error = data?.error || {};
-    throw new ApiError(
-      response.status,
-      error.code || 'UNKNOWN_ERROR',
-      error.message || 'リクエストに失敗しました',
-      error.details
-    );
+    // JSONレスポンスでない場合やerrorフィールドがない場合のデフォルト値
+    const errorData = data && typeof data === 'object' && 'error' in data
+      ? data.error
+      : {};
+    const code = typeof errorData?.code === 'string' ? errorData.code : 'UNKNOWN_ERROR';
+    const message = typeof errorData?.message === 'string' ? errorData.message : 'リクエストに失敗しました';
+    const details = errorData?.details as Record<string, string[]> | undefined;
+
+    throw new ApiError(response.status, code, message, details);
   }
 
   return data as T;

@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router';
 import { Terminal } from 'lucide-react';
 import { TwoFactorForm } from '../../components/auth/TwoFactorForm';
+import { LoadingScreen } from '../../components/ui/LoadingScreen';
 import { useAdminAuth } from '../../hooks/useAdminAuth';
 
 /**
@@ -11,11 +12,7 @@ export function TwoFactorAuthPage() {
 
   // 読み込み中
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-foreground-muted">読み込み中...</div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   // 既に認証済みの場合

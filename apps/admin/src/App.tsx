@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import { Dashboard } from './pages/Dashboard';
 import { LoginPage } from './pages/auth/Login';
@@ -11,10 +11,15 @@ import { useAdminAuthStore } from './stores/admin-auth.store';
  */
 export function App() {
   const initialize = useAdminAuthStore((state) => state.initialize);
+  // 初期化済みフラグ（Strict Modeでの二重実行防止）
+  const initialized = useRef(false);
 
   // アプリ起動時に認証状態を初期化
   useEffect(() => {
-    initialize();
+    if (!initialized.current) {
+      initialized.current = true;
+      initialize();
+    }
   }, [initialize]);
 
   return (

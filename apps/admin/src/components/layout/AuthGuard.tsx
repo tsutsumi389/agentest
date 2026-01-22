@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Navigate } from 'react-router';
+import { LoadingScreen } from '../ui/LoadingScreen';
 import { useAdminAuth } from '../../hooks/useAdminAuth';
 
 interface AuthGuardProps {
@@ -16,11 +17,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
 
   // 読み込み中
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-foreground-muted">読み込み中...</div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   // 2FA検証が必要な場合
