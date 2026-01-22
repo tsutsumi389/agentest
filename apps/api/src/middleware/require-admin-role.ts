@@ -2,9 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { AdminRoleType } from '@agentest/db';
 import { AuthenticationError, AuthorizationError } from '@agentest/shared';
 import { AdminSessionService } from '../services/admin/admin-session.service.js';
-
-// 管理者セッションのクッキー名
-const ADMIN_SESSION_COOKIE = 'admin_session';
+import { adminAuthConfig } from '../config/auth.js';
 
 /**
  * ロールベース認可ミドルウェア
@@ -17,11 +15,12 @@ const ADMIN_SESSION_COOKIE = 'admin_session';
  *                SUPER_ADMINは全権限を持つ。
  */
 export function requireAdminRole(roles: AdminRoleType[] = []) {
+  // ミドルウェア生成時に1回だけインスタンス化（リクエストごとではない）
   const sessionService = new AdminSessionService();
 
   return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     try {
-      const token = req.cookies?.[ADMIN_SESSION_COOKIE];
+      const token = req.cookies?.[adminAuthConfig.sessionCookie];
 
       if (!token) {
         throw new AuthenticationError('認証が必要です');
@@ -52,14 +51,14 @@ export function requireAdminRole(roles: AdminRoleType[] = []) {
         }
       }
 
-      // 最終活動時刻を更新（非同期で実行）
+      // 最終活動時刻を更新（非同期で実行、リクエストをブロックしない）
       sessionService.updateActivity(session.id).catch(() => {
-        // エラーは無視
+        // エラーは無視（ログ記録のみでリクエスト処理に影響を与えない）
       });
 
-      next();
+      return next();
     } catch (error) {
-      next(error);
+      return next(error);
     }
   };
 }

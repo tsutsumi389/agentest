@@ -1,20 +1,9 @@
 import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { AuthenticationError, ValidationError } from '@agentest/shared';
-import { env } from '../../config/env.js';
 import { AdminAuthService } from '../../services/admin/admin-auth.service.js';
 import { extractClientInfo } from '../../middleware/session.middleware.js';
-
-// 管理者セッションのクッキー名
-const ADMIN_SESSION_COOKIE = 'admin_session';
-
-// 管理者クッキー設定
-const ADMIN_COOKIE_OPTIONS = {
-  httpOnly: true,
-  secure: env.NODE_ENV === 'production',
-  sameSite: 'strict' as const,
-  path: '/admin',
-};
+import { adminAuthConfig } from '../../config/auth.js';
 
 // ログインリクエストのバリデーション
 const loginSchema = z.object({
@@ -59,8 +48,8 @@ export class AdminAuthController {
       });
 
       // セッショントークンをクッキーに設定
-      res.cookie(ADMIN_SESSION_COOKIE, result.session.token, {
-        ...ADMIN_COOKIE_OPTIONS,
+      res.cookie(adminAuthConfig.sessionCookie, result.session.token, {
+        ...adminAuthConfig.cookieOptions,
         expires: result.session.expiresAt,
       });
 
@@ -94,12 +83,7 @@ export class AdminAuthController {
       );
 
       // クッキーをクリア
-      res.clearCookie(ADMIN_SESSION_COOKIE, {
-        httpOnly: true,
-        secure: env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        path: '/admin',
-      });
+      res.clearCookie(adminAuthConfig.sessionCookie, adminAuthConfig.cookieOptions);
 
       res.json({ message: 'ログアウトしました' });
     } catch (error) {
@@ -152,8 +136,8 @@ export class AdminAuthController {
       }
 
       // 新しい有効期限でクッキーを更新
-      res.cookie(ADMIN_SESSION_COOKIE, req.adminSession.token, {
-        ...ADMIN_COOKIE_OPTIONS,
+      res.cookie(adminAuthConfig.sessionCookie, req.adminSession.token, {
+        ...adminAuthConfig.cookieOptions,
         expires: newExpiresAt,
       });
 
