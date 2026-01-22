@@ -1,0 +1,155 @@
+/**
+ * 管理者向けAPIクライアント
+ */
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+
+// ============================================
+// 型定義
+// ============================================
+
+/** 管理者ロール */
+export type AdminRole = 'SUPER_ADMIN' | 'ADMIN' | 'OPERATOR' | 'VIEWER';
+
+/** 管理者ユーザー */
+export interface AdminUser {
+  id: string;
+  email: string;
+  name: string;
+  role: AdminRole;
+  totpEnabled: boolean;
+}
+
+/** ログインレスポンス */
+export interface LoginResponse {
+  admin: AdminUser;
+  expiresAt: string;
+}
+
+/** 2FA検証レスポンス */
+export interface Verify2FAResponse {
+  admin: AdminUser;
+}
+
+/**
+ * APIエラー
+ */
+export class ApiError extends Error {
+  constructor(
+    public statusCode: number,
+    public code: string,
+    message: string,
+    public details?: Record<string, string[]>
+  ) {
+    super(message);
+    this.name = 'ApiError';
+  }
+
+  /** アカウントロック状態かどうか */
+  get isLocked(): boolean {
+    return this.code === 'ACCOUNT_LOCKED';
+  }
+
+  /** レート制限かどうか */
+  get isRateLimited(): boolean {
+    return this.code === 'RATE_LIMITED' || this.statusCode === 429;
+  }
+}
+
+// ============================================
+// リクエストヘルパー
+// ============================================
+
+interface RequestOptions extends Omit<RequestInit, 'body'> {
+  body?: unknown;
+}
+
+/**
+ * APIリクエストを実行
+ */
+async function request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
+  const { body, headers: customHeaders, ...rest } = options;
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...customHeaders as Record<string, string>,
+  };
+
+  const config: RequestInit = {
+    ...rest,
+    headers,
+    credentials: 'include', // クッキーを含める
+  };
+
+  if (body) {
+    config.body = JSON.stringify(body);
+  }
+
+  const url = `${API_BASE_URL}${endpoint}`;
+  const response = await fetch(url, config);
+
+  // レスポンスボディを取得
+  const contentType = response.headers.get('content-type');
+  const isJson = contentType?.includes('application/json');
+  const data = isJson ? await response.json() : null;
+
+  // エラーレスポンスの場合
+  if (!response.ok) {
+    const error = data?.error || {};
+    throw new ApiError(
+      response.status,
+      error.code || 'UNKNOWN_ERROR',
+      error.message || 'リクエストに失敗しました',
+      error.details
+    );
+  }
+
+  return data as T;
+}
+
+/**
+ * APIクライアントインスタンス
+ */
+const api = {
+  get: <T>(endpoint: string, options?: RequestOptions) =>
+    request<T>(endpoint, { ...options, method: 'GET' }),
+
+  post: <T>(endpoint: string, body?: unknown, options?: RequestOptions) =>
+    request<T>(endpoint, { ...options, method: 'POST', body }),
+};
+
+// ============================================
+// 管理者認証API
+// ============================================
+
+export const adminAuthApi = {
+  /**
+   * ログイン
+   */
+  login: (email: string, password: string) =>
+    api.post<LoginResponse>('/admin/auth/login', { email, password }),
+
+  /**
+   * ログアウト
+   */
+  logout: () =>
+    api.post<{ message: string }>('/admin/auth/logout'),
+
+  /**
+   * 現在の管理者情報を取得
+   */
+  me: () =>
+    api.get<{ admin: AdminUser }>('/admin/auth/me'),
+
+  /**
+   * 2FA検証
+   */
+  verify2FA: (code: string) =>
+    api.post<Verify2FAResponse>('/admin/auth/2fa/verify', { code }),
+
+  /**
+   * セッション延長
+   */
+  refresh: () =>
+    api.post<{ expiresAt: string }>('/admin/auth/refresh'),
+};
