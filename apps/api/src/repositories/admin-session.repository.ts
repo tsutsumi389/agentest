@@ -115,13 +115,25 @@ export class AdminSessionRepository {
 
   /**
    * 期限切れセッションを削除（クリーンアップ用）
+   * 監査目的で30日間保持後に削除
    */
   async deleteExpired() {
+    const retentionDays = 30;
+    const retentionDate = new Date();
+    retentionDate.setDate(retentionDate.getDate() - retentionDays);
+
     return prisma.adminSession.deleteMany({
       where: {
         OR: [
-          { expiresAt: { lt: new Date() } },
-          { revokedAt: { not: null } },
+          // 期限切れかつ保持期間を超過したセッション
+          { expiresAt: { lt: retentionDate } },
+          // 失効かつ保持期間を超過したセッション
+          {
+            revokedAt: {
+              not: null,
+              lt: retentionDate,
+            },
+          },
         ],
       },
     });
