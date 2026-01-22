@@ -11,11 +11,11 @@ export default defineConfig({
     },
   },
   server: {
-    port: 3002,
-    // API プロキシ設定
+    port: 5174,
+    // API プロキシ設定（Docker内部向け）
     proxy: {
-      '/api': {
-        target: 'http://localhost:3001',
+      '/admin': {
+        target: process.env.VITE_API_PROXY_TARGET || 'http://localhost:3001',
         changeOrigin: true,
       },
     },

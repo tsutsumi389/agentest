@@ -19,3 +19,18 @@ export const authConfig = {
   },
   oauth: {},
 };
+
+/**
+ * 管理者認証設定
+ */
+export const adminAuthConfig = {
+  /** 管理者セッションのクッキー名 */
+  sessionCookie: 'admin_session',
+  /** 管理者クッキー設定 */
+  cookieOptions: {
+    httpOnly: true,
+    secure: env.NODE_ENV === 'production',
+    sameSite: 'strict' as const,
+    path: '/admin',
+  },
+};

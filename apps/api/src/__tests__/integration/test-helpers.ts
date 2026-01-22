@@ -193,6 +193,11 @@ export async function createTestAuditLog(
  */
 export async function cleanupTestData() {
   // 外部キー制約を考慮した順序で削除
+  // 管理者関連
+  await prisma.adminAuditLog.deleteMany({});
+  await prisma.adminSession.deleteMany({});
+  await prisma.adminUser.deleteMany({});
+  // レビュー関連
   await prisma.reviewCommentReply.deleteMany({});
   await prisma.reviewComment.deleteMany({});
   await prisma.auditLog.deleteMany({});
@@ -1128,5 +1133,105 @@ export async function createTestLabel(
 export async function createTestSuiteLabel(testSuiteId: string, labelId: string) {
   return prisma.testSuiteLabel.create({
     data: { testSuiteId, labelId },
+  });
+}
+
+// ==================== 管理者関連テストヘルパー ====================
+
+/**
+ * テスト用管理者ユーザーを作成
+ */
+export async function createTestAdminUser(
+  overrides: Partial<{
+    id: string;
+    email: string;
+    passwordHash: string;
+    name: string;
+    role: 'SUPER_ADMIN' | 'ADMIN';
+    totpEnabled: boolean;
+    failedAttempts: number;
+    lockedUntil: Date | null;
+    deletedAt: Date | null;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  // デフォルトのパスワードハッシュ
+  // 注: このハッシュはダミー値であり、結合テストでは bcryptjs.hashSync(testPassword, 12) で
+  // 実際のパスワードをハッシュ化してoverrideすることを想定
+  // ユニットテストではリポジトリをモックするため、このハッシュが使用されることはない
+  const defaultPasswordHash =
+    '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4bEaLwrMlxAqP6C2';
+  return prisma.adminUser.create({
+    data: {
+      id,
+      email: overrides.email ?? `admin-${id.slice(0, 8)}@example.com`,
+      passwordHash: overrides.passwordHash ?? defaultPasswordHash,
+      name: overrides.name ?? `Admin User ${id.slice(0, 8)}`,
+      role: overrides.role ?? 'ADMIN',
+      totpEnabled: overrides.totpEnabled ?? false,
+      failedAttempts: overrides.failedAttempts ?? 0,
+      lockedUntil: overrides.lockedUntil ?? null,
+      deletedAt: overrides.deletedAt ?? null,
+    },
+  });
+}
+
+/**
+ * テスト用管理者セッションを作成
+ */
+export async function createTestAdminSession(
+  adminUserId: string,
+  overrides: Partial<{
+    id: string;
+    token: string;
+    userAgent: string;
+    ipAddress: string;
+    expiresAt: Date;
+    revokedAt: Date | null;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.adminSession.create({
+    data: {
+      id,
+      adminUserId,
+      token: overrides.token ?? `admin-token-${id}`,
+      userAgent: overrides.userAgent ?? 'Mozilla/5.0 Test Browser',
+      ipAddress: overrides.ipAddress ?? '127.0.0.1',
+      expiresAt: overrides.expiresAt ?? new Date(Date.now() + 2 * 60 * 60 * 1000), // 2時間後
+      revokedAt: overrides.revokedAt ?? null,
+    },
+  });
+}
+
+/**
+ * テスト用管理者監査ログを作成
+ */
+export async function createTestAdminAuditLog(
+  adminUserId: string,
+  overrides: Partial<{
+    id: string;
+    action: string;
+    targetType: string | null;
+    targetId: string | null;
+    details: Prisma.InputJsonValue;
+    ipAddress: string | null;
+    userAgent: string | null;
+    createdAt: Date;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.adminAuditLog.create({
+    data: {
+      id,
+      adminUserId,
+      action: overrides.action ?? 'TEST_ACTION',
+      targetType: overrides.targetType ?? null,
+      targetId: overrides.targetId ?? null,
+      details: overrides.details,
+      ipAddress: overrides.ipAddress ?? null,
+      userAgent: overrides.userAgent ?? null,
+      createdAt: overrides.createdAt ?? new Date(),
+    },
   });
 }

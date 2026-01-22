@@ -430,6 +430,174 @@ sequenceDiagram
 }
 ```
 
+## 管理者認証機能
+
+管理者（システム運営者）向けの認証機能。ユーザー認証とは完全に独立したセッション管理を提供。
+
+### 機能一覧
+
+| ID | 機能名 | 説明 | 状態 |
+|----|--------|------|------|
+| ADM-AUTH-001 | 管理者ログイン | メール/パスワードでログイン | 実装済 |
+| ADM-AUTH-002 | 管理者ログアウト | セッションを終了 | 実装済 |
+| ADM-AUTH-003 | 2FA セットアップ | TOTP 認証の設定 | 実装済 |
+| ADM-AUTH-004 | 2FA 検証 | ログイン時の 2FA 検証 | 実装済 |
+| ADM-AUTH-005 | セッション延長 | セッション有効期限を延長 | 実装済 |
+| ADM-AUTH-006 | アカウントロック | 失敗回数超過でロック | 実装済 |
+
+### 管理者ログインフロー
+
+```mermaid
+sequenceDiagram
+    participant A as 管理者
+    participant F as Admin App
+    participant B as API
+    participant DB as データベース
+
+    A->>F: ログイン画面アクセス
+    F->>A: ログインフォーム表示
+    A->>F: メール/パスワード入力
+    F->>B: POST /admin/auth/login
+    B->>DB: 認証情報検証
+    alt 認証成功 & 2FA無効
+        B->>DB: セッション作成
+        B->>F: Cookie設定 + ユーザー情報
+        F->>A: ダッシュボードへリダイレクト
+    else 認証成功 & 2FA有効
+        B->>F: requiresTwoFactor: true + tempToken
+        F->>A: 2FA入力画面表示
+        A->>F: TOTPコード入力
+        F->>B: POST /admin/auth/2fa/verify
+        B->>DB: TOTPコード検証
+        B->>DB: セッション作成
+        B->>F: Cookie設定 + ユーザー情報
+        F->>A: ダッシュボードへリダイレクト
+    else 認証失敗
+        B->>DB: 失敗回数インクリメント
+        alt 5回以上失敗
+            B->>DB: アカウントロック
+        end
+        B->>F: エラーレスポンス
+        F->>A: エラーメッセージ表示
+    end
+```
+
+### 2FA セットアップフロー
+
+```mermaid
+sequenceDiagram
+    participant A as 管理者
+    participant F as Admin App
+    participant B as API
+    participant DB as データベース
+    participant Auth as 認証アプリ
+
+    A->>F: 2FA設定画面アクセス
+    F->>B: POST /admin/auth/2fa/setup
+    B->>B: TOTPシークレット生成
+    B->>DB: シークレット一時保存
+    B->>F: secret + otpauth URI
+    F->>F: QRコード生成
+    F->>A: QRコード表示
+    A->>Auth: QRコードスキャン
+    Auth->>A: 6桁コード表示
+    A->>F: コード入力
+    F->>B: POST /admin/auth/2fa/enable
+    B->>DB: TOTP検証
+    alt 検証成功
+        B->>DB: totpEnabled = true
+        B->>F: 成功レスポンス
+        F->>A: 有効化完了メッセージ
+    else 検証失敗
+        B->>F: エラーレスポンス
+        F->>A: エラーメッセージ（再試行）
+    end
+```
+
+### 管理者認証データモデル
+
+```mermaid
+erDiagram
+    AdminUser ||--o{ AdminSession : "has"
+    AdminUser ||--o{ AdminAuditLog : "has"
+
+    AdminUser {
+        uuid id PK
+        string email UK
+        string password_hash
+        string name
+        AdminRoleType role
+        string totp_secret
+        boolean totp_enabled
+        int failed_attempts
+        timestamp locked_until
+        timestamp created_at
+        timestamp updated_at
+        timestamp deleted_at
+    }
+
+    AdminSession {
+        uuid id PK
+        uuid admin_user_id FK
+        string token UK
+        string user_agent
+        string ip_address
+        timestamp last_active_at
+        timestamp expires_at
+        timestamp revoked_at
+        timestamp created_at
+    }
+
+    AdminAuditLog {
+        uuid id PK
+        uuid admin_user_id FK
+        string action
+        string target_type
+        string target_id
+        json details
+        string ip_address
+        string user_agent
+        timestamp created_at
+    }
+```
+
+### 管理者認証ビジネスルール
+
+#### パスワード要件
+
+- 最小文字数: 8文字
+- 複雑性: 大文字、小文字、数字、記号のうち3種類以上
+- bcrypt でハッシュ化（コストファクター: 12）
+
+#### アカウントロック
+
+- 連続5回のログイン失敗でアカウントをロック
+- ロック時間: 30分
+- ロック解除後、失敗カウントはリセット
+
+#### セッション管理
+
+- 有効期限: 8時間
+- 非アクティブタイムアウト: 30分
+- セッショントークン: 32バイトの暗号的に安全なランダム値
+
+#### 2FA（TOTP）
+
+- RFC 6238 準拠
+- 発行者: "Agentest Admin"
+- 時間ステップ: 30秒
+- 桁数: 6桁
+
+### 管理者認証セキュリティ考慮事項
+
+| 項目 | 対策 |
+|------|------|
+| パスワード | bcrypt ハッシュ化、複雑性要件 |
+| ブルートフォース | レート制限、アカウントロック |
+| セッションハイジャック | HttpOnly Cookie、Secure、SameSite=Strict |
+| TOTP シークレット | AES-256-GCM 暗号化保存 |
+| 監査証跡 | 全認証イベントをログ記録 |
+
 ## 関連機能
 
 - [ユーザー管理](./user-management.md) - OAuth連携の追加・解除
@@ -439,3 +607,5 @@ sequenceDiagram
 - [OAuth 2.1データベース設計](../database/oauth.md) - テーブル定義
 - [APIトークン データベース設計](../database/api-token.md) - APIトークンテーブル定義
 - [認証 API](../../api/auth.md) - APIキー管理エンドポイント
+- [管理者認証 API](../../api/admin-auth.md) - 管理者認証エンドポイント
+- [管理者認証データベース設計](../database/admin-auth.md) - 管理者認証テーブル定義

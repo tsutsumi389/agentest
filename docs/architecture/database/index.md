@@ -62,6 +62,14 @@ PostgreSQL を使用。Prisma ORM でスキーマ管理。
 |---------|------|------|
 | `AuditLog` | 監査ログ | [audit-log.md](./audit-log.md#auditlog) |
 
+### 管理者認証関連
+
+| テーブル | 説明 | 詳細 |
+|---------|------|------|
+| `AdminUser` | 管理者ユーザー | [admin-auth.md](./admin-auth.md#adminuser) |
+| `AdminSession` | 管理者セッション | [admin-auth.md](./admin-auth.md#adminsession) |
+| `AdminAuditLog` | 管理者監査ログ | [admin-auth.md](./admin-auth.md#adminauditlog) |
+
 ### 使用量記録
 
 | テーブル | 説明 | 詳細 |
@@ -208,6 +216,7 @@ Coding Agent が理解しやすい英語の文字列を使用。
 | `PaymentMethodType` | CARD | 支払い方法タイプ |
 | `NotificationType` | ORG_INVITATION, INVITATION_ACCEPTED, PROJECT_ADDED, REVIEW_COMMENT, TEST_COMPLETED, TEST_FAILED, USAGE_ALERT, BILLING, SECURITY_ALERT | 通知種別 |
 | `AuditLogCategory` | AUTH, USER, ORGANIZATION, MEMBER, PROJECT, API_TOKEN, BILLING | 監査ログカテゴリ |
+| `AdminRoleType` | SUPER_ADMIN, ADMIN, VIEWER | 管理者ロール |
 
 ### プラン系
 
@@ -329,6 +338,16 @@ CREATE INDEX idx_audit_logs_category ON "AuditLog"("category");
 CREATE INDEX idx_audit_logs_created ON "AuditLog"("createdAt");
 CREATE INDEX idx_audit_logs_org_created ON "AuditLog"("organizationId", "createdAt");
 
+-- 管理者認証
+CREATE UNIQUE INDEX idx_admin_users_email ON "admin_users"("email");
+CREATE INDEX idx_admin_users_deleted ON "admin_users"("deleted_at");
+CREATE INDEX idx_admin_sessions_user_id ON "admin_sessions"("admin_user_id");
+CREATE UNIQUE INDEX idx_admin_sessions_token ON "admin_sessions"("token");
+CREATE INDEX idx_admin_sessions_expires ON "admin_sessions"("expires_at");
+CREATE INDEX idx_admin_audit_logs_user_id ON "admin_audit_logs"("admin_user_id");
+CREATE INDEX idx_admin_audit_logs_action ON "admin_audit_logs"("action");
+CREATE INDEX idx_admin_audit_logs_created ON "admin_audit_logs"("created_at");
+
 -- 使用量記録
 CREATE INDEX idx_usage_records_user_id ON "UsageRecord"("userId");
 CREATE INDEX idx_usage_records_org_id ON "UsageRecord"("organizationId");
@@ -384,6 +403,7 @@ docker compose exec api pnpm --filter @agentest/db prisma migrate deploy
 - [通知](./notification.md)
 - [監査ログ](./audit-log.md)
 - [使用量記録](./usage.md)
+- [管理者認証](./admin-auth.md)
 - [システム全体像](../overview.md)
 - [API 設計方針](../api-design.md)
 - [ユーザー・オーガナイゼーション機能](../../requirements/user-organization.md)

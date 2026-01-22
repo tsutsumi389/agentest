@@ -12,6 +12,21 @@ declare global {
       token?: JwtPayload;
       /** 現在のセッションID */
       sessionId?: string;
+      /** 管理者ユーザー情報 */
+      adminUser?: {
+        id: string;
+        email: string;
+        name: string;
+        role: string;
+        totpEnabled: boolean;
+      };
+      /** 管理者セッション情報 */
+      adminSession?: {
+        id: string;
+        token: string;
+        createdAt: Date;
+        expiresAt: Date;
+      };
     }
   }
 }

@@ -146,6 +146,14 @@ User → Web App → API (/auth/github) → GitHub OAuth → API → JWT 発行 
 
 > **セキュリティ**: JWT は HttpOnly Cookie で管理。XSS 攻撃からトークンを保護し、SameSite=Strict で CSRF を防止。
 
+### 管理者認証フロー
+
+```
+Admin → Admin App → API (/admin/auth/login) → メール/パスワード検証 → 2FA 検証（有効時） → セッション Cookie 設定 → Admin App
+```
+
+> **セキュリティ**: ユーザー認証とは独立したセッション管理。2FA（TOTP）対応、アカウントロック機能、監査ログ記録。
+
 ### リアルタイム更新フロー
 
 ```
