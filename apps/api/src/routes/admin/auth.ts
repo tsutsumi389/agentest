@@ -1,10 +1,8 @@
 import { Router } from 'express';
-import {
-  AdminAuthController,
-  requireAdminAuth,
-} from '../../controllers/admin/auth.controller.js';
+import { AdminAuthController } from '../../controllers/admin/auth.controller.js';
 import { AdminTotpController } from '../../controllers/admin/totp.controller.js';
 import { adminAuthLimiter } from '../../middleware/rate-limiter.js';
+import { requireAdminAuth } from '../../middleware/require-admin-role.js';
 
 const router: Router = Router();
 const controller = new AdminAuthController();

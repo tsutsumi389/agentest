@@ -14,20 +14,6 @@ vi.mock('../../services/admin/admin-auth.service.js', () => ({
   AdminAuthService: vi.fn().mockImplementation(() => mockAuthService),
 }));
 
-// AdminSessionService のモック（vi.hoistedを使用）
-const mockSessionService = vi.hoisted(() => ({
-  generateToken: vi.fn(),
-  createSession: vi.fn(),
-  validateSession: vi.fn(),
-  refreshSession: vi.fn(),
-  revokeSession: vi.fn(),
-  updateActivity: vi.fn(),
-}));
-
-vi.mock('../../services/admin/admin-session.service.js', () => ({
-  AdminSessionService: vi.fn().mockImplementation(() => mockSessionService),
-}));
-
 // extractClientInfo のモック
 vi.mock('../../middleware/session.middleware.js', () => ({
   extractClientInfo: vi.fn().mockReturnValue({
@@ -44,10 +30,7 @@ vi.mock('../../config/env.js', () => ({
 }));
 
 // コントローラーのインポートはモック設定後
-import {
-  AdminAuthController,
-  requireAdminAuth,
-} from '../../controllers/admin/auth.controller.js';
+import { AdminAuthController } from '../../controllers/admin/auth.controller.js';
 
 // モックリクエスト・レスポンス・ネクスト
 function createMockReq(overrides: Partial<Request> = {}): Request {
@@ -73,109 +56,6 @@ function createMockRes(): Response {
 function createMockNext(): NextFunction {
   return vi.fn() as unknown as NextFunction;
 }
-
-describe('requireAdminAuth ミドルウェア', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it('クッキーからトークンを取得して認証できる', async () => {
-    const mockSession = {
-      id: 'session-1',
-      token: 'valid-token',
-      createdAt: new Date(),
-      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
-      adminUser: {
-        id: 'admin-1',
-        email: 'admin@example.com',
-        name: 'Test Admin',
-        role: 'ADMIN',
-        totpEnabled: false,
-      },
-    };
-    mockSessionService.validateSession.mockResolvedValue(mockSession);
-    mockSessionService.updateActivity.mockResolvedValue(undefined);
-
-    const req = createMockReq({
-      cookies: { admin_session: 'valid-token' },
-    });
-    const res = createMockRes();
-    const next = createMockNext();
-
-    const middleware = requireAdminAuth();
-    await middleware(req, res, next);
-
-    expect(mockSessionService.validateSession).toHaveBeenCalledWith('valid-token');
-    expect(next).toHaveBeenCalledWith();
-  });
-
-  it('req.adminUser, req.adminSessionを設定する', async () => {
-    const mockSession = {
-      id: 'session-1',
-      token: 'valid-token',
-      createdAt: new Date(),
-      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
-      adminUser: {
-        id: 'admin-1',
-        email: 'admin@example.com',
-        name: 'Test Admin',
-        role: 'ADMIN',
-        totpEnabled: false,
-      },
-    };
-    mockSessionService.validateSession.mockResolvedValue(mockSession);
-    mockSessionService.updateActivity.mockResolvedValue(undefined);
-
-    const req = createMockReq({
-      cookies: { admin_session: 'valid-token' },
-    });
-    const res = createMockRes();
-    const next = createMockNext();
-
-    const middleware = requireAdminAuth();
-    await middleware(req, res, next);
-
-    expect(req.adminUser).toEqual(mockSession.adminUser);
-    expect(req.adminSession).toEqual({
-      id: mockSession.id,
-      token: mockSession.token,
-      createdAt: mockSession.createdAt,
-      expiresAt: mockSession.expiresAt,
-    });
-  });
-
-  it('クッキーがない場合はAuthenticationError', async () => {
-    const req = createMockReq({
-      cookies: {},
-    });
-    const res = createMockRes();
-    const next = createMockNext();
-
-    const middleware = requireAdminAuth();
-    await middleware(req, res, next);
-
-    expect(next).toHaveBeenCalledWith(expect.any(AuthenticationError));
-    const error = (next as ReturnType<typeof vi.fn>).mock.calls[0][0];
-    expect(error.message).toBe('認証が必要です');
-  });
-
-  it('無効なセッションの場合はAuthenticationError', async () => {
-    mockSessionService.validateSession.mockResolvedValue(null);
-
-    const req = createMockReq({
-      cookies: { admin_session: 'invalid-token' },
-    });
-    const res = createMockRes();
-    const next = createMockNext();
-
-    const middleware = requireAdminAuth();
-    await middleware(req, res, next);
-
-    expect(next).toHaveBeenCalledWith(expect.any(AuthenticationError));
-    const error = (next as ReturnType<typeof vi.fn>).mock.calls[0][0];
-    expect(error.message).toBe('セッションが無効または期限切れです');
-  });
-});
 
 describe('AdminAuthController', () => {
   let controller: AdminAuthController;

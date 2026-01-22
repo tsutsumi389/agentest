@@ -3,7 +3,6 @@ import { z } from 'zod';
 import { AuthenticationError, ValidationError } from '@agentest/shared';
 import { env } from '../../config/env.js';
 import { AdminAuthService } from '../../services/admin/admin-auth.service.js';
-import { AdminSessionService } from '../../services/admin/admin-session.service.js';
 import { extractClientInfo } from '../../middleware/session.middleware.js';
 
 // 管理者セッションのクッキー名
@@ -22,50 +21,6 @@ const loginSchema = z.object({
   email: z.string().email('有効なメールアドレスを入力してください'),
   password: z.string().min(1, 'パスワードを入力してください'),
 });
-
-/**
- * 管理者認証ミドルウェア
- *
- * クッキーからセッショントークンを取得し、
- * 有効なセッションであればreq.adminUserとreq.adminSessionを設定
- */
-export function requireAdminAuth() {
-  const sessionService = new AdminSessionService();
-
-  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const token = req.cookies?.[ADMIN_SESSION_COOKIE];
-
-      if (!token) {
-        throw new AuthenticationError('認証が必要です');
-      }
-
-      const session = await sessionService.validateSession(token);
-
-      if (!session) {
-        throw new AuthenticationError('セッションが無効または期限切れです');
-      }
-
-      // リクエストに管理者情報を設定
-      req.adminUser = session.adminUser;
-      req.adminSession = {
-        id: session.id,
-        token: session.token,
-        createdAt: session.createdAt,
-        expiresAt: session.expiresAt,
-      };
-
-      // 最終活動時刻を更新（非同期で実行）
-      sessionService.updateActivity(session.id).catch(() => {
-        // エラーは無視
-      });
-
-      next();
-    } catch (error) {
-      next(error);
-    }
-  };
-}
 
 /**
  * 管理者認証コントローラー
