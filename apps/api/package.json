@@ -18,6 +18,7 @@
     "@agentest/shared": "workspace:*",
     "@agentest/storage": "workspace:*",
     "@agentest/ws-types": "workspace:*",
+    "bcrypt": "^5.1.1",
     "cookie-parser": "catalog:",
     "cors": "catalog:",
     "express": "catalog:",
@@ -31,6 +32,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
     "@types/cookie-parser": "catalog:",
     "@types/cors": "catalog:",
     "@types/express": "catalog:",
