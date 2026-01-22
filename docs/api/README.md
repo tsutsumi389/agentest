@@ -34,6 +34,21 @@ Authorization: Bearer <access_token>
 
 → [認証 API 詳細](./auth.md)
 
+### 管理者認証
+
+| メソッド | パス | 説明 |
+|---------|------|------|
+| POST | `/admin/auth/login` | 管理者ログイン |
+| POST | `/admin/auth/logout` | 管理者ログアウト |
+| GET | `/admin/auth/me` | 現在の管理者情報 |
+| POST | `/admin/auth/refresh` | セッション延長 |
+| POST | `/admin/auth/2fa/setup` | 2FA セットアップ |
+| POST | `/admin/auth/2fa/enable` | 2FA 有効化 |
+| POST | `/admin/auth/2fa/verify` | 2FA 検証 |
+| POST | `/admin/auth/2fa/disable` | 2FA 無効化 |
+
+→ [管理者認証 API 詳細](./admin-auth.md)
+
 ### OAuth 2.1（MCP クライアント向け）
 
 | メソッド | パス | 説明 |
