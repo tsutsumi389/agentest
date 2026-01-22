@@ -6,7 +6,7 @@ import { extractClientInfo } from '../../middleware/session.middleware.js';
 
 // TOTPコードのバリデーション（6桁の数字）
 const totpCodeSchema = z.object({
-  code: z.string().length(6, 'TOTPコードは6桁で入力してください').regex(/^\d{6}$/, 'TOTPコードは数字のみで入力してください'),
+  code: z.string().regex(/^\d{6}$/, 'TOTPコードは6桁の数字で入力してください'),
 });
 
 // TOTP無効化のバリデーション

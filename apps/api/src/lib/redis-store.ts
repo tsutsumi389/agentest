@@ -175,18 +175,17 @@ export async function markTotpCodeUsed(
  * TOTPコードが使用済みかどうかを確認
  * @param adminUserId 管理者ユーザーID
  * @param code TOTPコード
- * @throws Error 本番環境でRedis未設定の場合
+ *
+ * 注: この関数は確認専用のため、Redis未設定時はfalse（未使用）を返す。
+ * 本番環境でのセキュリティはmarkTotpCodeUsed側で担保される。
  */
 export async function isTotpCodeUsed(
   adminUserId: string,
   code: string
 ): Promise<boolean> {
-  // 本番環境ではRedis必須
-  requireRedisInProduction();
-
   const redis = getRedisClient();
   if (!redis) {
-    // 開発環境ではフォールバック（セキュリティ低下の警告は表示済み）
+    // Redis未設定時はfalseを返す（安全側：後続のmarkTotpCodeUsedでエラーになる）
     return false;
   }
 
