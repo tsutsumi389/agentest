@@ -168,6 +168,13 @@ enum AuditLogCategory {
   BILLING
 }
 
+// 管理者ロール定義
+enum AdminRoleType {
+  SUPER_ADMIN   // 最高権限管理者
+  ADMIN         // 一般管理者
+  VIEWER        // 閲覧専用
+}
+
 // ============================================
 // 認証モデル
 // ============================================
@@ -1272,4 +1279,58 @@ model TestSuiteLabel {
   @@index([testSuiteId])
   @@index([labelId])
   @@map("test_suite_labels")
+}
+
+// ============================================
+// 管理者モデル
+// ============================================
+
+// 管理者ユーザー
+model AdminUser {
+  id             String        @id @default(uuid())
+  email          String        @unique @db.VarChar(255)
+  passwordHash   String        @map("password_hash") @db.VarChar(255)
+  name           String        @db.VarChar(100)
+  role           AdminRoleType @default(ADMIN)
+
+  // 2FA
+  totpSecret     String?       @map("totp_secret") @db.VarChar(255)
+  totpEnabled    Boolean       @default(false) @map("totp_enabled")
+
+  // セキュリティ
+  failedAttempts Int           @default(0) @map("failed_attempts")
+  lockedUntil    DateTime?     @map("locked_until")
+
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
+  deletedAt      DateTime?     @map("deleted_at")
+
+  sessions       AdminSession[]
+
+  @@index([email])
+  @@index([deletedAt])
+  @@map("admin_users")
+}
+
+// 管理者セッション
+model AdminSession {
+  id           String    @id @default(uuid())
+  adminUserId  String    @map("admin_user_id")
+  token        String    @unique @db.VarChar(500)
+
+  userAgent    String?   @map("user_agent")
+  ipAddress    String?   @map("ip_address") @db.VarChar(45)
+
+  lastActiveAt DateTime  @default(now()) @map("last_active_at")
+  expiresAt    DateTime  @map("expires_at")
+  revokedAt    DateTime? @map("revoked_at")
+
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  adminUser    AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([adminUserId])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("admin_sessions")
 }
