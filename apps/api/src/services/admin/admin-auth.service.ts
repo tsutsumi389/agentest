@@ -10,6 +10,9 @@ const BCRYPT_ROUNDS = 12;
 const MAX_FAILED_ATTEMPTS = 5;
 // アカウントロック時間（30分）
 const LOCK_DURATION_MS = 30 * 60 * 1000;
+// タイミング攻撃対策用のダミーハッシュ（有効なbcrypt形式）
+const DUMMY_PASSWORD_HASH =
+  '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4bEaLwrMlxAqP6C2';
 
 /**
  * ログイン入力
@@ -72,7 +75,7 @@ export class AdminAuthService {
     // タイミング攻撃対策: ユーザーが存在しなくてもbcrypt処理を実行
     if (!user) {
       // ダミーのハッシュと比較してタイミングを均一化
-      await bcrypt.compare(password, '$2b$12$dummyhashfortimingattack');
+      await bcrypt.compare(password, DUMMY_PASSWORD_HASH);
       throw new AuthenticationError('メールアドレスまたはパスワードが正しくありません');
     }
 
