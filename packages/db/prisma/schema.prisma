@@ -1306,6 +1306,7 @@ model AdminUser {
   deletedAt      DateTime?     @map("deleted_at")
 
   sessions       AdminSession[]
+  auditLogs      AdminAuditLog[]
 
   @@index([email])
   @@index([deletedAt])
@@ -1333,4 +1334,27 @@ model AdminSession {
   @@index([token])
   @@index([expiresAt])
   @@map("admin_sessions")
+}
+
+// 管理者監査ログ
+model AdminAuditLog {
+  id           String   @id @default(uuid())
+  adminUserId  String   @map("admin_user_id")
+
+  action       String   @db.VarChar(100)
+  targetType   String?  @map("target_type") @db.VarChar(50)
+  targetId     String?  @map("target_id")
+
+  details      Json?
+  ipAddress    String?  @map("ip_address") @db.VarChar(45)
+  userAgent    String?  @map("user_agent")
+
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  adminUser    AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+
+  @@index([adminUserId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("admin_audit_logs")
 }
