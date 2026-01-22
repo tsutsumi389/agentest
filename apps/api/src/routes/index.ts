@@ -15,6 +15,7 @@ import editLockRoutes from './edit-locks.js';
 import notificationRoutes from './notifications.js';
 import internalRoutes from './internal.js';
 import oauthRoutes from './oauth.js';
+import adminAuthRoutes from './admin/auth.js';
 import { oauthController } from '../controllers/oauth.controller.js';
 
 const router: Router = Router();
@@ -42,6 +43,9 @@ router.use('/api/notifications', notificationRoutes);
 
 // OAuth 2.1 エンドポイント (RFC 9728)
 router.use('/oauth', oauthRoutes);
+
+// 管理者認証
+router.use('/admin/auth', adminAuthRoutes);
 
 // 内部API（MCPサーバーからの呼び出し用）
 router.use('/internal/api', internalRoutes);

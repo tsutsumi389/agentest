@@ -64,3 +64,23 @@ export const strictLimiter = rateLimit({
   },
   skip: () => isTest, // テスト環境ではスキップ
 });
+
+/**
+ * 管理者認証エンドポイント用レート制限
+ * 15分間で5リクエストまで（ブルートフォース対策）
+ */
+export const adminAuthLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15分
+  max: 5, // IP毎に5リクエスト
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: {
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: '管理者認証の試行回数が多すぎます。しばらくしてから再試行してください。',
+      statusCode: 429,
+    },
+  },
+  skipSuccessfulRequests: true, // 成功したリクエストはカウントしない
+  skip: () => isTest, // テスト環境ではスキップ
+});
