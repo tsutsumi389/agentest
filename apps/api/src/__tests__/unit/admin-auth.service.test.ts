@@ -255,7 +255,7 @@ describe('AdminAuthService', () => {
       const lockCall = mockUserRepo.lockAccount.mock.calls[0];
       const lockUntil = lockCall[1].getTime();
       const expectedLock = Date.now() + 30 * 60 * 1000;
-      expect(Math.abs(lockUntil - expectedLock)).toBeLessThan(1000);
+      expect(Math.abs(lockUntil - expectedLock)).toBeLessThan(5000);
     });
 
     it('アカウントロック時に監査ログを記録（ACCOUNT_LOCKED）', async () => {

@@ -1,9 +1,23 @@
 /**
  * Vitest セットアップファイル
  * 各テストファイル実行前に実行される
+ * - bcryptをbcryptjsでモック（Docker環境でのネイティブモジュール問題を回避）
  * - テスト用DBへの接続を確認
  */
-import { beforeAll, afterAll } from 'vitest';
+import { vi, beforeAll, afterAll } from 'vitest';
+import bcryptjs from 'bcryptjs';
+
+// bcryptをbcryptjsでモック（Docker環境ではbcryptのネイティブモジュールがビルドされないため）
+vi.mock('bcrypt', () => ({
+  default: {
+    hash: (password: string, rounds: number) => bcryptjs.hash(password, rounds),
+    compare: (password: string, hash: string) => bcryptjs.compare(password, hash),
+    hashSync: (password: string, rounds: number) => bcryptjs.hashSync(password, rounds),
+    compareSync: (password: string, hash: string) => bcryptjs.compareSync(password, hash),
+    genSalt: (rounds: number) => bcryptjs.genSalt(rounds),
+    genSaltSync: (rounds: number) => bcryptjs.genSaltSync(rounds),
+  },
+}));
 import { prisma } from '@agentest/db';
 
 beforeAll(async () => {

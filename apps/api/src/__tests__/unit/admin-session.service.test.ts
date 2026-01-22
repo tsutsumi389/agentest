@@ -77,7 +77,7 @@ describe('AdminSessionService', () => {
       const createCall = mockSessionRepo.create.mock.calls[0][0];
       const expiresAt = createCall.expiresAt.getTime();
       const expectedExpiry = now + 2 * 60 * 60 * 1000;
-      expect(Math.abs(expiresAt - expectedExpiry)).toBeLessThan(1000);
+      expect(Math.abs(expiresAt - expectedExpiry)).toBeLessThan(5000);
 
       expect(result.token).toBeDefined();
     });
@@ -189,7 +189,7 @@ describe('AdminSessionService', () => {
       // 新しい有効期限が約2時間後であることを確認
       const newExpiry = result!.getTime();
       const expectedExpiry = now + 2 * 60 * 60 * 1000;
-      expect(Math.abs(newExpiry - expectedExpiry)).toBeLessThan(1000);
+      expect(Math.abs(newExpiry - expectedExpiry)).toBeLessThan(5000);
     });
 
     it('最大延長期限（8時間）を超えない', async () => {

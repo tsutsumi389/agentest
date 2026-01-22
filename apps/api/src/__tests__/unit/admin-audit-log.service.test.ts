@@ -109,11 +109,11 @@ describe('AdminAuditLogService', () => {
       consoleSpy.mockRestore();
     });
 
-    it('DB書込みエラー時もメイン処理に影響しない', async () => {
+    it('DB書込みエラー時もメイン処理に影響しない（Promiseはresolveする）', async () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       mockPrisma.adminAuditLog.create.mockRejectedValue(new Error('DB connection error'));
 
-      // エラーがスローされないことを確認
+      // エラーがスローされず、Promiseがresolveすることを確認
       await expect(
         service.log({
           adminUserId: 'admin-1',
@@ -121,25 +121,13 @@ describe('AdminAuditLogService', () => {
         })
       ).resolves.toBeUndefined();
 
+      // エラーログが出力されることを確認
       expect(consoleSpy).toHaveBeenCalledWith(
         '管理者監査ログの記録に失敗:',
         expect.any(Error)
       );
 
       consoleSpy.mockRestore();
-    });
-
-    it('DB書込みエラー時もPromiseはresolveする', async () => {
-      vi.spyOn(console, 'error').mockImplementation(() => {});
-      mockPrisma.adminAuditLog.create.mockRejectedValue(new Error('DB error'));
-
-      // 明示的にPromiseの状態を確認
-      const result = service.log({
-        adminUserId: 'admin-1',
-        action: 'LOGIN_SUCCESS',
-      });
-
-      await expect(result).resolves.not.toThrow();
     });
   });
 });

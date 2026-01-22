@@ -189,6 +189,10 @@ describe('AdminSessionRepository', () => {
       const thirtyOneDaysAgo = new Date(now.getTime() - 31 * 24 * 60 * 60 * 1000);
       const twentyNineDaysAgo = new Date(now.getTime() - 29 * 24 * 60 * 60 * 1000);
 
+      // 注: 以下ではcreateTestAdminSessionではなくprisma.adminSession.createを直接使用
+      // 理由: createdAtのデフォルト値（now）を使用し、expiresAtのみを過去に設定することで
+      // 「期限切れだが保持期間内」と「期限切れかつ保持期間超過」のセッションを作成するため
+
       // 31日前に期限切れのセッション（削除対象）
       await prisma.adminSession.create({
         data: {

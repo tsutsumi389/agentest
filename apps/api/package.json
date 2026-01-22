@@ -33,6 +33,7 @@
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
+    "@types/bcryptjs": "^3.0.0",
     "@types/cookie-parser": "catalog:",
     "@types/cors": "catalog:",
     "@types/express": "catalog:",
@@ -42,6 +43,7 @@
     "@types/nodemailer": "^7.0.5",
     "@types/supertest": "catalog:",
     "@types/uuid": "^10.0.0",
+    "bcryptjs": "^3.0.3",
     "supertest": "catalog:",
     "tsx": "^4.7.0",
     "typescript": "catalog:",

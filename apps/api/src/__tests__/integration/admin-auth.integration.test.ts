@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import request from 'supertest';
 import type { Express } from 'express';
-import bcrypt from 'bcrypt';
+import bcryptjs from 'bcryptjs';
 import { prisma } from '@agentest/db';
 import {
   createTestAdminUser,
@@ -28,7 +28,8 @@ describe('Admin Auth API Integration Tests', () => {
     await cleanupTestData();
 
     // テスト用の管理者ユーザーを作成（パスワードをハッシュ化）
-    const passwordHash = await bcrypt.hash(testPassword, 12);
+    // bcryptjsを使用（pure JS実装でDockerネイティブモジュール問題を回避）
+    const passwordHash = bcryptjs.hashSync(testPassword, 12);
     testAdminUser = await createTestAdminUser({
       email: 'admin@example.com',
       name: 'Test Admin',
