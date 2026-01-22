@@ -81,6 +81,10 @@ export const adminAuthLimiter = rateLimit({
       statusCode: 429,
     },
   },
+  keyGenerator: (req) => {
+    // X-Forwarded-For ヘッダーまたはIPアドレスを使用
+    return (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.ip || 'unknown';
+  },
   skipSuccessfulRequests: true, // 成功したリクエストはカウントしない
   skip: () => isTest, // テスト環境ではスキップ
 });

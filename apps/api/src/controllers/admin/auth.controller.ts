@@ -6,27 +6,6 @@ import { AdminAuthService } from '../../services/admin/admin-auth.service.js';
 import { AdminSessionService } from '../../services/admin/admin-session.service.js';
 import { extractClientInfo } from '../../middleware/session.middleware.js';
 
-// Express 型拡張
-declare global {
-  namespace Express {
-    interface Request {
-      adminUser?: {
-        id: string;
-        email: string;
-        name: string;
-        role: string;
-        totpEnabled: boolean;
-      };
-      adminSession?: {
-        id: string;
-        token: string;
-        createdAt: Date;
-        expiresAt: Date;
-      };
-    }
-  }
-}
-
 // 管理者セッションのクッキー名
 const ADMIN_SESSION_COOKIE = 'admin_session';
 
@@ -161,6 +140,9 @@ export class AdminAuthController {
 
       // クッキーをクリア
       res.clearCookie(ADMIN_SESSION_COOKIE, {
+        httpOnly: true,
+        secure: env.NODE_ENV === 'production',
+        sameSite: 'strict',
         path: '/admin',
       });
 
