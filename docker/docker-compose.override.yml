@@ -208,7 +208,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile.dev
     container_name: agentest-admin
-    command: pnpm --filter @agentest/admin dev -- --host --port 5174
+    command: pnpm --filter @agentest/admin dev -- --host
     volumes:
       - ..:/app
       - pnpm_store:/root/.local/share/pnpm/store
@@ -217,6 +217,8 @@ services:
     environment:
       NODE_ENV: development
       VITE_API_URL: ${VITE_API_URL:-http://localhost:3001}
+      # Docker内部でのAPIプロキシ先
+      VITE_API_PROXY_TARGET: http://api:3001
     ports:
       - "${ADMIN_EXTERNAL_PORT:-3003}:5174"
     restart: "no"
