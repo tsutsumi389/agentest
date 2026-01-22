@@ -80,4 +80,52 @@ export class AdminUserRepository {
       },
     });
   }
+
+  /**
+   * TOTPを有効化し、秘密鍵を保存
+   * @param id 管理者ユーザーID
+   * @param totpSecret TOTP秘密鍵
+   */
+  async enableTotp(id: string, totpSecret: string): Promise<void> {
+    await prisma.adminUser.update({
+      where: { id },
+      data: {
+        totpSecret,
+        totpEnabled: true,
+      },
+    });
+  }
+
+  /**
+   * TOTPを無効化（秘密鍵をnullに）
+   * @param id 管理者ユーザーID
+   */
+  async disableTotp(id: string): Promise<void> {
+    await prisma.adminUser.update({
+      where: { id },
+      data: {
+        totpSecret: null,
+        totpEnabled: false,
+      },
+    });
+  }
+
+  /**
+   * TOTP秘密鍵を取得（検証用）
+   * @param id 管理者ユーザーID
+   * @returns TOTP秘密鍵またはnull
+   */
+  async getTotpSecret(id: string): Promise<string | null> {
+    const user = await prisma.adminUser.findFirst({
+      where: {
+        id,
+        deletedAt: null,
+      },
+      select: {
+        totpSecret: true,
+      },
+    });
+
+    return user?.totpSecret ?? null;
+  }
 }

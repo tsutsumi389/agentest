@@ -139,4 +139,86 @@ describe('AdminUserRepository', () => {
       expect(updated?.lockedUntil).toBeNull();
     });
   });
+
+  describe('enableTotp', () => {
+    it('TOTPを有効化し、秘密鍵を保存できる', async () => {
+      const adminUser = await createTestAdminUser({
+        totpEnabled: false,
+      });
+      const totpSecret = 'JBSWY3DPEHPK3PXP';
+
+      await repo.enableTotp(adminUser.id, totpSecret);
+
+      const updated = await prisma.adminUser.findUnique({
+        where: { id: adminUser.id },
+      });
+
+      expect(updated?.totpEnabled).toBe(true);
+      expect(updated?.totpSecret).toBe(totpSecret);
+    });
+  });
+
+  describe('disableTotp', () => {
+    it('TOTPを無効化し、秘密鍵をnullにできる', async () => {
+      const adminUser = await createTestAdminUser({
+        totpEnabled: true,
+      });
+      // 先にTOTPを有効化
+      await repo.enableTotp(adminUser.id, 'JBSWY3DPEHPK3PXP');
+
+      await repo.disableTotp(adminUser.id);
+
+      const updated = await prisma.adminUser.findUnique({
+        where: { id: adminUser.id },
+      });
+
+      expect(updated?.totpEnabled).toBe(false);
+      expect(updated?.totpSecret).toBeNull();
+    });
+  });
+
+  describe('getTotpSecret', () => {
+    it('TOTP秘密鍵を取得できる', async () => {
+      const adminUser = await createTestAdminUser({
+        totpEnabled: true,
+      });
+      const totpSecret = 'JBSWY3DPEHPK3PXP';
+      await repo.enableTotp(adminUser.id, totpSecret);
+
+      const result = await repo.getTotpSecret(adminUser.id);
+
+      expect(result).toBe(totpSecret);
+    });
+
+    it('TOTP未設定の場合はnullを返す', async () => {
+      const adminUser = await createTestAdminUser({
+        totpEnabled: false,
+      });
+
+      const result = await repo.getTotpSecret(adminUser.id);
+
+      expect(result).toBeNull();
+    });
+
+    it('削除済みユーザーはnullを返す', async () => {
+      const adminUser = await createTestAdminUser({
+        deletedAt: new Date(),
+      });
+      // 強制的にtotpSecretを設定
+      await prisma.adminUser.update({
+        where: { id: adminUser.id },
+        data: { totpSecret: 'JBSWY3DPEHPK3PXP', totpEnabled: true },
+      });
+
+      const result = await repo.getTotpSecret(adminUser.id);
+
+      expect(result).toBeNull();
+    });
+
+    it('存在しないIDはnullを返す', async () => {
+      const result = await repo.getTotpSecret('nonexistent-id');
+
+      expect(result).toBeNull();
+    });
+  });
 });
