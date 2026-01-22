@@ -95,6 +95,8 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
+    ports:
+      - "${API_EXTERNAL_PORT:-3001}:3001"
     restart: "no"
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]

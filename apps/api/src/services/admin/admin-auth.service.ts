@@ -1,4 +1,4 @@
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import { AuthenticationError } from '@agentest/shared';
 import { AdminUserRepository } from '../../repositories/admin-user.repository.js';
 import { AdminSessionService } from './admin-session.service.js';
