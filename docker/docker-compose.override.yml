@@ -208,7 +208,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile.dev
     container_name: agentest-admin
-    command: sh -c "cd /app/apps/admin && pnpm vite --host --port 5174"
+    command: sh -c "cd /app/apps/admin && pnpm vite --host"
     volumes:
       - ..:/app
       - pnpm_store:/root/.local/share/pnpm/store
