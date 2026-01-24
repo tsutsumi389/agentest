@@ -253,20 +253,9 @@ export class ProjectService {
    */
   async createEnvironment(
     projectId: string,
-    data: { name: string; slug: string; baseUrl?: string | null; description?: string | null; isDefault?: boolean }
+    data: { name: string; baseUrl?: string | null; description?: string | null; isDefault?: boolean }
   ) {
     await this.findById(projectId);
-
-    // スラッグの重複チェック
-    const existing = await prisma.projectEnvironment.findUnique({
-      where: {
-        projectId_slug: { projectId, slug: data.slug },
-      },
-    });
-
-    if (existing) {
-      throw new ConflictError('このスラッグは既に使用されています');
-    }
 
     // デフォルト環境の場合、他のデフォルトを解除
     if (data.isDefault) {
@@ -286,7 +275,6 @@ export class ProjectService {
       data: {
         projectId,
         name: data.name,
-        slug: data.slug,
         baseUrl: data.baseUrl,
         description: data.description,
         isDefault: data.isDefault ?? false,
@@ -301,7 +289,7 @@ export class ProjectService {
   async updateEnvironment(
     projectId: string,
     environmentId: string,
-    data: { name?: string; slug?: string; baseUrl?: string | null; description?: string | null; isDefault?: boolean }
+    data: { name?: string; baseUrl?: string | null; description?: string | null; isDefault?: boolean }
   ) {
     await this.findById(projectId);
 
@@ -312,19 +300,6 @@ export class ProjectService {
 
     if (!environment || environment.projectId !== projectId) {
       throw new NotFoundError('Environment', environmentId);
-    }
-
-    // スラッグの重複チェック（変更がある場合のみ）
-    if (data.slug && data.slug !== environment.slug) {
-      const existing = await prisma.projectEnvironment.findUnique({
-        where: {
-          projectId_slug: { projectId, slug: data.slug },
-        },
-      });
-
-      if (existing) {
-        throw new ConflictError('このスラッグは既に使用されています');
-      }
     }
 
     // トランザクションでデフォルト切替と更新を実行

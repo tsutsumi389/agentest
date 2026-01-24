@@ -519,7 +519,6 @@ describe('Internal API Create Endpoints Integration Tests', () => {
           data: {
             projectId: testProject.id,
             name: 'Development',
-            slug: 'dev',
             isDefault: true,
             sortOrder: 0,
           },

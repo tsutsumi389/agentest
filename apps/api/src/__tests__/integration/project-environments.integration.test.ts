@@ -101,14 +101,12 @@ describe('Project Environments API Integration Tests', () => {
     // 環境を作成
     devEnv = await createTestEnvironment(project.id, {
       name: 'Development',
-      slug: 'dev',
       baseUrl: 'http://localhost:3000',
       isDefault: true,
       sortOrder: 0,
     });
     stagingEnv = await createTestEnvironment(project.id, {
       name: 'Staging',
-      slug: 'staging',
       baseUrl: 'http://staging.example.com',
       isDefault: false,
       sortOrder: 1,
@@ -176,14 +174,12 @@ describe('Project Environments API Integration Tests', () => {
         .post(`/api/projects/${project.id}/environments`)
         .send({
           name: 'Production',
-          slug: 'prod',
           baseUrl: 'https://example.com',
           description: 'Production environment',
         })
         .expect(201);
 
       expect(response.body.environment.name).toBe('Production');
-      expect(response.body.environment.slug).toBe('prod');
       expect(response.body.environment.sortOrder).toBe(2); // 既存は0, 1なので次は2
       expect(response.body.environment.isDefault).toBe(false);
     });
@@ -193,7 +189,6 @@ describe('Project Environments API Integration Tests', () => {
         .post(`/api/projects/${project.id}/environments`)
         .send({
           name: 'Production',
-          slug: 'prod',
           isDefault: true,
         })
         .expect(201);
@@ -207,24 +202,11 @@ describe('Project Environments API Integration Tests', () => {
       expect(updatedDevEnv?.isDefault).toBe(false);
     });
 
-    it('重複するスラッグは409エラー', async () => {
-      const response = await request(app)
-        .post(`/api/projects/${project.id}/environments`)
-        .send({
-          name: 'Another Dev',
-          slug: 'dev', // 既存のスラッグ
-        })
-        .expect(409);
-
-      expect(response.body.error.code).toBe('CONFLICT');
-    });
-
     it('必須フィールドがない場合は400エラー', async () => {
       const response = await request(app)
         .post(`/api/projects/${project.id}/environments`)
         .send({
-          name: 'Test',
-          // slugがない
+          // nameがない
         })
         .expect(400);
 
@@ -238,7 +220,6 @@ describe('Project Environments API Integration Tests', () => {
         .post(`/api/projects/${project.id}/environments`)
         .send({
           name: 'Test',
-          slug: 'test',
         })
         .expect(403);
 
@@ -263,28 +244,6 @@ describe('Project Environments API Integration Tests', () => {
 
       expect(response.body.environment.name).toBe('Development Updated');
       expect(response.body.environment.description).toBe('Updated description');
-    });
-
-    it('スラッグを変更できる', async () => {
-      const response = await request(app)
-        .patch(`/api/projects/${project.id}/environments/${devEnv.id}`)
-        .send({
-          slug: 'development',
-        })
-        .expect(200);
-
-      expect(response.body.environment.slug).toBe('development');
-    });
-
-    it('重複するスラッグへの変更は409エラー', async () => {
-      const response = await request(app)
-        .patch(`/api/projects/${project.id}/environments/${devEnv.id}`)
-        .send({
-          slug: 'staging', // 既存のスラッグ
-        })
-        .expect(409);
-
-      expect(response.body.error.code).toBe('CONFLICT');
     });
 
     it('デフォルト環境に設定すると他のデフォルトが解除される', async () => {
@@ -428,7 +387,6 @@ describe('Project Environments API Integration Tests', () => {
       // 3つ目の環境を追加
       prodEnv = await createTestEnvironment(project.id, {
         name: 'Production',
-        slug: 'prod',
         sortOrder: 2,
       });
     });
@@ -548,7 +506,7 @@ describe('Project Environments API Integration Tests', () => {
       it('環境を作成できる', async () => {
         await request(app)
           .post(`/api/projects/${project.id}/environments`)
-          .send({ name: 'Test', slug: 'test' })
+          .send({ name: 'Test' })
           .expect(201);
       });
 
@@ -587,7 +545,7 @@ describe('Project Environments API Integration Tests', () => {
       it('環境を作成できる', async () => {
         await request(app)
           .post(`/api/projects/${project.id}/environments`)
-          .send({ name: 'Test', slug: 'test' })
+          .send({ name: 'Test' })
           .expect(201);
       });
 
@@ -626,7 +584,7 @@ describe('Project Environments API Integration Tests', () => {
       it('環境を作成できない', async () => {
         await request(app)
           .post(`/api/projects/${project.id}/environments`)
-          .send({ name: 'Test', slug: 'test' })
+          .send({ name: 'Test' })
           .expect(403);
       });
 

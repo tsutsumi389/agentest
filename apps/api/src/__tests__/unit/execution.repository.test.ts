@@ -35,7 +35,6 @@ describe('ExecutionRepository', () => {
         environment: {
           id: 'env-1',
           name: 'Development',
-          slug: 'dev',
         },
         executedByUser: {
           id: 'user-1',
@@ -54,7 +53,7 @@ describe('ExecutionRepository', () => {
             select: { id: true, name: true, projectId: true },
           },
           environment: {
-            select: { id: true, name: true, slug: true },
+            select: { id: true, name: true },
           },
           executedByUser: {
             select: { id: true, name: true, avatarUrl: true },
@@ -75,7 +74,6 @@ describe('ExecutionRepository', () => {
         environment: {
           id: 'env-1',
           name: 'Production',
-          slug: 'prod',
         },
         executedByUser: {
           id: 'user-1',
@@ -115,7 +113,6 @@ describe('ExecutionRepository', () => {
         environment: {
           id: 'env-1',
           name: 'Development',
-          slug: 'dev',
         },
         executedByUser: {
           id: 'user-1',
@@ -154,7 +151,7 @@ describe('ExecutionRepository', () => {
             select: { id: true, name: true, projectId: true },
           },
           environment: {
-            select: { id: true, name: true, slug: true },
+            select: { id: true, name: true },
           },
           executedByUser: {
             select: { id: true, name: true, avatarUrl: true },
@@ -279,8 +276,7 @@ describe('ExecutionRepository', () => {
           environment: {
             id: 'env-1',
             name: 'Development',
-            slug: 'dev',
-          },
+                      },
         },
         {
           id: 'execution-2',
@@ -294,8 +290,7 @@ describe('ExecutionRepository', () => {
           environment: {
             id: 'env-2',
             name: 'Production',
-            slug: 'prod',
-          },
+                      },
         },
       ];
       mockPrismaExecution.findMany.mockResolvedValue(mockExecutions);
@@ -309,7 +304,7 @@ describe('ExecutionRepository', () => {
             select: { id: true, name: true, avatarUrl: true },
           },
           environment: {
-            select: { id: true, name: true, slug: true },
+            select: { id: true, name: true },
           },
         },
         orderBy: { createdAt: 'desc' },

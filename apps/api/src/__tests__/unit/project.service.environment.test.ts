@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { NotFoundError, ConflictError } from '@agentest/shared';
+import { NotFoundError } from '@agentest/shared';
 
 // ProjectRepository のモック
 const mockProjectRepo = vi.hoisted(() => ({
@@ -61,7 +61,6 @@ describe('ProjectService - Environment Management', () => {
     id: 'env-1',
     projectId: 'project-1',
     name: 'Development',
-    slug: 'dev',
     baseUrl: 'http://localhost:3000',
     description: 'Development environment',
     isDefault: true,
@@ -94,47 +93,6 @@ describe('ProjectService - Environment Management', () => {
         where: { id: 'env-1' },
       });
       expect(result.name).toBe('Updated Name');
-    });
-
-    it('スラッグを変更できる', async () => {
-      mockProjectRepo.findById.mockResolvedValue(mockProject);
-      mockPrisma.projectEnvironment.findUnique
-        .mockResolvedValueOnce(mockEnvironment) // 環境存在確認
-        .mockResolvedValueOnce(null); // スラッグ重複チェック（なし）
-      mockPrisma.projectEnvironment.update.mockResolvedValue({
-        ...mockEnvironment,
-        slug: 'development',
-      });
-
-      const result = await service.updateEnvironment('project-1', 'env-1', { slug: 'development' });
-
-      expect(result.slug).toBe('development');
-    });
-
-    it('重複するスラッグへの変更はConflictErrorを投げる', async () => {
-      const existingEnv = { ...mockEnvironment, id: 'env-2', slug: 'staging' };
-      mockProjectRepo.findById.mockResolvedValue(mockProject);
-      mockPrisma.projectEnvironment.findUnique
-        .mockResolvedValueOnce(mockEnvironment) // 環境存在確認
-        .mockResolvedValueOnce(existingEnv); // スラッグ重複チェック（あり）
-
-      await expect(service.updateEnvironment('project-1', 'env-1', { slug: 'staging' }))
-        .rejects.toThrow(ConflictError);
-    });
-
-    it('同じスラッグへの更新は重複チェックをスキップする', async () => {
-      mockProjectRepo.findById.mockResolvedValue(mockProject);
-      mockPrisma.projectEnvironment.findUnique.mockResolvedValue(mockEnvironment);
-      mockPrisma.projectEnvironment.update.mockResolvedValue({
-        ...mockEnvironment,
-        name: 'Updated Name',
-      });
-
-      // スラッグを現在と同じ値に設定
-      await service.updateEnvironment('project-1', 'env-1', { slug: 'dev', name: 'Updated Name' });
-
-      // findUniqueは1回のみ呼ばれる（環境存在確認のみ、スラッグ重複チェックはスキップ）
-      expect(mockPrisma.projectEnvironment.findUnique).toHaveBeenCalledTimes(1);
     });
 
     it('デフォルト環境に設定すると他のデフォルトが解除される', async () => {
@@ -335,7 +293,6 @@ describe('ProjectService - Environment Management', () => {
         id: 'new-env',
         projectId: 'project-1',
         name: 'Staging',
-        slug: 'staging',
         baseUrl: 'http://staging.example.com',
         description: 'Staging environment',
         isDefault: false,
@@ -345,35 +302,21 @@ describe('ProjectService - Environment Management', () => {
       };
 
       mockProjectRepo.findById.mockResolvedValue(mockProject);
-      mockPrisma.projectEnvironment.findUnique.mockResolvedValue(null); // スラッグ重複なし
       mockPrisma.projectEnvironment.aggregate.mockResolvedValue({ _max: { sortOrder: 0 } });
       mockPrisma.projectEnvironment.create.mockResolvedValue(newEnv);
 
       const result = await service.createEnvironment('project-1', {
         name: 'Staging',
-        slug: 'staging',
         baseUrl: 'http://staging.example.com',
         description: 'Staging environment',
       });
 
       expect(result.name).toBe('Staging');
-      expect(result.slug).toBe('staging');
       expect(result.sortOrder).toBe(1);
-    });
-
-    it('重複するスラッグはConflictErrorを投げる', async () => {
-      mockProjectRepo.findById.mockResolvedValue(mockProject);
-      mockPrisma.projectEnvironment.findUnique.mockResolvedValue(mockEnvironment); // スラッグ重複あり
-
-      await expect(service.createEnvironment('project-1', {
-        name: 'Test',
-        slug: 'dev', // 既存のスラッグ
-      })).rejects.toThrow(ConflictError);
     });
 
     it('デフォルト環境として作成すると他のデフォルトが解除される', async () => {
       mockProjectRepo.findById.mockResolvedValue(mockProject);
-      mockPrisma.projectEnvironment.findUnique.mockResolvedValue(null);
       mockPrisma.projectEnvironment.updateMany.mockResolvedValue({ count: 1 });
       mockPrisma.projectEnvironment.aggregate.mockResolvedValue({ _max: { sortOrder: 0 } });
       mockPrisma.projectEnvironment.create.mockResolvedValue({
@@ -384,7 +327,6 @@ describe('ProjectService - Environment Management', () => {
 
       await service.createEnvironment('project-1', {
         name: 'New Default',
-        slug: 'new-default',
         isDefault: true,
       });
 
@@ -396,7 +338,6 @@ describe('ProjectService - Environment Management', () => {
 
     it('最初の環境はsortOrder=0で作成される', async () => {
       mockProjectRepo.findById.mockResolvedValue(mockProject);
-      mockPrisma.projectEnvironment.findUnique.mockResolvedValue(null);
       mockPrisma.projectEnvironment.aggregate.mockResolvedValue({ _max: { sortOrder: null } });
       mockPrisma.projectEnvironment.create.mockResolvedValue({
         ...mockEnvironment,
@@ -405,7 +346,6 @@ describe('ProjectService - Environment Management', () => {
 
       await service.createEnvironment('project-1', {
         name: 'First',
-        slug: 'first',
       });
 
       expect(mockPrisma.projectEnvironment.create).toHaveBeenCalledWith({
@@ -421,7 +361,7 @@ describe('ProjectService - Environment Management', () => {
     it('プロジェクトの環境一覧を取得できる', async () => {
       const environments = [
         { ...mockEnvironment, sortOrder: 0 },
-        { ...mockEnvironment, id: 'env-2', name: 'Staging', slug: 'staging', sortOrder: 1 },
+        { ...mockEnvironment, id: 'env-2', name: 'Staging', sortOrder: 1 },
       ];
       mockProjectRepo.findById.mockResolvedValue(mockProject);
       mockPrisma.projectEnvironment.findMany.mockResolvedValue(environments);
@@ -454,3 +394,4 @@ describe('ProjectService - Environment Management', () => {
     });
   });
 });
+

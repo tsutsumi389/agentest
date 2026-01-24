@@ -232,7 +232,7 @@ describe('ProjectController', () => {
       mockProjectService.createEnvironment.mockResolvedValue(mockEnv);
 
       const req = mockRequest({
-        body: { name: 'Production', slug: 'prod' },
+        body: { name: 'Production' },
       }) as Request;
       const res = mockResponse() as Response;
 

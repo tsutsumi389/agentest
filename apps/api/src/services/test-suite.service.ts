@@ -578,7 +578,7 @@ export class TestSuiteService {
             select: { id: true, name: true, avatarUrl: true },
           },
           environment: {
-            select: { id: true, name: true, slug: true },
+            select: { id: true, name: true },
           },
           expectedResults: {
             select: { status: true },

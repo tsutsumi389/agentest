@@ -14,7 +14,6 @@ interface SearchExecutionResponse {
     environment: {
       id: string;
       name: string;
-      slug: string;
     } | null;
     createdAt: string;
     updatedAt: string;
@@ -71,7 +70,6 @@ function createMockExecution(overrides: Record<string, unknown> = {}) {
     environment: {
       id: TEST_ENVIRONMENT_ID,
       name: 'Production',
-      slug: 'production',
     },
     createdAt: '2024-01-01T10:00:00.000Z',
     updatedAt: '2024-01-01T11:00:00.000Z',

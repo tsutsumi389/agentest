@@ -168,7 +168,6 @@ interface GetExecutionResponse {
     environment: {
       id: string;
       name: string;
-      slug: string;
     } | null;
     executionTestSuite: ExecutionTestSuiteSnapshot | null;
     preconditionResults: ExecutionPreconditionResult[];

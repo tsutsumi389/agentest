@@ -936,7 +936,6 @@ interface SearchExecutionResponse {
     environment: {
       id: string;
       name: string;
-      slug: string;
     } | null;
     createdAt: string;
     updatedAt: string;
@@ -973,7 +972,7 @@ interface SearchExecutionResponse {
       "id": "exec_xxx",
       "testSuiteId": "suite_xxx",
       "executedByUser": { "id": "user_xxx", "name": "田中太郎", "avatarUrl": null },
-      "environment": { "id": "env_xxx", "name": "本番環境", "slug": "production" },
+      "environment": { "id": "env_xxx", "name": "本番環境" },
       "createdAt": "2024-01-15T10:00:00.000Z",
       "updatedAt": "2024-01-15T11:30:00.000Z"
     }
@@ -1026,7 +1025,6 @@ interface GetProjectResponse {
       id: string;
       projectId: string;
       name: string;
-      slug: string;
       baseUrl: string | null;
       description: string | null;
       isDefault: boolean;
@@ -1072,7 +1070,6 @@ interface GetProjectResponse {
         "id": "env_xxx",
         "projectId": "proj_xxx",
         "name": "開発環境",
-        "slug": "development",
         "baseUrl": "https://dev.example.com",
         "description": null,
         "isDefault": true,
@@ -1410,7 +1407,6 @@ interface GetExecutionResponse {
     environment: {
       id: string;
       name: string;
-      slug: string;
     } | null;
     executionTestSuite: {        // 実行時点のスナップショット
       id: string;
@@ -1540,7 +1536,7 @@ interface GetExecutionResponse {
       "projectId": "proj_xxx"
     },
     "executedByUser": { "id": "user_xxx", "name": "田中太郎", "avatarUrl": null },
-    "environment": { "id": "env_xxx", "name": "本番環境", "slug": "production" },
+    "environment": { "id": "env_xxx", "name": "本番環境" },
     "executionTestSuite": { ... },
     "preconditionResults": [ ... ],
     "stepResults": [ ... ],

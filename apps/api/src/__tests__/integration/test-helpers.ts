@@ -315,7 +315,6 @@ export async function createTestEnvironment(
   overrides: Partial<{
     id: string;
     name: string;
-    slug: string;
     baseUrl: string | null;
     description: string | null;
     isDefault: boolean;
@@ -328,7 +327,6 @@ export async function createTestEnvironment(
       id,
       projectId,
       name: overrides.name ?? `Environment ${id.slice(0, 8)}`,
-      slug: overrides.slug ?? `env-${id.slice(0, 8)}`,
       baseUrl: overrides.baseUrl ?? null,
       description: overrides.description ?? null,
       isDefault: overrides.isDefault ?? false,

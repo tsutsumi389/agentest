@@ -522,7 +522,6 @@ export interface ProjectEnvironment {
   id: string;
   projectId: string;
   name: string;
-  slug: string;
   baseUrl: string | null;
   description: string | null;
   isDefault: boolean;
@@ -534,7 +533,6 @@ export interface ProjectEnvironment {
 /** 環境作成リクエスト */
 export interface CreateEnvironmentRequest {
   name: string;
-  slug: string;
   baseUrl?: string | null;
   description?: string | null;
   isDefault?: boolean;
@@ -543,7 +541,6 @@ export interface CreateEnvironmentRequest {
 /** 環境更新リクエスト */
 export interface UpdateEnvironmentRequest {
   name?: string;
-  slug?: string;
   baseUrl?: string | null;
   description?: string | null;
   isDefault?: boolean;
@@ -655,7 +652,7 @@ export interface Execution {
   environmentId: string | null;
   createdAt: string;
   executedByUser?: { id: string; name: string; avatarUrl: string | null };
-  environment?: { id: string; name: string; slug: string };
+  environment?: { id: string; name: string };
   judgmentCounts?: {
     PASS: number;
     FAIL: number;

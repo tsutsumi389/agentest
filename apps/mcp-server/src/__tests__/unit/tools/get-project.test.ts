@@ -99,14 +99,12 @@ describe('getProjectTool', () => {
           {
             id: 'env-1',
             name: 'Development',
-            slug: 'dev',
             isDefault: true,
             sortOrder: 0,
           },
           {
             id: 'env-2',
             name: 'Production',
-            slug: 'prod',
             isDefault: false,
             sortOrder: 1,
           },

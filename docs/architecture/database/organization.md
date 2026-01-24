@@ -179,7 +179,6 @@ model Project {
 | `id` | UUID | NO | gen_random_uuid() | 主キー |
 | `projectId` | UUID | NO | - | プロジェクト ID（外部キー） |
 | `name` | VARCHAR(100) | NO | - | 環境名（例: "開発環境", "ステージング", "本番"） |
-| `slug` | VARCHAR(50) | NO | - | URL スラッグ（例: "dev", "stg", "prod"） |
 | `baseUrl` | TEXT | NO | - | エンドポイント URL（例: "https://dev.example.com"） |
 | `description` | TEXT | YES | NULL | 環境の説明 |
 | `isDefault` | BOOLEAN | NO | false | デフォルト環境フラグ |
@@ -189,7 +188,6 @@ model Project {
 
 ### 制約
 
-- `projectId` + `slug` は一意（同一プロジェクト内でスラッグは重複不可）
 - `isDefault` が true の環境はプロジェクト内で1つのみ（アプリケーション層で制御）
 
 ### Prisma スキーマ
@@ -199,7 +197,6 @@ model ProjectEnvironment {
   id          String   @id @default(uuid()) @db.Uuid
   projectId   String   @db.Uuid
   name        String   @db.VarChar(100)
-  slug        String   @db.VarChar(50)
   baseUrl     String
   description String?
   isDefault   Boolean  @default(false)
@@ -210,7 +207,6 @@ model ProjectEnvironment {
   project    Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
   executions Execution[]
 
-  @@unique([projectId, slug])
   @@index([projectId])
 }
 ```
@@ -219,9 +215,9 @@ model ProjectEnvironment {
 
 ```
 プロジェクト: ECサイト
-├── dev:  https://dev.ec-site.example.com (isDefault: true)
-├── stg:  https://stg.ec-site.example.com
-└── prod: https://ec-site.example.com
+├── 開発環境:      https://dev.ec-site.example.com (isDefault: true)
+├── ステージング:  https://stg.ec-site.example.com
+└── 本番環境:      https://ec-site.example.com
 ```
 
 ---

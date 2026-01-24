@@ -32,7 +32,6 @@ interface SearchExecutionResponse {
     environment: {
       id: string;
       name: string;
-      slug: string;
     } | null;
     createdAt: string;
     updatedAt: string;
