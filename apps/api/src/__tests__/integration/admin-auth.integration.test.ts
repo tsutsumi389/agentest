@@ -3,11 +3,7 @@ import request from 'supertest';
 import type { Express } from 'express';
 import bcryptjs from 'bcryptjs';
 import { prisma } from '@agentest/db';
-import {
-  createTestAdminUser,
-  createTestAdminSession,
-  cleanupTestData,
-} from './test-helpers.js';
+import { createTestAdminUser, cleanupTestData } from './test-helpers.js';
 import { createApp } from '../../app.js';
 
 describe('Admin Auth API Integration Tests', () => {
