@@ -22,7 +22,7 @@
 | 監査ログ | ✅ 実装済 | APIのみ |
 | 管理画面UI | 🔲 未実装 | Phase 2 |
 | ユーザー停止/有効化/削除 | 🔲 未実装 | Phase 2 |
-| 組織管理 | 🔲 未実装 | Phase 2 |
+| 組織管理（一覧） | ✅ 実装済 | APIのみ |
 | 課金管理 | 🔲 未実装 | Phase 2 |
 
 ## 機能一覧
@@ -375,6 +375,7 @@ erDiagram
 | admin:dashboard | 5分 | ダッシュボード統計 |
 | admin:users:${hash} | 60秒 | ユーザー一覧 |
 | admin:user:detail:${id} | 30秒 | ユーザー詳細 |
+| admin:organizations:${hash} | 60秒 | 組織一覧 |
 
 ## セキュリティ考慮事項
 
@@ -394,6 +395,7 @@ erDiagram
 - [管理者認証 API](../../api/admin-auth.md) - ログイン、2FA、セッション管理
 - [管理者ダッシュボード API](../../api/admin-dashboard.md) - システム統計
 - [管理者ユーザー管理 API](../../api/admin-users.md) - ユーザー一覧・詳細
+- [管理者組織管理 API](../../api/admin-organizations.md) - 組織一覧
 
 ### データベース設計
 
