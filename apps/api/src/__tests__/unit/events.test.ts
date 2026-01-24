@@ -1,4 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type {
+  publishTestSuiteUpdated as PublishTestSuiteUpdatedFn,
+  publishTestCaseUpdated as PublishTestCaseUpdatedFn,
+  closeEventsPublisher as CloseEventsPublisherFn,
+} from '../../lib/events.js';
 
 // Redis Publisherのモック
 const mockPublish = vi.fn();
@@ -29,9 +34,9 @@ vi.mock('node:crypto', () => ({
 }));
 
 // 動的インポートのためのモジュール
-let publishTestSuiteUpdated: typeof import('../../lib/events.js').publishTestSuiteUpdated;
-let publishTestCaseUpdated: typeof import('../../lib/events.js').publishTestCaseUpdated;
-let closeEventsPublisher: typeof import('../../lib/events.js').closeEventsPublisher;
+let publishTestSuiteUpdated: typeof PublishTestSuiteUpdatedFn;
+let publishTestCaseUpdated: typeof PublishTestCaseUpdatedFn;
+let closeEventsPublisher: typeof CloseEventsPublisherFn;
 
 describe('events.ts - イベント発行ヘルパー', () => {
   beforeEach(async () => {
