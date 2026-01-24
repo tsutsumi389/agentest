@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import { Dashboard } from './pages/Dashboard';
 import { Users } from './pages/Users';
 import { UserDetail } from './pages/UserDetail';
+import { Organizations } from './pages/Organizations';
 import { LoginPage } from './pages/auth/Login';
 import { TwoFactorAuthPage } from './pages/auth/TwoFactorAuth';
 import { AuthGuard } from './components/layout/AuthGuard';
@@ -53,6 +54,14 @@ export function App() {
           element={
             <AuthGuard>
               <UserDetail />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/organizations"
+          element={
+            <AuthGuard>
+              <Organizations />
             </AuthGuard>
           }
         />

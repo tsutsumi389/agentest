@@ -74,6 +74,12 @@ export function Dashboard() {
                 >
                   ユーザー
                 </Link>
+                <Link
+                  to="/organizations"
+                  className="text-sm font-medium text-foreground-muted hover:text-foreground"
+                >
+                  組織
+                </Link>
               </nav>
             </div>
             <div className="flex items-center gap-4">
