@@ -1,8 +1,11 @@
 import {
   LayoutDashboard,
   RefreshCw,
+  LogOut,
 } from 'lucide-react';
+import { useNavigate } from 'react-router';
 import { useAdminDashboard } from '../hooks/useAdminDashboard';
+import { useAdminAuth } from '../hooks/useAdminAuth';
 import {
   SystemHealthCard,
   UserStatsCard,
@@ -16,6 +19,14 @@ import {
  */
 export function Dashboard() {
   const { data: stats, isLoading, refetch, isFetching } = useAdminDashboard();
+  const { admin, logout } = useAdminAuth();
+  const navigate = useNavigate();
+
+  // ログアウト処理
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
 
   // 最終更新時刻をフォーマット
   const formatFetchedAt = (isoString: string) => {
@@ -42,11 +53,18 @@ export function Dashboard() {
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-foreground-muted">
-                管理者ダッシュボード
+                {admin?.name ?? '管理者'}
               </span>
               <div className="w-8 h-8 rounded-full bg-accent-muted flex items-center justify-center">
                 <span className="text-sm font-medium text-accent">A</span>
               </div>
+              <button
+                onClick={handleLogout}
+                className="btn btn-ghost p-2"
+                title="ログアウト"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
             </div>
           </div>
         </div>
