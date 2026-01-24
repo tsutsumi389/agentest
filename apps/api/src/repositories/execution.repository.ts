@@ -15,7 +15,7 @@ export class ExecutionRepository {
           select: { id: true, name: true, projectId: true },
         },
         environment: {
-          select: { id: true, name: true, slug: true },
+          select: { id: true, name: true },
         },
         executedByUser: {
           select: { id: true, name: true, avatarUrl: true },
@@ -35,7 +35,7 @@ export class ExecutionRepository {
           select: { id: true, name: true, projectId: true },
         },
         environment: {
-          select: { id: true, name: true, slug: true },
+          select: { id: true, name: true },
         },
         executedByUser: {
           select: { id: true, name: true, avatarUrl: true },
@@ -108,7 +108,7 @@ export class ExecutionRepository {
           select: { id: true, name: true, avatarUrl: true },
         },
         environment: {
-          select: { id: true, name: true, slug: true },
+          select: { id: true, name: true },
         },
       },
       orderBy: { createdAt: 'desc' },

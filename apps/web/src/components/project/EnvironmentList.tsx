@@ -457,9 +457,6 @@ export function EnvironmentList({ project, currentRole }: EnvironmentListProps) 
                     <span className="font-medium text-foreground truncate">
                       {env.name}
                     </span>
-                    <span className="text-xs text-foreground-subtle bg-background-tertiary px-1.5 py-0.5 rounded font-mono">
-                      {env.slug}
-                    </span>
                     {env.isDefault && (
                       <span className="badge badge-accent text-xs flex items-center gap-1">
                         <Star className="w-3 h-3" />

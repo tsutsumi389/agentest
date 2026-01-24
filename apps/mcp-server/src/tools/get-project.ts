@@ -18,7 +18,6 @@ interface ProjectEnvironment {
   id: string;
   projectId: string;
   name: string;
-  slug: string;
   baseUrl: string | null;
   description: string | null;
   isDefault: boolean;

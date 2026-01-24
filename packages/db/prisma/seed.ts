@@ -65,17 +65,12 @@ async function main() {
 
   // デモ環境を作成
   await prisma.projectEnvironment.upsert({
-    where: {
-      projectId_slug: {
-        projectId: demoProject.id,
-        slug: 'development',
-      },
-    },
+    where: { id: '00000000-0000-0000-0000-000000000010' },
     update: {},
     create: {
+      id: '00000000-0000-0000-0000-000000000010',
       projectId: demoProject.id,
       name: 'Development',
-      slug: 'development',
       baseUrl: 'http://localhost:3000',
       isDefault: true,
       sortOrder: 0,

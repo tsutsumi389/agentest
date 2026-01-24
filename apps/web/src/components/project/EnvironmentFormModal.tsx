@@ -9,18 +9,6 @@ import {
 } from '../../lib/api';
 import { toast } from '../../stores/toast';
 
-/**
- * 名前からslugを自動生成（ケバブケースに変換）
- */
-function generateSlug(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}\s-]/gu, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-}
-
 interface EnvironmentFormModalProps {
   isOpen: boolean;
   projectId: string;
@@ -45,8 +33,6 @@ export function EnvironmentFormModal({
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState('');
-  const [slug, setSlug] = useState('');
-  const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
   const [baseUrl, setBaseUrl] = useState('');
   const [description, setDescription] = useState('');
   const [isDefault, setIsDefault] = useState(false);
@@ -57,8 +43,6 @@ export function EnvironmentFormModal({
   useEffect(() => {
     if (isOpen && environment) {
       setName(environment.name);
-      setSlug(environment.slug);
-      setSlugManuallyEdited(true); // 編集時はslugの自動生成を無効化
       setBaseUrl(environment.baseUrl || '');
       setDescription(environment.description || '');
       setIsDefault(environment.isDefault);
@@ -78,8 +62,6 @@ export function EnvironmentFormModal({
   // モーダルを閉じる
   const handleClose = useCallback(() => {
     setName('');
-    setSlug('');
-    setSlugManuallyEdited(false);
     setBaseUrl('');
     setDescription('');
     setIsDefault(false);
@@ -103,21 +85,10 @@ export function EnvironmentFormModal({
 
   if (!isOpen) return null;
 
-  // 名前変更時にslugを自動生成（編集時は自動生成しない）
+  // 名前変更時
   const handleNameChange = (value: string) => {
     setName(value);
     setErrors((prev) => ({ ...prev, name: '' }));
-    // 新規作成時のみ、かつslugがまだ手動編集されていない場合のみ自動生成
-    if (!isEditing && !slugManuallyEdited) {
-      setSlug(generateSlug(value));
-    }
-  };
-
-  // slugの手動編集を検知
-  const handleSlugChange = (value: string) => {
-    setSlug(value.toLowerCase());
-    setSlugManuallyEdited(true);
-    setErrors((prev) => ({ ...prev, slug: '' }));
   };
 
   // バリデーション
@@ -128,14 +99,6 @@ export function EnvironmentFormModal({
       newErrors.name = '環境名は必須です';
     } else if (name.length > 50) {
       newErrors.name = '環境名は50文字以内で入力してください';
-    }
-
-    if (!slug.trim()) {
-      newErrors.slug = 'スラッグは必須です';
-    } else if (!/^[a-z0-9-]+$/.test(slug)) {
-      newErrors.slug = 'スラッグは小文字英数字とハイフンのみ使用可能です';
-    } else if (slug.length > 50) {
-      newErrors.slug = 'スラッグは50文字以内で入力してください';
     }
 
     if (baseUrl && !/^https?:\/\/.+/.test(baseUrl)) {
@@ -167,7 +130,6 @@ export function EnvironmentFormModal({
         // 更新
         const data: UpdateEnvironmentRequest = {
           name: name.trim(),
-          slug: slug.trim(),
           baseUrl: baseUrl.trim() || null,
           description: description.trim() || null,
           isDefault,
@@ -179,7 +141,6 @@ export function EnvironmentFormModal({
         // 作成
         const data: CreateEnvironmentRequest = {
           name: name.trim(),
-          slug: slug.trim(),
           baseUrl: baseUrl.trim() || null,
           description: description.trim() || null,
           isDefault,
@@ -193,9 +154,7 @@ export function EnvironmentFormModal({
       handleClose();
     } catch (err) {
       if (err instanceof ApiError) {
-        if (err.statusCode === 409) {
-          setErrors({ slug: 'このスラッグは既に使用されています' });
-        } else if (err.details) {
+        if (err.details) {
           const fieldErrors: Record<string, string> = {};
           for (const [field, messages] of Object.entries(err.details)) {
             fieldErrors[field] = messages[0];
@@ -255,26 +214,6 @@ export function EnvironmentFormModal({
               disabled={isSubmitting}
             />
             {errors.name && <p className="text-xs text-danger mt-1">{errors.name}</p>}
-          </div>
-
-          {/* スラッグ */}
-          <div>
-            <label htmlFor="env-slug" className="block text-sm font-medium text-foreground mb-1">
-              スラッグ <span className="text-danger">*</span>
-            </label>
-            <input
-              id="env-slug"
-              type="text"
-              value={slug}
-              onChange={(e) => handleSlugChange(e.target.value)}
-              className={`input w-full ${errors.slug ? 'border-danger focus:border-danger focus:ring-danger' : ''}`}
-              placeholder="production"
-              disabled={isSubmitting}
-            />
-            {errors.slug && <p className="text-xs text-danger mt-1">{errors.slug}</p>}
-            <p className="text-xs text-foreground-subtle mt-1">
-              小文字英数字とハイフンのみ使用可能です
-            </p>
           </div>
 
           {/* ベースURL */}
@@ -350,7 +289,7 @@ export function EnvironmentFormModal({
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={isSubmitting || !name.trim() || !slug.trim()}
+              disabled={isSubmitting || !name.trim()}
             >
               {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
               {isSubmitting ? (isEditing ? '更新中...' : '作成中...') : isEditing ? '更新' : '作成'}

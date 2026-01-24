@@ -101,7 +101,6 @@ describe('getExecutionTool', () => {
         environment: {
           id: 'env-1',
           name: 'Development',
-          slug: 'dev',
         },
       });
       const mockResponse = { execution: executionWithEnv };
@@ -113,12 +112,11 @@ describe('getExecutionTool', () => {
       const result = await getExecutionTool.handler(input, context);
 
       const typedResult = result as {
-        execution: { environment: { id: string; name: string; slug: string } };
+        execution: { environment: { id: string; name: string } };
       };
       expect(typedResult.execution.environment).toEqual({
         id: 'env-1',
         name: 'Development',
-        slug: 'dev',
       });
     });
 

@@ -225,8 +225,7 @@ describe('Project Dashboard API Integration Tests', () => {
         data: {
           projectId: project.id,
           name: 'Test Env',
-          slug: 'test-env',
-          isDefault: true,
+                    isDefault: true,
           sortOrder: 0,
         },
       });
@@ -272,8 +271,7 @@ describe('Project Dashboard API Integration Tests', () => {
         data: {
           projectId: project.id,
           name: 'Test Env',
-          slug: 'test-env',
-          isDefault: true,
+                    isDefault: true,
           sortOrder: 0,
         },
       });
@@ -326,8 +324,7 @@ describe('Project Dashboard API Integration Tests', () => {
         data: {
           projectId: project.id,
           name: 'Test Env',
-          slug: 'test-env',
-          isDefault: true,
+                    isDefault: true,
           sortOrder: 0,
         },
       });
@@ -404,8 +401,7 @@ describe('Project Dashboard API Integration Tests', () => {
         data: {
           projectId: project.id,
           name: 'Test Env',
-          slug: 'test-env',
-          isDefault: true,
+                    isDefault: true,
           sortOrder: 0,
         },
       });
@@ -449,8 +445,7 @@ describe('Project Dashboard API Integration Tests', () => {
         data: {
           projectId: project.id,
           name: 'Test Env',
-          slug: 'test-env',
-          isDefault: true,
+                    isDefault: true,
           sortOrder: 0,
         },
       });
