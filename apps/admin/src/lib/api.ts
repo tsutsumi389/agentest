@@ -155,3 +155,17 @@ export const adminAuthApi = {
   refresh: () =>
     api.post<{ expiresAt: string }>('/admin/auth/refresh'),
 };
+
+// ============================================
+// 管理者ダッシュボードAPI
+// ============================================
+
+import type { AdminDashboardStats } from '@agentest/shared';
+
+export const adminDashboardApi = {
+  /**
+   * ダッシュボード統計を取得
+   */
+  getStats: () =>
+    api.get<AdminDashboardStats>('/admin/dashboard'),
+};

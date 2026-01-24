@@ -11,6 +11,7 @@ const isProduction = env.NODE_ENV === 'production';
 const KEY_PREFIX = {
   TOTP_SETUP: 'totp:setup:',
   TOTP_USED: 'totp:used:',
+  ADMIN_DASHBOARD: 'admin:dashboard',
 } as const;
 
 // Redis未設定時の警告メッセージ（開発環境用）
@@ -206,5 +207,74 @@ export async function closeRedisStore(): Promise<void> {
   if (redisClient) {
     await redisClient.quit();
     redisClient = null;
+  }
+}
+
+// ============================================
+// 管理者ダッシュボードキャッシュ
+// ============================================
+
+/**
+ * 管理者ダッシュボード統計をキャッシュに保存
+ * @param stats ダッシュボード統計
+ * @param ttlSeconds 有効期限（秒）、デフォルト5分
+ */
+export async function setAdminDashboardCache<T>(
+  stats: T,
+  ttlSeconds: number = 300
+): Promise<boolean> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    const key = KEY_PREFIX.ADMIN_DASHBOARD;
+    await redis.setex(key, ttlSeconds, JSON.stringify(stats));
+    return true;
+  } catch (error) {
+    console.error('管理者ダッシュボードキャッシュの保存に失敗:', error);
+    return false;
+  }
+}
+
+/**
+ * 管理者ダッシュボード統計をキャッシュから取得
+ */
+export async function getAdminDashboardCache<T>(): Promise<T | null> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return null;
+  }
+
+  try {
+    const key = KEY_PREFIX.ADMIN_DASHBOARD;
+    const data = await redis.get(key);
+    if (!data) {
+      return null;
+    }
+    return JSON.parse(data) as T;
+  } catch (error) {
+    console.error('管理者ダッシュボードキャッシュの取得に失敗:', error);
+    return null;
+  }
+}
+
+/**
+ * 管理者ダッシュボードキャッシュを無効化
+ */
+export async function invalidateAdminDashboardCache(): Promise<boolean> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    const key = KEY_PREFIX.ADMIN_DASHBOARD;
+    await redis.del(key);
+    return true;
+  } catch (error) {
+    console.error('管理者ダッシュボードキャッシュの無効化に失敗:', error);
+    return false;
   }
 }
