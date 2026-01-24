@@ -1,29 +1,19 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useSearchParams } from 'react-router';
-import {
-  LayoutDashboard,
-  Users as UsersIcon,
-  RefreshCw,
-  LogOut,
-} from 'lucide-react';
-import { useNavigate, Link } from 'react-router';
+import { Users as UsersIcon, RefreshCw } from 'lucide-react';
 import type {
   AdminUserSearchParams,
   AdminUserSortBy,
   AdminUserStatus,
 } from '@agentest/shared';
 import { useAdminUsers } from '../hooks/useAdminUsers';
-import { useAdminAuth } from '../hooks/useAdminAuth';
 import { UserTable, UserSearchForm, UserFilters } from '../components/users';
+import { AdminHeader } from '../components/layout/AdminHeader';
 
 /**
  * ユーザー一覧ページ
  */
 export function Users() {
-  const navigate = useNavigate();
-  const { admin, logout } = useAdminAuth();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-
   // URLSearchParams を使って検索条件を管理
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -70,19 +60,6 @@ export function Users() {
     [searchParams, setSearchParams]
   );
 
-  // ログアウト処理
-  const handleLogout = async () => {
-    if (isLoggingOut) return;
-    setIsLoggingOut(true);
-    try {
-      await logout();
-      navigate('/login');
-    } catch (error) {
-      console.error('ログアウトに失敗しました', error);
-      setIsLoggingOut(false);
-    }
-  };
-
   // ソート処理
   const handleSort = (sortBy: AdminUserSortBy) => {
     if (params.sortBy === sortBy) {
@@ -104,57 +81,7 @@ export function Users() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* ヘッダー */}
-      <header className="bg-background-secondary border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-3">
-                <LayoutDashboard className="w-6 h-6 text-accent" />
-                <span className="text-lg font-semibold text-foreground">
-                  Agentest Admin
-                </span>
-              </div>
-              <nav className="flex items-center gap-4">
-                <Link
-                  to="/"
-                  className="text-sm font-medium text-foreground-muted hover:text-foreground"
-                >
-                  ダッシュボード
-                </Link>
-                <Link
-                  to="/users"
-                  className="text-sm font-medium text-accent"
-                >
-                  ユーザー
-                </Link>
-                <Link
-                  to="/organizations"
-                  className="text-sm font-medium text-foreground-muted hover:text-foreground"
-                >
-                  組織
-                </Link>
-              </nav>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-foreground-muted">
-                {admin?.name ?? '管理者'}
-              </span>
-              <div className="w-8 h-8 rounded-full bg-accent-muted flex items-center justify-center">
-                <span className="text-sm font-medium text-accent">A</span>
-              </div>
-              <button
-                onClick={handleLogout}
-                disabled={isLoggingOut}
-                className="btn btn-ghost p-2"
-                title="ログアウト"
-              >
-                <LogOut className={`w-5 h-5 ${isLoggingOut ? 'animate-spin' : ''}`} />
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <AdminHeader />
 
       {/* メインコンテンツ */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

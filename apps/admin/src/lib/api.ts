@@ -178,13 +178,28 @@ export const adminDashboardApi = {
 };
 
 // ============================================
-// 管理者ユーザー一覧API
+// 検索パラメータ共通ヘルパー
 // ============================================
+
+/**
+ * 検索パラメータの共通インターフェース
+ */
+interface SearchParams {
+  q?: string;
+  plan?: string[];
+  status?: string;
+  createdFrom?: string;
+  createdTo?: string;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
 
 /**
  * 検索パラメータをクエリ文字列に変換
  */
-function toQueryString(params: AdminUserSearchParams): string {
+function toSearchQueryString(params: SearchParams): string {
   const searchParams = new URLSearchParams();
 
   if (params.q) searchParams.set('q', params.q);
@@ -203,12 +218,16 @@ function toQueryString(params: AdminUserSearchParams): string {
   return qs ? `?${qs}` : '';
 }
 
+// ============================================
+// 管理者ユーザー一覧API
+// ============================================
+
 export const adminUsersApi = {
   /**
    * ユーザー一覧を取得
    */
   list: (params: AdminUserSearchParams = {}) =>
-    api.get<AdminUserListResponse>(`/admin/users${toQueryString(params)}`),
+    api.get<AdminUserListResponse>(`/admin/users${toSearchQueryString(params)}`),
 
   /**
    * ユーザー詳細を取得
@@ -221,32 +240,10 @@ export const adminUsersApi = {
 // 管理者組織一覧API
 // ============================================
 
-/**
- * 組織検索パラメータをクエリ文字列に変換
- */
-function toOrganizationQueryString(params: AdminOrganizationSearchParams): string {
-  const searchParams = new URLSearchParams();
-
-  if (params.q) searchParams.set('q', params.q);
-  if (params.plan && params.plan.length > 0) {
-    searchParams.set('plan', params.plan.join(','));
-  }
-  if (params.status) searchParams.set('status', params.status);
-  if (params.createdFrom) searchParams.set('createdFrom', params.createdFrom);
-  if (params.createdTo) searchParams.set('createdTo', params.createdTo);
-  if (params.page) searchParams.set('page', String(params.page));
-  if (params.limit) searchParams.set('limit', String(params.limit));
-  if (params.sortBy) searchParams.set('sortBy', params.sortBy);
-  if (params.sortOrder) searchParams.set('sortOrder', params.sortOrder);
-
-  const qs = searchParams.toString();
-  return qs ? `?${qs}` : '';
-}
-
 export const adminOrganizationsApi = {
   /**
    * 組織一覧を取得
    */
   list: (params: AdminOrganizationSearchParams = {}) =>
-    api.get<AdminOrganizationListResponse>(`/admin/organizations${toOrganizationQueryString(params)}`),
+    api.get<AdminOrganizationListResponse>(`/admin/organizations${toSearchQueryString(params)}`),
 };
