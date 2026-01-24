@@ -7,7 +7,7 @@ const mockBcrypt = vi.hoisted(() => ({
   compare: vi.fn(),
 }));
 
-vi.mock('bcrypt', () => ({
+vi.mock('bcryptjs', () => ({
   default: {
     hash: (pwd: string, rounds: number) => mockBcrypt.hash(pwd, rounds),
     compare: (pwd: string, hash: string) => mockBcrypt.compare(pwd, hash),

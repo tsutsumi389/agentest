@@ -169,7 +169,7 @@ describe('ProjectController', () => {
 
       await controller.addMember(req, res, mockNext);
 
-      expect(mockProjectService.addMember).toHaveBeenCalledWith(TEST_PROJECT_ID, newUserId, 'READ');
+      expect(mockProjectService.addMember).toHaveBeenCalledWith(TEST_PROJECT_ID, newUserId, 'READ', TEST_USER_ID);
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith({ member: mockMember });
     });
