@@ -49,6 +49,14 @@ Authorization: Bearer <access_token>
 
 → [管理者認証 API 詳細](./admin-auth.md)
 
+### 管理者ダッシュボード
+
+| メソッド | パス | 説明 |
+|---------|------|------|
+| GET | `/admin/dashboard` | システムダッシュボード統計取得 |
+
+→ [管理者ダッシュボード API 詳細](./admin-dashboard.md)
+
 ### OAuth 2.1（MCP クライアント向け）
 
 | メソッド | パス | 説明 |

@@ -10,6 +10,7 @@ export async function createTestUser(overrides: Partial<{
   email: string;
   name: string;
   avatarUrl: string | null;
+  plan: 'FREE' | 'PRO';
 }> = {}) {
   const id = overrides.id ?? randomUUID();
   return prisma.user.create({
@@ -18,6 +19,7 @@ export async function createTestUser(overrides: Partial<{
       email: overrides.email ?? `test-${id}@example.com`,
       name: overrides.name ?? `Test User ${id.slice(0, 8)}`,
       avatarUrl: overrides.avatarUrl ?? null,
+      plan: overrides.plan ?? 'FREE',
     },
   });
 }
@@ -79,6 +81,7 @@ export async function createTestOrganization(
     name: string;
     slug: string;
     description: string | null;
+    plan: 'TEAM' | 'ENTERPRISE';
   }> = {}
 ) {
   const id = overrides.id ?? randomUUID();
@@ -88,6 +91,7 @@ export async function createTestOrganization(
       name: overrides.name ?? `Test Org ${id.slice(0, 8)}`,
       slug: overrides.slug ?? `test-org-${id.slice(0, 8)}`,
       description: overrides.description ?? null,
+      plan: overrides.plan ?? 'TEAM',
     },
   });
 
@@ -197,6 +201,9 @@ export async function cleanupTestData() {
   await prisma.adminAuditLog.deleteMany({});
   await prisma.adminSession.deleteMany({});
   await prisma.adminUser.deleteMany({});
+  // 課金関連
+  await prisma.invoice.deleteMany({});
+  await prisma.subscription.deleteMany({});
   // レビュー関連
   await prisma.reviewCommentReply.deleteMany({});
   await prisma.reviewComment.deleteMany({});
@@ -1147,7 +1154,7 @@ export async function createTestAdminUser(
     email: string;
     passwordHash: string;
     name: string;
-    role: 'SUPER_ADMIN' | 'ADMIN';
+    role: 'SUPER_ADMIN' | 'ADMIN' | 'VIEWER';
     totpEnabled: boolean;
     failedAttempts: number;
     lockedUntil: Date | null;
@@ -1232,6 +1239,76 @@ export async function createTestAdminAuditLog(
       ipAddress: overrides.ipAddress ?? null,
       userAgent: overrides.userAgent ?? null,
       createdAt: overrides.createdAt ?? new Date(),
+    },
+  });
+}
+
+// ==================== 課金関連テストヘルパー ====================
+
+/**
+ * テスト用サブスクリプションを作成
+ */
+export async function createTestSubscription(
+  overrides: Partial<{
+    id: string;
+    userId: string | null;
+    organizationId: string | null;
+    plan: 'FREE' | 'PRO' | 'TEAM' | 'ENTERPRISE';
+    status: 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'TRIALING';
+    billingCycle: 'MONTHLY' | 'YEARLY';
+    currentPeriodStart: Date;
+    currentPeriodEnd: Date;
+    cancelAtPeriodEnd: boolean;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  const now = new Date();
+  return prisma.subscription.create({
+    data: {
+      id,
+      userId: overrides.userId ?? null,
+      organizationId: overrides.organizationId ?? null,
+      plan: overrides.plan ?? 'FREE',
+      status: overrides.status ?? 'ACTIVE',
+      billingCycle: overrides.billingCycle ?? 'MONTHLY',
+      currentPeriodStart: overrides.currentPeriodStart ?? now,
+      currentPeriodEnd: overrides.currentPeriodEnd ?? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+      cancelAtPeriodEnd: overrides.cancelAtPeriodEnd ?? false,
+    },
+  });
+}
+
+/**
+ * テスト用インボイスを作成
+ */
+export async function createTestInvoice(
+  subscriptionId: string,
+  overrides: Partial<{
+    id: string;
+    invoiceNumber: string;
+    amount: number;
+    currency: string;
+    status: 'PENDING' | 'PAID' | 'FAILED' | 'VOID';
+    periodStart: Date;
+    periodEnd: Date;
+    dueDate: Date;
+    pdfUrl: string | null;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  const now = new Date();
+  return prisma.invoice.create({
+    data: {
+      id,
+      subscriptionId,
+      invoiceNumber: overrides.invoiceNumber ?? `INV-${id.slice(0, 8).toUpperCase()}`,
+      amount: overrides.amount ?? 980,
+      currency: overrides.currency ?? 'JPY',
+      status: overrides.status ?? 'PENDING',
+      periodStart: overrides.periodStart ?? now,
+      periodEnd: overrides.periodEnd ?? new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+      dueDate: overrides.dueDate ?? new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000),
+      pdfUrl: overrides.pdfUrl ?? null,
     },
   });
 }

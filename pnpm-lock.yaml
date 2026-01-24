@@ -185,6 +185,9 @@ importers:
 
   apps/admin:
     dependencies:
+      '@agentest/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@tanstack/react-query':
         specifier: ^5.62.11
         version: 5.90.12(react@19.2.3)
