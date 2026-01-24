@@ -1,4 +1,4 @@
-import { prisma, Prisma } from '@agentest/db';
+import { prisma, type Prisma } from '@agentest/db';
 
 /**
  * 監査ログ作成用の型

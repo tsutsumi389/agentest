@@ -1,4 +1,4 @@
-import { prisma, Prisma } from '@agentest/db';
+import { prisma, type Prisma } from '@agentest/db';
 import type { NotificationType } from '@agentest/db';
 
 /**

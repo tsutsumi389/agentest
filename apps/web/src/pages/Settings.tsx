@@ -329,7 +329,7 @@ function NotificationSettings() {
       } else {
         toast.error('通知設定の更新に失敗しました');
       }
-    } catch (error) {
+    } catch {
       toast.error('通知設定の更新に失敗しました');
     } finally {
       setIsSaving(null);
