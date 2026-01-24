@@ -103,3 +103,126 @@ export interface AdminUserListResponse {
   /** ページネーション情報 */
   pagination: AdminUserPagination;
 }
+
+// ============================================
+// ユーザー詳細
+// ============================================
+
+/**
+ * 所属組織情報
+ */
+export interface AdminUserOrganization {
+  /** 組織ID */
+  id: string;
+  /** 組織名 */
+  name: string;
+  /** 役割 */
+  role: 'OWNER' | 'ADMIN' | 'MEMBER';
+  /** 参加日時 */
+  joinedAt: string;
+}
+
+/**
+ * OAuth連携プロバイダー情報
+ */
+export interface AdminUserOAuthProvider {
+  /** プロバイダー名 */
+  provider: string;
+  /** 連携日時 */
+  createdAt: string;
+}
+
+/**
+ * サブスクリプション情報
+ * 注: planはサブスクリプションプラン（4種類）で、ユーザープラン（FREE/PRO）とは異なる
+ */
+export interface AdminUserSubscription {
+  /** サブスクリプションプラン（ユーザープランとは別概念） */
+  plan: 'FREE' | 'PRO' | 'TEAM' | 'ENTERPRISE';
+  /** ステータス */
+  status: 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'TRIALING';
+  /** 請求サイクル */
+  billingCycle: 'MONTHLY' | 'YEARLY';
+  /** 現在の期間開始日 */
+  currentPeriodStart: string;
+  /** 現在の期間終了日 */
+  currentPeriodEnd: string;
+  /** 期間終了時にキャンセル予定 */
+  cancelAtPeriodEnd: boolean;
+}
+
+/**
+ * 監査ログエントリ
+ */
+export interface AdminUserAuditLogEntry {
+  /** ログID */
+  id: string;
+  /** カテゴリ */
+  category: string;
+  /** アクション */
+  action: string;
+  /** 対象タイプ */
+  targetType: string | null;
+  /** 対象ID */
+  targetId: string | null;
+  /** IPアドレス */
+  ipAddress: string | null;
+  /** 作成日時 */
+  createdAt: string;
+}
+
+/**
+ * ユーザー詳細情報
+ */
+export interface AdminUserDetail {
+  /** ユーザーID */
+  id: string;
+  /** メールアドレス */
+  email: string;
+  /** 表示名 */
+  name: string;
+  /** アバターURL */
+  avatarUrl: string | null;
+  /** ユーザープラン（個人向け: FREE/PRO。組織向けはSubscription.planで管理） */
+  plan: 'FREE' | 'PRO';
+  /** 作成日時 */
+  createdAt: string;
+  /** 更新日時 */
+  updatedAt: string;
+  /** 削除日時 */
+  deletedAt: string | null;
+  /** アクティビティ情報 */
+  activity: {
+    /** 最終アクティブ日時 */
+    lastActiveAt: string | null;
+    /** アクティブセッション数 */
+    activeSessionCount: number;
+  };
+  /** 統計情報 */
+  stats: {
+    /** 所属組織数 */
+    organizationCount: number;
+    /** 参加プロジェクト数 */
+    projectCount: number;
+    /** テストスイート作成数 */
+    testSuiteCount: number;
+    /** テスト実行数 */
+    executionCount: number;
+  };
+  /** 所属組織一覧 */
+  organizations: AdminUserOrganization[];
+  /** OAuth連携プロバイダー一覧 */
+  oauthProviders: AdminUserOAuthProvider[];
+  /** サブスクリプション情報 */
+  subscription: AdminUserSubscription | null;
+  /** 最近の監査ログ */
+  recentAuditLogs: AdminUserAuditLogEntry[];
+}
+
+/**
+ * ユーザー詳細レスポンス
+ */
+export interface AdminUserDetailResponse {
+  /** ユーザー詳細 */
+  user: AdminUserDetail;
+}

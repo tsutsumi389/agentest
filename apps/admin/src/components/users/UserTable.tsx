@@ -1,9 +1,12 @@
 import { ChevronUp, ChevronDown, Building2, FolderKanban } from 'lucide-react';
+import { Link } from 'react-router';
 import type {
   AdminUserListItem,
   AdminUserSortBy,
   AdminUserPagination,
 } from '@agentest/shared';
+import { formatDate, formatRelativeTime } from '../../lib/date-utils';
+import { PlanBadge } from '../common';
 
 interface UserTableProps {
   users: AdminUserListItem[];
@@ -67,59 +70,6 @@ function SortableHeader({
       </div>
     </th>
   );
-}
-
-interface PlanBadgeProps {
-  plan: 'FREE' | 'PRO';
-}
-
-/**
- * プランバッジ
- */
-function PlanBadge({ plan }: PlanBadgeProps) {
-  return (
-    <span
-      className={`px-2 py-0.5 text-xs font-medium rounded ${
-        plan === 'PRO'
-          ? 'bg-accent-muted text-accent'
-          : 'bg-background-tertiary text-foreground-muted'
-      }`}
-    >
-      {plan}
-    </span>
-  );
-}
-
-// ============================================
-// ユーティリティ関数
-// ============================================
-
-/**
- * 日付をフォーマット
- */
-function formatDate(isoString: string): string {
-  return new Date(isoString).toLocaleDateString('ja-JP', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
-}
-
-/**
- * 相対時間をフォーマット
- */
-function formatRelativeTime(isoString: string | null): string {
-  if (!isoString) return '-';
-  const date = new Date(isoString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffDays === 0) return '今日';
-  if (diffDays === 1) return '昨日';
-  if (diffDays < 7) return `${diffDays}日前`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)}週間前`;
-  return formatDate(isoString);
 }
 
 // ============================================
@@ -223,12 +173,15 @@ export function UserTable({
                         </div>
                       )}
                       <div>
-                        <div className="text-sm font-medium text-foreground">
+                        <Link
+                          to={`/users/${user.id}`}
+                          className="text-sm font-medium text-foreground hover:text-accent hover:underline"
+                        >
                           {user.name}
-                          {user.deletedAt && (
-                            <span className="ml-2 text-xs text-error">削除済み</span>
-                          )}
-                        </div>
+                        </Link>
+                        {user.deletedAt && (
+                          <span className="ml-2 text-xs text-error">削除済み</span>
+                        )}
                       </div>
                     </div>
                   </td>

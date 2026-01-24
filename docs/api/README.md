@@ -62,6 +62,7 @@ Authorization: Bearer <access_token>
 | メソッド | パス | 説明 |
 |---------|------|------|
 | GET | `/admin/users` | ユーザー一覧取得（検索・フィルタ・ソート対応） |
+| GET | `/admin/users/:id` | ユーザー詳細取得 |
 
 → [管理者ユーザー API 詳細](./admin-users.md)
 

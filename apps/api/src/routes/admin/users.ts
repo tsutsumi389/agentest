@@ -11,4 +11,10 @@ const controller = new AdminUsersController();
  */
 router.get('/', requireAdminAuth(), controller.list);
 
+/**
+ * ユーザー詳細を取得
+ * GET /admin/users/:id
+ */
+router.get('/:id', requireAdminAuth(), controller.getById);
+
 export default router;

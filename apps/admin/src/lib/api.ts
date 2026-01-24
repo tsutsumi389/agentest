@@ -164,6 +164,7 @@ import type {
   AdminDashboardStats,
   AdminUserListResponse,
   AdminUserSearchParams,
+  AdminUserDetailResponse,
 } from '@agentest/shared';
 
 export const adminDashboardApi = {
@@ -206,4 +207,10 @@ export const adminUsersApi = {
    */
   list: (params: AdminUserSearchParams = {}) =>
     api.get<AdminUserListResponse>(`/admin/users${toQueryString(params)}`),
+
+  /**
+   * ユーザー詳細を取得
+   */
+  getById: (userId: string) =>
+    api.get<AdminUserDetailResponse>(`/admin/users/${userId}`),
 };
