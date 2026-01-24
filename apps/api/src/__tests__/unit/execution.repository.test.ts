@@ -35,7 +35,7 @@ describe('ExecutionRepository', () => {
         environment: {
           id: 'env-1',
           name: 'Development',
-                  },
+        },
         executedByUser: {
           id: 'user-1',
           name: 'Test User',
@@ -74,7 +74,7 @@ describe('ExecutionRepository', () => {
         environment: {
           id: 'env-1',
           name: 'Production',
-                  },
+        },
         executedByUser: {
           id: 'user-1',
           name: 'User',
@@ -113,7 +113,7 @@ describe('ExecutionRepository', () => {
         environment: {
           id: 'env-1',
           name: 'Development',
-                  },
+        },
         executedByUser: {
           id: 'user-1',
           name: 'Test User',
