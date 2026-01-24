@@ -1,8 +1,12 @@
+import { useState } from 'react';
 import {
   LayoutDashboard,
   RefreshCw,
+  LogOut,
 } from 'lucide-react';
+import { useNavigate } from 'react-router';
 import { useAdminDashboard } from '../hooks/useAdminDashboard';
+import { useAdminAuth } from '../hooks/useAdminAuth';
 import {
   SystemHealthCard,
   UserStatsCard,
@@ -16,6 +20,22 @@ import {
  */
 export function Dashboard() {
   const { data: stats, isLoading, refetch, isFetching } = useAdminDashboard();
+  const { admin, logout } = useAdminAuth();
+  const navigate = useNavigate();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  // ログアウト処理
+  const handleLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('ログアウトに失敗しました', error);
+      setIsLoggingOut(false);
+    }
+  };
 
   // 最終更新時刻をフォーマット
   const formatFetchedAt = (isoString: string) => {
@@ -42,11 +62,19 @@ export function Dashboard() {
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-foreground-muted">
-                管理者ダッシュボード
+                {admin?.name ?? '管理者'}
               </span>
               <div className="w-8 h-8 rounded-full bg-accent-muted flex items-center justify-center">
                 <span className="text-sm font-medium text-accent">A</span>
               </div>
+              <button
+                onClick={handleLogout}
+                disabled={isLoggingOut}
+                className="btn btn-ghost p-2"
+                title="ログアウト"
+              >
+                <LogOut className={`w-5 h-5 ${isLoggingOut ? 'animate-spin' : ''}`} />
+              </button>
             </div>
           </div>
         </div>
