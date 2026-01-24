@@ -1,4 +1,5 @@
 import { ChevronUp, ChevronDown, Building2, FolderKanban } from 'lucide-react';
+import { Link } from 'react-router';
 import type {
   AdminUserListItem,
   AdminUserSortBy,
@@ -223,12 +224,15 @@ export function UserTable({
                         </div>
                       )}
                       <div>
-                        <div className="text-sm font-medium text-foreground">
+                        <Link
+                          to={`/users/${user.id}`}
+                          className="text-sm font-medium text-foreground hover:text-accent hover:underline"
+                        >
                           {user.name}
-                          {user.deletedAt && (
-                            <span className="ml-2 text-xs text-error">削除済み</span>
-                          )}
-                        </div>
+                        </Link>
+                        {user.deletedAt && (
+                          <span className="ml-2 text-xs text-error">削除済み</span>
+                        )}
                       </div>
                     </div>
                   </td>

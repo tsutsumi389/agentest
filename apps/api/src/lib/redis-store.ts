@@ -13,6 +13,7 @@ const KEY_PREFIX = {
   TOTP_USED: 'totp:used:',
   ADMIN_DASHBOARD: 'admin:dashboard',
   ADMIN_USERS: 'admin:users:',
+  ADMIN_USER_DETAIL: 'admin:user:detail:',
 } as const;
 
 // Redis未設定時の警告メッセージ（開発環境用）
@@ -345,5 +346,82 @@ export async function getAdminUsersCache<T>(
   } catch (error) {
     console.error('管理者ユーザー一覧キャッシュの取得に失敗:', error);
     return null;
+  }
+}
+
+// ============================================
+// 管理者ユーザー詳細キャッシュ
+// ============================================
+
+/**
+ * 管理者ユーザー詳細をキャッシュから取得
+ * @param userId ユーザーID
+ */
+export async function getAdminUserDetailCache<T>(
+  userId: string
+): Promise<T | null> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return null;
+  }
+
+  try {
+    const key = `${KEY_PREFIX.ADMIN_USER_DETAIL}${userId}`;
+    const data = await redis.get(key);
+    if (!data) {
+      return null;
+    }
+    return JSON.parse(data) as T;
+  } catch (error) {
+    console.error('管理者ユーザー詳細キャッシュの取得に失敗:', error);
+    return null;
+  }
+}
+
+/**
+ * 管理者ユーザー詳細をキャッシュに保存
+ * @param userId ユーザーID
+ * @param data キャッシュデータ
+ * @param ttlSeconds 有効期限（秒）、デフォルト30秒
+ */
+export async function setAdminUserDetailCache<T>(
+  userId: string,
+  data: T,
+  ttlSeconds: number = 30
+): Promise<boolean> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    const key = `${KEY_PREFIX.ADMIN_USER_DETAIL}${userId}`;
+    await redis.setex(key, ttlSeconds, JSON.stringify(data));
+    return true;
+  } catch (error) {
+    console.error('管理者ユーザー詳細キャッシュの保存に失敗:', error);
+    return false;
+  }
+}
+
+/**
+ * 管理者ユーザー詳細キャッシュを無効化
+ * @param userId ユーザーID
+ */
+export async function invalidateAdminUserDetailCache(
+  userId: string
+): Promise<boolean> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    const key = `${KEY_PREFIX.ADMIN_USER_DETAIL}${userId}`;
+    await redis.del(key);
+    return true;
+  } catch (error) {
+    console.error('管理者ユーザー詳細キャッシュの無効化に失敗:', error);
+    return false;
   }
 }

@@ -206,6 +206,219 @@ data.users.forEach((user) => {
 });
 ```
 
+---
+
+### GET /admin/users/:id
+
+指定したユーザーの詳細情報を取得する。
+
+#### 認証
+
+Cookie認証が必要。
+
+```
+Cookie: admin_session=<session_id>
+```
+
+#### パスパラメータ
+
+| パラメータ | 型 | 説明 |
+|-----------|-----|------|
+| `id` | string (UUID) | ユーザーID |
+
+#### レスポンス
+
+##### 成功時 (200 OK)
+
+```json
+{
+  "user": {
+    "id": "user_abc123",
+    "email": "user@example.com",
+    "name": "田中太郎",
+    "avatarUrl": "https://example.com/avatar.png",
+    "plan": "PRO",
+    "createdAt": "2024-01-15T12:00:00.000Z",
+    "updatedAt": "2024-06-01T09:30:00.000Z",
+    "deletedAt": null,
+    "activity": {
+      "lastActiveAt": "2024-06-15T10:00:00.000Z",
+      "activeSessionCount": 2
+    },
+    "stats": {
+      "organizationCount": 2,
+      "projectCount": 5,
+      "testSuiteCount": 10,
+      "executionCount": 50
+    },
+    "organizations": [
+      {
+        "id": "org_xyz789",
+        "name": "サンプル組織",
+        "role": "ADMIN",
+        "joinedAt": "2024-02-01T00:00:00.000Z"
+      }
+    ],
+    "oauthProviders": [
+      {
+        "provider": "github",
+        "createdAt": "2024-01-15T12:00:00.000Z"
+      }
+    ],
+    "subscription": {
+      "plan": "PRO",
+      "status": "ACTIVE",
+      "billingCycle": "MONTHLY",
+      "currentPeriodStart": "2024-06-01T00:00:00.000Z",
+      "currentPeriodEnd": "2024-07-01T00:00:00.000Z",
+      "cancelAtPeriodEnd": false
+    },
+    "recentAuditLogs": [
+      {
+        "id": "log_123",
+        "category": "AUTH",
+        "action": "login",
+        "targetType": null,
+        "targetId": null,
+        "ipAddress": "192.168.1.1",
+        "createdAt": "2024-06-15T10:00:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+##### エラー時 (404 Not Found)
+
+```json
+{
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "ユーザーが見つかりません"
+  }
+}
+```
+
+##### エラー時 (400 Bad Request)
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "無効なユーザーIDです",
+    "details": {
+      "id": ["有効なUUID形式で指定してください"]
+    }
+  }
+}
+```
+
+## レスポンス型定義（詳細）
+
+### AdminUserDetail
+
+| フィールド | 型 | 説明 |
+|-----------|------|------|
+| id | string | ユーザーID |
+| email | string | メールアドレス |
+| name | string | 表示名 |
+| avatarUrl | string \| null | アバター画像URL |
+| plan | `FREE` \| `PRO` | 契約プラン |
+| createdAt | string | 作成日時（ISO 8601形式） |
+| updatedAt | string | 更新日時（ISO 8601形式） |
+| deletedAt | string \| null | 削除日時（論理削除時のみ） |
+| activity | AdminUserActivity | アクティビティ情報 |
+| stats | AdminUserDetailStats | ユーザー統計情報 |
+| organizations | AdminUserOrganization[] | 所属組織一覧 |
+| oauthProviders | AdminUserOAuthProvider[] | OAuth連携プロバイダー一覧 |
+| subscription | AdminUserSubscription \| null | サブスクリプション情報 |
+| recentAuditLogs | AdminUserAuditLogEntry[] | 最近の監査ログ（10件） |
+
+### AdminUserActivity
+
+| フィールド | 型 | 説明 |
+|-----------|------|------|
+| lastActiveAt | string \| null | 最終アクティブ日時 |
+| activeSessionCount | number | アクティブセッション数 |
+
+### AdminUserDetailStats
+
+| フィールド | 型 | 説明 |
+|-----------|------|------|
+| organizationCount | number | 所属組織数 |
+| projectCount | number | 参加プロジェクト数 |
+| testSuiteCount | number | 作成したテストスイート数 |
+| executionCount | number | テスト実行数 |
+
+### AdminUserOrganization
+
+| フィールド | 型 | 説明 |
+|-----------|------|------|
+| id | string | 組織ID |
+| name | string | 組織名 |
+| role | `OWNER` \| `ADMIN` \| `MEMBER` | 役割 |
+| joinedAt | string | 参加日時（ISO 8601形式） |
+
+### AdminUserOAuthProvider
+
+| フィールド | 型 | 説明 |
+|-----------|------|------|
+| provider | string | プロバイダー名（github, google等） |
+| createdAt | string | 連携日時（ISO 8601形式） |
+
+### AdminUserSubscription
+
+| フィールド | 型 | 説明 |
+|-----------|------|------|
+| plan | `FREE` \| `PRO` \| `TEAM` \| `ENTERPRISE` | サブスクリプションプラン |
+| status | `ACTIVE` \| `PAST_DUE` \| `CANCELED` \| `TRIALING` | ステータス |
+| billingCycle | `MONTHLY` \| `YEARLY` | 請求サイクル |
+| currentPeriodStart | string | 現在の期間開始日（ISO 8601形式） |
+| currentPeriodEnd | string | 現在の期間終了日（ISO 8601形式） |
+| cancelAtPeriodEnd | boolean | 期間終了時にキャンセル予定か |
+
+### AdminUserAuditLogEntry
+
+| フィールド | 型 | 説明 |
+|-----------|------|------|
+| id | string | ログID |
+| category | string | カテゴリ（AUTH, USER等） |
+| action | string | アクション |
+| targetType | string \| null | 対象タイプ |
+| targetId | string \| null | 対象ID |
+| ipAddress | string \| null | IPアドレス |
+| createdAt | string | 作成日時（ISO 8601形式） |
+
+## キャッシュ仕様（詳細）
+
+- **TTL**: 30秒
+- **キャッシュキー**: `admin:user:detail:${userId}`
+- キャッシュはRedisに保存される
+
+## 使用例（詳細）
+
+### cURL
+
+```bash
+# ユーザー詳細取得
+curl -X GET "http://localhost:3001/api/v1/admin/users/user_abc123" \
+  -H "Cookie: admin_session=your-session-id"
+```
+
+### TypeScript (fetch)
+
+```typescript
+const response = await fetch('/api/v1/admin/users/user_abc123', {
+  method: 'GET',
+  credentials: 'include',
+});
+
+const { user } = await response.json();
+console.log(`ユーザー名: ${user.name}`);
+console.log(`所属組織数: ${user.stats.organizationCount}`);
+console.log(`最終アクティブ: ${user.activity.lastActiveAt}`);
+```
+
 ## 関連ドキュメント
 
 - [管理者認証 API](./admin-auth.md)

@@ -3,14 +3,19 @@ import type {
   AdminUserListResponse,
   AdminUserListItem,
   AdminUserSearchParams,
+  AdminUserDetailResponse,
+  AdminUserDetail,
 } from '@agentest/shared';
 import {
   getAdminUsersCache,
   setAdminUsersCache,
+  getAdminUserDetailCache,
+  setAdminUserDetailCache,
 } from '../../lib/redis-store.js';
 
 // キャッシュ有効期限（秒）
 const CACHE_TTL_SECONDS = 60;
+const DETAIL_CACHE_TTL_SECONDS = 30;
 
 /**
  * 管理者ユーザー一覧サービス
@@ -196,5 +201,130 @@ export class AdminUsersService {
       default:
         return { createdAt: sortOrder };
     }
+  }
+
+  /**
+   * ユーザー詳細を取得
+   */
+  async findUserById(userId: string): Promise<AdminUserDetailResponse | null> {
+    // キャッシュをチェック
+    const cached = await getAdminUserDetailCache<AdminUserDetailResponse>(userId);
+    if (cached) {
+      return cached;
+    }
+
+    // Prismaでユーザーを取得
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      include: {
+        sessions: {
+          where: {
+            revokedAt: null,
+            expiresAt: { gt: new Date() },
+          },
+          orderBy: { lastActiveAt: 'desc' },
+          select: { lastActiveAt: true },
+        },
+        organizationMembers: {
+          where: { organization: { deletedAt: null } },
+          include: {
+            organization: { select: { id: true, name: true } },
+          },
+        },
+        accounts: {
+          select: { provider: true, createdAt: true },
+        },
+        subscription: true,
+        auditLogs: {
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          select: {
+            id: true,
+            category: true,
+            action: true,
+            targetType: true,
+            targetId: true,
+            ipAddress: true,
+            createdAt: true,
+          },
+        },
+        _count: {
+          select: {
+            organizationMembers: {
+              where: { organization: { deletedAt: null } },
+            },
+            projectMembers: {
+              where: { project: { deletedAt: null } },
+            },
+            testSuites: {
+              where: { deletedAt: null },
+            },
+            executions: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      return null;
+    }
+
+    // レスポンス形式に変換
+    const userDetail: AdminUserDetail = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      avatarUrl: user.avatarUrl,
+      plan: user.plan,
+      createdAt: user.createdAt.toISOString(),
+      updatedAt: user.updatedAt.toISOString(),
+      deletedAt: user.deletedAt?.toISOString() ?? null,
+      activity: {
+        lastActiveAt: user.sessions[0]?.lastActiveAt?.toISOString() ?? null,
+        activeSessionCount: user.sessions.length,
+      },
+      stats: {
+        organizationCount: user._count.organizationMembers,
+        projectCount: user._count.projectMembers,
+        testSuiteCount: user._count.testSuites,
+        executionCount: user._count.executions,
+      },
+      organizations: user.organizationMembers.map((member) => ({
+        id: member.organization.id,
+        name: member.organization.name,
+        role: member.role,
+        joinedAt: member.joinedAt.toISOString(),
+      })),
+      oauthProviders: user.accounts.map((account) => ({
+        provider: account.provider,
+        createdAt: account.createdAt.toISOString(),
+      })),
+      subscription: user.subscription
+        ? {
+            plan: user.subscription.plan,
+            status: user.subscription.status,
+            billingCycle: user.subscription.billingCycle,
+            currentPeriodStart: user.subscription.currentPeriodStart.toISOString(),
+            currentPeriodEnd: user.subscription.currentPeriodEnd.toISOString(),
+            cancelAtPeriodEnd: user.subscription.cancelAtPeriodEnd,
+          }
+        : null,
+      recentAuditLogs: user.auditLogs.map((log) => ({
+        id: log.id,
+        category: log.category,
+        action: log.action,
+        targetType: log.targetType,
+        targetId: log.targetId,
+        ipAddress: log.ipAddress,
+        createdAt: log.createdAt.toISOString(),
+      })),
+    };
+
+    const response: AdminUserDetailResponse = { user: userDetail };
+
+    // キャッシュに保存
+    await setAdminUserDetailCache(userId, response, DETAIL_CACHE_TTL_SECONDS);
+
+    return response;
   }
 }
