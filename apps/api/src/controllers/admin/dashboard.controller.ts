@@ -14,6 +14,7 @@ export class AdminDashboardController {
    */
   getStats = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
+      // requireAdminAuth()ミドルウェアで認証済みだが、TypeScript型安全性のためチェック
       if (!req.adminUser) {
         throw new AuthenticationError('認証が必要です');
       }

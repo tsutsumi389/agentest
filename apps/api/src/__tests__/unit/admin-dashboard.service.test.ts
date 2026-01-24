@@ -35,6 +35,7 @@ vi.mock('../../config/env.js', () => ({
 vi.mock('../../lib/redis-store.js', () => ({
   getAdminDashboardCache: vi.fn(),
   setAdminDashboardCache: vi.fn(),
+  getRedisClient: vi.fn(() => null), // 未設定状態をシミュレート
 }));
 
 import { AdminDashboardService } from '../../services/admin/admin-dashboard.service.js';
@@ -212,8 +213,13 @@ describe('AdminDashboardService', () => {
 
       const result = await service.getDashboard();
 
-      // MRR計算: PRO(980) + PRO(980) + TEAM(4980) + ENTERPRISE(19800) = 26740
-      expect(result.revenue.mrr).toBe(26740);
+      // MRR計算:
+      // - PRO月払い: 980
+      // - PRO年払い: 9800/12 = 817（切り上げ）
+      // - TEAM月払い: 4980
+      // - ENTERPRISE月払い: 19800
+      // 合計: 980 + 817 + 4980 + 19800 = 26577
+      expect(result.revenue.mrr).toBe(26577);
       expect(result.revenue.invoices.paid).toBe(10);
       expect(result.revenue.invoices.pending).toBe(3);
       expect(result.revenue.invoices.failed).toBe(1);

@@ -39,9 +39,13 @@ function StatusIndicator({ status, label }: { status: SystemHealthStatus; label:
   const Icon = config.icon;
 
   return (
-    <div className={`flex items-center justify-between p-3 rounded-lg ${config.bgColor}`}>
+    <div
+      role="status"
+      aria-label={`${label}: ${config.text}`}
+      className={`flex items-center justify-between p-3 rounded-lg ${config.bgColor}`}
+    >
       <div className="flex items-center gap-2">
-        <Icon className={`w-4 h-4 ${config.color}`} />
+        <Icon className={`w-4 h-4 ${config.color}`} aria-hidden="true" />
         <span className="text-sm font-medium text-foreground">{label}</span>
       </div>
       <div className="flex items-center gap-2">

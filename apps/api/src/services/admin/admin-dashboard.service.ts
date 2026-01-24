@@ -1,5 +1,4 @@
 import { prisma } from '@agentest/db';
-import { Redis } from 'ioredis';
 import type {
   AdminDashboardStats,
   AdminDashboardUserStats,
@@ -13,6 +12,7 @@ import { env } from '../../config/env.js';
 import {
   getAdminDashboardCache,
   setAdminDashboardCache,
+  getRedisClient,
 } from '../../lib/redis-store.js';
 
 // 定数
@@ -20,11 +20,19 @@ const CACHE_TTL_SECONDS = 300; // 5分
 const ACTIVE_DAYS = 30; // アクティブ判定用の日数
 
 // サブスクリプションプランごとの月額料金（円）
-const PLAN_PRICES = {
+const PLAN_MONTHLY_PRICES = {
   FREE: 0,
   PRO: 980,
   TEAM: 4980,
   ENTERPRISE: 19800,
+} as const;
+
+// 年払いの場合の年額料金（円）- 2ヶ月分割引
+const PLAN_YEARLY_PRICES = {
+  FREE: 0,
+  PRO: 9800,        // 980 * 10ヶ月分
+  TEAM: 49800,      // 4980 * 10ヶ月分
+  ENTERPRISE: 198000, // 19800 * 10ヶ月分
 } as const;
 
 /**
@@ -147,14 +155,22 @@ export class AdminDashboardService {
           deletedAt: null,
         },
       }),
-      // アクティブ組織数（30日以内にプロジェクトの更新あり）
+      // アクティブ組織数（30日以内にテスト実行があった組織）
       prisma.organization.count({
         where: {
           deletedAt: null,
           projects: {
             some: {
-              updatedAt: { gte: thirtyDaysAgo },
               deletedAt: null,
+              testSuites: {
+                some: {
+                  executions: {
+                    some: {
+                      createdAt: { gte: thirtyDaysAgo },
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -232,15 +248,16 @@ export class AdminDashboardService {
       },
     });
 
-    // MRRを計算
+    // MRRを計算（年払いは実際の年額から月額換算）
     let mrr = 0;
     for (const sub of activeSubscriptions) {
-      const monthlyPrice = PLAN_PRICES[sub.plan] || 0;
-      // 年払いの場合は12で割る
       if (sub.billingCycle === 'YEARLY') {
-        mrr += Math.round(monthlyPrice * 12 / 12); // 年額を月額に換算
+        // 年払いの場合: 年額を12で割って月額換算
+        const yearlyPrice = PLAN_YEARLY_PRICES[sub.plan] || 0;
+        mrr += Math.round(yearlyPrice / 12);
       } else {
-        mrr += monthlyPrice;
+        // 月払いの場合: そのまま月額を加算
+        mrr += PLAN_MONTHLY_PRICES[sub.plan] || 0;
       }
     }
 
@@ -315,25 +332,19 @@ export class AdminDashboardService {
 
   /**
    * Redisヘルスチェック
+   * 共有インスタンスを使用してコネクション漏れを防ぐ
    */
   private async checkRedisHealth(): Promise<SystemHealthStatus> {
-    if (!env.REDIS_URL) {
+    const redis = getRedisClient();
+    if (!redis) {
       return { status: 'not_configured' };
     }
 
     const start = Date.now();
-    const redis = new Redis(env.REDIS_URL);
-
     try {
       await redis.ping();
-      await redis.quit();
       return { status: 'healthy', latency: Date.now() - start };
     } catch (error) {
-      try {
-        await redis.quit();
-      } catch {
-        // 無視
-      }
       return { status: 'unhealthy', error: (error as Error).message };
     }
   }

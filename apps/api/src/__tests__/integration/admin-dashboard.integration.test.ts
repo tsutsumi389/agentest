@@ -215,7 +215,7 @@ describe('Admin Dashboard API Integration Tests', () => {
         .set('Cookie', `admin_session=${testAdminSession.token}`);
 
       expect(response.status).toBe(200);
-      // MRRの計算: PRO(980) + TEAM(4980) = 5960
+      // MRRの計算: PRO月払い(980) + TEAM月払い(4980) = 5960
       expect(response.body.revenue.mrr).toBe(5960);
       expect(response.body.revenue.invoices.paid).toBe(1);
       expect(response.body.revenue.invoices.pending).toBe(1);
