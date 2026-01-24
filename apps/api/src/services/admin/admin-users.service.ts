@@ -68,6 +68,7 @@ export class AdminUsersService {
     const skip = (page - 1) * limit;
 
     // 並列でデータを取得
+    // _countを使用して効率的にカウント（全件取得を避ける）
     const [users, total] = await Promise.all([
       prisma.user.findMany({
         where,
@@ -75,17 +76,15 @@ export class AdminUsersService {
         skip,
         take: limit,
         include: {
-          organizationMembers: {
-            where: {
-              organization: { deletedAt: null },
+          _count: {
+            select: {
+              organizationMembers: {
+                where: { organization: { deletedAt: null } },
+              },
+              projectMembers: {
+                where: { project: { deletedAt: null } },
+              },
             },
-            select: { id: true },
-          },
-          projectMembers: {
-            where: {
-              project: { deletedAt: null },
-            },
-            select: { id: true },
           },
           sessions: {
             where: { revokedAt: null },
@@ -109,8 +108,8 @@ export class AdminUsersService {
       updatedAt: user.updatedAt.toISOString(),
       deletedAt: user.deletedAt?.toISOString() ?? null,
       stats: {
-        organizationCount: user.organizationMembers.length,
-        projectCount: user.projectMembers.length,
+        organizationCount: user._count.organizationMembers,
+        projectCount: user._count.projectMembers,
         lastActiveAt: user.sessions[0]?.lastActiveAt?.toISOString() ?? null,
       },
     }));
