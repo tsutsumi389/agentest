@@ -423,3 +423,31 @@ export type LabelCreate = z.infer<typeof labelCreateSchema>;
 export type LabelUpdate = z.infer<typeof labelUpdateSchema>;
 export type TestSuiteLabelsUpdate = z.infer<typeof testSuiteLabelsUpdateSchema>;
 export type AuditLogExport = z.infer<typeof auditLogExportSchema>;
+
+// ============================================
+// 管理者向けユーザー検索スキーマ
+// ============================================
+
+export const adminUserSearchSchema = z.object({
+  // 検索クエリ
+  q: z.string().max(100).optional(),
+  // プランフィルタ（カンマ区切り → 配列変換）
+  plan: z
+    .string()
+    .optional()
+    .transform((val) => val?.split(',').map((s) => s.trim()))
+    .pipe(z.array(userPlanSchema).optional()),
+  // ステータスフィルタ
+  status: z.enum(['active', 'deleted', 'all']).default('active'),
+  // 日付フィルタ
+  createdFrom: z.string().datetime().optional(),
+  createdTo: z.string().datetime().optional(),
+  // ページネーション
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  // ソート
+  sortBy: z.enum(['createdAt', 'name', 'email', 'plan']).default('createdAt'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+});
+
+export type AdminUserSearch = z.infer<typeof adminUserSearchSchema>;

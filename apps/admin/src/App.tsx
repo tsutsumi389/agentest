@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import { Dashboard } from './pages/Dashboard';
+import { Users } from './pages/Users';
 import { LoginPage } from './pages/auth/Login';
 import { TwoFactorAuthPage } from './pages/auth/TwoFactorAuth';
 import { AuthGuard } from './components/layout/AuthGuard';
@@ -35,6 +36,14 @@ export function App() {
           element={
             <AuthGuard>
               <Dashboard />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/users"
+          element={
+            <AuthGuard>
+              <Users />
             </AuthGuard>
           }
         />

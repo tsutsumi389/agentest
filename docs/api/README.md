@@ -57,6 +57,14 @@ Authorization: Bearer <access_token>
 
 → [管理者ダッシュボード API 詳細](./admin-dashboard.md)
 
+### 管理者ユーザー管理
+
+| メソッド | パス | 説明 |
+|---------|------|------|
+| GET | `/admin/users` | ユーザー一覧取得（検索・フィルタ・ソート対応） |
+
+→ [管理者ユーザー API 詳細](./admin-users.md)
+
 ### OAuth 2.1（MCP クライアント向け）
 
 | メソッド | パス | 説明 |

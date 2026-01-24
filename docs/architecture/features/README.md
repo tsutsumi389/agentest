@@ -48,7 +48,8 @@
 | 機能 | 説明 | ドキュメント |
 |------|------|-------------|
 | 管理者認証 | 管理者ログイン、2FA、セッション管理 | [authentication.md](./authentication.md#管理者認証機能) |
-| 管理者ダッシュボード | システム統計、ヘルスチェック | 未作成 |
+| 管理者ダッシュボード | システム統計、ヘルスチェック | [admin-dashboard API](../../api/admin-dashboard.md) |
+| 管理者ユーザー管理 | ユーザー一覧・検索・フィルタ | [admin-users API](../../api/admin-users.md) |
 
 ## ドキュメント構成
 

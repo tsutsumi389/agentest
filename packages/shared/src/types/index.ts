@@ -8,3 +8,4 @@ export * from './review.js';
 export * from './project-dashboard.js';
 export * from './label.js';
 export * from './admin-dashboard.js';
+export * from './admin-users.js';
