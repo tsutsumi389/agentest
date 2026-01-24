@@ -499,6 +499,15 @@ describe('Admin Organizations API Integration Tests', () => {
       expect(response.body.error).toBeDefined();
     });
 
+    it('createdFromがcreatedToより後の日付の場合はエラーを返す', async () => {
+      const response = await request(app)
+        .get('/admin/organizations?createdFrom=2024-12-31T00:00:00.000Z&createdTo=2024-01-01T00:00:00.000Z')
+        .set('Cookie', sessionCookie);
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBeDefined();
+    });
+
     it('検索結果がない場合は空配列を返す', async () => {
       // 存在しないプレフィックスで検索
       const response = await request(app)

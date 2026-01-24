@@ -494,3 +494,27 @@ export async function getAdminOrganizationsCache<T>(
     return null;
   }
 }
+
+/**
+ * 管理者組織一覧キャッシュを無効化（パターンマッチで全キャッシュを削除）
+ * 組織の作成・更新・削除時に呼び出す
+ */
+export async function invalidateAdminOrganizationsCache(): Promise<boolean> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    // パターンマッチで全ての組織一覧キャッシュを削除
+    const pattern = `${KEY_PREFIX.ADMIN_ORGANIZATIONS}*`;
+    const keys = await redis.keys(pattern);
+    if (keys.length > 0) {
+      await redis.del(...keys);
+    }
+    return true;
+  } catch (error) {
+    console.error('管理者組織一覧キャッシュの無効化に失敗:', error);
+    return false;
+  }
+}

@@ -476,6 +476,17 @@ export const adminOrganizationSearchSchema = z.object({
   // ソート
   sortBy: z.enum(['createdAt', 'name', 'plan']).default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
-});
+}).refine(
+  (data) => {
+    if (data.createdFrom && data.createdTo) {
+      return new Date(data.createdFrom) <= new Date(data.createdTo);
+    }
+    return true;
+  },
+  {
+    message: 'createdFromはcreatedTo以前の日付を指定してください',
+    path: ['createdFrom'],
+  }
+);
 
 export type AdminOrganizationSearch = z.infer<typeof adminOrganizationSearchSchema>;

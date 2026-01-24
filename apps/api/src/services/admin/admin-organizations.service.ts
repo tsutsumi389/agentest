@@ -78,7 +78,10 @@ export class AdminOrganizationsService {
         include: {
           _count: {
             select: {
-              members: true,
+              // 削除済みユーザーを除外してメンバー数をカウント
+              members: {
+                where: { user: { deletedAt: null } },
+              },
               projects: {
                 where: { deletedAt: null },
               },

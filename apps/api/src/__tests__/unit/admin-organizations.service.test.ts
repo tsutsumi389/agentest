@@ -399,6 +399,15 @@ describe('AdminOrganizationsService', () => {
           take: 20,
           orderBy: { createdAt: 'desc' },
           where: expect.objectContaining({ deletedAt: null }),
+          include: expect.objectContaining({
+            _count: {
+              select: {
+                // 削除済みユーザーを除外
+                members: { where: { user: { deletedAt: null } } },
+                projects: { where: { deletedAt: null } },
+              },
+            },
+          }),
         })
       );
     });

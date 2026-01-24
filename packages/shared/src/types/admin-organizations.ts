@@ -18,6 +18,9 @@ export type AdminOrganizationSortBy = 'createdAt' | 'name' | 'plan';
 
 /**
  * 組織検索パラメータ
+ * 注: Zodスキーマ（adminOrganizationSearchSchema）から推論される型（AdminOrganizationSearch）は
+ * transform処理を含むため、このインターフェースとは微妙に異なる。
+ * サービス層ではこのインターフェースを使用し、コントローラー層でZodバリデーション後の型を受け取る。
  */
 export interface AdminOrganizationSearchParams {
   /** 検索クエリ（名前・スラグで部分一致） */
