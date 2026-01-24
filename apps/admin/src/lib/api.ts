@@ -165,6 +165,8 @@ import type {
   AdminUserListResponse,
   AdminUserSearchParams,
   AdminUserDetailResponse,
+  AdminOrganizationListResponse,
+  AdminOrganizationSearchParams,
 } from '@agentest/shared';
 
 export const adminDashboardApi = {
@@ -176,13 +178,28 @@ export const adminDashboardApi = {
 };
 
 // ============================================
-// 管理者ユーザー一覧API
+// 検索パラメータ共通ヘルパー
 // ============================================
+
+/**
+ * 検索パラメータの共通インターフェース
+ */
+interface SearchParams {
+  q?: string;
+  plan?: string[];
+  status?: string;
+  createdFrom?: string;
+  createdTo?: string;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
 
 /**
  * 検索パラメータをクエリ文字列に変換
  */
-function toQueryString(params: AdminUserSearchParams): string {
+function toSearchQueryString(params: SearchParams): string {
   const searchParams = new URLSearchParams();
 
   if (params.q) searchParams.set('q', params.q);
@@ -201,16 +218,32 @@ function toQueryString(params: AdminUserSearchParams): string {
   return qs ? `?${qs}` : '';
 }
 
+// ============================================
+// 管理者ユーザー一覧API
+// ============================================
+
 export const adminUsersApi = {
   /**
    * ユーザー一覧を取得
    */
   list: (params: AdminUserSearchParams = {}) =>
-    api.get<AdminUserListResponse>(`/admin/users${toQueryString(params)}`),
+    api.get<AdminUserListResponse>(`/admin/users${toSearchQueryString(params)}`),
 
   /**
    * ユーザー詳細を取得
    */
   getById: (userId: string) =>
     api.get<AdminUserDetailResponse>(`/admin/users/${userId}`),
+};
+
+// ============================================
+// 管理者組織一覧API
+// ============================================
+
+export const adminOrganizationsApi = {
+  /**
+   * 組織一覧を取得
+   */
+  list: (params: AdminOrganizationSearchParams = {}) =>
+    api.get<AdminOrganizationListResponse>(`/admin/organizations${toSearchQueryString(params)}`),
 };

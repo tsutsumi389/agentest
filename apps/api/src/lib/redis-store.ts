@@ -14,6 +14,7 @@ const KEY_PREFIX = {
   ADMIN_DASHBOARD: 'admin:dashboard',
   ADMIN_USERS: 'admin:users:',
   ADMIN_USER_DETAIL: 'admin:user:detail:',
+  ADMIN_ORGANIZATIONS: 'admin:organizations:',
 } as const;
 
 // Redis未設定時の警告メッセージ（開発環境用）
@@ -422,6 +423,98 @@ export async function invalidateAdminUserDetailCache(
     return true;
   } catch (error) {
     console.error('管理者ユーザー詳細キャッシュの無効化に失敗:', error);
+    return false;
+  }
+}
+
+// ============================================
+// 管理者組織一覧キャッシュ
+// ============================================
+
+/**
+ * 検索パラメータからキャッシュキーを生成
+ */
+function generateAdminOrganizationsKey(params: Record<string, unknown>): string {
+  // パラメータをソートして一意のキーを生成
+  const sortedParams = Object.keys(params)
+    .sort()
+    .filter((key) => params[key] !== undefined && params[key] !== null)
+    .map((key) => `${key}:${JSON.stringify(params[key])}`)
+    .join('|');
+  return `${KEY_PREFIX.ADMIN_ORGANIZATIONS}${sortedParams}`;
+}
+
+/**
+ * 管理者組織一覧をキャッシュに保存
+ * @param params 検索パラメータ
+ * @param data キャッシュデータ
+ * @param ttlSeconds 有効期限（秒）、デフォルト1分
+ */
+export async function setAdminOrganizationsCache<T>(
+  params: Record<string, unknown>,
+  data: T,
+  ttlSeconds: number = 60
+): Promise<boolean> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    const key = generateAdminOrganizationsKey(params);
+    await redis.setex(key, ttlSeconds, JSON.stringify(data));
+    return true;
+  } catch (error) {
+    console.error('管理者組織一覧キャッシュの保存に失敗:', error);
+    return false;
+  }
+}
+
+/**
+ * 管理者組織一覧をキャッシュから取得
+ * @param params 検索パラメータ
+ */
+export async function getAdminOrganizationsCache<T>(
+  params: Record<string, unknown>
+): Promise<T | null> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return null;
+  }
+
+  try {
+    const key = generateAdminOrganizationsKey(params);
+    const data = await redis.get(key);
+    if (!data) {
+      return null;
+    }
+    return JSON.parse(data) as T;
+  } catch (error) {
+    console.error('管理者組織一覧キャッシュの取得に失敗:', error);
+    return null;
+  }
+}
+
+/**
+ * 管理者組織一覧キャッシュを無効化（パターンマッチで全キャッシュを削除）
+ * 組織の作成・更新・削除時に呼び出す
+ */
+export async function invalidateAdminOrganizationsCache(): Promise<boolean> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    // パターンマッチで全ての組織一覧キャッシュを削除
+    const pattern = `${KEY_PREFIX.ADMIN_ORGANIZATIONS}*`;
+    const keys = await redis.keys(pattern);
+    if (keys.length > 0) {
+      await redis.del(...keys);
+    }
+    return true;
+  } catch (error) {
+    console.error('管理者組織一覧キャッシュの無効化に失敗:', error);
     return false;
   }
 }

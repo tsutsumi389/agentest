@@ -1,12 +1,5 @@
-import { useState } from 'react';
-import {
-  LayoutDashboard,
-  RefreshCw,
-  LogOut,
-} from 'lucide-react';
-import { useNavigate, Link } from 'react-router';
+import { RefreshCw } from 'lucide-react';
 import { useAdminDashboard } from '../hooks/useAdminDashboard';
-import { useAdminAuth } from '../hooks/useAdminAuth';
 import {
   SystemHealthCard,
   UserStatsCard,
@@ -14,28 +7,13 @@ import {
   ExecutionStatsCard,
   RevenueStatsCard,
 } from '../components/dashboard';
+import { AdminHeader } from '../components/layout/AdminHeader';
 
 /**
  * 管理ダッシュボードページ
  */
 export function Dashboard() {
   const { data: stats, isLoading, refetch, isFetching } = useAdminDashboard();
-  const { admin, logout } = useAdminAuth();
-  const navigate = useNavigate();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-
-  // ログアウト処理
-  const handleLogout = async () => {
-    if (isLoggingOut) return;
-    setIsLoggingOut(true);
-    try {
-      await logout();
-      navigate('/login');
-    } catch (error) {
-      console.error('ログアウトに失敗しました', error);
-      setIsLoggingOut(false);
-    }
-  };
 
   // 最終更新時刻をフォーマット
   const formatFetchedAt = (isoString: string) => {
@@ -50,51 +28,7 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* ヘッダー */}
-      <header className="bg-background-secondary border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-3">
-                <LayoutDashboard className="w-6 h-6 text-accent" />
-                <span className="text-lg font-semibold text-foreground">
-                  Agentest Admin
-                </span>
-              </div>
-              <nav className="flex items-center gap-4">
-                <Link
-                  to="/"
-                  className="text-sm font-medium text-accent"
-                >
-                  ダッシュボード
-                </Link>
-                <Link
-                  to="/users"
-                  className="text-sm font-medium text-foreground-muted hover:text-foreground"
-                >
-                  ユーザー
-                </Link>
-              </nav>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-foreground-muted">
-                {admin?.name ?? '管理者'}
-              </span>
-              <div className="w-8 h-8 rounded-full bg-accent-muted flex items-center justify-center">
-                <span className="text-sm font-medium text-accent">A</span>
-              </div>
-              <button
-                onClick={handleLogout}
-                disabled={isLoggingOut}
-                className="btn btn-ghost p-2"
-                title="ログアウト"
-              >
-                <LogOut className={`w-5 h-5 ${isLoggingOut ? 'animate-spin' : ''}`} />
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <AdminHeader />
 
       {/* メインコンテンツ */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

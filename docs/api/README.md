@@ -66,6 +66,14 @@ Authorization: Bearer <access_token>
 
 → [管理者ユーザー API 詳細](./admin-users.md)
 
+### 管理者組織管理
+
+| メソッド | パス | 説明 |
+|---------|------|------|
+| GET | `/admin/organizations` | 組織一覧取得（検索・フィルタ・ソート対応） |
+
+→ [管理者組織 API 詳細](./admin-organizations.md)
+
 ### OAuth 2.1（MCP クライアント向け）
 
 | メソッド | パス | 説明 |

@@ -18,6 +18,7 @@ import oauthRoutes from './oauth.js';
 import adminAuthRoutes from './admin/auth.js';
 import adminDashboardRoutes from './admin/dashboard.js';
 import adminUsersRoutes from './admin/users.js';
+import adminOrganizationsRoutes from './admin/organizations.js';
 import { oauthController } from '../controllers/oauth.controller.js';
 
 const router: Router = Router();
@@ -54,6 +55,9 @@ router.use('/admin/dashboard', adminDashboardRoutes);
 
 // 管理者ユーザー一覧
 router.use('/admin/users', adminUsersRoutes);
+
+// 管理者組織一覧
+router.use('/admin/organizations', adminOrganizationsRoutes);
 
 // 内部API（MCPサーバーからの呼び出し用）
 router.use('/internal/api', internalRoutes);

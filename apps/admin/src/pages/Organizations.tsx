@@ -1,43 +1,43 @@
 import { useCallback } from 'react';
 import { useSearchParams } from 'react-router';
-import { Users as UsersIcon, RefreshCw } from 'lucide-react';
+import { Building2, RefreshCw } from 'lucide-react';
 import type {
-  AdminUserSearchParams,
-  AdminUserSortBy,
-  AdminUserStatus,
+  AdminOrganizationSearchParams,
+  AdminOrganizationSortBy,
+  AdminOrganizationStatus,
 } from '@agentest/shared';
-import { useAdminUsers } from '../hooks/useAdminUsers';
-import { UserTable, UserSearchForm, UserFilters } from '../components/users';
+import { useAdminOrganizations } from '../hooks/useAdminOrganizations';
+import { OrganizationTable, OrganizationSearchForm, OrganizationFilters } from '../components/organizations';
 import { AdminHeader } from '../components/layout/AdminHeader';
 
 /**
- * ユーザー一覧ページ
+ * 組織一覧ページ
  */
-export function Users() {
+export function Organizations() {
   // URLSearchParams を使って検索条件を管理
   const [searchParams, setSearchParams] = useSearchParams();
 
   // 検索パラメータを取得
-  const params: AdminUserSearchParams = {
+  const params: AdminOrganizationSearchParams = {
     q: searchParams.get('q') || undefined,
     plan: searchParams.get('plan')
-      ? (searchParams.get('plan')!.split(',') as ('FREE' | 'PRO')[])
+      ? (searchParams.get('plan')!.split(',') as ('TEAM' | 'ENTERPRISE')[])
       : undefined,
-    status: (searchParams.get('status') as AdminUserStatus) || 'active',
+    status: (searchParams.get('status') as AdminOrganizationStatus) || 'active',
     createdFrom: searchParams.get('createdFrom') || undefined,
     createdTo: searchParams.get('createdTo') || undefined,
     page: searchParams.get('page') ? Number(searchParams.get('page')) : 1,
     limit: searchParams.get('limit') ? Number(searchParams.get('limit')) : 20,
-    sortBy: (searchParams.get('sortBy') as AdminUserSortBy) || 'createdAt',
+    sortBy: (searchParams.get('sortBy') as AdminOrganizationSortBy) || 'createdAt',
     sortOrder: (searchParams.get('sortOrder') as 'asc' | 'desc') || 'desc',
   };
 
   // データ取得
-  const { data, isLoading, isFetching, refetch } = useAdminUsers(params);
+  const { data, isLoading, isFetching, refetch } = useAdminOrganizations(params);
 
   // パラメータ更新ヘルパー
   const updateParams = useCallback(
-    (updates: Partial<AdminUserSearchParams>) => {
+    (updates: Partial<AdminOrganizationSearchParams>) => {
       const newParams = new URLSearchParams(searchParams);
 
       Object.entries(updates).forEach(([key, value]) => {
@@ -61,7 +61,7 @@ export function Users() {
   );
 
   // ソート処理
-  const handleSort = (sortBy: AdminUserSortBy) => {
+  const handleSort = (sortBy: AdminOrganizationSortBy) => {
     if (params.sortBy === sortBy) {
       // 同じカラムの場合は順序を反転
       updateParams({
@@ -89,11 +89,11 @@ export function Users() {
           {/* タイトル */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <UsersIcon className="w-6 h-6 text-accent" />
+              <Building2 className="w-6 h-6 text-accent" />
               <div>
-                <h1 className="text-2xl font-bold text-foreground">ユーザー一覧</h1>
+                <h1 className="text-2xl font-bold text-foreground">組織一覧</h1>
                 <p className="text-foreground-muted mt-1">
-                  登録ユーザーの一覧と統計
+                  登録組織の一覧と統計
                 </p>
               </div>
             </div>
@@ -109,11 +109,11 @@ export function Users() {
 
           {/* 検索・フィルター */}
           <div className="bg-background-secondary border border-border rounded-lg p-4 space-y-4">
-            <UserSearchForm
+            <OrganizationSearchForm
               value={params.q || ''}
               onChange={(q) => updateParams({ q })}
             />
-            <UserFilters
+            <OrganizationFilters
               plan={params.plan || []}
               status={params.status || 'active'}
               createdFrom={params.createdFrom || ''}
@@ -133,8 +133,8 @@ export function Users() {
                 読み込み中...
               </div>
             ) : data ? (
-              <UserTable
-                users={data.users}
+              <OrganizationTable
+                organizations={data.organizations}
                 pagination={data.pagination}
                 sortBy={params.sortBy || 'createdAt'}
                 sortOrder={params.sortOrder || 'desc'}
