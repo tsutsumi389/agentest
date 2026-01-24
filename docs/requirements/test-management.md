@@ -185,7 +185,6 @@ ProjectEnvironment
 ├── id
 ├── projectId
 ├── name (例: "開発環境", "ステージング", "本番")
-├── slug (例: "dev", "stg", "prod")
 ├── baseUrl (例: "https://dev.example.com")
 ├── description (任意)
 ├── isDefault (デフォルト環境フラグ)
@@ -203,9 +202,9 @@ ProjectEnvironment
 **使用例:**
 ```
 プロジェクト: ECサイト
-├── dev:  https://dev.ec-site.example.com
-├── stg:  https://stg.ec-site.example.com
-└── prod: https://ec-site.example.com
+├── 開発環境:      https://dev.ec-site.example.com
+├── ステージング:  https://stg.ec-site.example.com
+└── 本番環境:      https://ec-site.example.com
 ```
 
 ---
