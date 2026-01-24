@@ -69,9 +69,18 @@ docker compose exec dev pnpm --filter @agentest/db db:generate
 
 # データベーススキーマを同期
 docker compose exec dev pnpm --filter @agentest/db db:push
+
+# 管理者ユーザーを作成
+docker compose exec dev pnpm --filter @agentest/db db:seed:admin
 ```
 
 > **Note:** テスト用データベース（agentest_test）は Docker 起動時に自動作成されます。テスト実行時にスキーマが自動同期されます。
+
+管理者ログイン情報：
+| 項目 | 値 |
+|------|-----|
+| Email | `admin@example.com` |
+| Password | `password123` |
 
 ### 6. 動作確認
 
