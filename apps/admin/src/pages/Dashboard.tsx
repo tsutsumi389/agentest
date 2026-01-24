@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   LayoutDashboard,
   RefreshCw,
@@ -21,11 +22,19 @@ export function Dashboard() {
   const { data: stats, isLoading, refetch, isFetching } = useAdminDashboard();
   const { admin, logout } = useAdminAuth();
   const navigate = useNavigate();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // ログアウト処理
   const handleLogout = async () => {
-    await logout();
-    navigate('/login');
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    try {
+      await logout();
+      navigate('/login');
+    } catch (error) {
+      console.error('ログアウトに失敗しました', error);
+      setIsLoggingOut(false);
+    }
   };
 
   // 最終更新時刻をフォーマット
@@ -60,10 +69,11 @@ export function Dashboard() {
               </div>
               <button
                 onClick={handleLogout}
+                disabled={isLoggingOut}
                 className="btn btn-ghost p-2"
                 title="ログアウト"
               >
-                <LogOut className="w-5 h-5" />
+                <LogOut className={`w-5 h-5 ${isLoggingOut ? 'animate-spin' : ''}`} />
               </button>
             </div>
           </div>
