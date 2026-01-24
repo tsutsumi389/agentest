@@ -160,7 +160,11 @@ export const adminAuthApi = {
 // 管理者ダッシュボードAPI
 // ============================================
 
-import type { AdminDashboardStats } from '@agentest/shared';
+import type {
+  AdminDashboardStats,
+  AdminUserListResponse,
+  AdminUserSearchParams,
+} from '@agentest/shared';
 
 export const adminDashboardApi = {
   /**
@@ -168,4 +172,38 @@ export const adminDashboardApi = {
    */
   getStats: () =>
     api.get<AdminDashboardStats>('/admin/dashboard'),
+};
+
+// ============================================
+// 管理者ユーザー一覧API
+// ============================================
+
+/**
+ * 検索パラメータをクエリ文字列に変換
+ */
+function toQueryString(params: AdminUserSearchParams): string {
+  const searchParams = new URLSearchParams();
+
+  if (params.q) searchParams.set('q', params.q);
+  if (params.plan && params.plan.length > 0) {
+    searchParams.set('plan', params.plan.join(','));
+  }
+  if (params.status) searchParams.set('status', params.status);
+  if (params.createdFrom) searchParams.set('createdFrom', params.createdFrom);
+  if (params.createdTo) searchParams.set('createdTo', params.createdTo);
+  if (params.page) searchParams.set('page', String(params.page));
+  if (params.limit) searchParams.set('limit', String(params.limit));
+  if (params.sortBy) searchParams.set('sortBy', params.sortBy);
+  if (params.sortOrder) searchParams.set('sortOrder', params.sortOrder);
+
+  const qs = searchParams.toString();
+  return qs ? `?${qs}` : '';
+}
+
+export const adminUsersApi = {
+  /**
+   * ユーザー一覧を取得
+   */
+  list: (params: AdminUserSearchParams = {}) =>
+    api.get<AdminUserListResponse>(`/admin/users${toQueryString(params)}`),
 };

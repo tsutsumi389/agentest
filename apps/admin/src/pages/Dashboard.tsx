@@ -4,7 +4,7 @@ import {
   RefreshCw,
   LogOut,
 } from 'lucide-react';
-import { useNavigate } from 'react-router';
+import { useNavigate, Link } from 'react-router';
 import { useAdminDashboard } from '../hooks/useAdminDashboard';
 import { useAdminAuth } from '../hooks/useAdminAuth';
 import {
@@ -54,11 +54,27 @@ export function Dashboard() {
       <header className="bg-background-secondary border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <LayoutDashboard className="w-6 h-6 text-accent" />
-              <span className="text-lg font-semibold text-foreground">
-                Agentest Admin
-              </span>
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-3">
+                <LayoutDashboard className="w-6 h-6 text-accent" />
+                <span className="text-lg font-semibold text-foreground">
+                  Agentest Admin
+                </span>
+              </div>
+              <nav className="flex items-center gap-4">
+                <Link
+                  to="/"
+                  className="text-sm font-medium text-accent"
+                >
+                  ダッシュボード
+                </Link>
+                <Link
+                  to="/users"
+                  className="text-sm font-medium text-foreground-muted hover:text-foreground"
+                >
+                  ユーザー
+                </Link>
+              </nav>
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-foreground-muted">
