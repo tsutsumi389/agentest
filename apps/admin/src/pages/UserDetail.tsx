@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, useNavigate, Link } from 'react-router';
+import { useParams, useNavigate, Navigate, Link } from 'react-router';
 import {
   LayoutDashboard,
   RefreshCw,
@@ -18,19 +18,7 @@ import {
   UserSubscriptionSection,
   UserAuditLogSection,
 } from '../components/users';
-
-/**
- * 日付フォーマット
- */
-function formatDate(isoString: string): string {
-  return new Date(isoString).toLocaleDateString('ja-JP', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
+import { formatDateTime } from '../lib/date-utils';
 
 /**
  * ユーザー詳細ページ
@@ -41,9 +29,16 @@ export function UserDetail() {
   const { admin, logout } = useAdminAuth();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+  // フックは条件分岐の前に呼び出す（React Hooks のルール）
+  // enabled: !!userId により、id が空の場合はクエリは実行されない
   const { data, isLoading, isFetching, error, refetch } = useAdminUserDetail(
     id ?? ''
   );
+
+  // IDが未指定の場合は一覧へリダイレクト
+  if (!id) {
+    return <Navigate to="/users" replace />;
+  }
 
   // ログアウト処理
   const handleLogout = async () => {
@@ -93,12 +88,10 @@ export function UserDetail() {
               <button
                 onClick={handleLogout}
                 disabled={isLoggingOut}
-                className="btn btn-ghost p-2"
+                className={`btn btn-ghost p-2 ${isLoggingOut ? 'opacity-50' : ''}`}
                 title="ログアウト"
               >
-                <LogOut
-                  className={`w-5 h-5 ${isLoggingOut ? 'animate-spin' : ''}`}
-                />
+                <LogOut className="w-5 h-5" />
               </button>
             </div>
           </div>
@@ -162,7 +155,7 @@ export function UserDetail() {
                   <div>
                     <p className="text-sm text-foreground-muted">作成日</p>
                     <p className="text-sm text-foreground">
-                      {formatDate(data.user.createdAt)}
+                      {formatDateTime(data.user.createdAt)}
                     </p>
                   </div>
                 </div>
@@ -171,7 +164,7 @@ export function UserDetail() {
                   <div>
                     <p className="text-sm text-foreground-muted">更新日</p>
                     <p className="text-sm text-foreground">
-                      {formatDate(data.user.updatedAt)}
+                      {formatDateTime(data.user.updatedAt)}
                     </p>
                   </div>
                 </div>
@@ -181,7 +174,7 @@ export function UserDetail() {
                     <div>
                       <p className="text-sm text-foreground-muted">削除日</p>
                       <p className="text-sm text-error">
-                        {formatDate(data.user.deletedAt)}
+                        {formatDateTime(data.user.deletedAt!)}
                       </p>
                     </div>
                   </div>

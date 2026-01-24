@@ -1,4 +1,5 @@
 import type { AdminUserOrganization } from '@agentest/shared';
+import { formatDate } from '../../lib/date-utils';
 
 interface UserOrganizationsSectionProps {
   organizations: AdminUserOrganization[];
@@ -25,17 +26,6 @@ function RoleBadge({ role }: { role: AdminUserOrganization['role'] }) {
       {labels[role]}
     </span>
   );
-}
-
-/**
- * 日付フォーマット
- */
-function formatDate(isoString: string): string {
-  return new Date(isoString).toLocaleDateString('ja-JP', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
 }
 
 /**

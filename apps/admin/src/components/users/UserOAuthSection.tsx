@@ -1,5 +1,6 @@
 import { Github, Mail } from 'lucide-react';
 import type { AdminUserOAuthProvider } from '@agentest/shared';
+import { formatDate } from '../../lib/date-utils';
 
 interface UserOAuthSectionProps {
   providers: AdminUserOAuthProvider[];
@@ -31,17 +32,6 @@ function formatProviderName(provider: string): string {
     default:
       return provider;
   }
-}
-
-/**
- * 日付フォーマット
- */
-function formatDate(isoString: string): string {
-  return new Date(isoString).toLocaleDateString('ja-JP', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  });
 }
 
 /**

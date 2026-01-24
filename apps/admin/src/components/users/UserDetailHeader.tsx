@@ -1,26 +1,10 @@
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router';
 import type { AdminUserDetail } from '@agentest/shared';
+import { PlanBadge } from '../common';
 
 interface UserDetailHeaderProps {
   user: AdminUserDetail;
-}
-
-/**
- * プランバッジ
- */
-function PlanBadge({ plan }: { plan: 'FREE' | 'PRO' }) {
-  return (
-    <span
-      className={`px-2 py-0.5 text-xs font-medium rounded ${
-        plan === 'PRO'
-          ? 'bg-accent-muted text-accent'
-          : 'bg-background-tertiary text-foreground-muted'
-      }`}
-    >
-      {plan}
-    </span>
-  );
 }
 
 /**

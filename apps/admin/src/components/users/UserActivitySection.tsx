@@ -1,29 +1,9 @@
 import { Clock, Users } from 'lucide-react';
 import type { AdminUserDetail } from '@agentest/shared';
+import { formatRelativeTime } from '../../lib/date-utils';
 
 interface UserActivitySectionProps {
   activity: AdminUserDetail['activity'];
-}
-
-/**
- * 相対時間をフォーマット
- */
-function formatRelativeTime(isoString: string | null): string {
-  if (!isoString) return '-';
-  const date = new Date(isoString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffMinutes = Math.floor(diffMs / (1000 * 60));
-
-  if (diffMinutes < 1) return 'たった今';
-  if (diffMinutes < 60) return `${diffMinutes}分前`;
-  if (diffHours < 24) return `${diffHours}時間前`;
-  if (diffDays === 1) return '昨日';
-  if (diffDays < 7) return `${diffDays}日前`;
-  if (diffDays < 30) return `${Math.floor(diffDays / 7)}週間前`;
-  return new Date(isoString).toLocaleDateString('ja-JP');
 }
 
 /**

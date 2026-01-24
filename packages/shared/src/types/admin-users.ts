@@ -134,9 +134,10 @@ export interface AdminUserOAuthProvider {
 
 /**
  * サブスクリプション情報
+ * 注: planはサブスクリプションプラン（4種類）で、ユーザープラン（FREE/PRO）とは異なる
  */
 export interface AdminUserSubscription {
-  /** プラン */
+  /** サブスクリプションプラン（ユーザープランとは別概念） */
   plan: 'FREE' | 'PRO' | 'TEAM' | 'ENTERPRISE';
   /** ステータス */
   status: 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'TRIALING';
@@ -182,7 +183,7 @@ export interface AdminUserDetail {
   name: string;
   /** アバターURL */
   avatarUrl: string | null;
-  /** プラン */
+  /** ユーザープラン（個人向け: FREE/PRO。組織向けはSubscription.planで管理） */
   plan: 'FREE' | 'PRO';
   /** 作成日時 */
   createdAt: string;

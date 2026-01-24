@@ -1,5 +1,6 @@
 import { CreditCard } from 'lucide-react';
 import type { AdminUserSubscription } from '@agentest/shared';
+import { formatDate } from '../../lib/date-utils';
 
 interface UserSubscriptionSectionProps {
   subscription: AdminUserSubscription | null;
@@ -28,17 +29,6 @@ function StatusBadge({ status }: { status: AdminUserSubscription['status'] }) {
       {labels[status]}
     </span>
   );
-}
-
-/**
- * 日付フォーマット
- */
-function formatDate(isoString: string): string {
-  return new Date(isoString).toLocaleDateString('ja-JP', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
 }
 
 /**
