@@ -554,6 +554,9 @@ importers:
       '@prisma/client':
         specifier: 'catalog:'
         version: 6.19.1(prisma@6.19.1(typescript@5.9.3))(typescript@5.9.3)
+      bcryptjs:
+        specifier: ^3.0.3
+        version: 3.0.3
     devDependencies:
       prisma:
         specifier: 'catalog:'
