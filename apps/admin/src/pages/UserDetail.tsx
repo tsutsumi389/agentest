@@ -174,7 +174,7 @@ export function UserDetail() {
                     <div>
                       <p className="text-sm text-foreground-muted">削除日</p>
                       <p className="text-sm text-error">
-                        {formatDateTime(data.user.deletedAt!)}
+                        {formatDateTime(data.user.deletedAt)}
                       </p>
                     </div>
                   </div>

@@ -17,7 +17,7 @@ export function formatRelativeTime(isoString: string | null): string {
   if (diffMinutes < 1) return 'たった今';
   if (diffMinutes < 60) return `${diffMinutes}分前`;
   if (diffHours < 24) return `${diffHours}時間前`;
-  if (diffDays === 0) return '今日';
+  // 24時間以上経過した場合は日数で表示
   if (diffDays === 1) return '昨日';
   if (diffDays < 7) return `${diffDays}日前`;
   if (diffDays < 30) return `${Math.floor(diffDays / 7)}週間前`;
