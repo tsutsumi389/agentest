@@ -4,11 +4,19 @@ import { UserController } from '../controllers/user.controller.js';
 import { SubscriptionController } from '../controllers/subscription.controller.js';
 import { PaymentMethodController } from '../controllers/payment-method.controller.js';
 import { authConfig } from '../config/auth.js';
+import { requireOwnership } from '../middleware/require-ownership.js';
+import { billingLimiter } from '../middleware/rate-limiter.js';
 
 const router: Router = Router();
 const userController = new UserController();
 const subscriptionController = new SubscriptionController();
 const paymentMethodController = new PaymentMethodController();
+
+// 認証 + オーナーシップチェックのミドルウェアチェーン
+const authWithOwnership = [requireAuth(authConfig), requireOwnership()];
+
+// 課金API用ミドルウェアチェーン（認証 + オーナーシップ + レート制限）
+const billingMiddleware = [requireAuth(authConfig), requireOwnership(), billingLimiter];
 
 /**
  * ユーザープロフィール取得
@@ -59,59 +67,59 @@ router.get('/:userId/accounts', requireAuth(authConfig), userController.getAccou
 router.delete('/:userId/accounts/:provider', requireAuth(authConfig), userController.unlinkAccount);
 
 // ============================================
-// サブスクリプション関連
+// サブスクリプション関連（認証 + オーナーシップ + レート制限）
 // ============================================
 
 /**
  * サブスクリプション取得
  * GET /api/users/:userId/subscription
  */
-router.get('/:userId/subscription', requireAuth(authConfig), subscriptionController.getSubscription);
+router.get('/:userId/subscription', authWithOwnership, subscriptionController.getSubscription);
 
 /**
- * サブスクリプション作成（アップグレード）
+ * サブスクリプション作成（アップグレード）- レート制限あり
  * POST /api/users/:userId/subscription
  */
-router.post('/:userId/subscription', requireAuth(authConfig), subscriptionController.createSubscription);
+router.post('/:userId/subscription', billingMiddleware, subscriptionController.createSubscription);
 
 /**
- * サブスクリプションキャンセル（ダウングレード予約）
+ * サブスクリプションキャンセル（ダウングレード予約）- レート制限あり
  * DELETE /api/users/:userId/subscription
  */
-router.delete('/:userId/subscription', requireAuth(authConfig), subscriptionController.cancelSubscription);
+router.delete('/:userId/subscription', billingMiddleware, subscriptionController.cancelSubscription);
 
 /**
- * ダウングレードキャンセル（サブスクリプション継続）
+ * ダウングレードキャンセル（サブスクリプション継続）- レート制限あり
  * POST /api/users/:userId/subscription/reactivate
  */
-router.post('/:userId/subscription/reactivate', requireAuth(authConfig), subscriptionController.reactivateSubscription);
+router.post('/:userId/subscription/reactivate', billingMiddleware, subscriptionController.reactivateSubscription);
 
 // ============================================
-// 支払い方法関連
+// 支払い方法関連（認証 + オーナーシップ + レート制限）
 // ============================================
 
 /**
  * 支払い方法一覧取得
  * GET /api/users/:userId/payment-methods
  */
-router.get('/:userId/payment-methods', requireAuth(authConfig), paymentMethodController.getPaymentMethods);
+router.get('/:userId/payment-methods', authWithOwnership, paymentMethodController.getPaymentMethods);
 
 /**
- * 支払い方法追加
+ * 支払い方法追加 - レート制限あり
  * POST /api/users/:userId/payment-methods
  */
-router.post('/:userId/payment-methods', requireAuth(authConfig), paymentMethodController.addPaymentMethod);
+router.post('/:userId/payment-methods', billingMiddleware, paymentMethodController.addPaymentMethod);
 
 /**
- * 支払い方法削除
+ * 支払い方法削除 - レート制限あり
  * DELETE /api/users/:userId/payment-methods/:paymentMethodId
  */
-router.delete('/:userId/payment-methods/:paymentMethodId', requireAuth(authConfig), paymentMethodController.deletePaymentMethod);
+router.delete('/:userId/payment-methods/:paymentMethodId', billingMiddleware, paymentMethodController.deletePaymentMethod);
 
 /**
- * デフォルト支払い方法設定
+ * デフォルト支払い方法設定 - レート制限あり
  * PUT /api/users/:userId/payment-methods/:paymentMethodId/default
  */
-router.put('/:userId/payment-methods/:paymentMethodId/default', requireAuth(authConfig), paymentMethodController.setDefaultPaymentMethod);
+router.put('/:userId/payment-methods/:paymentMethodId/default', billingMiddleware, paymentMethodController.setDefaultPaymentMethod);
 
 export default router;

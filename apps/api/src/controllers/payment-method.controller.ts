@@ -5,7 +5,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { PaymentMethodService } from '../services/payment-method.service.js';
-import { AuthorizationError } from '@agentest/shared';
 
 /**
  * 支払い方法追加スキーマ
@@ -31,15 +30,8 @@ export class PaymentMethodController {
   ): Promise<void> => {
     try {
       const { userId } = req.params;
-
-      // 自分の支払い方法のみ取得可能
-      if (req.user?.id !== userId) {
-        throw new AuthorizationError('自分の支払い方法のみ取得できます');
-      }
-
       const paymentMethods =
         await this.paymentMethodService.getPaymentMethods(userId);
-
       res.json({ paymentMethods });
     } catch (error) {
       next(error);
@@ -57,18 +49,11 @@ export class PaymentMethodController {
   ): Promise<void> => {
     try {
       const { userId } = req.params;
-
-      // 自分の支払い方法のみ追加可能
-      if (req.user?.id !== userId) {
-        throw new AuthorizationError('自分の支払い方法のみ追加できます');
-      }
-
       const { token } = addPaymentMethodSchema.parse(req.body);
       const paymentMethod = await this.paymentMethodService.addPaymentMethod(
         userId,
         token
       );
-
       res.status(201).json({ paymentMethod });
     } catch (error) {
       next(error);
@@ -86,14 +71,7 @@ export class PaymentMethodController {
   ): Promise<void> => {
     try {
       const { userId, paymentMethodId } = req.params;
-
-      // 自分の支払い方法のみ削除可能
-      if (req.user?.id !== userId) {
-        throw new AuthorizationError('自分の支払い方法のみ削除できます');
-      }
-
       await this.paymentMethodService.deletePaymentMethod(userId, paymentMethodId);
-
       res.status(204).send();
     } catch (error) {
       next(error);
@@ -111,17 +89,10 @@ export class PaymentMethodController {
   ): Promise<void> => {
     try {
       const { userId, paymentMethodId } = req.params;
-
-      // 自分の支払い方法のみ設定可能
-      if (req.user?.id !== userId) {
-        throw new AuthorizationError('自分の支払い方法のみ設定できます');
-      }
-
       const paymentMethod = await this.paymentMethodService.setDefaultPaymentMethod(
         userId,
         paymentMethodId
       );
-
       res.json({ paymentMethod });
     } catch (error) {
       next(error);

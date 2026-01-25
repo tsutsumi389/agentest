@@ -5,7 +5,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { SubscriptionService } from '../services/subscription.service.js';
-import { AuthorizationError } from '@agentest/shared';
 
 /**
  * サブスクリプション作成スキーマ
@@ -33,14 +32,7 @@ export class SubscriptionController {
   ): Promise<void> => {
     try {
       const { userId } = req.params;
-
-      // 自分のサブスクリプションのみ取得可能
-      if (req.user?.id !== userId) {
-        throw new AuthorizationError('自分のサブスクリプションのみ取得できます');
-      }
-
       const subscription = await this.subscriptionService.getSubscription(userId);
-
       res.json({ subscription });
     } catch (error) {
       next(error);
@@ -58,18 +50,11 @@ export class SubscriptionController {
   ): Promise<void> => {
     try {
       const { userId } = req.params;
-
-      // 自分のサブスクリプションのみ作成可能
-      if (req.user?.id !== userId) {
-        throw new AuthorizationError('自分のサブスクリプションのみ作成できます');
-      }
-
       const input = createSubscriptionSchema.parse(req.body);
       const subscription = await this.subscriptionService.createSubscription(
         userId,
         input
       );
-
       res.status(201).json({ subscription });
     } catch (error) {
       next(error);
@@ -87,14 +72,7 @@ export class SubscriptionController {
   ): Promise<void> => {
     try {
       const { userId } = req.params;
-
-      // 自分のサブスクリプションのみキャンセル可能
-      if (req.user?.id !== userId) {
-        throw new AuthorizationError('自分のサブスクリプションのみキャンセルできます');
-      }
-
       const subscription = await this.subscriptionService.cancelSubscription(userId);
-
       res.json({ subscription });
     } catch (error) {
       next(error);
@@ -112,14 +90,7 @@ export class SubscriptionController {
   ): Promise<void> => {
     try {
       const { userId } = req.params;
-
-      // 自分のサブスクリプションのみ再開可能
-      if (req.user?.id !== userId) {
-        throw new AuthorizationError('自分のサブスクリプションのみ再開できます');
-      }
-
       const subscription = await this.subscriptionService.reactivateSubscription(userId);
-
       res.json({ subscription });
     } catch (error) {
       next(error);

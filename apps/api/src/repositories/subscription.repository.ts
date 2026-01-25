@@ -17,6 +17,7 @@ import {
 export interface CreateSubscriptionParams {
   userId?: string;
   organizationId?: string;
+  externalId?: string;
   plan: SubscriptionPlan;
   billingCycle: BillingCycle;
   currentPeriodStart: Date;
@@ -29,6 +30,7 @@ export interface CreateSubscriptionParams {
  * サブスクリプション更新パラメータ
  */
 export interface UpdateSubscriptionParams {
+  externalId?: string;
   plan?: SubscriptionPlan;
   billingCycle?: BillingCycle;
   status?: SubscriptionStatus;
@@ -78,6 +80,7 @@ export class SubscriptionRepository {
       data: {
         userId: params.userId,
         organizationId: params.organizationId,
+        externalId: params.externalId,
         plan: params.plan,
         billingCycle: params.billingCycle,
         currentPeriodStart: params.currentPeriodStart,
@@ -97,6 +100,7 @@ export class SubscriptionRepository {
   ): Promise<Subscription> {
     const data: Prisma.SubscriptionUpdateInput = {};
 
+    if (params.externalId !== undefined) data.externalId = params.externalId;
     if (params.plan !== undefined) data.plan = params.plan;
     if (params.billingCycle !== undefined) data.billingCycle = params.billingCycle;
     if (params.status !== undefined) data.status = params.status;
@@ -133,6 +137,7 @@ export class SubscriptionRepository {
       where: { userId },
       create: {
         userId,
+        externalId: params.externalId,
         plan: params.plan,
         billingCycle: params.billingCycle,
         currentPeriodStart: params.currentPeriodStart,
@@ -141,6 +146,7 @@ export class SubscriptionRepository {
         cancelAtPeriodEnd: params.cancelAtPeriodEnd ?? false,
       },
       update: {
+        externalId: params.externalId,
         plan: params.plan,
         billingCycle: params.billingCycle,
         currentPeriodStart: params.currentPeriodStart,

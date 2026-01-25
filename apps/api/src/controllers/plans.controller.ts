@@ -13,6 +13,13 @@ import { SubscriptionService } from '../services/subscription.service.js';
 import { AuthorizationError } from '@agentest/shared';
 
 /**
+ * プランパラメータスキーマ
+ */
+const planParamSchema = z.object({
+  plan: z.enum(['FREE', 'PRO']),
+});
+
+/**
  * 料金計算クエリスキーマ
  */
 const calculateQuerySchema = z.object({
@@ -79,30 +86,22 @@ export class PlansController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const { plan } = req.params;
       const userId = req.user?.id;
 
       if (!userId) {
         throw new AuthorizationError('認証が必要です');
       }
 
-      // プランの検証
-      if (plan !== 'FREE' && plan !== 'PRO') {
-        res.status(400).json({
-          error: {
-            code: 'INVALID_PLAN',
-            message: '無効なプランです',
-          },
-        });
-        return;
-      }
+      // プランパラメータの検証
+      const { plan } = planParamSchema.parse(req.params);
 
-      const query = calculateQuerySchema.parse(req.query);
+      // クエリパラメータの検証
+      const { billingCycle } = calculateQuerySchema.parse(req.query);
 
       const calculation = await this.subscriptionService.calculatePlanChange(
         userId,
-        plan as PersonalPlan,
-        query.billingCycle
+        plan,
+        billingCycle
       );
 
       res.json({ calculation });

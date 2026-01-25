@@ -956,6 +956,7 @@ model Subscription {
   id                 String             @id @default(uuid())
   userId             String?            @unique @map("user_id")
   organizationId     String?            @unique @map("organization_id")
+  externalId         String?            @unique @map("external_id") @db.VarChar(255) // 決済サービスのサブスクリプションID
   plan               SubscriptionPlan   @default(FREE)
   status             SubscriptionStatus @default(ACTIVE)
   billingCycle       BillingCycle       @default(MONTHLY) @map("billing_cycle")

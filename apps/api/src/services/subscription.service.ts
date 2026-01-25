@@ -16,6 +16,7 @@ import { SubscriptionRepository } from '../repositories/subscription.repository.
 import { PaymentMethodRepository } from '../repositories/payment-method.repository.js';
 import { getPaymentGateway } from '../gateways/payment/index.js';
 import type { IPaymentGateway } from '../gateways/payment/payment-gateway.interface.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * サブスクリプション作成パラメータ
@@ -129,8 +130,9 @@ export class SubscriptionService {
       priceId: priceId ?? undefined,
     });
 
-    // DBにサブスクリプションを作成/更新
+    // DBにサブスクリプションを作成/更新（externalIdを保存）
     const subscription = await this.subscriptionRepo.upsertForUser(userId, {
+      externalId: gatewayResult.id,
       plan,
       billingCycle,
       currentPeriodStart: gatewayResult.currentPeriodStart,
@@ -143,6 +145,14 @@ export class SubscriptionService {
     await prisma.user.update({
       where: { id: userId },
       data: { plan },
+    });
+
+    logger.info('Subscription created', {
+      userId,
+      subscriptionId: subscription.id,
+      externalId: gatewayResult.id,
+      plan,
+      billingCycle,
     });
 
     return this.toResponse(subscription);
@@ -165,13 +175,21 @@ export class SubscriptionService {
       throw new ValidationError('すでにキャンセル予約されています');
     }
 
-    // 決済ゲートウェイでキャンセル予約
-    // TODO: externalIdがある場合のみ呼び出す（モック環境では不要）
-    // await this.paymentGateway.cancelSubscription(subscription.externalId, true);
+    // 決済ゲートウェイでキャンセル予約（externalIdがある場合のみ）
+    if (subscription.externalId) {
+      await this.paymentGateway.cancelSubscription(subscription.externalId, true);
+    }
 
     // DBでキャンセル予約を設定
     const updated = await this.subscriptionRepo.update(subscription.id, {
       cancelAtPeriodEnd: true,
+    });
+
+    logger.info('Subscription cancellation scheduled', {
+      userId,
+      subscriptionId: subscription.id,
+      externalId: subscription.externalId,
+      currentPeriodEnd: subscription.currentPeriodEnd,
     });
 
     return this.toResponse(updated);
@@ -190,13 +208,20 @@ export class SubscriptionService {
       throw new ValidationError('キャンセル予約されていません');
     }
 
-    // 決済ゲートウェイでキャンセル予約を解除
-    // TODO: externalIdがある場合のみ呼び出す
-    // await this.paymentGateway.reactivateSubscription(subscription.externalId);
+    // 決済ゲートウェイでキャンセル予約を解除（externalIdがある場合のみ）
+    if (subscription.externalId) {
+      await this.paymentGateway.reactivateSubscription(subscription.externalId);
+    }
 
     // DBでキャンセル予約を解除
     const updated = await this.subscriptionRepo.update(subscription.id, {
       cancelAtPeriodEnd: false,
+    });
+
+    logger.info('Subscription reactivated', {
+      userId,
+      subscriptionId: subscription.id,
+      externalId: subscription.externalId,
     });
 
     return this.toResponse(updated);
@@ -233,8 +258,8 @@ export class SubscriptionService {
 
     // ユーザー情報取得
     const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user?.paymentCustomerId) {
-      // 決済顧客がない場合は単純な価格を返す
+    if (!user?.paymentCustomerId || !subscription.externalId) {
+      // 決済顧客またはexternalIdがない場合は単純な価格を返す
       return {
         plan,
         billingCycle,
@@ -247,7 +272,7 @@ export class SubscriptionService {
     try {
       const prorationPreview = await this.paymentGateway.previewProration({
         customerId: user.paymentCustomerId,
-        subscriptionId: '', // TODO: externalIdを使用
+        subscriptionId: subscription.externalId,
         currentPlan,
         newPlan: plan,
         billingCycle,
@@ -262,8 +287,14 @@ export class SubscriptionService {
         prorationAmount: prorationPreview.amountDue,
         effectiveDate: prorationPreview.effectiveDate,
       };
-    } catch {
-      // 日割り計算に失敗した場合は単純な価格を返す
+    } catch (error) {
+      // 日割り計算に失敗した場合はログ出力して単純な価格を返す
+      logger.warn('Failed to calculate proration', {
+        userId,
+        plan,
+        billingCycle,
+        error: error instanceof Error ? error.message : String(error),
+      });
       return {
         plan,
         billingCycle,
