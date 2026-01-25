@@ -15,7 +15,7 @@ export class ProjectRepository {
       },
       include: {
         organization: {
-          select: { id: true, name: true, slug: true },
+          select: { id: true, name: true },
         },
       },
     });
@@ -32,7 +32,7 @@ export class ProjectRepository {
       },
       include: {
         organization: {
-          select: { id: true, name: true, slug: true },
+          select: { id: true, name: true },
         },
       },
     });
@@ -67,7 +67,7 @@ export class ProjectRepository {
       data: { deletedAt: null },
       include: {
         organization: {
-          select: { id: true, name: true, slug: true },
+          select: { id: true, name: true },
         },
       },
     });

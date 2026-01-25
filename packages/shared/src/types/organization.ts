@@ -3,7 +3,6 @@ import type { OrganizationPlan, OrganizationRole, ProjectRole } from './enums.js
 export interface Organization {
   id: string;
   name: string;
-  slug: string;
   description: string | null;
   avatarUrl: string | null;
   plan: OrganizationPlan;
@@ -69,7 +68,6 @@ export interface ProjectMember {
 export interface OrganizationPublic {
   id: string;
   name: string;
-  slug: string;
   description: string | null;
   avatarUrl: string | null;
   plan: OrganizationPlan;

@@ -99,7 +99,7 @@ describe('ApiTokenService', () => {
         organizationId: 'org-1',
         scopes: ['*'],
         user: null,
-        organization: { id: 'org-1', name: 'Test Org', slug: 'test-org', deletedAt: new Date() },
+        organization: { id: 'org-1', name: 'Test Org', deletedAt: new Date() },
       };
       mockApiTokenRepo.findByHash.mockResolvedValue(mockToken);
 

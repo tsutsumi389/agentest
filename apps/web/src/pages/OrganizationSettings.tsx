@@ -165,7 +165,6 @@ export function OrganizationSettingsPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-foreground">{organization.name}</h1>
-            <p className="text-foreground-muted text-sm">/{organization.slug}</p>
           </div>
         </div>
       </div>
@@ -353,22 +352,6 @@ function GeneralSettings({
           {errors.name && (
             <p className="text-xs text-danger mt-1">{errors.name}</p>
           )}
-        </div>
-
-        {/* スラッグ（読み取り専用） */}
-        <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
-            スラッグ
-          </label>
-          <input
-            type="text"
-            value={organization.slug}
-            disabled
-            className="input w-full max-w-md bg-background-tertiary font-mono text-sm"
-          />
-          <p className="text-xs text-foreground-subtle mt-1">
-            スラッグは変更できません
-          </p>
         </div>
 
         {/* 説明 */}

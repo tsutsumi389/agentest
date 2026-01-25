@@ -41,7 +41,6 @@ describe('AdminOrganizationsService', () => {
     const createMockOrganizationData = (overrides: Partial<{
       id: string;
       name: string;
-      slug: string;
       description: string | null;
       avatarUrl: string | null;
       plan: 'TEAM' | 'ENTERPRISE';
@@ -57,7 +56,6 @@ describe('AdminOrganizationsService', () => {
     }> = {}) => ({
       id: '550e8400-e29b-41d4-a716-446655440000',
       name: 'Test Organization',
-      slug: 'test-org',
       description: 'Test description',
       avatarUrl: 'https://example.com/avatar.png',
       plan: 'TEAM' as const,
@@ -76,7 +74,6 @@ describe('AdminOrganizationsService', () => {
           {
             id: '550e8400-e29b-41d4-a716-446655440000',
             name: 'Test Organization',
-            slug: 'test-org',
             description: 'Test description',
             avatarUrl: 'https://example.com/avatar.png',
             plan: 'TEAM',
@@ -138,7 +135,6 @@ describe('AdminOrganizationsService', () => {
       expect(result.organizations[0]).toMatchObject({
         id: expect.any(String),
         name: 'Test Organization',
-        slug: 'test-org',
         description: 'Test description',
         avatarUrl: 'https://example.com/avatar.png',
         plan: 'TEAM',
@@ -208,10 +204,7 @@ describe('AdminOrganizationsService', () => {
       expect(prisma.organization.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            OR: [
-              { name: { contains: 'test', mode: 'insensitive' } },
-              { slug: { contains: 'test', mode: 'insensitive' } },
-            ],
+            name: { contains: 'test', mode: 'insensitive' },
           }),
         })
       );

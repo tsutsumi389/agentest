@@ -4,7 +4,6 @@ import { NotFoundError, ConflictError, AuthorizationError } from '@agentest/shar
 // OrganizationRepository のモック
 const mockOrgRepo = vi.hoisted(() => ({
   findById: vi.fn(),
-  findBySlug: vi.fn(),
   update: vi.fn(),
   softDelete: vi.fn(),
   findDeletedById: vi.fn(),
@@ -82,7 +81,6 @@ describe('OrganizationService', () => {
       organization: {
         id: 'org-1',
         name: 'Test Org',
-        slug: 'test-org',
         avatarUrl: null,
       },
       invitedBy: {
@@ -105,7 +103,6 @@ describe('OrganizationService', () => {
             select: {
               id: true,
               name: true,
-              slug: true,
               avatarUrl: true,
             },
           },
@@ -665,7 +662,6 @@ describe('OrganizationService', () => {
     const mockDeletedOrg = {
       id: 'org-1',
       name: 'Deleted Org',
-      slug: 'deleted-org',
       deletedAt: new Date(),
     };
 
@@ -760,7 +756,7 @@ describe('OrganizationService', () => {
         action: 'organization.restored',
         targetType: 'Organization',
         targetId: 'org-1',
-        details: { name: 'Deleted Org', slug: 'deleted-org' },
+        details: { name: 'Deleted Org' },
       });
     });
   });
@@ -769,12 +765,11 @@ describe('OrganizationService', () => {
   describe('Audit Logging', () => {
     describe('create', () => {
       it('組織作成時に監査ログを記録する', async () => {
-        const mockOrg = { id: 'org-1', name: 'Test Org', slug: 'test-org' };
-        mockPrisma.organization.findUnique.mockResolvedValue(null);
+        const mockOrg = { id: 'org-1', name: 'Test Org' };
         mockPrisma.organization.create.mockResolvedValue(mockOrg);
         mockPrisma.organizationMember.create.mockResolvedValue({});
 
-        await service.create('user-1', { name: 'Test Org', slug: 'test-org' });
+        await service.create('user-1', { name: 'Test Org' });
 
         expect(mockAuditLogService.log).toHaveBeenCalledWith({
           userId: 'user-1',
@@ -783,7 +778,7 @@ describe('OrganizationService', () => {
           action: 'organization.created',
           targetType: 'Organization',
           targetId: 'org-1',
-          details: { name: 'Test Org', slug: 'test-org' },
+          details: { name: 'Test Org' },
         });
       });
     });
@@ -810,7 +805,7 @@ describe('OrganizationService', () => {
 
     describe('softDelete', () => {
       it('組織削除時に監査ログを記録する', async () => {
-        const mockOrg = { id: 'org-1', name: 'Test Org', slug: 'test-org' };
+        const mockOrg = { id: 'org-1', name: 'Test Org' };
         mockOrgRepo.findById.mockResolvedValue(mockOrg);
         mockOrgRepo.softDelete.mockResolvedValue(mockOrg);
 
@@ -823,7 +818,7 @@ describe('OrganizationService', () => {
           action: 'organization.deleted',
           targetType: 'Organization',
           targetId: 'org-1',
-          details: { name: 'Test Org', slug: 'test-org' },
+          details: { name: 'Test Org' },
         });
       });
     });

@@ -26,7 +26,6 @@ describe('OrganizationRepository', () => {
       const mockOrg = {
         id: 'org-1',
         name: 'Test Organization',
-        slug: 'test-org',
         description: 'Test description',
         billingEmail: 'billing@example.com',
         deletedAt: null,
@@ -62,43 +61,6 @@ describe('OrganizationRepository', () => {
       mockPrismaOrganization.findFirst.mockResolvedValue(null);
 
       const result = await repository.findById('non-existent');
-
-      expect(result).toBeNull();
-    });
-  });
-
-  describe('findBySlug', () => {
-    it('スラッグで組織を取得できる', async () => {
-      const mockOrg = {
-        id: 'org-1',
-        name: 'Test Organization',
-        slug: 'test-org',
-      };
-      mockPrismaOrganization.findFirst.mockResolvedValue(mockOrg);
-
-      const result = await repository.findBySlug('test-org');
-
-      expect(mockPrismaOrganization.findFirst).toHaveBeenCalledWith({
-        where: {
-          slug: 'test-org',
-          deletedAt: null,
-        },
-      });
-      expect(result).toEqual(mockOrg);
-    });
-
-    it('削除済み組織はnullを返す', async () => {
-      mockPrismaOrganization.findFirst.mockResolvedValue(null);
-
-      const result = await repository.findBySlug('deleted-org-slug');
-
-      expect(result).toBeNull();
-    });
-
-    it('存在しないスラッグはnullを返す', async () => {
-      mockPrismaOrganization.findFirst.mockResolvedValue(null);
-
-      const result = await repository.findBySlug('unknown-slug');
 
       expect(result).toBeNull();
     });

@@ -13,22 +13,6 @@ interface CreateOrganizationModalProps {
 }
 
 /**
- * 組織名からスラッグを生成する
- * - 小文字に変換
- * - 英数字とハイフンのみ許可
- * - 連続するハイフンを単一に
- * - 先頭・末尾のハイフンを削除
- */
-function generateSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-}
-
-/**
  * 組織作成モーダル
  */
 export function CreateOrganizationModal({
@@ -42,9 +26,7 @@ export function CreateOrganizationModal({
 
   // フォーム状態
   const [name, setName] = useState('');
-  const [slug, setSlug] = useState('');
   const [description, setDescription] = useState('');
-  const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
 
   // UI状態
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -53,9 +35,7 @@ export function CreateOrganizationModal({
   // フォームをリセットする
   const resetForm = useCallback(() => {
     setName('');
-    setSlug('');
     setDescription('');
-    setIsSlugManuallyEdited(false);
     setErrors({});
   }, []);
 
@@ -128,21 +108,6 @@ export function CreateOrganizationModal({
     }
   }, [isOpen, handleTabKey, handleEscapeKey]);
 
-  // 組織名が変更されたらスラッグを自動生成
-  useEffect(() => {
-    if (!isSlugManuallyEdited) {
-      setSlug(generateSlug(name));
-    }
-  }, [name, isSlugManuallyEdited]);
-
-  // スラッグ入力時に手動編集フラグを立てる
-  const handleSlugChange = (value: string) => {
-    // スラッグとして有効な文字のみ許可
-    const sanitized = value.toLowerCase().replace(/[^a-z0-9-]/g, '');
-    setSlug(sanitized);
-    setIsSlugManuallyEdited(true);
-  };
-
   // バリデーション
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -151,17 +116,6 @@ export function CreateOrganizationModal({
       newErrors.name = '組織名は必須です';
     } else if (name.length > 100) {
       newErrors.name = '組織名は100文字以内で入力してください';
-    }
-
-    if (!slug.trim()) {
-      newErrors.slug = 'スラッグは必須です';
-    } else if (slug.length < 2) {
-      newErrors.slug = 'スラッグは2文字以上必要です';
-    } else if (slug.length > 50) {
-      newErrors.slug = 'スラッグは50文字以内で入力してください';
-    } else if (!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(slug)) {
-      // 先頭と末尾は英数字、中間はハイフンも可。2文字以上の場合も正しくマッチ
-      newErrors.slug = 'スラッグは英小文字、数字、ハイフンのみ使用できます（先頭と末尾はハイフン不可）';
     }
 
     if (description.length > 500) {
@@ -186,7 +140,6 @@ export function CreateOrganizationModal({
     try {
       const response = await organizationsApi.create({
         name: name.trim(),
-        slug: slug.trim(),
         description: description.trim() || undefined,
       });
 
@@ -206,8 +159,6 @@ export function CreateOrganizationModal({
             fieldErrors[field] = messages[0];
           }
           setErrors(fieldErrors);
-        } else if (err.code === 'CONFLICT' || err.message.includes('既に使用されています')) {
-          setErrors({ slug: 'このスラッグは既に使用されています' });
         } else {
           setErrors({ general: err.message });
         }
@@ -289,37 +240,6 @@ export function CreateOrganizationModal({
               {errors.name && (
                 <p id="org-name-error" className="mt-1 text-sm text-error">
                   {errors.name}
-                </p>
-              )}
-            </div>
-
-            {/* スラッグ */}
-            <div>
-              <label htmlFor="org-slug" className="block text-sm font-medium text-foreground mb-1.5">
-                スラッグ <span className="text-error">*</span>
-              </label>
-              <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-foreground-muted">
-                  /
-                </span>
-                <input
-                  id="org-slug"
-                  type="text"
-                  value={slug}
-                  onChange={(e) => handleSlugChange(e.target.value)}
-                  placeholder="my-organization"
-                  className={`input w-full pl-6 font-mono text-sm ${errors.slug ? 'border-error focus:border-error' : ''}`}
-                  disabled={isSubmitting}
-                  aria-invalid={!!errors.slug}
-                  aria-describedby={errors.slug ? 'org-slug-hint org-slug-error' : 'org-slug-hint'}
-                />
-              </div>
-              <p id="org-slug-hint" className="mt-1 text-xs text-foreground-muted">
-                URLに使用されます。英小文字、数字、ハイフンのみ使用可能
-              </p>
-              {errors.slug && (
-                <p id="org-slug-error" className="mt-1 text-sm text-error">
-                  {errors.slug}
                 </p>
               )}
             </div>

@@ -79,7 +79,6 @@ export async function createTestOrganization(
   overrides: Partial<{
     id: string;
     name: string;
-    slug: string;
     description: string | null;
     plan: 'TEAM' | 'ENTERPRISE';
   }> = {}
@@ -89,7 +88,6 @@ export async function createTestOrganization(
     data: {
       id,
       name: overrides.name ?? `Test Org ${id.slice(0, 8)}`,
-      slug: overrides.slug ?? `test-org-${id.slice(0, 8)}`,
       description: overrides.description ?? null,
       plan: overrides.plan ?? 'TEAM',
     },

@@ -38,7 +38,6 @@ describe('ProjectRepository', () => {
         organization: {
           id: 'org-1',
           name: 'Test Organization',
-          slug: 'test-org',
         },
       };
       mockPrismaProject.findFirst.mockResolvedValue(mockProject);
@@ -52,7 +51,7 @@ describe('ProjectRepository', () => {
         },
         include: {
           organization: {
-            select: { id: true, name: true, slug: true },
+            select: { id: true, name: true },
           },
         },
       });
@@ -65,7 +64,6 @@ describe('ProjectRepository', () => {
         organization: {
           id: 'org-1',
           name: 'Organization',
-          slug: 'org-slug',
         },
       };
       mockPrismaProject.findFirst.mockResolvedValue(mockProject);
@@ -103,7 +101,6 @@ describe('ProjectRepository', () => {
         organization: {
           id: 'org-1',
           name: 'Test Organization',
-          slug: 'test-org',
         },
       };
       mockPrismaProject.findFirst.mockResolvedValue(mockProject);
@@ -117,7 +114,7 @@ describe('ProjectRepository', () => {
         },
         include: {
           organization: {
-            select: { id: true, name: true, slug: true },
+            select: { id: true, name: true },
           },
         },
       });
@@ -234,7 +231,6 @@ describe('ProjectRepository', () => {
         organization: {
           id: 'org-1',
           name: 'Test Organization',
-          slug: 'test-org',
         },
       };
       mockPrismaProject.update.mockResolvedValue(mockProject);
@@ -246,7 +242,7 @@ describe('ProjectRepository', () => {
         data: { deletedAt: null },
         include: {
           organization: {
-            select: { id: true, name: true, slug: true },
+            select: { id: true, name: true },
           },
         },
       });

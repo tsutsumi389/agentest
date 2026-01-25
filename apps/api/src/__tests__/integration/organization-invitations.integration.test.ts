@@ -84,7 +84,6 @@ describe('Organization Invitations API Integration Tests', () => {
     // 組織を作成（オーナーで）
     organization = await createTestOrganization(owner.id, {
       name: 'Test Organization',
-      slug: 'test-org',
     });
 
     // adminとmemberを追加
@@ -368,9 +367,7 @@ describe('Organization Invitations API Integration Tests', () => {
 
     it('他の組織の招待は取消できない', async () => {
       // 別の組織を作成
-      const otherOrg = await createTestOrganization(owner.id, {
-        slug: 'other-org',
-      });
+      const otherOrg = await createTestOrganization(owner.id, {});
       const invitation = await createTestInvitation(otherOrg.id, owner.id, {
         email: 'other@example.com',
       });

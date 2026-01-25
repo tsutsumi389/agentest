@@ -14,7 +14,6 @@
 |--------|------|------|------------|------|
 | `id` | UUID | NO | gen_random_uuid() | 主キー |
 | `name` | VARCHAR(100) | NO | - | 組織名 |
-| `slug` | VARCHAR(100) | NO | - | URL スラッグ（一意） |
 | `description` | TEXT | YES | NULL | 組織の説明 |
 | `avatarUrl` | TEXT | YES | NULL | 組織アバター画像 URL |
 | `plan` | ENUM | NO | TEAM | 組織プラン（TEAM, ENTERPRISE） |
@@ -32,7 +31,6 @@
 
 ### 制約
 
-- `slug` は一意
 - `billingEmail` は有効なメールアドレス形式
 
 ### Prisma スキーマ
@@ -46,7 +44,6 @@ enum OrganizationPlan {
 model Organization {
   id           String           @id @default(uuid()) @db.Uuid
   name         String           @db.VarChar(100)
-  slug         String           @unique @db.VarChar(100)
   description  String?
   avatarUrl    String?
   plan         OrganizationPlan @default(TEAM)
@@ -409,8 +406,8 @@ model ProjectMember {
 
 | 機能 ID | 機能 | 説明 |
 |---------|------|------|
-| ORG-001 | 組織作成 | 新規組織の作成（URL スラッグ設定） |
-| ORG-002 | 組織設定 | 組織名、説明、アバター、URL の設定 |
+| ORG-001 | 組織作成 | 新規組織の作成 |
+| ORG-002 | 組織設定 | 組織名、説明、アバターの設定 |
 | ORG-003 | 組織一覧 | 所属する組織の一覧表示 |
 | ORG-004 | オーナー権限移譲 | 組織のオーナー権限を他のメンバーに移譲 |
 | ORG-005 | 組織削除 | 組織を削除（オーナーのみ、30日後に物理削除） |

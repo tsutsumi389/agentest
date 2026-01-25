@@ -20,7 +20,7 @@
 
 ### 監査ログ一覧画面
 
-- **URL**: `/organizations/{slug}/audit-logs`
+- **URL**: `/organizations/{id}/audit-logs`
 - **表示要素**
   - アクションバー
     - エクスポートボタン（CSV/JSON形式選択ドロップダウン）
@@ -90,10 +90,10 @@
 
 | アクション | 説明 | 記録内容 |
 |-----------|------|----------|
-| organization.created | 組織作成 | name, slug |
+| organization.created | 組織作成 | name |
 | organization.updated | 組織設定変更 | 変更項目と値 |
-| organization.deleted | 組織削除 | name, slug |
-| organization.restored | 組織復元 | name, slug |
+| organization.deleted | 組織削除 | name |
+| organization.restored | 組織復元 | name |
 | organization.ownership_transferred | オーナー移譲 | previousOwnerId, newOwnerId |
 
 #### メンバー操作（MEMBER）
@@ -271,8 +271,7 @@ erDiagram
 
 ```json
 {
-  "name": "Example Organization",
-  "slug": "example-org"
+  "name": "Example Organization"
 }
 ```
 

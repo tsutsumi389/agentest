@@ -24,7 +24,7 @@ export class ApiTokenRepository {
           select: { id: true, email: true, name: true, deletedAt: true },
         },
         organization: {
-          select: { id: true, name: true, slug: true, deletedAt: true },
+          select: { id: true, name: true, deletedAt: true },
         },
       },
     });

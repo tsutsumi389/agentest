@@ -13,21 +13,12 @@ export class OrganizationService {
   /**
    * 組織を作成
    */
-  async create(userId: string, data: { name: string; slug: string; description?: string }) {
-    // スラッグの重複チェック
-    const existing = await prisma.organization.findUnique({
-      where: { slug: data.slug },
-    });
-    if (existing) {
-      throw new ConflictError('このスラッグは既に使用されています');
-    }
-
+  async create(userId: string, data: { name: string; description?: string }) {
     // トランザクションで組織とオーナーメンバーシップを作成
     const organization = await prisma.$transaction(async (tx) => {
       const org = await tx.organization.create({
         data: {
           name: data.name,
-          slug: data.slug,
           description: data.description,
         },
       });
@@ -51,7 +42,7 @@ export class OrganizationService {
       action: 'organization.created',
       targetType: 'Organization',
       targetId: organization.id,
-      details: { name: data.name, slug: data.slug },
+      details: { name: data.name },
     });
 
     return organization;
@@ -108,7 +99,7 @@ export class OrganizationService {
       action: 'organization.deleted',
       targetType: 'Organization',
       targetId: organizationId,
-      details: { name: org.name, slug: org.slug },
+      details: { name: org.name },
     });
 
     return result;
@@ -235,7 +226,6 @@ export class OrganizationService {
           select: {
             id: true,
             name: true,
-            slug: true,
             avatarUrl: true,
           },
         },
@@ -625,7 +615,7 @@ export class OrganizationService {
       action: 'organization.restored',
       targetType: 'Organization',
       targetId: organizationId,
-      details: { name: org.name, slug: org.slug },
+      details: { name: org.name },
     });
 
     return restoredOrg;

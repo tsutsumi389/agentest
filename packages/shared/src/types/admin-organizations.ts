@@ -23,7 +23,7 @@ export type AdminOrganizationSortBy = 'createdAt' | 'name' | 'plan';
  * サービス層ではこのインターフェースを使用し、コントローラー層でZodバリデーション後の型を受け取る。
  */
 export interface AdminOrganizationSearchParams {
-  /** 検索クエリ（名前・スラグで部分一致） */
+  /** 検索クエリ（名前で部分一致） */
   q?: string;
   /** プランフィルタ（カンマ区切り） */
   plan?: ('TEAM' | 'ENTERPRISE')[];
@@ -79,8 +79,6 @@ export interface AdminOrganizationListItem {
   id: string;
   /** 組織名 */
   name: string;
-  /** スラグ */
-  slug: string;
   /** 説明 */
   description: string | null;
   /** アバターURL */

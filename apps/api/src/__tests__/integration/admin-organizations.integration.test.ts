@@ -67,7 +67,6 @@ describe('Admin Organizations API Integration Tests', () => {
       });
       await createTestOrganization(testUser.id, {
         name: `${testPrefix}-org`,
-        slug: `${testPrefix}-org`,
       });
 
       const response = await request(app)
@@ -95,11 +94,9 @@ describe('Admin Organizations API Integration Tests', () => {
       });
       await createTestOrganization(testUser.id, {
         name: `${testPrefix}-alpha-org`,
-        slug: `${testPrefix}-alpha-org`,
       });
       await createTestOrganization(testUser.id, {
         name: `${testPrefix}-beta-company`,
-        slug: `${testPrefix}-beta-company`,
       });
 
       const response = await request(app)
@@ -111,29 +108,6 @@ describe('Admin Organizations API Integration Tests', () => {
       expect(response.body.organizations[0].name).toBe(`${testPrefix}-alpha-org`);
     });
 
-    it('検索クエリ（q）でスラグを検索できる', async () => {
-      const testUser = await createTestUser({
-        email: 'owner@example.com',
-        name: 'Owner User',
-      });
-      await createTestOrganization(testUser.id, {
-        name: `Org One ${testPrefix}`,
-        slug: `${testPrefix}-unique-slug`,
-      });
-      await createTestOrganization(testUser.id, {
-        name: `Org Two ${testPrefix}`,
-        slug: `${testPrefix}-another-slug`,
-      });
-
-      const response = await request(app)
-        .get(`/admin/organizations?q=${testPrefix}-unique`)
-        .set('Cookie', sessionCookie);
-
-      expect(response.status).toBe(200);
-      expect(response.body.organizations).toHaveLength(1);
-      expect(response.body.organizations[0].slug).toBe(`${testPrefix}-unique-slug`);
-    });
-
     it('プランフィルタ（plan）で絞り込みできる', async () => {
       const testUser = await createTestUser({
         email: 'owner@example.com',
@@ -141,12 +115,10 @@ describe('Admin Organizations API Integration Tests', () => {
       });
       await createTestOrganization(testUser.id, {
         name: `${testPrefix}-team-org`,
-        slug: `${testPrefix}-team-org`,
         plan: 'TEAM',
       });
       await createTestOrganization(testUser.id, {
         name: `${testPrefix}-enterprise-org`,
-        slug: `${testPrefix}-enterprise-org`,
         plan: 'ENTERPRISE',
       });
 
@@ -166,12 +138,10 @@ describe('Admin Organizations API Integration Tests', () => {
       });
       await createTestOrganization(testUser.id, {
         name: `${testPrefix}-team-org`,
-        slug: `${testPrefix}-team-org`,
         plan: 'TEAM',
       });
       await createTestOrganization(testUser.id, {
         name: `${testPrefix}-enterprise-org`,
-        slug: `${testPrefix}-enterprise-org`,
         plan: 'ENTERPRISE',
       });
 
@@ -190,11 +160,9 @@ describe('Admin Organizations API Integration Tests', () => {
       });
       const activeOrg = await createTestOrganization(testUser.id, {
         name: `${testPrefix}-active-org`,
-        slug: `${testPrefix}-active-org`,
       });
       const deletedOrg = await createTestOrganization(testUser.id, {
         name: `${testPrefix}-deleted-org`,
-        slug: `${testPrefix}-deleted-org`,
       });
       // 組織を論理削除
       await prisma.organization.update({
@@ -218,11 +186,9 @@ describe('Admin Organizations API Integration Tests', () => {
       });
       await createTestOrganization(testUser.id, {
         name: `${testPrefix}-active-org`,
-        slug: `${testPrefix}-active-org`,
       });
       const deletedOrg = await createTestOrganization(testUser.id, {
         name: `${testPrefix}-deleted-org`,
-        slug: `${testPrefix}-deleted-org`,
       });
       // 組織を論理削除
       await prisma.organization.update({
@@ -247,11 +213,9 @@ describe('Admin Organizations API Integration Tests', () => {
       });
       await createTestOrganization(testUser.id, {
         name: `${testPrefix}-active-org`,
-        slug: `${testPrefix}-active-org`,
       });
       const deletedOrg = await createTestOrganization(testUser.id, {
         name: `${testPrefix}-deleted-org`,
-        slug: `${testPrefix}-deleted-org`,
       });
       // 組織を論理削除
       await prisma.organization.update({
@@ -276,7 +240,6 @@ describe('Admin Organizations API Integration Tests', () => {
       for (let i = 0; i < 5; i++) {
         await createTestOrganization(testUser.id, {
           name: `${testPrefix}-org-${i}`,
-          slug: `${testPrefix}-org-${i}`,
         });
       }
 
@@ -301,13 +264,11 @@ describe('Admin Organizations API Integration Tests', () => {
       });
       const org1 = await createTestOrganization(testUser.id, {
         name: `${testPrefix}-org-1`,
-        slug: `${testPrefix}-org-1`,
       });
       // 少し待ってから2つ目を作成
       await new Promise((resolve) => setTimeout(resolve, 10));
       const org2 = await createTestOrganization(testUser.id, {
         name: `${testPrefix}-org-2`,
-        slug: `${testPrefix}-org-2`,
       });
 
       const response = await request(app)
@@ -326,11 +287,9 @@ describe('Admin Organizations API Integration Tests', () => {
       });
       await createTestOrganization(testUser.id, {
         name: `${testPrefix}-zebra-org`,
-        slug: `${testPrefix}-zebra-org`,
       });
       await createTestOrganization(testUser.id, {
         name: `${testPrefix}-alpha-org`,
-        slug: `${testPrefix}-alpha-org`,
       });
 
       const response = await request(app)
@@ -349,7 +308,6 @@ describe('Admin Organizations API Integration Tests', () => {
       });
       const org = await createTestOrganization(testUser.id, {
         name: `${testPrefix}-test-org`,
-        slug: `${testPrefix}-test-org`,
         description: 'Test description',
         plan: 'ENTERPRISE',
       });
@@ -368,7 +326,6 @@ describe('Admin Organizations API Integration Tests', () => {
       const organization = response.body.organizations[0];
       expect(organization.id).toBe(org.id);
       expect(organization.name).toBe(`${testPrefix}-test-org`);
-      expect(organization.slug).toBe(`${testPrefix}-test-org`);
       expect(organization.description).toBe('Test description');
       expect(organization.plan).toBe('ENTERPRISE');
       expect(organization.billingEmail).toBe('billing@example.com');
@@ -388,7 +345,6 @@ describe('Admin Organizations API Integration Tests', () => {
       });
       const org = await createTestOrganization(testUser1.id, {
         name: `${testPrefix}-stats-org`,
-        slug: `${testPrefix}-stats-org`,
       });
       // メンバーを追加
       await createTestOrgMember(org.id, testUser2.id, 'MEMBER');
@@ -422,7 +378,6 @@ describe('Admin Organizations API Integration Tests', () => {
       });
       await createTestOrganization(testUser.id, {
         name: `${testPrefix}-owner-org`,
-        slug: `${testPrefix}-owner-org`,
       });
 
       const response = await request(app)
@@ -447,7 +402,6 @@ describe('Admin Organizations API Integration Tests', () => {
       // 古い組織
       const oldOrg = await createTestOrganization(testUser.id, {
         name: `${testPrefix}-old-org`,
-        slug: `${testPrefix}-old-org`,
       });
       await prisma.organization.update({
         where: { id: oldOrg.id },
@@ -456,7 +410,6 @@ describe('Admin Organizations API Integration Tests', () => {
       // 新しい組織
       const newOrg = await createTestOrganization(testUser.id, {
         name: `${testPrefix}-new-org`,
-        slug: `${testPrefix}-new-org`,
       });
       await prisma.organization.update({
         where: { id: newOrg.id },

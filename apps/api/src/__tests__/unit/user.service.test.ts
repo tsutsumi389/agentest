@@ -56,7 +56,6 @@ describe('UserService', () => {
           organization: {
             id: 'org-1',
             name: 'Test Org 1',
-            slug: 'test-org-1',
             description: 'Description 1',
             avatarUrl: null,
             plan: 'FREE',
@@ -75,7 +74,6 @@ describe('UserService', () => {
           organization: {
             id: 'org-2',
             name: 'Test Org 2',
-            slug: 'test-org-2',
             description: null,
             avatarUrl: 'https://example.com/avatar.png',
             plan: 'PRO',
@@ -101,7 +99,6 @@ describe('UserService', () => {
             select: {
               id: true,
               name: true,
-              slug: true,
               description: true,
               avatarUrl: true,
               plan: true,
@@ -140,7 +137,6 @@ describe('UserService', () => {
           organization: {
             id: 'org-1',
             name: 'Newest Org',
-            slug: 'newest-org',
             description: null,
             avatarUrl: null,
             plan: 'FREE',
@@ -157,7 +153,6 @@ describe('UserService', () => {
           organization: {
             id: 'org-2',
             name: 'Oldest Org',
-            slug: 'oldest-org',
             description: null,
             avatarUrl: null,
             plan: 'FREE',
@@ -197,7 +192,6 @@ describe('UserService', () => {
       {
         id: 'project-1',
         name: 'Project 1',
-        slug: 'project-1',
         description: 'Description 1',
         organizationId: null,
         deletedAt: null,
@@ -210,13 +204,12 @@ describe('UserService', () => {
       {
         id: 'project-2',
         name: 'Project 2',
-        slug: 'project-2',
         description: 'Description 2',
         organizationId: 'org-1',
         deletedAt: null,
         createdAt: new Date('2024-02-01'),
         updatedAt: new Date('2024-02-15'),
-        organization: { id: 'org-1', name: 'Org 1', slug: 'org-1' },
+        organization: { id: 'org-1', name: 'Org 1' },
         members: [{ role: 'WRITE' }],
         _count: { testSuites: 5 },
       },
@@ -237,7 +230,7 @@ describe('UserService', () => {
         },
         include: {
           organization: {
-            select: { id: true, name: true, slug: true },
+            select: { id: true, name: true },
           },
           members: {
             where: { userId: 'user-1' },
@@ -369,7 +362,6 @@ describe('UserService', () => {
         {
           id: 'project-3',
           name: 'Member Only Project',
-          slug: 'member-only',
           description: null,
           organizationId: null,
           deletedAt: null,
@@ -393,7 +385,6 @@ describe('UserService', () => {
         {
           id: 'project-4',
           name: 'No Member Info',
-          slug: 'no-member',
           description: null,
           organizationId: null,
           deletedAt: null,

@@ -83,7 +83,7 @@ describe('Organization CRUD Audit Logs Integration Tests', () => {
     it('組織作成時に監査ログが記録される', async () => {
       const response = await request(app)
         .post('/api/organizations')
-        .send({ name: 'New Organization', slug: 'new-org', description: 'Test description' })
+        .send({ name: 'New Organization', description: 'Test description' })
         .expect(201);
 
       const orgId = response.body.organization.id;
@@ -102,7 +102,7 @@ describe('Organization CRUD Audit Logs Integration Tests', () => {
       expect(auditLog?.targetType).toBe('Organization');
       expect(auditLog?.targetId).toBe(orgId);
       expect(auditLog?.details).toEqual(
-        expect.objectContaining({ name: 'New Organization', slug: 'new-org' })
+        expect.objectContaining({ name: 'New Organization' })
       );
     });
   });
@@ -112,7 +112,6 @@ describe('Organization CRUD Audit Logs Integration Tests', () => {
       // 組織を作成（オーナーで）
       organization = await createTestOrganization(owner.id, {
         name: 'Test Organization',
-        slug: 'test-org',
       });
     });
 
@@ -146,7 +145,6 @@ describe('Organization CRUD Audit Logs Integration Tests', () => {
       // 組織を作成（オーナーで）
       organization = await createTestOrganization(owner.id, {
         name: 'Test Organization',
-        slug: 'test-org',
       });
     });
 
@@ -169,7 +167,7 @@ describe('Organization CRUD Audit Logs Integration Tests', () => {
       expect(auditLog?.targetType).toBe('Organization');
       expect(auditLog?.targetId).toBe(organization.id);
       expect(auditLog?.details).toEqual(
-        expect.objectContaining({ name: 'Test Organization', slug: 'test-org' })
+        expect.objectContaining({ name: 'Test Organization' })
       );
     });
   });
@@ -179,7 +177,6 @@ describe('Organization CRUD Audit Logs Integration Tests', () => {
       // 組織を作成（オーナーで）
       organization = await createTestOrganization(owner.id, {
         name: 'Test Organization',
-        slug: 'test-org',
       });
 
       // メンバーを追加
@@ -219,7 +216,6 @@ describe('Organization CRUD Audit Logs Integration Tests', () => {
       // 組織を作成（オーナーで）
       organization = await createTestOrganization(owner.id, {
         name: 'Test Organization',
-        slug: 'test-org',
       });
 
       // メンバーを追加
@@ -258,7 +254,6 @@ describe('Organization CRUD Audit Logs Integration Tests', () => {
       // 組織を作成（オーナーで）
       organization = await createTestOrganization(owner.id, {
         name: 'Test Organization',
-        slug: 'test-org',
       });
 
       // Adminを追加
@@ -299,7 +294,6 @@ describe('Organization CRUD Audit Logs Integration Tests', () => {
       // 組織を作成（オーナーで）
       organization = await createTestOrganization(owner.id, {
         name: 'Test Organization',
-        slug: 'test-org',
       });
     });
 
