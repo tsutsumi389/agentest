@@ -1807,3 +1807,117 @@ export const notificationsApi = {
   updatePreference: (type: NotificationType, data: { emailEnabled?: boolean; inAppEnabled?: boolean }) =>
     api.patch<{ preference: NotificationPreference }>(`/api/notifications/preferences/${type}`, data),
 };
+
+// ============================================
+// 課金API
+// ============================================
+
+/** 請求サイクル */
+export type BillingCycle = 'MONTHLY' | 'YEARLY';
+
+/** 個人プラン */
+export type PersonalPlan = 'FREE' | 'PRO';
+
+/** プラン機能 */
+export interface PlanFeature {
+  name: string;
+  description: string;
+  included: boolean;
+}
+
+/** プラン情報 */
+export interface PlanInfo {
+  plan: PersonalPlan;
+  monthlyPrice: number;
+  yearlyPrice: number;
+  features: PlanFeature[];
+}
+
+/** サブスクリプション */
+export interface Subscription {
+  id: string;
+  plan: PersonalPlan;
+  billingCycle: BillingCycle;
+  status: string;
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+  cancelAtPeriodEnd: boolean;
+}
+
+/** 支払い方法 */
+export interface PaymentMethod {
+  id: string;
+  brand: string | null;
+  last4: string | null;
+  expiryMonth: number | null;
+  expiryYear: number | null;
+  isDefault: boolean;
+  createdAt: string;
+}
+
+/** 料金計算結果 */
+export interface PlanChangeCalculation {
+  plan: PersonalPlan;
+  billingCycle: BillingCycle;
+  price: number;
+  currency: string;
+  prorationAmount?: number;
+  effectiveDate: string;
+}
+
+/** サブスクリプション作成リクエスト */
+export interface CreateSubscriptionRequest {
+  plan: 'PRO';
+  billingCycle: BillingCycle;
+  paymentMethodId: string;
+}
+
+export const plansApi = {
+  // プラン一覧取得
+  list: () =>
+    api.get<{ plans: PlanInfo[] }>('/api/plans'),
+
+  // 料金計算
+  calculate: (plan: PersonalPlan, billingCycle: BillingCycle) =>
+    api.get<{ calculation: PlanChangeCalculation }>(
+      `/api/plans/${plan}/calculate?billingCycle=${billingCycle}`
+    ),
+};
+
+export const subscriptionApi = {
+  // サブスクリプション取得
+  get: (userId: string) =>
+    api.get<{ subscription: Subscription | null }>(`/api/users/${userId}/subscription`),
+
+  // サブスクリプション作成（アップグレード）
+  create: (userId: string, data: CreateSubscriptionRequest) =>
+    api.post<{ subscription: Subscription }>(`/api/users/${userId}/subscription`, data),
+
+  // サブスクリプションキャンセル（ダウングレード予約）
+  cancel: (userId: string) =>
+    api.delete<{ subscription: Subscription }>(`/api/users/${userId}/subscription`),
+
+  // ダウングレード予約キャンセル
+  reactivate: (userId: string) =>
+    api.post<{ subscription: Subscription }>(`/api/users/${userId}/subscription/reactivate`),
+};
+
+export const paymentMethodsApi = {
+  // 支払い方法一覧取得
+  list: (userId: string) =>
+    api.get<{ paymentMethods: PaymentMethod[] }>(`/api/users/${userId}/payment-methods`),
+
+  // 支払い方法追加
+  add: (userId: string, token: string) =>
+    api.post<{ paymentMethod: PaymentMethod }>(`/api/users/${userId}/payment-methods`, { token }),
+
+  // 支払い方法削除
+  delete: (userId: string, paymentMethodId: string) =>
+    api.delete<void>(`/api/users/${userId}/payment-methods/${paymentMethodId}`),
+
+  // デフォルト設定
+  setDefault: (userId: string, paymentMethodId: string) =>
+    api.put<{ paymentMethod: PaymentMethod }>(
+      `/api/users/${userId}/payment-methods/${paymentMethodId}/default`
+    ),
+};
