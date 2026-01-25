@@ -138,7 +138,7 @@ export interface IPaymentGateway {
   verifyWebhookSignature(payload: string, signature: string): boolean;
 
   /**
-   * WebhookイベントをパーWse
+   * Webhookイベントをパース
    */
   parseWebhookEvent(payload: string): WebhookEvent;
 }

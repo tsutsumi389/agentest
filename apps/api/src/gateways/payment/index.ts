@@ -34,9 +34,10 @@ export function getPaymentGateway(): IPaymentGateway {
 }
 
 /**
- * 決済ゲートウェイを作成
+ * 決済ゲートウェイを作成（内部用）
+ * 外部からは getPaymentGateway() を使用すること
  */
-export function createPaymentGateway(): IPaymentGateway {
+function createPaymentGateway(): IPaymentGateway {
   const gatewayType = process.env.PAYMENT_GATEWAY || 'mock';
 
   switch (gatewayType) {

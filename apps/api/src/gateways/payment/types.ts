@@ -1,5 +1,10 @@
 /**
  * 決済ゲートウェイ共通型定義
+ *
+ * 注: PersonalPlan ('FREE' | 'PRO') は個人ユーザー向けプランを表す。
+ * DBスキーマの SubscriptionPlan (FREE/PRO/TEAM/ENTERPRISE) とは異なり、
+ * このモジュールは個人プランのみを扱う。
+ * 組織プラン (TEAM/ENTERPRISE) は別途実装予定。
  */
 
 import type { BillingCycle, PersonalPlan } from '@agentest/shared';

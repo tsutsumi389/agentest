@@ -274,7 +274,7 @@ export class MockGateway implements IPaymentGateway {
 
     return {
       amountDue: Math.max(0, amountDue),
-      currency: 'JPY',
+      currency: 'jpy',
       effectiveDate: now,
     };
   }
@@ -370,7 +370,7 @@ export class MockGateway implements IPaymentGateway {
       customerId,
       invoiceNumber: `INV-${Date.now()}`,
       amount,
-      currency: 'JPY',
+      currency: 'jpy',
       status: 'paid',
       periodStart: now,
       periodEnd,
