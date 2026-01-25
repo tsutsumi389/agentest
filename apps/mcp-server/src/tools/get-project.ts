@@ -38,7 +38,6 @@ interface GetProjectResponse {
     organization: {
       id: string;
       name: string;
-      slug: string;
     } | null;
     role: string;
     environments: ProjectEnvironment[];

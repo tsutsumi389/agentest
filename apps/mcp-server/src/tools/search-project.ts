@@ -26,7 +26,6 @@ interface SearchProjectResponse {
     organization: {
       id: string;
       name: string;
-      slug: string;
     } | null;
     role: string;
     _count: {

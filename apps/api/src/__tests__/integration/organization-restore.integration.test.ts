@@ -84,7 +84,6 @@ describe('Organization Restore API Integration Tests', () => {
     // 組織を作成（オーナーで）
     organization = await createTestOrganization(owner.id, {
       name: 'Test Organization',
-      slug: 'test-org',
       description: 'Test description',
     });
 
@@ -141,7 +140,6 @@ describe('Organization Restore API Integration Tests', () => {
       expect(auditLog?.details).toEqual(
         expect.objectContaining({
           name: 'Test Organization',
-          slug: 'test-org',
         })
       );
     });

@@ -319,8 +319,8 @@ describe('Users API Integration Tests', () => {
   describe('GET /api/users/:userId/organizations', () => {
     it('所属組織一覧を取得できる', async () => {
       // 組織を作成
-      await createTestOrganization(testUser.id, { name: 'Org 1', slug: 'org-1' });
-      await createTestOrganization(testUser.id, { name: 'Org 2', slug: 'org-2' });
+      await createTestOrganization(testUser.id, { name: 'Org 1' });
+      await createTestOrganization(testUser.id, { name: 'Org 2' });
 
       const response = await request(app)
         .get(`/api/users/${testUser.id}/organizations`)
@@ -353,11 +353,11 @@ describe('Users API Integration Tests', () => {
 
     it('ロールが正しく返される', async () => {
       // 自分がオーナーの組織
-      await createTestOrganization(testUser.id, { name: 'Owner Org', slug: 'owner-org' });
+      await createTestOrganization(testUser.id, { name: 'Owner Org' });
 
       // 他のユーザーがオーナーで、自分がメンバーの組織
       const otherUser = await createTestUser({ email: 'owner@example.com' });
-      const memberOrg = await createTestOrganization(otherUser.id, { name: 'Member Org', slug: 'member-org' });
+      const memberOrg = await createTestOrganization(otherUser.id, { name: 'Member Org' });
       await createTestOrgMember(memberOrg.id, testUser.id, 'MEMBER');
 
       const response = await request(app)
@@ -413,7 +413,7 @@ describe('Users API Integration Tests', () => {
       await createTestProject(testUser.id, { name: 'Personal Project' });
 
       // 組織プロジェクト
-      const org = await createTestOrganization(testUser.id, { name: 'Test Org', slug: 'test-org' });
+      const org = await createTestOrganization(testUser.id, { name: 'Test Org' });
       await createTestProject(testUser.id, { name: 'Org Project', organizationId: org.id });
 
       const response = await request(app)
@@ -485,11 +485,11 @@ describe('Users API Integration Tests', () => {
       await createTestProject(testUser.id, { name: 'Personal' });
 
       // 組織Aのプロジェクト
-      const orgA = await createTestOrganization(testUser.id, { name: 'Org A', slug: 'org-a' });
+      const orgA = await createTestOrganization(testUser.id, { name: 'Org A' });
       await createTestProject(testUser.id, { name: 'OrgA Project', organizationId: orgA.id });
 
       // 組織Bのプロジェクト
-      const orgB = await createTestOrganization(testUser.id, { name: 'Org B', slug: 'org-b' });
+      const orgB = await createTestOrganization(testUser.id, { name: 'Org B' });
       await createTestProject(testUser.id, { name: 'OrgB Project', organizationId: orgB.id });
 
       // 組織Aでフィルタ
@@ -507,7 +507,7 @@ describe('Users API Integration Tests', () => {
       await createTestProject(testUser.id, { name: 'Personal' });
 
       // 組織プロジェクト
-      const org = await createTestOrganization(testUser.id, { name: 'Org', slug: 'org' });
+      const org = await createTestOrganization(testUser.id, { name: 'Org' });
       await createTestProject(testUser.id, { name: 'Org Project', organizationId: org.id });
 
       const response = await request(app)
@@ -653,7 +653,7 @@ describe('Users API Integration Tests', () => {
     describe('複合条件フィルタ', () => {
       it('名前検索と組織フィルタを組み合わせて検索できる', async () => {
         // 組織を作成
-        const org = await createTestOrganization(testUser.id, { name: 'Test Org', slug: 'test-org' });
+        const org = await createTestOrganization(testUser.id, { name: 'Test Org' });
 
         // 様々なプロジェクトを作成
         await createTestProject(testUser.id, { name: 'Alpha Personal' });
@@ -702,7 +702,7 @@ describe('Users API Integration Tests', () => {
       });
 
       it('組織フィルタと削除済みフラグを組み合わせて検索できる', async () => {
-        const org = await createTestOrganization(testUser.id, { name: 'Test Org', slug: 'test-org' });
+        const org = await createTestOrganization(testUser.id, { name: 'Test Org' });
 
         // 組織のアクティブなプロジェクト
         await createTestProject(testUser.id, { name: 'Active Org Project', organizationId: org.id });
@@ -735,7 +735,7 @@ describe('Users API Integration Tests', () => {
       });
 
       it('全条件を組み合わせて検索できる', async () => {
-        const org = await createTestOrganization(testUser.id, { name: 'Test Org', slug: 'test-org' });
+        const org = await createTestOrganization(testUser.id, { name: 'Test Org' });
 
         // 様々なパターンのプロジェクトを作成
         await createTestProject(testUser.id, { name: 'Target Active', organizationId: org.id });
@@ -764,7 +764,7 @@ describe('Users API Integration Tests', () => {
       });
 
       it('個人プロジェクトフィルタと名前検索を組み合わせられる', async () => {
-        const org = await createTestOrganization(testUser.id, { name: 'Test Org', slug: 'test-org' });
+        const org = await createTestOrganization(testUser.id, { name: 'Test Org' });
 
         await createTestProject(testUser.id, { name: 'Alpha Personal' });
         await createTestProject(testUser.id, { name: 'Beta Personal' });

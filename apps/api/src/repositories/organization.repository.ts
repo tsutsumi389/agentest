@@ -17,18 +17,6 @@ export class OrganizationRepository {
   }
 
   /**
-   * スラッグで組織を検索
-   */
-  async findBySlug(slug: string) {
-    return prisma.organization.findFirst({
-      where: {
-        slug,
-        deletedAt: null,
-      },
-    });
-  }
-
-  /**
    * 組織を更新
    */
   async update(id: string, data: { name?: string; description?: string | null; billingEmail?: string | null }) {

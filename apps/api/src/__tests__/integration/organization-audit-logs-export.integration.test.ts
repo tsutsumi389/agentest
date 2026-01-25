@@ -84,7 +84,6 @@ describe('Organization Audit Logs Export API Integration Tests', () => {
     // 組織を作成（オーナーで）
     organization = await createTestOrganization(owner.id, {
       name: 'Test Organization',
-      slug: 'test-org',
     });
 
     // adminとmemberを追加
@@ -468,7 +467,7 @@ describe('Organization Audit Logs Export API Integration Tests', () => {
       it('他の組織のログは含まれない', async () => {
         // 別の組織を作成
         const otherOrg = await createTestOrganization(owner.id, {
-          slug: 'other-org',
+          name: 'Other Organization',
         });
 
         await createTestAuditLog({

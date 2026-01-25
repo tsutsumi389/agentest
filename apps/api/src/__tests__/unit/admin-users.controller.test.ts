@@ -26,7 +26,7 @@ describe('AdminUsersController', () => {
 
     // モックリクエスト・レスポンスを初期化
     mockReq = {
-      adminUser: { id: 'admin-123', email: 'admin@example.com', name: 'Admin', role: 'ADMIN' },
+      adminUser: { id: 'admin-123', email: 'admin@example.com', name: 'Admin', role: 'ADMIN', totpEnabled: false },
       params: {},
       query: {},
     };

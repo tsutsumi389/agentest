@@ -79,7 +79,6 @@ describe('Organization Invitation Accept/Token API Integration Tests', () => {
     // 組織を作成（オーナーで）
     organization = await createTestOrganization(owner.id, {
       name: 'Test Organization',
-      slug: 'test-org',
     });
   });
 

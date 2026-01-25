@@ -5,14 +5,11 @@ import bcryptjs from 'bcryptjs';
 import { prisma } from '@agentest/db';
 import {
   createTestAdminUser,
-  createTestAdminSession,
   createTestUser,
   createTestSession,
   createTestOrganization,
   createTestProject,
   createTestSuite,
-  createTestExecution,
-  createTestEnvironment,
   createTestAccount,
   createTestSubscription,
   createTestAuditLog,
@@ -22,7 +19,6 @@ import { createApp } from '../../app.js';
 
 describe('Admin Users API Integration Tests', () => {
   let app: Express;
-  let testAdminUser: Awaited<ReturnType<typeof createTestAdminUser>>;
   let sessionCookie: string;
   const testPassword = 'TestPassword123!';
 
@@ -40,7 +36,7 @@ describe('Admin Users API Integration Tests', () => {
 
     // テスト用の管理者ユーザーを作成
     const passwordHash = bcryptjs.hashSync(testPassword, 12);
-    testAdminUser = await createTestAdminUser({
+    await createTestAdminUser({
       email: 'admin@example.com',
       name: 'Test Admin',
       passwordHash,

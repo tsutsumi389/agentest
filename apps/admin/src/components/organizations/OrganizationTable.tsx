@@ -172,9 +172,6 @@ export function OrganizationTable({
                             <span className="text-xs text-error">削除済み</span>
                           )}
                         </div>
-                        <span className="text-xs text-foreground-muted">
-                          @{org.slug}
-                        </span>
                       </div>
                     </div>
                   </td>

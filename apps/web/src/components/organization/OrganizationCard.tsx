@@ -73,7 +73,6 @@ export function OrganizationCard({ organization, role, onSelect, onRestore, isRe
           </div>
           <div>
             <h3 className="font-medium text-foreground">{organization.name}</h3>
-            <p className="text-sm text-foreground-muted">/{organization.slug}</p>
           </div>
         </div>
 

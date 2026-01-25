@@ -88,7 +88,6 @@ export class UserService {
           select: {
             id: true,
             name: true,
-            slug: true,
             description: true,
             avatarUrl: true,
             plan: true,
@@ -162,7 +161,7 @@ export class UserService {
       },
       include: {
         organization: {
-          select: { id: true, name: true, slug: true },
+          select: { id: true, name: true },
         },
         members: {
           where: { userId },

@@ -215,7 +215,6 @@ export function DeleteOrganizationModal({
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-foreground-muted">削除対象:</span>
                 <span className="font-medium text-foreground">{organization.name}</span>
-                <span className="text-foreground-muted">/{organization.slug}</span>
               </div>
             </div>
 

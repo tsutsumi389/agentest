@@ -83,7 +83,6 @@ describe('Organization Operations API Integration Tests', () => {
     // 組織を作成（オーナーで）
     organization = await createTestOrganization(owner.id, {
       name: 'Test Organization',
-      slug: 'test-org',
       description: 'Test description',
     });
 
@@ -106,7 +105,6 @@ describe('Organization Operations API Integration Tests', () => {
 
       expect(response.body.organization).toHaveProperty('id', organization.id);
       expect(response.body.organization).toHaveProperty('name', 'Test Organization');
-      expect(response.body.organization).toHaveProperty('slug', 'test-org');
       expect(response.body.organization).toHaveProperty('description', 'Test description');
     });
 

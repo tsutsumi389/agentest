@@ -20,18 +20,18 @@ async function main() {
 
   // デモ組織を作成
   const demoOrg = await prisma.organization.upsert({
-    where: { slug: 'demo-org' },
+    where: { id: '00000000-0000-0000-0000-000000000100' },
     update: {},
     create: {
+      id: '00000000-0000-0000-0000-000000000100',
       name: 'Demo Organization',
-      slug: 'demo-org',
       description: 'A demo organization for testing',
       plan: OrganizationPlan.TEAM,
       billingEmail: 'billing@demo-org.dev',
     },
   });
 
-  console.log('デモ組織を作成:', demoOrg.slug);
+  console.log('デモ組織を作成:', demoOrg.name);
 
   // デモユーザーを組織に追加
   await prisma.organizationMember.upsert({

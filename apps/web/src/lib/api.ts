@@ -251,7 +251,6 @@ export interface User {
 export interface Organization {
   id: string;
   name: string;
-  slug: string;
   description: string | null;
   avatarUrl: string | null;
   billingEmail: string | null;
@@ -306,7 +305,6 @@ export interface InvitationDetail {
   organization: {
     id: string;
     name: string;
-    slug: string;
     avatarUrl: string | null;
   };
   invitedBy: {
@@ -344,7 +342,7 @@ export interface Project {
   organizationId: string | null;
   createdAt: string;
   updatedAt: string;
-  organization?: { id: string; name: string; slug: string } | null;
+  organization?: { id: string; name: string } | null;
   _count?: { testSuites: number };
 }
 
@@ -1292,7 +1290,6 @@ export const accountsApi = {
 
 export interface CreateOrganizationRequest {
   name: string;
-  slug: string;
   description?: string;
 }
 

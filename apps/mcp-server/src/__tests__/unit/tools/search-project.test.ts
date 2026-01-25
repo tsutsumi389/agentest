@@ -11,7 +11,6 @@ interface SearchProjectResponse {
     organization: {
       id: string;
       name: string;
-      slug: string;
     } | null;
     role: string;
     _count: {
@@ -215,7 +214,6 @@ describe('searchProjectTool', () => {
         organization: {
           id: 'org-1',
           name: 'Test Organization',
-          slug: 'test-org',
         },
       });
       const mockResponse = createMockResponse([projectWithOrg]);
@@ -229,7 +227,6 @@ describe('searchProjectTool', () => {
       expect(result.projects[0].organization).toEqual({
         id: 'org-1',
         name: 'Test Organization',
-        slug: 'test-org',
       });
     });
   });

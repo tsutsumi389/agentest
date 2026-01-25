@@ -123,7 +123,6 @@ export class AdminOrganizationsService {
       return {
         id: org.id,
         name: org.name,
-        slug: org.slug,
         description: org.description,
         avatarUrl: org.avatarUrl,
         plan: org.plan,
@@ -168,12 +167,9 @@ export class AdminOrganizationsService {
     const { q, plan, status, createdFrom, createdTo } = params;
     const where: Prisma.OrganizationWhereInput = {};
 
-    // 検索クエリ（OR条件：名前、スラグで部分一致）
+    // 検索クエリ（名前で部分一致）
     if (q) {
-      where.OR = [
-        { name: { contains: q, mode: 'insensitive' } },
-        { slug: { contains: q, mode: 'insensitive' } },
-      ];
+      where.name = { contains: q, mode: 'insensitive' };
     }
 
     // プランフィルタ

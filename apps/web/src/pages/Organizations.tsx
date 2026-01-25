@@ -20,8 +20,7 @@ export function OrganizationsPage() {
 
   // 検索フィルター
   const filteredOrganizations = organizations.filter((org) =>
-    org.organization.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    org.organization.slug.toLowerCase().includes(searchQuery.toLowerCase())
+    org.organization.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // 組織を選択してダッシュボードに移動

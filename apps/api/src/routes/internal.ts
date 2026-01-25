@@ -302,7 +302,7 @@ router.get('/projects/:projectId', async (req: Request, res: Response, next: Nex
       },
       include: {
         organization: {
-          select: { id: true, name: true, slug: true },
+          select: { id: true, name: true },
         },
         environments: {
           orderBy: { sortOrder: 'asc' },
