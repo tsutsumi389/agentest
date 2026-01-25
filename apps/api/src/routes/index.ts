@@ -15,6 +15,7 @@ import editLockRoutes from './edit-locks.js';
 import notificationRoutes from './notifications.js';
 import internalRoutes from './internal.js';
 import oauthRoutes from './oauth.js';
+import billingRoutes from './billing.js';
 import adminAuthRoutes from './admin/auth.js';
 import adminDashboardRoutes from './admin/dashboard.js';
 import adminUsersRoutes from './admin/users.js';
@@ -43,6 +44,9 @@ router.use('/api/reviews', reviewRoutes);
 router.use('/api/api-tokens', apiTokenRoutes);
 router.use('/api/locks', editLockRoutes);
 router.use('/api/notifications', notificationRoutes);
+
+// 課金関連ルート
+router.use('/api', billingRoutes);
 
 // OAuth 2.1 エンドポイント (RFC 9728)
 router.use('/oauth', oauthRoutes);

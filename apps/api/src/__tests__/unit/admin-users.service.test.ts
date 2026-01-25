@@ -48,6 +48,7 @@ describe('AdminUsersService', () => {
       name: string;
       avatarUrl: string | null;
       plan: 'FREE' | 'PRO';
+      paymentCustomerId: string | null;
       createdAt: Date;
       updatedAt: Date;
       deletedAt: Date | null;
@@ -87,6 +88,7 @@ describe('AdminUsersService', () => {
       name: 'Test User',
       avatarUrl: 'https://example.com/avatar.png',
       plan: 'PRO' as const,
+      paymentCustomerId: null,
       createdAt: new Date('2024-01-15T00:00:00.000Z'),
       updatedAt: new Date('2024-01-20T00:00:00.000Z'),
       deletedAt: null,

@@ -263,6 +263,23 @@ Authorization: Bearer <access_token>
 
 → [通知 API 詳細](./notifications.md)
 
+### 課金・サブスクリプション
+
+| メソッド | パス | 説明 |
+|---------|------|------|
+| GET | `/plans` | プラン一覧 |
+| GET | `/plans/:plan/calculate` | 料金計算 |
+| GET | `/users/:userId/subscription` | サブスクリプション取得 |
+| POST | `/users/:userId/subscription` | サブスクリプション作成 |
+| DELETE | `/users/:userId/subscription` | サブスクリプションキャンセル |
+| POST | `/users/:userId/subscription/reactivate` | キャンセル予約解除 |
+| GET | `/users/:userId/payment-methods` | 支払い方法一覧 |
+| POST | `/users/:userId/payment-methods` | 支払い方法追加 |
+| DELETE | `/users/:userId/payment-methods/:id` | 支払い方法削除 |
+| PUT | `/users/:userId/payment-methods/:id/default` | デフォルト設定 |
+
+→ [課金 API 詳細](./billing.md)
+
 ## レスポンス形式
 
 ### 成功
@@ -315,5 +332,6 @@ Authorization: Bearer <access_token>
 |---------------|------|
 | 一般 | 100 req / 15分 |
 | 認証 | 5 req / 1時間 |
+| 課金 | 10 req / 1分 |
 
 制限超過時は `429 Too Many Requests` を返却。

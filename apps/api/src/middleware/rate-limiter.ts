@@ -66,6 +66,35 @@ export const strictLimiter = rateLimit({
 });
 
 /**
+ * 課金API用レート制限
+ * 1分間で10リクエストまで（不正利用対策）
+ */
+export const billingLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1分
+  max: 10, // IP毎に10リクエスト
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: {
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: '課金操作のリクエストが多すぎます。しばらくしてから再試行してください。',
+      statusCode: 429,
+    },
+  },
+  keyGenerator: (req) => {
+    // ユーザーIDをキーにする（認証済みの場合）
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const userId = (req as any).user?.id;
+    if (userId) {
+      return `billing:${userId}`;
+    }
+    // 認証前はIPアドレスを使用
+    return (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.ip || 'unknown';
+  },
+  skip: () => isTest, // テスト環境ではスキップ
+});
+
+/**
  * 管理者認証エンドポイント用レート制限
  * 15分間で5リクエストまで（ブルートフォース対策）
  */

@@ -202,6 +202,7 @@ export async function cleanupTestData() {
   // 課金関連
   await prisma.invoice.deleteMany({});
   await prisma.subscription.deleteMany({});
+  await prisma.paymentMethod.deleteMany({});
   // レビュー関連
   await prisma.reviewCommentReply.deleteMany({});
   await prisma.reviewComment.deleteMany({});
@@ -1136,6 +1137,37 @@ export async function createTestLabel(
 export async function createTestSuiteLabel(testSuiteId: string, labelId: string) {
   return prisma.testSuiteLabel.create({
     data: { testSuiteId, labelId },
+  });
+}
+
+/**
+ * テスト用支払い方法を作成
+ */
+export async function createTestPaymentMethod(
+  userId: string,
+  overrides: Partial<{
+    id: string;
+    externalId: string;
+    brand: string;
+    last4: string;
+    expiryMonth: number;
+    expiryYear: number;
+    isDefault: boolean;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.paymentMethod.create({
+    data: {
+      id,
+      userId,
+      type: 'CARD',
+      externalId: overrides.externalId ?? `pm_test_${id.slice(0, 8)}`,
+      brand: overrides.brand ?? 'visa',
+      last4: overrides.last4 ?? '4242',
+      expiryMonth: overrides.expiryMonth ?? 12,
+      expiryYear: overrides.expiryYear ?? 2030,
+      isDefault: overrides.isDefault ?? false,
+    },
   });
 }
 
