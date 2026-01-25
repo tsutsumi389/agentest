@@ -20,7 +20,7 @@ Cookie: admin_session=<session_id>
 
 | パラメータ | 型 | デフォルト | 説明 |
 |-----------|-----|----------|------|
-| `q` | string | - | 名前・スラグで部分一致検索（最大100文字） |
+| `q` | string | - | 名前で部分一致検索（最大100文字） |
 | `plan` | string | - | プラン（TEAM,ENTERPRISE）カンマ区切り |
 | `status` | enum | `active` | active / deleted / all |
 | `createdFrom` | datetime | - | 登録日From（ISO 8601形式） |
@@ -43,7 +43,6 @@ Cookie: admin_session=<session_id>
     {
       "id": "org_abc123",
       "name": "サンプル株式会社",
-      "slug": "sample-corp",
       "description": "サンプルの組織です",
       "avatarUrl": "https://example.com/avatar.png",
       "plan": "TEAM",
@@ -87,7 +86,6 @@ Cookie: admin_session=<session_id>
 |-----------|------|------|
 | id | string | 組織ID |
 | name | string | 組織名 |
-| slug | string | スラグ |
 | description | string \| null | 説明 |
 | avatarUrl | string \| null | アバター画像URL |
 | plan | `TEAM` \| `ENTERPRISE` | 契約プラン |
@@ -134,7 +132,6 @@ interface AdminOrganizationListResponse {
 interface AdminOrganizationListItem {
   id: string;
   name: string;
-  slug: string;
   description: string | null;
   avatarUrl: string | null;
   plan: 'TEAM' | 'ENTERPRISE';
@@ -234,7 +231,7 @@ const filteredResponse = await fetch(`/api/v1/admin/organizations?${params}`, {
 
 const data = await filteredResponse.json();
 data.organizations.forEach((org) => {
-  console.log(`${org.name} (${org.slug}) - ${org.plan}`);
+  console.log(`${org.name} - ${org.plan}`);
   console.log(`  メンバー: ${org.stats.memberCount}名`);
   console.log(`  プロジェクト: ${org.stats.projectCount}件`);
   if (org.owner) {

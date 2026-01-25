@@ -37,25 +37,21 @@
 
 - **表示要素**
   - 組織名入力欄（必須）
-  - スラッグ入力欄（自動生成、編集可能）
   - 説明入力欄（任意）
   - キャンセルボタン
   - 作成ボタン
 - **バリデーション**
   - 組織名: 1〜100文字
-  - スラッグ: 3〜50文字、英小文字・数字・ハイフンのみ、一意
   - 説明: 最大500文字
 - **操作**
-  - 組織名入力 → スラッグ自動生成
   - 作成ボタン → 組織作成 → 組織詳細へ遷移
 
 ### 組織設定画面
 
-- **URL**: `/organizations/{slug}/settings`
+- **URL**: `/organizations/{id}/settings`
 - **表示要素**
   - 基本情報セクション
     - 組織名入力欄
-    - スラッグ（読み取り専用）
     - 説明入力欄
     - 請求先メール入力欄
     - 保存ボタン
@@ -119,17 +115,12 @@ sequenceDiagram
     F->>F: スラッグ自動生成
     U->>F: 「作成」ボタンをクリック
     F->>B: POST /api/organizations
-    B->>DB: スラッグの一意性確認
-    alt スラッグ重複
-        B->>F: 400エラー
-        F->>U: エラーメッセージ表示
-    else スラッグ一意
-        B->>DB: Organization作成
+    B->>DB: Organization作成
         B->>DB: OrganizationMember作成（OWNER）
-        B->>DB: 監査ログ記録
-        B->>F: 作成した組織情報
-        F->>U: 組織詳細画面へ遷移
-    end
+    B->>DB: OrganizationMember作成（OWNER）
+    B->>DB: 監査ログ記録
+    B->>F: 作成した組織情報
+    F->>U: 組織詳細画面へ遷移
 ```
 
 ### 組織削除フロー
@@ -215,7 +206,6 @@ erDiagram
     Organization {
         uuid id PK
         string name
-        string slug UK
         string description
         string avatarUrl
         enum plan
@@ -239,9 +229,6 @@ erDiagram
 ### 組織作成
 
 - 組織作成者は自動的にOWNERになる
-- スラッグは一意である必要がある
-- スラッグは英小文字、数字、ハイフンのみ使用可能
-- スラッグは変更不可
 
 ### 組織削除
 
@@ -287,8 +274,6 @@ erDiagram
 |------|-----|------|
 | DELETION_GRACE_PERIOD_DAYS | 30 | 削除猶予期間（日） |
 | 組織名最大長 | 100文字 | |
-| スラッグ最小長 | 3文字 | |
-| スラッグ最大長 | 50文字 | |
 | 説明最大長 | 500文字 | |
 
 ## 関連機能

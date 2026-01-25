@@ -639,7 +639,6 @@ interface SearchProjectResponse {
     organization: {
       id: string;
       name: string;
-      slug: string;
     } | null;
     role: string;          // ユーザーのプロジェクトロール
     _count: {
@@ -679,8 +678,7 @@ interface SearchProjectResponse {
       "organizationId": "org_xxx",
       "organization": {
         "id": "org_xxx",
-        "name": "開発チーム",
-        "slug": "dev-team"
+        "name": "開発チーム"
       },
       "role": "WRITE",
       "_count": { "testSuites": 5 },
@@ -1018,7 +1016,6 @@ interface GetProjectResponse {
     organization: {
       id: string;
       name: string;
-      slug: string;
     } | null;
     role: string;              // ユーザーのプロジェクトロール（OWNER/ADMIN/WRITE/READ）
     environments: Array<{      // プロジェクトの環境設定
@@ -1061,8 +1058,7 @@ interface GetProjectResponse {
     "organizationId": "org_xxx",
     "organization": {
       "id": "org_xxx",
-      "name": "開発チーム",
-      "slug": "dev-team"
+      "name": "開発チーム"
     },
     "role": "ADMIN",
     "environments": [

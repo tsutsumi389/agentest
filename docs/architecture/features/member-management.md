@@ -21,7 +21,7 @@
 
 ### メンバー一覧画面
 
-- **URL**: `/organizations/{slug}/members`
+- **URL**: `/organizations/{id}/members`
 - **表示要素**
   - メンバータブ / 招待タブ
   - メンバー一覧
@@ -39,7 +39,7 @@
 
 ### 招待一覧画面
 
-- **URL**: `/organizations/{slug}/members`（招待タブ）
+- **URL**: `/organizations/{id}/members`（招待タブ）
 - **表示要素**
   - 保留中の招待一覧
     - メールアドレス
