@@ -19,6 +19,7 @@ import {
   type PlanChangeCalculation,
 } from '../../lib/api';
 import { AddPaymentMethodModal } from './AddPaymentMethodModal';
+import { formatExpiry } from './PaymentMethodsCard';
 
 interface PlanChangeModalProps {
   onClose: () => void;
@@ -471,7 +472,7 @@ function PaymentMethodStep({
                   {pm.brand?.toUpperCase() || 'CARD'} •••• {pm.last4 || '****'}
                 </p>
                 <p className="text-sm text-foreground-muted">
-                  有効期限: {pm.expiryMonth?.toString().padStart(2, '0')}/{pm.expiryYear?.toString().slice(-2)}
+                  有効期限: {formatExpiry(pm.expiryMonth, pm.expiryYear)}
                 </p>
               </div>
               {pm.isDefault && (

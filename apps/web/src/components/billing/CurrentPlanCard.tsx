@@ -12,6 +12,7 @@ import {
   type Subscription,
   type PersonalPlan,
 } from '../../lib/api';
+import { ConfirmDialog } from '../common/ConfirmDialog';
 import { PlanChangeModal } from './PlanChangeModal';
 
 /**
@@ -45,6 +46,7 @@ export function CurrentPlanCard() {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showPlanChangeModal, setShowPlanChangeModal] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isReactivating, setIsReactivating] = useState(false);
 
@@ -72,11 +74,6 @@ export function CurrentPlanCard() {
   const handleCancelSubscription = async () => {
     if (!user?.id) return;
 
-    const confirmed = window.confirm(
-      'PROプランを解約しますか？\n現在の課金期間終了後にFREEプランにダウングレードされます。'
-    );
-    if (!confirmed) return;
-
     setIsCancelling(true);
     try {
       const response = await subscriptionApi.cancel(user.id);
@@ -90,6 +87,7 @@ export function CurrentPlanCard() {
       }
     } finally {
       setIsCancelling(false);
+      setShowCancelDialog(false);
     }
   };
 
@@ -202,7 +200,7 @@ export function CurrentPlanCard() {
             {isPro && !isCancelScheduled && (
               <button
                 className="btn btn-ghost text-foreground-muted hover:text-danger"
-                onClick={handleCancelSubscription}
+                onClick={() => setShowCancelDialog(true)}
                 disabled={isCancelling}
               >
                 {isCancelling && <Loader2 className="w-4 h-4 animate-spin" />}
@@ -252,6 +250,18 @@ export function CurrentPlanCard() {
           onComplete={handleUpgradeComplete}
         />
       )}
+
+      {/* 解約確認ダイアログ */}
+      <ConfirmDialog
+        isOpen={showCancelDialog}
+        title="PROプランを解約"
+        message="現在の課金期間終了後にFREEプランにダウングレードされます。解約後も課金期間終了まではPROプランの機能をご利用いただけます。"
+        confirmLabel="解約する"
+        onConfirm={handleCancelSubscription}
+        onCancel={() => setShowCancelDialog(false)}
+        isLoading={isCancelling}
+        isDanger
+      />
     </>
   );
 }

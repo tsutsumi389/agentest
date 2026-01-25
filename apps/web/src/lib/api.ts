@@ -1844,9 +1844,13 @@ export interface Subscription {
   cancelAtPeriodEnd: boolean;
 }
 
+/** 支払い方法タイプ */
+export type PaymentMethodType = 'CARD';
+
 /** 支払い方法 */
 export interface PaymentMethod {
   id: string;
+  type: PaymentMethodType;
   brand: string | null;
   last4: string | null;
   expiryMonth: number | null;

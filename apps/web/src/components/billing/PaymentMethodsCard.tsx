@@ -7,6 +7,7 @@ import { Loader2, CreditCard, Plus, Trash2, Check, AlertTriangle } from 'lucide-
 import { useAuthStore } from '../../stores/auth';
 import { toast } from '../../stores/toast';
 import { ApiError, paymentMethodsApi, type PaymentMethod } from '../../lib/api';
+import { ConfirmDialog } from '../common/ConfirmDialog';
 import { AddPaymentMethodModal } from './AddPaymentMethodModal';
 
 /**
@@ -30,7 +31,7 @@ function getCardBrandIcon(brand: string | null): string {
 /**
  * 有効期限をフォーマット
  */
-function formatExpiry(month: number | null, year: number | null): string {
+export function formatExpiry(month: number | null, year: number | null): string {
   if (!month || !year) return '-';
   return `${month.toString().padStart(2, '0')}/${year.toString().slice(-2)}`;
 }
@@ -39,7 +40,8 @@ export function PaymentMethodsCard() {
   const { user } = useAuthStore();
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; last4: string | null } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
 
@@ -63,23 +65,24 @@ export function PaymentMethodsCard() {
     fetchPaymentMethods();
   }, [fetchPaymentMethods]);
 
-  // 支払い方法削除
-  const handleDelete = async (paymentMethodId: string) => {
-    if (!user?.id) return;
-
+  // 削除ダイアログを開く
+  const openDeleteDialog = (paymentMethodId: string) => {
     const paymentMethod = paymentMethods.find((pm) => pm.id === paymentMethodId);
     if (paymentMethod?.isDefault && paymentMethods.length > 1) {
       toast.error('デフォルトの支払い方法は削除できません。先に他の支払い方法をデフォルトに設定してください。');
       return;
     }
+    setDeleteTarget({ id: paymentMethodId, last4: paymentMethod?.last4 || null });
+  };
 
-    const confirmed = window.confirm('この支払い方法を削除しますか？');
-    if (!confirmed) return;
+  // 支払い方法削除
+  const handleDelete = async () => {
+    if (!user?.id || !deleteTarget) return;
 
-    setDeletingId(paymentMethodId);
+    setIsDeleting(true);
     try {
-      await paymentMethodsApi.delete(user.id, paymentMethodId);
-      setPaymentMethods((prev) => prev.filter((pm) => pm.id !== paymentMethodId));
+      await paymentMethodsApi.delete(user.id, deleteTarget.id);
+      setPaymentMethods((prev) => prev.filter((pm) => pm.id !== deleteTarget.id));
       toast.success('支払い方法を削除しました');
     } catch (error) {
       if (error instanceof ApiError) {
@@ -88,7 +91,8 @@ export function PaymentMethodsCard() {
         toast.error('支払い方法の削除に失敗しました');
       }
     } finally {
-      setDeletingId(null);
+      setIsDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -177,10 +181,10 @@ export function PaymentMethodsCard() {
               <PaymentMethodItem
                 key={paymentMethod.id}
                 paymentMethod={paymentMethod}
-                isDeleting={deletingId === paymentMethod.id}
+                isDeleting={deleteTarget?.id === paymentMethod.id && isDeleting}
                 isSettingDefault={settingDefaultId === paymentMethod.id}
                 canDelete={paymentMethods.length === 1 || !paymentMethod.isDefault}
-                onDelete={() => handleDelete(paymentMethod.id)}
+                onDelete={() => openDeleteDialog(paymentMethod.id)}
                 onSetDefault={() => handleSetDefault(paymentMethod.id)}
               />
             ))}
@@ -202,6 +206,18 @@ export function PaymentMethodsCard() {
           onComplete={handleAddComplete}
         />
       )}
+
+      {/* 削除確認ダイアログ */}
+      <ConfirmDialog
+        isOpen={deleteTarget !== null}
+        title="支払い方法を削除"
+        message={`カード（•••• ${deleteTarget?.last4 || '****'}）を削除しますか？この操作は取り消せません。`}
+        confirmLabel="削除する"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteTarget(null)}
+        isLoading={isDeleting}
+        isDanger
+      />
     </>
   );
 }
