@@ -46,8 +46,10 @@ export const PERSONAL_PLAN_PRICING: Record<PersonalPlan, PlanPricing> = {
     monthlyPrice: 980,
     yearlyPrice: 9800,
     stripePriceId: {
-      monthly: process.env.STRIPE_PRICE_PRO_MONTHLY || 'price_pro_monthly',
-      yearly: process.env.STRIPE_PRICE_PRO_YEARLY || 'price_pro_yearly',
+      // 実際のStripe Price IDはバックエンドで環境変数から取得する
+      // フロントエンドではプレースホルダーとして使用
+      monthly: 'price_pro_monthly',
+      yearly: 'price_pro_yearly',
     },
     features: [
       { name: 'プロジェクト数', description: '無制限', included: true },
