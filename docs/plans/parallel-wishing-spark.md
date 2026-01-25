@@ -24,9 +24,24 @@
 
 ## 1. バックエンド実装
 
-### 1.1 決済ゲートウェイインターフェース
+### 1.1 決済ゲートウェイ実装
 
-**ファイル**: `apps/api/src/gateways/payment/payment-gateway.interface.ts`
+**実装順序:**
+1. `IPaymentGateway` インターフェース定義
+2. `MockGateway` 実装（開発・テスト用）
+3. `StripeGateway` 実装（本番用、アカウント作成後）
+
+**ファイル構成:**
+```
+apps/api/src/gateways/payment/
+├── payment-gateway.interface.ts  # インターフェース定義
+├── types.ts                       # 共通型定義
+├── mock.gateway.ts                # モック実装（優先）
+├── stripe.gateway.ts              # Stripe実装（後日）
+└── index.ts                       # ファクトリー関数
+```
+
+**インターフェース定義（payment-gateway.interface.ts）:**
 
 ```typescript
 export interface IPaymentGateway {
@@ -48,11 +63,107 @@ export interface IPaymentGateway {
 
   // 日割り計算プレビュー（Stripe Upcoming Invoice API）
   previewProration(params: PreviewProrationParams): Promise<ProrationPreview>;
+
+  // 請求書
+  getInvoice(invoiceId: string): Promise<InvoiceResult>;
+  listInvoices(customerId: string): Promise<InvoiceResult[]>;
+  getInvoicePdf(invoiceId: string): Promise<string>;
+
+  // Webhook
+  verifyWebhookSignature(payload: string, signature: string): boolean;
+  parseWebhookEvent(payload: string): WebhookEvent;
 }
 ```
 
-**ファイル**: `apps/api/src/gateways/payment/stripe.gateway.ts` - Stripe実装
-**ファイル**: `apps/api/src/gateways/payment/mock.gateway.ts` - 開発用モック実装
+**ファクトリー関数（index.ts）:**
+```typescript
+export function createPaymentGateway(): IPaymentGateway {
+  const gateway = process.env.PAYMENT_GATEWAY || 'mock';
+
+  switch (gateway) {
+    case 'stripe':
+      return new StripeGateway();
+    case 'mock':
+    default:
+      return new MockGateway();
+  }
+}
+```
+
+### 1.2 MockGateway実装詳細
+
+**ファイル:** `apps/api/src/gateways/payment/mock.gateway.ts`
+
+```typescript
+export class MockGateway implements IPaymentGateway {
+  // インメモリストア（テスト用）
+  private customers = new Map<string, Customer>();
+  private paymentMethods = new Map<string, PaymentMethodResult>();
+  private subscriptions = new Map<string, SubscriptionResult>();
+
+  async createCustomer(email: string): Promise<Customer> {
+    const id = `cus_mock_${randomUUID()}`;
+    const customer = { id, email, createdAt: new Date() };
+    this.customers.set(id, customer);
+    return customer;
+  }
+
+  async attachPaymentMethod(customerId: string, token: string): Promise<PaymentMethodResult> {
+    // トークンを無視し、テストカード情報を返却
+    const id = `pm_mock_${randomUUID()}`;
+    const result = {
+      id,
+      customerId,
+      brand: 'visa',
+      last4: '4242',
+      expiryMonth: 12,
+      expiryYear: 2030,
+    };
+    this.paymentMethods.set(id, result);
+    return result;
+  }
+
+  async createSubscription(params: CreateSubscriptionParams): Promise<SubscriptionResult> {
+    const id = `sub_mock_${randomUUID()}`;
+    const now = new Date();
+    const periodEnd = new Date(now);
+    periodEnd.setDate(periodEnd.getDate() + 30);
+
+    const result = {
+      id,
+      customerId: params.customerId,
+      status: 'active',
+      plan: params.plan,
+      billingCycle: params.billingCycle,
+      currentPeriodStart: now,
+      currentPeriodEnd: periodEnd,
+    };
+    this.subscriptions.set(id, result);
+    return result;
+  }
+
+  async previewProration(params: PreviewProrationParams): Promise<ProrationPreview> {
+    // 簡易日割り計算
+    const daysRemaining = 15; // 仮の値
+    const prorationFactor = daysRemaining / 30;
+    const oldAmount = this.getPlanPrice(params.currentPlan, params.billingCycle);
+    const newAmount = this.getPlanPrice(params.newPlan, params.billingCycle);
+    const amountDue = Math.round((newAmount - oldAmount) * prorationFactor);
+
+    return {
+      amountDue,
+      currency: 'jpy',
+      effectiveDate: new Date(),
+    };
+  }
+
+  // Webhookは不要（モックは同期処理）
+  verifyWebhookSignature(): boolean { return true; }
+  parseWebhookEvent(payload: string): WebhookEvent {
+    return JSON.parse(payload);
+  }
+}
+```
 
 ### 1.2 プラン料金設定
 
@@ -219,6 +330,31 @@ export const plansApi = { list, calculate };
 | `apps/web/src/components/billing/PlanChangeModal.tsx` | プラン変更フロー |
 | `apps/web/src/components/billing/AddPaymentMethodModal.tsx` | 支払い方法追加 |
 
+### 2.5 フロントエンドのモック対応
+
+**支払い方法追加モーダル（AddPaymentMethodModal.tsx）:**
+
+モック環境では Stripe Elements を使用せず、テストフォームを表示:
+
+```typescript
+const isProduction = import.meta.env.VITE_PAYMENT_GATEWAY === 'stripe';
+
+if (isProduction) {
+  // Stripe Elements を使用
+  return <StripeCardElement />;
+} else {
+  // モック用テストフォーム
+  return (
+    <div className="mock-payment-form">
+      <p>テスト環境: カード情報入力は不要です</p>
+      <button onClick={() => onSubmit('mock_token')}>
+        テストカードを追加
+      </button>
+    </div>
+  );
+}
+```
+
 ---
 
 ## 3. データモデル変更
@@ -374,12 +510,26 @@ docker compose exec dev pnpm test:e2e
 ### 9.1 必要な環境変数
 
 ```bash
-STRIPE_SECRET_KEY=sk_test_xxx       # Stripe秘密鍵
-STRIPE_PUBLISHABLE_KEY=pk_test_xxx  # Stripe公開鍵（フロントエンド用）
-STRIPE_WEBHOOK_SECRET=whsec_xxx     # Webhook署名検証用
+# 決済サービス切り替え
+PAYMENT_GATEWAY=mock   # 'mock' または 'stripe'
+
+# Stripe連携（アカウント作成後に設定）
+STRIPE_SECRET_KEY=      # 未設定時はmockにフォールバック
+STRIPE_PUBLISHABLE_KEY=
+STRIPE_WEBHOOK_SECRET=
 ```
 
-### 9.2 Stripe Priceの事前作成
+### 9.2 開発環境設定
+
+`docker/docker-compose.yml` に追加:
+```yaml
+services:
+  dev:
+    environment:
+      - PAYMENT_GATEWAY=mock
+```
+
+### 9.3 Stripe Priceの事前作成
 
 Stripeダッシュボードまたは`stripe prices create`で以下を作成:
 
@@ -387,8 +537,10 @@ Stripeダッシュボードまたは`stripe prices create`で以下を作成:
 |--------|----------|----------|
 | PRO | 月額 | `price_pro_monthly` |
 | PRO | 年額 | `price_pro_yearly` |
+| TEAM | 月額 | `price_team_monthly` |
+| TEAM | 年額 | `price_team_yearly` |
 
-### 9.3 Webhook（将来実装）
+### 9.4 Webhook（将来実装）
 
 Phase 11-Bで実装予定:
 - `invoice.paid` - 請求書支払い完了

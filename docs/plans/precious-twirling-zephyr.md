@@ -5,7 +5,8 @@
 テスト管理ツールSaaSの有料プランと支払い機能を構築する。
 
 ### 設計前提
-- **決済サービス**: 未定（Stripe/PAY.JP等を抽象化するインターフェースを設計）
+- **決済サービス**: Stripe（モック実装を経て本番連携予定）
+- **開発フェーズ**: モック実装 → Stripe Test Mode → 本番
 - **通貨**: JPY（日本円）のみ
 - **トライアル**: なし（FREEプランで基本機能を提供）
 
@@ -367,44 +368,84 @@ POST /api/webhooks/payment         # 決済Webhook受信
 
 ---
 
-## 5. 外部決済連携の抽象化
+## 5. 外部決済連携（Stripe）
 
-### 5.1 PaymentGatewayインターフェース
+### 5.1 実装フェーズ
+
+| フェーズ | 環境 | 決済処理 | 用途 |
+|----------|------|----------|------|
+| Phase A | 開発 | MockGateway | ローカル開発・CI/CD |
+| Phase B | Staging | Stripe Test Mode | 結合テスト |
+| Phase C | 本番 | Stripe Live Mode | サービス提供 |
+
+### 5.2 環境変数
+
+```bash
+# 決済サービス設定
+PAYMENT_GATEWAY=mock               # mock | stripe
+STRIPE_SECRET_KEY=sk_test_xxx      # Stripe秘密鍵
+STRIPE_PUBLISHABLE_KEY=pk_test_xxx # Stripe公開鍵（フロントエンド）
+STRIPE_WEBHOOK_SECRET=whsec_xxx    # Webhook署名検証
+```
+
+### 5.3 Stripe Price ID（事前作成が必要）
+
+| プラン | サイクル | Price ID |
+|--------|----------|----------|
+| PRO | 月額 | price_pro_monthly |
+| PRO | 年額 | price_pro_yearly |
+| TEAM | 月額 | price_team_monthly |
+| TEAM | 年額 | price_team_yearly |
+
+### 5.4 IPaymentGatewayインターフェース
 
 ```typescript
 interface IPaymentGateway {
   // 顧客管理
-  createCustomer(params): Promise<Customer>
-  updateCustomer(customerId, params): Promise<Customer>
-  deleteCustomer(customerId): Promise<void>
+  createCustomer(email: string, metadata?: Record<string, string>): Promise<Customer>;
+  getCustomer(customerId: string): Promise<Customer | null>;
 
   // 支払い方法
-  createPaymentMethod(customerId, token): Promise<PaymentMethodResult>
-  deletePaymentMethod(paymentMethodId): Promise<void>
-  setDefaultPaymentMethod(customerId, paymentMethodId): Promise<void>
-  listPaymentMethods(customerId): Promise<PaymentMethodResult[]>
+  attachPaymentMethod(customerId: string, token: string): Promise<PaymentMethodResult>;
+  detachPaymentMethod(paymentMethodId: string): Promise<void>;
+  listPaymentMethods(customerId: string): Promise<PaymentMethodResult[]>;
+  setDefaultPaymentMethod(customerId: string, paymentMethodId: string): Promise<void>;
 
   // サブスクリプション
-  createSubscription(params): Promise<SubscriptionResult>
-  updateSubscription(subscriptionId, params): Promise<SubscriptionResult>
-  cancelSubscription(subscriptionId, cancelAtPeriodEnd): Promise<SubscriptionResult>
-  reactivateSubscription(subscriptionId): Promise<SubscriptionResult>
+  createSubscription(params: CreateSubscriptionParams): Promise<SubscriptionResult>;
+  updateSubscription(subscriptionId: string, params: UpdateSubscriptionParams): Promise<SubscriptionResult>;
+  cancelSubscription(subscriptionId: string, cancelAtPeriodEnd: boolean): Promise<SubscriptionResult>;
+  reactivateSubscription(subscriptionId: string): Promise<SubscriptionResult>;
+
+  // 日割り計算（Stripeに委任）
+  previewProration(params: PreviewProrationParams): Promise<ProrationPreview>;
 
   // 請求書
-  getInvoice(invoiceId): Promise<InvoiceResult>
-  listInvoices(customerId, params): Promise<InvoiceResult[]>
-  getInvoicePdf(invoiceId): Promise<string>  // 署名付きURL
+  getInvoice(invoiceId: string): Promise<InvoiceResult>;
+  listInvoices(customerId: string): Promise<InvoiceResult[]>;
+  getInvoicePdf(invoiceId: string): Promise<string>;
 
   // Webhook
-  verifyWebhookSignature(payload, signature): boolean
-  parseWebhookEvent(payload): WebhookEvent
-
-  // 日割り計算
-  calculateProration(params): Promise<ProrationResult>
+  verifyWebhookSignature(payload: string, signature: string): boolean;
+  parseWebhookEvent(payload: string): WebhookEvent;
 }
 ```
 
-### 5.2 Webhook処理フロー
+### 5.5 MockGateway仕様
+
+モック実装では以下の動作をシミュレート：
+
+| 機能 | MockGatewayの動作 |
+|------|-------------------|
+| 顧客作成 | UUID生成、メモリ/DB保存 |
+| 支払い方法 | 常に成功、テストカード情報を返却 |
+| サブスクリプション作成 | 即時ACTIVE、periodEnd=30日後 |
+| サブスクリプション更新 | 即時反映 |
+| 日割り計算 | 簡易計算（残り日数 / 30 × 金額差分） |
+| 請求書 | Invoiceレコード作成、status=PAID |
+| Webhook | 不要（同期処理のため） |
+
+### 5.6 Webhook処理フロー
 
 1. 決済サービスからPOST受信
 2. 署名検証（無効なら400返却）
