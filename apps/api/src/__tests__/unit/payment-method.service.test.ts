@@ -1,20 +1,48 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { NotFoundError, ValidationError } from '@agentest/shared';
 
-// リポジトリとゲートウェイのモック
-vi.mock('../../repositories/payment-method.repository.js', () => ({
-  PaymentMethodRepository: vi.fn().mockImplementation(() => ({
+/**
+ * モック型定義
+ */
+interface MockPaymentMethodRepo {
+  findByUserId: Mock;
+  findById: Mock;
+  countByUserId: Mock;
+  create: Mock;
+  delete: Mock;
+  setDefaultForUser: Mock;
+}
+
+interface MockPaymentGateway {
+  createCustomer: Mock;
+  getCustomer: Mock;
+  attachPaymentMethod: Mock;
+  detachPaymentMethod: Mock;
+  listPaymentMethods: Mock;
+  setDefaultPaymentMethod: Mock;
+  createSubscription: Mock;
+  updateSubscription: Mock;
+  cancelSubscription: Mock;
+  reactivateSubscription: Mock;
+  previewProration: Mock;
+  getInvoice: Mock;
+  listInvoices: Mock;
+  getInvoicePdf: Mock;
+  verifyWebhookSignature: Mock;
+  parseWebhookEvent: Mock;
+}
+
+// vi.hoistedでモックインスタンスを作成（vi.mockより先に初期化される）
+const { mockPaymentMethodRepo, mockPaymentGateway, mockPrisma } = vi.hoisted(() => ({
+  mockPaymentMethodRepo: {
     findByUserId: vi.fn(),
     findById: vi.fn(),
     countByUserId: vi.fn(),
     create: vi.fn(),
     delete: vi.fn(),
     setDefaultForUser: vi.fn(),
-  })),
-}));
-
-vi.mock('../../gateways/payment/index.js', () => ({
-  getPaymentGateway: vi.fn().mockImplementation(() => ({
+  } as MockPaymentMethodRepo,
+  mockPaymentGateway: {
     createCustomer: vi.fn(),
     getCustomer: vi.fn(),
     attachPaymentMethod: vi.fn(),
@@ -31,11 +59,8 @@ vi.mock('../../gateways/payment/index.js', () => ({
     getInvoicePdf: vi.fn(),
     verifyWebhookSignature: vi.fn(),
     parseWebhookEvent: vi.fn(),
-  })),
-}));
-
-vi.mock('@agentest/db', () => ({
-  prisma: {
+  } as MockPaymentGateway,
+  mockPrisma: {
     user: {
       findUnique: vi.fn(),
       update: vi.fn(),
@@ -43,28 +68,34 @@ vi.mock('@agentest/db', () => ({
   },
 }));
 
-// モックをインポート
+// リポジトリとゲートウェイのモック
+vi.mock('../../repositories/payment-method.repository.js', () => ({
+  PaymentMethodRepository: vi.fn().mockImplementation(() => mockPaymentMethodRepo),
+}));
+
+vi.mock('../../gateways/payment/index.js', () => ({
+  getPaymentGateway: vi.fn().mockImplementation(() => mockPaymentGateway),
+}));
+
+vi.mock('@agentest/db', () => ({
+  prisma: mockPrisma,
+}));
+
+// モック設定後にインポート
 import { PaymentMethodService } from '../../services/payment-method.service.js';
-import { PaymentMethodRepository } from '../../repositories/payment-method.repository.js';
-import { getPaymentGateway } from '../../gateways/payment/index.js';
-import { prisma } from '@agentest/db';
 
 describe('PaymentMethodService', () => {
   let service: PaymentMethodService;
-  let mockPaymentMethodRepo: ReturnType<typeof PaymentMethodRepository.prototype.constructor>;
-  let mockPaymentGateway: ReturnType<typeof getPaymentGateway>;
   const testUserId = 'user-123';
   const testPaymentMethodId = 'pm-123';
-  const now = new Date();
+
+  // テスト用の日付（beforeEachで再計算）
+  let now: Date;
 
   beforeEach(() => {
     vi.clearAllMocks();
     service = new PaymentMethodService();
-    // モックインスタンスを取得
-    mockPaymentMethodRepo = (PaymentMethodRepository as any).mock.results[0]?.value ||
-      (PaymentMethodRepository as any)();
-    mockPaymentGateway = (getPaymentGateway as any).mock.results[0]?.value ||
-      (getPaymentGateway as any)();
+    now = new Date();
   });
 
   describe('getPaymentMethods', () => {
@@ -91,7 +122,7 @@ describe('PaymentMethodService', () => {
           createdAt: now,
         },
       ];
-      vi.mocked(mockPaymentMethodRepo.findByUserId).mockResolvedValue(mockPaymentMethods);
+      mockPaymentMethodRepo.findByUserId.mockResolvedValue(mockPaymentMethods);
 
       const result = await service.getPaymentMethods(testUserId);
 
@@ -102,7 +133,7 @@ describe('PaymentMethodService', () => {
     });
 
     it('支払い方法が存在しない場合は空配列を返す', async () => {
-      vi.mocked(mockPaymentMethodRepo.findByUserId).mockResolvedValue([]);
+      mockPaymentMethodRepo.findByUserId.mockResolvedValue([]);
 
       const result = await service.getPaymentMethods(testUserId);
 
@@ -115,14 +146,14 @@ describe('PaymentMethodService', () => {
 
     it('支払い方法を追加できる', async () => {
       // ユーザーが存在する
-      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      mockPrisma.user.findUnique.mockResolvedValue({
         id: testUserId,
         email: 'test@example.com',
         paymentCustomerId: 'cus_123',
-      } as any);
+      });
 
       // 決済ゲートウェイに支払い方法を紐付け
-      vi.mocked(mockPaymentGateway.attachPaymentMethod).mockResolvedValue({
+      mockPaymentGateway.attachPaymentMethod.mockResolvedValue({
         id: 'pm_external_123',
         customerId: 'cus_123',
         brand: 'visa',
@@ -132,10 +163,10 @@ describe('PaymentMethodService', () => {
       });
 
       // 既存の支払い方法は0件（最初の支払い方法）
-      vi.mocked(mockPaymentMethodRepo.countByUserId).mockResolvedValue(0);
+      mockPaymentMethodRepo.countByUserId.mockResolvedValue(0);
 
       // DBに保存
-      vi.mocked(mockPaymentMethodRepo.create).mockResolvedValue({
+      mockPaymentMethodRepo.create.mockResolvedValue({
         id: testPaymentMethodId,
         userId: testUserId,
         externalId: 'pm_external_123',
@@ -156,13 +187,13 @@ describe('PaymentMethodService', () => {
     });
 
     it('2番目以降の支払い方法はデフォルトにならない', async () => {
-      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      mockPrisma.user.findUnique.mockResolvedValue({
         id: testUserId,
         email: 'test@example.com',
         paymentCustomerId: 'cus_123',
-      } as any);
+      });
 
-      vi.mocked(mockPaymentGateway.attachPaymentMethod).mockResolvedValue({
+      mockPaymentGateway.attachPaymentMethod.mockResolvedValue({
         id: 'pm_external_456',
         customerId: 'cus_123',
         brand: 'mastercard',
@@ -172,9 +203,9 @@ describe('PaymentMethodService', () => {
       });
 
       // 既に1件の支払い方法がある
-      vi.mocked(mockPaymentMethodRepo.countByUserId).mockResolvedValue(1);
+      mockPaymentMethodRepo.countByUserId.mockResolvedValue(1);
 
-      vi.mocked(mockPaymentMethodRepo.create).mockResolvedValue({
+      mockPaymentMethodRepo.create.mockResolvedValue({
         id: 'pm-456',
         userId: testUserId,
         externalId: 'pm_external_456',
@@ -193,19 +224,19 @@ describe('PaymentMethodService', () => {
     });
 
     it('決済顧客IDがない場合は新規作成する', async () => {
-      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      mockPrisma.user.findUnique.mockResolvedValue({
         id: testUserId,
         email: 'test@example.com',
         paymentCustomerId: null,
-      } as any);
+      });
 
-      vi.mocked(mockPaymentGateway.createCustomer).mockResolvedValue({
+      mockPaymentGateway.createCustomer.mockResolvedValue({
         id: 'cus_new_123',
         email: 'test@example.com',
         createdAt: now,
       });
 
-      vi.mocked(mockPaymentGateway.attachPaymentMethod).mockResolvedValue({
+      mockPaymentGateway.attachPaymentMethod.mockResolvedValue({
         id: 'pm_external_123',
         customerId: 'cus_new_123',
         brand: 'visa',
@@ -214,9 +245,9 @@ describe('PaymentMethodService', () => {
         expiryYear: 2030,
       });
 
-      vi.mocked(mockPaymentMethodRepo.countByUserId).mockResolvedValue(0);
+      mockPaymentMethodRepo.countByUserId.mockResolvedValue(0);
 
-      vi.mocked(mockPaymentMethodRepo.create).mockResolvedValue({
+      mockPaymentMethodRepo.create.mockResolvedValue({
         id: testPaymentMethodId,
         userId: testUserId,
         externalId: 'pm_external_123',
@@ -231,14 +262,14 @@ describe('PaymentMethodService', () => {
       await service.addPaymentMethod(testUserId, testToken);
 
       expect(mockPaymentGateway.createCustomer).toHaveBeenCalledWith('test@example.com', { userId: testUserId });
-      expect(prisma.user.update).toHaveBeenCalledWith({
+      expect(mockPrisma.user.update).toHaveBeenCalledWith({
         where: { id: testUserId },
         data: { paymentCustomerId: 'cus_new_123' },
       });
     });
 
     it('ユーザーが存在しない場合はNotFoundErrorを投げる', async () => {
-      vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
+      mockPrisma.user.findUnique.mockResolvedValue(null);
 
       await expect(service.addPaymentMethod(testUserId, testToken))
         .rejects.toThrow(NotFoundError);
@@ -247,7 +278,7 @@ describe('PaymentMethodService', () => {
 
   describe('deletePaymentMethod', () => {
     it('支払い方法を削除できる', async () => {
-      vi.mocked(mockPaymentMethodRepo.findById).mockResolvedValue({
+      mockPaymentMethodRepo.findById.mockResolvedValue({
         id: testPaymentMethodId,
         userId: testUserId,
         externalId: 'pm_external_123',
@@ -261,14 +292,14 @@ describe('PaymentMethodService', () => {
     });
 
     it('唯一のデフォルト支払い方法は削除できる', async () => {
-      vi.mocked(mockPaymentMethodRepo.findById).mockResolvedValue({
+      mockPaymentMethodRepo.findById.mockResolvedValue({
         id: testPaymentMethodId,
         userId: testUserId,
         externalId: 'pm_external_123',
         isDefault: true,
       });
       // 支払い方法が1件のみ
-      vi.mocked(mockPaymentMethodRepo.countByUserId).mockResolvedValue(1);
+      mockPaymentMethodRepo.countByUserId.mockResolvedValue(1);
 
       await service.deletePaymentMethod(testUserId, testPaymentMethodId);
 
@@ -276,28 +307,28 @@ describe('PaymentMethodService', () => {
     });
 
     it('他に支払い方法がある場合デフォルトは削除できない', async () => {
-      vi.mocked(mockPaymentMethodRepo.findById).mockResolvedValue({
+      mockPaymentMethodRepo.findById.mockResolvedValue({
         id: testPaymentMethodId,
         userId: testUserId,
         externalId: 'pm_external_123',
         isDefault: true,
       });
       // 支払い方法が2件ある
-      vi.mocked(mockPaymentMethodRepo.countByUserId).mockResolvedValue(2);
+      mockPaymentMethodRepo.countByUserId.mockResolvedValue(2);
 
       await expect(service.deletePaymentMethod(testUserId, testPaymentMethodId))
         .rejects.toThrow(ValidationError);
     });
 
     it('支払い方法が存在しない場合はNotFoundErrorを投げる', async () => {
-      vi.mocked(mockPaymentMethodRepo.findById).mockResolvedValue(null);
+      mockPaymentMethodRepo.findById.mockResolvedValue(null);
 
       await expect(service.deletePaymentMethod(testUserId, testPaymentMethodId))
         .rejects.toThrow(NotFoundError);
     });
 
     it('他ユーザーの支払い方法は削除できない', async () => {
-      vi.mocked(mockPaymentMethodRepo.findById).mockResolvedValue({
+      mockPaymentMethodRepo.findById.mockResolvedValue({
         id: testPaymentMethodId,
         userId: 'other-user',
         externalId: 'pm_external_123',
@@ -311,7 +342,7 @@ describe('PaymentMethodService', () => {
 
   describe('setDefaultPaymentMethod', () => {
     it('デフォルト支払い方法を設定できる', async () => {
-      vi.mocked(mockPaymentMethodRepo.findById)
+      mockPaymentMethodRepo.findById
         .mockResolvedValueOnce({
           id: testPaymentMethodId,
           userId: testUserId,
@@ -335,10 +366,10 @@ describe('PaymentMethodService', () => {
           createdAt: now,
         });
 
-      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      mockPrisma.user.findUnique.mockResolvedValue({
         id: testUserId,
         paymentCustomerId: 'cus_123',
-      } as any);
+      });
 
       const result = await service.setDefaultPaymentMethod(testUserId, testPaymentMethodId);
 
@@ -348,7 +379,7 @@ describe('PaymentMethodService', () => {
     });
 
     it('既にデフォルトの場合は何もしない', async () => {
-      vi.mocked(mockPaymentMethodRepo.findById).mockResolvedValue({
+      mockPaymentMethodRepo.findById.mockResolvedValue({
         id: testPaymentMethodId,
         userId: testUserId,
         externalId: 'pm_external_123',
@@ -368,14 +399,14 @@ describe('PaymentMethodService', () => {
     });
 
     it('支払い方法が存在しない場合はNotFoundErrorを投げる', async () => {
-      vi.mocked(mockPaymentMethodRepo.findById).mockResolvedValue(null);
+      mockPaymentMethodRepo.findById.mockResolvedValue(null);
 
       await expect(service.setDefaultPaymentMethod(testUserId, testPaymentMethodId))
         .rejects.toThrow(NotFoundError);
     });
 
     it('他ユーザーの支払い方法は設定できない', async () => {
-      vi.mocked(mockPaymentMethodRepo.findById).mockResolvedValue({
+      mockPaymentMethodRepo.findById.mockResolvedValue({
         id: testPaymentMethodId,
         userId: 'other-user',
         externalId: 'pm_external_123',
@@ -387,16 +418,16 @@ describe('PaymentMethodService', () => {
     });
 
     it('決済顧客情報がない場合はValidationErrorを投げる', async () => {
-      vi.mocked(mockPaymentMethodRepo.findById).mockResolvedValue({
+      mockPaymentMethodRepo.findById.mockResolvedValue({
         id: testPaymentMethodId,
         userId: testUserId,
         externalId: 'pm_external_123',
         isDefault: false,
       });
-      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      mockPrisma.user.findUnique.mockResolvedValue({
         id: testUserId,
         paymentCustomerId: null,
-      } as any);
+      });
 
       await expect(service.setDefaultPaymentMethod(testUserId, testPaymentMethodId))
         .rejects.toThrow(ValidationError);

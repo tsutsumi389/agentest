@@ -1,27 +1,57 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { NotFoundError, ValidationError } from '@agentest/shared';
 
-// リポジトリとゲートウェイのモック
-vi.mock('../../repositories/subscription.repository.js', () => ({
-  SubscriptionRepository: vi.fn().mockImplementation(() => ({
+/**
+ * モック型定義
+ */
+interface MockSubscriptionRepo {
+  findByUserId: Mock;
+  findById: Mock;
+  create: Mock;
+  update: Mock;
+  upsertForUser: Mock;
+}
+
+interface MockPaymentMethodRepo {
+  findById: Mock;
+  findByUserId: Mock;
+  countByUserId: Mock;
+}
+
+interface MockPaymentGateway {
+  createCustomer: Mock;
+  getCustomer: Mock;
+  attachPaymentMethod: Mock;
+  detachPaymentMethod: Mock;
+  listPaymentMethods: Mock;
+  setDefaultPaymentMethod: Mock;
+  createSubscription: Mock;
+  updateSubscription: Mock;
+  cancelSubscription: Mock;
+  reactivateSubscription: Mock;
+  previewProration: Mock;
+  getInvoice: Mock;
+  listInvoices: Mock;
+  getInvoicePdf: Mock;
+  verifyWebhookSignature: Mock;
+  parseWebhookEvent: Mock;
+}
+
+// vi.hoistedでモックインスタンスを作成（vi.mockより先に初期化される）
+const { mockSubscriptionRepo, mockPaymentMethodRepo, mockPaymentGateway, mockPrisma } = vi.hoisted(() => ({
+  mockSubscriptionRepo: {
     findByUserId: vi.fn(),
     findById: vi.fn(),
     create: vi.fn(),
     update: vi.fn(),
     upsertForUser: vi.fn(),
-  })),
-}));
-
-vi.mock('../../repositories/payment-method.repository.js', () => ({
-  PaymentMethodRepository: vi.fn().mockImplementation(() => ({
+  } as MockSubscriptionRepo,
+  mockPaymentMethodRepo: {
     findById: vi.fn(),
     findByUserId: vi.fn(),
     countByUserId: vi.fn(),
-  })),
-}));
-
-vi.mock('../../gateways/payment/index.js', () => ({
-  getPaymentGateway: vi.fn().mockImplementation(() => ({
+  } as MockPaymentMethodRepo,
+  mockPaymentGateway: {
     createCustomer: vi.fn(),
     getCustomer: vi.fn(),
     attachPaymentMethod: vi.fn(),
@@ -38,11 +68,8 @@ vi.mock('../../gateways/payment/index.js', () => ({
     getInvoicePdf: vi.fn(),
     verifyWebhookSignature: vi.fn(),
     parseWebhookEvent: vi.fn(),
-  })),
-}));
-
-vi.mock('@agentest/db', () => ({
-  prisma: {
+  } as MockPaymentGateway,
+  mockPrisma: {
     user: {
       findUnique: vi.fn(),
       update: vi.fn(),
@@ -50,36 +77,42 @@ vi.mock('@agentest/db', () => ({
   },
 }));
 
-// モックをインポート
+// リポジトリとゲートウェイのモック
+vi.mock('../../repositories/subscription.repository.js', () => ({
+  SubscriptionRepository: vi.fn().mockImplementation(() => mockSubscriptionRepo),
+}));
+
+vi.mock('../../repositories/payment-method.repository.js', () => ({
+  PaymentMethodRepository: vi.fn().mockImplementation(() => mockPaymentMethodRepo),
+}));
+
+vi.mock('../../gateways/payment/index.js', () => ({
+  getPaymentGateway: vi.fn().mockImplementation(() => mockPaymentGateway),
+}));
+
+vi.mock('@agentest/db', () => ({
+  prisma: mockPrisma,
+}));
+
+// モック設定後にインポート
 import { SubscriptionService } from '../../services/subscription.service.js';
-import { SubscriptionRepository } from '../../repositories/subscription.repository.js';
-import { PaymentMethodRepository } from '../../repositories/payment-method.repository.js';
-import { getPaymentGateway } from '../../gateways/payment/index.js';
-import { prisma } from '@agentest/db';
 
 describe('SubscriptionService', () => {
   let service: SubscriptionService;
-  let mockSubscriptionRepo: ReturnType<typeof SubscriptionRepository.prototype.constructor>;
-  let mockPaymentMethodRepo: ReturnType<typeof PaymentMethodRepository.prototype.constructor>;
-  let mockPaymentGateway: ReturnType<typeof getPaymentGateway>;
   const testUserId = 'user-123';
   const testPaymentMethodId = 'pm-123';
 
-  // テスト用の日付
-  const now = new Date();
-  const periodEnd = new Date(now);
-  periodEnd.setDate(periodEnd.getDate() + 30);
+  // テスト用の日付（beforeEachで再計算）
+  let now: Date;
+  let periodEnd: Date;
 
   beforeEach(() => {
     vi.clearAllMocks();
     service = new SubscriptionService();
-    // モックインスタンスを取得
-    mockSubscriptionRepo = (SubscriptionRepository as any).mock.results[0]?.value ||
-      (SubscriptionRepository as any)();
-    mockPaymentMethodRepo = (PaymentMethodRepository as any).mock.results[0]?.value ||
-      (PaymentMethodRepository as any)();
-    mockPaymentGateway = (getPaymentGateway as any).mock.results[0]?.value ||
-      (getPaymentGateway as any)();
+    // 日付をテストごとに再計算
+    now = new Date();
+    periodEnd = new Date(now);
+    periodEnd.setDate(periodEnd.getDate() + 30);
   });
 
   describe('getSubscription', () => {
@@ -94,7 +127,7 @@ describe('SubscriptionService', () => {
         currentPeriodEnd: periodEnd,
         cancelAtPeriodEnd: false,
       };
-      vi.mocked(mockSubscriptionRepo.findByUserId).mockResolvedValue(mockSubscription);
+      mockSubscriptionRepo.findByUserId.mockResolvedValue(mockSubscription);
 
       const result = await service.getSubscription(testUserId);
 
@@ -111,7 +144,7 @@ describe('SubscriptionService', () => {
     });
 
     it('サブスクリプションが存在しない場合はnullを返す', async () => {
-      vi.mocked(mockSubscriptionRepo.findByUserId).mockResolvedValue(null);
+      mockSubscriptionRepo.findByUserId.mockResolvedValue(null);
 
       const result = await service.getSubscription(testUserId);
 
@@ -128,31 +161,31 @@ describe('SubscriptionService', () => {
 
     it('FREE→PROへのアップグレードに成功する', async () => {
       // 既存サブスクリプションなし
-      vi.mocked(mockSubscriptionRepo.findByUserId).mockResolvedValue(null);
+      mockSubscriptionRepo.findByUserId.mockResolvedValue(null);
 
       // 支払い方法が存在する
-      vi.mocked(mockPaymentMethodRepo.findById).mockResolvedValue({
+      mockPaymentMethodRepo.findById.mockResolvedValue({
         id: testPaymentMethodId,
         userId: testUserId,
         externalId: 'pm_external_123',
       });
 
       // ユーザーが存在する
-      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      mockPrisma.user.findUnique.mockResolvedValue({
         id: testUserId,
         email: 'test@example.com',
         paymentCustomerId: null,
-      } as any);
+      });
 
       // 顧客作成
-      vi.mocked(mockPaymentGateway.createCustomer).mockResolvedValue({
+      mockPaymentGateway.createCustomer.mockResolvedValue({
         id: 'cus_123',
         email: 'test@example.com',
         createdAt: now,
       });
 
       // サブスクリプション作成
-      vi.mocked(mockPaymentGateway.createSubscription).mockResolvedValue({
+      mockPaymentGateway.createSubscription.mockResolvedValue({
         id: 'sub_external_123',
         customerId: 'cus_123',
         status: 'active',
@@ -164,7 +197,7 @@ describe('SubscriptionService', () => {
       });
 
       // DB保存
-      vi.mocked(mockSubscriptionRepo.upsertForUser).mockResolvedValue({
+      mockSubscriptionRepo.upsertForUser.mockResolvedValue({
         id: 'sub-123',
         userId: testUserId,
         externalId: 'sub_external_123',
@@ -176,7 +209,7 @@ describe('SubscriptionService', () => {
         cancelAtPeriodEnd: false,
       });
 
-      vi.mocked(prisma.user.update).mockResolvedValue({} as any);
+      mockPrisma.user.update.mockResolvedValue({});
 
       const result = await service.createSubscription(testUserId, createInput);
 
@@ -187,7 +220,7 @@ describe('SubscriptionService', () => {
     });
 
     it('既にPROプランに加入している場合はValidationErrorを投げる', async () => {
-      vi.mocked(mockSubscriptionRepo.findByUserId).mockResolvedValue({
+      mockSubscriptionRepo.findByUserId.mockResolvedValue({
         id: 'sub-123',
         userId: testUserId,
         plan: 'PRO',
@@ -199,16 +232,16 @@ describe('SubscriptionService', () => {
     });
 
     it('支払い方法が存在しない場合はNotFoundErrorを投げる', async () => {
-      vi.mocked(mockSubscriptionRepo.findByUserId).mockResolvedValue(null);
-      vi.mocked(mockPaymentMethodRepo.findById).mockResolvedValue(null);
+      mockSubscriptionRepo.findByUserId.mockResolvedValue(null);
+      mockPaymentMethodRepo.findById.mockResolvedValue(null);
 
       await expect(service.createSubscription(testUserId, createInput))
         .rejects.toThrow(NotFoundError);
     });
 
     it('他ユーザーの支払い方法を指定した場合はNotFoundErrorを投げる', async () => {
-      vi.mocked(mockSubscriptionRepo.findByUserId).mockResolvedValue(null);
-      vi.mocked(mockPaymentMethodRepo.findById).mockResolvedValue({
+      mockSubscriptionRepo.findByUserId.mockResolvedValue(null);
+      mockPaymentMethodRepo.findById.mockResolvedValue({
         id: testPaymentMethodId,
         userId: 'other-user',
         externalId: 'pm_external_123',
@@ -219,13 +252,13 @@ describe('SubscriptionService', () => {
     });
 
     it('ユーザーが存在しない場合はNotFoundErrorを投げる', async () => {
-      vi.mocked(mockSubscriptionRepo.findByUserId).mockResolvedValue(null);
-      vi.mocked(mockPaymentMethodRepo.findById).mockResolvedValue({
+      mockSubscriptionRepo.findByUserId.mockResolvedValue(null);
+      mockPaymentMethodRepo.findById.mockResolvedValue({
         id: testPaymentMethodId,
         userId: testUserId,
         externalId: 'pm_external_123',
       });
-      vi.mocked(prisma.user.findUnique).mockResolvedValue(null);
+      mockPrisma.user.findUnique.mockResolvedValue(null);
 
       await expect(service.createSubscription(testUserId, createInput))
         .rejects.toThrow(NotFoundError);
@@ -245,12 +278,12 @@ describe('SubscriptionService', () => {
         currentPeriodStart: now,
         currentPeriodEnd: periodEnd,
       };
-      vi.mocked(mockSubscriptionRepo.findByUserId).mockResolvedValue(mockSubscription);
-      vi.mocked(mockPaymentGateway.cancelSubscription).mockResolvedValue({
+      mockSubscriptionRepo.findByUserId.mockResolvedValue(mockSubscription);
+      mockPaymentGateway.cancelSubscription.mockResolvedValue({
         ...mockSubscription,
         cancelAtPeriodEnd: true,
       });
-      vi.mocked(mockSubscriptionRepo.update).mockResolvedValue({
+      mockSubscriptionRepo.update.mockResolvedValue({
         ...mockSubscription,
         cancelAtPeriodEnd: true,
       });
@@ -263,14 +296,14 @@ describe('SubscriptionService', () => {
     });
 
     it('サブスクリプションが存在しない場合はNotFoundErrorを投げる', async () => {
-      vi.mocked(mockSubscriptionRepo.findByUserId).mockResolvedValue(null);
+      mockSubscriptionRepo.findByUserId.mockResolvedValue(null);
 
       await expect(service.cancelSubscription(testUserId))
         .rejects.toThrow(NotFoundError);
     });
 
     it('FREEプランはキャンセルできない', async () => {
-      vi.mocked(mockSubscriptionRepo.findByUserId).mockResolvedValue({
+      mockSubscriptionRepo.findByUserId.mockResolvedValue({
         id: 'sub-123',
         userId: testUserId,
         plan: 'FREE',
@@ -282,7 +315,7 @@ describe('SubscriptionService', () => {
     });
 
     it('既にキャンセル予約されている場合はValidationErrorを投げる', async () => {
-      vi.mocked(mockSubscriptionRepo.findByUserId).mockResolvedValue({
+      mockSubscriptionRepo.findByUserId.mockResolvedValue({
         id: 'sub-123',
         userId: testUserId,
         plan: 'PRO',
@@ -308,12 +341,12 @@ describe('SubscriptionService', () => {
         currentPeriodStart: now,
         currentPeriodEnd: periodEnd,
       };
-      vi.mocked(mockSubscriptionRepo.findByUserId).mockResolvedValue(mockSubscription);
-      vi.mocked(mockPaymentGateway.reactivateSubscription).mockResolvedValue({
+      mockSubscriptionRepo.findByUserId.mockResolvedValue(mockSubscription);
+      mockPaymentGateway.reactivateSubscription.mockResolvedValue({
         ...mockSubscription,
         cancelAtPeriodEnd: false,
       });
-      vi.mocked(mockSubscriptionRepo.update).mockResolvedValue({
+      mockSubscriptionRepo.update.mockResolvedValue({
         ...mockSubscription,
         cancelAtPeriodEnd: false,
       });
@@ -325,14 +358,14 @@ describe('SubscriptionService', () => {
     });
 
     it('サブスクリプションが存在しない場合はNotFoundErrorを投げる', async () => {
-      vi.mocked(mockSubscriptionRepo.findByUserId).mockResolvedValue(null);
+      mockSubscriptionRepo.findByUserId.mockResolvedValue(null);
 
       await expect(service.reactivateSubscription(testUserId))
         .rejects.toThrow(NotFoundError);
     });
 
     it('キャンセル予約されていない場合はValidationErrorを投げる', async () => {
-      vi.mocked(mockSubscriptionRepo.findByUserId).mockResolvedValue({
+      mockSubscriptionRepo.findByUserId.mockResolvedValue({
         id: 'sub-123',
         userId: testUserId,
         plan: 'PRO',
@@ -347,7 +380,7 @@ describe('SubscriptionService', () => {
 
   describe('calculatePlanChange', () => {
     it('新規サブスクリプションの場合は単純な価格を返す', async () => {
-      vi.mocked(mockSubscriptionRepo.findByUserId).mockResolvedValue(null);
+      mockSubscriptionRepo.findByUserId.mockResolvedValue(null);
 
       const result = await service.calculatePlanChange(testUserId, 'PRO', 'MONTHLY');
 
@@ -359,7 +392,7 @@ describe('SubscriptionService', () => {
     });
 
     it('FREEプランからの場合は単純な価格を返す', async () => {
-      vi.mocked(mockSubscriptionRepo.findByUserId).mockResolvedValue({
+      mockSubscriptionRepo.findByUserId.mockResolvedValue({
         id: 'sub-123',
         userId: testUserId,
         plan: 'FREE',
@@ -374,7 +407,7 @@ describe('SubscriptionService', () => {
     });
 
     it('既存PROサブスクリプションがあり決済顧客IDがある場合は日割り計算を行う', async () => {
-      vi.mocked(mockSubscriptionRepo.findByUserId).mockResolvedValue({
+      mockSubscriptionRepo.findByUserId.mockResolvedValue({
         id: 'sub-123',
         userId: testUserId,
         externalId: 'sub_external_123',
@@ -384,11 +417,11 @@ describe('SubscriptionService', () => {
         currentPeriodStart: now,
         currentPeriodEnd: periodEnd,
       });
-      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      mockPrisma.user.findUnique.mockResolvedValue({
         id: testUserId,
         paymentCustomerId: 'cus_123',
-      } as any);
-      vi.mocked(mockPaymentGateway.previewProration).mockResolvedValue({
+      });
+      mockPaymentGateway.previewProration.mockResolvedValue({
         amountDue: 4000,
         currency: 'jpy',
         effectiveDate: now,
@@ -401,7 +434,7 @@ describe('SubscriptionService', () => {
     });
 
     it('日割り計算に失敗した場合は単純な価格を返す', async () => {
-      vi.mocked(mockSubscriptionRepo.findByUserId).mockResolvedValue({
+      mockSubscriptionRepo.findByUserId.mockResolvedValue({
         id: 'sub-123',
         userId: testUserId,
         externalId: 'sub_external_123',
@@ -409,11 +442,11 @@ describe('SubscriptionService', () => {
         billingCycle: 'MONTHLY',
         status: 'ACTIVE',
       });
-      vi.mocked(prisma.user.findUnique).mockResolvedValue({
+      mockPrisma.user.findUnique.mockResolvedValue({
         id: testUserId,
         paymentCustomerId: 'cus_123',
-      } as any);
-      vi.mocked(mockPaymentGateway.previewProration).mockRejectedValue(new Error('Gateway error'));
+      });
+      mockPaymentGateway.previewProration.mockRejectedValue(new Error('Gateway error'));
 
       const result = await service.calculatePlanChange(testUserId, 'PRO', 'YEARLY');
 

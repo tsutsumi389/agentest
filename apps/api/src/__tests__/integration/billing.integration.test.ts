@@ -12,23 +12,49 @@ import { AuthenticationError } from '@agentest/shared';
 // 注意: createAppは動的インポートを使用（サービス初期化前にMockGatewayを設定するため）
 import { resetPaymentGateway, setPaymentGateway, MockGateway } from '../../gateways/payment/index.js';
 
-// グローバルな認証状態（モック用）
-let mockAuthUser: {
+/**
+ * 認証ユーザーの型定義
+ */
+interface AuthUser {
   id: string;
   email: string;
   name: string;
   avatarUrl: string | null;
   plan: string;
   createdAt: Date;
-} | null = null;
+}
 
-// テスト用認証設定関数
-function setTestAuth(user: typeof mockAuthUser) {
+// グローバルな認証状態（モック用）
+let mockAuthUser: AuthUser | null = null;
+
+/**
+ * テスト用認証設定関数
+ */
+function setTestAuth(user: AuthUser | null) {
   mockAuthUser = user;
 }
 
 function clearTestAuth() {
   mockAuthUser = null;
+}
+
+/**
+ * テストユーザーを認証状態に設定するヘルパー
+ * @param user テストユーザー
+ * @param overrides プランなどのオーバーライド
+ */
+function authenticateAs(
+  user: Awaited<ReturnType<typeof createTestUser>>,
+  overrides: { plan?: string } = {}
+) {
+  setTestAuth({
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    avatarUrl: user.avatarUrl,
+    plan: overrides.plan ?? user.plan,
+    createdAt: user.createdAt,
+  });
 }
 
 vi.mock('@agentest/auth', () => ({
@@ -91,14 +117,7 @@ describe('Billing API Integration Tests', () => {
 
   describe('GET /api/users/:userId/subscription', () => {
     it('サブスクリプションがない場合はnullを返す', async () => {
-      setTestAuth({
-        id: testUser.id,
-        email: testUser.email,
-        name: testUser.name,
-        avatarUrl: testUser.avatarUrl,
-        plan: 'FREE',
-        createdAt: testUser.createdAt,
-      });
+      authenticateAs(testUser);
 
       const response = await request(app).get(`/api/users/${testUser.id}/subscription`);
 
@@ -107,7 +126,6 @@ describe('Billing API Integration Tests', () => {
     });
 
     it('PROプランのサブスクリプションを取得できる', async () => {
-      // サブスクリプションを作成
       await createTestSubscription({
         userId: testUser.id,
         plan: 'PRO',
@@ -115,14 +133,7 @@ describe('Billing API Integration Tests', () => {
         billingCycle: 'MONTHLY',
       });
 
-      setTestAuth({
-        id: testUser.id,
-        email: testUser.email,
-        name: testUser.name,
-        avatarUrl: testUser.avatarUrl,
-        plan: 'PRO',
-        createdAt: testUser.createdAt,
-      });
+      authenticateAs(testUser, { plan: 'PRO' });
 
       const response = await request(app).get(`/api/users/${testUser.id}/subscription`);
 
@@ -143,28 +154,17 @@ describe('Billing API Integration Tests', () => {
 
   describe('POST /api/users/:userId/subscription', () => {
     it('FREE→PROへのアップグレードに成功する', async () => {
-      // 支払い方法を作成
       const paymentMethod = await createTestPaymentMethod(testUser.id, {
         isDefault: true,
       });
 
-      // 決済顧客IDを設定
       await prisma.user.update({
         where: { id: testUser.id },
         data: { paymentCustomerId: 'cus_test_123' },
       });
 
-      // MockGatewayに顧客を登録
       await mockGateway.createCustomer(testUser.email, { userId: testUser.id });
-
-      setTestAuth({
-        id: testUser.id,
-        email: testUser.email,
-        name: testUser.name,
-        avatarUrl: testUser.avatarUrl,
-        plan: 'FREE',
-        createdAt: testUser.createdAt,
-      });
+      authenticateAs(testUser);
 
       const response = await request(app)
         .post(`/api/users/${testUser.id}/subscription`)
@@ -192,15 +192,7 @@ describe('Billing API Integration Tests', () => {
       });
 
       await mockGateway.createCustomer(testUser.email, { userId: testUser.id });
-
-      setTestAuth({
-        id: testUser.id,
-        email: testUser.email,
-        name: testUser.name,
-        avatarUrl: testUser.avatarUrl,
-        plan: 'FREE',
-        createdAt: testUser.createdAt,
-      });
+      authenticateAs(testUser);
 
       const response = await request(app)
         .post(`/api/users/${testUser.id}/subscription`)
@@ -215,14 +207,7 @@ describe('Billing API Integration Tests', () => {
     });
 
     it('支払い方法がない場合は404エラー', async () => {
-      setTestAuth({
-        id: testUser.id,
-        email: testUser.email,
-        name: testUser.name,
-        avatarUrl: testUser.avatarUrl,
-        plan: 'FREE',
-        createdAt: testUser.createdAt,
-      });
+      authenticateAs(testUser);
 
       const response = await request(app)
         .post(`/api/users/${testUser.id}/subscription`)
@@ -236,7 +221,6 @@ describe('Billing API Integration Tests', () => {
     });
 
     it('既にPROプランの場合は400エラー', async () => {
-      // PROプランのサブスクリプションを作成
       await createTestSubscription({
         userId: testUser.id,
         plan: 'PRO',
@@ -244,15 +228,7 @@ describe('Billing API Integration Tests', () => {
       });
 
       const paymentMethod = await createTestPaymentMethod(testUser.id);
-
-      setTestAuth({
-        id: testUser.id,
-        email: testUser.email,
-        name: testUser.name,
-        avatarUrl: testUser.avatarUrl,
-        plan: 'PRO',
-        createdAt: testUser.createdAt,
-      });
+      authenticateAs(testUser, { plan: 'PRO' });
 
       const response = await request(app)
         .post(`/api/users/${testUser.id}/subscription`)
@@ -267,15 +243,7 @@ describe('Billing API Integration Tests', () => {
 
     it('無効なプランを指定した場合は400エラー', async () => {
       const paymentMethod = await createTestPaymentMethod(testUser.id);
-
-      setTestAuth({
-        id: testUser.id,
-        email: testUser.email,
-        name: testUser.name,
-        avatarUrl: testUser.avatarUrl,
-        plan: 'FREE',
-        createdAt: testUser.createdAt,
-      });
+      authenticateAs(testUser);
 
       const response = await request(app)
         .post(`/api/users/${testUser.id}/subscription`)
@@ -305,7 +273,6 @@ describe('Billing API Integration Tests', () => {
 
   describe('DELETE /api/users/:userId/subscription', () => {
     it('PRO→FREEへのダウングレード予約に成功する', async () => {
-      // PROサブスクリプションを作成
       const subscription = await createTestSubscription({
         userId: testUser.id,
         plan: 'PRO',
@@ -313,7 +280,6 @@ describe('Billing API Integration Tests', () => {
         cancelAtPeriodEnd: false,
       });
 
-      // MockGatewayにサブスクリプションを登録
       const customer = await mockGateway.createCustomer(testUser.email);
       const gatewaySub = await mockGateway.createSubscription({
         customerId: customer.id,
@@ -322,20 +288,12 @@ describe('Billing API Integration Tests', () => {
         paymentMethodId: 'pm_test',
       });
 
-      // externalIdを設定
       await prisma.subscription.update({
         where: { id: subscription.id },
         data: { externalId: gatewaySub.id },
       });
 
-      setTestAuth({
-        id: testUser.id,
-        email: testUser.email,
-        name: testUser.name,
-        avatarUrl: testUser.avatarUrl,
-        plan: 'PRO',
-        createdAt: testUser.createdAt,
-      });
+      authenticateAs(testUser, { plan: 'PRO' });
 
       const response = await request(app).delete(`/api/users/${testUser.id}/subscription`);
 
@@ -344,21 +302,13 @@ describe('Billing API Integration Tests', () => {
     });
 
     it('FREEプランはキャンセルできない', async () => {
-      // FREEサブスクリプションを作成
       await createTestSubscription({
         userId: testUser.id,
         plan: 'FREE',
         status: 'ACTIVE',
       });
 
-      setTestAuth({
-        id: testUser.id,
-        email: testUser.email,
-        name: testUser.name,
-        avatarUrl: testUser.avatarUrl,
-        plan: 'FREE',
-        createdAt: testUser.createdAt,
-      });
+      authenticateAs(testUser);
 
       const response = await request(app).delete(`/api/users/${testUser.id}/subscription`);
 
@@ -373,14 +323,7 @@ describe('Billing API Integration Tests', () => {
         cancelAtPeriodEnd: true,
       });
 
-      setTestAuth({
-        id: testUser.id,
-        email: testUser.email,
-        name: testUser.name,
-        avatarUrl: testUser.avatarUrl,
-        plan: 'PRO',
-        createdAt: testUser.createdAt,
-      });
+      authenticateAs(testUser, { plan: 'PRO' });
 
       const response = await request(app).delete(`/api/users/${testUser.id}/subscription`);
 
@@ -388,14 +331,7 @@ describe('Billing API Integration Tests', () => {
     });
 
     it('サブスクリプションがない場合は404エラー', async () => {
-      setTestAuth({
-        id: testUser.id,
-        email: testUser.email,
-        name: testUser.name,
-        avatarUrl: testUser.avatarUrl,
-        plan: 'FREE',
-        createdAt: testUser.createdAt,
-      });
+      authenticateAs(testUser);
 
       const response = await request(app).delete(`/api/users/${testUser.id}/subscription`);
 
@@ -405,7 +341,6 @@ describe('Billing API Integration Tests', () => {
 
   describe('POST /api/users/:userId/subscription/reactivate', () => {
     it('ダウングレード予約のキャンセルに成功する', async () => {
-      // キャンセル予約中のサブスクリプション
       const subscription = await createTestSubscription({
         userId: testUser.id,
         plan: 'PRO',
@@ -413,7 +348,6 @@ describe('Billing API Integration Tests', () => {
         cancelAtPeriodEnd: true,
       });
 
-      // MockGatewayにサブスクリプションを登録
       const customer = await mockGateway.createCustomer(testUser.email);
       const gatewaySub = await mockGateway.createSubscription({
         customerId: customer.id,
@@ -428,14 +362,7 @@ describe('Billing API Integration Tests', () => {
         data: { externalId: gatewaySub.id },
       });
 
-      setTestAuth({
-        id: testUser.id,
-        email: testUser.email,
-        name: testUser.name,
-        avatarUrl: testUser.avatarUrl,
-        plan: 'PRO',
-        createdAt: testUser.createdAt,
-      });
+      authenticateAs(testUser, { plan: 'PRO' });
 
       const response = await request(app).post(`/api/users/${testUser.id}/subscription/reactivate`);
 
@@ -451,14 +378,7 @@ describe('Billing API Integration Tests', () => {
         cancelAtPeriodEnd: false,
       });
 
-      setTestAuth({
-        id: testUser.id,
-        email: testUser.email,
-        name: testUser.name,
-        avatarUrl: testUser.avatarUrl,
-        plan: 'PRO',
-        createdAt: testUser.createdAt,
-      });
+      authenticateAs(testUser, { plan: 'PRO' });
 
       const response = await request(app).post(`/api/users/${testUser.id}/subscription/reactivate`);
 
@@ -479,32 +399,17 @@ describe('Billing API Integration Tests', () => {
         isDefault: false,
       });
 
-      setTestAuth({
-        id: testUser.id,
-        email: testUser.email,
-        name: testUser.name,
-        avatarUrl: testUser.avatarUrl,
-        plan: 'FREE',
-        createdAt: testUser.createdAt,
-      });
+      authenticateAs(testUser);
 
       const response = await request(app).get(`/api/users/${testUser.id}/payment-methods`);
 
       expect(response.status).toBe(200);
       expect(response.body.paymentMethods).toHaveLength(2);
-      // デフォルトが先に来る
       expect(response.body.paymentMethods[0].isDefault).toBe(true);
     });
 
     it('支払い方法がない場合は空配列を返す', async () => {
-      setTestAuth({
-        id: testUser.id,
-        email: testUser.email,
-        name: testUser.name,
-        avatarUrl: testUser.avatarUrl,
-        plan: 'FREE',
-        createdAt: testUser.createdAt,
-      });
+      authenticateAs(testUser);
 
       const response = await request(app).get(`/api/users/${testUser.id}/payment-methods`);
 
@@ -515,21 +420,13 @@ describe('Billing API Integration Tests', () => {
 
   describe('POST /api/users/:userId/payment-methods', () => {
     it('支払い方法を追加できる', async () => {
-      // 決済顧客IDを設定
       const customer = await mockGateway.createCustomer(testUser.email, { userId: testUser.id });
       await prisma.user.update({
         where: { id: testUser.id },
         data: { paymentCustomerId: customer.id },
       });
 
-      setTestAuth({
-        id: testUser.id,
-        email: testUser.email,
-        name: testUser.name,
-        avatarUrl: testUser.avatarUrl,
-        plan: 'FREE',
-        createdAt: testUser.createdAt,
-      });
+      authenticateAs(testUser);
 
       const response = await request(app)
         .post(`/api/users/${testUser.id}/payment-methods`)
@@ -539,11 +436,10 @@ describe('Billing API Integration Tests', () => {
       expect(response.body.paymentMethod).toBeDefined();
       expect(response.body.paymentMethod.brand).toBe('visa');
       expect(response.body.paymentMethod.last4).toBe('4242');
-      expect(response.body.paymentMethod.isDefault).toBe(true); // 最初の支払い方法
+      expect(response.body.paymentMethod.isDefault).toBe(true);
     });
 
     it('2番目以降の支払い方法はデフォルトにならない', async () => {
-      // 既存の支払い方法
       await createTestPaymentMethod(testUser.id, { isDefault: true });
 
       const customer = await mockGateway.createCustomer(testUser.email, { userId: testUser.id });
@@ -552,14 +448,7 @@ describe('Billing API Integration Tests', () => {
         data: { paymentCustomerId: customer.id },
       });
 
-      setTestAuth({
-        id: testUser.id,
-        email: testUser.email,
-        name: testUser.name,
-        avatarUrl: testUser.avatarUrl,
-        plan: 'FREE',
-        createdAt: testUser.createdAt,
-      });
+      authenticateAs(testUser);
 
       const response = await request(app)
         .post(`/api/users/${testUser.id}/payment-methods`)
@@ -570,14 +459,7 @@ describe('Billing API Integration Tests', () => {
     });
 
     it('トークンがない場合は400エラー', async () => {
-      setTestAuth({
-        id: testUser.id,
-        email: testUser.email,
-        name: testUser.name,
-        avatarUrl: testUser.avatarUrl,
-        plan: 'FREE',
-        createdAt: testUser.createdAt,
-      });
+      authenticateAs(testUser);
 
       const response = await request(app)
         .post(`/api/users/${testUser.id}/payment-methods`)
@@ -589,26 +471,16 @@ describe('Billing API Integration Tests', () => {
 
   describe('DELETE /api/users/:userId/payment-methods/:paymentMethodId', () => {
     it('支払い方法を削除できる', async () => {
-      // デフォルトの支払い方法
       await createTestPaymentMethod(testUser.id, { isDefault: true });
-      // 非デフォルトの支払い方法
       const paymentMethod = await createTestPaymentMethod(testUser.id, { isDefault: false });
 
-      setTestAuth({
-        id: testUser.id,
-        email: testUser.email,
-        name: testUser.name,
-        avatarUrl: testUser.avatarUrl,
-        plan: 'FREE',
-        createdAt: testUser.createdAt,
-      });
+      authenticateAs(testUser);
 
       const response = await request(app)
         .delete(`/api/users/${testUser.id}/payment-methods/${paymentMethod.id}`);
 
       expect(response.status).toBe(204);
 
-      // 削除されていることを確認
       const remaining = await prisma.paymentMethod.findMany({
         where: { userId: testUser.id },
       });
@@ -619,14 +491,7 @@ describe('Billing API Integration Tests', () => {
       const defaultMethod = await createTestPaymentMethod(testUser.id, { isDefault: true });
       await createTestPaymentMethod(testUser.id, { isDefault: false });
 
-      setTestAuth({
-        id: testUser.id,
-        email: testUser.email,
-        name: testUser.name,
-        avatarUrl: testUser.avatarUrl,
-        plan: 'FREE',
-        createdAt: testUser.createdAt,
-      });
+      authenticateAs(testUser);
 
       const response = await request(app)
         .delete(`/api/users/${testUser.id}/payment-methods/${defaultMethod.id}`);
@@ -637,14 +502,7 @@ describe('Billing API Integration Tests', () => {
     it('唯一の支払い方法（デフォルト）は削除できる', async () => {
       const paymentMethod = await createTestPaymentMethod(testUser.id, { isDefault: true });
 
-      setTestAuth({
-        id: testUser.id,
-        email: testUser.email,
-        name: testUser.name,
-        avatarUrl: testUser.avatarUrl,
-        plan: 'FREE',
-        createdAt: testUser.createdAt,
-      });
+      authenticateAs(testUser);
 
       const response = await request(app)
         .delete(`/api/users/${testUser.id}/payment-methods/${paymentMethod.id}`);
@@ -653,14 +511,7 @@ describe('Billing API Integration Tests', () => {
     });
 
     it('存在しない支払い方法は404エラー', async () => {
-      setTestAuth({
-        id: testUser.id,
-        email: testUser.email,
-        name: testUser.name,
-        avatarUrl: testUser.avatarUrl,
-        plan: 'FREE',
-        createdAt: testUser.createdAt,
-      });
+      authenticateAs(testUser);
 
       const response = await request(app)
         .delete(`/api/users/${testUser.id}/payment-methods/00000000-0000-0000-0000-000000000000`);
@@ -671,36 +522,25 @@ describe('Billing API Integration Tests', () => {
 
   describe('PUT /api/users/:userId/payment-methods/:paymentMethodId/default', () => {
     it('デフォルト支払い方法を設定できる', async () => {
-      // 顧客とユーザーをセットアップ
       const customer = await mockGateway.createCustomer(testUser.email, { userId: testUser.id });
       await prisma.user.update({
         where: { id: testUser.id },
         data: { paymentCustomerId: customer.id },
       });
 
-      // MockGatewayに支払い方法を登録
       const gatewayPm1 = await mockGateway.attachPaymentMethod(customer.id, 'tok_visa');
       const gatewayPm2 = await mockGateway.attachPaymentMethod(customer.id, 'tok_mastercard');
 
-      // DBに既存のデフォルトを作成（gatewayのexternalIdを設定）
       await createTestPaymentMethod(testUser.id, {
         externalId: gatewayPm1.id,
         isDefault: true,
       });
-      // 新しくデフォルトにする支払い方法
       const newDefault = await createTestPaymentMethod(testUser.id, {
         externalId: gatewayPm2.id,
         isDefault: false,
       });
 
-      setTestAuth({
-        id: testUser.id,
-        email: testUser.email,
-        name: testUser.name,
-        avatarUrl: testUser.avatarUrl,
-        plan: 'FREE',
-        createdAt: testUser.createdAt,
-      });
+      authenticateAs(testUser);
 
       const response = await request(app)
         .put(`/api/users/${testUser.id}/payment-methods/${newDefault.id}/default`);
@@ -708,7 +548,6 @@ describe('Billing API Integration Tests', () => {
       expect(response.status).toBe(200);
       expect(response.body.paymentMethod.isDefault).toBe(true);
 
-      // 古いデフォルトが解除されていることを確認
       const methods = await prisma.paymentMethod.findMany({
         where: { userId: testUser.id },
         orderBy: { createdAt: 'asc' },
@@ -718,14 +557,7 @@ describe('Billing API Integration Tests', () => {
     });
 
     it('存在しない支払い方法は404エラー', async () => {
-      setTestAuth({
-        id: testUser.id,
-        email: testUser.email,
-        name: testUser.name,
-        avatarUrl: testUser.avatarUrl,
-        plan: 'FREE',
-        createdAt: testUser.createdAt,
-      });
+      authenticateAs(testUser);
 
       const response = await request(app)
         .put(`/api/users/${testUser.id}/payment-methods/00000000-0000-0000-0000-000000000000/default`);
