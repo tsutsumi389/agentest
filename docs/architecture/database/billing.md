@@ -13,19 +13,19 @@
 | カラム | 型 | NULL | デフォルト | 説明 |
 |--------|------|------|------------|------|
 | `id` | UUID | NO | gen_random_uuid() | 主キー |
-| `userId` | UUID | YES | NULL | ユーザー ID（外部キー）※1 |
-| `organizationId` | UUID | YES | NULL | 組織 ID（外部キー）※1 |
-| `plan` | ENUM | NO | - | プラン種別（SubscriptionPlan） |
+| `userId` | UUID | YES | NULL | ユーザー ID（外部キー・一意）※1 |
+| `organizationId` | UUID | YES | NULL | 組織 ID（外部キー・一意）※1 |
+| `externalId` | VARCHAR(255) | YES | NULL | 決済サービスのサブスクリプション ID（一意） |
+| `plan` | ENUM | NO | FREE | プラン種別（SubscriptionPlan） |
 | `status` | ENUM | NO | ACTIVE | ステータス |
 | `billingCycle` | ENUM | NO | MONTHLY | 請求サイクル（MONTHLY, YEARLY） |
 | `currentPeriodStart` | TIMESTAMP | NO | - | 現在の請求期間開始日 |
 | `currentPeriodEnd` | TIMESTAMP | NO | - | 現在の請求期間終了日 |
 | `cancelAtPeriodEnd` | BOOLEAN | NO | false | 期間終了時にキャンセル |
-| `canceledAt` | TIMESTAMP | YES | NULL | キャンセル日時 |
 | `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
 | `updatedAt` | TIMESTAMP | NO | now() | 更新日時 |
 
-※1: `userId` と `organizationId` はどちらか一方のみ設定（排他制約）
+※1: `userId` と `organizationId` はどちらか一方のみ設定（排他制約）。また、各ユーザー/組織につき1つのサブスクリプションのみ許可（一意制約）。
 
 ### サブスクリプションステータス
 
@@ -55,6 +55,9 @@
 ### 制約
 
 - `userId` か `organizationId` のどちらか一方が必ず設定される（排他制約）
+- `userId` は一意（1ユーザーにつき1サブスクリプション）
+- `organizationId` は一意（1組織につき1サブスクリプション）
+- `externalId` は一意
 
 ### Prisma スキーマ
 
@@ -79,26 +82,25 @@ enum SubscriptionPlan {
 }
 
 model Subscription {
-  id                 String             @id @default(uuid()) @db.Uuid
-  userId             String?            @db.Uuid
-  organizationId     String?            @db.Uuid
-  plan               SubscriptionPlan
+  id                 String             @id @default(uuid())
+  userId             String?            @unique @map("user_id")
+  organizationId     String?            @unique @map("organization_id")
+  externalId         String?            @unique @map("external_id") @db.VarChar(255)
+  plan               SubscriptionPlan   @default(FREE)
   status             SubscriptionStatus @default(ACTIVE)
-  billingCycle       BillingCycle       @default(MONTHLY)
-  currentPeriodStart DateTime
-  currentPeriodEnd   DateTime
-  cancelAtPeriodEnd  Boolean            @default(false)
-  canceledAt         DateTime?
-  createdAt          DateTime           @default(now())
-  updatedAt          DateTime           @updatedAt
+  billingCycle       BillingCycle       @default(MONTHLY) @map("billing_cycle")
+  currentPeriodStart DateTime           @map("current_period_start")
+  currentPeriodEnd   DateTime           @map("current_period_end")
+  cancelAtPeriodEnd  Boolean            @default(false) @map("cancel_at_period_end")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
 
-  user         User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?         @relation("UserSubscription", fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization? @relation("OrgSubscription", fields: [organizationId], references: [id], onDelete: Cascade)
   invoices     Invoice[]
 
-  @@index([userId])
-  @@index([organizationId])
   @@index([status])
+  @@map("subscriptions")
 }
 ```
 
@@ -106,7 +108,7 @@ model Subscription {
 
 ```sql
 -- userId か organizationId のどちらか一方のみ設定
-ALTER TABLE "Subscription" ADD CONSTRAINT "subscription_owner_check"
+ALTER TABLE "subscriptions" ADD CONSTRAINT "subscription_owner_check"
   CHECK (
     (user_id IS NOT NULL AND organization_id IS NULL) OR
     (user_id IS NULL AND organization_id IS NOT NULL)
@@ -127,14 +129,14 @@ ALTER TABLE "Subscription" ADD CONSTRAINT "subscription_owner_check"
 | `subscriptionId` | UUID | NO | - | サブスクリプション ID（外部キー） |
 | `invoiceNumber` | VARCHAR(50) | NO | - | 請求書番号（一意） |
 | `amount` | DECIMAL(10,2) | NO | - | 請求金額 |
-| `currency` | VARCHAR(3) | NO | USD | 通貨コード |
+| `currency` | VARCHAR(3) | NO | JPY | 通貨コード |
 | `status` | ENUM | NO | PENDING | 請求書ステータス |
 | `periodStart` | TIMESTAMP | NO | - | 請求期間開始日 |
 | `periodEnd` | TIMESTAMP | NO | - | 請求期間終了日 |
-| `paidAt` | TIMESTAMP | YES | NULL | 支払い日時 |
 | `dueDate` | TIMESTAMP | NO | - | 支払期限 |
 | `pdfUrl` | TEXT | YES | NULL | PDF ダウンロード URL |
 | `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
+| `updatedAt` | TIMESTAMP | NO | now() | 更新日時 |
 
 ### 請求書ステータス
 
@@ -160,24 +162,24 @@ enum InvoiceStatus {
 }
 
 model Invoice {
-  id             String        @id @default(uuid()) @db.Uuid
-  subscriptionId String        @db.Uuid
-  invoiceNumber  String        @unique @db.VarChar(50)
+  id             String        @id @default(uuid())
+  subscriptionId String        @map("subscription_id")
+  invoiceNumber  String        @unique @map("invoice_number") @db.VarChar(50)
   amount         Decimal       @db.Decimal(10, 2)
-  currency       String        @default("USD") @db.VarChar(3)
+  currency       String        @default("JPY") @db.VarChar(3)
   status         InvoiceStatus @default(PENDING)
-  periodStart    DateTime
-  periodEnd      DateTime
-  paidAt         DateTime?
-  dueDate        DateTime
-  pdfUrl         String?
-  createdAt      DateTime      @default(now())
+  periodStart    DateTime      @map("period_start")
+  periodEnd      DateTime      @map("period_end")
+  dueDate        DateTime      @map("due_date")
+  pdfUrl         String?       @map("pdf_url")
+  createdAt      DateTime      @default(now()) @map("created_at")
+  updatedAt      DateTime      @updatedAt @map("updated_at")
 
   subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
 
   @@index([subscriptionId])
   @@index([status])
-  @@index([invoiceNumber])
+  @@map("invoices")
 }
 ```
 
@@ -194,7 +196,7 @@ model Invoice {
 | `id` | UUID | NO | gen_random_uuid() | 主キー |
 | `userId` | UUID | YES | NULL | ユーザー ID（外部キー）※1 |
 | `organizationId` | UUID | YES | NULL | 組織 ID（外部キー）※1 |
-| `type` | ENUM | NO | - | 支払い方法タイプ |
+| `type` | ENUM | NO | CARD | 支払い方法タイプ |
 | `externalId` | VARCHAR(255) | NO | - | 外部決済サービスの ID |
 | `brand` | VARCHAR(50) | YES | NULL | カードブランド（visa, mastercard 等） |
 | `last4` | VARCHAR(4) | YES | NULL | カード番号下4桁 |
@@ -210,7 +212,7 @@ model Invoice {
 
 | タイプ | 説明 |
 |--------|------|
-| `CARD` | クレジットカード |
+| `CARD` | クレジットカード（デフォルト） |
 
 ### 制約
 
@@ -224,24 +226,25 @@ enum PaymentMethodType {
 }
 
 model PaymentMethod {
-  id             String            @id @default(uuid()) @db.Uuid
-  userId         String?           @db.Uuid
-  organizationId String?           @db.Uuid
-  type           PaymentMethodType
-  externalId     String            @db.VarChar(255)
+  id             String            @id @default(uuid())
+  userId         String?           @map("user_id")
+  organizationId String?           @map("organization_id")
+  type           PaymentMethodType @default(CARD)
+  externalId     String            @map("external_id") @db.VarChar(255)
   brand          String?           @db.VarChar(50)
   last4          String?           @db.VarChar(4)
-  expiryMonth    Int?
-  expiryYear     Int?
-  isDefault      Boolean           @default(false)
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
+  expiryMonth    Int?              @map("expiry_month")
+  expiryYear     Int?              @map("expiry_year")
+  isDefault      Boolean           @default(false) @map("is_default")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
 
-  user         User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?         @relation("UserPaymentMethods", fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization? @relation("OrgPaymentMethods", fields: [organizationId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([organizationId])
+  @@map("payment_methods")
 }
 ```
 
@@ -249,7 +252,7 @@ model PaymentMethod {
 
 ```sql
 -- userId か organizationId のどちらか一方のみ設定
-ALTER TABLE "PaymentMethod" ADD CONSTRAINT "payment_method_owner_check"
+ALTER TABLE "payment_methods" ADD CONSTRAINT "payment_method_owner_check"
   CHECK (
     (user_id IS NOT NULL AND organization_id IS NULL) OR
     (user_id IS NULL AND organization_id IS NOT NULL)
@@ -278,3 +281,5 @@ ALTER TABLE "PaymentMethod" ADD CONSTRAINT "payment_method_owner_check"
 - [認証関連](./auth.md)
 - [組織・プロジェクト](./organization.md)
 - [使用量記録](./usage.md)
+- [課金機能設計](../features/billing.md)
+- [課金 API](../../api/billing.md)
