@@ -1,4 +1,4 @@
-import { Play, Pencil, FileText, History, MessageSquare, Settings, Copy, X } from 'lucide-react';
+import { Play, Pencil, FileText, History, MessageSquare, Settings, Copy } from 'lucide-react';
 import type { TestSuite, ProjectMemberRole, Label } from '../../lib/api';
 import { PRIORITY_COLORS, PRIORITY_LABELS, STATUS_COLORS, STATUS_LABELS } from '../../lib/constants';
 import { LabelBadgeList } from '../ui/LabelBadge';
@@ -58,7 +58,6 @@ interface TestSuiteHeaderProps {
   onTestCaseTabChange?: (tab: TestCaseTabType) => void;
   onEditTestCase?: () => void;
   onCopyTestCase?: () => void;
-  onCloseTestCase?: () => void;
   // ラベル
   labels?: Label[];
 }
@@ -85,7 +84,6 @@ export function TestSuiteHeader({
   onTestCaseTabChange,
   onEditTestCase,
   onCopyTestCase,
-  onCloseTestCase,
   // ラベル
   labels,
 }: TestSuiteHeaderProps) {
@@ -141,16 +139,6 @@ export function TestSuiteHeader({
                 >
                   <Copy className="w-4 h-4" />
                   コピー
-                </button>
-              )}
-              {onCloseTestCase && (
-                <button
-                  onClick={onCloseTestCase}
-                  className="btn btn-secondary btn-sm"
-                  title="閉じる"
-                >
-                  <X className="w-4 h-4" />
-                  閉じる
                 </button>
               )}
             </div>

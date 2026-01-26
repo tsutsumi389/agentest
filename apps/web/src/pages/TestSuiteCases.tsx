@@ -112,6 +112,16 @@ export function TestSuiteCasesPage() {
     setSearchParams(newParams);
   }, [searchParams, setSearchParams]);
 
+  // 概要表示ハンドラ（テストケース選択を解除して概要タブを表示）
+  const handleShowOverview = useCallback(() => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete('testCase');
+    newParams.delete('testCaseTab');
+    newParams.delete('mode');
+    newParams.set('tab', 'overview');
+    setSearchParams(newParams);
+  }, [searchParams, setSearchParams]);
+
   // テストスイート情報を取得
   const { data: suiteData, isLoading: isLoadingSuite } = useQuery({
     queryKey: ['test-suite', testSuiteId],
@@ -237,11 +247,13 @@ export function TestSuiteCasesPage() {
         isLoading={isLoadingCases}
         onTestCasesReordered={handleTestCasesReordered}
         isCreateMode={isCreateMode}
+        isOverviewMode={!selectedTestCaseId && !isCreateMode}
+        onOverviewClick={handleShowOverview}
       />
     );
 
     return () => setSidebarContent(null);
-  }, [testSuiteId, testCases, selectedTestCaseId, currentRole, isLoadingCases, setSidebarContent, handleTestCasesReordered, handleSelectTestCase, handleStartCreateMode, isCreateMode]);
+  }, [testSuiteId, testCases, selectedTestCaseId, currentRole, isLoadingCases, setSidebarContent, handleTestCasesReordered, handleSelectTestCase, handleStartCreateMode, isCreateMode, handleShowOverview]);
 
   if (isLoadingSuite) {
     return (
@@ -308,7 +320,6 @@ export function TestSuiteCasesPage() {
             onTestCaseTabChange={handleTestCaseTabChange}
             onEditTestCase={() => setIsTestCaseEditMode(true)}
             onCopyTestCase={() => setIsCopyModalOpen(true)}
-            onCloseTestCase={() => handleSelectTestCase(null)}
             // ラベル
             labels={suiteLabels}
           />
