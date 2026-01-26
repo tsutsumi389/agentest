@@ -22,6 +22,7 @@ import {
   GripVertical,
   Search,
   FileText,
+  LayoutGrid,
 } from 'lucide-react';
 import { testSuitesApi, ApiError, type TestCase, type ProjectMemberRole } from '../../lib/api';
 import { toast } from '../../stores/toast';
@@ -37,6 +38,10 @@ interface TestCaseSidebarProps {
   onTestCasesReordered?: (reorderedTestCases: TestCase[]) => void;
   /** 作成モードかどうか */
   isCreateMode?: boolean;
+  /** 概要表示中かどうか */
+  isOverviewMode?: boolean;
+  /** 概要ボタンクリック時のハンドラ */
+  onOverviewClick?: () => void;
 }
 
 /**
@@ -135,6 +140,8 @@ export function TestCaseSidebar({
   isLoading = false,
   onTestCasesReordered,
   isCreateMode = false,
+  isOverviewMode = false,
+  onOverviewClick,
 }: TestCaseSidebarProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [isReordering, setIsReordering] = useState(false);
@@ -265,6 +272,27 @@ export function TestCaseSidebar({
           />
         </div>
       </div>
+
+      {/* 概要ボタン */}
+      {onOverviewClick && (
+        <div className="p-2 border-b border-border">
+          <button
+            type="button"
+            onClick={onOverviewClick}
+            aria-label="テストスイート概要を表示"
+            className={`
+              w-full flex items-center gap-2 p-2 rounded-md text-left transition-colors
+              ${isOverviewMode
+                ? 'bg-accent-subtle text-accent'
+                : 'hover:bg-background-tertiary text-foreground'
+              }
+            `}
+          >
+            <LayoutGrid className="w-4 h-4 flex-shrink-0" />
+            <span className="text-sm font-medium flex-1">概要</span>
+          </button>
+        </div>
+      )}
 
       {/* テストケース一覧 */}
       <div className="flex-1 overflow-y-auto p-2">
