@@ -158,6 +158,15 @@ export class SubscriptionRepository {
   }
 
   /**
+   * 外部ID（決済サービスのサブスクリプションID）でサブスクリプションを取得
+   */
+  async findByExternalId(externalId: string): Promise<Subscription | null> {
+    return prisma.subscription.findUnique({
+      where: { externalId },
+    });
+  }
+
+  /**
    * 期間終了時にキャンセル予定のサブスクリプションを取得
    */
   async findCancelAtPeriodEnd(): Promise<Subscription[]> {
