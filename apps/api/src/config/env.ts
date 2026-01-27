@@ -61,6 +61,8 @@ const envSchema = z.object({
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   STRIPE_PRICE_PRO_MONTHLY: z.string().optional(),
   STRIPE_PRICE_PRO_YEARLY: z.string().optional(),
+  STRIPE_PRICE_TEAM_MONTHLY: z.string().optional(),
+  STRIPE_PRICE_TEAM_YEARLY: z.string().optional(),
 
   // SMTP（メール送信）
   SMTP_HOST: z.string().default('mailpit'),       // dev/staging: mailpit

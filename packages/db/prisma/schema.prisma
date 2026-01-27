@@ -291,8 +291,9 @@ model Organization {
   name         String           @db.VarChar(100)
   description  String?          @db.Text
   avatarUrl    String?          @map("avatar_url")
-  plan         OrganizationPlan @default(TEAM)
-  billingEmail String?          @map("billing_email") @db.VarChar(255)
+  plan              OrganizationPlan @default(TEAM)
+  paymentCustomerId String?          @unique @map("payment_customer_id") @db.VarChar(255) // 決済サービス顧客ID
+  billingEmail      String?          @map("billing_email") @db.VarChar(255)
   createdAt    DateTime         @default(now()) @map("created_at")
   updatedAt    DateTime         @updatedAt @map("updated_at")
   deletedAt    DateTime?        @map("deleted_at")
