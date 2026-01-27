@@ -115,7 +115,7 @@ function MockPaymentForm({
   onCancel,
   isSubmitting,
 }: {
-  onSubmit: (token: string) => void;
+  onSubmit: (token: string) => Promise<void>;
   onCancel: () => void;
   isSubmitting: boolean;
 }) {
@@ -128,10 +128,10 @@ function MockPaymentForm({
 
   const [selectedCard, setSelectedCard] = useState(testCards[0]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // モック用トークン（ブランドと下4桁を含む）
-    onSubmit(`mock_token_${selectedCard.brand}_${selectedCard.last4}`);
+    await onSubmit(`mock_token_${selectedCard.brand}_${selectedCard.last4}`);
   };
 
   return (
