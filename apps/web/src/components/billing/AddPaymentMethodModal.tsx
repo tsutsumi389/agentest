@@ -3,7 +3,7 @@
  * モック環境ではテストフォーム、本番環境ではStripe Elementsを使用
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { X, Loader2, CreditCard, Info, AlertCircle, RefreshCw } from 'lucide-react';
 import { useAuthStore } from '../../stores/auth';
 import { toast } from '../../stores/toast';
@@ -18,7 +18,7 @@ interface AddPaymentMethodModalProps {
 }
 
 // 決済ゲートウェイの設定（環境変数で切り替え）
-const isProduction = import.meta.env.VITE_PAYMENT_GATEWAY === 'stripe';
+const isStripeGateway = import.meta.env.VITE_PAYMENT_GATEWAY === 'stripe';
 
 // Stripe Elements のダークテーマ設定
 const appearance: Appearance = {
@@ -86,8 +86,7 @@ export function AddPaymentMethodModal({ onClose, onComplete }: AddPaymentMethodM
 
         {/* コンテンツ */}
         <div className="p-6">
-          {isProduction ? (
-            // 本番環境: Stripe Elements
+          {isStripeGateway ? (
             <StripeCardForm
               onSubmit={handleSubmit}
               onCancel={onClose}
@@ -206,7 +205,7 @@ function StripeCardForm({
   onCancel,
   isSubmitting,
 }: {
-  onSubmit: (token: string) => void;
+  onSubmit: (token: string) => Promise<void>;
   onCancel: () => void;
   isSubmitting: boolean;
 }) {
@@ -216,7 +215,7 @@ function StripeCardForm({
   const [error, setError] = useState<string | null>(null);
 
   // SetupIntent の clientSecret を取得
-  const fetchSetupIntent = async () => {
+  const fetchSetupIntent = useCallback(async () => {
     if (!user?.id) return;
 
     setLoading(true);
@@ -233,12 +232,42 @@ function StripeCardForm({
     } finally {
       setLoading(false);
     }
-  };
+  }, [user?.id]);
 
   useEffect(() => {
+    // Stripe 公開キーが未設定なら API を呼ばない
+    if (!stripePromise) {
+      setLoading(false);
+      return;
+    }
     fetchSetupIntent();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchSetupIntent]);
+
+  // Stripe 公開キーが未設定の場合（API呼び出し前にチェック）
+  if (!stripePromise) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-start gap-3 p-3 bg-warning-subtle border border-warning rounded-lg">
+          <AlertCircle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-medium text-warning">設定エラー</p>
+            <p className="text-foreground-muted mt-1">
+              Stripeの公開キーが設定されていません。管理者にお問い合わせください。
+            </p>
+          </div>
+        </div>
+        <div className="flex justify-end">
+          <button
+            type="button"
+            className="btn btn-ghost"
+            onClick={onCancel}
+          >
+            閉じる
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // ローディング中
   if (loading) {
@@ -284,32 +313,6 @@ function StripeCardForm({
     );
   }
 
-  // Stripe が利用不可の場合
-  if (!stripePromise) {
-    return (
-      <div className="space-y-4">
-        <div className="flex items-start gap-3 p-3 bg-warning-subtle border border-warning rounded-lg">
-          <AlertCircle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
-          <div className="text-sm">
-            <p className="font-medium text-warning">設定エラー</p>
-            <p className="text-foreground-muted mt-1">
-              Stripeの公開キーが設定されていません。管理者にお問い合わせください。
-            </p>
-          </div>
-        </div>
-        <div className="flex justify-end">
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={onCancel}
-          >
-            閉じる
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <Elements
       stripe={stripePromise}
@@ -336,27 +339,32 @@ function StripeCardFormInner({
   onCancel,
   isSubmitting,
 }: {
-  onSubmit: (token: string) => void;
+  onSubmit: (token: string) => Promise<void>;
   onCancel: () => void;
   isSubmitting: boolean;
 }) {
   const stripe = useStripe();
   const elements = useElements();
-  const [submitting, setSubmitting] = useState(false);
+  const [confirming, setConfirming] = useState(false);
   const [elementReady, setElementReady] = useState(false);
 
-  const isProcessing = isSubmitting || submitting;
+  // confirmSetup中 または 親のAPI呼び出し中
+  const isProcessing = confirming || isSubmitting;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!stripe || !elements) return;
 
-    setSubmitting(true);
+    setConfirming(true);
     try {
       // カード登録を確定
       const result = await stripe.confirmSetup({
         elements,
+        confirmParams: {
+          // 3Dセキュア等のリダイレクトが必要な場合の戻り先URL
+          return_url: `${window.location.origin}/settings?tab=billing`,
+        },
         redirect: 'if_required',
       });
 
@@ -371,14 +379,15 @@ function StripeCardFormInner({
         const paymentMethodId = typeof setupIntent.payment_method === 'string'
           ? setupIntent.payment_method
           : setupIntent.payment_method.id;
-        onSubmit(paymentMethodId);
+        // 親の add API が完了するまで await し、processing 状態を維持する
+        await onSubmit(paymentMethodId);
       } else {
         toast.error('支払い方法の情報を取得できませんでした');
       }
     } catch {
       toast.error('カードの登録中にエラーが発生しました');
     } finally {
-      setSubmitting(false);
+      setConfirming(false);
     }
   };
 
