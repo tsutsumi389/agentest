@@ -32,7 +32,7 @@ export class PaymentMethodController {
       const { userId } = req.params;
       const result =
         await this.paymentMethodService.createSetupIntent(userId);
-      res.json(result);
+      res.json({ setupIntent: result });
     } catch (error) {
       next(error);
     }

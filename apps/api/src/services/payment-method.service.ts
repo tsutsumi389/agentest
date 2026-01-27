@@ -40,25 +40,7 @@ export class PaymentMethodService {
   async createSetupIntent(
     userId: string
   ): Promise<{ clientSecret: string }> {
-    // ユーザー情報取得
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      throw new NotFoundError('User', userId);
-    }
-
-    // 決済顧客IDの取得または作成
-    let customerId = user.paymentCustomerId;
-    if (!customerId) {
-      const customer = await this.paymentGateway.createCustomer(user.email, {
-        userId: user.id,
-      });
-      customerId = customer.id;
-
-      await prisma.user.update({
-        where: { id: userId },
-        data: { paymentCustomerId: customerId },
-      });
-    }
+    const customerId = await this.ensurePaymentCustomer(userId);
 
     const setupIntent =
       await this.paymentGateway.createSetupIntent(customerId);
@@ -82,26 +64,7 @@ export class PaymentMethodService {
     userId: string,
     token: string
   ): Promise<PaymentMethodResponse> {
-    // ユーザー情報取得
-    const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user) {
-      throw new NotFoundError('User', userId);
-    }
-
-    // 決済顧客IDの取得または作成
-    let customerId = user.paymentCustomerId;
-    if (!customerId) {
-      const customer = await this.paymentGateway.createCustomer(user.email, {
-        userId: user.id,
-      });
-      customerId = customer.id;
-
-      // ユーザーに決済顧客IDを保存
-      await prisma.user.update({
-        where: { id: userId },
-        data: { paymentCustomerId: customerId },
-      });
-    }
+    const customerId = await this.ensurePaymentCustomer(userId);
 
     // 決済ゲートウェイに支払い方法を紐付け
     const gatewayResult = await this.paymentGateway.attachPaymentMethod(
@@ -205,6 +168,31 @@ export class PaymentMethodService {
     }
 
     return this.toResponse(updated);
+  }
+
+  /**
+   * 決済顧客IDを取得し、未登録の場合は作成してDBに保存する
+   */
+  private async ensurePaymentCustomer(userId: string): Promise<string> {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundError('User', userId);
+    }
+
+    if (user.paymentCustomerId) {
+      return user.paymentCustomerId;
+    }
+
+    const customer = await this.paymentGateway.createCustomer(user.email, {
+      userId: user.id,
+    });
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { paymentCustomerId: customer.id },
+    });
+
+    return customer.id;
   }
 
   /**
