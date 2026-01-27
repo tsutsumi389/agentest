@@ -39,7 +39,6 @@ export interface CreateSubscriptionParams {
   plan: PersonalPlan;
   billingCycle: BillingCycle;
   paymentMethodId: string;
-  priceId?: string;
 }
 
 /**
@@ -48,7 +47,6 @@ export interface CreateSubscriptionParams {
 export interface UpdateSubscriptionParams {
   plan?: PersonalPlan;
   billingCycle?: BillingCycle;
-  priceId?: string;
   paymentMethodId?: string;
 }
 
@@ -62,6 +60,7 @@ export interface SubscriptionResult {
     | 'active'
     | 'past_due'
     | 'canceled'
+    | 'paused'
     | 'trialing'
     | 'incomplete'
     | 'incomplete_expired';
@@ -81,7 +80,6 @@ export interface PreviewProrationParams {
   currentPlan: PersonalPlan;
   newPlan: PersonalPlan;
   billingCycle: BillingCycle;
-  newPriceId?: string;
 }
 
 /**

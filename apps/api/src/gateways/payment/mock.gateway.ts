@@ -308,12 +308,8 @@ export class MockGateway implements IPaymentGateway {
   // Webhook（モックでは不要だが実装）
   // ============================================
 
-  verifyWebhookSignature(_payload: string, _signature: string): boolean {
-    // モックでは常に検証成功
-    return true;
-  }
-
-  parseWebhookEvent(payload: string): WebhookEvent {
+  verifyAndParseWebhookEvent(payload: string, _signature: string): WebhookEvent {
+    // モックでは署名検証をスキップし、ペイロードをそのままパース
     return JSON.parse(payload) as WebhookEvent;
   }
 

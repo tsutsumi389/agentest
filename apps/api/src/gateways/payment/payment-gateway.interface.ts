@@ -133,12 +133,8 @@ export interface IPaymentGateway {
   // ============================================
 
   /**
-   * Webhook署名を検証
+   * Webhook署名を検証し、検証済みイベントをパースして返す
+   * 署名検証とパースを統合することで、検証済みペイロードのみが使用されることを保証する
    */
-  verifyWebhookSignature(payload: string, signature: string): boolean;
-
-  /**
-   * Webhookイベントをパース
-   */
-  parseWebhookEvent(payload: string): WebhookEvent;
+  verifyAndParseWebhookEvent(payload: string, signature: string): WebhookEvent;
 }

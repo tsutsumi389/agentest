@@ -23,6 +23,17 @@ import type {
 } from './types.js';
 
 /**
+ * Stripeリソース未検出エラーかどうかを判定
+ * ネットワークエラーや認証エラーなどは再throwし、リソース不存在のみnullを返すために使用
+ */
+function isStripeNotFoundError(error: unknown): boolean {
+  return (
+    error instanceof Stripe.errors.StripeInvalidRequestError &&
+    error.statusCode === 404
+  );
+}
+
+/**
  * Stripe決済ゲートウェイ
  */
 export class StripeGateway implements IPaymentGateway {
@@ -68,8 +79,11 @@ export class StripeGateway implements IPaymentGateway {
         createdAt: new Date(customer.created * 1000),
         metadata: (customer.metadata as Record<string, string>) ?? undefined,
       };
-    } catch {
-      return null;
+    } catch (error) {
+      if (isStripeNotFoundError(error)) {
+        return null;
+      }
+      throw error;
     }
   }
 
@@ -203,8 +217,11 @@ export class StripeGateway implements IPaymentGateway {
     try {
       const subscription = await this.stripe.subscriptions.retrieve(subscriptionId);
       return this.toSubscriptionResult(subscription);
-    } catch {
-      return null;
+    } catch (error) {
+      if (isStripeNotFoundError(error)) {
+        return null;
+      }
+      throw error;
     }
   }
 
@@ -215,6 +232,7 @@ export class StripeGateway implements IPaymentGateway {
   async previewProration(
     params: PreviewProrationParams
   ): Promise<ProrationPreview> {
+    // currentPlanはStripe側で自動的に差分計算されるため使用しない
     const subscription = await this.stripe.subscriptions.retrieve(params.subscriptionId);
     const currentItemId = subscription.items.data[0]?.id;
 
@@ -256,25 +274,33 @@ export class StripeGateway implements IPaymentGateway {
     try {
       const invoice = await this.stripe.invoices.retrieve(invoiceId);
       return this.toInvoiceResult(invoice);
-    } catch {
-      return null;
+    } catch (error) {
+      if (isStripeNotFoundError(error)) {
+        return null;
+      }
+      throw error;
     }
   }
 
   async listInvoices(customerId: string): Promise<InvoiceResult[]> {
-    const invoices = await this.stripe.invoices.list({
+    const results: InvoiceResult[] = [];
+    for await (const invoice of this.stripe.invoices.list({
       customer: customerId,
-      limit: 100,
-    });
-    return invoices.data.map((inv) => this.toInvoiceResult(inv));
+    })) {
+      results.push(this.toInvoiceResult(invoice));
+    }
+    return results;
   }
 
   async getInvoicePdf(invoiceId: string): Promise<string | null> {
     try {
       const invoice = await this.stripe.invoices.retrieve(invoiceId);
       return invoice.invoice_pdf ?? null;
-    } catch {
-      return null;
+    } catch (error) {
+      if (isStripeNotFoundError(error)) {
+        return null;
+      }
+      throw error;
     }
   }
 
@@ -282,21 +308,18 @@ export class StripeGateway implements IPaymentGateway {
   // Webhook
   // ============================================
 
-  verifyWebhookSignature(payload: string, signature: string): boolean {
+  verifyAndParseWebhookEvent(payload: string, signature: string): WebhookEvent {
     const webhookSecret = env.STRIPE_WEBHOOK_SECRET;
     if (!webhookSecret) {
       throw new Error('STRIPE_WEBHOOK_SECRET is required');
     }
-    try {
-      this.stripe.webhooks.constructEvent(payload, signature, webhookSecret);
-      return true;
-    } catch {
-      return false;
-    }
-  }
 
-  parseWebhookEvent(payload: string): WebhookEvent {
-    const event = JSON.parse(payload) as Stripe.Event;
+    // 署名検証と同時に検証済みイベントオブジェクトを取得
+    const event = this.stripe.webhooks.constructEvent(
+      payload,
+      signature,
+      webhookSecret
+    );
 
     // StripeイベントタイプをWebhookEventTypeにマッピング
     const typeMap: Record<string, WebhookEventType> = {
@@ -374,10 +397,16 @@ export class StripeGateway implements IPaymentGateway {
       active: 'active',
       past_due: 'past_due',
       canceled: 'canceled',
+      paused: 'paused',
       trialing: 'trialing',
       incomplete: 'incomplete',
       incomplete_expired: 'incomplete_expired',
     };
+
+    const firstItem = sub.items.data[0];
+    if (!firstItem) {
+      throw new Error(`Subscription ${sub.id} has no items`);
+    }
 
     return {
       id: sub.id,
@@ -385,8 +414,8 @@ export class StripeGateway implements IPaymentGateway {
       status: statusMap[sub.status] ?? 'incomplete',
       plan: (sub.metadata.plan as PersonalPlan) ?? 'PRO',
       billingCycle: (sub.metadata.billingCycle as BillingCycle) ?? 'MONTHLY',
-      currentPeriodStart: new Date((sub.items.data[0]?.current_period_start ?? 0) * 1000),
-      currentPeriodEnd: new Date((sub.items.data[0]?.current_period_end ?? 0) * 1000),
+      currentPeriodStart: new Date(firstItem.current_period_start * 1000),
+      currentPeriodEnd: new Date(firstItem.current_period_end * 1000),
       cancelAtPeriodEnd: sub.cancel_at_period_end,
     };
   }
@@ -403,13 +432,14 @@ export class StripeGateway implements IPaymentGateway {
       void: 'void',
     };
 
+    const subscriptionRef = inv.parent?.subscription_details?.subscription;
+    const subscriptionId = subscriptionRef
+      ? (typeof subscriptionRef === 'string' ? subscriptionRef : subscriptionRef.id)
+      : '';
+
     return {
       id: inv.id,
-      subscriptionId: (() => {
-        const sub = inv.parent?.subscription_details?.subscription;
-        if (!sub) return '';
-        return typeof sub === 'string' ? sub : sub.id;
-      })(),
+      subscriptionId,
       customerId: typeof inv.customer === 'string'
         ? inv.customer
         : inv.customer?.id ?? '',
