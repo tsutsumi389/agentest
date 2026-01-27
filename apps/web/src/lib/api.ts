@@ -1924,4 +1924,10 @@ export const paymentMethodsApi = {
     api.put<{ paymentMethod: PaymentMethod }>(
       `/api/users/${userId}/payment-methods/${paymentMethodId}/default`
     ),
+
+  // SetupIntent作成
+  setupIntent: (userId: string) =>
+    api.post<{ setupIntent: { clientSecret: string } }>(
+      `/api/users/${userId}/payment-methods/setup-intent`
+    ),
 };
