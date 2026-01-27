@@ -4,14 +4,17 @@
  */
 
 import type {
+  CreateOrgSubscriptionParams,
   CreateSubscriptionParams,
   Customer,
   InvoiceResult,
+  OrgSubscriptionResult,
   PaymentMethodResult,
   PreviewProrationParams,
   ProrationPreview,
   SetupIntentResult,
   SubscriptionResult,
+  UpdateOrgSubscriptionParams,
   UpdateSubscriptionParams,
   WebhookEvent,
 } from './types.js';
@@ -105,6 +108,33 @@ export interface IPaymentGateway {
    * サブスクリプションを取得
    */
   getSubscription(subscriptionId: string): Promise<SubscriptionResult | null>;
+
+  // ============================================
+  // 組織サブスクリプション管理
+  // ============================================
+
+  /**
+   * 組織サブスクリプションを作成
+   */
+  createOrgSubscription(
+    params: CreateOrgSubscriptionParams
+  ): Promise<OrgSubscriptionResult>;
+
+  /**
+   * 組織サブスクリプションを更新（請求サイクル変更等）
+   */
+  updateOrgSubscription(
+    subscriptionId: string,
+    params: UpdateOrgSubscriptionParams
+  ): Promise<OrgSubscriptionResult>;
+
+  /**
+   * サブスクリプションの数量（メンバー数）を更新
+   */
+  updateSubscriptionQuantity(
+    subscriptionId: string,
+    quantity: number
+  ): Promise<OrgSubscriptionResult>;
 
   // ============================================
   // 日割り計算

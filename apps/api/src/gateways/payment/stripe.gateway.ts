@@ -5,19 +5,22 @@
 
 import Stripe from 'stripe';
 
-import type { BillingCycle, PersonalPlan } from '@agentest/shared';
+import type { BillingCycle, OrgPlan, PersonalPlan } from '@agentest/shared';
 
 import { env } from '../../config/env.js';
 import type { IPaymentGateway } from './payment-gateway.interface.js';
 import type {
+  CreateOrgSubscriptionParams,
   CreateSubscriptionParams,
   Customer,
   InvoiceResult,
+  OrgSubscriptionResult,
   PaymentMethodResult,
   PreviewProrationParams,
   ProrationPreview,
   SetupIntentResult,
   SubscriptionResult,
+  UpdateOrgSubscriptionParams,
   UpdateSubscriptionParams,
   WebhookEvent,
   WebhookEventType,
@@ -243,6 +246,84 @@ export class StripeGateway implements IPaymentGateway {
   }
 
   // ============================================
+  // 組織サブスクリプション管理
+  // ============================================
+
+  async createOrgSubscription(
+    params: CreateOrgSubscriptionParams
+  ): Promise<OrgSubscriptionResult> {
+    const priceId = this.resolveOrgPriceId(params.plan, params.billingCycle);
+
+    const subscription = await this.stripe.subscriptions.create({
+      customer: params.customerId,
+      items: [{ price: priceId, quantity: params.quantity }],
+      default_payment_method: params.paymentMethodId,
+      metadata: {
+        plan: params.plan,
+        billingCycle: params.billingCycle,
+        type: 'organization',
+      },
+    });
+
+    return this.toOrgSubscriptionResult(subscription);
+  }
+
+  async updateOrgSubscription(
+    subscriptionId: string,
+    params: UpdateOrgSubscriptionParams
+  ): Promise<OrgSubscriptionResult> {
+    const subscription = await this.stripe.subscriptions.retrieve(subscriptionId);
+    const currentItemId = subscription.items.data[0]?.id;
+    if (!currentItemId) {
+      throw new Error('Subscription has no items');
+    }
+
+    const updateParams: Stripe.SubscriptionUpdateParams = {
+      proration_behavior: 'create_prorations',
+    };
+
+    if (params.billingCycle !== undefined) {
+      const plan = subscription.metadata.plan as OrgPlan;
+      const newPriceId = this.resolveOrgPriceId(plan, params.billingCycle);
+      updateParams.items = [{ id: currentItemId, price: newPriceId }];
+      updateParams.metadata = {
+        ...subscription.metadata,
+        billingCycle: params.billingCycle,
+      };
+    }
+
+    if (params.quantity !== undefined) {
+      // items が未設定の場合は既存アイテムの数量のみ更新
+      if (!updateParams.items) {
+        updateParams.items = [{ id: currentItemId, quantity: params.quantity }];
+      } else {
+        updateParams.items[0].quantity = params.quantity;
+      }
+    }
+
+    const updated = await this.stripe.subscriptions.update(subscriptionId, updateParams);
+    return this.toOrgSubscriptionResult(updated);
+  }
+
+  async updateSubscriptionQuantity(
+    subscriptionId: string,
+    quantity: number
+  ): Promise<OrgSubscriptionResult> {
+    const subscription = await this.stripe.subscriptions.retrieve(subscriptionId);
+    const currentItemId = subscription.items.data[0]?.id;
+    if (!currentItemId) {
+      throw new Error('Subscription has no items');
+    }
+
+    const updated = await this.stripe.subscriptions.update(subscriptionId, {
+      items: [{ id: currentItemId, quantity }],
+      proration_behavior: 'create_prorations',
+    });
+
+    return this.toOrgSubscriptionResult(updated);
+  }
+
+  // ============================================
   // 日割り計算
   // ============================================
 
@@ -387,6 +468,57 @@ export class StripeGateway implements IPaymentGateway {
       throw new Error('STRIPE_PRICE_PRO_YEARLY is not configured');
     }
     return priceId;
+  }
+
+  /**
+   * 組織プランと請求サイクルからStripe Price IDを解決
+   */
+  private resolveOrgPriceId(_plan: OrgPlan, cycle: BillingCycle): string {
+    // 現在は TEAM プランのみだが、将来の拡張に備えて plan を引数に取る
+    if (cycle === 'MONTHLY') {
+      const priceId = env.STRIPE_PRICE_TEAM_MONTHLY;
+      if (!priceId) {
+        throw new Error('STRIPE_PRICE_TEAM_MONTHLY is not configured');
+      }
+      return priceId;
+    }
+    const priceId = env.STRIPE_PRICE_TEAM_YEARLY;
+    if (!priceId) {
+      throw new Error('STRIPE_PRICE_TEAM_YEARLY is not configured');
+    }
+    return priceId;
+  }
+
+  /**
+   * Stripe Subscriptionを組織サブスクリプション結果型に変換
+   */
+  private toOrgSubscriptionResult(sub: Stripe.Subscription): OrgSubscriptionResult {
+    const statusMap: Record<string, OrgSubscriptionResult['status']> = {
+      active: 'active',
+      past_due: 'past_due',
+      canceled: 'canceled',
+      paused: 'paused',
+      trialing: 'trialing',
+      incomplete: 'incomplete',
+      incomplete_expired: 'incomplete_expired',
+    };
+
+    const firstItem = sub.items.data[0];
+    if (!firstItem) {
+      throw new Error(`Subscription ${sub.id} has no items`);
+    }
+
+    return {
+      id: sub.id,
+      customerId: typeof sub.customer === 'string' ? sub.customer : sub.customer.id,
+      status: statusMap[sub.status] ?? 'incomplete',
+      plan: (sub.metadata.plan as OrgPlan) ?? 'TEAM',
+      billingCycle: (sub.metadata.billingCycle as BillingCycle) ?? 'MONTHLY',
+      currentPeriodStart: new Date(firstItem.current_period_start * 1000),
+      currentPeriodEnd: new Date(firstItem.current_period_end * 1000),
+      cancelAtPeriodEnd: sub.cancel_at_period_end,
+      quantity: firstItem.quantity ?? 1,
+    };
   }
 
   /**
