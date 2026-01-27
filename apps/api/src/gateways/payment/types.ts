@@ -110,6 +110,14 @@ export interface InvoiceResult {
 }
 
 /**
+ * SetupIntent結果
+ */
+export interface SetupIntentResult {
+  id: string;
+  clientSecret: string;
+}
+
+/**
  * Webhookイベント型
  */
 export type WebhookEventType =

@@ -16,6 +16,7 @@ import type {
   PaymentMethodResult,
   PreviewProrationParams,
   ProrationPreview,
+  SetupIntentResult,
   SubscriptionResult,
   UpdateSubscriptionParams,
   WebhookEvent,
@@ -90,6 +91,22 @@ export class StripeGateway implements IPaymentGateway {
   // ============================================
   // 支払い方法管理
   // ============================================
+
+  async createSetupIntent(customerId: string): Promise<SetupIntentResult> {
+    const setupIntent = await this.stripe.setupIntents.create({
+      customer: customerId,
+      payment_method_types: ['card'],
+    });
+
+    if (!setupIntent.client_secret) {
+      throw new Error('SetupIntent client_secret is missing');
+    }
+
+    return {
+      id: setupIntent.id,
+      clientSecret: setupIntent.client_secret,
+    };
+  }
 
   async attachPaymentMethod(
     customerId: string,

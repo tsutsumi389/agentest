@@ -15,6 +15,7 @@ import type {
   PaymentMethodResult,
   PreviewProrationParams,
   ProrationPreview,
+  SetupIntentResult,
   SubscriptionResult,
   UpdateSubscriptionParams,
   WebhookEvent,
@@ -72,6 +73,14 @@ export class MockGateway implements IPaymentGateway {
   // ============================================
   // 支払い方法管理
   // ============================================
+
+  async createSetupIntent(_customerId: string): Promise<SetupIntentResult> {
+    const id = `seti_mock_${randomUUID().slice(0, 8)}`;
+    return {
+      id,
+      clientSecret: `${id}_secret_mock_${randomUUID().slice(0, 8)}`,
+    };
+  }
 
   async attachPaymentMethod(
     customerId: string,

@@ -10,6 +10,7 @@ import type {
   PaymentMethodResult,
   PreviewProrationParams,
   ProrationPreview,
+  SetupIntentResult,
   SubscriptionResult,
   UpdateSubscriptionParams,
   WebhookEvent,
@@ -54,6 +55,11 @@ export interface IPaymentGateway {
    * 支払い方法一覧を取得
    */
   listPaymentMethods(customerId: string): Promise<PaymentMethodResult[]>;
+
+  /**
+   * SetupIntentを作成（Stripe Elements用）
+   */
+  createSetupIntent(customerId: string): Promise<SetupIntentResult>;
 
   /**
    * デフォルト支払い方法を設定

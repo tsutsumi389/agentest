@@ -34,6 +34,38 @@ export class PaymentMethodService {
   }
 
   /**
+   * SetupIntentを作成（Stripe Elements用）
+   * フロントエンドがカード情報を収集するためのclient_secretを返す
+   */
+  async createSetupIntent(
+    userId: string
+  ): Promise<{ clientSecret: string }> {
+    // ユーザー情報取得
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundError('User', userId);
+    }
+
+    // 決済顧客IDの取得または作成
+    let customerId = user.paymentCustomerId;
+    if (!customerId) {
+      const customer = await this.paymentGateway.createCustomer(user.email, {
+        userId: user.id,
+      });
+      customerId = customer.id;
+
+      await prisma.user.update({
+        where: { id: userId },
+        data: { paymentCustomerId: customerId },
+      });
+    }
+
+    const setupIntent =
+      await this.paymentGateway.createSetupIntent(customerId);
+    return { clientSecret: setupIntent.clientSecret };
+  }
+
+  /**
    * ユーザーの支払い方法一覧を取得
    */
   async getPaymentMethods(userId: string): Promise<PaymentMethodResponse[]> {
