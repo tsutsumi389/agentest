@@ -223,40 +223,57 @@ export class MockGateway implements IPaymentGateway {
     subscriptionId: string,
     cancelAtPeriodEnd: boolean
   ): Promise<SubscriptionResult> {
-    const subscription = this.store.subscriptions.get(subscriptionId);
+    // 個人用ストアを検索
+    const personalSub = this.store.subscriptions.get(subscriptionId);
+    // 組織用ストアも検索（Stripe実装ではsubscription IDで統一的にアクセス可能なため）
+    const orgSub = this.store.orgSubscriptions.get(subscriptionId);
+    const subscription = personalSub ?? orgSub;
     if (!subscription) {
       throw new Error('Subscription not found');
     }
 
     if (cancelAtPeriodEnd) {
-      // 期間終了時にキャンセル
       subscription.cancelAtPeriodEnd = true;
     } else {
-      // 即時キャンセル
       subscription.status = 'canceled';
     }
 
-    this.store.subscriptions.set(subscriptionId, subscription);
-    return subscription;
+    if (personalSub) {
+      return personalSub;
+    }
+    return this.orgToSubscriptionResult(orgSub!);
   }
 
   async reactivateSubscription(
     subscriptionId: string
   ): Promise<SubscriptionResult> {
-    const subscription = this.store.subscriptions.get(subscriptionId);
+    const personalSub = this.store.subscriptions.get(subscriptionId);
+    const orgSub = this.store.orgSubscriptions.get(subscriptionId);
+    const subscription = personalSub ?? orgSub;
     if (!subscription) {
       throw new Error('Subscription not found');
     }
 
     subscription.cancelAtPeriodEnd = false;
-    this.store.subscriptions.set(subscriptionId, subscription);
-    return subscription;
+
+    if (personalSub) {
+      return personalSub;
+    }
+    return this.orgToSubscriptionResult(orgSub!);
   }
 
   async getSubscription(
     subscriptionId: string
   ): Promise<SubscriptionResult | null> {
-    return this.store.subscriptions.get(subscriptionId) ?? null;
+    const personalSub = this.store.subscriptions.get(subscriptionId);
+    if (personalSub) {
+      return personalSub;
+    }
+    const orgSub = this.store.orgSubscriptions.get(subscriptionId);
+    if (orgSub) {
+      return this.orgToSubscriptionResult(orgSub);
+    }
+    return null;
   }
 
   // ============================================
@@ -266,6 +283,9 @@ export class MockGateway implements IPaymentGateway {
   async createOrgSubscription(
     params: CreateOrgSubscriptionParams
   ): Promise<OrgSubscriptionResult> {
+    if (params.quantity < 1) {
+      throw new Error('quantity must be at least 1');
+    }
     const id = `sub_mock_${randomUUID().slice(0, 8)}`;
     const now = new Date();
     const periodEnd = this.calculatePeriodEnd(now, params.billingCycle);
@@ -293,6 +313,9 @@ export class MockGateway implements IPaymentGateway {
     subscriptionId: string,
     params: UpdateOrgSubscriptionParams
   ): Promise<OrgSubscriptionResult> {
+    if (params.quantity !== undefined && params.quantity < 1) {
+      throw new Error('quantity must be at least 1');
+    }
     const subscription = this.store.orgSubscriptions.get(subscriptionId);
     if (!subscription) {
       throw new Error('Organization subscription not found');
@@ -313,6 +336,9 @@ export class MockGateway implements IPaymentGateway {
     subscriptionId: string,
     quantity: number
   ): Promise<OrgSubscriptionResult> {
+    if (quantity < 1) {
+      throw new Error('quantity must be at least 1');
+    }
     const subscription = this.store.orgSubscriptions.get(subscriptionId);
     if (!subscription) {
       throw new Error('Organization subscription not found');
@@ -453,6 +479,24 @@ export class MockGateway implements IPaymentGateway {
       createdAt: now,
     };
     this.store.invoices.set(id, invoice);
+  }
+
+  /**
+   * OrgSubscriptionResult を SubscriptionResult に変換
+   * cancelSubscription / reactivateSubscription / getSubscription で
+   * 組織サブスクリプションを SubscriptionResult として返す際に使用
+   */
+  private orgToSubscriptionResult(org: OrgSubscriptionResult): SubscriptionResult {
+    return {
+      id: org.id,
+      customerId: org.customerId,
+      status: org.status,
+      plan: org.plan as unknown as SubscriptionResult['plan'],
+      billingCycle: org.billingCycle,
+      currentPeriodStart: org.currentPeriodStart,
+      currentPeriodEnd: org.currentPeriodEnd,
+      cancelAtPeriodEnd: org.cancelAtPeriodEnd,
+    };
   }
 
   /**

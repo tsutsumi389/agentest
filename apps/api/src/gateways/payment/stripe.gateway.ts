@@ -38,6 +38,19 @@ function isStripeNotFoundError(error: unknown): boolean {
 }
 
 /**
+ * Stripeサブスクリプションステータスを内部ステータスに変換するマッピング
+ */
+const subscriptionStatusMap: Record<string, SubscriptionResult['status']> = {
+  active: 'active',
+  past_due: 'past_due',
+  canceled: 'canceled',
+  paused: 'paused',
+  trialing: 'trialing',
+  incomplete: 'incomplete',
+  incomplete_expired: 'incomplete_expired',
+};
+
+/**
  * Stripe決済ゲートウェイ
  */
 export class StripeGateway implements IPaymentGateway {
@@ -252,7 +265,10 @@ export class StripeGateway implements IPaymentGateway {
   async createOrgSubscription(
     params: CreateOrgSubscriptionParams
   ): Promise<OrgSubscriptionResult> {
-    const priceId = this.resolveOrgPriceId(params.plan, params.billingCycle);
+    if (params.quantity < 1) {
+      throw new Error('quantity must be at least 1');
+    }
+    const priceId = this.resolveOrgPriceId(params.billingCycle);
 
     const subscription = await this.stripe.subscriptions.create({
       customer: params.customerId,
@@ -272,6 +288,9 @@ export class StripeGateway implements IPaymentGateway {
     subscriptionId: string,
     params: UpdateOrgSubscriptionParams
   ): Promise<OrgSubscriptionResult> {
+    if (params.quantity !== undefined && params.quantity < 1) {
+      throw new Error('quantity must be at least 1');
+    }
     const subscription = await this.stripe.subscriptions.retrieve(subscriptionId);
     const currentItemId = subscription.items.data[0]?.id;
     if (!currentItemId) {
@@ -283,8 +302,7 @@ export class StripeGateway implements IPaymentGateway {
     };
 
     if (params.billingCycle !== undefined) {
-      const plan = subscription.metadata.plan as OrgPlan;
-      const newPriceId = this.resolveOrgPriceId(plan, params.billingCycle);
+      const newPriceId = this.resolveOrgPriceId(params.billingCycle);
       updateParams.items = [{ id: currentItemId, price: newPriceId }];
       updateParams.metadata = {
         ...subscription.metadata,
@@ -309,6 +327,9 @@ export class StripeGateway implements IPaymentGateway {
     subscriptionId: string,
     quantity: number
   ): Promise<OrgSubscriptionResult> {
+    if (quantity < 1) {
+      throw new Error('quantity must be at least 1');
+    }
     const subscription = await this.stripe.subscriptions.retrieve(subscriptionId);
     const currentItemId = subscription.items.data[0]?.id;
     if (!currentItemId) {
@@ -471,10 +492,10 @@ export class StripeGateway implements IPaymentGateway {
   }
 
   /**
-   * 組織プランと請求サイクルからStripe Price IDを解決
+   * 組織プランの請求サイクルからStripe Price IDを解決
+   * 現在は TEAM プランのみのため、プラン引数は不要
    */
-  private resolveOrgPriceId(_plan: OrgPlan, cycle: BillingCycle): string {
-    // 現在は TEAM プランのみだが、将来の拡張に備えて plan を引数に取る
+  private resolveOrgPriceId(cycle: BillingCycle): string {
     if (cycle === 'MONTHLY') {
       const priceId = env.STRIPE_PRICE_TEAM_MONTHLY;
       if (!priceId) {
@@ -493,16 +514,6 @@ export class StripeGateway implements IPaymentGateway {
    * Stripe Subscriptionを組織サブスクリプション結果型に変換
    */
   private toOrgSubscriptionResult(sub: Stripe.Subscription): OrgSubscriptionResult {
-    const statusMap: Record<string, OrgSubscriptionResult['status']> = {
-      active: 'active',
-      past_due: 'past_due',
-      canceled: 'canceled',
-      paused: 'paused',
-      trialing: 'trialing',
-      incomplete: 'incomplete',
-      incomplete_expired: 'incomplete_expired',
-    };
-
     const firstItem = sub.items.data[0];
     if (!firstItem) {
       throw new Error(`Subscription ${sub.id} has no items`);
@@ -511,7 +522,7 @@ export class StripeGateway implements IPaymentGateway {
     return {
       id: sub.id,
       customerId: typeof sub.customer === 'string' ? sub.customer : sub.customer.id,
-      status: statusMap[sub.status] ?? 'incomplete',
+      status: subscriptionStatusMap[sub.status] ?? 'incomplete',
       plan: (sub.metadata.plan as OrgPlan) ?? 'TEAM',
       billingCycle: (sub.metadata.billingCycle as BillingCycle) ?? 'MONTHLY',
       currentPeriodStart: new Date(firstItem.current_period_start * 1000),
@@ -542,16 +553,6 @@ export class StripeGateway implements IPaymentGateway {
    * Stripe Subscriptionを内部型に変換
    */
   private toSubscriptionResult(sub: Stripe.Subscription): SubscriptionResult {
-    const statusMap: Record<string, SubscriptionResult['status']> = {
-      active: 'active',
-      past_due: 'past_due',
-      canceled: 'canceled',
-      paused: 'paused',
-      trialing: 'trialing',
-      incomplete: 'incomplete',
-      incomplete_expired: 'incomplete_expired',
-    };
-
     const firstItem = sub.items.data[0];
     if (!firstItem) {
       throw new Error(`Subscription ${sub.id} has no items`);
@@ -560,7 +561,7 @@ export class StripeGateway implements IPaymentGateway {
     return {
       id: sub.id,
       customerId: typeof sub.customer === 'string' ? sub.customer : sub.customer.id,
-      status: statusMap[sub.status] ?? 'incomplete',
+      status: subscriptionStatusMap[sub.status] ?? 'incomplete',
       plan: (sub.metadata.plan as PersonalPlan) ?? 'PRO',
       billingCycle: (sub.metadata.billingCycle as BillingCycle) ?? 'MONTHLY',
       currentPeriodStart: new Date(firstItem.current_period_start * 1000),
