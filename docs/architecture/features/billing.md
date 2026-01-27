@@ -179,12 +179,17 @@ sequenceDiagram
     participant D as Database
 
     U->>F: 支払い方法を追加クリック
-    F->>F: AddPaymentMethodModal表示
+    F->>A: POST /users/:userId/payment-methods/setup-intent
+    A->>G: createSetupIntent()
+    G-->>A: SetupIntent (clientSecret)
+    A-->>F: { setupIntent: { clientSecret } }
+    F->>F: AddPaymentMethodModal表示（Stripe Elements）
     U->>F: カード情報入力
-    F->>S: createToken()
-    S-->>F: token
+    U->>F: 追加ボタンクリック
+    F->>S: stripe.confirmSetup({ clientSecret })
+    S-->>F: SetupIntent 完了（paymentMethod ID 含む）
     F->>A: POST /users/:userId/payment-methods
-    A->>G: attachPaymentMethod(token)
+    A->>G: attachPaymentMethod(paymentMethodId)
     G-->>A: paymentMethod info
     A->>D: PaymentMethod作成
     A-->>F: paymentMethod
@@ -260,21 +265,26 @@ sequenceDiagram
 apps/api/src/
 ├── gateways/payment/
 │   ├── payment-gateway.interface.ts   # 決済ゲートウェイインターフェース
-│   ├── mock-payment-gateway.ts        # テスト用モック実装
-│   └── stripe-gateway.ts              # Stripe実装（スケルトン）
+│   ├── mock.gateway.ts                # テスト用モック実装
+│   ├── stripe.gateway.ts              # Stripe実装
+│   ├── types.ts                       # ゲートウェイ共通型定義
+│   └── index.ts                       # ゲートウェイファクトリ（PAYMENT_GATEWAY環境変数で切替）
 ├── services/
 │   ├── subscription.service.ts        # サブスクリプションビジネスロジック
-│   └── payment-method.service.ts      # 支払い方法ビジネスロジック
+│   ├── payment-method.service.ts      # 支払い方法ビジネスロジック
+│   └── webhook.service.ts             # Webhook イベント処理
 ├── controllers/
 │   ├── subscription.controller.ts     # サブスクリプションAPI
 │   ├── payment-method.controller.ts   # 支払い方法API
-│   └── plans.controller.ts            # プランAPI
+│   ├── plans.controller.ts            # プランAPI
+│   └── webhook.controller.ts          # Webhook API
 ├── repositories/
 │   ├── subscription.repository.ts     # サブスクリプションDB操作
 │   └── payment-method.repository.ts   # 支払い方法DB操作
 └── routes/
     ├── billing.ts                     # /api/plans ルート
-    └── users.ts                       # /api/users/:userId/* ルート
+    ├── users.ts                       # /api/users/:userId/* ルート
+    └── webhooks.ts                    # /webhooks/stripe ルート
 ```
 
 ### フロントエンド
@@ -282,7 +292,8 @@ apps/api/src/
 ```
 apps/web/src/
 ├── lib/
-│   └── api.ts                         # subscriptionApi, paymentMethodsApi, plansApi
+│   ├── api.ts                         # subscriptionApi, paymentMethodsApi, plansApi
+│   └── stripe.ts                      # Stripe.js 初期化ユーティリティ（loadStripe シングルトン）
 ├── components/settings/
 │   ├── BillingSettings.tsx            # 請求タブコンテナ
 │   ├── CurrentPlanCard.tsx            # 現在のプラン表示
@@ -315,17 +326,63 @@ packages/shared/src/
 
 ### 環境変数
 
+#### バックエンド（apps/api）
+
 | 変数名 | 説明 | デフォルト |
 |--------|------|----------|
+| `PAYMENT_GATEWAY` | 決済ゲートウェイの切替（`mock` / `stripe`） | `mock` |
 | `STRIPE_SECRET_KEY` | Stripe シークレットキー | - |
-| `STRIPE_PRICE_PRO_MONTHLY` | PRO月払いの Price ID | `price_pro_monthly` |
-| `STRIPE_PRICE_PRO_YEARLY` | PRO年払いの Price ID | `price_pro_yearly` |
+| `STRIPE_WEBHOOK_SECRET` | Stripe Webhook 署名シークレット | - |
+| `STRIPE_PRICE_PRO_MONTHLY` | PRO月払いの Price ID | - |
+| `STRIPE_PRICE_PRO_YEARLY` | PRO年払いの Price ID | - |
+
+#### フロントエンド（apps/web）
+
+| 変数名 | 説明 | デフォルト |
+|--------|------|----------|
+| `VITE_PAYMENT_GATEWAY` | 決済ゲートウェイの切替（`mock` / `stripe`） | `mock` |
+| `VITE_STRIPE_PUBLISHABLE_KEY` | Stripe 公開可能キー | - |
 
 ### レート制限
 
 | 対象 | 制限 |
 |------|------|
 | 課金 API | 10 req / 1分 |
+
+## Webhook 処理
+
+Stripe からの Webhook イベントを受信し、データベースの状態を同期します。
+
+### エンドポイント
+
+`POST /webhooks/stripe` — `express.raw()` で raw body を受信し、`stripe-signature` ヘッダーで署名を検証します。
+
+### 処理するイベント
+
+| イベント | 処理内容 |
+|---------|---------|
+| `invoice.paid` | Invoice レコードを upsert（支払い完了として記録） |
+| `invoice.payment_failed` | Invoice レコードを upsert（支払い失敗として記録）、Subscription ステータスを `PAST_DUE` に更新 |
+| `customer.subscription.created` | Subscription レコードを作成、ユーザーのプランを更新 |
+| `customer.subscription.updated` | Subscription レコードを更新（ステータス、請求期間、キャンセル予約等） |
+| `customer.subscription.deleted` | Subscription レコードのステータスを `CANCELED` に更新、ユーザーのプランを `FREE` に戻す |
+
+### 処理フロー
+
+```mermaid
+sequenceDiagram
+    participant S as Stripe
+    participant A as API（/webhooks/stripe）
+    participant W as WebhookService
+    participant D as Database
+
+    S->>A: POST /webhooks/stripe（署名付き）
+    A->>A: stripe-signature で署名検証
+    A->>W: handleEvent(event)
+    W->>W: イベントタイプで分岐
+    W->>D: DB更新（トランザクション）
+    A-->>S: 200 OK
+```
 
 ## 関連機能
 
