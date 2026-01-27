@@ -10,7 +10,6 @@ import {
   type BillingCycle,
   type PersonalPlan,
   PERSONAL_PLAN_PRICING,
-  getStripePriceId,
 } from '@agentest/shared';
 import { SubscriptionRepository } from '../repositories/subscription.repository.js';
 import { PaymentMethodRepository } from '../repositories/payment-method.repository.js';
@@ -118,16 +117,12 @@ export class SubscriptionService {
       });
     }
 
-    // Stripe Price IDを取得
-    const priceId = getStripePriceId(plan, billingCycle);
-
     // 決済ゲートウェイでサブスクリプションを作成
     const gatewayResult = await this.paymentGateway.createSubscription({
       customerId,
       plan,
       billingCycle,
       paymentMethodId: paymentMethod.externalId,
-      priceId: priceId ?? undefined,
     });
 
     // DBにサブスクリプションを作成/更新（externalIdを保存）
@@ -254,7 +249,6 @@ export class SubscriptionService {
     // 既存サブスクリプションがある場合は日割り計算
     // 実際の本番環境ではStripeのpreviewProrationを使用
     const currentPlan = subscription.plan as PersonalPlan;
-    const priceId = getStripePriceId(plan, billingCycle);
 
     // ユーザー情報取得
     const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -276,7 +270,6 @@ export class SubscriptionService {
         currentPlan,
         newPlan: plan,
         billingCycle,
-        newPriceId: priceId ?? undefined,
       });
 
       return {

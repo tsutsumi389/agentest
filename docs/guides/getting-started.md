@@ -41,6 +41,18 @@ GITHUB_CLIENT_ID=
 GITHUB_CLIENT_SECRET=
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
+
+# Stripe（デフォルトは mock ゲートウェイのため設定不要）
+PAYMENT_GATEWAY=mock
+# Stripe を使う場合は以下を設定:
+# PAYMENT_GATEWAY=stripe
+# STRIPE_SECRET_KEY=sk_test_xxx
+# STRIPE_PUBLISHABLE_KEY=pk_test_xxx
+# STRIPE_WEBHOOK_SECRET=whsec_xxx
+# STRIPE_PRICE_PRO_MONTHLY=price_xxx
+# STRIPE_PRICE_PRO_YEARLY=price_xxx
+# VITE_PAYMENT_GATEWAY=stripe
+# VITE_STRIPE_PUBLISHABLE_KEY=pk_test_xxx
 ```
 
 ### 3. Docker用シンボリックリンクを作成

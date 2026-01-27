@@ -16,6 +16,7 @@ import notificationRoutes from './notifications.js';
 import internalRoutes from './internal.js';
 import oauthRoutes from './oauth.js';
 import billingRoutes from './billing.js';
+import webhookRoutes from './webhooks.js';
 import adminAuthRoutes from './admin/auth.js';
 import adminDashboardRoutes from './admin/dashboard.js';
 import adminUsersRoutes from './admin/users.js';
@@ -47,6 +48,9 @@ router.use('/api/notifications', notificationRoutes);
 
 // 課金関連ルート
 router.use('/api', billingRoutes);
+
+// Webhookルート（認証不要）
+router.use('/webhooks', webhookRoutes);
 
 // OAuth 2.1 エンドポイント (RFC 9728)
 router.use('/oauth', oauthRoutes);

@@ -10,6 +10,7 @@ import type {
   PaymentMethodResult,
   PreviewProrationParams,
   ProrationPreview,
+  SetupIntentResult,
   SubscriptionResult,
   UpdateSubscriptionParams,
   WebhookEvent,
@@ -54,6 +55,11 @@ export interface IPaymentGateway {
    * 支払い方法一覧を取得
    */
   listPaymentMethods(customerId: string): Promise<PaymentMethodResult[]>;
+
+  /**
+   * SetupIntentを作成（Stripe Elements用）
+   */
+  createSetupIntent(customerId: string): Promise<SetupIntentResult>;
 
   /**
    * デフォルト支払い方法を設定
@@ -133,12 +139,8 @@ export interface IPaymentGateway {
   // ============================================
 
   /**
-   * Webhook署名を検証
+   * Webhook署名を検証し、検証済みイベントをパースして返す
+   * 署名検証とパースを統合することで、検証済みペイロードのみが使用されることを保証する
    */
-  verifyWebhookSignature(payload: string, signature: string): boolean;
-
-  /**
-   * Webhookイベントをパース
-   */
-  parseWebhookEvent(payload: string): WebhookEvent;
+  verifyAndParseWebhookEvent(payload: string, signature: string): WebhookEvent;
 }

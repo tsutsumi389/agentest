@@ -33,8 +33,7 @@ interface MockPaymentGateway {
   getInvoice: Mock;
   listInvoices: Mock;
   getInvoicePdf: Mock;
-  verifyWebhookSignature: Mock;
-  parseWebhookEvent: Mock;
+  verifyAndParseWebhookEvent: Mock;
 }
 
 // vi.hoistedでモックインスタンスを作成（vi.mockより先に初期化される）
@@ -66,8 +65,7 @@ const { mockSubscriptionRepo, mockPaymentMethodRepo, mockPaymentGateway, mockPri
     getInvoice: vi.fn(),
     listInvoices: vi.fn(),
     getInvoicePdf: vi.fn(),
-    verifyWebhookSignature: vi.fn(),
-    parseWebhookEvent: vi.fn(),
+    verifyAndParseWebhookEvent: vi.fn(),
   } as MockPaymentGateway,
   mockPrisma: {
     user: {

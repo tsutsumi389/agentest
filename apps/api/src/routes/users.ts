@@ -99,6 +99,12 @@ router.post('/:userId/subscription/reactivate', billingMiddleware, subscriptionC
 // ============================================
 
 /**
+ * SetupIntent作成（Stripe Elements用）
+ * POST /api/users/:userId/payment-methods/setup-intent
+ */
+router.post('/:userId/payment-methods/setup-intent', billingMiddleware, paymentMethodController.createSetupIntent);
+
+/**
  * 支払い方法一覧取得
  * GET /api/users/:userId/payment-methods
  */

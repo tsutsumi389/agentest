@@ -20,6 +20,25 @@ export class PaymentMethodController {
   private paymentMethodService = new PaymentMethodService();
 
   /**
+   * SetupIntent作成
+   * POST /api/users/:userId/payment-methods/setup-intent
+   */
+  createSetupIntent = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { userId } = req.params;
+      const result =
+        await this.paymentMethodService.createSetupIntent(userId);
+      res.json({ setupIntent: result });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
    * 支払い方法一覧取得
    * GET /api/users/:userId/payment-methods
    */

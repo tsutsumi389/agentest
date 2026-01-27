@@ -318,11 +318,37 @@ GET /api/users/:userId/payment-methods
 
 ---
 
+### SetupIntent 作成
+
+**認証必要** / **オーナーシップチェック** / **レート制限あり**
+
+Stripe Elements でカード情報を安全に収集するための SetupIntent を作成します。
+
+```
+POST /api/users/:userId/payment-methods/setup-intent
+```
+
+#### レスポンス（200 OK）
+
+```json
+{
+  "setupIntent": {
+    "clientSecret": "seti_xxx_secret_xxx"
+  }
+}
+```
+
+| フィールド | 説明 |
+|-----------|------|
+| `setupIntent.clientSecret` | フロントエンドで `stripe.confirmSetup()` に渡すクライアントシークレット |
+
+---
+
 ### 支払い方法追加
 
 **認証必要** / **オーナーシップチェック** / **レート制限あり**
 
-新しい支払い方法（クレジットカード）を追加します。
+新しい支払い方法（クレジットカード）を追加します。フロントエンドで SetupIntent を完了した後、取得した `paymentMethodId` を送信します。
 
 ```
 POST /api/users/:userId/payment-methods
@@ -332,13 +358,13 @@ POST /api/users/:userId/payment-methods
 
 ```json
 {
-  "token": "tok_visa_xxxxxxxxxxxx"
+  "paymentMethodId": "pm_xxxxxxxxxxxx"
 }
 ```
 
 | フィールド | 型 | 必須 | 説明 |
 |-----------|------|------|------|
-| `token` | string | Yes | 決済サービス（Stripe）から取得したトークン |
+| `paymentMethodId` | string | Yes | Stripe の `confirmSetup()` で取得した PaymentMethod ID |
 
 #### レスポンス（201 Created）
 
@@ -363,7 +389,7 @@ POST /api/users/:userId/payment-methods
 
 | コード | 説明 |
 |--------|------|
-| 400 | トークンが無効 |
+| 400 | PaymentMethod ID が無効 |
 
 ---
 
@@ -422,6 +448,44 @@ PUT /api/users/:userId/payment-methods/:paymentMethodId/default
 | コード | 説明 |
 |--------|------|
 | 404 | 支払い方法が見つからない |
+
+---
+
+## Webhook
+
+### Stripe Webhook
+
+**認証不要**（Stripe 署名による検証）
+
+Stripe からのイベント通知を受信します。`express.raw()` で raw body を受信し、`stripe-signature` ヘッダーで署名を検証します。
+
+```
+POST /webhooks/stripe
+```
+
+#### ヘッダー
+
+| ヘッダー | 説明 |
+|---------|------|
+| `stripe-signature` | Stripe が付与する署名ヘッダー |
+| `Content-Type` | `application/json` |
+
+#### 処理するイベント
+
+| イベント | 処理内容 |
+|---------|---------|
+| `invoice.paid` | 支払い完了の記録 |
+| `invoice.payment_failed` | 支払い失敗の記録、サブスクリプションステータス更新 |
+| `customer.subscription.created` | サブスクリプション作成 |
+| `customer.subscription.updated` | サブスクリプション更新 |
+| `customer.subscription.deleted` | サブスクリプションキャンセル、プランを FREE に戻す |
+
+#### レスポンス
+
+| コード | 説明 |
+|--------|------|
+| 200 | イベント処理成功 |
+| 400 | 署名検証失敗 |
 
 ---
 
