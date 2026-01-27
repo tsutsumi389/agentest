@@ -55,6 +55,13 @@ const envSchema = z.object({
   S3_BUCKET: z.string().default('agentest'),
   S3_REGION: z.string().default('us-east-1'),
 
+  // Payment (Stripe)
+  PAYMENT_GATEWAY: z.enum(['mock', 'stripe']).default('mock'),
+  STRIPE_SECRET_KEY: z.string().optional(),
+  STRIPE_WEBHOOK_SECRET: z.string().optional(),
+  STRIPE_PRICE_PRO_MONTHLY: z.string().optional(),
+  STRIPE_PRICE_PRO_YEARLY: z.string().optional(),
+
   // SMTP（メール送信）
   SMTP_HOST: z.string().default('mailpit'),       // dev/staging: mailpit
   SMTP_PORT: z.coerce.number().default(1025),     // dev/staging: 1025
