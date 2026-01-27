@@ -103,15 +103,19 @@ export function getStripePriceId(
 export type OrgPlan = 'TEAM';
 
 export interface OrgPlanPricing extends PlanPricing {
-  /** ユーザーあたりの単価（月額） */
+  /** 1ユーザーあたりの月額単価。課金額は pricePerUser * メンバー数 で計算する */
   pricePerUser: number;
 }
 
 /**
  * 組織プラン料金設定
+ * 組織プランはユーザー単価制（基本料金なし）。
+ * monthlyPrice/yearlyPrice は1ユーザーあたりの単価を表す。
+ * 組織全体の課金額は pricePerUser * メンバー数 で算出する。
  */
 export const ORG_PLAN_PRICING: Record<OrgPlan, OrgPlanPricing> = {
   TEAM: {
+    // 1ユーザーあたりの料金（基本料金なし）
     monthlyPrice: 1200,
     yearlyPrice: 12000,
     pricePerUser: 1200,
