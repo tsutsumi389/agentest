@@ -24,12 +24,17 @@ export class WebhookController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      // express.raw()で受け取ったBufferを文字列に変換
+      // express.raw()で受け取ったBufferまたは文字列をそのまま使用
+      // JSON.stringifyでの再構築は署名検証が必ず失敗するため不可
+      if (!Buffer.isBuffer(req.body) && typeof req.body !== 'string') {
+        res.status(400).json({
+          error: 'Invalid request body: raw body is required for webhook signature verification',
+        });
+        return;
+      }
       const rawBody = Buffer.isBuffer(req.body)
         ? req.body.toString('utf8')
-        : typeof req.body === 'string'
-          ? req.body
-          : JSON.stringify(req.body);
+        : req.body;
 
       const signature = req.headers['stripe-signature'];
       if (!signature || typeof signature !== 'string') {

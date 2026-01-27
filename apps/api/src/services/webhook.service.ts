@@ -7,6 +7,7 @@ import { prisma } from '@agentest/db';
 import type { WebhookEvent } from '../gateways/payment/types.js';
 import { SubscriptionRepository } from '../repositories/subscription.repository.js';
 import { InvoiceRepository } from '../repositories/invoice.repository.js';
+import { UserRepository } from '../repositories/user.repository.js';
 import { logger } from '../utils/logger.js';
 
 /**
@@ -28,16 +29,19 @@ interface StripeInvoiceData {
 
 /**
  * Stripe Subscriptionオブジェクトの型（webhookイベントデータ用）
+ * Stripe API 2025-03-31以降: current_period_start/endはitems.data[]に存在
  */
 interface StripeSubscriptionData {
   id: string;
   customer: string;
   status: string;
   cancel_at_period_end: boolean;
+  current_period_start?: number;
+  current_period_end?: number;
   items: {
     data: Array<{
-      current_period_start: number;
-      current_period_end: number;
+      current_period_start?: number;
+      current_period_end?: number;
     }>;
   };
   metadata: {
@@ -53,6 +57,7 @@ interface StripeSubscriptionData {
 export class WebhookService {
   private subscriptionRepo = new SubscriptionRepository();
   private invoiceRepo = new InvoiceRepository();
+  private userRepo = new UserRepository();
 
   /**
    * イベントディスパッチャ
@@ -79,6 +84,12 @@ export class WebhookService {
         break;
       case 'customer.subscription.deleted':
         await this.handleSubscriptionDeleted(event.data.object as StripeSubscriptionData);
+        break;
+      default:
+        logger.warn('Unhandled webhook event type', {
+          eventId: event.id,
+          eventType: event.type,
+        });
         break;
     }
   }
@@ -112,7 +123,9 @@ export class WebhookService {
       status: 'PAID',
       periodStart: new Date(data.period_start * 1000),
       periodEnd: new Date(data.period_end * 1000),
-      dueDate: data.due_date ? new Date(data.due_date * 1000) : new Date(),
+      dueDate: data.due_date
+        ? new Date(data.due_date * 1000)
+        : new Date(data.period_start * 1000),
       pdfUrl: data.invoice_pdf,
     });
 
@@ -125,6 +138,7 @@ export class WebhookService {
   /**
    * 支払い失敗
    * Invoiceレコードを作成/更新（status=FAILED）、サブスクリプションをPAST_DUEに更新
+   * トランザクションで一貫性を保証
    */
   private async handleInvoicePaymentFailed(data: StripeInvoiceData): Promise<void> {
     const subscriptionExternalId = data.subscription;
@@ -143,21 +157,41 @@ export class WebhookService {
     }
 
     const invoiceNumber = data.number ?? data.id;
-    await this.invoiceRepo.upsertByInvoiceNumber(invoiceNumber, {
-      subscriptionId: subscription.id,
-      invoiceNumber,
-      amount: data.amount_due,
-      currency: data.currency,
-      status: 'FAILED',
-      periodStart: new Date(data.period_start * 1000),
-      periodEnd: new Date(data.period_end * 1000),
-      dueDate: data.due_date ? new Date(data.due_date * 1000) : new Date(),
-      pdfUrl: data.invoice_pdf,
-    });
 
-    // サブスクリプションのステータスをPAST_DUEに更新
-    await this.subscriptionRepo.update(subscription.id, {
-      status: 'PAST_DUE',
+    // InvoiceのupsertとSubscriptionのstatus更新をトランザクションで実行
+    await prisma.$transaction(async (tx) => {
+      await tx.invoice.upsert({
+        where: { invoiceNumber },
+        create: {
+          subscriptionId: subscription.id,
+          invoiceNumber,
+          amount: data.amount_due,
+          currency: data.currency,
+          status: 'FAILED',
+          periodStart: new Date(data.period_start * 1000),
+          periodEnd: new Date(data.period_end * 1000),
+          dueDate: data.due_date
+            ? new Date(data.due_date * 1000)
+            : new Date(data.period_start * 1000),
+          pdfUrl: data.invoice_pdf ?? null,
+        },
+        update: {
+          amount: data.amount_due,
+          currency: data.currency,
+          status: 'FAILED',
+          periodStart: new Date(data.period_start * 1000),
+          periodEnd: new Date(data.period_end * 1000),
+          dueDate: data.due_date
+            ? new Date(data.due_date * 1000)
+            : new Date(data.period_start * 1000),
+          pdfUrl: data.invoice_pdf ?? null,
+        },
+      });
+
+      await tx.subscription.update({
+        where: { id: subscription.id },
+        data: { status: 'PAST_DUE' },
+      });
     });
 
     logger.info('Invoice payment failed processed', {
@@ -189,9 +223,9 @@ export class WebhookService {
       return;
     }
 
-    const firstItem = data.items.data[0];
-    if (!firstItem) {
-      logger.warn('Subscription has no items', { externalId: data.id });
+    const period = this.extractPeriod(data);
+    if (!period) {
+      logger.warn('Subscription has no period data', { externalId: data.id });
       return;
     }
 
@@ -202,8 +236,8 @@ export class WebhookService {
       externalId: data.id,
       plan,
       billingCycle,
-      currentPeriodStart: new Date(firstItem.current_period_start * 1000),
-      currentPeriodEnd: new Date(firstItem.current_period_end * 1000),
+      currentPeriodStart: period.start,
+      currentPeriodEnd: period.end,
       status: this.mapSubscriptionStatus(data.status),
       cancelAtPeriodEnd: data.cancel_at_period_end,
     });
@@ -226,9 +260,9 @@ export class WebhookService {
       return;
     }
 
-    const firstItem = data.items.data[0];
-    if (!firstItem) {
-      logger.warn('Subscription has no items', { externalId: data.id });
+    const period = this.extractPeriod(data);
+    if (!period) {
+      logger.warn('Subscription has no period data', { externalId: data.id });
       return;
     }
 
@@ -236,8 +270,8 @@ export class WebhookService {
       plan: this.mapPlan(data.metadata.plan),
       billingCycle: this.mapBillingCycle(data.metadata.billingCycle),
       status: this.mapSubscriptionStatus(data.status),
-      currentPeriodStart: new Date(firstItem.current_period_start * 1000),
-      currentPeriodEnd: new Date(firstItem.current_period_end * 1000),
+      currentPeriodStart: period.start,
+      currentPeriodEnd: period.end,
       cancelAtPeriodEnd: data.cancel_at_period_end,
     });
 
@@ -266,10 +300,7 @@ export class WebhookService {
 
     // ユーザーのプランをFREEに更新
     if (subscription.userId) {
-      await prisma.user.update({
-        where: { id: subscription.userId },
-        data: { plan: 'FREE' },
-      });
+      await this.userRepo.updatePlan(subscription.userId, 'FREE');
     }
 
     logger.info('Subscription deleted via webhook', {
@@ -277,6 +308,31 @@ export class WebhookService {
       subscriptionId: subscription.id,
       userId: subscription.userId,
     });
+  }
+
+  /**
+   * StripeSubscriptionDataから期間情報を取得
+   * Stripe API 2025-03-31以降: items.data[]にperiodが存在
+   * 旧API: Subscription直下にperiodが存在
+   * 両方にフォールバック対応
+   */
+  private extractPeriod(
+    data: StripeSubscriptionData
+  ): { start: Date; end: Date } | null {
+    const firstItem = data.items.data[0];
+    const periodStart =
+      firstItem?.current_period_start ?? data.current_period_start;
+    const periodEnd =
+      firstItem?.current_period_end ?? data.current_period_end;
+
+    if (periodStart === undefined || periodEnd === undefined) {
+      return null;
+    }
+
+    return {
+      start: new Date(periodStart * 1000),
+      end: new Date(periodEnd * 1000),
+    };
   }
 
   /**
@@ -304,6 +360,8 @@ export class WebhookService {
 
   /**
    * StripeのサブスクリプションステータスをDBのSubscriptionStatusにマッピング
+   * incomplete / incomplete_expired / paused はDBスキーマに対応するステータスがないため
+   * 警告ログを出力しACTIVEにフォールバックする
    */
   private mapSubscriptionStatus(
     status: string
@@ -318,6 +376,9 @@ export class WebhookService {
       case 'trialing':
         return 'TRIALING';
       default:
+        logger.warn('Unknown subscription status, defaulting to ACTIVE', {
+          stripeStatus: status,
+        });
         return 'ACTIVE';
     }
   }

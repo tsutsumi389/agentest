@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { WebhookEvent } from '../../gateways/payment/types.js';
 
 // vi.hoisted() でモックオブジェクトを事前定義（vi.mockのホイスティング対応）
-const { mockSubscriptionRepo, mockInvoiceRepo, mockPrisma } = vi.hoisted(() => ({
+const { mockSubscriptionRepo, mockInvoiceRepo, mockUserRepo, mockPrisma } = vi.hoisted(() => ({
   mockSubscriptionRepo: {
     findByUserId: vi.fn(),
     findByOrganizationId: vi.fn(),
@@ -19,10 +19,15 @@ const { mockSubscriptionRepo, mockInvoiceRepo, mockPrisma } = vi.hoisted(() => (
     findByInvoiceNumber: vi.fn(),
     upsertByInvoiceNumber: vi.fn(),
   },
+  mockUserRepo: {
+    findById: vi.fn(),
+    findByEmail: vi.fn(),
+    update: vi.fn(),
+    updatePlan: vi.fn(),
+    softDelete: vi.fn(),
+  },
   mockPrisma: {
-    user: {
-      update: vi.fn(),
-    },
+    $transaction: vi.fn(),
   },
 }));
 
@@ -32,6 +37,10 @@ vi.mock('../../repositories/subscription.repository.js', () => ({
 
 vi.mock('../../repositories/invoice.repository.js', () => ({
   InvoiceRepository: vi.fn().mockImplementation(() => mockInvoiceRepo),
+}));
+
+vi.mock('../../repositories/user.repository.js', () => ({
+  UserRepository: vi.fn().mockImplementation(() => mockUserRepo),
 }));
 
 vi.mock('@agentest/db', () => ({
@@ -116,6 +125,40 @@ describe('WebhookService', () => {
       });
     });
 
+    it('due_dateがnullの場合はperiod_startをdueDateとして使用する', async () => {
+      mockSubscriptionRepo.findByExternalId.mockResolvedValue(mockSubscription);
+      mockInvoiceRepo.upsertByInvoiceNumber.mockResolvedValue({});
+
+      const event: WebhookEvent = {
+        id: 'evt_1',
+        type: 'invoice.paid',
+        data: {
+          object: {
+            id: 'inv_1',
+            number: 'INV-001',
+            subscription: 'sub_stripe_123',
+            customer: 'cus_1',
+            amount_due: 1000,
+            currency: 'jpy',
+            status: 'paid',
+            period_start: 1704067200,
+            period_end: 1706745600,
+            due_date: null,
+            invoice_pdf: null,
+          },
+        },
+        createdAt: new Date(),
+      };
+
+      await service.handleEvent(event);
+
+      expect(mockInvoiceRepo.upsertByInvoiceNumber).toHaveBeenCalledWith('INV-001',
+        expect.objectContaining({
+          dueDate: new Date(1704067200 * 1000),
+        }),
+      );
+    });
+
     it('サブスクリプションが見つからない場合はスキップする', async () => {
       mockSubscriptionRepo.findByExternalId.mockResolvedValue(null);
 
@@ -175,10 +218,21 @@ describe('WebhookService', () => {
   });
 
   describe('handleEvent - invoice.payment_failed', () => {
-    it('支払い失敗時にInvoiceをFAILEDで作成し、サブスクリプションをPAST_DUEに更新する', async () => {
+    it('支払い失敗時にトランザクションでInvoice作成とサブスクリプション更新を実行する', async () => {
       mockSubscriptionRepo.findByExternalId.mockResolvedValue(mockSubscription);
-      mockInvoiceRepo.upsertByInvoiceNumber.mockResolvedValue({});
-      mockSubscriptionRepo.update.mockResolvedValue({});
+      // $transactionはコールバック関数を受け取って実行する
+      mockPrisma.$transaction.mockImplementation(async (fn: (tx: unknown) => Promise<void>) => {
+        const mockTx = {
+          invoice: {
+            upsert: vi.fn().mockResolvedValue({}),
+          },
+          subscription: {
+            update: vi.fn().mockResolvedValue({}),
+          },
+        };
+        await fn(mockTx);
+        return mockTx;
+      });
 
       const event: WebhookEvent = {
         id: 'evt_2',
@@ -203,12 +257,38 @@ describe('WebhookService', () => {
 
       await service.handleEvent(event);
 
-      expect(mockInvoiceRepo.upsertByInvoiceNumber).toHaveBeenCalledWith('INV-002', expect.objectContaining({
-        status: 'FAILED',
-      }));
-      expect(mockSubscriptionRepo.update).toHaveBeenCalledWith('sub-db-1', {
-        status: 'PAST_DUE',
-      });
+      // トランザクションが呼ばれたことを確認
+      expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1);
+      expect(mockSubscriptionRepo.findByExternalId).toHaveBeenCalledWith('sub_stripe_123');
+    });
+
+    it('サブスクリプションが見つからない場合はスキップする', async () => {
+      mockSubscriptionRepo.findByExternalId.mockResolvedValue(null);
+
+      const event: WebhookEvent = {
+        id: 'evt_2',
+        type: 'invoice.payment_failed',
+        data: {
+          object: {
+            id: 'inv_2',
+            number: 'INV-002',
+            subscription: 'sub_unknown',
+            customer: 'cus_1',
+            amount_due: 1000,
+            currency: 'jpy',
+            status: 'open',
+            period_start: 1704067200,
+            period_end: 1706745600,
+            due_date: null,
+            invoice_pdf: null,
+          },
+        },
+        createdAt: new Date(),
+      };
+
+      await service.handleEvent(event);
+
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled();
     });
   });
 
@@ -396,7 +476,7 @@ describe('WebhookService', () => {
     it('サブスクリプションをCANCELEDにし、ユーザープランをFREEに更新する', async () => {
       mockSubscriptionRepo.findByExternalId.mockResolvedValue(mockSubscription);
       mockSubscriptionRepo.update.mockResolvedValue({});
-      mockPrisma.user.update.mockResolvedValue({});
+      mockUserRepo.updatePlan.mockResolvedValue({});
 
       const event: WebhookEvent = {
         id: 'evt_5',
@@ -424,10 +504,7 @@ describe('WebhookService', () => {
       expect(mockSubscriptionRepo.update).toHaveBeenCalledWith('sub-db-1', {
         status: 'CANCELED',
       });
-      expect(mockPrisma.user.update).toHaveBeenCalledWith({
-        where: { id: 'user-1' },
-        data: { plan: 'FREE' },
-      });
+      expect(mockUserRepo.updatePlan).toHaveBeenCalledWith('user-1', 'FREE');
     });
 
     it('サブスクリプションが見つからない場合はスキップする', async () => {
@@ -457,7 +534,7 @@ describe('WebhookService', () => {
       await service.handleEvent(event);
 
       expect(mockSubscriptionRepo.update).not.toHaveBeenCalled();
-      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+      expect(mockUserRepo.updatePlan).not.toHaveBeenCalled();
     });
 
     it('userIdが無いサブスクリプション削除時はユーザー更新をスキップする', async () => {
@@ -491,7 +568,7 @@ describe('WebhookService', () => {
       expect(mockSubscriptionRepo.update).toHaveBeenCalledWith('sub-db-1', {
         status: 'CANCELED',
       });
-      expect(mockPrisma.user.update).not.toHaveBeenCalled();
+      expect(mockUserRepo.updatePlan).not.toHaveBeenCalled();
     });
   });
 });
