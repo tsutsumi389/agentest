@@ -94,6 +94,12 @@ services:
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       INTERNAL_API_SECRET: ${INTERNAL_API_SECRET}
+      # Stripe決済
+      PAYMENT_GATEWAY: ${PAYMENT_GATEWAY:-stripe}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
+      STRIPE_PRICE_PRO_MONTHLY: ${STRIPE_PRICE_PRO_MONTHLY}
+      STRIPE_PRICE_PRO_YEARLY: ${STRIPE_PRICE_PRO_YEARLY}
       API_PORT: 3001
     ports:
       - "3001:3001"
@@ -181,6 +187,8 @@ services:
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:3001}
         VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:3002}
+        VITE_PAYMENT_GATEWAY: ${VITE_PAYMENT_GATEWAY:-stripe}
+        VITE_STRIPE_PUBLISHABLE_KEY: ${VITE_STRIPE_PUBLISHABLE_KEY}
     container_name: agentest-web
     restart: unless-stopped
     depends_on:
