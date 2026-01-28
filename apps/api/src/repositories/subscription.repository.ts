@@ -158,6 +158,37 @@ export class SubscriptionRepository {
   }
 
   /**
+   * 組織のサブスクリプションをアップサート
+   */
+  async upsertForOrganization(
+    organizationId: string,
+    params: Omit<CreateSubscriptionParams, 'userId' | 'organizationId'>
+  ): Promise<Subscription> {
+    return prisma.subscription.upsert({
+      where: { organizationId },
+      create: {
+        organizationId,
+        externalId: params.externalId,
+        plan: params.plan,
+        billingCycle: params.billingCycle,
+        currentPeriodStart: params.currentPeriodStart,
+        currentPeriodEnd: params.currentPeriodEnd,
+        status: params.status ?? 'ACTIVE',
+        cancelAtPeriodEnd: params.cancelAtPeriodEnd ?? false,
+      },
+      update: {
+        externalId: params.externalId,
+        plan: params.plan,
+        billingCycle: params.billingCycle,
+        currentPeriodStart: params.currentPeriodStart,
+        currentPeriodEnd: params.currentPeriodEnd,
+        status: params.status ?? 'ACTIVE',
+        cancelAtPeriodEnd: params.cancelAtPeriodEnd ?? false,
+      },
+    });
+  }
+
+  /**
    * 外部ID（決済サービスのサブスクリプションID）でサブスクリプションを取得
    */
   async findByExternalId(externalId: string): Promise<Subscription | null> {
