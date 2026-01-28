@@ -246,6 +246,7 @@ export class WebhookService {
       cancelAtPeriodEnd: data.cancel_at_period_end,
     };
 
+    // 両方存在する場合は organizationId を優先（組織サブスクリプションが優先）
     if (organizationId) {
       // 組織向けサブスクリプション
       await this.subscriptionRepo.upsertForOrganization(organizationId, subscriptionParams);
@@ -331,6 +332,13 @@ export class WebhookService {
         externalId: data.id,
         subscriptionId: subscription.id,
         organizationId: subscription.organizationId,
+      });
+    }
+    // userId も organizationId もない場合は警告（通常発生しない）
+    else {
+      logger.warn('Subscription deleted but has no userId or organizationId', {
+        externalId: data.id,
+        subscriptionId: subscription.id,
       });
     }
   }
