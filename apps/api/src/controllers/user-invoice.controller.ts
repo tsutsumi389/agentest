@@ -4,22 +4,14 @@
  */
 
 import type { Request, Response, NextFunction } from 'express';
-import { z } from 'zod';
 import { AuthorizationError } from '@agentest/shared';
 import { UserInvoiceService } from '../services/user-invoice.service.js';
-
-/**
- * 請求書IDパラメータスキーマ
- */
-const invoiceIdSchema = z.object({
-  invoiceId: z.string().min(1),
-});
 
 /**
  * ユーザー請求履歴コントローラー
  */
 export class UserInvoiceController {
-  private userInvoiceService = new UserInvoiceService();
+  constructor(private userInvoiceService = new UserInvoiceService()) {}
 
   /**
    * 請求履歴一覧取得
@@ -60,8 +52,7 @@ export class UserInvoiceController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const { userId } = req.params;
-      const { invoiceId } = invoiceIdSchema.parse(req.params);
+      const { userId, invoiceId } = req.params;
 
       // 認可チェック
       if (req.user?.id !== userId) {
@@ -88,8 +79,7 @@ export class UserInvoiceController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const { userId } = req.params;
-      const { invoiceId } = invoiceIdSchema.parse(req.params);
+      const { userId, invoiceId } = req.params;
 
       // 認可チェック
       if (req.user?.id !== userId) {

@@ -46,8 +46,8 @@ export interface InvoiceListResponse {
 export class UserInvoiceService {
   private paymentGateway: IPaymentGateway;
 
-  constructor() {
-    this.paymentGateway = getPaymentGateway();
+  constructor(paymentGateway?: IPaymentGateway) {
+    this.paymentGateway = paymentGateway ?? getPaymentGateway();
   }
 
   /**
@@ -84,7 +84,7 @@ export class UserInvoiceService {
       user.paymentCustomerId
     );
 
-    const invoices = stripeInvoices.map(this.toResponse);
+    const invoices = stripeInvoices.map((inv) => this.toResponse(inv));
     const result: InvoiceListResponse = {
       invoices,
       total: invoices.length,
@@ -105,6 +105,45 @@ export class UserInvoiceService {
    * 請求書詳細を取得
    */
   async getInvoice(userId: string, invoiceId: string): Promise<InvoiceResponse> {
+    const invoice = await this.getInvoiceWithAuth(userId, invoiceId);
+    return this.toResponse(invoice);
+  }
+
+  /**
+   * 請求書PDFのURLを取得
+   * StripeのPDFリンクにリダイレクトするためのURL取得
+   */
+  async getInvoicePdfUrl(userId: string, invoiceId: string): Promise<string> {
+    // 認可チェック済みの請求書を取得
+    await this.getInvoiceWithAuth(userId, invoiceId);
+
+    // PDF URLを取得
+    const pdfUrl = await this.paymentGateway.getInvoicePdf(invoiceId);
+
+    if (!pdfUrl) {
+      throw new NotFoundError('InvoicePdf', invoiceId);
+    }
+
+    return pdfUrl;
+  }
+
+  /**
+   * 請求履歴キャッシュを無効化
+   * Webhook処理などから呼び出される
+   */
+  async invalidateCache(userId: string): Promise<void> {
+    await invalidateUserInvoicesCache(userId);
+    logger.debug('Invoice cache invalidated', { userId });
+  }
+
+  /**
+   * 認可チェック付きで請求書を取得
+   * ユーザーの決済顧客IDと請求書の顧客IDが一致するか確認
+   */
+  private async getInvoiceWithAuth(
+    userId: string,
+    invoiceId: string
+  ): Promise<InvoiceResult> {
     // ユーザーの決済顧客IDを取得
     const user = await prisma.user.findUnique({
       where: { id: userId },
@@ -131,57 +170,7 @@ export class UserInvoiceService {
       throw new AuthorizationError('この請求書にアクセスする権限がありません');
     }
 
-    return this.toResponse(invoice);
-  }
-
-  /**
-   * 請求書PDFのURLを取得
-   * StripeのPDFリンクにリダイレクトするためのURL取得
-   */
-  async getInvoicePdfUrl(userId: string, invoiceId: string): Promise<string> {
-    // ユーザーの決済顧客IDを取得
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { paymentCustomerId: true },
-    });
-
-    if (!user) {
-      throw new NotFoundError('User', userId);
-    }
-
-    if (!user.paymentCustomerId) {
-      throw new NotFoundError('Invoice', invoiceId);
-    }
-
-    // 請求書詳細を取得して認可チェック
-    const invoice = await this.paymentGateway.getInvoice(invoiceId);
-
-    if (!invoice) {
-      throw new NotFoundError('Invoice', invoiceId);
-    }
-
-    // 請求書の顧客IDが一致するか確認（認可チェック）
-    if (invoice.customerId !== user.paymentCustomerId) {
-      throw new AuthorizationError('この請求書にアクセスする権限がありません');
-    }
-
-    // PDF URLを取得
-    const pdfUrl = await this.paymentGateway.getInvoicePdf(invoiceId);
-
-    if (!pdfUrl) {
-      throw new NotFoundError('InvoicePdf', invoiceId);
-    }
-
-    return pdfUrl;
-  }
-
-  /**
-   * 請求履歴キャッシュを無効化
-   * Webhook処理などから呼び出される
-   */
-  async invalidateCache(userId: string): Promise<void> {
-    await invalidateUserInvoicesCache(userId);
-    logger.debug('Invoice cache invalidated', { userId });
+    return invoice;
   }
 
   /**

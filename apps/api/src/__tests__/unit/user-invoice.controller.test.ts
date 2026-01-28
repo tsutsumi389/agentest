@@ -11,10 +11,6 @@ const mockUserInvoiceService = {
   invalidateCache: vi.fn(),
 };
 
-vi.mock('../../services/user-invoice.service.js', () => ({
-  UserInvoiceService: vi.fn().mockImplementation(() => mockUserInvoiceService),
-}));
-
 // テスト用の固定値
 const TEST_USER_ID = '11111111-1111-1111-1111-111111111111';
 const OTHER_USER_ID = '22222222-2222-2222-2222-222222222222';
@@ -44,7 +40,8 @@ describe('UserInvoiceController', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    controller = new UserInvoiceController();
+    // DI: モックサービスを注入
+    controller = new UserInvoiceController(mockUserInvoiceService as any);
     mockNext = vi.fn();
   });
 
@@ -58,11 +55,11 @@ describe('UserInvoiceController', () => {
             amount: 1000,
             currency: 'jpy',
             status: 'paid',
-            periodStart: new Date('2024-01-01'),
-            periodEnd: new Date('2024-01-31'),
+            periodStart: new Date('2024-01-01T00:00:00.000Z'),
+            periodEnd: new Date('2024-01-31T23:59:59.999Z'),
             dueDate: null,
             pdfUrl: 'https://stripe.com/pdf',
-            createdAt: new Date('2024-01-01'),
+            createdAt: new Date('2024-01-01T00:00:00.000Z'),
           },
         ],
         total: 1,
@@ -111,11 +108,11 @@ describe('UserInvoiceController', () => {
         amount: 1000,
         currency: 'jpy',
         status: 'paid',
-        periodStart: new Date('2024-01-01'),
-        periodEnd: new Date('2024-01-31'),
+        periodStart: new Date('2024-01-01T00:00:00.000Z'),
+        periodEnd: new Date('2024-01-31T23:59:59.999Z'),
         dueDate: null,
         pdfUrl: 'https://stripe.com/pdf',
-        createdAt: new Date('2024-01-01'),
+        createdAt: new Date('2024-01-01T00:00:00.000Z'),
       };
       mockUserInvoiceService.getInvoice.mockResolvedValue(mockInvoice);
 
