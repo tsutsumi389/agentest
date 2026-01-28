@@ -233,7 +233,7 @@ export class OrganizationBillingController {
 
   /**
    * 支払い方法削除
-   * DELETE /api/organizations/:organizationId/payment-methods/:pmId
+   * DELETE /api/organizations/:organizationId/payment-methods/:paymentMethodId
    */
   deletePaymentMethod = async (
     req: Request,
@@ -241,8 +241,8 @@ export class OrganizationBillingController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const { organizationId, pmId } = req.params;
-      await this.paymentMethodService.deletePaymentMethod(organizationId, pmId);
+      const { organizationId, paymentMethodId } = req.params;
+      await this.paymentMethodService.deletePaymentMethod(organizationId, paymentMethodId);
       res.status(204).send();
     } catch (error) {
       next(error);
@@ -251,7 +251,7 @@ export class OrganizationBillingController {
 
   /**
    * デフォルト支払い方法設定
-   * PUT /api/organizations/:organizationId/payment-methods/:pmId/default
+   * PUT /api/organizations/:organizationId/payment-methods/:paymentMethodId/default
    */
   setDefaultPaymentMethod = async (
     req: Request,
@@ -259,11 +259,11 @@ export class OrganizationBillingController {
     next: NextFunction
   ): Promise<void> => {
     try {
-      const { organizationId, pmId } = req.params;
+      const { organizationId, paymentMethodId } = req.params;
       const paymentMethod =
         await this.paymentMethodService.setDefaultPaymentMethod(
           organizationId,
-          pmId
+          paymentMethodId
         );
       res.json({ paymentMethod });
     } catch (error) {

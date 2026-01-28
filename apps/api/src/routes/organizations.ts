@@ -230,10 +230,10 @@ router.post(
 
 /**
  * 支払い方法削除
- * DELETE /api/organizations/:organizationId/payment-methods/:pmId
+ * DELETE /api/organizations/:organizationId/payment-methods/:paymentMethodId
  */
 router.delete(
-  '/:organizationId/payment-methods/:pmId',
+  '/:organizationId/payment-methods/:paymentMethodId',
   requireAuth(authConfig),
   requireOrgRole(['OWNER', 'ADMIN']),
   billingLimiter,
@@ -242,10 +242,10 @@ router.delete(
 
 /**
  * デフォルト支払い方法設定
- * PUT /api/organizations/:organizationId/payment-methods/:pmId/default
+ * PUT /api/organizations/:organizationId/payment-methods/:paymentMethodId/default
  */
 router.put(
-  '/:organizationId/payment-methods/:pmId/default',
+  '/:organizationId/payment-methods/:paymentMethodId/default',
   requireAuth(authConfig),
   requireOrgRole(['OWNER', 'ADMIN']),
   billingLimiter,
