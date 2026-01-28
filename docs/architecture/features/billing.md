@@ -18,6 +18,9 @@
 | BIL-006 | 支払い方法追加 | 新規クレジットカード登録 |
 | BIL-007 | 支払い方法削除 | 登録済みカード削除 |
 | BIL-008 | デフォルト支払い方法設定 | 請求に使用するカードを指定 |
+| BIL-009 | 請求履歴一覧 | 過去の請求履歴を表示 |
+| BIL-010 | 請求書詳細 | 請求書の詳細情報を表示 |
+| BIL-011 | 請求書PDFダウンロード | PDF形式で請求書をダウンロード |
 
 ## 画面仕様
 
@@ -36,6 +39,17 @@
 │          │ │ ・料金/月 or 年                     │  │
 │          │ │ ・[プラン変更] ボタン               │  │
 │          │ │ ・(PRO時) [キャンセル] ボタン       │  │
+│          │ └─────────────────────────────────────┘  │
+│          │                                          │
+│          │ ┌─────────────────────────────────────┐  │
+│          │ │ Billing History (InvoiceList)       │  │
+│          │ │ ・請求履歴テーブル                  │  │
+│          │ │   - 請求番号                        │  │
+│          │ │   - 請求日                          │  │
+│          │ │   - 期間                            │  │
+│          │ │   - 金額                            │  │
+│          │ │   - ステータス                      │  │
+│          │ │   - [PDF] ダウンロードボタン        │  │
 │          │ └─────────────────────────────────────┘  │
 │          │                                          │
 │          │ ┌─────────────────────────────────────┐  │
@@ -272,18 +286,21 @@ apps/api/src/
 ├── services/
 │   ├── subscription.service.ts        # サブスクリプションビジネスロジック
 │   ├── payment-method.service.ts      # 支払い方法ビジネスロジック
-│   └── webhook.service.ts             # Webhook イベント処理
+│   ├── user-invoice.service.ts        # 個人向け請求履歴（Redisキャッシュ含む）
+│   └── webhook.service.ts             # Webhook イベント処理（冪等性チェック含む）
 ├── controllers/
 │   ├── subscription.controller.ts     # サブスクリプションAPI
 │   ├── payment-method.controller.ts   # 支払い方法API
 │   ├── plans.controller.ts            # プランAPI
-│   └── webhook.controller.ts          # Webhook API
+│   ├── user-invoice.controller.ts     # 個人向け請求履歴API
+│   └── webhook.controller.ts          # Webhook API（署名検証含む）
 ├── repositories/
 │   ├── subscription.repository.ts     # サブスクリプションDB操作
-│   └── payment-method.repository.ts   # 支払い方法DB操作
+│   ├── payment-method.repository.ts   # 支払い方法DB操作
+│   └── payment-event.repository.ts    # PaymentEvent操作（Webhook冪等性）
 └── routes/
     ├── billing.ts                     # /api/plans ルート
-    ├── users.ts                       # /api/users/:userId/* ルート
+    ├── users.ts                       # /api/users/:userId/* ルート（請求履歴含む）
     └── webhooks.ts                    # /webhooks/stripe ルート
 ```
 
@@ -300,6 +317,8 @@ apps/web/src/
 │   ├── PaymentMethodsCard.tsx         # 支払い方法一覧
 │   ├── PlanChangeModal.tsx            # プラン変更モーダル
 │   └── AddPaymentMethodModal.tsx      # 支払い方法追加モーダル
+├── components/billing/
+│   └── InvoiceList.tsx                # 請求履歴一覧コンポーネント
 └── routes/
     └── Settings.tsx                   # 設定ページ（billing タブ統合）
 ```
@@ -383,6 +402,27 @@ sequenceDiagram
     W->>D: DB更新（トランザクション）
     A-->>S: 200 OK
 ```
+
+## キャッシュ戦略
+
+### 請求履歴キャッシュ
+
+Stripe APIへのリクエスト削減とレスポンス高速化のため、請求履歴をRedisでキャッシュします。
+
+| キャッシュキー | TTL | 内容 |
+|---------------|-----|------|
+| `invoices:user:{userId}` | 5分 | 個人向け請求履歴一覧 |
+| `invoices:org:{organizationId}` | 5分 | 組織向け請求履歴一覧 |
+
+### キャッシュ無効化
+
+以下のタイミングでキャッシュを無効化します：
+
+| イベント | 無効化するキャッシュ |
+|---------|-------------------|
+| `invoice.paid` Webhook受信時 | 該当ユーザー/組織の請求履歴 |
+| `invoice.payment_failed` Webhook受信時 | 該当ユーザー/組織の請求履歴 |
+| 支払い方法変更時 | 該当ユーザー/組織の請求履歴 |
 
 ## 関連機能
 

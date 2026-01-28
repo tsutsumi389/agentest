@@ -451,6 +451,148 @@ PUT /api/users/:userId/payment-methods/:paymentMethodId/default
 
 ---
 
+## 個人向け請求履歴
+
+### 請求履歴一覧取得
+
+**認証必要** / **オーナーシップチェック**
+
+自分の請求履歴一覧を取得します。Stripe APIからリアルタイムで取得し、5分間Redisキャッシュします。
+
+```
+GET /api/users/:userId/invoices
+```
+
+#### パラメータ
+
+| パラメータ | 型 | 必須 | 説明 |
+|-----------|------|------|------|
+| `userId` | string (UUID) | Yes | ユーザー ID |
+
+#### クエリパラメータ
+
+| パラメータ | 型 | 必須 | デフォルト | 説明 |
+|-----------|------|------|----------|------|
+| `limit` | number | No | 100 | 取得件数（最大 100） |
+
+#### レスポンス
+
+```json
+{
+  "invoices": [
+    {
+      "id": "in_xxxxxxxxxxxx",
+      "invoiceNumber": "INV-2025-0001",
+      "amount": 980,
+      "currency": "jpy",
+      "status": "paid",
+      "paidAt": "2025-01-01T00:00:00.000Z",
+      "periodStart": "2025-01-01T00:00:00.000Z",
+      "periodEnd": "2025-02-01T00:00:00.000Z",
+      "pdfUrl": "https://invoice.stripe.com/i/xxx/pdf",
+      "createdAt": "2025-01-01T00:00:00.000Z"
+    }
+  ]
+}
+```
+
+| フィールド | 説明 |
+|-----------|------|
+| `id` | Stripe の請求書 ID |
+| `invoiceNumber` | 請求書番号 |
+| `amount` | 請求金額（円） |
+| `currency` | 通貨コード |
+| `status` | ステータス（`paid` / `open` / `draft` / `void` / `uncollectible`） |
+| `paidAt` | 支払日時（支払い済みの場合） |
+| `periodStart` | 請求期間開始日 |
+| `periodEnd` | 請求期間終了日 |
+| `pdfUrl` | PDF ダウンロード URL（存在する場合） |
+| `createdAt` | 請求書作成日時 |
+
+#### エラー
+
+| コード | 説明 |
+|--------|------|
+| 403 | 他のユーザーの請求履歴にはアクセスできません |
+| 404 | サブスクリプションが見つからない |
+
+---
+
+### 請求書詳細取得
+
+**認証必要** / **オーナーシップチェック**
+
+指定した請求書の詳細を取得します。
+
+```
+GET /api/users/:userId/invoices/:invoiceId
+```
+
+#### パラメータ
+
+| パラメータ | 型 | 必須 | 説明 |
+|-----------|------|------|------|
+| `userId` | string (UUID) | Yes | ユーザー ID |
+| `invoiceId` | string | Yes | Stripe の請求書 ID |
+
+#### レスポンス
+
+```json
+{
+  "invoice": {
+    "id": "in_xxxxxxxxxxxx",
+    "invoiceNumber": "INV-2025-0001",
+    "amount": 980,
+    "currency": "jpy",
+    "status": "paid",
+    "paidAt": "2025-01-01T00:00:00.000Z",
+    "periodStart": "2025-01-01T00:00:00.000Z",
+    "periodEnd": "2025-02-01T00:00:00.000Z",
+    "pdfUrl": "https://invoice.stripe.com/i/xxx/pdf",
+    "createdAt": "2025-01-01T00:00:00.000Z"
+  }
+}
+```
+
+#### エラー
+
+| コード | 説明 |
+|--------|------|
+| 403 | 他のユーザーの請求書にはアクセスできません |
+| 404 | 請求書が見つからない |
+
+---
+
+### 請求書PDF取得
+
+**認証必要** / **オーナーシップチェック**
+
+請求書PDFのダウンロードURLにリダイレクトします。
+
+```
+GET /api/users/:userId/invoices/:invoiceId/pdf
+```
+
+#### パラメータ
+
+| パラメータ | 型 | 必須 | 説明 |
+|-----------|------|------|------|
+| `userId` | string (UUID) | Yes | ユーザー ID |
+| `invoiceId` | string | Yes | Stripe の請求書 ID |
+
+#### レスポンス
+
+StripeのPDF URLにリダイレクト（302）します。
+
+#### エラー
+
+| コード | 説明 |
+|--------|------|
+| 403 | 他のユーザーの請求書にはアクセスできません |
+| 404 | 請求書またはPDFが見つからない |
+
+---
+
 ## Webhook
 
 ### Stripe Webhook
