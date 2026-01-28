@@ -94,7 +94,9 @@ export class InvoiceRepository {
     subscriptionId: string,
     pagination: PaginationParams
   ): Promise<PaginatedResult<Invoice>> {
-    const { page, limit } = pagination;
+    // ページネーションの境界値を正規化
+    const page = Math.max(1, pagination.page);
+    const limit = Math.max(1, Math.min(100, pagination.limit));
     const skip = (page - 1) * limit;
 
     const [data, total] = await Promise.all([
@@ -112,7 +114,7 @@ export class InvoiceRepository {
       total,
       page,
       limit,
-      totalPages: Math.ceil(total / limit),
+      totalPages: limit > 0 ? Math.ceil(total / limit) : 0,
     };
   }
 }

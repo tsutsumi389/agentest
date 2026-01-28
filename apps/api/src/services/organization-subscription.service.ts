@@ -95,8 +95,12 @@ export class OrganizationSubscriptionService {
     const { plan, billingCycle, paymentMethodId } = input;
 
     // 既存サブスクリプションの確認
+    // ACTIVE または PAST_DUE（支払い遅延中だが有効）の場合は新規作成を拒否
     const existingSub = await this.subscriptionRepo.findByOrganizationId(orgId);
-    if (existingSub && existingSub.status === 'ACTIVE') {
+    if (
+      existingSub &&
+      (existingSub.status === 'ACTIVE' || existingSub.status === 'PAST_DUE')
+    ) {
       throw new ValidationError('すでにアクティブなサブスクリプションがあります');
     }
 
