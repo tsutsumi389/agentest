@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import { requireAuth, requireOrgRole } from '@agentest/auth';
 import { OrganizationController } from '../controllers/organization.controller.js';
+import { organizationBillingController } from '../controllers/organization-billing.controller.js';
 import { authConfig } from '../config/auth.js';
+import { billingLimiter } from '../middleware/rate-limiter.js';
 
 const router: Router = Router();
 const orgController = new OrganizationController();
@@ -123,5 +125,156 @@ router.get('/:organizationId/audit-logs', requireAuth(authConfig), requireOrgRol
  * GET /api/organizations/:organizationId/audit-logs/export
  */
 router.get('/:organizationId/audit-logs/export', requireAuth(authConfig), requireOrgRole(['OWNER', 'ADMIN']), orgController.exportAuditLogs);
+
+// ====================================================================
+// 組織Billing ルート
+// ====================================================================
+
+// === Subscription ===
+
+/**
+ * サブスクリプション取得
+ * GET /api/organizations/:organizationId/subscription
+ */
+router.get(
+  '/:organizationId/subscription',
+  requireAuth(authConfig),
+  requireOrgRole(['OWNER', 'ADMIN']),
+  organizationBillingController.getSubscription
+);
+
+/**
+ * サブスクリプション作成（TEAM契約開始）
+ * POST /api/organizations/:organizationId/subscription
+ */
+router.post(
+  '/:organizationId/subscription',
+  requireAuth(authConfig),
+  requireOrgRole(['OWNER', 'ADMIN']),
+  billingLimiter,
+  organizationBillingController.createSubscription
+);
+
+/**
+ * サブスクリプション更新（請求サイクル変更）
+ * PUT /api/organizations/:organizationId/subscription
+ */
+router.put(
+  '/:organizationId/subscription',
+  requireAuth(authConfig),
+  requireOrgRole(['OWNER', 'ADMIN']),
+  billingLimiter,
+  organizationBillingController.updateSubscription
+);
+
+/**
+ * サブスクリプションキャンセル
+ * DELETE /api/organizations/:organizationId/subscription
+ */
+router.delete(
+  '/:organizationId/subscription',
+  requireAuth(authConfig),
+  requireOrgRole(['OWNER', 'ADMIN']),
+  billingLimiter,
+  organizationBillingController.cancelSubscription
+);
+
+/**
+ * キャンセル予約解除（サブスクリプション継続）
+ * POST /api/organizations/:organizationId/subscription/reactivate
+ */
+router.post(
+  '/:organizationId/subscription/reactivate',
+  requireAuth(authConfig),
+  requireOrgRole(['OWNER', 'ADMIN']),
+  billingLimiter,
+  organizationBillingController.reactivateSubscription
+);
+
+/**
+ * プラン変更時の料金計算
+ * GET /api/organizations/:organizationId/subscription/calculate
+ */
+router.get(
+  '/:organizationId/subscription/calculate',
+  requireAuth(authConfig),
+  requireOrgRole(['OWNER', 'ADMIN']),
+  billingLimiter,
+  organizationBillingController.calculatePlanChange
+);
+
+// === Payment Methods ===
+
+/**
+ * 支払い方法一覧取得
+ * GET /api/organizations/:organizationId/payment-methods
+ */
+router.get(
+  '/:organizationId/payment-methods',
+  requireAuth(authConfig),
+  requireOrgRole(['OWNER', 'ADMIN']),
+  organizationBillingController.getPaymentMethods
+);
+
+/**
+ * 支払い方法追加
+ * POST /api/organizations/:organizationId/payment-methods
+ */
+router.post(
+  '/:organizationId/payment-methods',
+  requireAuth(authConfig),
+  requireOrgRole(['OWNER', 'ADMIN']),
+  billingLimiter,
+  organizationBillingController.addPaymentMethod
+);
+
+/**
+ * 支払い方法削除
+ * DELETE /api/organizations/:organizationId/payment-methods/:pmId
+ */
+router.delete(
+  '/:organizationId/payment-methods/:pmId',
+  requireAuth(authConfig),
+  requireOrgRole(['OWNER', 'ADMIN']),
+  billingLimiter,
+  organizationBillingController.deletePaymentMethod
+);
+
+/**
+ * デフォルト支払い方法設定
+ * PUT /api/organizations/:organizationId/payment-methods/:pmId/default
+ */
+router.put(
+  '/:organizationId/payment-methods/:pmId/default',
+  requireAuth(authConfig),
+  requireOrgRole(['OWNER', 'ADMIN']),
+  billingLimiter,
+  organizationBillingController.setDefaultPaymentMethod
+);
+
+/**
+ * SetupIntent作成（Stripe Elements用）
+ * POST /api/organizations/:organizationId/payment-methods/setup-intent
+ */
+router.post(
+  '/:organizationId/payment-methods/setup-intent',
+  requireAuth(authConfig),
+  requireOrgRole(['OWNER', 'ADMIN']),
+  billingLimiter,
+  organizationBillingController.createSetupIntent
+);
+
+// === Invoices ===
+
+/**
+ * 請求履歴取得
+ * GET /api/organizations/:organizationId/invoices
+ */
+router.get(
+  '/:organizationId/invoices',
+  requireAuth(authConfig),
+  requireOrgRole(['OWNER', 'ADMIN']),
+  organizationBillingController.getInvoices
+);
 
 export default router;

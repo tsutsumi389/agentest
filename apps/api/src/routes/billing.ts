@@ -18,6 +18,12 @@ const plansController = new PlansController();
 router.get('/plans', plansController.getPlans);
 
 /**
+ * 組織プラン一覧取得（認証不要）
+ * GET /api/plans/organization
+ */
+router.get('/plans/organization', plansController.getOrgPlans);
+
+/**
  * 料金計算（認証必要、レート制限あり）
  * GET /api/plans/:plan/calculate
  */

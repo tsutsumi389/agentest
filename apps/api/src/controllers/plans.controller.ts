@@ -7,7 +7,10 @@ import { z } from 'zod';
 import {
   PERSONAL_PLAN_PRICING,
   calculateYearlySavings,
+  ORG_PLAN_PRICING,
+  calculateOrgYearlySavings,
   type PersonalPlan,
+  type OrgPlan,
 } from '@agentest/shared';
 import { SubscriptionService } from '../services/subscription.service.js';
 import { AuthorizationError } from '@agentest/shared';
@@ -105,6 +108,33 @@ export class PlansController {
       );
 
       res.json({ calculation });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 組織プラン一覧取得（認証不要）
+   * GET /api/plans/organization
+   */
+  getOrgPlans = async (
+    _req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const plans = (Object.keys(ORG_PLAN_PRICING) as OrgPlan[]).map((plan) => {
+        const pricing = ORG_PLAN_PRICING[plan];
+        return {
+          plan,
+          pricePerUser: pricing.pricePerUser,
+          monthlyPrice: pricing.monthlyPrice,
+          yearlyPrice: pricing.yearlyPrice,
+          yearlySavings: calculateOrgYearlySavings(plan),
+          features: pricing.features,
+        };
+      });
+      res.json({ plans });
     } catch (error) {
       next(error);
     }
