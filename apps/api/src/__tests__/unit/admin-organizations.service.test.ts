@@ -59,6 +59,7 @@ describe('AdminOrganizationsService', () => {
       description: 'Test description',
       avatarUrl: 'https://example.com/avatar.png',
       plan: 'TEAM' as const,
+      paymentCustomerId: null,
       billingEmail: 'billing@example.com',
       createdAt: new Date('2024-01-15T00:00:00.000Z'),
       updatedAt: new Date('2024-01-20T00:00:00.000Z'),

@@ -12,6 +12,7 @@ const { mockSubscriptionRepo, mockInvoiceRepo, mockUserRepo, mockPrisma } = vi.h
     update: vi.fn(),
     delete: vi.fn(),
     upsertForUser: vi.fn(),
+    upsertForOrganization: vi.fn(),
     findCancelAtPeriodEnd: vi.fn(),
     findExpired: vi.fn(),
   },
@@ -568,6 +569,280 @@ describe('WebhookService', () => {
       expect(mockSubscriptionRepo.update).toHaveBeenCalledWith('sub-db-1', {
         status: 'CANCELED',
       });
+      expect(mockUserRepo.updatePlan).not.toHaveBeenCalled();
+    });
+  });
+
+  // ============================================
+  // 組織サブスクリプション - handleSubscriptionCreated
+  // ============================================
+
+  describe('handleEvent - customer.subscription.created (organization)', () => {
+    it('metadataにorganizationIdがある場合は組織用として処理', async () => {
+      mockSubscriptionRepo.findByExternalId.mockResolvedValue(null);
+      mockSubscriptionRepo.upsertForOrganization.mockResolvedValue({});
+
+      const event: WebhookEvent = {
+        id: 'evt_org_1',
+        type: 'customer.subscription.created',
+        data: {
+          object: {
+            id: 'sub_stripe_org_new',
+            customer: 'cus_org_1',
+            status: 'active',
+            cancel_at_period_end: false,
+            items: {
+              data: [{
+                current_period_start: 1704067200,
+                current_period_end: 1706745600,
+              }],
+            },
+            metadata: {
+              plan: 'TEAM',
+              billingCycle: 'MONTHLY',
+              organizationId: 'org-1',
+            },
+          },
+        },
+        createdAt: new Date(),
+      };
+
+      await service.handleEvent(event);
+
+      expect(mockSubscriptionRepo.upsertForOrganization).toHaveBeenCalledWith('org-1', {
+        externalId: 'sub_stripe_org_new',
+        plan: 'TEAM',
+        billingCycle: 'MONTHLY',
+        currentPeriodStart: new Date(1704067200 * 1000),
+        currentPeriodEnd: new Date(1706745600 * 1000),
+        status: 'ACTIVE',
+        cancelAtPeriodEnd: false,
+      });
+      expect(mockSubscriptionRepo.upsertForUser).not.toHaveBeenCalled();
+    });
+
+    it('upsertForOrganization が呼ばれる', async () => {
+      mockSubscriptionRepo.findByExternalId.mockResolvedValue(null);
+      mockSubscriptionRepo.upsertForOrganization.mockResolvedValue({
+        id: 'sub-org-123',
+        organizationId: 'org-1',
+        plan: 'TEAM',
+      });
+
+      const event: WebhookEvent = {
+        id: 'evt_org_2',
+        type: 'customer.subscription.created',
+        data: {
+          object: {
+            id: 'sub_stripe_org_2',
+            customer: 'cus_org_1',
+            status: 'active',
+            cancel_at_period_end: false,
+            items: {
+              data: [{
+                current_period_start: 1704067200,
+                current_period_end: 1706745600,
+              }],
+            },
+            metadata: {
+              plan: 'TEAM',
+              billingCycle: 'YEARLY',
+              organizationId: 'org-2',
+            },
+          },
+        },
+        createdAt: new Date(),
+      };
+
+      await service.handleEvent(event);
+
+      expect(mockSubscriptionRepo.upsertForOrganization).toHaveBeenCalledTimes(1);
+      expect(mockSubscriptionRepo.upsertForOrganization).toHaveBeenCalledWith('org-2', expect.objectContaining({
+        plan: 'TEAM',
+        billingCycle: 'YEARLY',
+      }));
+    });
+
+    it('organizationIdとuserId両方ある場合はorganizationIdを優先', async () => {
+      mockSubscriptionRepo.findByExternalId.mockResolvedValue(null);
+      mockSubscriptionRepo.upsertForOrganization.mockResolvedValue({});
+
+      const event: WebhookEvent = {
+        id: 'evt_org_3',
+        type: 'customer.subscription.created',
+        data: {
+          object: {
+            id: 'sub_stripe_both',
+            customer: 'cus_1',
+            status: 'active',
+            cancel_at_period_end: false,
+            items: {
+              data: [{
+                current_period_start: 1704067200,
+                current_period_end: 1706745600,
+              }],
+            },
+            metadata: {
+              plan: 'TEAM',
+              billingCycle: 'MONTHLY',
+              userId: 'user-1',
+              organizationId: 'org-1',
+            },
+          },
+        },
+        createdAt: new Date(),
+      };
+
+      await service.handleEvent(event);
+
+      // organizationIdを優先するので upsertForOrganization が呼ばれる
+      expect(mockSubscriptionRepo.upsertForOrganization).toHaveBeenCalledWith('org-1', expect.any(Object));
+      // upsertForUser は呼ばれない
+      expect(mockSubscriptionRepo.upsertForUser).not.toHaveBeenCalled();
+    });
+  });
+
+  // ============================================
+  // 組織サブスクリプション - handleSubscriptionUpdated
+  // ============================================
+
+  describe('handleEvent - customer.subscription.updated (organization)', () => {
+    const mockOrgSubscription = {
+      id: 'sub-org-db-1',
+      userId: null,
+      organizationId: 'org-1',
+      externalId: 'sub_stripe_org_123',
+      plan: 'TEAM',
+      status: 'ACTIVE',
+      billingCycle: 'MONTHLY',
+      currentPeriodStart: new Date('2025-01-01'),
+      currentPeriodEnd: new Date('2025-02-01'),
+      cancelAtPeriodEnd: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    it('組織サブスクリプションの情報をDBに同期', async () => {
+      mockSubscriptionRepo.findByExternalId.mockResolvedValue(mockOrgSubscription);
+      mockSubscriptionRepo.update.mockResolvedValue({});
+
+      const event: WebhookEvent = {
+        id: 'evt_org_update_1',
+        type: 'customer.subscription.updated',
+        data: {
+          object: {
+            id: 'sub_stripe_org_123',
+            customer: 'cus_org_1',
+            status: 'active',
+            cancel_at_period_end: true,
+            items: {
+              data: [{
+                current_period_start: 1706745600,
+                current_period_end: 1738368000,
+              }],
+            },
+            metadata: {
+              plan: 'TEAM',
+              billingCycle: 'YEARLY',
+            },
+          },
+        },
+        createdAt: new Date(),
+      };
+
+      await service.handleEvent(event);
+
+      expect(mockSubscriptionRepo.update).toHaveBeenCalledWith('sub-org-db-1', {
+        plan: 'TEAM',
+        billingCycle: 'YEARLY',
+        status: 'ACTIVE',
+        currentPeriodStart: new Date(1706745600 * 1000),
+        currentPeriodEnd: new Date(1738368000 * 1000),
+        cancelAtPeriodEnd: true,
+      });
+    });
+  });
+
+  // ============================================
+  // 組織サブスクリプション - handleSubscriptionDeleted
+  // ============================================
+
+  describe('handleEvent - customer.subscription.deleted (organization)', () => {
+    const mockOrgSubscription = {
+      id: 'sub-org-db-1',
+      userId: null,
+      organizationId: 'org-1',
+      externalId: 'sub_stripe_org_123',
+      plan: 'TEAM',
+      status: 'ACTIVE',
+      billingCycle: 'MONTHLY',
+      currentPeriodStart: new Date('2025-01-01'),
+      currentPeriodEnd: new Date('2025-02-01'),
+      cancelAtPeriodEnd: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    it('組織サブスクリプションをCANCELEDにする', async () => {
+      mockSubscriptionRepo.findByExternalId.mockResolvedValue(mockOrgSubscription);
+      mockSubscriptionRepo.update.mockResolvedValue({});
+
+      const event: WebhookEvent = {
+        id: 'evt_org_delete_1',
+        type: 'customer.subscription.deleted',
+        data: {
+          object: {
+            id: 'sub_stripe_org_123',
+            customer: 'cus_org_1',
+            status: 'canceled',
+            cancel_at_period_end: false,
+            items: {
+              data: [{
+                current_period_start: 1704067200,
+                current_period_end: 1706745600,
+              }],
+            },
+            metadata: {},
+          },
+        },
+        createdAt: new Date(),
+      };
+
+      await service.handleEvent(event);
+
+      expect(mockSubscriptionRepo.update).toHaveBeenCalledWith('sub-org-db-1', {
+        status: 'CANCELED',
+      });
+    });
+
+    it('organizationIdがある場合はUser.plan更新をスキップ', async () => {
+      mockSubscriptionRepo.findByExternalId.mockResolvedValue(mockOrgSubscription);
+      mockSubscriptionRepo.update.mockResolvedValue({});
+
+      const event: WebhookEvent = {
+        id: 'evt_org_delete_2',
+        type: 'customer.subscription.deleted',
+        data: {
+          object: {
+            id: 'sub_stripe_org_123',
+            customer: 'cus_org_1',
+            status: 'canceled',
+            cancel_at_period_end: false,
+            items: {
+              data: [{
+                current_period_start: 1704067200,
+                current_period_end: 1706745600,
+              }],
+            },
+            metadata: {},
+          },
+        },
+        createdAt: new Date(),
+      };
+
+      await service.handleEvent(event);
+
+      // 組織サブスクリプションなのでユーザープラン更新は呼ばれない
       expect(mockUserRepo.updatePlan).not.toHaveBeenCalled();
     });
   });

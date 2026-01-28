@@ -9,6 +9,7 @@ import {
   AlertTriangle,
   ArrowLeft,
   Loader2,
+  CreditCard,
 } from 'lucide-react';
 import { organizationsApi, ApiError, type Organization } from '../lib/api';
 import { useOrganization } from '../contexts/OrganizationContext';
@@ -19,8 +20,9 @@ import { InvitationList } from '../components/organization/InvitationList';
 import { AuditLogList } from '../components/organization/AuditLogList';
 import { TransferOwnershipModal } from '../components/organization/TransferOwnershipModal';
 import { DeleteOrganizationModal } from '../components/organization/DeleteOrganizationModal';
+import { OrgBillingSettings } from '../components/organization/billing';
 
-type SettingsTab = 'general' | 'members' | 'invitations' | 'audit-logs' | 'danger';
+type SettingsTab = 'general' | 'members' | 'invitations' | 'audit-logs' | 'billing' | 'danger';
 
 /**
  * 組織設定ページ
@@ -34,7 +36,7 @@ export function OrganizationSettingsPage() {
   // タブ状態
   const tabParam = searchParams.get('tab') as SettingsTab | null;
   const [activeTab, setActiveTab] = useState<SettingsTab>(
-    tabParam && ['general', 'members', 'invitations', 'audit-logs', 'danger'].includes(tabParam)
+    tabParam && ['general', 'members', 'invitations', 'audit-logs', 'billing', 'danger'].includes(tabParam)
       ? tabParam
       : 'general'
   );
@@ -93,12 +95,13 @@ export function OrganizationSettingsPage() {
     refreshOrganizations();
   };
 
-  // タブ定義
+  // タブ定義（課金タブはOWNER/ADMINのみ表示）
   const tabs = [
     { id: 'general' as const, label: '一般', icon: Settings },
     { id: 'members' as const, label: 'メンバー', icon: Users },
     { id: 'invitations' as const, label: '招待', icon: Mail },
     { id: 'audit-logs' as const, label: '監査ログ', icon: FileText },
+    { id: 'billing' as const, label: '課金', icon: CreditCard },
     { id: 'danger' as const, label: '危険な操作', icon: AlertTriangle },
   ];
 
@@ -210,6 +213,9 @@ export function OrganizationSettingsPage() {
           )}
           {activeTab === 'audit-logs' && (
             <AuditLogsSettings organizationId={organization.id} />
+          )}
+          {activeTab === 'billing' && (
+            <OrgBillingSettings organizationId={organization.id} />
           )}
           {activeTab === 'danger' && (
             <DangerSettings

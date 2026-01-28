@@ -1931,3 +1931,105 @@ export const paymentMethodsApi = {
       `/api/users/${userId}/payment-methods/setup-intent`
     ),
 };
+
+// ============================================
+// 組織課金API
+// ============================================
+
+/** 組織プラン */
+export type OrgPlan = 'TEAM' | 'ENTERPRISE';
+
+/** 組織サブスクリプションステータス */
+export type OrgSubscriptionStatus = 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'TRIALING';
+
+/** 組織サブスクリプション */
+export interface OrgSubscription {
+  id: string;
+  organizationId: string;
+  plan: OrgPlan;
+  billingCycle: BillingCycle;
+  status: OrgSubscriptionStatus;
+  currentPeriodStart: string;
+  currentPeriodEnd: string;
+  cancelAtPeriodEnd: boolean;
+  quantity: number;  // メンバー数
+}
+
+/** 組織請求書ステータス */
+export type OrgInvoiceStatus = 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
+
+/** 組織請求書 */
+export interface OrgInvoice {
+  id: string;
+  invoiceNumber: string;
+  amount: number;
+  currency: string;
+  status: OrgInvoiceStatus;
+  periodStart: string;
+  periodEnd: string;
+  dueDate: string;
+  pdfUrl: string | null;
+  createdAt: string;
+}
+
+/** 組織サブスクリプション作成リクエスト */
+export interface CreateOrgSubscriptionRequest {
+  billingCycle: BillingCycle;
+  paymentMethodId: string;
+}
+
+/** 組織プラン料金計算結果 */
+export interface OrgPlanCalculation {
+  plan: OrgPlan;
+  billingCycle: BillingCycle;
+  unitPrice: number;
+  quantity: number;
+  totalPrice: number;
+  currency: string;
+  effectiveDate: string;
+}
+
+export const orgBillingApi = {
+  // サブスクリプション
+  getSubscription: (orgId: string) =>
+    api.get<{ subscription: OrgSubscription | null }>(`/api/organizations/${orgId}/subscription`),
+  createSubscription: (orgId: string, data: CreateOrgSubscriptionRequest) =>
+    api.post<{ subscription: OrgSubscription }>(`/api/organizations/${orgId}/subscription`, data),
+  updateSubscription: (orgId: string, data: { billingCycle: BillingCycle }) =>
+    api.put<{ subscription: OrgSubscription }>(`/api/organizations/${orgId}/subscription`, data),
+  cancelSubscription: (orgId: string) =>
+    api.delete<{ subscription: OrgSubscription }>(`/api/organizations/${orgId}/subscription`),
+  reactivateSubscription: (orgId: string) =>
+    api.post<{ subscription: OrgSubscription }>(`/api/organizations/${orgId}/subscription/reactivate`),
+  calculatePlanChange: (orgId: string, billingCycle: BillingCycle) =>
+    api.get<{ calculation: OrgPlanCalculation }>(
+      `/api/organizations/${orgId}/subscription/calculate?billingCycle=${billingCycle}`
+    ),
+
+  // 支払い方法
+  getPaymentMethods: (orgId: string) =>
+    api.get<{ paymentMethods: PaymentMethod[] }>(`/api/organizations/${orgId}/payment-methods`),
+  addPaymentMethod: (orgId: string, paymentMethodId: string) =>
+    api.post<{ paymentMethod: PaymentMethod }>(`/api/organizations/${orgId}/payment-methods`, { paymentMethodId }),
+  deletePaymentMethod: (orgId: string, paymentMethodId: string) =>
+    api.delete<void>(`/api/organizations/${orgId}/payment-methods/${paymentMethodId}`),
+  setDefaultPaymentMethod: (orgId: string, paymentMethodId: string) =>
+    api.put<{ paymentMethod: PaymentMethod }>(
+      `/api/organizations/${orgId}/payment-methods/${paymentMethodId}/default`
+    ),
+  createSetupIntent: (orgId: string) =>
+    api.post<{ setupIntent: { clientSecret: string } }>(
+      `/api/organizations/${orgId}/payment-methods/setup-intent`
+    ),
+
+  // 請求書
+  getInvoices: (orgId: string, params?: { page?: number; limit?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.page) query.set('page', String(params.page));
+    if (params?.limit) query.set('limit', String(params.limit));
+    const queryString = query.toString();
+    return api.get<{ invoices: OrgInvoice[]; total: number; page: number; limit: number; totalPages: number }>(
+      `/api/organizations/${orgId}/invoices${queryString ? `?${queryString}` : ''}`
+    );
+  },
+};

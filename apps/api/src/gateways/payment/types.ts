@@ -7,7 +7,7 @@
  * 組織プラン (TEAM/ENTERPRISE) は別途実装予定。
  */
 
-import type { BillingCycle, PersonalPlan } from '@agentest/shared';
+import type { BillingCycle, OrgPlan, PersonalPlan } from '@agentest/shared';
 
 /**
  * 顧客情報
@@ -69,6 +69,41 @@ export interface SubscriptionResult {
   currentPeriodStart: Date;
   currentPeriodEnd: Date;
   cancelAtPeriodEnd: boolean;
+}
+
+/**
+ * 組織サブスクリプション作成パラメータ
+ */
+export interface CreateOrgSubscriptionParams {
+  customerId: string;
+  plan: OrgPlan;
+  billingCycle: BillingCycle;
+  paymentMethodId: string;
+  quantity: number;
+}
+
+/**
+ * 組織サブスクリプション更新パラメータ
+ */
+export interface UpdateOrgSubscriptionParams {
+  billingCycle?: BillingCycle;
+  quantity?: number;
+}
+
+/**
+ * 組織サブスクリプション結果
+ * SubscriptionResult とは独立した型として定義（plan フィールドの型が異なるため）
+ */
+export interface OrgSubscriptionResult {
+  id: string;
+  customerId: string;
+  status: SubscriptionResult['status'];
+  plan: OrgPlan;
+  billingCycle: BillingCycle;
+  currentPeriodStart: Date;
+  currentPeriodEnd: Date;
+  cancelAtPeriodEnd: boolean;
+  quantity: number;
 }
 
 /**

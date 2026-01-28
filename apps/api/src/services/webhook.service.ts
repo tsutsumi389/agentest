@@ -48,6 +48,7 @@ interface StripeSubscriptionData {
     plan?: string;
     billingCycle?: string;
     userId?: string;
+    organizationId?: string;
   };
 }
 
@@ -203,6 +204,7 @@ export class WebhookService {
   /**
    * サブスクリプション作成
    * 通常はcreateSubscription時にDB書き込み済みのため、未登録時のみ作成
+   * organizationIdがmetadataにある場合は組織向けサブスクリプションとして処理
    */
   private async handleSubscriptionCreated(data: StripeSubscriptionData): Promise<void> {
     const existing = await this.subscriptionRepo.findByExternalId(data.id);
@@ -214,10 +216,12 @@ export class WebhookService {
       return;
     }
 
-    // metadataからユーザーIDを取得
+    // metadataからユーザーIDまたは組織IDを取得
     const userId = data.metadata.userId;
-    if (!userId) {
-      logger.warn('Subscription created event has no userId in metadata', {
+    const organizationId = data.metadata.organizationId;
+
+    if (!userId && !organizationId) {
+      logger.warn('Subscription created event has no userId or organizationId in metadata', {
         externalId: data.id,
       });
       return;
@@ -232,7 +236,7 @@ export class WebhookService {
     const plan = this.mapPlan(data.metadata.plan);
     const billingCycle = this.mapBillingCycle(data.metadata.billingCycle);
 
-    await this.subscriptionRepo.upsertForUser(userId, {
+    const subscriptionParams = {
       externalId: data.id,
       plan,
       billingCycle,
@@ -240,13 +244,26 @@ export class WebhookService {
       currentPeriodEnd: period.end,
       status: this.mapSubscriptionStatus(data.status),
       cancelAtPeriodEnd: data.cancel_at_period_end,
-    });
+    };
 
-    logger.info('Subscription created via webhook', {
-      externalId: data.id,
-      userId,
-      plan,
-    });
+    // 両方存在する場合は organizationId を優先（組織サブスクリプションが優先）
+    if (organizationId) {
+      // 組織向けサブスクリプション
+      await this.subscriptionRepo.upsertForOrganization(organizationId, subscriptionParams);
+      logger.info('Organization subscription created via webhook', {
+        externalId: data.id,
+        organizationId,
+        plan,
+      });
+    } else if (userId) {
+      // ユーザー向けサブスクリプション
+      await this.subscriptionRepo.upsertForUser(userId, subscriptionParams);
+      logger.info('Subscription created via webhook', {
+        externalId: data.id,
+        userId,
+        plan,
+      });
+    }
   }
 
   /**
@@ -284,7 +301,9 @@ export class WebhookService {
 
   /**
    * サブスクリプション削除
-   * SubscriptionのstatusをCANCELED、User.planをFREEに更新
+   * SubscriptionのstatusをCANCELEDに更新
+   * ユーザー向け: User.planをFREEに更新
+   * 組織向け: ステータス更新のみ（CANCELEDステータスで制御）
    */
   private async handleSubscriptionDeleted(data: StripeSubscriptionData): Promise<void> {
     const subscription = await this.subscriptionRepo.findByExternalId(data.id);
@@ -298,16 +317,30 @@ export class WebhookService {
       status: 'CANCELED',
     });
 
-    // ユーザーのプランをFREEに更新
+    // ユーザー向け: プランをFREEに更新
     if (subscription.userId) {
       await this.userRepo.updatePlan(subscription.userId, 'FREE');
+      logger.info('Subscription deleted via webhook (user)', {
+        externalId: data.id,
+        subscriptionId: subscription.id,
+        userId: subscription.userId,
+      });
     }
-
-    logger.info('Subscription deleted via webhook', {
-      externalId: data.id,
-      subscriptionId: subscription.id,
-      userId: subscription.userId,
-    });
+    // 組織向け: ステータス更新のみ（CANCELEDステータスで制御）
+    else if (subscription.organizationId) {
+      logger.info('Subscription deleted via webhook (organization)', {
+        externalId: data.id,
+        subscriptionId: subscription.id,
+        organizationId: subscription.organizationId,
+      });
+    }
+    // userId も organizationId もない場合は警告（通常発生しない）
+    else {
+      logger.warn('Subscription deleted but has no userId or organizationId', {
+        externalId: data.id,
+        subscriptionId: subscription.id,
+      });
+    }
   }
 
   /**

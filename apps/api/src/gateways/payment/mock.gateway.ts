@@ -5,18 +5,21 @@
 
 import { randomUUID } from 'crypto';
 
-import { PERSONAL_PLAN_PRICING, type BillingCycle } from '@agentest/shared';
+import { ORG_PLAN_PRICING, PERSONAL_PLAN_PRICING, type BillingCycle, type OrgPlan } from '@agentest/shared';
 
 import type { IPaymentGateway } from './payment-gateway.interface.js';
 import type {
+  CreateOrgSubscriptionParams,
   CreateSubscriptionParams,
   Customer,
   InvoiceResult,
+  OrgSubscriptionResult,
   PaymentMethodResult,
   PreviewProrationParams,
   ProrationPreview,
   SetupIntentResult,
   SubscriptionResult,
+  UpdateOrgSubscriptionParams,
   UpdateSubscriptionParams,
   WebhookEvent,
 } from './types.js';
@@ -30,6 +33,7 @@ interface MockStore {
   customerPaymentMethods: Map<string, string[]>;
   defaultPaymentMethods: Map<string, string>;
   subscriptions: Map<string, SubscriptionResult>;
+  orgSubscriptions: Map<string, OrgSubscriptionResult>;
   invoices: Map<string, InvoiceResult>;
 }
 
@@ -43,6 +47,7 @@ export class MockGateway implements IPaymentGateway {
     customerPaymentMethods: new Map(),
     defaultPaymentMethods: new Map(),
     subscriptions: new Map(),
+    orgSubscriptions: new Map(),
     invoices: new Map(),
   };
 
@@ -218,40 +223,130 @@ export class MockGateway implements IPaymentGateway {
     subscriptionId: string,
     cancelAtPeriodEnd: boolean
   ): Promise<SubscriptionResult> {
-    const subscription = this.store.subscriptions.get(subscriptionId);
+    // 個人用ストアを検索
+    const personalSub = this.store.subscriptions.get(subscriptionId);
+    // 組織用ストアも検索（Stripe実装ではsubscription IDで統一的にアクセス可能なため）
+    const orgSub = this.store.orgSubscriptions.get(subscriptionId);
+    const subscription = personalSub ?? orgSub;
     if (!subscription) {
       throw new Error('Subscription not found');
     }
 
     if (cancelAtPeriodEnd) {
-      // 期間終了時にキャンセル
       subscription.cancelAtPeriodEnd = true;
     } else {
-      // 即時キャンセル
       subscription.status = 'canceled';
     }
 
-    this.store.subscriptions.set(subscriptionId, subscription);
-    return subscription;
+    if (personalSub) {
+      return personalSub;
+    }
+    return this.orgToSubscriptionResult(orgSub!);
   }
 
   async reactivateSubscription(
     subscriptionId: string
   ): Promise<SubscriptionResult> {
-    const subscription = this.store.subscriptions.get(subscriptionId);
+    const personalSub = this.store.subscriptions.get(subscriptionId);
+    const orgSub = this.store.orgSubscriptions.get(subscriptionId);
+    const subscription = personalSub ?? orgSub;
     if (!subscription) {
       throw new Error('Subscription not found');
     }
 
     subscription.cancelAtPeriodEnd = false;
-    this.store.subscriptions.set(subscriptionId, subscription);
-    return subscription;
+
+    if (personalSub) {
+      return personalSub;
+    }
+    return this.orgToSubscriptionResult(orgSub!);
   }
 
   async getSubscription(
     subscriptionId: string
   ): Promise<SubscriptionResult | null> {
-    return this.store.subscriptions.get(subscriptionId) ?? null;
+    const personalSub = this.store.subscriptions.get(subscriptionId);
+    if (personalSub) {
+      return personalSub;
+    }
+    const orgSub = this.store.orgSubscriptions.get(subscriptionId);
+    if (orgSub) {
+      return this.orgToSubscriptionResult(orgSub);
+    }
+    return null;
+  }
+
+  // ============================================
+  // 組織サブスクリプション管理
+  // ============================================
+
+  async createOrgSubscription(
+    params: CreateOrgSubscriptionParams
+  ): Promise<OrgSubscriptionResult> {
+    if (params.quantity < 1) {
+      throw new Error('quantity must be at least 1');
+    }
+    const id = `sub_mock_${randomUUID().slice(0, 8)}`;
+    const now = new Date();
+    const periodEnd = this.calculatePeriodEnd(now, params.billingCycle);
+
+    const result: OrgSubscriptionResult = {
+      id,
+      customerId: params.customerId,
+      status: 'active',
+      plan: params.plan,
+      billingCycle: params.billingCycle,
+      currentPeriodStart: now,
+      currentPeriodEnd: periodEnd,
+      cancelAtPeriodEnd: false,
+      quantity: params.quantity,
+    };
+    this.store.orgSubscriptions.set(id, result);
+
+    // 請求書を作成（金額 = pricePerUser * quantity）
+    this.createOrgMockInvoice(id, params.customerId, params.plan, params.billingCycle, params.quantity);
+
+    return result;
+  }
+
+  async updateOrgSubscription(
+    subscriptionId: string,
+    params: UpdateOrgSubscriptionParams
+  ): Promise<OrgSubscriptionResult> {
+    if (params.quantity !== undefined && params.quantity < 1) {
+      throw new Error('quantity must be at least 1');
+    }
+    const subscription = this.store.orgSubscriptions.get(subscriptionId);
+    if (!subscription) {
+      throw new Error('Organization subscription not found');
+    }
+
+    if (params.billingCycle !== undefined) {
+      subscription.billingCycle = params.billingCycle;
+    }
+    if (params.quantity !== undefined) {
+      subscription.quantity = params.quantity;
+    }
+
+    this.store.orgSubscriptions.set(subscriptionId, subscription);
+    return subscription;
+  }
+
+  async updateSubscriptionQuantity(
+    subscriptionId: string,
+    quantity: number
+  ): Promise<OrgSubscriptionResult> {
+    if (quantity < 1) {
+      throw new Error('quantity must be at least 1');
+    }
+    const subscription = this.store.orgSubscriptions.get(subscriptionId);
+    if (!subscription) {
+      throw new Error('Organization subscription not found');
+    }
+
+    subscription.quantity = quantity;
+    this.store.orgSubscriptions.set(subscriptionId, subscription);
+    return subscription;
   }
 
   // ============================================
@@ -386,6 +481,58 @@ export class MockGateway implements IPaymentGateway {
     this.store.invoices.set(id, invoice);
   }
 
+  /**
+   * OrgSubscriptionResult を SubscriptionResult に変換
+   * cancelSubscription / reactivateSubscription / getSubscription で
+   * 組織サブスクリプションを SubscriptionResult として返す際に使用
+   */
+  private orgToSubscriptionResult(org: OrgSubscriptionResult): SubscriptionResult {
+    return {
+      id: org.id,
+      customerId: org.customerId,
+      status: org.status,
+      plan: org.plan as unknown as SubscriptionResult['plan'],
+      billingCycle: org.billingCycle,
+      currentPeriodStart: org.currentPeriodStart,
+      currentPeriodEnd: org.currentPeriodEnd,
+      cancelAtPeriodEnd: org.cancelAtPeriodEnd,
+    };
+  }
+
+  /**
+   * 組織用モック請求書を作成
+   */
+  private createOrgMockInvoice(
+    subscriptionId: string,
+    customerId: string,
+    plan: OrgPlan,
+    cycle: BillingCycle,
+    quantity: number
+  ): void {
+    const id = `inv_mock_${randomUUID().slice(0, 8)}`;
+    const now = new Date();
+    const periodEnd = this.calculatePeriodEnd(now, cycle);
+    const pricing = ORG_PLAN_PRICING[plan];
+    const unitPrice = cycle === 'YEARLY' ? pricing.yearlyPrice : pricing.monthlyPrice;
+    const amount = unitPrice * quantity;
+
+    const invoice: InvoiceResult = {
+      id,
+      subscriptionId,
+      customerId,
+      invoiceNumber: `INV-${Date.now()}`,
+      amount,
+      currency: 'jpy',
+      status: 'paid',
+      periodStart: now,
+      periodEnd,
+      dueDate: now,
+      pdfUrl: null,
+      createdAt: now,
+    };
+    this.store.invoices.set(id, invoice);
+  }
+
   // ============================================
   // テスト用メソッド
   // ============================================
@@ -400,6 +547,7 @@ export class MockGateway implements IPaymentGateway {
       customerPaymentMethods: new Map(),
       defaultPaymentMethods: new Map(),
       subscriptions: new Map(),
+      orgSubscriptions: new Map(),
       invoices: new Map(),
     };
   }

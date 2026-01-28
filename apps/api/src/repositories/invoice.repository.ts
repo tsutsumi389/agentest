@@ -20,6 +20,25 @@ export interface UpsertInvoiceParams {
 }
 
 /**
+ * ページネーションパラメータ
+ */
+export interface PaginationParams {
+  page: number;
+  limit: number;
+}
+
+/**
+ * ページネーション結果
+ */
+export interface PaginatedResult<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+/**
  * 請求書リポジトリ
  */
 export class InvoiceRepository {
@@ -66,5 +85,36 @@ export class InvoiceRepository {
       create: createData,
       update: updateData,
     });
+  }
+
+  /**
+   * サブスクリプションIDで請求書を取得（ページネーション付き）
+   */
+  async findBySubscriptionId(
+    subscriptionId: string,
+    pagination: PaginationParams
+  ): Promise<PaginatedResult<Invoice>> {
+    // ページネーションの境界値を正規化
+    const page = Math.max(1, pagination.page);
+    const limit = Math.max(1, Math.min(100, pagination.limit));
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await Promise.all([
+      prisma.invoice.findMany({
+        where: { subscriptionId },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      prisma.invoice.count({ where: { subscriptionId } }),
+    ]);
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: limit > 0 ? Math.ceil(total / limit) : 0,
+    };
   }
 }

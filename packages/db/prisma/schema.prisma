@@ -73,15 +73,15 @@ enum ReviewStatus {
 
 // レビューセッションのステータス
 enum ReviewSessionStatus {
-  DRAFT      // 下書き中（submitするまで他の人に見えない）
-  SUBMITTED  // 提出済み（公開）
+  DRAFT // 下書き中（submitするまで他の人に見えない）
+  SUBMITTED // 提出済み（公開）
 }
 
 // レビュー評価
 enum ReviewVerdict {
-  APPROVED           // 承認
-  CHANGES_REQUESTED  // 要修正
-  COMMENT_ONLY       // コメントのみ（評価なし）
+  APPROVED // 承認
+  CHANGES_REQUESTED // 要修正
+  COMMENT_ONLY // コメントのみ（評価なし）
 }
 
 enum ReviewTargetType {
@@ -170,9 +170,9 @@ enum AuditLogCategory {
 
 // 管理者ロール定義
 enum AdminRoleType {
-  SUPER_ADMIN   // 最高権限管理者
-  ADMIN         // 一般管理者
-  VIEWER        // 閲覧専用
+  SUPER_ADMIN // 最高権限管理者
+  ADMIN // 一般管理者
+  VIEWER // 閲覧専用
 }
 
 // ============================================
@@ -180,44 +180,44 @@ enum AdminRoleType {
 // ============================================
 
 model User {
-  id        String    @id @default(uuid())
-  email     String    @unique @db.VarChar(255)
-  name      String    @db.VarChar(100)
-  avatarUrl String?   @map("avatar_url")
+  id                String    @id @default(uuid())
+  email             String    @unique @db.VarChar(255)
+  name              String    @db.VarChar(100)
+  avatarUrl         String?   @map("avatar_url")
   plan              UserPlan  @default(FREE)
   paymentCustomerId String?   @unique @map("payment_customer_id") @db.VarChar(255) // 決済サービス顧客ID
   createdAt         DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+  deletedAt         DateTime? @map("deleted_at")
 
   // リレーション
-  accounts               Account[]
-  refreshTokens          RefreshToken[]
-  sessions               Session[]
-  organizationMembers    OrganizationMember[]
-  sentInvitations        OrganizationInvitation[]
-  projectMembers         ProjectMember[]
-  testSuites             TestSuite[]              @relation("TestSuiteCreator")
-  testCases              TestCase[]               @relation("TestCaseCreator")
-  executions             Execution[]              @relation("ExecutionUser")
-  reviews                Review[]                 @relation("ReviewAuthor")
-  reviewComments         ReviewComment[]          @relation("ReviewCommentUser")
-  reviewCommentReplies   ReviewCommentReply[]     @relation("ReviewReplyUser")
-  editLocks              EditLock[]               @relation("EditLockUser")
-  uploadedEvidences      ExecutionEvidence[]      @relation("EvidenceUploader")
-  projectHistories       ProjectHistory[]         @relation("ProjectHistoryUser")
-  testSuiteHistories     TestSuiteHistory[]       @relation("TestSuiteHistoryUser")
-  testCaseHistories      TestCaseHistory[]        @relation("TestCaseHistoryUser")
-  apiTokens              ApiToken[]               @relation("UserApiTokens")
-  subscription           Subscription?            @relation("UserSubscription")
-  paymentMethods         PaymentMethod[]          @relation("UserPaymentMethods")
-  notifications          Notification[]
-  notificationPreferences NotificationPreference[]
-  auditLogs              AuditLog[]
-  usageRecords           UsageRecord[]            @relation("UserUsageRecords")
-  oauthAuthorizationCodes OAuthAuthorizationCode[]
-  oauthAccessTokens       OAuthAccessToken[]
-  oauthRefreshTokens      OAuthRefreshToken[]
+  accounts                   Account[]
+  refreshTokens              RefreshToken[]
+  sessions                   Session[]
+  organizationMembers        OrganizationMember[]
+  sentInvitations            OrganizationInvitation[]
+  projectMembers             ProjectMember[]
+  testSuites                 TestSuite[]                   @relation("TestSuiteCreator")
+  testCases                  TestCase[]                    @relation("TestCaseCreator")
+  executions                 Execution[]                   @relation("ExecutionUser")
+  reviews                    Review[]                      @relation("ReviewAuthor")
+  reviewComments             ReviewComment[]               @relation("ReviewCommentUser")
+  reviewCommentReplies       ReviewCommentReply[]          @relation("ReviewReplyUser")
+  editLocks                  EditLock[]                    @relation("EditLockUser")
+  uploadedEvidences          ExecutionEvidence[]           @relation("EvidenceUploader")
+  projectHistories           ProjectHistory[]              @relation("ProjectHistoryUser")
+  testSuiteHistories         TestSuiteHistory[]            @relation("TestSuiteHistoryUser")
+  testCaseHistories          TestCaseHistory[]             @relation("TestCaseHistoryUser")
+  apiTokens                  ApiToken[]                    @relation("UserApiTokens")
+  subscription               Subscription?                 @relation("UserSubscription")
+  paymentMethods             PaymentMethod[]               @relation("UserPaymentMethods")
+  notifications              Notification[]
+  notificationPreferences    NotificationPreference[]
+  auditLogs                  AuditLog[]
+  usageRecords               UsageRecord[]                 @relation("UserUsageRecords")
+  oauthAuthorizationCodes    OAuthAuthorizationCode[]
+  oauthAccessTokens          OAuthAccessToken[]
+  oauthRefreshTokens         OAuthRefreshToken[]
   // 実行結果の実施者リレーション
   preconditionResultsChecked ExecutionPreconditionResult[] @relation("PreconditionResultChecker")
   stepResultsExecuted        ExecutionStepResult[]         @relation("StepResultExecutor")
@@ -287,15 +287,16 @@ model Session {
 // ============================================
 
 model Organization {
-  id           String           @id @default(uuid())
-  name         String           @db.VarChar(100)
-  description  String?          @db.Text
-  avatarUrl    String?          @map("avatar_url")
-  plan         OrganizationPlan @default(TEAM)
-  billingEmail String?          @map("billing_email") @db.VarChar(255)
-  createdAt    DateTime         @default(now()) @map("created_at")
-  updatedAt    DateTime         @updatedAt @map("updated_at")
-  deletedAt    DateTime?        @map("deleted_at")
+  id                String           @id @default(uuid())
+  name              String           @db.VarChar(100)
+  description       String?          @db.Text
+  avatarUrl         String?          @map("avatar_url")
+  plan              OrganizationPlan @default(TEAM)
+  paymentCustomerId String?          @unique @map("payment_customer_id") @db.VarChar(255) // 決済サービス顧客ID
+  billingEmail      String?          @map("billing_email") @db.VarChar(255)
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+  deletedAt         DateTime?        @map("deleted_at")
 
   // リレーション
   members              OrganizationMember[]
@@ -407,14 +408,14 @@ model ProjectMember {
 }
 
 model ProjectHistory {
-  id                    String     @id @default(uuid())
-  projectId             String     @map("project_id")
-  changedByUserId       String?    @map("changed_by_user_id")
-  changedByAgentSessionId String?  @map("changed_by_agent_session_id")
-  changeType            ChangeType @map("change_type")
-  snapshot              Json
-  changeReason          String?    @map("change_reason") @db.Text
-  createdAt             DateTime   @default(now()) @map("created_at")
+  id                      String     @id @default(uuid())
+  projectId               String     @map("project_id")
+  changedByUserId         String?    @map("changed_by_user_id")
+  changedByAgentSessionId String?    @map("changed_by_agent_session_id")
+  changeType              ChangeType @map("change_type")
+  snapshot                Json
+  changeReason            String?    @map("change_reason") @db.Text
+  createdAt               DateTime   @default(now()) @map("created_at")
 
   project      Project       @relation(fields: [projectId], references: [id], onDelete: Cascade)
   changedBy    User?         @relation("ProjectHistoryUser", fields: [changedByUserId], references: [id])
@@ -441,9 +442,9 @@ model TestSuite {
   updatedAt               DateTime     @updatedAt @map("updated_at")
   deletedAt               DateTime?    @map("deleted_at")
 
-  project         Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  createdByUser   User?                  @relation("TestSuiteCreator", fields: [createdByUserId], references: [id])
-  agentSession    AgentSession?          @relation(fields: [createdByAgentSessionId], references: [id])
+  project         Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdByUser   User?                   @relation("TestSuiteCreator", fields: [createdByUserId], references: [id])
+  agentSession    AgentSession?           @relation(fields: [createdByAgentSessionId], references: [id])
   preconditions   TestSuitePrecondition[]
   testCases       TestCase[]
   histories       TestSuiteHistory[]
@@ -597,13 +598,13 @@ model TestCaseHistory {
 // ============================================
 
 model Execution {
-  id                      String   @id @default(uuid())
-  testSuiteId             String   @map("test_suite_id")
-  environmentId           String?  @map("environment_id")
-  executedByUserId        String?  @map("executed_by_user_id")
-  executedByAgentSessionId String? @map("executed_by_agent_session_id")
-  createdAt               DateTime @default(now()) @map("created_at")
-  updatedAt               DateTime @updatedAt @map("updated_at")
+  id                       String   @id @default(uuid())
+  testSuiteId              String   @map("test_suite_id")
+  environmentId            String?  @map("environment_id")
+  executedByUserId         String?  @map("executed_by_user_id")
+  executedByAgentSessionId String?  @map("executed_by_agent_session_id")
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
 
   testSuite           TestSuite                     @relation(fields: [testSuiteId], references: [id], onDelete: Cascade)
   environment         ProjectEnvironment?           @relation(fields: [environmentId], references: [id])
@@ -804,16 +805,16 @@ model ExecutionExpectedResult {
 }
 
 model ExecutionEvidence {
-  id                      String   @id @default(uuid())
-  expectedResultId        String   @map("expected_result_id")
-  fileName                String   @map("file_name") @db.VarChar(255)
-  fileUrl                 String   @map("file_url")
-  fileType                String   @map("file_type") @db.VarChar(100)
-  fileSize                BigInt   @map("file_size")
-  description             String?  @db.Text
-  uploadedByUserId        String?  @map("uploaded_by_user_id")
-  uploadedByAgentSessionId String? @map("uploaded_by_agent_session_id")
-  createdAt               DateTime @default(now()) @map("created_at")
+  id                       String   @id @default(uuid())
+  expectedResultId         String   @map("expected_result_id")
+  fileName                 String   @map("file_name") @db.VarChar(255)
+  fileUrl                  String   @map("file_url")
+  fileType                 String   @map("file_type") @db.VarChar(100)
+  fileSize                 BigInt   @map("file_size")
+  description              String?  @db.Text
+  uploadedByUserId         String?  @map("uploaded_by_user_id")
+  uploadedByAgentSessionId String?  @map("uploaded_by_agent_session_id")
+  createdAt                DateTime @default(now()) @map("created_at")
 
   expectedResult ExecutionExpectedResult @relation(fields: [expectedResultId], references: [id], onDelete: Cascade)
   uploadedBy     User?                   @relation("EvidenceUploader", fields: [uploadedByUserId], references: [id])
@@ -829,21 +830,21 @@ model ExecutionEvidence {
 
 // レビューセッション（GitHubのPR Reviewに相当）
 model Review {
-  id                    String              @id @default(uuid())
-  testSuiteId           String              @map("test_suite_id")
-  authorUserId          String?             @map("author_user_id")
-  authorAgentSessionId  String?             @map("author_agent_session_id")
-  status                ReviewSessionStatus @default(DRAFT)
-  verdict               ReviewVerdict?      // DRAFTの場合はnull、submit時に設定
-  summary               String?             @db.Text // レビュー全体のサマリーコメント（オプション）
-  submittedAt           DateTime?           @map("submitted_at")
-  createdAt             DateTime            @default(now()) @map("created_at")
-  updatedAt             DateTime            @updatedAt @map("updated_at")
+  id                   String              @id @default(uuid())
+  testSuiteId          String              @map("test_suite_id")
+  authorUserId         String?             @map("author_user_id")
+  authorAgentSessionId String?             @map("author_agent_session_id")
+  status               ReviewSessionStatus @default(DRAFT)
+  verdict              ReviewVerdict? // DRAFTの場合はnull、submit時に設定
+  summary              String?             @db.Text // レビュー全体のサマリーコメント（オプション）
+  submittedAt          DateTime?           @map("submitted_at")
+  createdAt            DateTime            @default(now()) @map("created_at")
+  updatedAt            DateTime            @updatedAt @map("updated_at")
 
   // リレーション
-  testSuite    TestSuite      @relation(fields: [testSuiteId], references: [id], onDelete: Cascade)
-  author       User?          @relation("ReviewAuthor", fields: [authorUserId], references: [id])
-  agentSession AgentSession?  @relation("ReviewAgentSession", fields: [authorAgentSessionId], references: [id])
+  testSuite    TestSuite       @relation(fields: [testSuiteId], references: [id], onDelete: Cascade)
+  author       User?           @relation("ReviewAuthor", fields: [authorUserId], references: [id])
+  agentSession AgentSession?   @relation("ReviewAgentSession", fields: [authorAgentSessionId], references: [id])
   comments     ReviewComment[]
 
   @@index([testSuiteId])
@@ -853,19 +854,19 @@ model Review {
 }
 
 model ReviewComment {
-  id                    String            @id @default(uuid())
-  reviewId              String            @map("review_id")
-  targetType            ReviewTargetType  @map("target_type")
-  targetId              String            @map("target_id")
-  targetField           ReviewTargetField @map("target_field")
-  targetItemId          String?           @map("target_item_id")
-  targetItemContent     String?           @map("target_item_content") @db.Text
-  authorUserId          String?           @map("author_user_id")
-  authorAgentSessionId  String?           @map("author_agent_session_id")
-  content               String            @db.Text
-  status                ReviewStatus      @default(OPEN)
-  createdAt             DateTime          @default(now()) @map("created_at")
-  updatedAt             DateTime          @updatedAt @map("updated_at")
+  id                   String            @id @default(uuid())
+  reviewId             String            @map("review_id")
+  targetType           ReviewTargetType  @map("target_type")
+  targetId             String            @map("target_id")
+  targetField          ReviewTargetField @map("target_field")
+  targetItemId         String?           @map("target_item_id")
+  targetItemContent    String?           @map("target_item_content") @db.Text
+  authorUserId         String?           @map("author_user_id")
+  authorAgentSessionId String?           @map("author_agent_session_id")
+  content              String            @db.Text
+  status               ReviewStatus      @default(OPEN)
+  createdAt            DateTime          @default(now()) @map("created_at")
+  updatedAt            DateTime          @updatedAt @map("updated_at")
 
   review       Review               @relation(fields: [reviewId], references: [id], onDelete: Cascade)
   author       User?                @relation("ReviewCommentUser", fields: [authorUserId], references: [id])
@@ -896,14 +897,14 @@ model ReviewCommentReply {
 }
 
 model EditLock {
-  id                   String         @id @default(uuid())
-  targetType           LockTargetType @map("target_type")
-  targetId             String         @map("target_id")
-  lockedByUserId       String?        @map("locked_by_user_id")
-  lockedByAgentSessionId String?      @map("locked_by_agent_session_id")
-  lockedAt             DateTime       @default(now()) @map("locked_at")
-  lastHeartbeat        DateTime       @default(now()) @map("last_heartbeat")
-  expiresAt            DateTime       @map("expires_at")
+  id                     String         @id @default(uuid())
+  targetType             LockTargetType @map("target_type")
+  targetId               String         @map("target_id")
+  lockedByUserId         String?        @map("locked_by_user_id")
+  lockedByAgentSessionId String?        @map("locked_by_agent_session_id")
+  lockedAt               DateTime       @default(now()) @map("locked_at")
+  lastHeartbeat          DateTime       @default(now()) @map("last_heartbeat")
+  expiresAt              DateTime       @map("expires_at")
 
   lockedBy     User?         @relation("EditLockUser", fields: [lockedByUserId], references: [id])
   agentSession AgentSession? @relation(fields: [lockedByAgentSessionId], references: [id])
@@ -1285,26 +1286,26 @@ model TestSuiteLabel {
 
 // 管理者ユーザー
 model AdminUser {
-  id             String        @id @default(uuid())
-  email          String        @unique @db.VarChar(255)
-  passwordHash   String        @map("password_hash") @db.VarChar(255)
-  name           String        @db.VarChar(100)
-  role           AdminRoleType @default(ADMIN)
+  id           String        @id @default(uuid())
+  email        String        @unique @db.VarChar(255)
+  passwordHash String        @map("password_hash") @db.VarChar(255)
+  name         String        @db.VarChar(100)
+  role         AdminRoleType @default(ADMIN)
 
   // 2FA
-  totpSecret     String?       @map("totp_secret") @db.VarChar(255)
-  totpEnabled    Boolean       @default(false) @map("totp_enabled")
+  totpSecret  String? @map("totp_secret") @db.VarChar(255)
+  totpEnabled Boolean @default(false) @map("totp_enabled")
 
   // セキュリティ
-  failedAttempts Int           @default(0) @map("failed_attempts")
-  lockedUntil    DateTime?     @map("locked_until")
+  failedAttempts Int       @default(0) @map("failed_attempts")
+  lockedUntil    DateTime? @map("locked_until")
 
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
-  deletedAt      DateTime?     @map("deleted_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
 
-  sessions       AdminSession[]
-  auditLogs      AdminAuditLog[]
+  sessions  AdminSession[]
+  auditLogs AdminAuditLog[]
 
   @@index([email])
   @@index([deletedAt])
@@ -1313,20 +1314,20 @@ model AdminUser {
 
 // 管理者セッション
 model AdminSession {
-  id           String    @id @default(uuid())
-  adminUserId  String    @map("admin_user_id")
-  token        String    @unique @db.VarChar(500)
+  id          String @id @default(uuid())
+  adminUserId String @map("admin_user_id")
+  token       String @unique @db.VarChar(500)
 
-  userAgent    String?   @map("user_agent")
-  ipAddress    String?   @map("ip_address") @db.VarChar(45)
+  userAgent String? @map("user_agent")
+  ipAddress String? @map("ip_address") @db.VarChar(45)
 
   lastActiveAt DateTime  @default(now()) @map("last_active_at")
   expiresAt    DateTime  @map("expires_at")
   revokedAt    DateTime? @map("revoked_at")
 
-  createdAt    DateTime  @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  adminUser    AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
 
   @@index([adminUserId])
   @@index([token])
@@ -1336,20 +1337,20 @@ model AdminSession {
 
 // 管理者監査ログ
 model AdminAuditLog {
-  id           String   @id @default(uuid())
-  adminUserId  String   @map("admin_user_id")
+  id          String @id @default(uuid())
+  adminUserId String @map("admin_user_id")
 
-  action       String   @db.VarChar(100)
-  targetType   String?  @map("target_type") @db.VarChar(50)
-  targetId     String?  @map("target_id")
+  action     String  @db.VarChar(100)
+  targetType String? @map("target_type") @db.VarChar(50)
+  targetId   String? @map("target_id")
 
-  details      Json?
-  ipAddress    String?  @map("ip_address") @db.VarChar(45)
-  userAgent    String?  @map("user_agent")
+  details   Json?
+  ipAddress String? @map("ip_address") @db.VarChar(45)
+  userAgent String? @map("user_agent")
 
-  createdAt    DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  adminUser    AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
 
   @@index([adminUserId])
   @@index([action])

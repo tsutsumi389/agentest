@@ -95,3 +95,64 @@ export function getStripePriceId(
     ? pricing.stripePriceId.yearly
     : pricing.stripePriceId.monthly;
 }
+
+// ============================================
+// 組織プラン料金設定
+// ============================================
+
+export type OrgPlan = 'TEAM';
+
+export interface OrgPlanPricing extends PlanPricing {
+  /** 1ユーザーあたりの月額単価。課金額は pricePerUser * メンバー数 で計算する */
+  pricePerUser: number;
+}
+
+/**
+ * 組織プラン料金設定
+ * 組織プランはユーザー単価制（基本料金なし）。
+ * monthlyPrice/yearlyPrice は1ユーザーあたりの単価を表す。
+ * 組織全体の課金額は pricePerUser * メンバー数 で算出する。
+ */
+export const ORG_PLAN_PRICING: Record<OrgPlan, OrgPlanPricing> = {
+  TEAM: {
+    // 1ユーザーあたりの料金（基本料金なし）
+    monthlyPrice: 1200,
+    yearlyPrice: 12000,
+    pricePerUser: 1200,
+    stripePriceId: {
+      // 実際のStripe Price IDはバックエンドで環境変数から取得する
+      // フロントエンドではプレースホルダーとして使用
+      monthly: 'price_team_monthly',
+      yearly: 'price_team_yearly',
+    },
+    features: [
+      { name: 'プロジェクト数', description: '無制限', included: true },
+      { name: 'テストケース数', description: '無制限', included: true },
+      { name: 'MCP連携', description: '利用可能', included: true },
+      { name: 'チーム機能', description: '利用可能', included: true },
+      { name: 'メンバー管理', description: 'ロールベース', included: true },
+      { name: '優先サポート', description: 'メールサポート', included: true },
+    ],
+  },
+};
+
+/**
+ * 組織プランの年額割引額を計算
+ */
+export function calculateOrgYearlySavings(plan: OrgPlan): number {
+  const pricing = ORG_PLAN_PRICING[plan];
+  return pricing.monthlyPrice * 12 - pricing.yearlyPrice;
+}
+
+/**
+ * 組織プランのStripe Price IDを取得
+ */
+export function getOrgStripePriceId(
+  plan: OrgPlan,
+  cycle: BillingCycle
+): string | null {
+  const pricing = ORG_PLAN_PRICING[plan];
+  return cycle === 'YEARLY'
+    ? pricing.stripePriceId.yearly
+    : pricing.stripePriceId.monthly;
+}

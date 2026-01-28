@@ -4,6 +4,7 @@ import type { Express } from 'express';
 import { prisma } from '@agentest/db';
 import {
   createTestUser,
+  createTestOrganization,
   createTestSubscription,
   cleanupTestData,
 } from './test-helpers.js';
@@ -24,13 +25,6 @@ interface AuthUser {
 
 // グローバルな認証状態（モック用）
 let mockAuthUser: AuthUser | null = null;
-
-/**
- * テスト用認証設定関数
- */
-function setTestAuth(user: AuthUser | null) {
-  mockAuthUser = user;
-}
 
 function clearTestAuth() {
   mockAuthUser = null;
@@ -327,6 +321,177 @@ describe('Webhook Integration Tests', () => {
 
       expect(response.status).toBe(400);
       expect(response.body.error).toContain('stripe-signature');
+    });
+  });
+
+  // ============================================
+  // Webhook Integration - 組織サブスクリプション
+  // ============================================
+
+  describe('Webhook Integration - 組織サブスクリプション', () => {
+    let testOrg: Awaited<ReturnType<typeof createTestOrganization>>;
+
+    beforeEach(async () => {
+      // 組織を作成（testUserをオーナーとして）
+      testOrg = await createTestOrganization(testUser.id, {
+        name: 'Webhook Test Org',
+      });
+    });
+
+    it('invoice.paid: 組織サブスクリプションのInvoice作成', async () => {
+      // 組織向けサブスクリプションを作成（externalId付き）
+      const subscription = await createTestSubscription({
+        organizationId: testOrg.id,
+        plan: 'TEAM',
+        status: 'ACTIVE',
+        billingCycle: 'MONTHLY',
+      });
+      await prisma.subscription.update({
+        where: { id: subscription.id },
+        data: { externalId: 'sub_stripe_org_webhook_1' },
+      });
+
+      const webhookEvent = {
+        id: 'evt_org_invoice_paid_1',
+        type: 'invoice.paid',
+        data: {
+          object: {
+            id: 'inv_org_1',
+            number: 'INV-ORG-WEBHOOK-001',
+            subscription: 'sub_stripe_org_webhook_1',
+            customer: 'cus_org_1',
+            amount_due: 4500, // 1500 * 3メンバー
+            currency: 'jpy',
+            status: 'paid',
+            period_start: 1704067200,
+            period_end: 1706745600,
+            due_date: 1704067200,
+            invoice_pdf: null,
+          },
+        },
+        createdAt: new Date().toISOString(),
+      };
+
+      const response = await sendWebhookRequest(app, webhookEvent);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ received: true });
+
+      // Invoiceが作成されたことを確認
+      const invoice = await prisma.invoice.findFirst({
+        where: { invoiceNumber: 'INV-ORG-WEBHOOK-001' },
+      });
+      expect(invoice).not.toBeNull();
+      expect(invoice?.status).toBe('PAID');
+      expect(Number(invoice?.amount)).toBe(4500);
+      expect(invoice?.subscriptionId).toBe(subscription.id);
+    });
+
+    it('customer.subscription.updated: 組織サブスクリプションDB同期', async () => {
+      const subscription = await createTestSubscription({
+        organizationId: testOrg.id,
+        plan: 'TEAM',
+        status: 'ACTIVE',
+        billingCycle: 'MONTHLY',
+        cancelAtPeriodEnd: false,
+      });
+      await prisma.subscription.update({
+        where: { id: subscription.id },
+        data: { externalId: 'sub_stripe_org_webhook_2' },
+      });
+
+      const webhookEvent = {
+        id: 'evt_org_sub_updated_1',
+        type: 'customer.subscription.updated',
+        data: {
+          object: {
+            id: 'sub_stripe_org_webhook_2',
+            customer: 'cus_org_1',
+            status: 'active',
+            cancel_at_period_end: true,
+            items: {
+              data: [{
+                current_period_start: 1706745600,
+                current_period_end: 1738368000,
+              }],
+            },
+            metadata: {
+              plan: 'TEAM',
+              billingCycle: 'YEARLY',
+            },
+          },
+        },
+        createdAt: new Date().toISOString(),
+      };
+
+      const response = await sendWebhookRequest(app, webhookEvent);
+
+      expect(response.status).toBe(200);
+
+      // DB同期の確認
+      const updatedSub = await prisma.subscription.findUnique({
+        where: { id: subscription.id },
+      });
+      expect(updatedSub?.billingCycle).toBe('YEARLY');
+      expect(updatedSub?.status).toBe('ACTIVE');
+      expect(updatedSub?.cancelAtPeriodEnd).toBe(true);
+    });
+
+    it('customer.subscription.deleted: CANCELED更新（User.plan変更なし）', async () => {
+      const subscription = await createTestSubscription({
+        organizationId: testOrg.id,
+        plan: 'TEAM',
+        status: 'ACTIVE',
+        billingCycle: 'MONTHLY',
+      });
+      await prisma.subscription.update({
+        where: { id: subscription.id },
+        data: { externalId: 'sub_stripe_org_webhook_3' },
+      });
+
+      // ユーザーのプランを記録（変更されないことを確認）
+      const userBeforeDelete = await prisma.user.findUnique({
+        where: { id: testUser.id },
+      });
+      const originalUserPlan = userBeforeDelete?.plan;
+
+      const webhookEvent = {
+        id: 'evt_org_sub_deleted_1',
+        type: 'customer.subscription.deleted',
+        data: {
+          object: {
+            id: 'sub_stripe_org_webhook_3',
+            customer: 'cus_org_1',
+            status: 'canceled',
+            cancel_at_period_end: false,
+            items: {
+              data: [{
+                current_period_start: 1704067200,
+                current_period_end: 1706745600,
+              }],
+            },
+            metadata: {},
+          },
+        },
+        createdAt: new Date().toISOString(),
+      };
+
+      const response = await sendWebhookRequest(app, webhookEvent);
+
+      expect(response.status).toBe(200);
+
+      // サブスクリプションがCANCELEDに更新されたことを確認
+      const updatedSub = await prisma.subscription.findUnique({
+        where: { id: subscription.id },
+      });
+      expect(updatedSub?.status).toBe('CANCELED');
+
+      // ユーザーのプランが変更されていないことを確認
+      // 組織サブスクリプションの場合はUser.plan更新は行わない
+      const userAfterDelete = await prisma.user.findUnique({
+        where: { id: testUser.id },
+      });
+      expect(userAfterDelete?.plan).toBe(originalUserPlan);
     });
   });
 });

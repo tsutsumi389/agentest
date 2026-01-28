@@ -143,7 +143,7 @@ describe('MockGateway', () => {
   describe('setDefaultPaymentMethod', () => {
     it('正常にデフォルト支払い方法を設定する', async () => {
       const customer = await gateway.createCustomer('test@example.com');
-      const pm1 = await gateway.attachPaymentMethod(customer.id, 'tok_visa');
+      await gateway.attachPaymentMethod(customer.id, 'tok_visa');
       const pm2 = await gateway.attachPaymentMethod(customer.id, 'tok_mastercard');
 
       await gateway.setDefaultPaymentMethod(customer.id, pm2.id);
