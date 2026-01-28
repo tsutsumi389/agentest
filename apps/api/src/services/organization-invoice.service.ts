@@ -79,7 +79,7 @@ export class OrganizationInvoiceService {
     return {
       id: invoice.id,
       invoiceNumber: invoice.invoiceNumber,
-      amount: invoice.amount,
+      amount: Number(invoice.amount),
       currency: invoice.currency,
       status: invoice.status,
       periodStart: invoice.periodStart,

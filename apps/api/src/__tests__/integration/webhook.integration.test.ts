@@ -25,13 +25,6 @@ interface AuthUser {
 // グローバルな認証状態（モック用）
 let mockAuthUser: AuthUser | null = null;
 
-/**
- * テスト用認証設定関数
- */
-function setTestAuth(user: AuthUser | null) {
-  mockAuthUser = user;
-}
-
 function clearTestAuth() {
   mockAuthUser = null;
 }
