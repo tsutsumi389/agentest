@@ -200,6 +200,7 @@ export async function cleanupTestData() {
   await prisma.adminSession.deleteMany({});
   await prisma.adminUser.deleteMany({});
   // 課金関連
+  await prisma.paymentEvent.deleteMany({});
   await prisma.invoice.deleteMany({});
   await prisma.subscription.deleteMany({});
   await prisma.paymentMethod.deleteMany({});

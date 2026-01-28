@@ -46,10 +46,10 @@ export class WebhookController {
       const gateway = getPaymentGateway();
       const event = gateway.verifyAndParseWebhookEvent(rawBody, signature);
 
-      // イベント処理
-      await this.webhookService.handleEvent(event);
+      // イベント処理（冪等性チェック付き）
+      const result = await this.webhookService.handleEvent(event);
 
-      res.json({ received: true });
+      res.json({ received: true, duplicate: result.duplicate });
     } catch (error) {
       logger.error('Webhook processing failed', {
         error: error instanceof Error ? error.message : String(error),

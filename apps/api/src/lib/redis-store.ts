@@ -15,6 +15,8 @@ const KEY_PREFIX = {
   ADMIN_USERS: 'admin:users:',
   ADMIN_USER_DETAIL: 'admin:user:detail:',
   ADMIN_ORGANIZATIONS: 'admin:organizations:',
+  USER_INVOICES: 'invoices:user:',
+  ORG_INVOICES: 'invoices:org:',
 } as const;
 
 // Redis未設定時の警告メッセージ（開発環境用）
@@ -517,4 +519,178 @@ export async function invalidateAdminOrganizationsCache(): Promise<boolean> {
     console.error('管理者組織一覧キャッシュの無効化に失敗:', error);
     return false;
   }
+}
+
+// ============================================
+// ジェネリックキャッシュヘルパー（内部用）
+// ============================================
+
+/**
+ * キャッシュにデータを保存する汎用関数
+ * @param key キャッシュキー
+ * @param data 保存するデータ
+ * @param ttlSeconds 有効期限（秒）
+ * @param errorMessage エラー時のログメッセージ
+ */
+async function setCache<T>(
+  key: string,
+  data: T,
+  ttlSeconds: number,
+  errorMessage: string
+): Promise<boolean> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    await redis.setex(key, ttlSeconds, JSON.stringify(data));
+    return true;
+  } catch (error) {
+    console.error(errorMessage, error);
+    return false;
+  }
+}
+
+/**
+ * キャッシュからデータを取得する汎用関数
+ * @param key キャッシュキー
+ * @param errorMessage エラー時のログメッセージ
+ */
+async function getCache<T>(
+  key: string,
+  errorMessage: string
+): Promise<T | null> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return null;
+  }
+
+  try {
+    const data = await redis.get(key);
+    if (!data) {
+      return null;
+    }
+    return JSON.parse(data) as T;
+  } catch (error) {
+    console.error(errorMessage, error);
+    return null;
+  }
+}
+
+/**
+ * キャッシュを無効化する汎用関数
+ * @param key キャッシュキー
+ * @param errorMessage エラー時のログメッセージ
+ */
+async function invalidateCache(
+  key: string,
+  errorMessage: string
+): Promise<boolean> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    await redis.del(key);
+    return true;
+  } catch (error) {
+    console.error(errorMessage, error);
+    return false;
+  }
+}
+
+// ============================================
+// 請求履歴キャッシュ（個人・組織）
+// ============================================
+
+/**
+ * ユーザーの請求履歴をキャッシュに保存
+ * @param userId ユーザーID
+ * @param data 請求履歴データ
+ * @param ttlSeconds 有効期限（秒）、デフォルト5分
+ */
+export async function setUserInvoicesCache<T>(
+  userId: string,
+  data: T,
+  ttlSeconds: number = 300
+): Promise<boolean> {
+  return setCache(
+    `${KEY_PREFIX.USER_INVOICES}${userId}`,
+    data,
+    ttlSeconds,
+    'ユーザー請求履歴キャッシュの保存に失敗:'
+  );
+}
+
+/**
+ * ユーザーの請求履歴をキャッシュから取得
+ * @param userId ユーザーID
+ */
+export async function getUserInvoicesCache<T>(
+  userId: string
+): Promise<T | null> {
+  return getCache<T>(
+    `${KEY_PREFIX.USER_INVOICES}${userId}`,
+    'ユーザー請求履歴キャッシュの取得に失敗:'
+  );
+}
+
+/**
+ * ユーザーの請求履歴キャッシュを無効化
+ * @param userId ユーザーID
+ */
+export async function invalidateUserInvoicesCache(
+  userId: string
+): Promise<boolean> {
+  return invalidateCache(
+    `${KEY_PREFIX.USER_INVOICES}${userId}`,
+    'ユーザー請求履歴キャッシュの無効化に失敗:'
+  );
+}
+
+/**
+ * 組織の請求履歴をキャッシュに保存
+ * @param organizationId 組織ID
+ * @param data 請求履歴データ
+ * @param ttlSeconds 有効期限（秒）、デフォルト5分
+ */
+export async function setOrgInvoicesCache<T>(
+  organizationId: string,
+  data: T,
+  ttlSeconds: number = 300
+): Promise<boolean> {
+  return setCache(
+    `${KEY_PREFIX.ORG_INVOICES}${organizationId}`,
+    data,
+    ttlSeconds,
+    '組織請求履歴キャッシュの保存に失敗:'
+  );
+}
+
+/**
+ * 組織の請求履歴をキャッシュから取得
+ * @param organizationId 組織ID
+ */
+export async function getOrgInvoicesCache<T>(
+  organizationId: string
+): Promise<T | null> {
+  return getCache<T>(
+    `${KEY_PREFIX.ORG_INVOICES}${organizationId}`,
+    '組織請求履歴キャッシュの取得に失敗:'
+  );
+}
+
+/**
+ * 組織の請求履歴キャッシュを無効化
+ * @param organizationId 組織ID
+ */
+export async function invalidateOrgInvoicesCache(
+  organizationId: string
+): Promise<boolean> {
+  return invalidateCache(
+    `${KEY_PREFIX.ORG_INVOICES}${organizationId}`,
+    '組織請求履歴キャッシュの無効化に失敗:'
+  );
 }

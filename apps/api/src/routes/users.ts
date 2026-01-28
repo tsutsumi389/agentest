@@ -3,6 +3,7 @@ import { requireAuth } from '@agentest/auth';
 import { UserController } from '../controllers/user.controller.js';
 import { SubscriptionController } from '../controllers/subscription.controller.js';
 import { PaymentMethodController } from '../controllers/payment-method.controller.js';
+import { UserInvoiceController } from '../controllers/user-invoice.controller.js';
 import { authConfig } from '../config/auth.js';
 import { requireOwnership } from '../middleware/require-ownership.js';
 import { billingLimiter } from '../middleware/rate-limiter.js';
@@ -11,6 +12,7 @@ const router: Router = Router();
 const userController = new UserController();
 const subscriptionController = new SubscriptionController();
 const paymentMethodController = new PaymentMethodController();
+const userInvoiceController = new UserInvoiceController();
 
 // 認証 + オーナーシップチェックのミドルウェアチェーン
 const authWithOwnership = [requireAuth(authConfig), requireOwnership()];
@@ -127,5 +129,27 @@ router.delete('/:userId/payment-methods/:paymentMethodId', billingMiddleware, pa
  * PUT /api/users/:userId/payment-methods/:paymentMethodId/default
  */
 router.put('/:userId/payment-methods/:paymentMethodId/default', billingMiddleware, paymentMethodController.setDefaultPaymentMethod);
+
+// ============================================
+// 請求履歴関連（認証 + オーナーシップ）
+// ============================================
+
+/**
+ * 請求履歴一覧取得
+ * GET /api/users/:userId/invoices
+ */
+router.get('/:userId/invoices', authWithOwnership, userInvoiceController.getInvoices);
+
+/**
+ * 請求書詳細取得
+ * GET /api/users/:userId/invoices/:invoiceId
+ */
+router.get('/:userId/invoices/:invoiceId', authWithOwnership, userInvoiceController.getInvoice);
+
+/**
+ * 請求書PDFダウンロード
+ * GET /api/users/:userId/invoices/:invoiceId/pdf
+ */
+router.get('/:userId/invoices/:invoiceId/pdf', authWithOwnership, userInvoiceController.getInvoicePdf);
 
 export default router;

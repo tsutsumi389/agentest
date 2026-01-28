@@ -136,7 +136,7 @@ describe('Webhook Integration Tests', () => {
       const response = await sendWebhookRequest(app, webhookEvent);
 
       expect(response.status).toBe(200);
-      expect(response.body).toEqual({ received: true });
+      expect(response.body).toEqual({ received: true, duplicate: false });
 
       // Invoiceが作成されたことを確認
       const invoice = await prisma.invoice.findFirst({
@@ -375,7 +375,7 @@ describe('Webhook Integration Tests', () => {
       const response = await sendWebhookRequest(app, webhookEvent);
 
       expect(response.status).toBe(200);
-      expect(response.body).toEqual({ received: true });
+      expect(response.body).toEqual({ received: true, duplicate: false });
 
       // Invoiceが作成されたことを確認
       const invoice = await prisma.invoice.findFirst({

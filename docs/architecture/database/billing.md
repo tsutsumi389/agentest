@@ -261,6 +261,69 @@ ALTER TABLE "payment_methods" ADD CONSTRAINT "payment_method_owner_check"
 
 ---
 
+## PaymentEvent
+
+Stripe Webhookイベントの冪等性確保と監査ログを管理するテーブル。
+
+### カラム定義
+
+| カラム | 型 | NULL | デフォルト | 説明 |
+|--------|------|------|------------|------|
+| `id` | UUID | NO | gen_random_uuid() | 主キー |
+| `externalId` | VARCHAR(255) | NO | - | Stripeイベント ID（一意） |
+| `eventType` | VARCHAR(100) | NO | - | イベントタイプ |
+| `payload` | JSON | NO | - | イベントペイロード |
+| `status` | ENUM | NO | PENDING | 処理ステータス |
+| `processedAt` | TIMESTAMP | YES | NULL | 処理完了日時 |
+| `errorMessage` | TEXT | YES | NULL | エラーメッセージ |
+| `retryCount` | INTEGER | NO | 0 | リトライ回数 |
+| `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
+| `updatedAt` | TIMESTAMP | NO | now() | 更新日時 |
+
+### PaymentEventステータス
+
+| ステータス | 説明 |
+|------------|------|
+| `PENDING` | 処理待ち |
+| `PROCESSED` | 処理完了 |
+| `FAILED` | 処理失敗 |
+
+### インデックス
+
+- `status` - 処理待ちイベント検索用
+- `eventType` - イベントタイプ別検索用
+- `createdAt` - 古いイベント削除用
+
+### Prisma スキーマ
+
+```prisma
+enum PaymentEventStatus {
+  PENDING
+  PROCESSED
+  FAILED
+}
+
+model PaymentEvent {
+  id           String             @id @default(uuid())
+  externalId   String             @unique @map("external_id") @db.VarChar(255)
+  eventType    String             @map("event_type") @db.VarChar(100)
+  payload      Json
+  status       PaymentEventStatus @default(PENDING)
+  processedAt  DateTime?          @map("processed_at")
+  errorMessage String?            @map("error_message") @db.Text
+  retryCount   Int                @default(0) @map("retry_count")
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @updatedAt @map("updated_at")
+
+  @@index([status])
+  @@index([eventType])
+  @@index([createdAt])
+  @@map("payment_events")
+}
+```
+
+---
+
 ## 関連機能
 
 | 機能 ID | 機能 | 説明 |

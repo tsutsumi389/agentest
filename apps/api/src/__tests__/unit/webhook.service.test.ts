@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { WebhookEvent } from '../../gateways/payment/types.js';
 
 // vi.hoisted() でモックオブジェクトを事前定義（vi.mockのホイスティング対応）
-const { mockSubscriptionRepo, mockInvoiceRepo, mockUserRepo, mockPrisma } = vi.hoisted(() => ({
+const { mockSubscriptionRepo, mockInvoiceRepo, mockUserRepo, mockPaymentEventRepo, mockPrisma, mockRedisStore } = vi.hoisted(() => ({
   mockSubscriptionRepo: {
     findByUserId: vi.fn(),
     findByOrganizationId: vi.fn(),
@@ -27,8 +27,18 @@ const { mockSubscriptionRepo, mockInvoiceRepo, mockUserRepo, mockPrisma } = vi.h
     updatePlan: vi.fn(),
     softDelete: vi.fn(),
   },
+  mockPaymentEventRepo: {
+    findByExternalId: vi.fn(),
+    create: vi.fn(),
+    markAsProcessed: vi.fn(),
+    markAsFailed: vi.fn(),
+  },
   mockPrisma: {
     $transaction: vi.fn(),
+  },
+  mockRedisStore: {
+    invalidateUserInvoicesCache: vi.fn(),
+    invalidateOrgInvoicesCache: vi.fn(),
   },
 }));
 
@@ -44,8 +54,17 @@ vi.mock('../../repositories/user.repository.js', () => ({
   UserRepository: vi.fn().mockImplementation(() => mockUserRepo),
 }));
 
+vi.mock('../../repositories/payment-event.repository.js', () => ({
+  PaymentEventRepository: vi.fn().mockImplementation(() => mockPaymentEventRepo),
+}));
+
 vi.mock('@agentest/db', () => ({
   prisma: mockPrisma,
+}));
+
+vi.mock('../../lib/redis-store.js', () => ({
+  invalidateUserInvoicesCache: mockRedisStore.invalidateUserInvoicesCache,
+  invalidateOrgInvoicesCache: mockRedisStore.invalidateOrgInvoicesCache,
 }));
 
 vi.mock('../../utils/logger.js', () => ({
@@ -81,6 +100,17 @@ describe('WebhookService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    // PaymentEventRepositoryのデフォルト動作を設定
+    // 冪等性チェック: 重複なし（新規イベント）
+    mockPaymentEventRepo.findByExternalId.mockResolvedValue(null);
+    // イベント作成成功
+    mockPaymentEventRepo.create.mockResolvedValue({ id: 'pe-1' });
+    // 処理完了マーク成功
+    mockPaymentEventRepo.markAsProcessed.mockResolvedValue({ id: 'pe-1', status: 'PROCESSED' });
+    // キャッシュ無効化成功
+    mockRedisStore.invalidateUserInvoicesCache.mockResolvedValue(true);
+    mockRedisStore.invalidateOrgInvoicesCache.mockResolvedValue(true);
+
     service = new WebhookService();
   });
 
