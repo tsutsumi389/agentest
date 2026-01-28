@@ -280,6 +280,25 @@ Authorization: Bearer <access_token>
 
 → [課金 API 詳細](./billing.md)
 
+### 組織課金・サブスクリプション
+
+| メソッド | パス | 説明 |
+|---------|------|------|
+| GET | `/organizations/:organizationId/subscription` | 組織サブスクリプション取得 |
+| POST | `/organizations/:organizationId/subscription` | 組織サブスクリプション作成（TEAM 契約） |
+| PUT | `/organizations/:organizationId/subscription` | 組織サブスクリプション更新（請求サイクル変更） |
+| DELETE | `/organizations/:organizationId/subscription` | 組織サブスクリプションキャンセル |
+| POST | `/organizations/:organizationId/subscription/reactivate` | キャンセル予約解除 |
+| GET | `/organizations/:organizationId/subscription/calculate` | 料金計算 |
+| GET | `/organizations/:organizationId/payment-methods` | 組織の支払い方法一覧 |
+| POST | `/organizations/:organizationId/payment-methods` | 組織の支払い方法追加 |
+| DELETE | `/organizations/:organizationId/payment-methods/:id` | 組織の支払い方法削除 |
+| PUT | `/organizations/:organizationId/payment-methods/:id/default` | デフォルト設定 |
+| POST | `/organizations/:organizationId/payment-methods/setup-intent` | SetupIntent 作成 |
+| GET | `/organizations/:organizationId/invoices` | 組織の請求履歴取得 |
+
+→ [組織課金 API 詳細](./billing.md#組織課金-api)
+
 ## レスポンス形式
 
 ### 成功

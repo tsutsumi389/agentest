@@ -389,7 +389,328 @@ sequenceDiagram
 - [ユーザー管理](./user-management.md) - ユーザー基本情報
 - [認証](./authentication.md) - 認証・セッション
 
+---
+
+# 課金機能（組織プラン）
+
+## 概要
+
+組織向けの TEAM プラン契約機能を提供します。組織の OWNER または ADMIN は設定画面からプランのアップグレード・ダウングレード予約、支払い方法の管理を行えます。
+
+本機能は ORG-008（組織課金）として実装されています。
+
+## 機能一覧
+
+| 機能 ID | 機能名 | 説明 |
+|---------|--------|------|
+| ORG-BIL-001 | プラン表示 | 現在のプラン、次回更新日、料金を表示 |
+| ORG-BIL-002 | プランアップグレード | 組織を TEAM プランにアップグレード |
+| ORG-BIL-003 | プランダウングレード予約 | TEAM プランのキャンセルを次回更新時に予約 |
+| ORG-BIL-004 | ダウングレード予約キャンセル | ダウングレード予約を取り消し |
+| ORG-BIL-005 | 請求サイクル変更 | 月払い ↔ 年払いの切り替え |
+| ORG-BIL-006 | 支払い方法一覧 | 登録済みカード一覧表示 |
+| ORG-BIL-007 | 支払い方法追加 | 新規クレジットカード登録 |
+| ORG-BIL-008 | 支払い方法削除 | 登録済みカード削除 |
+| ORG-BIL-009 | 請求履歴表示 | 過去の請求履歴を表示 |
+
+## 画面仕様
+
+### 組織設定画面 - 請求タブ（OrgBillingSettings）
+
+組織設定画面（`/organizations/{id}/settings?tab=billing`）に以下のコンポーネントを配置：
+
+```
+┌─────────────────────────────────────────────────────┐
+│ 組織設定                                            │
+├──────────┬──────────────────────────────────────────┤
+│ 基本情報  │ ┌─────────────────────────────────────┐  │
+│ メンバー  │ │ Current Plan (OrgCurrentPlanCard)   │  │
+│ [請求]   │ │ ・現在のプラン名（無料/TEAM）        │  │
+│          │ │ ・メンバー数                        │  │
+│          │ │ ・次回更新日                        │  │
+│          │ │ ・料金/月 or 年（メンバー数×単価）  │  │
+│          │ │ ・[プラン変更] ボタン               │  │
+│          │ │ ・(TEAM時) [キャンセル] ボタン      │  │
+│          │ └─────────────────────────────────────┘  │
+│          │                                          │
+│          │ ┌─────────────────────────────────────┐  │
+│          │ │ Payment Methods (OrgPaymentMethods) │  │
+│          │ │ ・登録済みカード一覧                │  │
+│          │ │   - ブランドアイコン + 下4桁        │  │
+│          │ │   - 有効期限                        │  │
+│          │ │   - デフォルトバッジ                │  │
+│          │ │   - [削除] ボタン                   │  │
+│          │ │ ・[支払い方法を追加] ボタン         │  │
+│          │ └─────────────────────────────────────┘  │
+│          │                                          │
+│          │ ┌─────────────────────────────────────┐  │
+│          │ │ Billing History (OrgBillingHistory) │  │
+│          │ │ ・請求履歴テーブル                  │  │
+│          │ │   - 日付                            │  │
+│          │ │   - 金額                            │  │
+│          │ │   - ステータス                      │  │
+│          │ │   - [PDF] リンク                    │  │
+│          │ └─────────────────────────────────────┘  │
+└──────────┴──────────────────────────────────────────┘
+```
+
+### プラン変更モーダル（OrgPlanChangeModal）
+
+3ステップのウィザード形式：
+
+**Step 1: プラン確認**
+```
+┌─────────────────────────────────────────────────────┐
+│ TEAM プランにアップグレード                 [×]     │
+├─────────────────────────────────────────────────────┤
+│ ┌─────────────────────────────────────────────┐    │
+│ │ TEAM プラン                                 │    │
+│ │ ¥1,200/ユーザー/月                          │    │
+│ │ ・プロジェクト数: 無制限                    │    │
+│ │ ・テストケース数: 無制限                    │    │
+│ │ ・MCP連携: 利用可能                         │    │
+│ │ ・チーム機能: 利用可能                      │    │
+│ └─────────────────────────────────────────────┘    │
+│                                                     │
+│                             [キャンセル] [次へ]     │
+└─────────────────────────────────────────────────────┘
+```
+
+**Step 2: 請求サイクル選択**
+```
+┌─────────────────────────────────────────────────────┐
+│ 請求サイクルを選択                        [×]       │
+├─────────────────────────────────────────────────────┤
+│ 現在のメンバー数: 5名                              │
+│                                                     │
+│ ○ 月払い ¥1,200/ユーザー/月 = ¥6,000/月           │
+│ ◉ 年払い ¥12,000/ユーザー/年 = ¥60,000/年         │
+│         （2ヶ月分お得）                             │
+│                                                     │
+│                             [戻る] [次へ]           │
+└─────────────────────────────────────────────────────┘
+```
+
+**Step 3: 支払い方法選択・確認**
+```
+┌─────────────────────────────────────────────────────┐
+│ 確認                                      [×]       │
+├─────────────────────────────────────────────────────┤
+│ プラン: TEAM                                        │
+│ 請求サイクル: 月払い                                │
+│ メンバー数: 5名                                     │
+│ 料金: ¥6,000/月                                     │
+│                                                     │
+│ 支払い方法:                                         │
+│ ◉ Visa •••• 4242 (12/26)                           │
+│ ○ 新しいカードを追加                               │
+│                                                     │
+│                             [戻る] [アップグレード] │
+└─────────────────────────────────────────────────────┘
+```
+
+### 支払い方法追加モーダル（OrgAddPaymentMethodModal）
+
+```
+┌─────────────────────────────────────────────────────┐
+│ 支払い方法を追加                          [×]       │
+├─────────────────────────────────────────────────────┤
+│ カード番号                                          │
+│ ┌─────────────────────────────────────────────┐    │
+│ │ (Stripe Elements)                           │    │
+│ └─────────────────────────────────────────────┘    │
+│                                                     │
+│ 有効期限            セキュリティコード             │
+│ ┌─────────────────┐    ┌─────────────────┐         │
+│ │ MM / YY         │    │ CVC             │         │
+│ └─────────────────┘    └─────────────────┘         │
+│                                                     │
+│                             [キャンセル] [追加]     │
+└─────────────────────────────────────────────────────┘
+```
+
+## 業務フロー
+
+### TEAM アップグレードフロー
+
+```mermaid
+sequenceDiagram
+    participant U as ユーザー（OWNER/ADMIN）
+    participant F as Frontend
+    participant A as API
+    participant G as PaymentGateway
+    participant D as Database
+
+    U->>F: プラン変更ボタンクリック
+    F->>F: OrgPlanChangeModal表示
+    U->>F: 請求サイクル選択
+    U->>F: 支払い方法選択
+    U->>F: アップグレードボタンクリック
+    F->>A: POST /organizations/:id/subscription
+    A->>G: createSubscription()
+    G-->>A: subscription created
+    A->>D: Subscription作成（organizationId付き）
+    A->>D: Organization.plan = TEAM に更新
+    A-->>F: subscription
+    F->>F: 成功メッセージ表示
+```
+
+### キャンセル予約フロー
+
+```mermaid
+sequenceDiagram
+    participant U as ユーザー（OWNER/ADMIN）
+    participant F as Frontend
+    participant A as API
+    participant G as PaymentGateway
+    participant D as Database
+
+    U->>F: キャンセルボタンクリック
+    F->>F: 確認ダイアログ表示
+    U->>F: 確認
+    F->>A: DELETE /organizations/:id/subscription
+    A->>G: cancelSubscription()
+    G-->>A: subscription updated
+    A->>D: Subscription.cancelAtPeriodEnd = true
+    A-->>F: subscription
+    F->>F: "次回更新日に無料へ移行" メッセージ表示
+```
+
+### メンバー数同期フロー（Webhook）
+
+```mermaid
+sequenceDiagram
+    participant M as メンバー追加/削除
+    participant A as API
+    participant G as PaymentGateway
+    participant D as Database
+    participant S as Stripe（Webhook）
+
+    M->>A: メンバー追加/削除
+    A->>D: OrganizationMember 更新
+    A->>G: updateSubscriptionQuantity(memberCount)
+    G-->>A: subscription updated
+    Note over G,S: Stripe が次回請求で反映
+    S->>A: invoice.paid（従量課金反映）
+    A->>D: Invoice 記録
+```
+
+## データモデル
+
+### Subscription（組織向け）
+
+| カラム | 型 | 説明 |
+|--------|------|------|
+| id | UUID | 主キー |
+| userId | UUID | ユーザーID（個人プラン用、組織の場合は null） |
+| organizationId | UUID | 組織ID（組織プラン用） |
+| externalId | String | 決済サービスのサブスクリプションID |
+| plan | Enum | プラン（FREE, PRO, TEAM, ENTERPRISE） |
+| status | Enum | ステータス（ACTIVE, PAST_DUE, CANCELED, TRIALING） |
+| billingCycle | Enum | 請求サイクル（MONTHLY, YEARLY） |
+| currentPeriodStart | DateTime | 現在の請求期間開始日 |
+| currentPeriodEnd | DateTime | 現在の請求期間終了日 |
+| cancelAtPeriodEnd | Boolean | 期間終了時にキャンセル予約 |
+
+※ `userId` と `organizationId` は排他的（どちらか一方のみ設定）
+
+### PaymentMethod（組織向け）
+
+| カラム | 型 | 説明 |
+|--------|------|------|
+| id | UUID | 主キー |
+| userId | UUID | ユーザーID（個人用、組織の場合は null） |
+| organizationId | UUID | 組織ID（組織用） |
+| type | Enum | 支払い方法タイプ（CARD） |
+| externalId | String | 決済サービスの支払い方法ID |
+| brand | String | カードブランド（visa, mastercard等） |
+| last4 | String | カード番号下4桁 |
+| expiryMonth | Int | 有効期限（月） |
+| expiryYear | Int | 有効期限（年） |
+| isDefault | Boolean | デフォルト支払い方法フラグ |
+
+## ビジネスルール
+
+### 料金体系
+
+| プラン | 月払い | 年払い | 備考 |
+|--------|--------|--------|------|
+| (無料) | ¥0 | ¥0 | 組織作成直後のデフォルト |
+| TEAM | ¥1,200/ユーザー | ¥12,000/ユーザー | 年払いで2ヶ月分お得 |
+| ENTERPRISE | 要問い合わせ | 要問い合わせ | 初期リリース対象外 |
+
+### 従量課金（メンバー数ベース）
+
+1. 料金はメンバー数 × 単価で計算
+2. メンバー追加時は日割りで請求
+3. メンバー削除時は次回請求から減額
+4. Stripe の `quantity` でメンバー数を管理
+
+### プラン変更ルール
+
+1. **アップグレード（無料 → TEAM）**
+   - 即時適用
+   - 支払い方法が必須
+   - 日割り計算は Stripe に委任
+
+2. **ダウングレード予約（TEAM → 無料）**
+   - 即時解約ではなく、次回更新日に適用
+   - `cancelAtPeriodEnd = true` を設定
+   - 現在の請求期間終了まで TEAM 機能は利用可能
+
+3. **請求サイクル変更**
+   - 月払い → 年払い: 即時切り替え、差額を請求
+   - 年払い → 月払い: 次回更新時から適用
+
+## コンポーネント構成
+
+### バックエンド
+
+```
+apps/api/src/
+├── services/
+│   └── organization-subscription.service.ts  # 組織サブスクリプションビジネスロジック
+├── controllers/
+│   └── organization-subscription.controller.ts  # 組織サブスクリプションAPI
+└── routes/
+    └── organizations.ts  # /api/organizations/:id/* ルート
+```
+
+### フロントエンド
+
+```
+apps/web/src/
+├── components/organization/billing/
+│   ├── OrgBillingSettings.tsx       # 組織請求タブコンテナ
+│   ├── OrgCurrentPlanCard.tsx       # 現在のプラン表示
+│   ├── OrgPaymentMethods.tsx        # 支払い方法一覧
+│   ├── OrgBillingHistory.tsx        # 請求履歴
+│   ├── OrgPlanChangeModal.tsx       # プラン変更モーダル
+│   └── OrgAddPaymentMethodModal.tsx # 支払い方法追加モーダル
+└── routes/
+    └── OrganizationSettings.tsx     # 組織設定ページ（billing タブ統合）
+```
+
+## 権限
+
+| 操作 | OWNER | ADMIN | MEMBER |
+|------|-------|-------|--------|
+| サブスクリプション取得 | ✓ | ✓ | ✓ |
+| サブスクリプション作成/キャンセル | ✓ | ✓ | - |
+| 支払い方法管理 | ✓ | ✓ | - |
+| 請求履歴取得 | ✓ | ✓ | - |
+
+## 設定値
+
+### 環境変数
+
+| 変数名 | 説明 | デフォルト |
+|--------|------|----------|
+| `STRIPE_PRICE_TEAM_MONTHLY` | TEAM 月払いの Price ID | - |
+| `STRIPE_PRICE_TEAM_YEARLY` | TEAM 年払いの Price ID | - |
+
 ## 関連ドキュメント
 
-- [課金 API リファレンス](../../api/billing.md)
+- [組織課金 API リファレンス](../../api/billing.md#組織課金-api)
+- [組織管理機能](./organization.md)
 - [データベース設計 - 課金](../database/billing.md)
