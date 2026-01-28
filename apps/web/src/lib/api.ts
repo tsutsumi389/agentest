@@ -2071,6 +2071,8 @@ export const userInvoicesApi = {
     api.get<{ invoice: UserInvoice }>(`/api/users/${userId}/invoices/${invoiceId}`),
 
   // 請求書PDFダウンロード（リダイレクトURL取得）
-  getInvoicePdfUrl: (userId: string, invoiceId: string) =>
-    `/api/users/${userId}/invoices/${invoiceId}/pdf`,
+  getInvoicePdfUrl: (userId: string, invoiceId: string) => {
+    const apiUrl = import.meta.env.VITE_API_URL || '';
+    return `${apiUrl}/api/users/${userId}/invoices/${invoiceId}/pdf`;
+  },
 };
