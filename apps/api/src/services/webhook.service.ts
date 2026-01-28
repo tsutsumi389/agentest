@@ -90,11 +90,24 @@ export class WebhookService {
 
     // PaymentEventを作成（PENDING状態）
     // WebhookEventをJSONとして保存するため、JSON.parse/stringifyでシリアライズ可能な形に変換
-    const paymentEvent = await this.paymentEventRepo.create({
-      externalId: event.id,
-      eventType: event.type,
-      payload: JSON.parse(JSON.stringify(event)),
-    });
+    let paymentEvent;
+    try {
+      paymentEvent = await this.paymentEventRepo.create({
+        externalId: event.id,
+        eventType: event.type,
+        payload: JSON.parse(JSON.stringify(event)),
+      });
+    } catch (error) {
+      // 同時リクエストでユニーク制約違反が発生した場合は重複として扱う
+      if (this.isUniqueConstraintViolation(error)) {
+        logger.info('Duplicate webhook event (race condition), skipping', {
+          eventId: event.id,
+          eventType: event.type,
+        });
+        return { duplicate: true };
+      }
+      throw error;
+    }
 
     try {
       // イベントタイプに応じた処理
@@ -115,7 +128,8 @@ export class WebhookService {
           await this.handleSubscriptionDeleted(event.data.object as StripeSubscriptionData);
           break;
         default:
-          logger.warn('Unhandled webhook event type', {
+          // 未対応のイベントタイプ（今後対応予定のイベントが多いためdebugレベル）
+          logger.debug('Unhandled webhook event type', {
             eventId: event.id,
             eventType: event.type,
           });
@@ -420,6 +434,8 @@ export class WebhookService {
 
   /**
    * Stripeのプランメタデータを内部のSubscriptionPlanにマッピング
+   * 有料サブスクリプションのWebhookなのでFREEは対象外
+   * 不明なプランの場合はログを残しPROにフォールバック
    */
   private mapPlan(plan?: string): 'FREE' | 'PRO' | 'TEAM' | 'ENTERPRISE' {
     switch (plan) {
@@ -430,6 +446,11 @@ export class WebhookService {
       case 'ENTERPRISE':
         return 'ENTERPRISE';
       default:
+        // 有料サブスクリプションでmetadata.planが未設定または不明な場合
+        // PROにフォールバック（個人向けデフォルトプラン）
+        logger.warn('Unknown plan in metadata, defaulting to PRO', {
+          receivedPlan: plan,
+        });
         return 'PRO';
     }
   }
@@ -464,6 +485,23 @@ export class WebhookService {
         });
         return 'ACTIVE';
     }
+  }
+
+  /**
+   * Prismaのユニーク制約違反エラーかどうかを判定
+   * 同時リクエストでexternalIdの重複が発生した場合の検出用
+   */
+  private isUniqueConstraintViolation(error: unknown): boolean {
+    // Prismaのユニーク制約違反エラーコード: P2002
+    if (
+      error &&
+      typeof error === 'object' &&
+      'code' in error &&
+      error.code === 'P2002'
+    ) {
+      return true;
+    }
+    return false;
   }
 
   /**
