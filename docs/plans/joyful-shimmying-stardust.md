@@ -36,14 +36,15 @@
 |---------------|------|
 | `InvoiceList.tsx` | 個人向け請求履歴表示 |
 
-### 4. バッチ処理（apps/api/src/jobs/）
+### 4. バッチ処理（apps/jobs/ - Cloud Run Jobs）
 
-| バッチ | 目的 | 優先度 |
-|--------|------|--------|
-| **HistoryCleanup** | FREEプランの30日経過履歴削除 | 高 |
-| **HistoryExpiryNotify** | 削除7日前のFREEユーザーへ通知 | 中 |
-| **WebhookRetry** | 処理失敗Webhookの再処理 | 中 |
-| **PaymentEventCleanup** | 90日以上前の処理済みイベント削除 | 低 |
+| ジョブ | 目的 | スケジュール |
+|--------|------|-------------|
+| **history-cleanup** | FREEプランの30日経過履歴削除 | 毎日 3:00 JST |
+| **history-expiry-notify** | 削除7日前のFREEユーザーへ通知 | 毎日 9:00 JST |
+| **webhook-retry** | 処理失敗Webhookの再処理 | 毎時 0分 |
+| **payment-event-cleanup** | 90日以上前の処理済みイベント削除 | 毎週日曜 4:00 JST |
+| **subscription-sync** | DB-Stripe間の状態同期チェック | 毎週日曜 5:00 JST |
 
 ---
 
@@ -248,55 +249,225 @@ model PaymentEvent {
 
 ---
 
-### Phase E: バッチ処理
+### Phase E: バッチ処理（Cloud Run Jobs）
 
-#### E-1: HistoryCleanupジョブ（カーソルベース）
+#### ディレクトリ構成
 
-**対象ファイル**: `apps/api/src/jobs/history-cleanup.job.ts`
+```
+apps/jobs/
+├── package.json
+├── tsconfig.json
+├── Dockerfile
+├── src/
+│   ├── index.ts              # エントリーポイント（ジョブ振り分け）
+│   ├── jobs/
+│   │   ├── history-cleanup.ts
+│   │   ├── history-expiry-notify.ts
+│   │   ├── webhook-retry.ts
+│   │   ├── payment-event-cleanup.ts
+│   │   └── subscription-sync.ts
+│   └── lib/
+│       ├── prisma.ts
+│       ├── redis.ts
+│       └── stripe.ts
+```
+
+#### E-1: エントリーポイント
+
+**対象ファイル**: `apps/jobs/src/index.ts`
 
 ```typescript
+import { runHistoryCleanup } from './jobs/history-cleanup.js';
+import { runHistoryExpiryNotify } from './jobs/history-expiry-notify.js';
+import { runWebhookRetry } from './jobs/webhook-retry.js';
+import { runPaymentEventCleanup } from './jobs/payment-event-cleanup.js';
+import { runSubscriptionSync } from './jobs/subscription-sync.js';
+
+const jobs: Record<string, () => Promise<void>> = {
+  'history-cleanup': runHistoryCleanup,
+  'history-expiry-notify': runHistoryExpiryNotify,
+  'webhook-retry': runWebhookRetry,
+  'payment-event-cleanup': runPaymentEventCleanup,
+  'subscription-sync': runSubscriptionSync,
+};
+
+async function main() {
+  const jobName = process.env.JOB_NAME;
+
+  if (!jobName || !jobs[jobName]) {
+    console.error(`Unknown job: ${jobName}`);
+    console.error(`Available jobs: ${Object.keys(jobs).join(', ')}`);
+    process.exit(1);
+  }
+
+  console.log(`Starting job: ${jobName}`);
+  const startTime = Date.now();
+
+  try {
+    await jobs[jobName]();
+    const duration = Date.now() - startTime;
+    console.log(`Job ${jobName} completed successfully in ${duration}ms`);
+    process.exit(0);
+  } catch (error) {
+    console.error(`Job ${jobName} failed:`, error);
+    process.exit(1);
+  }
+}
+
+main();
+```
+
+#### E-2: Dockerfile
+
+**対象ファイル**: `apps/jobs/Dockerfile`
+
+```dockerfile
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# pnpmインストール
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# 依存関係のコピーとインストール
+COPY pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/db/package.json packages/db/
+COPY packages/shared/package.json packages/shared/
+COPY apps/jobs/package.json apps/jobs/
+
+RUN pnpm install --frozen-lockfile
+
+# ソースコードのコピー
+COPY packages/db packages/db
+COPY packages/shared packages/shared
+COPY apps/jobs apps/jobs
+
+# ビルド
+RUN pnpm --filter @agentest/db build
+RUN pnpm --filter @agentest/shared build
+RUN pnpm --filter @agentest/jobs build
+
+# 本番イメージ
+FROM node:20-alpine
+
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages/db ./packages/db
+COPY --from=builder /app/packages/shared ./packages/shared
+COPY --from=builder /app/apps/jobs ./apps/jobs
+
+WORKDIR /app/apps/jobs
+
+CMD ["node", "dist/index.js"]
+```
+
+#### E-3: HistoryCleanupジョブ（カーソルベース）
+
+**対象ファイル**: `apps/jobs/src/jobs/history-cleanup.ts`
+
+```typescript
+import { prisma } from '../lib/prisma.js';
+import { PLAN_LIMITS } from '@agentest/shared';
+
 export async function runHistoryCleanup() {
-  let cursor: string | undefined;
   const batchSize = 100;
+  let cursor: string | undefined;
+  let totalDeleted = 0;
 
   do {
     // カーソルベースでFREEユーザーを取得
-    const { users, nextCursor } = await getFreeUsersBatch(cursor, batchSize);
+    const users = await prisma.user.findMany({
+      where: {
+        subscription: { plan: 'FREE' },
+      },
+      take: batchSize,
+      ...(cursor && { skip: 1, cursor: { id: cursor } }),
+      orderBy: { id: 'asc' },
+      select: { id: true },
+    });
 
-    // 並列処理（同時実行数制限付き）
-    await Promise.all(
-      users.map(user => deleteOldHistory(user.id, PLAN_LIMITS.FREE.changeHistoryDays))
-    );
+    if (users.length === 0) break;
 
-    cursor = nextCursor;
+    // 各ユーザーの古い履歴を削除
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - PLAN_LIMITS.FREE.changeHistoryDays);
+
+    for (const user of users) {
+      const result = await prisma.testCaseHistory.deleteMany({
+        where: {
+          testCase: { project: { userId: user.id } },
+          createdAt: { lt: cutoffDate },
+        },
+      });
+      totalDeleted += result.count;
+    }
+
+    cursor = users[users.length - 1]?.id;
   } while (cursor);
+
+  console.log(`Deleted ${totalDeleted} old history records`);
 }
 ```
 
-#### E-2: PaymentEventCleanupジョブ
+#### E-4: Cloud Scheduler設定
 
-**対象ファイル**: `apps/api/src/jobs/payment-event-cleanup.job.ts`
+```yaml
+# cloud-scheduler.yaml（Terraformまたは手動設定用のリファレンス）
+jobs:
+  - name: history-cleanup
+    schedule: "0 3 * * *"  # 毎日 3:00 JST
+    timeZone: "Asia/Tokyo"
+    cloudRunJob:
+      name: agentest-jobs
+      env:
+        - name: JOB_NAME
+          value: history-cleanup
 
-```typescript
-// 90日以上前のPROCESSEDイベントを削除
-export async function runPaymentEventCleanup() {
-  const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - 90);
+  - name: history-expiry-notify
+    schedule: "0 9 * * *"  # 毎日 9:00 JST
+    timeZone: "Asia/Tokyo"
+    cloudRunJob:
+      name: agentest-jobs
+      env:
+        - name: JOB_NAME
+          value: history-expiry-notify
 
-  await prisma.paymentEvent.deleteMany({
-    where: {
-      status: 'PROCESSED',
-      createdAt: { lt: cutoffDate },
-    },
-  });
-}
+  - name: webhook-retry
+    schedule: "0 * * * *"  # 毎時 0分
+    timeZone: "Asia/Tokyo"
+    cloudRunJob:
+      name: agentest-jobs
+      env:
+        - name: JOB_NAME
+          value: webhook-retry
+
+  - name: payment-event-cleanup
+    schedule: "0 4 * * 0"  # 毎週日曜 4:00 JST
+    timeZone: "Asia/Tokyo"
+    cloudRunJob:
+      name: agentest-jobs
+      env:
+        - name: JOB_NAME
+          value: payment-event-cleanup
+
+  - name: subscription-sync
+    schedule: "0 5 * * 0"  # 毎週日曜 5:00 JST
+    timeZone: "Asia/Tokyo"
+    cloudRunJob:
+      name: agentest-jobs
+      env:
+        - name: JOB_NAME
+          value: subscription-sync
 ```
 
 ---
 
 ### Phase F: プラン制限定数
 
-**対象ファイル**: `apps/api/src/config/plan-limits.ts` (新規)
+**対象ファイル**: `packages/shared/src/config/plan-limits.ts` (新規)
 
 ```typescript
 export const PLAN_LIMITS = {
@@ -321,6 +492,9 @@ export const PLAN_LIMITS = {
     projectLimit: null,
   },
 } as const;
+
+export type PlanLimits = typeof PLAN_LIMITS;
+export type PlanName = keyof PlanLimits;
 ```
 
 ---
@@ -350,30 +524,7 @@ async handleSubscriptionDowngraded(subscription: Stripe.Subscription) {
 
 ## 追加検討事項
 
-### 1. サブスク状態の同期遅延対策
-
-Webhookが失敗した場合のDB-Stripe間の状態乖離を検知・修復:
-
-```typescript
-// 定期的な同期チェックジョブ（週1回程度）
-export async function runSubscriptionSyncCheck() {
-  const subscriptions = await subscriptionRepo.findAllActive();
-
-  for (const sub of subscriptions) {
-    if (!sub.externalId) continue;
-
-    const stripeSub = await stripe.subscriptions.retrieve(sub.externalId);
-
-    // 状態の乖離をチェック
-    if (sub.status !== mapStripeStatus(stripeSub.status)) {
-      console.warn(`Subscription sync mismatch: ${sub.id}`);
-      // 修復または通知
-    }
-  }
-}
-```
-
-### 2. テスト環境の分離
+### 1. テスト環境の分離
 
 ```bash
 # 環境変数で分離
@@ -384,7 +535,7 @@ STRIPE_WEBHOOK_SECRET=whsec_test_xxx
 STRIPE_WEBHOOK_SECRET=whsec_live_xxx
 ```
 
-### 3. Stripe Customer Portal検討
+### 2. Stripe Customer Portal検討
 
 将来的にStripe Customer Portalを使えば、以下を自前実装不要:
 - 請求履歴表示
@@ -400,13 +551,12 @@ STRIPE_WEBHOOK_SECRET=whsec_live_xxx
 | ファイル | 変更内容 |
 |----------|----------|
 | `packages/db/prisma/schema.prisma` | PaymentEventモデル追加 |
+| `packages/shared/src/config/plan-limits.ts` | プラン制限定数（新規） |
 | `apps/api/src/routes/users.ts` | 請求履歴APIルート追加 |
 | `apps/api/src/controllers/webhook.controller.ts` | 署名検証強化 |
 | `apps/api/src/services/webhook.service.ts` | PaymentEvent統合、イベントハンドラー |
 | `apps/api/src/services/user-invoice.service.ts` | Stripe API + Redisキャッシュ |
-| `apps/api/src/config/plan-limits.ts` | プラン制限定数（新規） |
-| `apps/api/src/jobs/history-cleanup.job.ts` | カーソルベースの履歴削除（新規） |
-| `apps/api/src/jobs/payment-event-cleanup.job.ts` | 古いイベント削除（新規） |
+| `apps/jobs/` | Cloud Run Jobs用バッチ処理（新規ディレクトリ） |
 | `apps/web/src/components/billing/InvoiceList.tsx` | 請求履歴UI（新規） |
 
 ---
@@ -417,8 +567,9 @@ STRIPE_WEBHOOK_SECRET=whsec_live_xxx
 2. **PaymentEvent冪等性**: 同じWebhookを2回送信し、2回目が無視されることを確認
 3. **認可チェック**: 他ユーザーのuserIdで請求履歴APIを呼び、403エラーを確認
 4. **キャッシュ**: 請求履歴取得後、5分以内の再取得でStripe APIが呼ばれないことを確認
-5. **履歴削除バッチ**: FREEプランユーザーの31日前の履歴が削除されることを確認
-6. **ダウングレード**: PRO→FREE変更後、履歴が即時削除されず猶予があることを確認
+5. **Cloud Run Jobs**: ローカルで `JOB_NAME=history-cleanup node dist/index.js` を実行し動作確認
+6. **履歴削除バッチ**: FREEプランユーザーの31日前の履歴が削除されることを確認
+7. **ダウングレード**: PRO→FREE変更後、履歴が即時削除されず猶予があることを確認
 
 ---
 
