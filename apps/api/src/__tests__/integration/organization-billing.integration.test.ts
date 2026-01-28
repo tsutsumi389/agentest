@@ -607,8 +607,8 @@ describe('Organization Billing API Integration Tests', () => {
         .query({ page: 1, limit: 10 });
 
       expect(response.status).toBe(200);
-      // レスポンス構造: { data: [], total, page, limit, totalPages }
-      expect(response.body.data).toHaveLength(2);
+      // レスポンス構造: { invoices: [], total, page, limit, totalPages }
+      expect(response.body.invoices).toHaveLength(2);
       expect(response.body.total).toBe(2);
       expect(response.body.page).toBe(1);
       expect(response.body.limit).toBe(10);

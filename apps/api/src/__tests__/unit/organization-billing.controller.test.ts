@@ -451,11 +451,23 @@ describe('OrganizationBillingController', () => {
   describe('Invoice エンドポイント', () => {
     describe('getInvoices', () => {
       it('正常に請求履歴を取得する', async () => {
-        const mockResult = {
-          invoices: [{ id: 'inv-1', amount: 4500, status: 'PAID' }],
-          pagination: { page: 1, limit: 20, total: 1, totalPages: 1 },
+        // サービスが返す形式（data）
+        const mockServiceResult = {
+          data: [{ id: 'inv-1', amount: 4500, status: 'PAID' }],
+          total: 1,
+          page: 1,
+          limit: 20,
+          totalPages: 1,
         };
-        mockInvoiceService.getInvoices.mockResolvedValue(mockResult);
+        // コントローラーが返す形式（invoices）
+        const expectedControllerResult = {
+          invoices: [{ id: 'inv-1', amount: 4500, status: 'PAID' }],
+          total: 1,
+          page: 1,
+          limit: 20,
+          totalPages: 1,
+        };
+        mockInvoiceService.getInvoices.mockResolvedValue(mockServiceResult);
 
         const req = mockRequest({
           params: { organizationId: 'org-1' },
@@ -466,15 +478,18 @@ describe('OrganizationBillingController', () => {
         await controller.getInvoices(req, res, mockNext);
 
         expect(mockInvoiceService.getInvoices).toHaveBeenCalledWith('org-1', { page: 1, limit: 20 });
-        expect(res.json).toHaveBeenCalledWith(mockResult);
+        expect(res.json).toHaveBeenCalledWith(expectedControllerResult);
       });
 
       it('デフォルトのページネーションパラメータを使用する', async () => {
-        const mockResult = {
-          invoices: [],
-          pagination: { page: 1, limit: 20, total: 0, totalPages: 0 },
+        const mockServiceResult = {
+          data: [],
+          total: 0,
+          page: 1,
+          limit: 20,
+          totalPages: 0,
         };
-        mockInvoiceService.getInvoices.mockResolvedValue(mockResult);
+        mockInvoiceService.getInvoices.mockResolvedValue(mockServiceResult);
 
         const req = mockRequest({
           params: { organizationId: 'org-1' },

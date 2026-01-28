@@ -310,7 +310,14 @@ export class OrganizationBillingController {
         organizationId,
         pagination
       );
-      res.json(result);
+      // フロントエンドが期待する形式に変換（data -> invoices）
+      res.json({
+        invoices: result.data,
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        totalPages: result.totalPages,
+      });
     } catch (error) {
       next(error);
     }
