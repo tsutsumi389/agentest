@@ -4,35 +4,15 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { Loader2, FileText, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { toast } from '../../../stores/toast';
 import { ApiError, orgBillingApi, type OrgInvoice, type OrgInvoiceStatus } from '../../../lib/api';
+import { formatPrice, formatInvoiceDate } from '../../../lib/billing';
 
 interface OrgInvoiceListProps {
   organizationId: string;
 }
 
 const ITEMS_PER_PAGE = 10;
-
-/**
- * 日付をフォーマット
- */
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('ja-JP', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
-}
-
-/**
- * 金額をフォーマット（日本円）
- */
-function formatPrice(amount: number, currency: string): string {
-  return new Intl.NumberFormat('ja-JP', {
-    style: 'currency',
-    currency: currency || 'JPY',
-  }).format(amount);
-}
 
 /**
  * ステータスバッジを取得
@@ -73,11 +53,11 @@ export function OrgInvoiceList({ organizationId }: OrgInvoiceListProps) {
       setTotalPages(response.totalPages);
       setTotal(response.total);
     } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError('請求履歴の取得に失敗しました');
-      }
+      const errorMessage = err instanceof ApiError
+        ? err.message
+        : '請求履歴の取得に失敗しました';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -109,6 +89,12 @@ export function OrgInvoiceList({ organizationId }: OrgInvoiceListProps) {
       <div className="card p-6">
         <div className="text-center py-8">
           <p className="text-danger">{error}</p>
+          <button
+            className="btn btn-primary btn-sm mt-4"
+            onClick={fetchInvoices}
+          >
+            再読み込み
+          </button>
         </div>
       </div>
     );
@@ -127,32 +113,32 @@ export function OrgInvoiceList({ organizationId }: OrgInvoiceListProps) {
 
       {invoices.length === 0 ? (
         <div className="text-center py-8">
-          <FileText className="w-12 h-12 text-foreground-subtle mx-auto mb-3" />
+          <FileText className="w-12 h-12 text-foreground-subtle mx-auto mb-3" aria-hidden="true" />
           <p className="text-foreground-muted">請求履歴がありません</p>
         </div>
       ) : (
         <>
           {/* 請求書テーブル */}
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full" role="table">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 text-sm font-medium text-foreground-muted">
+                  <th className="text-left py-3 px-4 text-sm font-medium text-foreground-muted" scope="col">
                     請求番号
                   </th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-foreground-muted">
+                  <th className="text-left py-3 px-4 text-sm font-medium text-foreground-muted" scope="col">
                     請求日
                   </th>
-                  <th className="text-left py-3 px-4 text-sm font-medium text-foreground-muted">
+                  <th className="text-left py-3 px-4 text-sm font-medium text-foreground-muted" scope="col">
                     期間
                   </th>
-                  <th className="text-right py-3 px-4 text-sm font-medium text-foreground-muted">
+                  <th className="text-right py-3 px-4 text-sm font-medium text-foreground-muted" scope="col">
                     金額
                   </th>
-                  <th className="text-center py-3 px-4 text-sm font-medium text-foreground-muted">
+                  <th className="text-center py-3 px-4 text-sm font-medium text-foreground-muted" scope="col">
                     ステータス
                   </th>
-                  <th className="text-center py-3 px-4 text-sm font-medium text-foreground-muted">
+                  <th className="text-center py-3 px-4 text-sm font-medium text-foreground-muted" scope="col">
                     PDF
                   </th>
                 </tr>
@@ -171,10 +157,10 @@ export function OrgInvoiceList({ organizationId }: OrgInvoiceListProps) {
                         </span>
                       </td>
                       <td className="py-3 px-4 text-sm text-foreground-muted">
-                        {formatDate(invoice.createdAt)}
+                        {formatInvoiceDate(invoice.createdAt)}
                       </td>
                       <td className="py-3 px-4 text-sm text-foreground-muted">
-                        {formatDate(invoice.periodStart)} 〜 {formatDate(invoice.periodEnd)}
+                        {formatInvoiceDate(invoice.periodStart)} 〜 {formatInvoiceDate(invoice.periodEnd)}
                       </td>
                       <td className="py-3 px-4 text-right">
                         <span className="font-medium text-foreground">
@@ -194,11 +180,12 @@ export function OrgInvoiceList({ organizationId }: OrgInvoiceListProps) {
                             rel="noopener noreferrer"
                             className="btn btn-ghost btn-sm"
                             title="PDFをダウンロード"
+                            aria-label={`請求書 ${invoice.invoiceNumber} のPDFをダウンロード`}
                           >
-                            <Download className="w-4 h-4" />
+                            <Download className="w-4 h-4" aria-hidden="true" />
                           </a>
                         ) : (
-                          <span className="text-foreground-subtle">-</span>
+                          <span className="text-foreground-subtle" aria-label="PDF未対応">-</span>
                         )}
                       </td>
                     </tr>
@@ -210,7 +197,10 @@ export function OrgInvoiceList({ organizationId }: OrgInvoiceListProps) {
 
           {/* ページネーション */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+            <nav
+              className="flex items-center justify-between mt-4 pt-4 border-t border-border"
+              aria-label="請求履歴のページネーション"
+            >
               <p className="text-sm text-foreground-muted">
                 {total}件中 {(currentPage - 1) * ITEMS_PER_PAGE + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, total)}件を表示
               </p>
@@ -219,23 +209,25 @@ export function OrgInvoiceList({ organizationId }: OrgInvoiceListProps) {
                   className="btn btn-ghost btn-sm"
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
+                  aria-label="前のページ"
                 >
-                  <ChevronLeft className="w-4 h-4" />
+                  <ChevronLeft className="w-4 h-4" aria-hidden="true" />
                   前へ
                 </button>
-                <span className="text-sm text-foreground-muted">
+                <span className="text-sm text-foreground-muted" aria-current="page">
                   {currentPage} / {totalPages}
                 </span>
                 <button
                   className="btn btn-ghost btn-sm"
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
+                  aria-label="次のページ"
                 >
                   次へ
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-4 h-4" aria-hidden="true" />
                 </button>
               </div>
-            </div>
+            </nav>
           )}
         </>
       )}

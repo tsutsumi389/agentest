@@ -11,30 +11,17 @@ import {
   type OrgSubscription,
   type OrgPlan,
 } from '../../../lib/api';
+import {
+  TEAM_PLAN_PRICES,
+  formatPrice,
+  formatBillingDate,
+} from '../../../lib/billing';
 import { ConfirmDialog } from '../../common/ConfirmDialog';
 import { OrgPlanChangeModal } from './OrgPlanChangeModal';
 
 interface OrgCurrentPlanCardProps {
   organizationId: string;
   memberCount: number;
-}
-
-// TEAMプランの単価
-const TEAM_PLAN_PRICES = {
-  MONTHLY: 1200,  // 月額1,200円/user
-  YEARLY: 12000,  // 年額12,000円/user
-};
-
-/**
- * 日付をフォーマット
- */
-function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('ja-JP', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
 }
 
 /**
@@ -52,16 +39,6 @@ function getPlanDisplayName(plan: OrgPlan | null): string {
   }
 }
 
-/**
- * 金額をフォーマット（日本円）
- */
-function formatPrice(price: number): string {
-  return new Intl.NumberFormat('ja-JP', {
-    style: 'currency',
-    currency: 'JPY',
-  }).format(price);
-}
-
 export function OrgCurrentPlanCard({ organizationId, memberCount }: OrgCurrentPlanCardProps) {
   const [subscription, setSubscription] = useState<OrgSubscription | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -76,10 +53,8 @@ export function OrgCurrentPlanCard({ organizationId, memberCount }: OrgCurrentPl
       try {
         const response = await orgBillingApi.getSubscription(organizationId);
         setSubscription(response.subscription);
-      } catch (error) {
-        if (error instanceof ApiError) {
-          console.error('サブスクリプション取得エラー:', error.message);
-        }
+      } catch {
+        // エラー時はサブスクリプションなし（FREE状態）として扱う
       } finally {
         setIsLoading(false);
       }
@@ -197,10 +172,10 @@ export function OrgCurrentPlanCard({ organizationId, memberCount }: OrgCurrentPl
                     {isCancelScheduled ? (
                       <>
                         <AlertTriangle className="w-4 h-4 inline mr-1 text-warning" />
-                        {formatDate(subscription.currentPeriodEnd)} に解約されます
+                        {formatBillingDate(subscription.currentPeriodEnd)} に解約されます
                       </>
                     ) : (
-                      <>次回更新日: {formatDate(subscription.currentPeriodEnd)}</>
+                      <>次回更新日: {formatBillingDate(subscription.currentPeriodEnd)}</>
                     )}
                   </p>
                 </>

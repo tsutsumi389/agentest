@@ -6,5 +6,5 @@ export { OrgAddPaymentMethodModal } from './OrgAddPaymentMethodModal';
 export { OrgBillingSettings } from './OrgBillingSettings';
 export { OrgCurrentPlanCard } from './OrgCurrentPlanCard';
 export { OrgInvoiceList } from './OrgInvoiceList';
-export { OrgPaymentMethodsCard, formatExpiry } from './OrgPaymentMethodsCard';
+export { OrgPaymentMethodsCard } from './OrgPaymentMethodsCard';
 export { OrgPlanChangeModal } from './OrgPlanChangeModal';

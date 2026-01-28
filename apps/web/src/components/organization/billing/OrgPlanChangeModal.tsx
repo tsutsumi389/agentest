@@ -14,8 +14,13 @@ import {
   type BillingCycle,
   type OrgPlanCalculation,
 } from '../../../lib/api';
+import {
+  TEAM_PLAN_PRICES,
+  formatPrice,
+  formatCardExpiry,
+  calculateYearlySavings,
+} from '../../../lib/billing';
 import { OrgAddPaymentMethodModal } from './OrgAddPaymentMethodModal';
-import { formatExpiry } from './OrgPaymentMethodsCard';
 
 interface OrgPlanChangeModalProps {
   organizationId: string;
@@ -25,22 +30,6 @@ interface OrgPlanChangeModalProps {
 }
 
 type Step = 'billing-cycle' | 'payment-method' | 'confirm';
-
-// TEAMプランの単価
-const TEAM_PLAN_PRICES = {
-  MONTHLY: 1200,  // 月額1,200円/user
-  YEARLY: 12000,  // 年額12,000円/user
-};
-
-/**
- * 金額をフォーマット（日本円）
- */
-function formatPrice(price: number): string {
-  return new Intl.NumberFormat('ja-JP', {
-    style: 'currency',
-    currency: 'JPY',
-  }).format(price);
-}
 
 export function OrgPlanChangeModal({
   organizationId,
@@ -74,8 +63,8 @@ export function OrgPlanChangeModal({
       } else if (response.paymentMethods.length > 0) {
         setSelectedPaymentMethodId(response.paymentMethods[0].id);
       }
-    } catch (error) {
-      console.error('支払い方法取得エラー:', error);
+    } catch {
+      // エラー時は空のリストとして扱い、ユーザーに新規追加を促す
     } finally {
       setIsLoadingPaymentMethods(false);
     }
@@ -91,12 +80,21 @@ export function OrgPlanChangeModal({
     try {
       const response = await orgBillingApi.calculatePlanChange(organizationId, selectedBillingCycle);
       setCalculation(response.calculation);
-    } catch (error) {
-      console.error('料金計算エラー:', error);
+    } catch {
+      // エラー時はローカル計算にフォールバック
+      setCalculation({
+        plan: 'TEAM',
+        billingCycle: selectedBillingCycle,
+        unitPrice: TEAM_PLAN_PRICES[selectedBillingCycle],
+        quantity: memberCount,
+        totalPrice: TEAM_PLAN_PRICES[selectedBillingCycle] * memberCount,
+        currency: 'JPY',
+        effectiveDate: new Date().toISOString(),
+      });
     } finally {
       setIsCalculating(false);
     }
-  }, [organizationId, selectedBillingCycle]);
+  }, [organizationId, selectedBillingCycle, memberCount]);
 
   // 確認ステップに移動時に料金計算
   useEffect(() => {
@@ -167,7 +165,12 @@ export function OrgPlanChangeModal({
 
   return (
     <>
-      <div className="fixed inset-0 z-modal flex items-center justify-center">
+      <div
+        className="fixed inset-0 z-modal flex items-center justify-center"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="plan-change-modal-title"
+      >
         {/* オーバーレイ */}
         <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
@@ -175,11 +178,14 @@ export function OrgPlanChangeModal({
         <div className="relative bg-background border border-border rounded-lg shadow-lg max-w-lg w-full mx-4 max-h-[90vh] overflow-hidden flex flex-col">
           {/* ヘッダー */}
           <div className="flex items-center justify-between p-4 border-b border-border">
-            <h3 className="text-lg font-semibold text-foreground">TEAMプランにアップグレード</h3>
+            <h3 id="plan-change-modal-title" className="text-lg font-semibold text-foreground">
+              TEAMプランにアップグレード
+            </h3>
             <button
               onClick={onClose}
               className="text-foreground-subtle hover:text-foreground"
               disabled={isSubmitting}
+              aria-label="閉じる"
             >
               <X className="w-5 h-5" />
             </button>
@@ -193,14 +199,14 @@ export function OrgPlanChangeModal({
               isActive={step === 'billing-cycle'}
               isComplete={step !== 'billing-cycle'}
             />
-            <ChevronRight className="w-4 h-4 text-foreground-subtle" />
+            <ChevronRight className="w-4 h-4 text-foreground-subtle" aria-hidden="true" />
             <StepIndicator
               step={2}
               label="支払い方法"
               isActive={step === 'payment-method'}
               isComplete={step === 'confirm'}
             />
-            <ChevronRight className="w-4 h-4 text-foreground-subtle" />
+            <ChevronRight className="w-4 h-4 text-foreground-subtle" aria-hidden="true" />
             <StepIndicator
               step={3}
               label="確認"
@@ -317,8 +323,9 @@ function StepIndicator({
             ? 'bg-success text-white'
             : 'bg-background-tertiary text-foreground-muted'
         }`}
+        aria-current={isActive ? 'step' : undefined}
       >
-        {isComplete ? <Check className="w-3 h-3" /> : step}
+        {isComplete ? <Check className="w-3 h-3" aria-hidden="true" /> : step}
       </div>
       <span
         className={`text-sm ${
@@ -345,7 +352,8 @@ function BillingCycleStep({
 }) {
   const monthlyPrice = TEAM_PLAN_PRICES.MONTHLY * memberCount;
   const yearlyPrice = TEAM_PLAN_PRICES.YEARLY * memberCount;
-  const yearlySavings = monthlyPrice * 12 - yearlyPrice;
+  // 年額プランの節約額（月額12ヶ月分 - 年額 = 2ヶ月分お得）
+  const yearlySavings = calculateYearlySavings(memberCount);
 
   return (
     <div className="space-y-4">
@@ -361,7 +369,7 @@ function BillingCycleStep({
         </p>
       </div>
 
-      <div className="space-y-3">
+      <div className="space-y-3" role="radiogroup" aria-label="請求サイクル選択">
         {/* 月額 */}
         <button
           className={`w-full p-4 rounded-lg border text-left transition-colors ${
@@ -370,6 +378,8 @@ function BillingCycleStep({
               : 'border-border hover:border-accent-subtle'
           }`}
           onClick={() => onSelectCycle('MONTHLY')}
+          role="radio"
+          aria-checked={selectedCycle === 'MONTHLY'}
         >
           <div className="flex items-center justify-between">
             <div>
@@ -395,6 +405,8 @@ function BillingCycleStep({
               : 'border-border hover:border-accent-subtle'
           }`}
           onClick={() => onSelectCycle('YEARLY')}
+          role="radio"
+          aria-checked={selectedCycle === 'YEARLY'}
         >
           <div className="flex items-center justify-between">
             <div>
@@ -425,23 +437,23 @@ function BillingCycleStep({
         <p className="text-sm font-medium text-foreground mb-3">含まれる機能</p>
         <ul className="space-y-2">
           <li className="flex items-center gap-2 text-sm text-foreground-muted">
-            <Check className="w-4 h-4 text-success" />
+            <Check className="w-4 h-4 text-success" aria-hidden="true" />
             組織メンバー数: 無制限
           </li>
           <li className="flex items-center gap-2 text-sm text-foreground-muted">
-            <Check className="w-4 h-4 text-success" />
+            <Check className="w-4 h-4 text-success" aria-hidden="true" />
             組織プロジェクト数: 無制限
           </li>
           <li className="flex items-center gap-2 text-sm text-foreground-muted">
-            <Check className="w-4 h-4 text-success" />
+            <Check className="w-4 h-4 text-success" aria-hidden="true" />
             高度なアクセス制御
           </li>
           <li className="flex items-center gap-2 text-sm text-foreground-muted">
-            <Check className="w-4 h-4 text-success" />
+            <Check className="w-4 h-4 text-success" aria-hidden="true" />
             監査ログ機能
           </li>
           <li className="flex items-center gap-2 text-sm text-foreground-muted">
-            <Check className="w-4 h-4 text-success" />
+            <Check className="w-4 h-4 text-success" aria-hidden="true" />
             優先メールサポート
           </li>
         </ul>
@@ -468,7 +480,7 @@ function PaymentMethodStep({
     <div className="space-y-4">
       <p className="text-foreground-muted">支払いに使用するカードを選択してください</p>
 
-      <div className="space-y-3">
+      <div className="space-y-3" role="radiogroup" aria-label="支払い方法選択">
         {paymentMethods.map((pm) => (
           <button
             key={pm.id}
@@ -478,15 +490,17 @@ function PaymentMethodStep({
                 : 'border-border hover:border-accent-subtle'
             }`}
             onClick={() => onSelectPaymentMethod(pm.id)}
+            role="radio"
+            aria-checked={selectedId === pm.id}
           >
             <div className="flex items-center gap-4">
-              <CreditCard className="w-6 h-6 text-foreground-muted" />
+              <CreditCard className="w-6 h-6 text-foreground-muted" aria-hidden="true" />
               <div>
                 <p className="font-medium text-foreground">
                   {pm.brand?.toUpperCase() || 'CARD'} •••• {pm.last4 || '****'}
                 </p>
                 <p className="text-sm text-foreground-muted">
-                  有効期限: {formatExpiry(pm.expiryMonth, pm.expiryYear)}
+                  有効期限: {formatCardExpiry(pm.expiryMonth, pm.expiryYear)}
                 </p>
               </div>
               {pm.isDefault && (
@@ -502,7 +516,7 @@ function PaymentMethodStep({
           onClick={onAddPaymentMethod}
         >
           <div className="flex items-center gap-4">
-            <Plus className="w-6 h-6 text-foreground-muted" />
+            <Plus className="w-6 h-6 text-foreground-muted" aria-hidden="true" />
             <p className="text-foreground-muted">新しい支払い方法を追加</p>
           </div>
         </button>
@@ -573,7 +587,7 @@ function ConfirmStep({
           {paymentMethod && (
             <div className="p-4 rounded-lg bg-background-secondary">
               <div className="flex items-center gap-3">
-                <CreditCard className="w-5 h-5 text-foreground-muted" />
+                <CreditCard className="w-5 h-5 text-foreground-muted" aria-hidden="true" />
                 <div>
                   <p className="font-medium text-foreground">
                     {paymentMethod.brand?.toUpperCase() || 'CARD'} •••• {paymentMethod.last4 || '****'}

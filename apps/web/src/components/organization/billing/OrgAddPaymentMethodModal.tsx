@@ -67,7 +67,12 @@ export function OrgAddPaymentMethodModal({
   };
 
   return (
-    <div className="fixed inset-0 z-modal flex items-center justify-center">
+    <div
+      className="fixed inset-0 z-modal flex items-center justify-center"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="add-payment-method-modal-title"
+    >
       {/* オーバーレイ */}
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
@@ -75,11 +80,14 @@ export function OrgAddPaymentMethodModal({
       <div className="relative bg-background border border-border rounded-lg shadow-lg max-w-md w-full mx-4">
         {/* ヘッダー */}
         <div className="flex items-center justify-between p-4 border-b border-border">
-          <h3 className="text-lg font-semibold text-foreground">支払い方法を追加</h3>
+          <h3 id="add-payment-method-modal-title" className="text-lg font-semibold text-foreground">
+            支払い方法を追加
+          </h3>
           <button
             onClick={onClose}
             className="text-foreground-subtle hover:text-foreground"
             disabled={isSubmitting}
+            aria-label="閉じる"
           >
             <X className="w-5 h-5" />
           </button>
@@ -140,7 +148,7 @@ function MockPaymentForm({
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* テスト環境説明 */}
       <div className="flex items-start gap-3 p-3 bg-info-subtle border border-info rounded-lg">
-        <Info className="w-5 h-5 text-info flex-shrink-0 mt-0.5" />
+        <Info className="w-5 h-5 text-info flex-shrink-0 mt-0.5" aria-hidden="true" />
         <div className="text-sm">
           <p className="font-medium text-info">テスト環境</p>
           <p className="text-foreground-muted mt-1">
@@ -150,11 +158,11 @@ function MockPaymentForm({
       </div>
 
       {/* テストカード選択 */}
-      <div className="space-y-2">
-        <label className="block text-sm font-medium text-foreground">
+      <fieldset className="space-y-2">
+        <legend className="block text-sm font-medium text-foreground">
           テストカードを選択
-        </label>
-        <div className="space-y-2">
+        </legend>
+        <div className="space-y-2" role="radiogroup" aria-label="テストカード選択">
           {testCards.map((card) => (
             <button
               key={card.last4}
@@ -165,15 +173,17 @@ function MockPaymentForm({
                   : 'border-border hover:border-accent-subtle'
               }`}
               onClick={() => setSelectedCard(card)}
+              role="radio"
+              aria-checked={selectedCard.last4 === card.last4}
             >
               <div className="flex items-center gap-3">
-                <CreditCard className="w-5 h-5 text-foreground-muted" />
+                <CreditCard className="w-5 h-5 text-foreground-muted" aria-hidden="true" />
                 <span className="font-medium text-foreground">{card.label}</span>
               </div>
             </button>
           ))}
         </div>
-      </div>
+      </fieldset>
 
       {/* ボタン */}
       <div className="flex justify-end gap-2 pt-4">
@@ -190,7 +200,7 @@ function MockPaymentForm({
           className="btn btn-primary"
           disabled={isSubmitting}
         >
-          {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+          {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />}
           追加
         </button>
       </div>
@@ -225,11 +235,10 @@ function StripeCardForm({
       const response = await orgBillingApi.createSetupIntent(organizationId);
       setClientSecret(response.setupIntent.clientSecret);
     } catch (err) {
-      if (err instanceof ApiError) {
-        setError(err.message);
-      } else {
-        setError('SetupIntentの作成に失敗しました');
-      }
+      const errorMessage = err instanceof ApiError
+        ? err.message
+        : 'SetupIntentの作成に失敗しました';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -249,7 +258,7 @@ function StripeCardForm({
     return (
       <div className="space-y-4">
         <div className="flex items-start gap-3 p-3 bg-warning-subtle border border-warning rounded-lg">
-          <AlertCircle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-5 h-5 text-warning flex-shrink-0 mt-0.5" aria-hidden="true" />
           <div className="text-sm">
             <p className="font-medium text-warning">設定エラー</p>
             <p className="text-foreground-muted mt-1">
@@ -274,7 +283,7 @@ function StripeCardForm({
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-8 gap-3">
-        <Loader2 className="w-8 h-8 animate-spin text-accent" />
+        <Loader2 className="w-8 h-8 animate-spin text-accent" aria-hidden="true" />
         <p className="text-sm text-foreground-muted">カード入力フォームを準備中...</p>
       </div>
     );
@@ -285,7 +294,7 @@ function StripeCardForm({
     return (
       <div className="space-y-4">
         <div className="flex items-start gap-3 p-3 bg-danger-subtle border border-danger rounded-lg">
-          <AlertCircle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" aria-hidden="true" />
           <div className="text-sm">
             <p className="font-medium text-danger">エラー</p>
             <p className="text-foreground-muted mt-1">
@@ -306,7 +315,7 @@ function StripeCardForm({
             className="btn btn-primary"
             onClick={fetchSetupIntent}
           >
-            <RefreshCw className="w-4 h-4" />
+            <RefreshCw className="w-4 h-4" aria-hidden="true" />
             リトライ
           </button>
         </div>
@@ -417,7 +426,7 @@ function StripeCardFormInner({
           className="btn btn-primary"
           disabled={isProcessing || !stripe || !elements || !elementReady}
         >
-          {isProcessing && <Loader2 className="w-4 h-4 animate-spin" />}
+          {isProcessing && <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />}
           追加
         </button>
       </div>

@@ -6,37 +6,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { Loader2, CreditCard, Plus, Trash2, Check, AlertTriangle } from 'lucide-react';
 import { toast } from '../../../stores/toast';
 import { ApiError, orgBillingApi, type PaymentMethod } from '../../../lib/api';
+import { formatCardExpiry, getCardBrandLabel } from '../../../lib/billing';
 import { ConfirmDialog } from '../../common/ConfirmDialog';
 import { OrgAddPaymentMethodModal } from './OrgAddPaymentMethodModal';
 
 interface OrgPaymentMethodsCardProps {
   organizationId: string;
-}
-
-/**
- * カードブランドのアイコンを取得
- */
-function getCardBrandIcon(brand: string | null): string {
-  switch (brand?.toLowerCase()) {
-    case 'visa':
-      return 'VISA';
-    case 'mastercard':
-      return 'MC';
-    case 'amex':
-      return 'AMEX';
-    case 'jcb':
-      return 'JCB';
-    default:
-      return 'CARD';
-  }
-}
-
-/**
- * 有効期限をフォーマット
- */
-export function formatExpiry(month: number | null, year: number | null): string {
-  if (!month || !year) return '-';
-  return `${month.toString().padStart(2, '0')}/${year.toString().slice(-2)}`;
 }
 
 export function OrgPaymentMethodsCard({ organizationId }: OrgPaymentMethodsCardProps) {
@@ -52,10 +27,8 @@ export function OrgPaymentMethodsCard({ organizationId }: OrgPaymentMethodsCardP
     try {
       const response = await orgBillingApi.getPaymentMethods(organizationId);
       setPaymentMethods(response.paymentMethods);
-    } catch (error) {
-      if (error instanceof ApiError) {
-        console.error('支払い方法取得エラー:', error.message);
-      }
+    } catch {
+      // エラー時は空のリストとして扱う
     } finally {
       setIsLoading(false);
     }
@@ -156,20 +129,20 @@ export function OrgPaymentMethodsCard({ organizationId }: OrgPaymentMethodsCardP
             className="btn btn-primary btn-sm"
             onClick={() => setShowAddModal(true)}
           >
-            <Plus className="w-4 h-4" />
+            <Plus className="w-4 h-4" aria-hidden="true" />
             追加
           </button>
         </div>
 
         {paymentMethods.length === 0 ? (
           <div className="text-center py-8">
-            <CreditCard className="w-12 h-12 text-foreground-subtle mx-auto mb-3" />
+            <CreditCard className="w-12 h-12 text-foreground-subtle mx-auto mb-3" aria-hidden="true" />
             <p className="text-foreground-muted">支払い方法が登録されていません</p>
             <button
               className="btn btn-primary btn-sm mt-4"
               onClick={() => setShowAddModal(true)}
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-4 h-4" aria-hidden="true" />
               支払い方法を追加
             </button>
           </div>
@@ -191,7 +164,7 @@ export function OrgPaymentMethodsCard({ organizationId }: OrgPaymentMethodsCardP
 
         {paymentMethods.length > 0 && (
           <p className="text-xs text-foreground-subtle mt-4">
-            <AlertTriangle className="w-3 h-3 inline mr-1" />
+            <AlertTriangle className="w-3 h-3 inline mr-1" aria-hidden="true" />
             カード情報はStripeで安全に管理されています。当サービスではカード番号を保存しません。
           </p>
         )}
@@ -248,15 +221,16 @@ function PaymentMethodItem({
       }`}
     >
       <div className="flex items-center gap-4">
-        {/* カードアイコン */}
+        {/* カードブランドラベル */}
         <div
           className={`w-12 h-8 rounded flex items-center justify-center text-xs font-bold ${
             paymentMethod.isDefault
               ? 'bg-accent text-white'
               : 'bg-background-tertiary text-foreground-muted'
           }`}
+          aria-label={`カードブランド: ${getCardBrandLabel(paymentMethod.brand)}`}
         >
-          {getCardBrandIcon(paymentMethod.brand)}
+          {getCardBrandLabel(paymentMethod.brand)}
         </div>
 
         {/* カード情報 */}
@@ -270,7 +244,7 @@ function PaymentMethodItem({
             )}
           </div>
           <p className="text-sm text-foreground-muted">
-            有効期限: {formatExpiry(paymentMethod.expiryMonth, paymentMethod.expiryYear)}
+            有効期限: {formatCardExpiry(paymentMethod.expiryMonth, paymentMethod.expiryYear)}
           </p>
         </div>
       </div>
@@ -283,6 +257,7 @@ function PaymentMethodItem({
             onClick={onSetDefault}
             disabled={isSettingDefault}
             title="デフォルトに設定"
+            aria-label="デフォルトに設定"
           >
             {isSettingDefault ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -297,6 +272,7 @@ function PaymentMethodItem({
             onClick={onDelete}
             disabled={isDeleting}
             title="削除"
+            aria-label="削除"
           >
             {isDeleting ? (
               <Loader2 className="w-4 h-4 animate-spin" />
