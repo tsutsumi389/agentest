@@ -82,7 +82,7 @@ describe('WebhookController', () => {
         createdAt: new Date(),
       };
       mockGateway.verifyAndParseWebhookEvent.mockReturnValue(mockEvent);
-      mockWebhookService.handleEvent.mockResolvedValue(undefined);
+      mockWebhookService.handleEvent.mockResolvedValue({ duplicate: false });
 
       await controller.handleStripeWebhook(req, res, mockNext);
 
@@ -91,7 +91,7 @@ describe('WebhookController', () => {
         'sig_123',
       );
       expect(mockWebhookService.handleEvent).toHaveBeenCalledWith(mockEvent);
-      expect(res.json).toHaveBeenCalledWith({ received: true });
+      expect(res.json).toHaveBeenCalledWith({ received: true, duplicate: false });
     });
 
     it('raw body（string）で正常処理する', async () => {
@@ -109,12 +109,34 @@ describe('WebhookController', () => {
         createdAt: new Date(),
       };
       mockGateway.verifyAndParseWebhookEvent.mockReturnValue(mockEvent);
-      mockWebhookService.handleEvent.mockResolvedValue(undefined);
+      mockWebhookService.handleEvent.mockResolvedValue({ duplicate: false });
 
       await controller.handleStripeWebhook(req, res, mockNext);
 
       expect(mockGateway.verifyAndParseWebhookEvent).toHaveBeenCalledWith(rawBody, 'sig_123');
-      expect(res.json).toHaveBeenCalledWith({ received: true });
+      expect(res.json).toHaveBeenCalledWith({ received: true, duplicate: false });
+    });
+
+    it('重複イベントの場合はduplicate: trueを返す', async () => {
+      const rawBody = '{"type":"invoice.paid"}';
+      const req = mockRequest({
+        body: rawBody,
+        headers: { 'stripe-signature': 'sig_123' },
+      });
+      const res = mockResponse();
+
+      const mockEvent = {
+        id: 'evt_1',
+        type: 'invoice.paid',
+        data: { object: {} },
+        createdAt: new Date(),
+      };
+      mockGateway.verifyAndParseWebhookEvent.mockReturnValue(mockEvent);
+      mockWebhookService.handleEvent.mockResolvedValue({ duplicate: true });
+
+      await controller.handleStripeWebhook(req, res, mockNext);
+
+      expect(res.json).toHaveBeenCalledWith({ received: true, duplicate: true });
     });
 
     it('JSONオブジェクト（非raw）の場合は400エラーを返す', async () => {

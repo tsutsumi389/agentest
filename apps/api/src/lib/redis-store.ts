@@ -15,6 +15,8 @@ const KEY_PREFIX = {
   ADMIN_USERS: 'admin:users:',
   ADMIN_USER_DETAIL: 'admin:user:detail:',
   ADMIN_ORGANIZATIONS: 'admin:organizations:',
+  USER_INVOICES: 'invoices:user:',
+  ORG_INVOICES: 'invoices:org:',
 } as const;
 
 // Redis未設定時の警告メッセージ（開発環境用）
@@ -515,6 +517,156 @@ export async function invalidateAdminOrganizationsCache(): Promise<boolean> {
     return true;
   } catch (error) {
     console.error('管理者組織一覧キャッシュの無効化に失敗:', error);
+    return false;
+  }
+}
+
+// ============================================
+// 請求履歴キャッシュ（個人・組織）
+// ============================================
+
+/**
+ * ユーザーの請求履歴をキャッシュに保存
+ * @param userId ユーザーID
+ * @param data 請求履歴データ
+ * @param ttlSeconds 有効期限（秒）、デフォルト5分
+ */
+export async function setUserInvoicesCache<T>(
+  userId: string,
+  data: T,
+  ttlSeconds: number = 300
+): Promise<boolean> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    const key = `${KEY_PREFIX.USER_INVOICES}${userId}`;
+    await redis.setex(key, ttlSeconds, JSON.stringify(data));
+    return true;
+  } catch (error) {
+    console.error('ユーザー請求履歴キャッシュの保存に失敗:', error);
+    return false;
+  }
+}
+
+/**
+ * ユーザーの請求履歴をキャッシュから取得
+ * @param userId ユーザーID
+ */
+export async function getUserInvoicesCache<T>(
+  userId: string
+): Promise<T | null> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return null;
+  }
+
+  try {
+    const key = `${KEY_PREFIX.USER_INVOICES}${userId}`;
+    const data = await redis.get(key);
+    if (!data) {
+      return null;
+    }
+    return JSON.parse(data) as T;
+  } catch (error) {
+    console.error('ユーザー請求履歴キャッシュの取得に失敗:', error);
+    return null;
+  }
+}
+
+/**
+ * ユーザーの請求履歴キャッシュを無効化
+ * @param userId ユーザーID
+ */
+export async function invalidateUserInvoicesCache(
+  userId: string
+): Promise<boolean> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    const key = `${KEY_PREFIX.USER_INVOICES}${userId}`;
+    await redis.del(key);
+    return true;
+  } catch (error) {
+    console.error('ユーザー請求履歴キャッシュの無効化に失敗:', error);
+    return false;
+  }
+}
+
+/**
+ * 組織の請求履歴をキャッシュに保存
+ * @param organizationId 組織ID
+ * @param data 請求履歴データ
+ * @param ttlSeconds 有効期限（秒）、デフォルト5分
+ */
+export async function setOrgInvoicesCache<T>(
+  organizationId: string,
+  data: T,
+  ttlSeconds: number = 300
+): Promise<boolean> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    const key = `${KEY_PREFIX.ORG_INVOICES}${organizationId}`;
+    await redis.setex(key, ttlSeconds, JSON.stringify(data));
+    return true;
+  } catch (error) {
+    console.error('組織請求履歴キャッシュの保存に失敗:', error);
+    return false;
+  }
+}
+
+/**
+ * 組織の請求履歴をキャッシュから取得
+ * @param organizationId 組織ID
+ */
+export async function getOrgInvoicesCache<T>(
+  organizationId: string
+): Promise<T | null> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return null;
+  }
+
+  try {
+    const key = `${KEY_PREFIX.ORG_INVOICES}${organizationId}`;
+    const data = await redis.get(key);
+    if (!data) {
+      return null;
+    }
+    return JSON.parse(data) as T;
+  } catch (error) {
+    console.error('組織請求履歴キャッシュの取得に失敗:', error);
+    return null;
+  }
+}
+
+/**
+ * 組織の請求履歴キャッシュを無効化
+ * @param organizationId 組織ID
+ */
+export async function invalidateOrgInvoicesCache(
+  organizationId: string
+): Promise<boolean> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    const key = `${KEY_PREFIX.ORG_INVOICES}${organizationId}`;
+    await redis.del(key);
+    return true;
+  } catch (error) {
+    console.error('組織請求履歴キャッシュの無効化に失敗:', error);
     return false;
   }
 }
