@@ -2033,3 +2033,44 @@ export const orgBillingApi = {
     );
   },
 };
+
+// ============================================
+// ユーザー請求履歴API
+// ============================================
+
+/** ユーザー請求書ステータス */
+export type UserInvoiceStatus = 'draft' | 'open' | 'paid' | 'uncollectible' | 'void';
+
+/** ユーザー請求書 */
+export interface UserInvoice {
+  id: string;
+  invoiceNumber: string;
+  amount: number;
+  currency: string;
+  status: UserInvoiceStatus;
+  periodStart: string;
+  periodEnd: string;
+  dueDate: string | null;
+  pdfUrl: string | null;
+  createdAt: string;
+}
+
+/** ユーザー請求履歴APIレスポンス */
+export interface UserInvoiceListResponse {
+  invoices: UserInvoice[];
+  total: number;
+}
+
+export const userInvoicesApi = {
+  // 請求書一覧取得
+  getInvoices: (userId: string) =>
+    api.get<UserInvoiceListResponse>(`/api/users/${userId}/invoices`),
+
+  // 請求書詳細取得
+  getInvoice: (userId: string, invoiceId: string) =>
+    api.get<{ invoice: UserInvoice }>(`/api/users/${userId}/invoices/${invoiceId}`),
+
+  // 請求書PDFダウンロード（リダイレクトURL取得）
+  getInvoicePdfUrl: (userId: string, invoiceId: string) =>
+    `/api/users/${userId}/invoices/${invoiceId}/pdf`,
+};
