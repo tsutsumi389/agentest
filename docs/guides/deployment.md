@@ -71,6 +71,116 @@ gcloud run deploy agentest-api \
   --platform managed
 ```
 
+## Cloud Run Jobs (バッチ処理)
+
+`apps/jobs` はバッチ処理用の Cloud Run Jobs アプリケーションです。
+Cloud Scheduler と連携して定期的なデータメンテナンスを実行します。
+
+### 1. Docker イメージのビルド
+
+```bash
+docker build -f apps/jobs/Dockerfile -t gcr.io/PROJECT_ID/agentest-jobs:latest .
+```
+
+### 2. イメージのプッシュ
+
+```bash
+docker push gcr.io/PROJECT_ID/agentest-jobs:latest
+```
+
+### 3. Cloud Run Job の作成
+
+```bash
+gcloud run jobs create agentest-jobs \
+  --image gcr.io/PROJECT_ID/agentest-jobs:latest \
+  --region asia-northeast1 \
+  --task-timeout=30m \
+  --set-secrets=DATABASE_URL=DATABASE_URL:latest,REDIS_URL=REDIS_URL:latest,STRIPE_SECRET_KEY=STRIPE_SECRET_KEY:latest \
+  --set-env-vars SMTP_HOST=smtp.sendgrid.net,SMTP_PORT=587,SMTP_FROM=noreply@agentest.io
+```
+
+### 4. Cloud Scheduler 設定
+
+各ジョブのスケジュールを Cloud Scheduler で設定します。
+
+| ジョブ名 | cron 式 | 環境変数 |
+|---------|---------|---------|
+| history-cleanup | `0 3 * * *` (毎日 3:00 JST) | `JOB_NAME=history-cleanup` |
+| history-expiry-notify | `0 9 * * *` (毎日 9:00 JST) | `JOB_NAME=history-expiry-notify` |
+| webhook-retry | `0 * * * *` (毎時 0分) | `JOB_NAME=webhook-retry` |
+| payment-event-cleanup | `0 4 * * 0` (毎週日曜 4:00 JST) | `JOB_NAME=payment-event-cleanup` |
+| subscription-sync | `0 5 * * 0` (毎週日曜 5:00 JST) | `JOB_NAME=subscription-sync` |
+
+```bash
+# history-cleanup
+gcloud scheduler jobs create http agentest-history-cleanup \
+  --location=asia-northeast1 \
+  --schedule="0 3 * * *" \
+  --time-zone="Asia/Tokyo" \
+  --uri="https://asia-northeast1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/PROJECT_ID/jobs/agentest-jobs:run" \
+  --http-method=POST \
+  --oauth-service-account-email=SERVICE_ACCOUNT@PROJECT_ID.iam.gserviceaccount.com \
+  --message-body='{"overrides":{"containerOverrides":[{"env":[{"name":"JOB_NAME","value":"history-cleanup"}]}]}}'
+
+# history-expiry-notify
+gcloud scheduler jobs create http agentest-history-expiry-notify \
+  --location=asia-northeast1 \
+  --schedule="0 9 * * *" \
+  --time-zone="Asia/Tokyo" \
+  --uri="https://asia-northeast1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/PROJECT_ID/jobs/agentest-jobs:run" \
+  --http-method=POST \
+  --oauth-service-account-email=SERVICE_ACCOUNT@PROJECT_ID.iam.gserviceaccount.com \
+  --message-body='{"overrides":{"containerOverrides":[{"env":[{"name":"JOB_NAME","value":"history-expiry-notify"}]}]}}'
+
+# webhook-retry
+gcloud scheduler jobs create http agentest-webhook-retry \
+  --location=asia-northeast1 \
+  --schedule="0 * * * *" \
+  --time-zone="Asia/Tokyo" \
+  --uri="https://asia-northeast1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/PROJECT_ID/jobs/agentest-jobs:run" \
+  --http-method=POST \
+  --oauth-service-account-email=SERVICE_ACCOUNT@PROJECT_ID.iam.gserviceaccount.com \
+  --message-body='{"overrides":{"containerOverrides":[{"env":[{"name":"JOB_NAME","value":"webhook-retry"}]}]}}'
+
+# payment-event-cleanup
+gcloud scheduler jobs create http agentest-payment-event-cleanup \
+  --location=asia-northeast1 \
+  --schedule="0 4 * * 0" \
+  --time-zone="Asia/Tokyo" \
+  --uri="https://asia-northeast1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/PROJECT_ID/jobs/agentest-jobs:run" \
+  --http-method=POST \
+  --oauth-service-account-email=SERVICE_ACCOUNT@PROJECT_ID.iam.gserviceaccount.com \
+  --message-body='{"overrides":{"containerOverrides":[{"env":[{"name":"JOB_NAME","value":"payment-event-cleanup"}]}]}}'
+
+# subscription-sync
+gcloud scheduler jobs create http agentest-subscription-sync \
+  --location=asia-northeast1 \
+  --schedule="0 5 * * 0" \
+  --time-zone="Asia/Tokyo" \
+  --uri="https://asia-northeast1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/PROJECT_ID/jobs/agentest-jobs:run" \
+  --http-method=POST \
+  --oauth-service-account-email=SERVICE_ACCOUNT@PROJECT_ID.iam.gserviceaccount.com \
+  --message-body='{"overrides":{"containerOverrides":[{"env":[{"name":"JOB_NAME","value":"subscription-sync"}]}]}}'
+```
+
+### 5. ジョブの更新
+
+```bash
+gcloud run jobs update agentest-jobs \
+  --image gcr.io/PROJECT_ID/agentest-jobs:latest \
+  --region asia-northeast1
+```
+
+### 6. 手動実行（動作確認）
+
+```bash
+gcloud run jobs execute agentest-jobs \
+  --region=asia-northeast1 \
+  --set-env-vars JOB_NAME=history-cleanup
+```
+
+詳細は [バッチジョブ運用ガイド](../operations/batch-jobs-runbook.md) を参照してください。
+
 ## マイグレーション
 
 本番環境のマイグレーションは慎重に実行：

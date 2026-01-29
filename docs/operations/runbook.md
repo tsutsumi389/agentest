@@ -15,6 +15,7 @@
 | 9:00 | ステータスページ確認 | https://status.agentest.io |
 | 9:00 | 夜間アラート確認 | Slack #alerts |
 | 9:00 | エラーログ確認 | Datadog / Cloud Logging |
+| 10:00 | バッチジョブ実行結果確認 | Cloud Console / Cloud Logging |
 | 17:00 | 日次バックアップ確認 | Cloud Console |
 
 ### 1.2 毎週のタスク
@@ -385,6 +386,65 @@ gcloud run services update agentest-api \
 redis-cli -a $REDIS_PASSWORD SET rate_limit:global 50
 ```
 
+## 11. バッチジョブ管理
+
+バッチジョブは Cloud Run Jobs で実行されます。詳細は [バッチジョブ運用ガイド](./batch-jobs-runbook.md) を参照してください。
+
+### 11.1 ジョブ実行状態確認
+
+```bash
+# ジョブ一覧
+gcloud run jobs list
+
+# 最近の実行履歴
+gcloud run jobs executions list --job=agentest-jobs
+
+# 特定の実行の詳細
+gcloud run jobs executions describe EXECUTION_NAME --job=agentest-jobs
+```
+
+### 11.2 手動実行
+
+```bash
+# 履歴クリーンアップを手動実行
+gcloud run jobs execute agentest-jobs \
+  --region=asia-northeast1 \
+  --set-env-vars JOB_NAME=history-cleanup
+
+# Webhook再処理を手動実行
+gcloud run jobs execute agentest-jobs \
+  --region=asia-northeast1 \
+  --set-env-vars JOB_NAME=webhook-retry
+```
+
+### 11.3 ログ確認
+
+```bash
+# バッチジョブのログ
+gcloud logging read "resource.type=cloud_run_job \
+  AND resource.labels.job_name=agentest-jobs" \
+  --limit=100
+
+# エラーログのみ
+gcloud logging read "resource.type=cloud_run_job \
+  AND resource.labels.job_name=agentest-jobs \
+  AND severity>=ERROR" \
+  --limit=50
+```
+
+### 11.4 スケジュール確認・変更
+
+```bash
+# スケジュール一覧
+gcloud scheduler jobs list --location=asia-northeast1
+
+# スケジュール一時停止
+gcloud scheduler jobs pause agentest-history-cleanup --location=asia-northeast1
+
+# スケジュール再開
+gcloud scheduler jobs resume agentest-history-cleanup --location=asia-northeast1
+```
+
 ---
 
 ## 関連ドキュメント
@@ -392,4 +452,5 @@ redis-cli -a $REDIS_PASSWORD SET rate_limit:global 50
 - [インシデント対応](./incident-response.md)
 - [バックアップ・リストア](./backup-restore.md)
 - [監視・アラート](./monitoring.md)
+- [バッチジョブ運用](./batch-jobs-runbook.md)
 - [デプロイ手順](../guides/deployment.md)

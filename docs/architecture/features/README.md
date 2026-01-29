@@ -43,6 +43,12 @@
 | 通知 | メール・アプリ内通知、WebSocket リアルタイム配信 | [notification.md](./notification.md) |
 | 課金 | サブスクリプション、請求 | [billing.md](./billing.md) |
 
+### バッチ処理
+
+| 機能 | 説明 | ドキュメント |
+|------|------|-------------|
+| バッチ処理 | 履歴クリーンアップ、Webhook再処理、Stripe同期 | [batch-processing.md](./batch-processing.md) |
+
 ### 管理者システム
 
 | 機能 | 説明 | ドキュメント |

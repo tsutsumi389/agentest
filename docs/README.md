@@ -31,6 +31,7 @@
 
 ### サービス運用
 - [Runbook（運用手順書）](./operations/runbook.md) - 日常運用タスク
+- [バッチジョブ運用](./operations/batch-jobs-runbook.md) - Cloud Run Jobs 管理
 - [監視・アラート設定](./operations/monitoring.md) - メトリクス・ログ・アラート
 - [バックアップ・リストア](./operations/backup-restore.md) - データ保護
 - [データベース運用](./operations/database-operations.md) - DB管理

@@ -156,3 +156,46 @@ export function getOrgStripePriceId(
     ? pricing.stripePriceId.yearly
     : pricing.stripePriceId.monthly;
 }
+
+// ============================================
+// プラン制限定数
+// ============================================
+
+/**
+ * プラン別の機能制限
+ */
+export interface PlanLimits {
+  /** プロジェクト数上限（-1は無制限） */
+  maxProjects: number;
+  /** テストケース数上限（-1は無制限） */
+  maxTestCases: number;
+  /** 変更履歴保持日数（-1は無制限） */
+  changeHistoryDays: number;
+}
+
+/**
+ * 個人プランの制限
+ */
+export const PLAN_LIMITS: Record<PersonalPlan, PlanLimits> = {
+  FREE: {
+    maxProjects: 1,
+    maxTestCases: 100,
+    changeHistoryDays: 30,
+  },
+  PRO: {
+    maxProjects: -1,
+    maxTestCases: -1,
+    changeHistoryDays: -1,
+  },
+};
+
+/**
+ * 組織プランの制限
+ */
+export const ORG_PLAN_LIMITS: Record<OrgPlan, PlanLimits> = {
+  TEAM: {
+    maxProjects: -1,
+    maxTestCases: -1,
+    changeHistoryDays: -1,
+  },
+};
