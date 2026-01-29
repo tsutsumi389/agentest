@@ -3,7 +3,6 @@
  * JOB_NAME環境変数で実行するジョブを振り分ける
  */
 import { runHistoryCleanup } from './jobs/history-cleanup.js';
-import { runHistoryExpiryNotify } from './jobs/history-expiry-notify.js';
 import { runWebhookRetry } from './jobs/webhook-retry.js';
 import { runPaymentEventCleanup } from './jobs/payment-event-cleanup.js';
 import { runSubscriptionSync } from './jobs/subscription-sync.js';
@@ -13,7 +12,6 @@ import { closePrisma } from './lib/prisma.js';
 // 利用可能なジョブの定義
 const jobs: Record<string, () => Promise<void>> = {
   'history-cleanup': runHistoryCleanup,
-  'history-expiry-notify': runHistoryExpiryNotify,
   'webhook-retry': runWebhookRetry,
   'payment-event-cleanup': runPaymentEventCleanup,
   'subscription-sync': runSubscriptionSync,

@@ -1,7 +1,7 @@
 /**
  * payment-event-cleanup ユニットテスト
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // vi.hoisted() でモックオブジェクトを事前定義
 const { mockPrisma } = vi.hoisted(() => ({
