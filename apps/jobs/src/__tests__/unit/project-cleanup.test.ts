@@ -45,7 +45,9 @@ describe('runProjectCleanup', () => {
       .mockResolvedValueOnce([mockDeletedProject])
       .mockResolvedValueOnce([]);
     mockPrisma.project.delete.mockResolvedValue({ id: mockDeletedProject.id });
-    mockPrisma.project.count.mockResolvedValue(0);
+    mockPrisma.project.count
+      .mockResolvedValueOnce(1) // 事前カウント
+      .mockResolvedValueOnce(0); // 残件数カウント
 
     await runProjectCleanup();
 
@@ -81,7 +83,9 @@ describe('runProjectCleanup', () => {
       .mockResolvedValueOnce(batch2)
       .mockResolvedValueOnce([]); // ループ終了
     mockPrisma.project.delete.mockResolvedValue({ id: 'dummy' });
-    mockPrisma.project.count.mockResolvedValue(0);
+    mockPrisma.project.count
+      .mockResolvedValueOnce(3) // 事前カウント
+      .mockResolvedValueOnce(0); // 残件数カウント
 
     await runProjectCleanup();
 
@@ -103,7 +107,9 @@ describe('runProjectCleanup', () => {
 
   it('削除対象がない場合でも正常に完了する', async () => {
     mockPrisma.project.findMany.mockResolvedValueOnce([]);
-    mockPrisma.project.count.mockResolvedValue(0);
+    mockPrisma.project.count
+      .mockResolvedValueOnce(0) // 事前カウント
+      .mockResolvedValueOnce(0); // 残件数カウント
 
     await runProjectCleanup();
 
@@ -130,7 +136,9 @@ describe('runProjectCleanup', () => {
       .mockResolvedValueOnce({ id: 'proj-1' })
       .mockRejectedValueOnce(new Error('削除エラー')) // 2件目でエラー
       .mockResolvedValueOnce({ id: 'proj-3' });
-    mockPrisma.project.count.mockResolvedValue(0);
+    mockPrisma.project.count
+      .mockResolvedValueOnce(3) // 事前カウント
+      .mockResolvedValueOnce(0); // 残件数カウント
 
     await runProjectCleanup();
 
@@ -151,7 +159,9 @@ describe('runProjectCleanup', () => {
 
   it('30日の基準日を正しく計算する', async () => {
     mockPrisma.project.findMany.mockResolvedValueOnce([]);
-    mockPrisma.project.count.mockResolvedValue(0);
+    mockPrisma.project.count
+      .mockResolvedValueOnce(0) // 事前カウント
+      .mockResolvedValueOnce(0); // 残件数カウント
 
     await runProjectCleanup();
 
@@ -163,13 +173,36 @@ describe('runProjectCleanup', () => {
     expect(cutoffDate.getTime()).toBe(expected.getTime());
   });
 
-  it('残りのソフトデリート済みプロジェクト数をレポートする', async () => {
+  it('削除対象件数を事前にレポートする', async () => {
     mockPrisma.project.findMany.mockResolvedValueOnce([]);
-    mockPrisma.project.count.mockResolvedValue(5);
+    mockPrisma.project.count
+      .mockResolvedValueOnce(3) // 事前カウント
+      .mockResolvedValueOnce(0); // 残件数カウント
 
     await runProjectCleanup();
 
-    expect(mockPrisma.project.count).toHaveBeenCalledWith({
+    // 事前カウントが呼ばれる
+    expect(mockPrisma.project.count).toHaveBeenNthCalledWith(1, {
+      where: {
+        deletedAt: { not: null, lt: expect.any(Date) },
+      },
+    });
+
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('削除対象プロジェクト数: 3件')
+    );
+  });
+
+  it('残りのソフトデリート済みプロジェクト数をレポートする', async () => {
+    mockPrisma.project.findMany.mockResolvedValueOnce([]);
+    mockPrisma.project.count
+      .mockResolvedValueOnce(0) // 事前カウント
+      .mockResolvedValueOnce(5); // 残件数カウント
+
+    await runProjectCleanup();
+
+    // 残件数カウントが呼ばれる
+    expect(mockPrisma.project.count).toHaveBeenNthCalledWith(2, {
       where: {
         deletedAt: { not: null },
       },
@@ -185,7 +218,9 @@ describe('runProjectCleanup', () => {
       .mockResolvedValueOnce([mockDeletedProject])
       .mockResolvedValueOnce([]);
     mockPrisma.project.delete.mockResolvedValue({ id: mockDeletedProject.id });
-    mockPrisma.project.count.mockResolvedValue(0);
+    mockPrisma.project.count
+      .mockResolvedValueOnce(1) // 事前カウント
+      .mockResolvedValueOnce(0); // 残件数カウント
 
     await runProjectCleanup();
 

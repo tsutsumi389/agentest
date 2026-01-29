@@ -15,7 +15,12 @@ import {
 } from './test-helpers.js';
 
 describe('runProjectCleanup（結合テスト）', () => {
+  // テストの時刻を固定して境界条件の安定性を確保
+  const testDate = new Date('2025-05-15T12:00:00.000Z');
+
   beforeEach(async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(testDate);
     await cleanupTestData();
     vi.spyOn(console, 'log').mockImplementation(() => {});
     vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -23,6 +28,7 @@ describe('runProjectCleanup（結合テスト）', () => {
 
   afterEach(async () => {
     await cleanupTestData();
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -150,20 +156,19 @@ describe('runProjectCleanup（結合テスト）', () => {
     expect(active).not.toBeNull();
   });
 
-  it('ちょうど30日前に削除されたプロジェクトは削除される', async () => {
+  it('ちょうど30日前に削除されたプロジェクトは削除されない', async () => {
     const user = await createTestUser();
     // ちょうど30日前に削除されたプロジェクト
-    // daysAgo(30)は現在時刻から30日前の時刻を返すため、
-    // cutoffDate（setDateで計算）より前になり、削除対象となる
+    // daysAgo(30)とcutoffDateが同じ値になるため、lt条件を満たさず削除されない
     const deletedProject = await createDeletedTestProject(user.id, daysAgo(30));
 
     await runProjectCleanup();
 
-    // 30日前のプロジェクトは削除される
+    // ちょうど30日前のプロジェクトはまだ削除されない（lt条件のため）
     const project = await prisma.project.findUnique({
       where: { id: deletedProject.id },
     });
-    expect(project).toBeNull();
+    expect(project).not.toBeNull();
   });
 
   it('削除対象がない場合でも正常に完了する', async () => {

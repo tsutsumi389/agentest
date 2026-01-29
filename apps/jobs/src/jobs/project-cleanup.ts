@@ -14,9 +14,16 @@ export async function runProjectCleanup(): Promise<void> {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - PROJECT_CLEANUP_DAYS);
 
+  // 削除対象件数を事前にレポート
+  const targetCount = await prisma.project.count({
+    where: {
+      deletedAt: { not: null, lt: cutoffDate },
+    },
+  });
   console.log(
     `削除対象: deletedAtが${PROJECT_CLEANUP_DAYS}日以上前のプロジェクト（基準日: ${cutoffDate.toISOString()}）`
   );
+  console.log(`削除対象プロジェクト数: ${targetCount}件`);
 
   do {
     // カーソルベースでソフトデリート済みプロジェクトを取得
