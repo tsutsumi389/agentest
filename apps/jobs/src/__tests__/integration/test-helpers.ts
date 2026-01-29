@@ -244,6 +244,43 @@ export async function createTestProject(
   });
 }
 
+/**
+ * テスト用削除済みプロジェクトを作成
+ * deletedAtを指定してソフトデリート状態のプロジェクトを作成する
+ */
+export async function createDeletedTestProject(
+  ownerId: string,
+  deletedAt: Date,
+  overrides: Partial<{
+    id: string;
+    name: string;
+    description: string | null;
+    organizationId: string | null;
+  }> = {}
+) {
+  const id = overrides.id ?? randomUUID();
+  return prisma.$transaction(async (tx) => {
+    const project = await tx.project.create({
+      data: {
+        id,
+        name: overrides.name ?? `Deleted Project ${id.slice(0, 8)}`,
+        description: overrides.description ?? null,
+        organizationId: overrides.organizationId ?? null,
+        deletedAt,
+      },
+    });
+    // オーナーをProjectMemberとして登録
+    await tx.projectMember.create({
+      data: {
+        projectId: project.id,
+        userId: ownerId,
+        role: 'OWNER',
+      },
+    });
+    return project;
+  });
+}
+
 // ============================================
 // テストスイート作成
 // ============================================

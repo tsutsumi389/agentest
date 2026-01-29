@@ -106,6 +106,7 @@ gcloud run jobs create agentest-jobs \
 | ジョブ名 | cron 式 | 環境変数 |
 |---------|---------|---------|
 | history-cleanup | `0 3 * * *` (毎日 3:00 JST) | `JOB_NAME=history-cleanup` |
+| project-cleanup | `0 4 * * *` (毎日 4:00 JST) | `JOB_NAME=project-cleanup` |
 | webhook-retry | `0 * * * *` (毎時 0分) | `JOB_NAME=webhook-retry` |
 | payment-event-cleanup | `0 4 * * 0` (毎週日曜 4:00 JST) | `JOB_NAME=payment-event-cleanup` |
 | subscription-sync | `0 5 * * 0` (毎週日曜 5:00 JST) | `JOB_NAME=subscription-sync` |
@@ -150,6 +151,16 @@ gcloud scheduler jobs create http agentest-subscription-sync \
   --http-method=POST \
   --oauth-service-account-email=SERVICE_ACCOUNT@PROJECT_ID.iam.gserviceaccount.com \
   --message-body='{"overrides":{"containerOverrides":[{"env":[{"name":"JOB_NAME","value":"subscription-sync"}]}]}}'
+
+# project-cleanup
+gcloud scheduler jobs create http agentest-project-cleanup \
+  --location=asia-northeast1 \
+  --schedule="0 4 * * *" \
+  --time-zone="Asia/Tokyo" \
+  --uri="https://asia-northeast1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/PROJECT_ID/jobs/agentest-jobs:run" \
+  --http-method=POST \
+  --oauth-service-account-email=SERVICE_ACCOUNT@PROJECT_ID.iam.gserviceaccount.com \
+  --message-body='{"overrides":{"containerOverrides":[{"env":[{"name":"JOB_NAME","value":"project-cleanup"}]}]}}'
 ```
 
 ### 5. ジョブの更新

@@ -6,6 +6,7 @@ import { runHistoryCleanup } from './jobs/history-cleanup.js';
 import { runWebhookRetry } from './jobs/webhook-retry.js';
 import { runPaymentEventCleanup } from './jobs/payment-event-cleanup.js';
 import { runSubscriptionSync } from './jobs/subscription-sync.js';
+import { runProjectCleanup } from './jobs/project-cleanup.js';
 import { closeRedis } from './lib/redis.js';
 import { closePrisma } from './lib/prisma.js';
 
@@ -15,6 +16,7 @@ const jobs: Record<string, () => Promise<void>> = {
   'webhook-retry': runWebhookRetry,
   'payment-event-cleanup': runPaymentEventCleanup,
   'subscription-sync': runSubscriptionSync,
+  'project-cleanup': runProjectCleanup,
 };
 
 async function main() {

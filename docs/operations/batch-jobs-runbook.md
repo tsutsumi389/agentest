@@ -10,6 +10,7 @@ Agentest のバッチジョブは Cloud Run Jobs で実行され、Cloud Schedul
 | ジョブ名 | スケジュール | 目的 |
 |---------|-------------|------|
 | `history-cleanup` | 毎日 3:00 JST | FREE プランの古い履歴を削除 |
+| `project-cleanup` | 毎日 4:00 JST | ソフトデリート済みプロジェクトを物理削除 |
 | `webhook-retry` | 毎時 0分 | 失敗した決済 Webhook を再処理 |
 | `payment-event-cleanup` | 毎週日曜 4:00 JST | 古い決済イベントを削除 |
 | `subscription-sync` | 毎週日曜 5:00 JST | Stripe との状態を同期 |
@@ -90,6 +91,11 @@ gcloud run jobs execute agentest-jobs \
 gcloud run jobs execute agentest-jobs \
   --region=asia-northeast1 \
   --set-env-vars JOB_NAME=subscription-sync
+
+# project-cleanup を手動実行
+gcloud run jobs execute agentest-jobs \
+  --region=asia-northeast1 \
+  --set-env-vars JOB_NAME=project-cleanup
 ```
 
 ### 実行状態の監視
@@ -252,6 +258,24 @@ SELECT status, COUNT(*)
 FROM payment_events
 WHERE created_at < NOW() - INTERVAL '90 days'
 GROUP BY status;
+```
+
+### プロジェクトクリーンアップ関連
+
+```sql
+-- 削除対象プロジェクト数を確認（30日以上前にソフトデリート）
+SELECT COUNT(*)
+FROM projects
+WHERE deleted_at IS NOT NULL
+  AND deleted_at < NOW() - INTERVAL '30 days';
+
+-- ソフトデリート済みプロジェクトの詳細を確認
+SELECT id, name, deleted_at,
+  (SELECT COUNT(*) FROM test_suites WHERE project_id = projects.id) as test_suite_count
+FROM projects
+WHERE deleted_at IS NOT NULL
+ORDER BY deleted_at ASC
+LIMIT 20;
 ```
 
 ## アラート設定
