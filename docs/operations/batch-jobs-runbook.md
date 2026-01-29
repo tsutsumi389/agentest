@@ -10,7 +10,6 @@ Agentest のバッチジョブは Cloud Run Jobs で実行され、Cloud Schedul
 | ジョブ名 | スケジュール | 目的 |
 |---------|-------------|------|
 | `history-cleanup` | 毎日 3:00 JST | FREE プランの古い履歴を削除 |
-| `history-expiry-notify` | 毎日 9:00 JST | 履歴削除予告メールを送信 |
 | `webhook-retry` | 毎時 0分 | 失敗した決済 Webhook を再処理 |
 | `payment-event-cleanup` | 毎週日曜 4:00 JST | 古い決済イベントを削除 |
 | `subscription-sync` | 毎週日曜 5:00 JST | Stripe との状態を同期 |
@@ -76,11 +75,6 @@ gcloud scheduler jobs describe agentest-history-cleanup --location=asia-northeas
 gcloud run jobs execute agentest-jobs \
   --region=asia-northeast1 \
   --set-env-vars JOB_NAME=history-cleanup
-
-# history-expiry-notify を手動実行
-gcloud run jobs execute agentest-jobs \
-  --region=asia-northeast1 \
-  --set-env-vars JOB_NAME=history-expiry-notify
 
 # webhook-retry を手動実行
 gcloud run jobs execute agentest-jobs \
@@ -303,7 +297,6 @@ notificationChannels:
 | `SMTP_FROM` | No* | 送信元アドレス | `noreply@agentest.io` |
 
 \* `subscription-sync` には `STRIPE_SECRET_KEY` が必要
-\* `history-expiry-notify` には SMTP 設定が必要
 
 ## 関連ドキュメント
 

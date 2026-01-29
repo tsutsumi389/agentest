@@ -106,7 +106,6 @@ gcloud run jobs create agentest-jobs \
 | ジョブ名 | cron 式 | 環境変数 |
 |---------|---------|---------|
 | history-cleanup | `0 3 * * *` (毎日 3:00 JST) | `JOB_NAME=history-cleanup` |
-| history-expiry-notify | `0 9 * * *` (毎日 9:00 JST) | `JOB_NAME=history-expiry-notify` |
 | webhook-retry | `0 * * * *` (毎時 0分) | `JOB_NAME=webhook-retry` |
 | payment-event-cleanup | `0 4 * * 0` (毎週日曜 4:00 JST) | `JOB_NAME=payment-event-cleanup` |
 | subscription-sync | `0 5 * * 0` (毎週日曜 5:00 JST) | `JOB_NAME=subscription-sync` |
@@ -121,16 +120,6 @@ gcloud scheduler jobs create http agentest-history-cleanup \
   --http-method=POST \
   --oauth-service-account-email=SERVICE_ACCOUNT@PROJECT_ID.iam.gserviceaccount.com \
   --message-body='{"overrides":{"containerOverrides":[{"env":[{"name":"JOB_NAME","value":"history-cleanup"}]}]}}'
-
-# history-expiry-notify
-gcloud scheduler jobs create http agentest-history-expiry-notify \
-  --location=asia-northeast1 \
-  --schedule="0 9 * * *" \
-  --time-zone="Asia/Tokyo" \
-  --uri="https://asia-northeast1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/PROJECT_ID/jobs/agentest-jobs:run" \
-  --http-method=POST \
-  --oauth-service-account-email=SERVICE_ACCOUNT@PROJECT_ID.iam.gserviceaccount.com \
-  --message-body='{"overrides":{"containerOverrides":[{"env":[{"name":"JOB_NAME","value":"history-expiry-notify"}]}]}}'
 
 # webhook-retry
 gcloud scheduler jobs create http agentest-webhook-retry \
