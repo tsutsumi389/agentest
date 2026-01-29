@@ -1,0 +1,30 @@
+{
+  "name": "@agentest/jobs",
+  "version": "0.0.1",
+  "description": "Cloud Run Jobs用バッチ処理",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "lint": "eslint src/",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@agentest/db": "workspace:*",
+    "@agentest/shared": "workspace:*",
+    "ioredis": "catalog:",
+    "nodemailer": "^7.0.12",
+    "stripe": "^20.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@types/nodemailer": "^6.4.17",
+    "eslint": "catalog:",
+    "tsx": "^4.19.0",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
+  }
+}

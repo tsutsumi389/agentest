@@ -8,7 +8,7 @@
 | Phase B | Webhook処理の強化 | ✅ 完了 |
 | Phase C | 個人向け請求履歴API | ✅ 完了 |
 | Phase D | フロントエンド（InvoiceList） | ✅ 完了 |
-| Phase E | バッチ処理（Cloud Run Jobs） | ⏳ 未実装 |
+| Phase E | バッチ処理（Cloud Run Jobs） | ✅ 完了 |
 | Phase F | プラン制限定数 | ✅ 完了 |
 
 ### 実装済みファイル一覧
@@ -29,6 +29,21 @@
 #### Phase D: フロントエンド
 - `apps/web/src/components/billing/InvoiceList.tsx` - 請求履歴一覧UI
 
+#### Phase E: バッチ処理（Cloud Run Jobs）
+- `apps/jobs/package.json` - パッケージ定義
+- `apps/jobs/tsconfig.json` - TypeScript設定
+- `apps/jobs/Dockerfile` - Cloud Run Jobs用Dockerfile
+- `apps/jobs/src/index.ts` - エントリーポイント（ジョブ振り分け）
+- `apps/jobs/src/lib/prisma.ts` - Prismaクライアント
+- `apps/jobs/src/lib/redis.ts` - Redisクライアント
+- `apps/jobs/src/lib/stripe.ts` - Stripeクライアント
+- `apps/jobs/src/lib/email.ts` - メール送信ユーティリティ
+- `apps/jobs/src/jobs/history-cleanup.ts` - FREEプランの30日経過履歴削除
+- `apps/jobs/src/jobs/history-expiry-notify.ts` - 削除7日前のFREEユーザーへ通知
+- `apps/jobs/src/jobs/webhook-retry.ts` - 処理失敗Webhookの再処理
+- `apps/jobs/src/jobs/payment-event-cleanup.ts` - 90日以上前の処理済みイベント削除
+- `apps/jobs/src/jobs/subscription-sync.ts` - DB-Stripe間の状態同期チェック
+
 #### Phase F: プラン制限定数
 - `packages/shared/src/config/plan-pricing.ts` - プラン料金・制限定義
 
@@ -46,7 +61,9 @@
 
 ## 未実装項目一覧（残り）
 
-### 1. バッチ処理（apps/jobs/ - Cloud Run Jobs）（未実装）
+なし - すべて実装完了
+
+### ~~1. バッチ処理（apps/jobs/ - Cloud Run Jobs）~~（✅ 実装完了）
 
 | ジョブ | 目的 | スケジュール |
 |--------|------|-------------|
@@ -313,7 +330,7 @@ STRIPE_WEBHOOK_SECRET=whsec_live_xxx
 | `apps/api/src/controllers/user-invoice.controller.ts` | 請求履歴コントローラー | ✅ 完了 |
 | `apps/api/src/repositories/payment-event.repository.ts` | PaymentEvent操作 | ✅ 完了 |
 | `apps/web/src/components/billing/InvoiceList.tsx` | 請求履歴UI | ✅ 完了 |
-| `apps/jobs/` | Cloud Run Jobs用バッチ処理（新規ディレクトリ） | ⏳ 未実装 |
+| `apps/jobs/` | Cloud Run Jobs用バッチ処理（新規ディレクトリ） | ✅ 完了 |
 
 ---
 

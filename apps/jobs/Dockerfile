@@ -1,0 +1,42 @@
+# ビルドステージ
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# pnpmインストール
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+# 依存関係のコピーとインストール
+COPY pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY packages/db/package.json packages/db/
+COPY packages/shared/package.json packages/shared/
+COPY apps/jobs/package.json apps/jobs/
+
+RUN pnpm install --frozen-lockfile
+
+# ソースコードのコピー
+COPY packages/db packages/db
+COPY packages/shared packages/shared
+COPY apps/jobs apps/jobs
+COPY tsconfig.base.json ./
+
+# ビルド
+RUN pnpm --filter @agentest/db build
+RUN pnpm --filter @agentest/shared build
+RUN pnpm --filter @agentest/jobs build
+
+# 本番イメージ
+FROM node:20-alpine
+
+WORKDIR /app
+
+RUN corepack enable && corepack prepare pnpm@latest --activate
+
+COPY --from=builder /app/node_modules ./node_modules
+COPY --from=builder /app/packages/db ./packages/db
+COPY --from=builder /app/packages/shared ./packages/shared
+COPY --from=builder /app/apps/jobs ./apps/jobs
+
+WORKDIR /app/apps/jobs
+
+CMD ["node", "dist/index.js"]
