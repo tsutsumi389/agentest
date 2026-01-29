@@ -4,9 +4,8 @@
  * 毎日 3:00 JST に実行
  */
 import { prisma } from '../lib/prisma.js';
+import { DEFAULT_BATCH_SIZE } from '../lib/constants.js';
 import { PLAN_LIMITS } from '@agentest/shared';
-
-const BATCH_SIZE = 100;
 
 export async function runHistoryCleanup(): Promise<void> {
   let cursor: string | undefined;
@@ -26,7 +25,7 @@ export async function runHistoryCleanup(): Promise<void> {
       where: {
         subscription: { plan: 'FREE' },
       },
-      take: BATCH_SIZE,
+      take: DEFAULT_BATCH_SIZE,
       ...(cursor && { skip: 1, cursor: { id: cursor } }),
       orderBy: { id: 'asc' },
       select: { id: true },

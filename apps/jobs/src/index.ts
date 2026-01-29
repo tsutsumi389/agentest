@@ -8,6 +8,7 @@ import { runWebhookRetry } from './jobs/webhook-retry.js';
 import { runPaymentEventCleanup } from './jobs/payment-event-cleanup.js';
 import { runSubscriptionSync } from './jobs/subscription-sync.js';
 import { closeRedis } from './lib/redis.js';
+import { closePrisma } from './lib/prisma.js';
 
 // 利用可能なジョブの定義
 const jobs: Record<string, () => Promise<void>> = {
@@ -40,6 +41,7 @@ async function main() {
   } finally {
     // リソースのクリーンアップ
     await closeRedis();
+    await closePrisma();
   }
 
   process.exit(0);

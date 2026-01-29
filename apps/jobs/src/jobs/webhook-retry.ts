@@ -3,10 +3,8 @@
  * 処理失敗したWebhookイベント（PaymentEvent）を再処理
  * 毎時 0分 に実行
  */
-import { prisma, type PaymentEvent } from '@agentest/db';
-
-const MAX_RETRY_COUNT = 5;
-const BATCH_SIZE = 100;
+import { prisma } from '../lib/prisma.js';
+import { MAX_RETRY_COUNT, DEFAULT_BATCH_SIZE } from '../lib/constants.js';
 
 /**
  * Stripe Invoiceオブジェクトの型
@@ -72,7 +70,7 @@ export async function runWebhookRetry(): Promise<void> {
       retryCount: { lt: MAX_RETRY_COUNT },
     },
     orderBy: { createdAt: 'asc' },
-    take: BATCH_SIZE,
+    take: DEFAULT_BATCH_SIZE,
   });
 
   if (failedEvents.length === 0) {
@@ -90,7 +88,7 @@ export async function runWebhookRetry(): Promise<void> {
       const webhookEvent = event.payload as unknown as WebhookEvent;
 
       // イベントタイプに応じた処理
-      await processEvent(webhookEvent, event);
+      await processEvent(webhookEvent);
 
       // 成功: PROCESSEDに更新
       await prisma.paymentEvent.update({
@@ -148,10 +146,7 @@ export async function runWebhookRetry(): Promise<void> {
 /**
  * イベントタイプに応じた処理
  */
-async function processEvent(
-  webhookEvent: WebhookEvent,
-  _paymentEvent: PaymentEvent
-): Promise<void> {
+async function processEvent(webhookEvent: WebhookEvent): Promise<void> {
   switch (webhookEvent.type) {
     case 'invoice.paid':
       await handleInvoicePaid(webhookEvent.data.object as StripeInvoiceData);

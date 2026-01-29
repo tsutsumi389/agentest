@@ -5,15 +5,16 @@
  */
 import { prisma } from '../lib/prisma.js';
 import { sendEmail, generateHistoryExpiryEmail } from '../lib/email.js';
+import { DEFAULT_BATCH_SIZE } from '../lib/constants.js';
 import { PLAN_LIMITS } from '@agentest/shared';
 
-const BATCH_SIZE = 100;
 // 削除の何日前に通知するか
 const DAYS_BEFORE_DELETION = 7;
 
 export async function runHistoryExpiryNotify(): Promise<void> {
   let cursor: string | undefined;
   let totalNotified = 0;
+  let totalFailed = 0;
 
   // 削除対象となる日（今から (保持日数 - 通知日数前) 日前）
   const targetDate = new Date();
@@ -32,7 +33,7 @@ export async function runHistoryExpiryNotify(): Promise<void> {
       where: {
         subscription: { plan: 'FREE' },
       },
-      take: BATCH_SIZE,
+      take: DEFAULT_BATCH_SIZE,
       ...(cursor && { skip: 1, cursor: { id: cursor } }),
       orderBy: { id: 'asc' },
       select: { id: true, email: true, name: true },
@@ -92,6 +93,7 @@ export async function runHistoryExpiryNotify(): Promise<void> {
           `ユーザー ${user.id} (${user.email}) に通知: ${historyCount}件の履歴が${DAYS_BEFORE_DELETION}日後に削除予定`
         );
       } catch (error) {
+        totalFailed++;
         console.error(`ユーザー ${user.id} への通知送信に失敗:`, error);
       }
     }
@@ -99,5 +101,7 @@ export async function runHistoryExpiryNotify(): Promise<void> {
     cursor = users[users.length - 1]?.id;
   } while (cursor);
 
-  console.log(`合計 ${totalNotified} 人のユーザーに通知を送信しました`);
+  console.log(
+    `通知完了: 成功 ${totalNotified}件, 失敗 ${totalFailed}件`
+  );
 }

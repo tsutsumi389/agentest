@@ -3,8 +3,8 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# pnpmインストール
-RUN corepack enable && corepack prepare pnpm@latest --activate
+# pnpmインストール（バージョン固定で再現性を確保）
+RUN corepack enable && corepack prepare pnpm@10.0.0 --activate
 
 # 依存関係のコピーとインストール
 COPY pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -30,7 +30,7 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable && corepack prepare pnpm@10.0.0 --activate
 
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/packages/db ./packages/db

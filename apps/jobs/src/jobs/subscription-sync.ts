@@ -3,11 +3,18 @@
  * DB-Stripe間の状態同期チェックを行う
  * 毎週日曜 5:00 JST に実行
  */
-import { prisma, type SubscriptionStatus } from '@agentest/db';
+import { prisma, type SubscriptionStatus } from '../lib/prisma.js';
 import { getStripeClient } from '../lib/stripe.js';
+import { DEFAULT_BATCH_SIZE } from '../lib/constants.js';
 import type Stripe from 'stripe';
 
-const BATCH_SIZE = 100;
+/**
+ * Stripe APIの期間情報を含む型
+ * APIバージョンによってcurrent_period_endの位置が異なる
+ */
+interface PeriodData {
+  current_period_end?: number;
+}
 
 /**
  * Stripeの状態をDBの状態にマッピング
@@ -50,7 +57,7 @@ export async function runSubscriptionSync(): Promise<void> {
         externalId: { not: null },
         status: { not: 'CANCELED' }, // キャンセル済みは除外
       },
-      take: BATCH_SIZE,
+      take: DEFAULT_BATCH_SIZE,
       ...(cursor && { skip: 1, cursor: { id: cursor } }),
       orderBy: { id: 'asc' },
       select: {
@@ -174,13 +181,14 @@ export async function runSubscriptionSync(): Promise<void> {
 
 /**
  * Stripeサブスクリプションから期間終了日を取得
+ * Stripe API 2025-03以降: items.data[]に期間情報が存在
+ * 旧API: Subscription直下に期間情報が存在
  */
 function extractPeriodEnd(subscription: Stripe.Subscription): Date | null {
-  // 新しいAPIバージョンではitems.data[]に期間情報がある
-  const firstItem = subscription.items.data[0];
-  const periodEnd =
-    (firstItem as { current_period_end?: number })?.current_period_end ??
-    (subscription as { current_period_end?: number }).current_period_end;
+  const firstItem = subscription.items.data[0] as PeriodData | undefined;
+  const sub = subscription as PeriodData;
+
+  const periodEnd = firstItem?.current_period_end ?? sub.current_period_end;
 
   if (periodEnd === undefined) {
     return null;

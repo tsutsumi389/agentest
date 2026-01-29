@@ -4,17 +4,18 @@
  * 毎週日曜 4:00 JST に実行
  */
 import { prisma } from '../lib/prisma.js';
-
-// 処理済みイベントの保持日数
-const RETENTION_DAYS = 90;
+import {
+  MAX_RETRY_COUNT,
+  PAYMENT_EVENT_RETENTION_DAYS,
+} from '../lib/constants.js';
 
 export async function runPaymentEventCleanup(): Promise<void> {
   // 削除基準日
   const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - RETENTION_DAYS);
+  cutoffDate.setDate(cutoffDate.getDate() - PAYMENT_EVENT_RETENTION_DAYS);
 
   console.log(
-    `削除対象: ${RETENTION_DAYS}日以上前の処理済みイベント（基準日: ${cutoffDate.toISOString()}）`
+    `削除対象: ${PAYMENT_EVENT_RETENTION_DAYS}日以上前の処理済みイベント（基準日: ${cutoffDate.toISOString()}）`
   );
 
   // 処理済み（PROCESSED）イベントを削除
@@ -28,11 +29,10 @@ export async function runPaymentEventCleanup(): Promise<void> {
   console.log(`処理済みイベント: ${processedResult.count}件を削除`);
 
   // 古い失敗イベント（最大リトライ回数に達したもの）も削除
-  const maxRetryCount = 5;
   const failedResult = await prisma.paymentEvent.deleteMany({
     where: {
       status: 'FAILED',
-      retryCount: { gte: maxRetryCount },
+      retryCount: { gte: MAX_RETRY_COUNT },
       createdAt: { lt: cutoffDate },
     },
   });
