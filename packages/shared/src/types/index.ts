@@ -10,3 +10,4 @@ export * from './label.js';
 export * from './admin-dashboard.js';
 export * from './admin-users.js';
 export * from './admin-organizations.js';
+export * from './user-dashboard.js';

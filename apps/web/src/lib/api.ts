@@ -832,6 +832,23 @@ export interface ProjectWithRole extends Project {
   role?: 'OWNER' | 'ADMIN' | 'WRITE' | 'READ';
 }
 
+/** 最近のテスト実行結果アイテム */
+export interface RecentExecutionItem {
+  executionId: string;
+  projectId: string;
+  projectName: string;
+  testSuiteId: string;
+  testSuiteName: string;
+  environment: { id: string; name: string } | null;
+  createdAt: string;
+  judgmentCounts: {
+    PASS: number;
+    FAIL: number;
+    PENDING: number;
+    SKIPPED: number;
+  };
+}
+
 export const usersApi = {
   getOrganizations: (userId: string, options?: { includeDeleted?: boolean }) => {
     const query = new URLSearchParams();
@@ -854,6 +871,14 @@ export const usersApi = {
     const queryString = query.toString();
     return api.get<{ projects: ProjectWithRole[] }>(
       `/api/users/${userId}/projects${queryString ? `?${queryString}` : ''}`
+    );
+  },
+  getRecentExecutions: (userId: string, options?: { limit?: number }) => {
+    const query = new URLSearchParams();
+    if (options?.limit) query.set('limit', String(options.limit));
+    const queryString = query.toString();
+    return api.get<{ executions: RecentExecutionItem[] }>(
+      `/api/users/${userId}/recent-executions${queryString ? `?${queryString}` : ''}`
     );
   },
   update: (userId: string, data: UpdateUserRequest) =>

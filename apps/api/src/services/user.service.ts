@@ -1,5 +1,5 @@
 import { prisma, type EntityStatus } from '@agentest/db';
-import { NotFoundError } from '@agentest/shared';
+import { NotFoundError, type RecentExecutionItem } from '@agentest/shared';
 import { UserRepository } from '../repositories/user.repository.js';
 
 /**
@@ -296,5 +296,85 @@ export class UserService {
   ) {
     const where = this.buildTestSuiteWhereCondition(userId, options);
     return prisma.testSuite.count({ where });
+  }
+
+  /**
+   * ユーザーがアクセス可能な最近のテスト実行結果を取得
+   * @param userId ユーザーID
+   * @param limit 取得件数（デフォルト: 10）
+   */
+  async getRecentExecutions(userId: string, limit: number = 10): Promise<RecentExecutionItem[]> {
+    // ユーザーがアクセス可能なプロジェクトの最近の実行を取得
+    const executions = await prisma.execution.findMany({
+      where: {
+        testSuite: {
+          deletedAt: null,
+          project: {
+            deletedAt: null,
+            OR: [
+              { members: { some: { userId } } },
+              { organization: { members: { some: { userId } } } },
+            ],
+          },
+        },
+      },
+      include: {
+        testSuite: {
+          include: {
+            project: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        environment: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        expectedResults: {
+          select: {
+            status: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: limit,
+    });
+
+    // 結果を変換
+    return executions.map((execution) => {
+      // 期待結果のステータスをカウント
+      const judgmentCounts = {
+        PASS: 0,
+        FAIL: 0,
+        PENDING: 0,
+        SKIPPED: 0,
+      };
+
+      for (const result of execution.expectedResults) {
+        if (result.status in judgmentCounts) {
+          judgmentCounts[result.status as keyof typeof judgmentCounts]++;
+        }
+      }
+
+      return {
+        executionId: execution.id,
+        projectId: execution.testSuite.project.id,
+        projectName: execution.testSuite.project.name,
+        testSuiteId: execution.testSuite.id,
+        testSuiteName: execution.testSuite.name,
+        environment: execution.environment
+          ? { id: execution.environment.id, name: execution.environment.name }
+          : null,
+        createdAt: execution.createdAt.toISOString(),
+        judgmentCounts,
+      };
+    });
   }
 }
