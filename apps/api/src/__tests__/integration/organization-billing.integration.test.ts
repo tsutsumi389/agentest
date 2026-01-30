@@ -66,15 +66,6 @@ function setTestOrgRole(role: 'OWNER' | 'ADMIN' | 'MEMBER' | null) {
   mockOrgRole = role;
 }
 
-// ForbiddenErrorを作成（sharedパッケージにはないため、エラーハンドラーで403になる形で作成）
-class ForbiddenError extends Error {
-  statusCode = 403;
-  constructor(message: string) {
-    super(message);
-    this.name = 'ForbiddenError';
-  }
-}
-
 vi.mock('@agentest/auth', () => ({
   requireAuth: () => (req: any, _res: any, next: any) => {
     if (!mockAuthUser) {
