@@ -832,22 +832,9 @@ export interface ProjectWithRole extends Project {
   role?: 'OWNER' | 'ADMIN' | 'WRITE' | 'READ';
 }
 
-/** 最近のテスト実行結果アイテム */
-export interface RecentExecutionItem {
-  executionId: string;
-  projectId: string;
-  projectName: string;
-  testSuiteId: string;
-  testSuiteName: string;
-  environment: { id: string; name: string } | null;
-  createdAt: string;
-  judgmentCounts: {
-    PASS: number;
-    FAIL: number;
-    PENDING: number;
-    SKIPPED: number;
-  };
-}
+// ユーザーダッシュボード関連の型を再エクスポート
+export type { RecentExecutionItem } from '@agentest/shared';
+import type { RecentExecutionItem } from '@agentest/shared';
 
 export const usersApi = {
   getOrganizations: (userId: string, options?: { includeDeleted?: boolean }) => {
