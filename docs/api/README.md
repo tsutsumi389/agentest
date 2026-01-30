@@ -95,6 +95,7 @@ Authorization: Bearer <access_token>
 | GET | `/users/:id` | ユーザー詳細 |
 | PATCH | `/users/:id` | ユーザー更新 |
 | DELETE | `/users/:id` | ユーザー削除（論理削除） |
+| GET | `/users/:userId/recent-executions` | 最近のテスト実行結果一覧 |
 
 → [ユーザー API 詳細](./users.md)
 
