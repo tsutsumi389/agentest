@@ -22,6 +22,9 @@ vi.mock('@agentest/db', () => ({
       findMany: vi.fn(),
       count: vi.fn(),
     },
+    execution: {
+      findMany: vi.fn(),
+    },
   },
 }));
 
@@ -776,6 +779,228 @@ describe('UserService', () => {
       const result = await userService.countTestSuites('user-1', { q: 'nonexistent' });
 
       expect(result).toBe(0);
+    });
+  });
+
+  describe('getRecentExecutions', () => {
+    const mockExecutions = [
+      {
+        id: 'exec-1',
+        environmentId: 'env-1',
+        testSuiteId: 'suite-1',
+        createdAt: new Date('2024-03-01T10:00:00Z'),
+        testSuite: {
+          id: 'suite-1',
+          name: 'Test Suite 1',
+          project: {
+            id: 'project-1',
+            name: 'Project 1',
+          },
+        },
+        environment: {
+          id: 'env-1',
+          name: 'Production',
+        },
+        expectedResults: [
+          { status: 'PASS' },
+          { status: 'PASS' },
+          { status: 'FAIL' },
+          { status: 'PENDING' },
+          { status: 'SKIPPED' },
+        ],
+      },
+      {
+        id: 'exec-2',
+        environmentId: null,
+        testSuiteId: 'suite-2',
+        createdAt: new Date('2024-02-15T10:00:00Z'),
+        testSuite: {
+          id: 'suite-2',
+          name: 'Test Suite 2',
+          project: {
+            id: 'project-2',
+            name: 'Project 2',
+          },
+        },
+        environment: null,
+        expectedResults: [
+          { status: 'PASS' },
+          { status: 'PASS' },
+        ],
+      },
+    ];
+
+    it('デフォルトlimit（10件）で実行結果を取得する', async () => {
+      vi.mocked(prisma.execution.findMany).mockResolvedValue(mockExecutions as any);
+
+      await userService.getRecentExecutions('user-1');
+
+      expect(prisma.execution.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          take: 10,
+        })
+      );
+    });
+
+    it('limit指定で取得件数を制限できる', async () => {
+      vi.mocked(prisma.execution.findMany).mockResolvedValue(mockExecutions as any);
+
+      await userService.getRecentExecutions('user-1', 5);
+
+      expect(prisma.execution.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          take: 5,
+        })
+      );
+    });
+
+    it('アクセス可能なプロジェクトのみ取得する', async () => {
+      vi.mocked(prisma.execution.findMany).mockResolvedValue([]);
+
+      await userService.getRecentExecutions('user-1');
+
+      // 直接メンバー or 組織経由のOR条件を確認
+      expect(prisma.execution.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            testSuite: {
+              deletedAt: null,
+              project: {
+                deletedAt: null,
+                OR: [
+                  { members: { some: { userId: 'user-1' } } },
+                  { organization: { members: { some: { userId: 'user-1' } } } },
+                ],
+              },
+            },
+          },
+        })
+      );
+    });
+
+    it('削除済みプロジェクトを除外する', async () => {
+      vi.mocked(prisma.execution.findMany).mockResolvedValue([]);
+
+      await userService.getRecentExecutions('user-1');
+
+      expect(prisma.execution.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            testSuite: expect.objectContaining({
+              project: expect.objectContaining({
+                deletedAt: null,
+              }),
+            }),
+          },
+        })
+      );
+    });
+
+    it('削除済みテストスイートを除外する', async () => {
+      vi.mocked(prisma.execution.findMany).mockResolvedValue([]);
+
+      await userService.getRecentExecutions('user-1');
+
+      expect(prisma.execution.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            testSuite: expect.objectContaining({
+              deletedAt: null,
+            }),
+          },
+        })
+      );
+    });
+
+    it('judgmentCountsを正しく集計する（全種類）', async () => {
+      vi.mocked(prisma.execution.findMany).mockResolvedValue([mockExecutions[0]] as any);
+
+      const result = await userService.getRecentExecutions('user-1');
+
+      expect(result[0].judgmentCounts).toEqual({
+        PASS: 2,
+        FAIL: 1,
+        PENDING: 1,
+        SKIPPED: 1,
+      });
+    });
+
+    it('judgmentCountsを正しく集計する（一部のみ）', async () => {
+      vi.mocked(prisma.execution.findMany).mockResolvedValue([mockExecutions[1]] as any);
+
+      const result = await userService.getRecentExecutions('user-1');
+
+      // 存在しないステータスは0
+      expect(result[0].judgmentCounts).toEqual({
+        PASS: 2,
+        FAIL: 0,
+        PENDING: 0,
+        SKIPPED: 0,
+      });
+    });
+
+    it('環境情報ありの場合は{id,name}を返す', async () => {
+      vi.mocked(prisma.execution.findMany).mockResolvedValue([mockExecutions[0]] as any);
+
+      const result = await userService.getRecentExecutions('user-1');
+
+      expect(result[0].environment).toEqual({
+        id: 'env-1',
+        name: 'Production',
+      });
+    });
+
+    it('環境情報なしの場合はnullを返す', async () => {
+      vi.mocked(prisma.execution.findMany).mockResolvedValue([mockExecutions[1]] as any);
+
+      const result = await userService.getRecentExecutions('user-1');
+
+      expect(result[0].environment).toBeNull();
+    });
+
+    it('実行がない場合は空配列を返す', async () => {
+      vi.mocked(prisma.execution.findMany).mockResolvedValue([]);
+
+      const result = await userService.getRecentExecutions('user-1');
+
+      expect(result).toEqual([]);
+    });
+
+    it('createdAt降順でソートされる', async () => {
+      vi.mocked(prisma.execution.findMany).mockResolvedValue(mockExecutions as any);
+
+      await userService.getRecentExecutions('user-1');
+
+      expect(prisma.execution.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderBy: {
+            createdAt: 'desc',
+          },
+        })
+      );
+    });
+
+    it('結果が正しい形式で返される', async () => {
+      vi.mocked(prisma.execution.findMany).mockResolvedValue(mockExecutions as any);
+
+      const result = await userService.getRecentExecutions('user-1');
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual({
+        executionId: 'exec-1',
+        projectId: 'project-1',
+        projectName: 'Project 1',
+        testSuiteId: 'suite-1',
+        testSuiteName: 'Test Suite 1',
+        environment: { id: 'env-1', name: 'Production' },
+        createdAt: '2024-03-01T10:00:00.000Z',
+        judgmentCounts: {
+          PASS: 2,
+          FAIL: 1,
+          PENDING: 1,
+          SKIPPED: 1,
+        },
+      });
     });
   });
 });

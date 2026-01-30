@@ -9,6 +9,15 @@ import {
   createTestOrgMember,
   createTestProject,
   createTestProjectMember,
+  createTestSuite,
+  createTestCase,
+  createTestCaseExpectedResult,
+  createTestEnvironment,
+  createTestExecution,
+  createTestExecutionTestSuite,
+  createTestExecutionTestCase,
+  createTestExecutionTestCaseExpectedResult,
+  createTestExecutionExpectedResult,
   cleanupTestData,
 } from './test-helpers.js';
 
@@ -808,6 +817,341 @@ describe('Users API Integration Tests', () => {
         expect(response.body.projects).toHaveLength(0);
         expect(response.body.pagination.total).toBe(1);
         expect(response.body.pagination.hasMore).toBe(false);
+      });
+    });
+  });
+
+  describe('GET /api/users/:userId/recent-executions', () => {
+    /**
+     * テスト実行データを作成するヘルパー関数
+     * @param projectOwnerId プロジェクトオーナーのユーザーID
+     * @param options オプション
+     * @returns 作成したテストデータ
+     */
+    async function createExecutionTestData(
+      projectOwnerId: string,
+      options: {
+        projectName?: string;
+        testSuiteName?: string;
+        environmentName?: string | null;
+        judgments?: ('PASS' | 'FAIL' | 'PENDING' | 'SKIPPED')[];
+        executionCreatedAt?: Date;
+        projectDeleted?: boolean;
+        testSuiteDeleted?: boolean;
+      } = {}
+    ) {
+      const {
+        projectName = 'Test Project',
+        testSuiteName = 'Test Suite',
+        environmentName = 'Production',
+        judgments = ['PASS'],
+        executionCreatedAt,
+        projectDeleted = false,
+        testSuiteDeleted = false,
+      } = options;
+
+      // プロジェクトを作成
+      const project = await createTestProject(projectOwnerId, { name: projectName });
+      if (projectDeleted) {
+        await prisma.project.update({
+          where: { id: project.id },
+          data: { deletedAt: new Date() },
+        });
+      }
+
+      // テストスイートを作成
+      const testSuite = await createTestSuite(project.id, { name: testSuiteName });
+      if (testSuiteDeleted) {
+        await prisma.testSuite.update({
+          where: { id: testSuite.id },
+          data: { deletedAt: new Date() },
+        });
+      }
+
+      // テストケースを作成
+      const testCase = await createTestCase(testSuite.id, { title: 'Test Case' });
+
+      // 環境を作成（必要な場合）
+      let environment = null;
+      if (environmentName !== null) {
+        environment = await createTestEnvironment(project.id, { name: environmentName });
+      }
+
+      // 実行を作成（環境なしの場合はnullを渡す）
+      const execution = await prisma.execution.create({
+        data: {
+          testSuiteId: testSuite.id,
+          environmentId: environment?.id ?? null,
+          ...(executionCreatedAt && { createdAt: executionCreatedAt }),
+        },
+      });
+
+      // 実行スナップショットを作成
+      const execSuite = await createTestExecutionTestSuite(execution.id, testSuite.id, { name: testSuite.name });
+      const execCase = await createTestExecutionTestCase(execSuite.id, testCase.id, { title: testCase.title });
+
+      // 期待結果と実行結果を作成
+      for (let i = 0; i < judgments.length; i++) {
+        const expectedResult = await createTestCaseExpectedResult(testCase.id, { content: `Expected ${i}` });
+        const execExpResult = await createTestExecutionTestCaseExpectedResult(execCase.id, expectedResult.id);
+        await createTestExecutionExpectedResult(execution.id, execCase.id, execExpResult.id, { status: judgments[i] });
+      }
+
+      return { project, testSuite, testCase, environment, execution };
+    }
+
+    describe('正常系', () => {
+      it('最近のテスト実行結果を取得できる', async () => {
+        // テストデータを作成
+        const { project, testSuite, environment } = await createExecutionTestData(testUser.id, {
+          projectName: 'My Project',
+          testSuiteName: 'My Test Suite',
+          environmentName: 'Development',
+          judgments: ['PASS', 'FAIL'],
+        });
+
+        const response = await request(app)
+          .get(`/api/users/${testUser.id}/recent-executions`)
+          .expect(200);
+
+        expect(response.body.executions).toHaveLength(1);
+        expect(response.body.executions[0]).toMatchObject({
+          projectId: project.id,
+          projectName: 'My Project',
+          testSuiteId: testSuite.id,
+          testSuiteName: 'My Test Suite',
+          environment: { id: environment!.id, name: 'Development' },
+        });
+      });
+
+      it('複数プロジェクトの実行結果を取得できる', async () => {
+        // 2つのプロジェクトで実行を作成
+        await createExecutionTestData(testUser.id, { projectName: 'Project A' });
+        await createExecutionTestData(testUser.id, { projectName: 'Project B' });
+
+        const response = await request(app)
+          .get(`/api/users/${testUser.id}/recent-executions`)
+          .expect(200);
+
+        expect(response.body.executions).toHaveLength(2);
+        const projectNames = response.body.executions.map((e: any) => e.projectName);
+        expect(projectNames).toContain('Project A');
+        expect(projectNames).toContain('Project B');
+      });
+
+      it('組織経由でアクセス可能なプロジェクトの実行も取得できる', async () => {
+        // 他のユーザーがオーナーの組織を作成
+        const orgOwner = await createTestUser({ email: 'org-owner@example.com' });
+        const org = await createTestOrganization(orgOwner.id, { name: 'Test Org' });
+        await createTestOrgMember(org.id, testUser.id, 'MEMBER');
+
+        // 組織のプロジェクトを作成（組織オーナーが所有）
+        const orgProject = await prisma.$transaction(async (tx) => {
+          const project = await tx.project.create({
+            data: { name: 'Org Project', organizationId: org.id },
+          });
+          await tx.projectMember.create({
+            data: { projectId: project.id, userId: orgOwner.id, role: 'OWNER' },
+          });
+          return project;
+        });
+
+        // テストスイートと実行を作成
+        const testSuite = await createTestSuite(orgProject.id, { name: 'Org Test Suite' });
+        const testCase = await createTestCase(testSuite.id, { title: 'Test Case' });
+        const execution = await prisma.execution.create({
+          data: { testSuiteId: testSuite.id },
+        });
+        const execSuite = await createTestExecutionTestSuite(execution.id, testSuite.id, { name: testSuite.name });
+        const execCase = await createTestExecutionTestCase(execSuite.id, testCase.id, { title: testCase.title });
+        const expectedResult = await createTestCaseExpectedResult(testCase.id, { content: 'Expected' });
+        const execExpResult = await createTestExecutionTestCaseExpectedResult(execCase.id, expectedResult.id);
+        await createTestExecutionExpectedResult(execution.id, execCase.id, execExpResult.id, { status: 'PASS' });
+
+        const response = await request(app)
+          .get(`/api/users/${testUser.id}/recent-executions`)
+          .expect(200);
+
+        expect(response.body.executions).toHaveLength(1);
+        expect(response.body.executions[0].projectName).toBe('Org Project');
+      });
+
+      it('judgmentCountsが正しく集計される', async () => {
+        await createExecutionTestData(testUser.id, {
+          judgments: ['PASS', 'PASS', 'FAIL', 'PENDING', 'SKIPPED'],
+        });
+
+        const response = await request(app)
+          .get(`/api/users/${testUser.id}/recent-executions`)
+          .expect(200);
+
+        expect(response.body.executions[0].judgmentCounts).toEqual({
+          PASS: 2,
+          FAIL: 1,
+          PENDING: 1,
+          SKIPPED: 1,
+        });
+      });
+
+      it('環境情報がある場合は{id,name}で返される', async () => {
+        const { environment } = await createExecutionTestData(testUser.id, {
+          environmentName: 'Staging',
+        });
+
+        const response = await request(app)
+          .get(`/api/users/${testUser.id}/recent-executions`)
+          .expect(200);
+
+        expect(response.body.executions[0].environment).toEqual({
+          id: environment!.id,
+          name: 'Staging',
+        });
+      });
+
+      it('環境なしの実行はenvironment=nullで返される', async () => {
+        await createExecutionTestData(testUser.id, {
+          environmentName: null,
+        });
+
+        const response = await request(app)
+          .get(`/api/users/${testUser.id}/recent-executions`)
+          .expect(200);
+
+        expect(response.body.executions[0].environment).toBeNull();
+      });
+
+      it('limit指定で取得件数を制限できる', async () => {
+        // 5つの実行を作成
+        for (let i = 0; i < 5; i++) {
+          await createExecutionTestData(testUser.id, { projectName: `Project ${i}` });
+        }
+
+        const response = await request(app)
+          .get(`/api/users/${testUser.id}/recent-executions`)
+          .query({ limit: '3' })
+          .expect(200);
+
+        expect(response.body.executions).toHaveLength(3);
+      });
+
+      it('createdAt降順でソートされる', async () => {
+        // 日付を明示的に指定して作成
+        const { execution: oldExec } = await createExecutionTestData(testUser.id, {
+          projectName: 'Old Project',
+          executionCreatedAt: new Date('2024-01-01'),
+        });
+        const { execution: newExec } = await createExecutionTestData(testUser.id, {
+          projectName: 'New Project',
+          executionCreatedAt: new Date('2024-06-01'),
+        });
+
+        const response = await request(app)
+          .get(`/api/users/${testUser.id}/recent-executions`)
+          .expect(200);
+
+        expect(response.body.executions).toHaveLength(2);
+        // 新しいものが先
+        expect(response.body.executions[0].executionId).toBe(newExec.id);
+        expect(response.body.executions[1].executionId).toBe(oldExec.id);
+      });
+
+      it('実行がない場合は空配列を返す', async () => {
+        const response = await request(app)
+          .get(`/api/users/${testUser.id}/recent-executions`)
+          .expect(200);
+
+        expect(response.body.executions).toHaveLength(0);
+      });
+
+      it('削除済みプロジェクトの実行は除外される', async () => {
+        // アクティブなプロジェクトの実行
+        await createExecutionTestData(testUser.id, { projectName: 'Active Project' });
+        // 削除済みプロジェクトの実行
+        await createExecutionTestData(testUser.id, {
+          projectName: 'Deleted Project',
+          projectDeleted: true,
+        });
+
+        const response = await request(app)
+          .get(`/api/users/${testUser.id}/recent-executions`)
+          .expect(200);
+
+        expect(response.body.executions).toHaveLength(1);
+        expect(response.body.executions[0].projectName).toBe('Active Project');
+      });
+
+      it('削除済みテストスイートの実行は除外される', async () => {
+        // アクティブなテストスイートの実行
+        await createExecutionTestData(testUser.id, { testSuiteName: 'Active Suite' });
+        // 削除済みテストスイートの実行
+        await createExecutionTestData(testUser.id, {
+          testSuiteName: 'Deleted Suite',
+          testSuiteDeleted: true,
+        });
+
+        const response = await request(app)
+          .get(`/api/users/${testUser.id}/recent-executions`)
+          .expect(200);
+
+        expect(response.body.executions).toHaveLength(1);
+        expect(response.body.executions[0].testSuiteName).toBe('Active Suite');
+      });
+    });
+
+    describe('異常系', () => {
+      it('未認証の場合は401エラー', async () => {
+        clearTestAuth();
+
+        const response = await request(app)
+          .get(`/api/users/${testUser.id}/recent-executions`)
+          .expect(401);
+
+        expect(response.body.error.code).toBe('AUTHENTICATION_ERROR');
+      });
+
+      it('他人のデータは403エラー', async () => {
+        const otherUser = await createTestUser({ email: 'other@example.com' });
+
+        const response = await request(app)
+          .get(`/api/users/${otherUser.id}/recent-executions`)
+          .expect(403);
+
+        expect(response.body.error.code).toBe('AUTHORIZATION_ERROR');
+      });
+
+      it('limit < 1はバリデーションエラー', async () => {
+        const response = await request(app)
+          .get(`/api/users/${testUser.id}/recent-executions`)
+          .query({ limit: '0' })
+          .expect(400);
+
+        expect(response.body.error.code).toBe('VALIDATION_ERROR');
+      });
+
+      it('limit > 50はバリデーションエラー', async () => {
+        const response = await request(app)
+          .get(`/api/users/${testUser.id}/recent-executions`)
+          .query({ limit: '51' })
+          .expect(400);
+
+        expect(response.body.error.code).toBe('VALIDATION_ERROR');
+      });
+
+      it('アクセス権のないプロジェクトの実行は含まれない', async () => {
+        // 他のユーザーのプロジェクトで実行を作成
+        const otherUser = await createTestUser({ email: 'other@example.com' });
+        await createExecutionTestData(otherUser.id, { projectName: 'Other Project' });
+
+        // 自分のプロジェクトで実行を作成
+        await createExecutionTestData(testUser.id, { projectName: 'My Project' });
+
+        const response = await request(app)
+          .get(`/api/users/${testUser.id}/recent-executions`)
+          .expect(200);
+
+        // 自分のプロジェクトの実行のみ取得される
+        expect(response.body.executions).toHaveLength(1);
+        expect(response.body.executions[0].projectName).toBe('My Project');
       });
     });
   });
