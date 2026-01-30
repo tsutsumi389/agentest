@@ -11,6 +11,7 @@ const mockUserService = {
   getOrganizations: vi.fn(),
   getProjects: vi.fn(),
   countProjects: vi.fn(),
+  getRecentExecutions: vi.fn(),
 };
 
 vi.mock('../../services/user.service.js', () => ({
@@ -393,6 +394,112 @@ describe('UserController', () => {
 
       expect(mockNext).toHaveBeenCalledWith(expect.any(AuthorizationError));
       expect(mockAccountService.unlinkAccount).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getRecentExecutions', () => {
+    const mockExecutions = [
+      {
+        executionId: 'exec-1',
+        projectId: 'project-1',
+        projectName: 'Project 1',
+        testSuiteId: 'suite-1',
+        testSuiteName: 'Test Suite 1',
+        environment: { id: 'env-1', name: 'Production' },
+        createdAt: '2024-03-01T10:00:00.000Z',
+        judgmentCounts: { PASS: 2, FAIL: 1, PENDING: 0, SKIPPED: 0 },
+      },
+    ];
+
+    it('自分の実行結果を取得できる', async () => {
+      mockUserService.getRecentExecutions.mockResolvedValue(mockExecutions);
+
+      const req = mockRequest({
+        query: {},
+      }) as Request;
+      const res = mockResponse() as Response;
+
+      await controller.getRecentExecutions(req, res, mockNext);
+
+      expect(mockUserService.getRecentExecutions).toHaveBeenCalledWith(TEST_USER_ID, 10);
+      expect(res.json).toHaveBeenCalledWith({ executions: mockExecutions });
+    });
+
+    it('デフォルトlimitでサービスを呼び出す', async () => {
+      mockUserService.getRecentExecutions.mockResolvedValue([]);
+
+      const req = mockRequest({
+        query: {},
+      }) as Request;
+      const res = mockResponse() as Response;
+
+      await controller.getRecentExecutions(req, res, mockNext);
+
+      // limit未指定時はデフォルト値10
+      expect(mockUserService.getRecentExecutions).toHaveBeenCalledWith(TEST_USER_ID, 10);
+    });
+
+    it('limit指定でサービスを呼び出す', async () => {
+      mockUserService.getRecentExecutions.mockResolvedValue([]);
+
+      const req = mockRequest({
+        query: { limit: '25' },
+      }) as Request;
+      const res = mockResponse() as Response;
+
+      await controller.getRecentExecutions(req, res, mockNext);
+
+      expect(mockUserService.getRecentExecutions).toHaveBeenCalledWith(TEST_USER_ID, 25);
+    });
+
+    it('他人の実行結果はAuthorizationError', async () => {
+      const req = mockRequest({
+        params: { userId: OTHER_USER_ID },
+      }) as Request;
+      const res = mockResponse() as Response;
+
+      await controller.getRecentExecutions(req, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(expect.any(AuthorizationError));
+      expect(mockUserService.getRecentExecutions).not.toHaveBeenCalled();
+    });
+
+    it('limit < 1はバリデーションエラー', async () => {
+      const req = mockRequest({
+        query: { limit: '0' },
+      }) as Request;
+      const res = mockResponse() as Response;
+
+      await controller.getRecentExecutions(req, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalled();
+      expect(mockUserService.getRecentExecutions).not.toHaveBeenCalled();
+    });
+
+    it('limit > 50はバリデーションエラー', async () => {
+      const req = mockRequest({
+        query: { limit: '51' },
+      }) as Request;
+      const res = mockResponse() as Response;
+
+      await controller.getRecentExecutions(req, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalled();
+      expect(mockUserService.getRecentExecutions).not.toHaveBeenCalled();
+    });
+
+    it('サービスエラーをnextに委譲する', async () => {
+      const error = new Error('Database error');
+      mockUserService.getRecentExecutions.mockRejectedValue(error);
+
+      const req = mockRequest({
+        query: {},
+      }) as Request;
+      const res = mockResponse() as Response;
+
+      await controller.getRecentExecutions(req, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(error);
     });
   });
 });

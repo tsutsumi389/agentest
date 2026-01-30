@@ -30,6 +30,10 @@ const getUserProjectsQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).optional().default(0),
 });
 
+const getRecentExecutionsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(50).optional().default(10),
+});
+
 /**
  * ユーザーコントローラー
  */
@@ -200,6 +204,28 @@ export class UserController {
       const result = await this.accountService.unlinkAccount(userId, provider);
 
       res.json({ data: result });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 最近のテスト実行結果取得
+   * GET /api/users/:userId/recent-executions
+   */
+  getRecentExecutions = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { userId } = req.params;
+
+      // 自分の実行結果のみ取得可能
+      if (req.user?.id !== userId) {
+        throw new AuthorizationError('自分のテスト実行結果のみ取得できます');
+      }
+
+      const query = getRecentExecutionsQuerySchema.parse(req.query);
+      const executions = await this.userService.getRecentExecutions(userId, query.limit);
+
+      res.json({ executions });
     } catch (error) {
       next(error);
     }

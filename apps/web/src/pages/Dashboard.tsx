@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { FolderKanban, ArrowRight } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { usersApi } from '../lib/api';
+import { RecentExecutionsList } from '../components/dashboard';
 
 /**
  * ダッシュボードページ
@@ -82,6 +83,9 @@ export function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* 最近のテスト実行 */}
+      {user && <RecentExecutionsList userId={user.id} />}
     </div>
   );
 }

@@ -51,6 +51,12 @@ router.get('/:userId/organizations', requireAuth(authConfig), userController.get
 router.get('/:userId/projects', requireAuth(authConfig), userController.getUserProjects);
 
 /**
+ * 最近のテスト実行結果取得
+ * GET /api/users/:userId/recent-executions
+ */
+router.get('/:userId/recent-executions', requireAuth(authConfig), userController.getRecentExecutions);
+
+/**
  * OAuth連携一覧取得
  * GET /api/users/:userId/accounts
  */
