@@ -11,7 +11,7 @@ export function DashboardPage() {
   const { user } = useAuthStore();
 
   // プロジェクト一覧を取得
-  const { data: projectsData, isLoading } = useQuery({
+  const { data: projectsData, isLoading, isError } = useQuery({
     queryKey: ['user-projects', user?.id],
     queryFn: () => usersApi.getProjects(user!.id),
     enabled: !!user?.id,
@@ -21,6 +21,15 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* エラー表示 */}
+      {isError && (
+        <div className="card p-4 border-danger/30 bg-danger-subtle/10">
+          <p className="text-sm text-danger">
+            プロジェクト一覧の取得に失敗しました。ページを再読み込みしてください。
+          </p>
+        </div>
+      )}
+
       {/* 最近のプロジェクト */}
       <div className="card">
         <div className="flex items-center justify-between p-4 border-b border-border">
