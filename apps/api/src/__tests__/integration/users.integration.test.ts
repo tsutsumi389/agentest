@@ -13,7 +13,6 @@ import {
   createTestCase,
   createTestCaseExpectedResult,
   createTestEnvironment,
-  createTestExecution,
   createTestExecutionTestSuite,
   createTestExecutionTestCase,
   createTestExecutionTestCaseExpectedResult,
