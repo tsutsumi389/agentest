@@ -8,6 +8,16 @@ interface OrganizationSubscriptionSectionProps {
 }
 
 /**
+ * プラン名の日本語ラベル
+ */
+const PLAN_LABELS: Record<AdminOrganizationSubscription['plan'], string> = {
+  FREE: 'フリー',
+  PRO: 'プロ',
+  TEAM: 'チーム',
+  ENTERPRISE: 'エンタープライズ',
+};
+
+/**
  * ステータスバッジ
  */
 function StatusBadge({ status }: { status: AdminOrganizationSubscription['status'] }) {
@@ -57,7 +67,7 @@ export function OrganizationSubscriptionSection({
                 <CreditCard className="w-5 h-5 text-foreground-muted" />
               </div>
               <div>
-                <p className="font-medium text-foreground">{subscription.plan}</p>
+                <p className="font-medium text-foreground">{PLAN_LABELS[subscription.plan]}</p>
                 <p className="text-sm text-foreground-muted">
                   {subscription.billingCycle === 'MONTHLY' ? '月額' : '年額'}プラン
                 </p>

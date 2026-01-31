@@ -23,7 +23,7 @@ function StatCard({ icon, label, value }: StatCardProps) {
         </div>
         <div>
           <p className="text-sm text-foreground-muted">{label}</p>
-          <p className="text-xl font-bold text-foreground">{value}</p>
+          <p className="text-xl font-bold text-foreground">{value.toLocaleString()}</p>
         </div>
       </div>
     </div>
