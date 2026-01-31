@@ -7,7 +7,7 @@ import { Organizations } from './pages/Organizations';
 import { OrganizationDetail } from './pages/OrganizationDetail';
 import { LoginPage } from './pages/auth/Login';
 import { TwoFactorAuthPage } from './pages/auth/TwoFactorAuth';
-import { AuthGuard } from './components/layout/AuthGuard';
+import { AuthGuard, AdminLayout } from './components/layout';
 import { useAdminAuthStore } from './stores/admin-auth.store';
 
 /**
@@ -33,47 +33,20 @@ export function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/2fa" element={<TwoFactorAuthPage />} />
 
-        {/* 認証必須 */}
+        {/* 認証必須（AdminLayout内にネスト） */}
         <Route
-          path="/"
           element={
             <AuthGuard>
-              <Dashboard />
+              <AdminLayout />
             </AuthGuard>
           }
-        />
-        <Route
-          path="/users"
-          element={
-            <AuthGuard>
-              <Users />
-            </AuthGuard>
-          }
-        />
-        <Route
-          path="/users/:id"
-          element={
-            <AuthGuard>
-              <UserDetail />
-            </AuthGuard>
-          }
-        />
-        <Route
-          path="/organizations"
-          element={
-            <AuthGuard>
-              <Organizations />
-            </AuthGuard>
-          }
-        />
-        <Route
-          path="/organizations/:id"
-          element={
-            <AuthGuard>
-              <OrganizationDetail />
-            </AuthGuard>
-          }
-        />
+        >
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/users" element={<Users />} />
+          <Route path="/users/:id" element={<UserDetail />} />
+          <Route path="/organizations" element={<Organizations />} />
+          <Route path="/organizations/:id" element={<OrganizationDetail />} />
+        </Route>
 
         {/* その他のルートはダッシュボードにリダイレクト */}
         <Route path="*" element={<Navigate to="/" replace />} />

@@ -8,7 +8,6 @@ import type {
 } from '@agentest/shared';
 import { useAdminOrganizations } from '../hooks/useAdminOrganizations';
 import { OrganizationTable, OrganizationSearchForm, OrganizationFilters } from '../components/organizations';
-import { AdminHeader } from '../components/layout/AdminHeader';
 
 /**
  * 組織一覧ページ
@@ -80,12 +79,8 @@ export function Organizations() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <AdminHeader />
-
-      {/* メインコンテンツ */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="space-y-6">
           {/* タイトル */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -148,7 +143,6 @@ export function Organizations() {
             )}
           </div>
         </div>
-      </main>
     </div>
   );
 }
