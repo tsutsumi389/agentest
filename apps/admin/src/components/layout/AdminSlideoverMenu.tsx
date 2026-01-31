@@ -1,20 +1,12 @@
 import { useEffect } from 'react';
 import { NavLink } from 'react-router';
-import { X, LayoutDashboard, Users, Building2 } from 'lucide-react';
+import { X, LayoutDashboard } from 'lucide-react';
+import { adminNavLinks } from './nav-links';
 
 interface AdminSlideoverMenuProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
-/**
- * ナビゲーションリンク定義
- */
-const navLinks = [
-  { to: '/', label: 'ダッシュボード', icon: LayoutDashboard },
-  { to: '/users', label: 'ユーザー', icon: Users },
-  { to: '/organizations', label: '組織', icon: Building2 },
-];
 
 /**
  * 管理画面スライドオーバーメニュー
@@ -81,11 +73,11 @@ export function AdminSlideoverMenu({ isOpen, onClose }: AdminSlideoverMenuProps)
               <p className="px-3 py-2 text-xs font-medium text-foreground-muted uppercase tracking-wider">
                 メインメニュー
               </p>
-              {navLinks.map((link) => (
+              {adminNavLinks.map((link) => (
                 <NavLink
                   key={link.to}
                   to={link.to}
-                  end={link.to === '/'}
+                  end={link.exact}
                   onClick={onClose}
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${

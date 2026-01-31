@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Outlet } from 'react-router';
 import { AdminHeader } from './AdminHeader';
 import { AdminSlideoverMenu } from './AdminSlideoverMenu';
@@ -10,10 +10,14 @@ import { AdminSlideoverMenu } from './AdminSlideoverMenu';
 export function AdminLayout() {
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // コールバックをメモ化して不要な再レンダリングを防止
+  const handleMenuOpen = useCallback(() => setMenuOpen(true), []);
+  const handleMenuClose = useCallback(() => setMenuOpen(false), []);
+
   return (
     <div className="min-h-screen bg-background">
-      <AdminHeader onMenuClick={() => setMenuOpen(true)} />
-      <AdminSlideoverMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
+      <AdminHeader onMenuClick={handleMenuOpen} />
+      <AdminSlideoverMenu isOpen={menuOpen} onClose={handleMenuClose} />
       {/* ヘッダーの高さ（h-16 = 64px）分のパディング */}
       <main className="pt-16">
         <Outlet />

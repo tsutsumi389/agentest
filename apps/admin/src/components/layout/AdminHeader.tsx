@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { LayoutDashboard, LogOut, Loader2, Menu } from 'lucide-react';
 import { useNavigate, Link, useLocation } from 'react-router';
 import { useAdminAuth } from '../../hooks/useAdminAuth';
+import { adminNavLinks, isNavLinkActive } from './nav-links';
 
 interface AdminHeaderProps {
   onMenuClick: () => void;
@@ -29,16 +30,6 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
     }
   };
 
-  // ナビゲーションリンクのスタイルを取得
-  const getLinkClass = (path: string) => {
-    const isActive = location.pathname === path;
-    return `text-sm font-medium ${
-      isActive
-        ? 'text-accent'
-        : 'text-foreground-muted hover:text-foreground'
-    }`;
-  };
-
   return (
     <header className="fixed top-0 left-0 right-0 z-header bg-background-secondary border-b border-border">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -60,15 +51,22 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
             </div>
             {/* デスクトップ用ナビゲーション */}
             <nav className="hidden md:flex items-center gap-4 ml-2">
-              <Link to="/" className={getLinkClass('/')}>
-                ダッシュボード
-              </Link>
-              <Link to="/users" className={getLinkClass('/users')}>
-                ユーザー
-              </Link>
-              <Link to="/organizations" className={getLinkClass('/organizations')}>
-                組織
-              </Link>
+              {adminNavLinks.map((link) => {
+                const isActive = isNavLinkActive(link, location.pathname);
+                return (
+                  <Link
+                    key={link.to}
+                    to={link.to}
+                    className={`text-sm font-medium ${
+                      isActive
+                        ? 'text-accent'
+                        : 'text-foreground-muted hover:text-foreground'
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
             </nav>
           </div>
           <div className="flex items-center gap-4">
