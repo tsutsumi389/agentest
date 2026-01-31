@@ -15,6 +15,7 @@ const KEY_PREFIX = {
   ADMIN_USERS: 'admin:users:',
   ADMIN_USER_DETAIL: 'admin:user:detail:',
   ADMIN_ORGANIZATIONS: 'admin:organizations:',
+  ADMIN_ORGANIZATION_DETAIL: 'admin:organization:detail:',
   USER_INVOICES: 'invoices:user:',
   ORG_INVOICES: 'invoices:org:',
 } as const;
@@ -517,6 +518,83 @@ export async function invalidateAdminOrganizationsCache(): Promise<boolean> {
     return true;
   } catch (error) {
     console.error('管理者組織一覧キャッシュの無効化に失敗:', error);
+    return false;
+  }
+}
+
+// ============================================
+// 管理者組織詳細キャッシュ
+// ============================================
+
+/**
+ * 管理者組織詳細をキャッシュから取得
+ * @param organizationId 組織ID
+ */
+export async function getAdminOrganizationDetailCache<T>(
+  organizationId: string
+): Promise<T | null> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return null;
+  }
+
+  try {
+    const key = `${KEY_PREFIX.ADMIN_ORGANIZATION_DETAIL}${organizationId}`;
+    const data = await redis.get(key);
+    if (!data) {
+      return null;
+    }
+    return JSON.parse(data) as T;
+  } catch (error) {
+    console.error('管理者組織詳細キャッシュの取得に失敗:', error);
+    return null;
+  }
+}
+
+/**
+ * 管理者組織詳細をキャッシュに保存
+ * @param organizationId 組織ID
+ * @param data キャッシュデータ
+ * @param ttlSeconds 有効期限（秒）、デフォルト30秒
+ */
+export async function setAdminOrganizationDetailCache<T>(
+  organizationId: string,
+  data: T,
+  ttlSeconds: number = 30
+): Promise<boolean> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    const key = `${KEY_PREFIX.ADMIN_ORGANIZATION_DETAIL}${organizationId}`;
+    await redis.setex(key, ttlSeconds, JSON.stringify(data));
+    return true;
+  } catch (error) {
+    console.error('管理者組織詳細キャッシュの保存に失敗:', error);
+    return false;
+  }
+}
+
+/**
+ * 管理者組織詳細キャッシュを無効化
+ * @param organizationId 組織ID
+ */
+export async function invalidateAdminOrganizationDetailCache(
+  organizationId: string
+): Promise<boolean> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    const key = `${KEY_PREFIX.ADMIN_ORGANIZATION_DETAIL}${organizationId}`;
+    await redis.del(key);
+    return true;
+  } catch (error) {
+    console.error('管理者組織詳細キャッシュの無効化に失敗:', error);
     return false;
   }
 }

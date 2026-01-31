@@ -11,4 +11,10 @@ const controller = new AdminOrganizationsController();
  */
 router.get('/', requireAdminAuth(), controller.list);
 
+/**
+ * 組織詳細を取得
+ * GET /admin/organizations/:id
+ */
+router.get('/:id', requireAdminAuth(), controller.getById);
+
 export default router;

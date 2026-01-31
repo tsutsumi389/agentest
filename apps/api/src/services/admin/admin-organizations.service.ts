@@ -3,14 +3,19 @@ import type {
   AdminOrganizationListResponse,
   AdminOrganizationListItem,
   AdminOrganizationSearchParams,
+  AdminOrganizationDetailResponse,
+  AdminOrganizationDetail,
 } from '@agentest/shared';
 import {
   getAdminOrganizationsCache,
   setAdminOrganizationsCache,
+  getAdminOrganizationDetailCache,
+  setAdminOrganizationDetailCache,
 } from '../../lib/redis-store.js';
 
 // キャッシュ有効期限（秒）
 const CACHE_TTL_SECONDS = 60;
+const DETAIL_CACHE_TTL_SECONDS = 30;
 
 /**
  * 管理者組織一覧サービス
@@ -215,5 +220,174 @@ export class AdminOrganizationsService {
       default:
         return { createdAt: sortOrder };
     }
+  }
+
+  /**
+   * 組織詳細を取得
+   */
+  async findOrganizationById(organizationId: string): Promise<AdminOrganizationDetailResponse | null> {
+    // キャッシュをチェック
+    const cached = await getAdminOrganizationDetailCache<AdminOrganizationDetailResponse>(organizationId);
+    if (cached) {
+      return cached;
+    }
+
+    // Prismaで組織を取得
+    const org = await prisma.organization.findUnique({
+      where: { id: organizationId },
+      include: {
+        // メンバー一覧（最新20件、削除済みユーザーを除く）
+        members: {
+          where: { user: { deletedAt: null } },
+          orderBy: { joinedAt: 'desc' },
+          take: 20,
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                avatarUrl: true,
+              },
+            },
+          },
+        },
+        // プロジェクト一覧（最新10件、削除済みを除く）
+        projects: {
+          where: { deletedAt: null },
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          include: {
+            _count: {
+              select: {
+                members: true,
+                testSuites: { where: { deletedAt: null } },
+              },
+            },
+          },
+        },
+        // サブスクリプション
+        subscription: true,
+        // 監査ログ（最新10件）
+        auditLogs: {
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+          },
+        },
+        // 統計用カウント
+        _count: {
+          select: {
+            members: { where: { user: { deletedAt: null } } },
+            projects: { where: { deletedAt: null } },
+          },
+        },
+      },
+    });
+
+    if (!org) {
+      return null;
+    }
+
+    // テストスイート数と実行数を別途集計
+    const [testSuiteCount, executionCount] = await Promise.all([
+      prisma.testSuite.count({
+        where: {
+          project: {
+            organizationId: org.id,
+            deletedAt: null,
+          },
+          deletedAt: null,
+        },
+      }),
+      prisma.execution.count({
+        where: {
+          testSuite: {
+            project: {
+              organizationId: org.id,
+              deletedAt: null,
+            },
+            deletedAt: null,
+          },
+        },
+      }),
+    ]);
+
+    // レスポンス形式に変換
+    const orgDetail: AdminOrganizationDetail = {
+      id: org.id,
+      name: org.name,
+      description: org.description,
+      avatarUrl: org.avatarUrl,
+      plan: org.plan,
+      billingEmail: org.billingEmail,
+      paymentCustomerId: org.paymentCustomerId,
+      createdAt: org.createdAt.toISOString(),
+      updatedAt: org.updatedAt.toISOString(),
+      deletedAt: org.deletedAt?.toISOString() ?? null,
+      stats: {
+        memberCount: org._count.members,
+        projectCount: org._count.projects,
+        testSuiteCount,
+        executionCount,
+      },
+      members: org.members.map((member) => ({
+        id: member.id,
+        userId: member.user.id,
+        name: member.user.name,
+        email: member.user.email,
+        avatarUrl: member.user.avatarUrl,
+        role: member.role,
+        joinedAt: member.joinedAt.toISOString(),
+      })),
+      projects: org.projects.map((project) => ({
+        id: project.id,
+        name: project.name,
+        description: project.description,
+        memberCount: project._count.members,
+        testSuiteCount: project._count.testSuites,
+        createdAt: project.createdAt.toISOString(),
+      })),
+      subscription: org.subscription
+        ? {
+            plan: org.subscription.plan,
+            status: org.subscription.status,
+            billingCycle: org.subscription.billingCycle,
+            currentPeriodStart: org.subscription.currentPeriodStart.toISOString(),
+            currentPeriodEnd: org.subscription.currentPeriodEnd.toISOString(),
+            cancelAtPeriodEnd: org.subscription.cancelAtPeriodEnd,
+          }
+        : null,
+      recentAuditLogs: org.auditLogs.map((log) => ({
+        id: log.id,
+        category: log.category,
+        action: log.action,
+        targetType: log.targetType,
+        targetId: log.targetId,
+        user: log.user
+          ? {
+              id: log.user.id,
+              name: log.user.name,
+              email: log.user.email,
+            }
+          : null,
+        ipAddress: log.ipAddress,
+        createdAt: log.createdAt.toISOString(),
+      })),
+    };
+
+    const response: AdminOrganizationDetailResponse = { organization: orgDetail };
+
+    // キャッシュに保存
+    await setAdminOrganizationDetailCache(organizationId, response, DETAIL_CACHE_TTL_SECONDS);
+
+    return response;
   }
 }

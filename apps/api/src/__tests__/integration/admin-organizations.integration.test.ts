@@ -10,6 +10,11 @@ import {
   createTestOrganization,
   createTestProject,
   createTestOrgMember,
+  createTestSubscription,
+  createTestAuditLog,
+  createTestSuite,
+  createTestEnvironment,
+  createTestExecution,
   cleanupTestData,
 } from './test-helpers.js';
 import { createApp } from '../../app.js';
@@ -470,6 +475,357 @@ describe('Admin Organizations API Integration Tests', () => {
       expect(response.status).toBe(200);
       expect(response.body.organizations).toHaveLength(0);
       expect(response.body.pagination.total).toBe(0);
+    });
+  });
+
+  describe('GET /admin/organizations/:id', () => {
+    it('認証済みリクエストで組織詳細を取得できる', async () => {
+      const testUser = await createTestUser({
+        email: 'owner@example.com',
+        name: 'Owner User',
+      });
+      const org = await createTestOrganization(testUser.id, {
+        name: `${testPrefix}-detail-org`,
+        description: 'Test organization description',
+      });
+
+      const response = await request(app)
+        .get(`/admin/organizations/${org.id}`)
+        .set('Cookie', sessionCookie);
+
+      expect(response.status).toBe(200);
+      expect(response.body.organization).toBeDefined();
+      expect(response.body.organization.id).toBe(org.id);
+      expect(response.body.organization.name).toBe(`${testPrefix}-detail-org`);
+    });
+
+    it('未認証リクエストは401エラーを返す', async () => {
+      const testUser = await createTestUser({
+        email: 'owner@example.com',
+        name: 'Owner User',
+      });
+      const org = await createTestOrganization(testUser.id, {
+        name: `${testPrefix}-org`,
+      });
+
+      const response = await request(app)
+        .get(`/admin/organizations/${org.id}`);
+
+      expect(response.status).toBe(401);
+      expect(response.body.error).toBeDefined();
+    });
+
+    it('無効なUUID形式は400エラーを返す', async () => {
+      const response = await request(app)
+        .get('/admin/organizations/invalid-uuid')
+        .set('Cookie', sessionCookie);
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBeDefined();
+    });
+
+    it('存在しない組織IDは404エラーを返す', async () => {
+      const nonexistentId = randomUUID();
+      const response = await request(app)
+        .get(`/admin/organizations/${nonexistentId}`)
+        .set('Cookie', sessionCookie);
+
+      expect(response.status).toBe(404);
+      expect(response.body.error).toBeDefined();
+    });
+
+    it('レスポンスに基本情報が含まれる', async () => {
+      const testUser = await createTestUser({
+        email: 'owner@example.com',
+        name: 'Owner User',
+      });
+      const org = await createTestOrganization(testUser.id, {
+        name: `${testPrefix}-basic-info-org`,
+        description: 'Test description',
+        plan: 'ENTERPRISE',
+      });
+      // billingEmailを設定
+      await prisma.organization.update({
+        where: { id: org.id },
+        data: { billingEmail: 'billing@example.com' },
+      });
+
+      const response = await request(app)
+        .get(`/admin/organizations/${org.id}`)
+        .set('Cookie', sessionCookie);
+
+      expect(response.status).toBe(200);
+      const organization = response.body.organization;
+      expect(organization.id).toBe(org.id);
+      expect(organization.name).toBe(`${testPrefix}-basic-info-org`);
+      expect(organization.description).toBe('Test description');
+      expect(organization.plan).toBe('ENTERPRISE');
+      expect(organization.billingEmail).toBe('billing@example.com');
+      expect(organization.createdAt).toBeDefined();
+      expect(organization.updatedAt).toBeDefined();
+      expect(organization.deletedAt).toBeNull();
+    });
+
+    it('レスポンスにstats情報が含まれる', async () => {
+      const testUser = await createTestUser({
+        email: 'owner@example.com',
+        name: 'Owner User',
+      });
+      const org = await createTestOrganization(testUser.id, {
+        name: `${testPrefix}-stats-org`,
+      });
+      // プロジェクトを追加
+      const project = await createTestProject(testUser.id, {
+        name: 'Stats Project',
+        organizationId: org.id,
+      });
+      // テストスイートを追加
+      await createTestSuite(project.id, { name: 'Test Suite 1' });
+      await createTestSuite(project.id, { name: 'Test Suite 2' });
+
+      const response = await request(app)
+        .get(`/admin/organizations/${org.id}`)
+        .set('Cookie', sessionCookie);
+
+      expect(response.status).toBe(200);
+      const organization = response.body.organization;
+      expect(organization.stats).toBeDefined();
+      expect(organization.stats.memberCount).toBe(1); // owner
+      expect(organization.stats.projectCount).toBe(1);
+      expect(organization.stats.testSuiteCount).toBe(2);
+      expect(typeof organization.stats.executionCount).toBe('number');
+    });
+
+    it('レスポンスにメンバー一覧が含まれる', async () => {
+      const testUser1 = await createTestUser({
+        email: 'owner@example.com',
+        name: 'Owner User',
+        avatarUrl: 'https://example.com/owner.png',
+      });
+      const testUser2 = await createTestUser({
+        email: 'member@example.com',
+        name: 'Member User',
+      });
+      const org = await createTestOrganization(testUser1.id, {
+        name: `${testPrefix}-members-org`,
+      });
+      // メンバーを追加
+      await createTestOrgMember(org.id, testUser2.id, 'MEMBER');
+
+      const response = await request(app)
+        .get(`/admin/organizations/${org.id}`)
+        .set('Cookie', sessionCookie);
+
+      expect(response.status).toBe(200);
+      const organization = response.body.organization;
+      expect(organization.members).toBeDefined();
+      expect(organization.members.length).toBeGreaterThanOrEqual(2);
+      // メンバー情報の構造を確認
+      const ownerMember = organization.members.find((m: { role: string }) => m.role === 'OWNER');
+      expect(ownerMember).toBeDefined();
+      expect(ownerMember.userId).toBe(testUser1.id);
+      expect(ownerMember.name).toBe('Owner User');
+      expect(ownerMember.email).toBe('owner@example.com');
+      expect(ownerMember.avatarUrl).toBe('https://example.com/owner.png');
+      expect(ownerMember.joinedAt).toBeDefined();
+    });
+
+    it('削除済みユーザーはメンバー一覧に含まれない', async () => {
+      const testUser1 = await createTestUser({
+        email: 'owner@example.com',
+        name: 'Owner User',
+      });
+      const testUser2 = await createTestUser({
+        email: 'deleted-member@example.com',
+        name: 'Deleted Member',
+      });
+      const org = await createTestOrganization(testUser1.id, {
+        name: `${testPrefix}-deleted-member-org`,
+      });
+      // メンバーを追加後、ユーザーを論理削除
+      await createTestOrgMember(org.id, testUser2.id, 'MEMBER');
+      await prisma.user.update({
+        where: { id: testUser2.id },
+        data: { deletedAt: new Date() },
+      });
+
+      const response = await request(app)
+        .get(`/admin/organizations/${org.id}`)
+        .set('Cookie', sessionCookie);
+
+      expect(response.status).toBe(200);
+      const organization = response.body.organization;
+      // 削除済みユーザーはメンバー一覧に含まれない
+      const deletedMember = organization.members.find(
+        (m: { email: string }) => m.email === 'deleted-member@example.com'
+      );
+      expect(deletedMember).toBeUndefined();
+    });
+
+    it('レスポンスにプロジェクト一覧が含まれる', async () => {
+      const testUser = await createTestUser({
+        email: 'owner@example.com',
+        name: 'Owner User',
+      });
+      const org = await createTestOrganization(testUser.id, {
+        name: `${testPrefix}-projects-org`,
+      });
+      // プロジェクトを追加
+      await createTestProject(testUser.id, {
+        name: 'Project Alpha',
+        description: 'Alpha description',
+        organizationId: org.id,
+      });
+
+      const response = await request(app)
+        .get(`/admin/organizations/${org.id}`)
+        .set('Cookie', sessionCookie);
+
+      expect(response.status).toBe(200);
+      const organization = response.body.organization;
+      expect(organization.projects).toBeDefined();
+      expect(organization.projects).toHaveLength(1);
+      expect(organization.projects[0].name).toBe('Project Alpha');
+      expect(organization.projects[0].description).toBe('Alpha description');
+      expect(organization.projects[0].memberCount).toBeDefined();
+      expect(organization.projects[0].testSuiteCount).toBeDefined();
+      expect(organization.projects[0].createdAt).toBeDefined();
+    });
+
+    it('削除済みプロジェクトはプロジェクト一覧に含まれない', async () => {
+      const testUser = await createTestUser({
+        email: 'owner@example.com',
+        name: 'Owner User',
+      });
+      const org = await createTestOrganization(testUser.id, {
+        name: `${testPrefix}-deleted-project-org`,
+      });
+      // プロジェクトを追加後、論理削除
+      const activeProject = await createTestProject(testUser.id, {
+        name: 'Active Project',
+        organizationId: org.id,
+      });
+      const deletedProject = await createTestProject(testUser.id, {
+        name: 'Deleted Project',
+        organizationId: org.id,
+      });
+      await prisma.project.update({
+        where: { id: deletedProject.id },
+        data: { deletedAt: new Date() },
+      });
+
+      const response = await request(app)
+        .get(`/admin/organizations/${org.id}`)
+        .set('Cookie', sessionCookie);
+
+      expect(response.status).toBe(200);
+      const organization = response.body.organization;
+      // アクティブプロジェクトのみ
+      expect(organization.projects).toHaveLength(1);
+      expect(organization.projects[0].id).toBe(activeProject.id);
+    });
+
+    it('サブスクリプションがある場合は情報が含まれる', async () => {
+      const testUser = await createTestUser({
+        email: 'owner@example.com',
+        name: 'Owner User',
+      });
+      const org = await createTestOrganization(testUser.id, {
+        name: `${testPrefix}-subscription-org`,
+        plan: 'TEAM',
+      });
+      // サブスクリプションを追加
+      await createTestSubscription({
+        organizationId: org.id,
+        plan: 'TEAM',
+        status: 'ACTIVE',
+        billingCycle: 'MONTHLY',
+      });
+
+      const response = await request(app)
+        .get(`/admin/organizations/${org.id}`)
+        .set('Cookie', sessionCookie);
+
+      expect(response.status).toBe(200);
+      const organization = response.body.organization;
+      expect(organization.subscription).not.toBeNull();
+      expect(organization.subscription.plan).toBe('TEAM');
+      expect(organization.subscription.status).toBe('ACTIVE');
+      expect(organization.subscription.billingCycle).toBe('MONTHLY');
+      expect(organization.subscription.currentPeriodStart).toBeDefined();
+      expect(organization.subscription.currentPeriodEnd).toBeDefined();
+      expect(organization.subscription.cancelAtPeriodEnd).toBe(false);
+    });
+
+    it('サブスクリプションがない場合はnullになる', async () => {
+      const testUser = await createTestUser({
+        email: 'owner@example.com',
+        name: 'Owner User',
+      });
+      const org = await createTestOrganization(testUser.id, {
+        name: `${testPrefix}-no-subscription-org`,
+      });
+
+      const response = await request(app)
+        .get(`/admin/organizations/${org.id}`)
+        .set('Cookie', sessionCookie);
+
+      expect(response.status).toBe(200);
+      const organization = response.body.organization;
+      expect(organization.subscription).toBeNull();
+    });
+
+    it('削除済み組織の詳細も取得できる', async () => {
+      const testUser = await createTestUser({
+        email: 'owner@example.com',
+        name: 'Owner User',
+      });
+      const org = await createTestOrganization(testUser.id, {
+        name: `${testPrefix}-deleted-org`,
+      });
+      // 組織を論理削除
+      await prisma.organization.update({
+        where: { id: org.id },
+        data: { deletedAt: new Date() },
+      });
+
+      const response = await request(app)
+        .get(`/admin/organizations/${org.id}`)
+        .set('Cookie', sessionCookie);
+
+      expect(response.status).toBe(200);
+      const organization = response.body.organization;
+      expect(organization.id).toBe(org.id);
+      expect(organization.deletedAt).not.toBeNull();
+    });
+
+    it('レスポンスに監査ログ情報が含まれる', async () => {
+      const testUser = await createTestUser({
+        email: 'owner@example.com',
+        name: 'Owner User',
+      });
+      const org = await createTestOrganization(testUser.id, {
+        name: `${testPrefix}-audit-log-org`,
+      });
+      // 監査ログを追加
+      await createTestAuditLog({
+        organizationId: org.id,
+        userId: testUser.id,
+        category: 'ORGANIZATION',
+        action: 'organization.created',
+        targetType: 'organization',
+        targetId: org.id,
+        ipAddress: '127.0.0.1',
+      });
+
+      const response = await request(app)
+        .get(`/admin/organizations/${org.id}`)
+        .set('Cookie', sessionCookie);
+
+      expect(response.status).toBe(200);
+      const organization = response.body.organization;
+      expect(organization.recentAuditLogs).toBeDefined();
+      expect(Array.isArray(organization.recentAuditLogs)).toBe(true);
     });
   });
 });

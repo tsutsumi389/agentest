@@ -71,6 +71,7 @@ Authorization: Bearer <access_token>
 | メソッド | パス | 説明 |
 |---------|------|------|
 | GET | `/admin/organizations` | 組織一覧取得（検索・フィルタ・ソート対応） |
+| GET | `/admin/organizations/:id` | 組織詳細取得 |
 
 → [管理者組織 API 詳細](./admin-organizations.md)
 

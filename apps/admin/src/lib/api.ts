@@ -167,6 +167,7 @@ import type {
   AdminUserDetailResponse,
   AdminOrganizationListResponse,
   AdminOrganizationSearchParams,
+  AdminOrganizationDetailResponse,
 } from '@agentest/shared';
 
 export const adminDashboardApi = {
@@ -246,4 +247,10 @@ export const adminOrganizationsApi = {
    */
   list: (params: AdminOrganizationSearchParams = {}) =>
     api.get<AdminOrganizationListResponse>(`/admin/organizations${toSearchQueryString(params)}`),
+
+  /**
+   * 組織詳細を取得
+   */
+  getById: (organizationId: string) =>
+    api.get<AdminOrganizationDetailResponse>(`/admin/organizations/${organizationId}`),
 };
