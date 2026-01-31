@@ -4,6 +4,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Users } from './pages/Users';
 import { UserDetail } from './pages/UserDetail';
 import { Organizations } from './pages/Organizations';
+import { OrganizationDetail } from './pages/OrganizationDetail';
 import { LoginPage } from './pages/auth/Login';
 import { TwoFactorAuthPage } from './pages/auth/TwoFactorAuth';
 import { AuthGuard } from './components/layout/AuthGuard';
@@ -62,6 +63,14 @@ export function App() {
           element={
             <AuthGuard>
               <Organizations />
+            </AuthGuard>
+          }
+        />
+        <Route
+          path="/organizations/:id"
+          element={
+            <AuthGuard>
+              <OrganizationDetail />
             </AuthGuard>
           }
         />

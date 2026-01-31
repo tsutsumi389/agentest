@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
-import { AuthenticationError, ValidationError } from '@agentest/shared';
-import { adminOrganizationSearchSchema } from '@agentest/shared/validators';
+import { AuthenticationError, ValidationError, NotFoundError } from '@agentest/shared';
+import { adminOrganizationSearchSchema, uuidSchema } from '@agentest/shared/validators';
 import { AdminOrganizationsService } from '../../services/admin/admin-organizations.service.js';
 
 /**
@@ -30,6 +30,38 @@ export class AdminOrganizationsController {
       }
 
       const result = await this.organizationsService.findOrganizations(parseResult.data);
+
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 組織詳細を取得
+   * GET /admin/organizations/:id
+   */
+  getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      // requireAdminAuth()ミドルウェアで認証済みだが、TypeScript型安全性のためチェック
+      if (!req.adminUser) {
+        throw new AuthenticationError('認証が必要です');
+      }
+
+      // パスパラメータをバリデーション
+      const parseResult = uuidSchema.safeParse(req.params.id);
+      if (!parseResult.success) {
+        throw new ValidationError(
+          '無効な組織IDです',
+          { id: ['有効なUUID形式で指定してください'] }
+        );
+      }
+
+      const result = await this.organizationsService.findOrganizationById(parseResult.data);
+
+      if (!result) {
+        throw new NotFoundError('組織が見つかりません');
+      }
 
       res.json(result);
     } catch (error) {

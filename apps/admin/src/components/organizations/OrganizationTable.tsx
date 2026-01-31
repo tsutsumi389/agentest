@@ -1,3 +1,4 @@
+import { Link } from 'react-router';
 import { ChevronUp, ChevronDown, Users, FolderKanban } from 'lucide-react';
 import type {
   AdminOrganizationListItem,
@@ -149,7 +150,10 @@ export function OrganizationTable({
                 >
                   {/* 組織情報 */}
                   <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
+                    <Link
+                      to={`/organizations/${org.id}`}
+                      className="flex items-center gap-3 hover:opacity-80"
+                    >
                       {org.avatarUrl ? (
                         <img
                           src={org.avatarUrl}
@@ -165,7 +169,7 @@ export function OrganizationTable({
                       )}
                       <div>
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-medium text-foreground">
+                          <span className="text-sm font-medium text-foreground hover:text-accent">
                             {org.name}
                           </span>
                           {org.deletedAt && (
@@ -173,7 +177,7 @@ export function OrganizationTable({
                           )}
                         </div>
                       </div>
-                    </div>
+                    </Link>
                   </td>
 
                   {/* オーナー */}

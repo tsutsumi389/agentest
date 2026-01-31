@@ -122,3 +122,143 @@ export interface AdminOrganizationListResponse {
   /** ページネーション情報 */
   pagination: AdminOrganizationPagination;
 }
+
+// ============================================
+// 組織詳細
+// ============================================
+
+/**
+ * 組織メンバー情報
+ */
+export interface AdminOrganizationMember {
+  /** メンバーシップID */
+  id: string;
+  /** ユーザーID */
+  userId: string;
+  /** 表示名 */
+  name: string;
+  /** メールアドレス */
+  email: string;
+  /** アバターURL */
+  avatarUrl: string | null;
+  /** 組織内役割 */
+  role: 'OWNER' | 'ADMIN' | 'MEMBER';
+  /** 参加日時 */
+  joinedAt: string;
+}
+
+/**
+ * 組織プロジェクト情報
+ */
+export interface AdminOrganizationProject {
+  /** プロジェクトID */
+  id: string;
+  /** プロジェクト名 */
+  name: string;
+  /** 説明 */
+  description: string | null;
+  /** メンバー数 */
+  memberCount: number;
+  /** テストスイート数 */
+  testSuiteCount: number;
+  /** 作成日時 */
+  createdAt: string;
+}
+
+/**
+ * 組織サブスクリプション情報
+ */
+export interface AdminOrganizationSubscription {
+  /** プラン */
+  plan: 'FREE' | 'PRO' | 'TEAM' | 'ENTERPRISE';
+  /** ステータス */
+  status: 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'TRIALING';
+  /** 請求サイクル */
+  billingCycle: 'MONTHLY' | 'YEARLY';
+  /** 現在の請求期間開始日 */
+  currentPeriodStart: string;
+  /** 現在の請求期間終了日 */
+  currentPeriodEnd: string;
+  /** 期間終了時にキャンセル予定か */
+  cancelAtPeriodEnd: boolean;
+}
+
+/**
+ * 組織監査ログエントリ
+ */
+export interface AdminOrganizationAuditLogEntry {
+  /** ログID */
+  id: string;
+  /** カテゴリ */
+  category: string;
+  /** アクション */
+  action: string;
+  /** 対象タイプ */
+  targetType: string | null;
+  /** 対象ID */
+  targetId: string | null;
+  /** 実行ユーザー情報 */
+  user: { id: string; name: string; email: string } | null;
+  /** IPアドレス */
+  ipAddress: string | null;
+  /** 作成日時 */
+  createdAt: string;
+}
+
+/**
+ * 組織詳細統計
+ */
+export interface AdminOrganizationDetailStats {
+  /** メンバー数 */
+  memberCount: number;
+  /** プロジェクト数 */
+  projectCount: number;
+  /** テストスイート数 */
+  testSuiteCount: number;
+  /** テスト実行数 */
+  executionCount: number;
+}
+
+/**
+ * 組織詳細
+ */
+export interface AdminOrganizationDetail {
+  /** 組織ID */
+  id: string;
+  /** 組織名 */
+  name: string;
+  /** 説明 */
+  description: string | null;
+  /** アバターURL */
+  avatarUrl: string | null;
+  /** プラン */
+  plan: 'TEAM' | 'ENTERPRISE';
+  /** 請求先メールアドレス */
+  billingEmail: string | null;
+  /** 決済顧客ID */
+  paymentCustomerId: string | null;
+  /** 作成日時 */
+  createdAt: string;
+  /** 更新日時 */
+  updatedAt: string;
+  /** 削除日時 */
+  deletedAt: string | null;
+  /** 統計情報 */
+  stats: AdminOrganizationDetailStats;
+  /** メンバー一覧（最新20件） */
+  members: AdminOrganizationMember[];
+  /** プロジェクト一覧（最新10件） */
+  projects: AdminOrganizationProject[];
+  /** サブスクリプション情報 */
+  subscription: AdminOrganizationSubscription | null;
+  /** 監査ログ（最新10件） */
+  recentAuditLogs: AdminOrganizationAuditLogEntry[];
+}
+
+/**
+ * 組織詳細レスポンス
+ */
+export interface AdminOrganizationDetailResponse {
+  /** 組織詳細 */
+  organization: AdminOrganizationDetail;
+}
