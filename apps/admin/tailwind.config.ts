@@ -50,6 +50,11 @@ const config: Config = {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'Consolas', 'monospace'],
       },
+      zIndex: {
+        overlay: '50',
+        modal: '60',
+        header: '40',
+      },
     },
   },
   plugins: [],

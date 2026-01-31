@@ -7,7 +7,6 @@ import {
   ExecutionStatsCard,
   RevenueStatsCard,
 } from '../components/dashboard';
-import { AdminHeader } from '../components/layout/AdminHeader';
 
 /**
  * 管理ダッシュボードページ
@@ -27,11 +26,7 @@ export function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <AdminHeader />
-
-      {/* メインコンテンツ */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="space-y-8">
           {/* タイトル */}
           <div className="flex items-center justify-between">
@@ -81,7 +76,6 @@ export function Dashboard() {
             </div>
           )}
         </div>
-      </main>
     </div>
   );
 }
