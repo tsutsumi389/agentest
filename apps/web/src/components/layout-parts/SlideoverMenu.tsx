@@ -1,15 +1,7 @@
 import { NavLink } from 'react-router';
-import {
-  X,
-  LayoutDashboard,
-  FolderKanban,
-  Play,
-  FileText,
-  Building2,
-} from 'lucide-react';
+import { X, LayoutDashboard, FolderKanban, Building2 } from 'lucide-react';
 import { AgentestLogo } from '../ui/AgentestLogo';
 import { useEffect } from 'react';
-import { OrganizationSelector } from '../organization';
 
 interface SlideoverMenuProps {
   isOpen: boolean;
@@ -22,8 +14,6 @@ interface SlideoverMenuProps {
 const navLinks = [
   { to: '/dashboard', label: 'ダッシュボード', icon: LayoutDashboard },
   { to: '/projects', label: 'プロジェクト', icon: FolderKanban },
-  { to: '/executions', label: 'テスト実行', icon: Play },
-  { to: '/reports', label: 'レポート', icon: FileText },
 ];
 
 /**
@@ -87,14 +77,6 @@ export function SlideoverMenu({ isOpen, onClose }: SlideoverMenuProps) {
 
           {/* ナビゲーション */}
           <nav className="flex-1 p-4 space-y-4 overflow-y-auto">
-            {/* 組織セレクター */}
-            <div>
-              <p className="px-3 py-2 text-xs font-medium text-foreground-muted uppercase tracking-wider">
-                ワークスペース
-              </p>
-              <OrganizationSelector onClose={onClose} />
-            </div>
-
             {/* メインメニュー */}
             <div className="space-y-1">
               <p className="px-3 py-2 text-xs font-medium text-foreground-muted uppercase tracking-wider">
