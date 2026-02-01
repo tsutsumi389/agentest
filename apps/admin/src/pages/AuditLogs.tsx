@@ -6,7 +6,7 @@ import type {
   AdminAuditLogSortBy,
   AdminAuditLogCategory,
   AdminAuditLogEntry,
-} from '@agentest/shared';
+} from '@agentest/shared/types';
 import { useAdminAuditLogs } from '../hooks/useAdminAuditLogs';
 import {
   AuditLogTable,

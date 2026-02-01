@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { X } from 'lucide-react';
-import type { AdminAuditLogEntry } from '@agentest/shared';
+import type { AdminAuditLogEntry } from '@agentest/shared/types';
 import { formatDateTime } from '../../lib/date-utils';
 import { CATEGORY_LABELS } from '../../lib/audit-log-utils';
 

@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import type { AdminAuditLogSearchParams } from '@agentest/shared';
+import type { AdminAuditLogSearchParams } from '@agentest/shared/types';
 import { adminAuditLogsApi } from '../lib/api';
 
 /**

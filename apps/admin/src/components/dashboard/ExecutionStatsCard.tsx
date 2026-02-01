@@ -1,5 +1,5 @@
 import { Play, CheckCircle2, XCircle } from 'lucide-react';
-import type { AdminDashboardExecutionStats } from '@agentest/shared';
+import type { AdminDashboardExecutionStats } from '@agentest/shared/types';
 
 interface ExecutionStatsCardProps {
   stats: AdminDashboardExecutionStats;

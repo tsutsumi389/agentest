@@ -1,6 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router';
-import type { AdminUserDetail } from '@agentest/shared';
+import type { AdminUserDetail } from '@agentest/shared/types';
 import { PlanBadge } from '../common';
 
 interface UserDetailHeaderProps {

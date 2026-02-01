@@ -1,5 +1,5 @@
 import { Filter, X } from 'lucide-react';
-import { ADMIN_AUDIT_LOG_CATEGORIES, type AdminAuditLogCategory } from '@agentest/shared';
+import { ADMIN_AUDIT_LOG_CATEGORIES, type AdminAuditLogCategory } from '@agentest/shared/types';
 import { CATEGORY_LABELS } from '../../lib/audit-log-utils';
 
 interface AuditLogFiltersProps {

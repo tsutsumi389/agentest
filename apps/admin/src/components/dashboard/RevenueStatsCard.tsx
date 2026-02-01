@@ -1,5 +1,5 @@
 import { Banknote, CheckCircle2, Clock, AlertCircle } from 'lucide-react';
-import type { AdminDashboardRevenueStats } from '@agentest/shared';
+import type { AdminDashboardRevenueStats } from '@agentest/shared/types';
 
 interface RevenueStatsCardProps {
   stats: AdminDashboardRevenueStats;

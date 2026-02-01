@@ -1,5 +1,5 @@
 import { Users, UserPlus, Activity } from 'lucide-react';
-import type { AdminDashboardUserStats } from '@agentest/shared';
+import type { AdminDashboardUserStats } from '@agentest/shared/types';
 
 interface UserStatsCardProps {
   stats: AdminDashboardUserStats;

@@ -4,7 +4,7 @@ import type {
   AdminOrganizationListItem,
   AdminOrganizationSortBy,
   AdminOrganizationPagination,
-} from '@agentest/shared';
+} from '@agentest/shared/types';
 import { formatDate } from '../../lib/date-utils';
 import { OrganizationPlanBadge } from '../common';
 

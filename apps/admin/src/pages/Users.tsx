@@ -5,7 +5,7 @@ import type {
   AdminUserSearchParams,
   AdminUserSortBy,
   AdminUserStatus,
-} from '@agentest/shared';
+} from '@agentest/shared/types';
 import { useAdminUsers } from '../hooks/useAdminUsers';
 import { UserTable, UserSearchForm, UserFilters } from '../components/users';
 

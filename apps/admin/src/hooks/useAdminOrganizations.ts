@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import type { AdminOrganizationSearchParams } from '@agentest/shared';
+import type { AdminOrganizationSearchParams } from '@agentest/shared/types';
 import { adminOrganizationsApi } from '../lib/api';
 
 /**

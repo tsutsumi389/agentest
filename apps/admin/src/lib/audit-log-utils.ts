@@ -1,4 +1,4 @@
-import type { AdminAuditLogCategory } from '@agentest/shared';
+import type { AdminAuditLogCategory } from '@agentest/shared/types';
 
 /**
  * カテゴリの日本語ラベル

@@ -1,5 +1,5 @@
 import { Building2, Plus, Activity } from 'lucide-react';
-import type { AdminDashboardOrgStats } from '@agentest/shared';
+import type { AdminDashboardOrgStats } from '@agentest/shared/types';
 
 interface OrgStatsCardProps {
   stats: AdminDashboardOrgStats;

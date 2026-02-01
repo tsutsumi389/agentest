@@ -1,5 +1,5 @@
 import { Clock, Users } from 'lucide-react';
-import type { AdminUserDetail } from '@agentest/shared';
+import type { AdminUserDetail } from '@agentest/shared/types';
 import { formatRelativeTime } from '../../lib/date-utils';
 
 interface UserActivitySectionProps {

@@ -170,7 +170,7 @@ import type {
   AdminOrganizationDetailResponse,
   AdminAuditLogListResponse,
   AdminAuditLogSearchParams,
-} from '@agentest/shared';
+} from '@agentest/shared/types';
 
 export const adminDashboardApi = {
   /**

@@ -5,7 +5,7 @@ import type {
   AdminAuditLogSortBy,
   AdminAuditLogPagination,
   AdminAuditLogCategory,
-} from '@agentest/shared';
+} from '@agentest/shared/types';
 import { formatRelativeTime } from '../../lib/date-utils';
 import { CATEGORY_LABELS } from '../../lib/audit-log-utils';
 
