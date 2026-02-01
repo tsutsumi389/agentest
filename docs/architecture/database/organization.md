@@ -16,7 +16,7 @@
 | `name` | VARCHAR(100) | NO | - | 組織名 |
 | `description` | TEXT | YES | NULL | 組織の説明 |
 | `avatarUrl` | TEXT | YES | NULL | 組織アバター画像 URL |
-| `plan` | ENUM | NO | TEAM | 組織プラン（TEAM, ENTERPRISE） |
+| `plan` | ENUM | NO | NONE | 組織プラン（NONE, TEAM, ENTERPRISE） |
 | `billingEmail` | VARCHAR(255) | YES | NULL | 請求先メールアドレス |
 | `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
 | `updatedAt` | TIMESTAMP | NO | now() | 更新日時 |
@@ -26,6 +26,7 @@
 
 | プラン | 料金 | 説明 |
 |--------|------|------|
+| `NONE` | - | 契約なし（プロジェクト作成不可） |
 | `TEAM` | $6/ユーザー/月（最低10ユーザー） | 小〜中規模チーム |
 | `ENTERPRISE` | 要問合せ | 大規模組織・高度なセキュリティ要件 |
 
@@ -37,6 +38,7 @@
 
 ```prisma
 enum OrganizationPlan {
+  NONE
   TEAM
   ENTERPRISE
 }
@@ -46,7 +48,7 @@ model Organization {
   name         String           @db.VarChar(100)
   description  String?
   avatarUrl    String?
-  plan         OrganizationPlan @default(TEAM)
+  plan         OrganizationPlan @default(NONE)
   billingEmail String?          @db.VarChar(255)
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
