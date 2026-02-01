@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import { Dashboard } from './pages/Dashboard';
+import { MetricsPage } from './pages/MetricsPage';
 import { Users } from './pages/Users';
 import { UserDetail } from './pages/UserDetail';
 import { Organizations } from './pages/Organizations';
@@ -43,6 +44,7 @@ export function App() {
           }
         >
           <Route path="/" element={<Dashboard />} />
+          <Route path="/metrics" element={<MetricsPage />} />
           <Route path="/users" element={<Users />} />
           <Route path="/users/:id" element={<UserDetail />} />
           <Route path="/organizations" element={<Organizations />} />
