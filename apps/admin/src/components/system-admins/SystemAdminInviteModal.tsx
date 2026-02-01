@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { X } from 'lucide-react';
 import type { SystemAdminRole } from '@agentest/shared/types';
 
@@ -28,6 +28,53 @@ export function SystemAdminInviteModal({
   const [name, setName] = useState('');
   const [role, setRole] = useState<SystemAdminRole>('ADMIN');
   const [error, setError] = useState<string | null>(null);
+  const modalRef = useRef<HTMLDivElement>(null);
+  const firstFocusableRef = useRef<HTMLInputElement>(null);
+
+  // ESCキーで閉じる
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isLoading) {
+        onClose();
+      }
+    },
+    [onClose, isLoading]
+  );
+
+  // フォーカストラップ
+  const handleTabKey = useCallback((e: KeyboardEvent) => {
+    if (e.key !== 'Tab' || !modalRef.current) return;
+
+    const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+
+    if (e.shiftKey && document.activeElement === firstElement) {
+      e.preventDefault();
+      lastElement.focus();
+    } else if (!e.shiftKey && document.activeElement === lastElement) {
+      e.preventDefault();
+      firstElement.focus();
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+      document.addEventListener('keydown', handleTabKey);
+      // モーダルが開いたら最初の入力フィールドにフォーカス
+      firstFocusableRef.current?.focus();
+      // 背景スクロールを無効化
+      document.body.style.overflow = 'hidden';
+    }
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('keydown', handleTabKey);
+      document.body.style.overflow = '';
+    };
+  }, [isOpen, handleKeyDown, handleTabKey]);
 
   if (!isOpen) return null;
 
@@ -52,15 +99,36 @@ export function SystemAdminInviteModal({
     }
   };
 
+  // 背景クリックで閉じる
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget && !isLoading) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-background border border-border rounded-lg shadow-lg w-full max-w-md mx-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+      onClick={handleBackdropClick}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="invite-modal-title"
+    >
+      <div
+        ref={modalRef}
+        className="bg-background border border-border rounded-lg shadow-lg w-full max-w-md mx-4"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* ヘッダー */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground">管理者を招待</h2>
+          <h2 id="invite-modal-title" className="text-lg font-semibold text-foreground">
+            管理者を招待
+          </h2>
           <button
             onClick={onClose}
             className="p-1 text-foreground-muted hover:text-foreground"
+            aria-label="閉じる"
+            disabled={isLoading}
           >
             <X className="w-5 h-5" />
           </button>
@@ -69,7 +137,7 @@ export function SystemAdminInviteModal({
         {/* フォーム */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {error && (
-            <div className="p-3 text-sm text-error bg-error/10 rounded-lg">
+            <div className="p-3 text-sm text-error bg-error/10 rounded-lg" role="alert">
               {error}
             </div>
           )}
@@ -79,6 +147,7 @@ export function SystemAdminInviteModal({
               メールアドレス <span className="text-error">*</span>
             </label>
             <input
+              ref={firstFocusableRef}
               id="email"
               type="email"
               value={email}

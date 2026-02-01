@@ -104,13 +104,21 @@ export function SystemAdmins() {
     await inviteMutation.mutateAsync(inviteData);
   };
 
+  // APIエラーからメッセージを取得するヘルパー
+  const getErrorMessage = (error: unknown, defaultMessage: string): string => {
+    if (error instanceof Error) {
+      return error.message;
+    }
+    return defaultMessage;
+  };
+
   // 削除処理
   const handleDelete = async (admin: SystemAdminListItem) => {
     if (!confirm(`"${admin.name}" を削除しますか？`)) return;
     try {
       await deleteMutation.mutateAsync(admin.id);
-    } catch {
-      // エラーはミューテーションフックで処理
+    } catch (error) {
+      alert(getErrorMessage(error, '削除に失敗しました'));
     }
   };
 
@@ -119,8 +127,8 @@ export function SystemAdmins() {
     if (!confirm(`"${admin.name}" のロックを解除しますか？`)) return;
     try {
       await unlockMutation.mutateAsync(admin.id);
-    } catch {
-      // エラーはミューテーションフックで処理
+    } catch (error) {
+      alert(getErrorMessage(error, 'ロック解除に失敗しました'));
     }
   };
 
@@ -129,8 +137,8 @@ export function SystemAdmins() {
     if (!confirm(`"${admin.name}" の2FA設定をリセットしますか？`)) return;
     try {
       await reset2FAMutation.mutateAsync(admin.id);
-    } catch {
-      // エラーはミューテーションフックで処理
+    } catch (error) {
+      alert(getErrorMessage(error, '2FAリセットに失敗しました'));
     }
   };
 

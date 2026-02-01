@@ -123,7 +123,7 @@ export class SystemAdminService {
     ]);
 
     // レスポンス形式に変換
-    const adminUserItems: SystemAdminListItem[] = adminUsers.map((admin) => ({
+    let adminUserItems: SystemAdminListItem[] = adminUsers.map((admin) => ({
       id: admin.id,
       email: admin.email,
       name: admin.name,
@@ -139,6 +139,16 @@ export class SystemAdminService {
         activeSessionCount: admin._count.sessions,
       },
     }));
+
+    // lastLoginAtでソートする場合はJS側で再ソート
+    // （Prismaではリレーション先のフィールドでのソートがサポートされないため）
+    if (sortBy === 'lastLoginAt') {
+      adminUserItems = adminUserItems.sort((a, b) => {
+        const aTime = a.activity.lastLoginAt ? new Date(a.activity.lastLoginAt).getTime() : 0;
+        const bTime = b.activity.lastLoginAt ? new Date(b.activity.lastLoginAt).getTime() : 0;
+        return sortOrder === 'desc' ? bTime - aTime : aTime - bTime;
+      });
+    }
 
     const response: SystemAdminListResponse = {
       adminUsers: adminUserItems,
@@ -240,11 +250,9 @@ export class SystemAdminService {
       case 'role':
         return { role: sortOrder };
       case 'lastLoginAt':
-        // セッション経由でソートするため、最新セッションの日時でソート
-        return [
-          { sessions: { _count: sortOrder } },
-          { createdAt: sortOrder },
-        ];
+        // lastLoginAtソートはPrismaで直接サポートされないため、
+        // createdAtでソートし、取得後にJSで再ソートする（buildOrderByの呼び出し元で処理）
+        return { createdAt: sortOrder };
       case 'createdAt':
       default:
         return { createdAt: sortOrder };
@@ -557,7 +565,7 @@ export class SystemAdminService {
       }
     }
 
-    // 論理削除 & セッション無効化
+    // 論理削除 & セッション無効化 & 監査ログ記録（トランザクション内）
     const now = new Date();
     await prisma.$transaction([
       prisma.adminUser.update({
@@ -568,17 +576,15 @@ export class SystemAdminService {
         where: { adminUserId, revokedAt: null },
         data: { revokedAt: now },
       }),
+      prisma.adminAuditLog.create({
+        data: {
+          adminUserId: currentAdminId,
+          action: 'ADMIN_USER_DELETE',
+          targetType: 'AdminUser',
+          targetId: adminUserId,
+        },
+      }),
     ]);
-
-    // 監査ログを記録
-    await prisma.adminAuditLog.create({
-      data: {
-        adminUserId: currentAdminId,
-        action: 'ADMIN_USER_DELETE',
-        targetType: 'AdminUser',
-        targetId: adminUserId,
-      },
-    });
 
     // キャッシュを無効化
     await Promise.all([
