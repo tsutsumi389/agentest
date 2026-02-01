@@ -4,7 +4,7 @@
  */
 
 // JST（日本標準時）のUTCオフセット（ミリ秒）
-const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+export const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
 /**
  * JST基準で指定日の0時0分0秒のUTC Dateを取得
@@ -104,6 +104,31 @@ export function getJSTThisMonthStart(date: Date): Date {
 
   // 当月1日のJST 00:00:00
   const jstMidnight = new Date(Date.UTC(year, month, 1));
+  return new Date(jstMidnight.getTime() - JST_OFFSET_MS);
+}
+
+/**
+ * JST基準でNヶ月前の1日の開始時刻を取得
+ * @param date 基準となる日付
+ * @param monthsAgo 何ヶ月前か（1以上）
+ * @returns Nヶ月前の1日の0時0分0秒（JST）に相当するUTC Date
+ */
+export function getJSTMonthStartNMonthsAgo(date: Date, monthsAgo: number): Date {
+  const jstTime = date.getTime() + JST_OFFSET_MS;
+  const jstDate = new Date(jstTime);
+  const year = jstDate.getUTCFullYear();
+  const month = jstDate.getUTCMonth();
+
+  // Nヶ月前を計算
+  let targetMonth = month - monthsAgo;
+  let targetYear = year;
+  while (targetMonth < 0) {
+    targetMonth += 12;
+    targetYear -= 1;
+  }
+
+  // 対象月1日のJST 00:00:00
+  const jstMidnight = new Date(Date.UTC(targetYear, targetMonth, 1));
   return new Date(jstMidnight.getTime() - JST_OFFSET_MS);
 }
 

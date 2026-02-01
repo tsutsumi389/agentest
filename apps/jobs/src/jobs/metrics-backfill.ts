@@ -10,6 +10,7 @@ import { countActiveUsers, upsertMetric } from '../lib/metrics-utils.js';
 import {
   getJSTStartOfDay,
   getJSTLastMonday,
+  getJSTMonthStartNMonthsAgo,
   formatDateStringJST,
 } from '../lib/date-utils.js';
 
@@ -18,9 +19,6 @@ const DEFAULT_BACKFILL_DAYS = 90;
 
 // 1日のミリ秒
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-
-// JSTオフセット（ミリ秒）
-const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
 /**
  * メトリクスバックフィルジョブのエントリーポイント
@@ -110,33 +108,10 @@ async function backfillMAU(now: Date, days: number): Promise<void> {
 
   let totalUpserted = 0;
 
-  // JSTで現在の月を計算
-  const jstNow = new Date(now.getTime() + JST_OFFSET_MS);
-  const currentYear = jstNow.getUTCFullYear();
-  const currentMonth = jstNow.getUTCMonth();
-
   for (let i = 1; i <= months; i++) {
-    // i ヶ月前の月を計算
-    let targetMonth = currentMonth - i;
-    let targetYear = currentYear;
-    while (targetMonth < 0) {
-      targetMonth += 12;
-      targetYear -= 1;
-    }
-
-    // 対象月の開始・終了（JSTで計算してUTCに変換）
-    const monthStartJST = new Date(Date.UTC(targetYear, targetMonth, 1));
-    const monthStart = new Date(monthStartJST.getTime() - JST_OFFSET_MS);
-
-    // 翌月の開始
-    let nextMonth = targetMonth + 1;
-    let nextYear = targetYear;
-    if (nextMonth > 11) {
-      nextMonth = 0;
-      nextYear += 1;
-    }
-    const monthEndJST = new Date(Date.UTC(nextYear, nextMonth, 1));
-    const monthEnd = new Date(monthEndJST.getTime() - JST_OFFSET_MS);
+    // i ヶ月前と (i-1) ヶ月前の月初を取得
+    const monthStart = getJSTMonthStartNMonthsAgo(now, i);
+    const monthEnd = getJSTMonthStartNMonthsAgo(now, i - 1);
 
     const count = await countActiveUsers(monthStart, monthEnd);
     await upsertMetric('MONTH', monthStart, count);

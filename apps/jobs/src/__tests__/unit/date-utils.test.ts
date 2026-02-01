@@ -11,6 +11,7 @@ import {
   getJSTLastMonday,
   getJSTLastMonthStart,
   getJSTThisMonthStart,
+  getJSTMonthStartNMonthsAgo,
   formatDateStringJST,
 } from '../../lib/date-utils.js';
 
@@ -176,6 +177,44 @@ describe('date-utils', () => {
 
       // JST 2026-02-01 00:00:00 = UTC 2026-01-31 15:00:00
       expect(result.toISOString()).toBe('2026-01-31T15:00:00.000Z');
+    });
+  });
+
+  describe('getJSTMonthStartNMonthsAgo', () => {
+    it('1ヶ月前の月初を返す', () => {
+      // JST 2026-02-15 10:00:00
+      const input = new Date('2026-02-15T01:00:00.000Z');
+      const result = getJSTMonthStartNMonthsAgo(input, 1);
+
+      // JST 2026-01-01 00:00:00 = UTC 2025-12-31 15:00:00
+      expect(result.toISOString()).toBe('2025-12-31T15:00:00.000Z');
+    });
+
+    it('3ヶ月前の月初を返す', () => {
+      // JST 2026-02-15 10:00:00
+      const input = new Date('2026-02-15T01:00:00.000Z');
+      const result = getJSTMonthStartNMonthsAgo(input, 3);
+
+      // JST 2025-11-01 00:00:00 = UTC 2025-10-31 15:00:00
+      expect(result.toISOString()).toBe('2025-10-31T15:00:00.000Z');
+    });
+
+    it('0ヶ月前（当月）の月初を返す', () => {
+      // JST 2026-02-15 10:00:00
+      const input = new Date('2026-02-15T01:00:00.000Z');
+      const result = getJSTMonthStartNMonthsAgo(input, 0);
+
+      // JST 2026-02-01 00:00:00 = UTC 2026-01-31 15:00:00
+      expect(result.toISOString()).toBe('2026-01-31T15:00:00.000Z');
+    });
+
+    it('年をまたぐ場合も正しく計算する', () => {
+      // JST 2026-02-15 10:00:00
+      const input = new Date('2026-02-15T01:00:00.000Z');
+      const result = getJSTMonthStartNMonthsAgo(input, 14);
+
+      // JST 2024-12-01 00:00:00 = UTC 2024-11-30 15:00:00
+      expect(result.toISOString()).toBe('2024-11-30T15:00:00.000Z');
     });
   });
 

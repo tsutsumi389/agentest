@@ -107,7 +107,7 @@ describe('runMetricsAggregation', () => {
     });
 
     it('月曜日以外に実行された場合、WAU集計はスキップされる', async () => {
-      // 2026-01-15 10:00:00 JST (水曜日) に実行
+      // 2026-01-15 10:00:00 JST (木曜日) に実行
       const testTime = new Date('2026-01-15T01:00:00.000Z');
       vi.setSystemTime(testTime);
 
