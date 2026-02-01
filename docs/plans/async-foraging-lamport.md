@@ -174,9 +174,9 @@ export const activeUserMetricsQuerySchema = z.object({
 |---------|------|
 | `packages/shared/src/types/admin-metrics.ts` | 型定義 |
 | `apps/api/src/services/admin/admin-metrics.service.ts` | メトリクス取得サービス |
-| `apps/api/src/services/admin/admin-metrics-aggregator.ts` | 日次集計バッチ |
 | `apps/api/src/controllers/admin/metrics.controller.ts` | コントローラー |
 | `apps/api/src/routes/admin/metrics.ts` | ルーター |
+| `apps/jobs/src/jobs/metrics-aggregation.ts` | 日次集計ジョブ |
 | `apps/admin/src/components/ui/LineChart.tsx` | 折れ線グラフ |
 | `apps/admin/src/pages/MetricsPage.tsx` | メトリクス画面 |
 
@@ -188,10 +188,94 @@ export const activeUserMetricsQuerySchema = z.object({
 | `apps/api/src/lib/redis-store.ts` | メトリクスキャッシュ関数追加 |
 | `apps/api/src/routes/admin/index.ts` | メトリクスルーター追加 |
 | `packages/shared/src/validators/schemas.ts` | バリデーションスキーマ追加 |
+| `apps/jobs/src/index.ts` | metrics-aggregation ジョブ登録 |
 
 ---
 
-## 7. フロントエンド設計
+## 7. 日次集計ジョブ（apps/jobs）
+
+### ジョブ設計
+
+```typescript
+// apps/jobs/src/jobs/metrics-aggregation.ts
+
+/**
+ * メトリクス集計ジョブ
+ * 前日のアクティブユーザー数を集計してテーブルに保存
+ * 毎日 1:00 JST に実行
+ */
+import { prisma } from '../lib/prisma.js';
+
+export async function runMetricsAggregation(): Promise<void> {
+  const now = new Date();
+
+  // 前日の期間を計算（JST基準）
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  yesterday.setHours(0, 0, 0, 0);
+
+  const today = new Date(yesterday);
+  today.setDate(today.getDate() + 1);
+
+  console.log(`集計対象日: ${yesterday.toISOString().split('T')[0]}`);
+
+  // アクティブユーザー数を集計
+  const count = await prisma.user.count({
+    where: {
+      deletedAt: null,
+      sessions: {
+        some: {
+          lastActiveAt: {
+            gte: yesterday,
+            lt: today,
+          },
+          revokedAt: null,
+        },
+      },
+    },
+  });
+
+  // 集計テーブルに保存（upsert）
+  await prisma.dailyActiveUserMetric.upsert({
+    where: { date: yesterday },
+    create: {
+      date: yesterday,
+      userCount: count,
+    },
+    update: {
+      userCount: count,
+    },
+  });
+
+  console.log(`${yesterday.toISOString().split('T')[0]}: ${count}名のアクティブユーザー`);
+}
+```
+
+### index.tsへの登録
+
+```typescript
+// apps/jobs/src/index.ts に追加
+
+import { runMetricsAggregation } from './jobs/metrics-aggregation.js';
+
+const jobs: Record<string, () => Promise<void>> = {
+  // ... 既存のジョブ
+  'metrics-aggregation': runMetricsAggregation,
+};
+```
+
+### 実行方法
+
+```bash
+# Docker経由で実行
+docker compose exec jobs pnpm start
+# または
+JOB_NAME=metrics-aggregation docker compose exec jobs pnpm start
+```
+
+---
+
+## 8. フロントエンド設計
 
 ### 期間選択プリセット
 
@@ -213,7 +297,7 @@ const DATE_PRESETS = [
 
 ---
 
-## 8. テスト計画
+## 9. テスト計画
 
 ### 単体テスト
 
@@ -241,7 +325,7 @@ describe('GET /admin/metrics/active-users', () => {
 
 ---
 
-## 9. 実装順序
+## 10. 実装順序
 
 ### Phase 1: バックエンド基盤
 1. Prismaスキーマ追加（DailyActiveUserMetric）
@@ -259,9 +343,11 @@ describe('GET /admin/metrics/active-users', () => {
 2. ルーター実装・登録
 3. 統合テスト作成
 
-### Phase 4: 集計バッチ
-1. 日次集計バッチ実装
-2. 過去データ投入スクリプト作成
+### Phase 4: 集計バッチ（apps/jobs）
+1. `apps/jobs/src/jobs/metrics-aggregation.ts` に日次集計ジョブ実装
+2. `apps/jobs/src/index.ts` にジョブ登録
+3. 過去データ投入スクリプト作成
+4. 単体テスト作成
 
 ### Phase 5: フロントエンド
 1. LineChartコンポーネント作成
@@ -270,7 +356,7 @@ describe('GET /admin/metrics/active-users', () => {
 
 ---
 
-## 10. 検証方法
+## 11. 検証方法
 
 1. `docker compose exec dev pnpm test` でテスト実行
 2. 管理者としてログインし `/admin/metrics` にアクセス
@@ -279,9 +365,11 @@ describe('GET /admin/metrics/active-users', () => {
 
 ---
 
-## 11. 関連ファイル（参照用）
+## 12. 関連ファイル（参照用）
 
 - `apps/api/src/services/admin/admin-dashboard.service.ts` - 既存パターン
 - `packages/shared/src/types/admin-dashboard.ts` - 型定義パターン
 - `apps/api/src/lib/redis-store.ts` - キャッシュ実装
 - `apps/admin/src/components/ui/DonutChart.tsx` - チャート参考
+- `apps/jobs/src/jobs/history-cleanup.ts` - ジョブ実装パターン
+- `apps/jobs/src/index.ts` - ジョブ登録パターン
