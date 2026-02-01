@@ -15,6 +15,7 @@ Agentest のバッチジョブは Cloud Run Jobs で実行され、Cloud Schedul
 | `payment-event-cleanup` | 毎週日曜 4:00 JST | 古い決済イベントを削除 |
 | `subscription-sync` | 毎週日曜 5:00 JST | Stripe との状態を同期 |
 | `metrics-aggregation` | 毎日 1:00 JST | DAU/WAU/MAUを集計 |
+| `plan-distribution-aggregation` | 毎日 0:05 JST | プラン分布を集計 |
 
 ## 日常運用
 
@@ -107,6 +108,11 @@ gcloud run jobs execute agentest-jobs \
 gcloud run jobs execute agentest-jobs \
   --region=asia-northeast1 \
   --set-env-vars JOB_NAME=metrics-backfill,BACKFILL_MONTHS=3
+
+# plan-distribution-aggregation を手動実行
+gcloud run jobs execute agentest-jobs \
+  --region=asia-northeast1 \
+  --set-env-vars JOB_NAME=plan-distribution-aggregation
 ```
 
 ### 実行状態の監視
@@ -334,6 +340,53 @@ FROM date_series
 WHERE expected_date NOT IN (
   SELECT period_start::date
   FROM active_user_metrics
+  WHERE granularity = 'DAY'
+);
+```
+
+### プラン分布集計関連
+
+```sql
+-- 日次プラン分布の確認
+SELECT period_start, free_user_count, pro_user_count,
+       team_org_count, enterprise_org_count,
+       team_member_count, enterprise_member_count
+FROM plan_distribution_metrics
+WHERE granularity = 'DAY'
+ORDER BY period_start DESC
+LIMIT 30;
+
+-- 週次プラン分布の確認
+SELECT period_start, free_user_count, pro_user_count,
+       team_org_count, enterprise_org_count,
+       team_member_count, enterprise_member_count
+FROM plan_distribution_metrics
+WHERE granularity = 'WEEK'
+ORDER BY period_start DESC
+LIMIT 12;
+
+-- 月次プラン分布の確認
+SELECT period_start, free_user_count, pro_user_count,
+       team_org_count, enterprise_org_count,
+       team_member_count, enterprise_member_count
+FROM plan_distribution_metrics
+WHERE granularity = 'MONTH'
+ORDER BY period_start DESC
+LIMIT 12;
+
+-- 欠損している日付を確認
+WITH date_series AS (
+  SELECT generate_series(
+    (SELECT MIN(period_start) FROM plan_distribution_metrics WHERE granularity = 'DAY'),
+    CURRENT_DATE - 1,
+    '1 day'::interval
+  )::date AS expected_date
+)
+SELECT expected_date
+FROM date_series
+WHERE expected_date NOT IN (
+  SELECT period_start::date
+  FROM plan_distribution_metrics
   WHERE granularity = 'DAY'
 );
 ```

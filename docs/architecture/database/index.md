@@ -75,6 +75,7 @@ PostgreSQL を使用。Prisma ORM でスキーマ管理。
 | テーブル | 説明 | 詳細 |
 |---------|------|------|
 | `ActiveUserMetric` | アクティブユーザーメトリクス | [metrics.md](./metrics.md#activeusermetric) |
+| `PlanDistributionMetric` | プラン分布メトリクス | [metrics.md](./metrics.md#plandistributionmetric) |
 
 ### 使用量記録
 
@@ -358,6 +359,10 @@ CREATE INDEX idx_admin_audit_logs_created ON "admin_audit_logs"("created_at");
 -- メトリクス
 CREATE UNIQUE INDEX idx_active_user_metrics_granularity_period ON "active_user_metrics"("granularity", "period_start");
 CREATE INDEX idx_active_user_metrics_period ON "active_user_metrics"("granularity", "period_start");
+
+-- プラン分布メトリクス
+CREATE UNIQUE INDEX idx_plan_distribution_metrics_granularity_period ON "plan_distribution_metrics"("granularity", "period_start");
+CREATE INDEX idx_plan_distribution_metrics_period ON "plan_distribution_metrics"("granularity", "period_start");
 
 -- 使用量記録
 CREATE INDEX idx_usage_records_user_id ON "UsageRecord"("userId");

@@ -52,7 +52,7 @@
 |----|--------|------|------|
 | ADM-MON-001 | システム統計表示 | ユーザー・組織・実行統計を表示 | 実装済 |
 | ADM-MON-002 | アクティブユーザー推移 | DAU/WAU/MAUの時系列グラフ | 実装済 |
-| ADM-MON-003 | 収益統計表示 | MRR・請求書ステータスを表示 | 実装済 |
+| ADM-MON-003 | プラン別ユーザー分布 | 各プラン（FREE/PRO/TEAM/ENTERPRISE）の分布時系列 | 実装済 |
 
 ### ユーザー管理
 
@@ -421,6 +421,7 @@ erDiagram
 | admin:organization:detail:${id} | 30秒 | 組織詳細 |
 | admin:audit-logs:${hash} | 30秒 | 全体監査ログ一覧 |
 | admin:metrics:active-users:${hash} | 5分（過去）/1分（当日含む） | アクティブユーザーメトリクス |
+| admin:metrics:plan-distribution:${hash} | 5分（過去）/1分（当日含む） | プラン分布メトリクス |
 
 ## セキュリティ考慮事項
 
@@ -440,6 +441,7 @@ erDiagram
 - [管理者認証 API](../../api/admin-auth.md) - ログイン、2FA、セッション管理
 - [管理者ダッシュボード API](../../api/admin-dashboard.md) - システム統計
 - [管理者メトリクス API](../../api/admin-dashboard.md#アクティブユーザーメトリクス-api) - アクティブユーザー推移
+- [管理者プラン分布メトリクス API](../../api/admin-dashboard.md#プラン分布メトリクス-api) - プラン別ユーザー分布時系列
 - [管理者ユーザー管理 API](../../api/admin-users.md) - ユーザー一覧・詳細
 - [管理者組織管理 API](../../api/admin-organizations.md) - 組織一覧・詳細
 - [管理者監査ログ API](../../api/admin-audit-logs.md) - 全体監査ログ閲覧
