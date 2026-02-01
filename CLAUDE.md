@@ -26,12 +26,19 @@ docker compose exec dev pnpm lint
 
 ```
 apps/
-  web/           # ユーザー向けSPA
+  admin/         # 管理者向けSPA
   api/           # REST API
+  jobs/          # バッチ処理（Cloud Run Jobs）
   mcp-server/    # AI連携（MCP Protocol）
+  web/           # ユーザー向けSPA
+  ws/            # WebSocketサーバー
 packages/
-  shared/        # 共通型・バリデーション
+  auth/          # 認証（OAuth, JWT）
   db/            # Prismaスキーマ
+  shared/        # 共通型・バリデーション
+  storage/       # ファイルストレージ（S3/MinIO）
+  ui/            # 共通UIコンポーネント
+  ws-types/      # WebSocket型定義
 ```
 
 ## コーディング規約
