@@ -25,8 +25,8 @@
 
 | 項目 | 判断 | 理由 |
 |------|------|------|
-| 時系列データ | 不要（初期） | プラン分布の変化は緩やかで、スナップショットで十分 |
-| 基準 | Subscriptionベース | `Subscription` テーブルを正として使用 |
+| 時系列データ | **必要** | 日別・月別でプランの推移を追跡できるようにする |
+| 基準 | Subscriptionベース | `Subscription` テーブルを正として使用（トライアル機能なし） |
 | 組織メンバー数 | 考慮する | 「影響ユーザー数」として算出 |
 
 ---
@@ -43,44 +43,62 @@ GET /admin/metrics/plan-distribution
 
 | パラメータ | 型 | 必須 | デフォルト | 説明 |
 |-----------|-----|-----|-----------|------|
+| `granularity` | enum | - | `day` | `day` / `week` / `month` |
+| `startDate` | datetime | - | 30日前 | 期間開始日（ISO 8601） |
+| `endDate` | datetime | - | 今日 | 期間終了日（ISO 8601） |
+| `timezone` | string | - | `Asia/Tokyo` | タイムゾーン |
 | `view` | enum | - | `combined` | `combined` / `users` / `organizations` |
-| `includeTrialing` | boolean | - | `true` | トライアル中を含めるか |
 | `includeMembers` | boolean | - | `true` | 組織メンバー数を含めるか |
+
+※アクティブユーザー推移と同じパターンで時系列データを返す
 
 ### 2.3 レスポンス型
 
 ```typescript
 interface PlanDistributionResponse {
+  // クエリ情報
+  granularity: 'day' | 'week' | 'month';
+  startDate: string;    // ISO 8601
+  endDate: string;      // ISO 8601
+  timezone: string;
   view: 'combined' | 'users' | 'organizations';
 
-  users?: {
-    total: number;
-    byPlan: {
-      free: PlanSegment;
-      pro: PlanSegment;
-    };
-  };
+  // 時系列データ
+  data: PlanDistributionDataPoint[];
 
-  organizations?: {
-    total: number;
-    totalMembers: number;
-    byPlan: {
-      team: PlanSegment;
-      enterprise: PlanSegment;
+  // 最新時点のサマリー
+  current: {
+    users?: {
+      total: number;
+      byPlan: { free: PlanSegment; pro: PlanSegment };
     };
-  };
-
-  combined?: {
-    total: number;
-    byPlan: {
-      free: PlanSegment;
-      pro: PlanSegment;
-      team: PlanSegment;
-      enterprise: PlanSegment;
+    organizations?: {
+      total: number;
+      totalMembers: number;
+      byPlan: { team: PlanSegment; enterprise: PlanSegment };
+    };
+    combined?: {
+      total: number;
+      byPlan: { free: PlanSegment; pro: PlanSegment; team: PlanSegment; enterprise: PlanSegment };
     };
   };
 
   fetchedAt: string;
+}
+
+// 時系列データポイント
+interface PlanDistributionDataPoint {
+  date: string;  // YYYY-MM-DD
+  users?: {
+    free: number;
+    pro: number;
+  };
+  organizations?: {
+    team: number;
+    enterprise: number;
+    teamMembers: number;
+    enterpriseMembers: number;
+  };
 }
 
 interface PlanSegment {
@@ -95,29 +113,48 @@ interface PlanSegment {
 
 ```json
 {
+  "granularity": "day",
+  "startDate": "2026-01-02",
+  "endDate": "2026-02-01",
+  "timezone": "Asia/Tokyo",
   "view": "combined",
-  "users": {
-    "total": 1234,
-    "byPlan": {
-      "free": { "count": 1000, "percentage": 81.0, "activeCount": 350 },
-      "pro": { "count": 234, "percentage": 19.0, "activeCount": 180 }
-    }
-  },
-  "organizations": {
-    "total": 89,
-    "totalMembers": 456,
-    "byPlan": {
-      "team": { "count": 70, "percentage": 78.7, "members": 280, "activeCount": 42 },
-      "enterprise": { "count": 19, "percentage": 21.3, "members": 176, "activeCount": 15 }
-    }
-  },
-  "combined": {
-    "total": 1690,
-    "byPlan": {
-      "free": { "count": 1000, "percentage": 59.2 },
-      "pro": { "count": 234, "percentage": 13.8 },
-      "team": { "count": 280, "percentage": 16.6 },
-      "enterprise": { "count": 176, "percentage": 10.4 }
+  "data": [
+    {
+      "date": "2026-01-02",
+      "users": { "free": 980, "pro": 220 },
+      "organizations": { "team": 65, "enterprise": 17, "teamMembers": 260, "enterpriseMembers": 160 }
+    },
+    {
+      "date": "2026-01-03",
+      "users": { "free": 985, "pro": 222 },
+      "organizations": { "team": 66, "enterprise": 17, "teamMembers": 264, "enterpriseMembers": 162 }
+    },
+    "... (省略)"
+  ],
+  "current": {
+    "users": {
+      "total": 1234,
+      "byPlan": {
+        "free": { "count": 1000, "percentage": 81.0, "activeCount": 350 },
+        "pro": { "count": 234, "percentage": 19.0, "activeCount": 180 }
+      }
+    },
+    "organizations": {
+      "total": 89,
+      "totalMembers": 456,
+      "byPlan": {
+        "team": { "count": 70, "percentage": 78.7, "members": 280, "activeCount": 42 },
+        "enterprise": { "count": 19, "percentage": 21.3, "members": 176, "activeCount": 15 }
+      }
+    },
+    "combined": {
+      "total": 1690,
+      "byPlan": {
+        "free": { "count": 1000, "percentage": 59.2 },
+        "pro": { "count": 234, "percentage": 13.8 },
+        "team": { "count": 280, "percentage": 16.6 },
+        "enterprise": { "count": 176, "percentage": 10.4 }
+      }
     }
   },
   "fetchedAt": "2026-02-01T10:00:00.000Z"
@@ -128,22 +165,57 @@ interface PlanSegment {
 
 ## 3. データベース設計
 
-### 3.1 新規テーブル
+### 3.1 新規テーブル（必須）
 
-**初期実装では不要** - 既存テーブルで対応可能
+時系列追跡のため、集計テーブルを追加（ActiveUserMetricと同様のパターン）
 
-使用するテーブル:
-- `users` - `plan` フィールドでグループ化
-- `organizations` - `plan` フィールドでグループ化
-- `subscriptions` - `plan`, `status` でフィルタ
-- `organization_members` - メンバー数カウント
+```prisma
+// プラン分布メトリクス（日次/週次/月次の集計データ）
+model PlanDistributionMetric {
+  id          String            @id @default(uuid())
+  granularity MetricGranularity // DAY, WEEK, MONTH
+  periodStart DateTime          @map("period_start") @db.Date
 
-### 3.2 クエリ例
+  // ユーザープラン
+  freeUserCount Int @default(0) @map("free_user_count")
+  proUserCount  Int @default(0) @map("pro_user_count")
+
+  // 組織プラン
+  teamOrgCount          Int @default(0) @map("team_org_count")
+  teamMemberCount       Int @default(0) @map("team_member_count")
+  enterpriseOrgCount    Int @default(0) @map("enterprise_org_count")
+  enterpriseMemberCount Int @default(0) @map("enterprise_member_count")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([granularity, periodStart])
+  @@index([granularity, periodStart])
+  @@map("plan_distribution_metrics")
+}
+```
+
+### 3.2 バッチジョブ
+
+日次でプラン分布を集計し、テーブルに保存（アクティブユーザー集計と同じタイミング）
+
+```typescript
+// 実行タイミング: 毎日 00:05 JST
+async function aggregatePlanDistribution(date: Date): Promise<void> {
+  // 1. ユーザープラン分布を集計（FREE/PRO）
+  // 2. 組織プラン分布を集計（TEAM/ENTERPRISE + メンバー数）
+  // 3. DAY粒度でテーブルに保存
+  // 4. 週末の場合はWEEK粒度も保存
+  // 5. 月末の場合はMONTH粒度も保存
+}
+```
+
+### 3.3 現在のスナップショット取得クエリ
 
 ```sql
--- ユーザープラン分布
+-- ユーザープラン分布（現在）
 SELECT
-  s.plan,
+  COALESCE(s.plan, 'FREE') AS plan,
   COUNT(DISTINCT u.id) AS count,
   COUNT(DISTINCT CASE
     WHEN sess.last_active_at >= NOW() - INTERVAL '30 days'
@@ -153,19 +225,19 @@ FROM users u
 LEFT JOIN subscriptions s ON s.user_id = u.id
 LEFT JOIN sessions sess ON sess.user_id = u.id
 WHERE u.deleted_at IS NULL
-  AND (s.status IN ('ACTIVE', 'TRIALING') OR s.id IS NULL)
+  AND (s.status = 'ACTIVE' OR s.id IS NULL)
 GROUP BY COALESCE(s.plan, 'FREE');
 
--- 組織プラン分布
+-- 組織プラン分布（現在）
 SELECT
-  s.plan,
+  COALESCE(s.plan, 'TEAM') AS plan,
   COUNT(DISTINCT o.id) AS org_count,
   COUNT(DISTINCT om.user_id) AS member_count
 FROM organizations o
 LEFT JOIN subscriptions s ON s.organization_id = o.id
 LEFT JOIN organization_members om ON om.organization_id = o.id
 WHERE o.deleted_at IS NULL
-  AND (s.status IN ('ACTIVE', 'TRIALING') OR s.id IS NULL)
+  AND (s.status = 'ACTIVE' OR s.id IS NULL)
 GROUP BY COALESCE(s.plan, 'TEAM');
 ```
 
@@ -191,11 +263,16 @@ MetricsPage
 
 ```
 PlanDistributionSection
-├── SectionHeader（タイトル、表示モード切替、更新ボタン）
-├── ChartRow
-│   ├── DonutChart（ユーザープラン）
-│   └── DonutChart（組織プラン）
-├── SummaryCards（各プランの件数・割合サマリー）
+├── ControlBar
+│   ├── GranularitySelector（日次 / 週次 / 月次）
+│   ├── PeriodPresets（過去7日 / 30日 / 90日 / 当月 / 先月）
+│   └── RefreshButton
+├── TimeSeriesChart（時系列推移）
+│   └── LineChart（既存コンポーネントを再利用）
+├── CurrentDistribution（現在の分布）
+│   ├── DonutChart（ユーザープラン: FREE/PRO）
+│   └── DonutChart（組織プラン: TEAM/ENTERPRISE）
+├── SummaryCards（各プランの件数・割合）
 └── DetailTable（プラン別詳細）
 ```
 
@@ -228,22 +305,29 @@ const PLAN_COLORS = {
 
 ## 6. 実装計画
 
-### Phase 1: 基本実装
+### Phase 1: データベース・バックエンド
 
 | 順序 | タスク | ファイル |
 |:----:|--------|----------|
-| 1 | 型定義追加 | `packages/shared/src/types/admin-metrics.ts` |
-| 2 | バリデーション追加 | `packages/shared/src/validators/schemas.ts` |
-| 3 | サービス実装 | `apps/api/src/services/admin/admin-metrics.service.ts` |
-| 4 | コントローラー追加 | `apps/api/src/controllers/admin/metrics.controller.ts` |
-| 5 | ルート追加 | `apps/api/src/routes/admin/metrics.ts` |
-| 6 | DonutChartコピー | `apps/admin/src/components/ui/DonutChart.tsx` |
-| 7 | フック作成 | `apps/admin/src/hooks/useAdminPlanDistribution.ts` |
-| 8 | UI実装 | `apps/admin/src/pages/MetricsPage.tsx` にタブ追加 |
+| 1 | Prismaスキーマ追加 | `packages/db/prisma/schema.prisma` |
+| 2 | マイグレーション実行 | `pnpm db:migrate` |
+| 3 | 型定義追加 | `packages/shared/src/types/admin-metrics.ts` |
+| 4 | バリデーション追加 | `packages/shared/src/validators/schemas.ts` |
+| 5 | サービス実装 | `apps/api/src/services/admin/admin-metrics.service.ts` |
+| 6 | コントローラー追加 | `apps/api/src/controllers/admin/metrics.controller.ts` |
+| 7 | ルート追加 | `apps/api/src/routes/admin/metrics.ts` |
+| 8 | バッチジョブ追加 | `apps/api/src/jobs/aggregate-plan-distribution.ts` |
 
-### Phase 2: 拡張（オプション）
+### Phase 2: フロントエンド
 
-- 時系列追跡用テーブル追加
+| 順序 | タスク | ファイル |
+|:----:|--------|----------|
+| 9 | DonutChartコピー | `apps/admin/src/components/ui/DonutChart.tsx` |
+| 10 | フック作成 | `apps/admin/src/hooks/useAdminPlanDistribution.ts` |
+| 11 | UI実装 | `apps/admin/src/pages/MetricsPage.tsx` にタブ追加 |
+
+### Phase 3: 拡張（オプション）
+
 - CSVエクスポート機能
 
 ---
@@ -253,35 +337,45 @@ const PLAN_COLORS = {
 ### 7.1 APIテスト
 
 ```bash
-# デフォルト（combined view）
+# デフォルト（日次、過去30日、combined view）
 curl -H "Authorization: Bearer $ADMIN_TOKEN" \
   "http://localhost:3000/admin/metrics/plan-distribution"
+
+# 月次データ
+curl -H "Authorization: Bearer $ADMIN_TOKEN" \
+  "http://localhost:3000/admin/metrics/plan-distribution?granularity=month&startDate=2025-01-01"
 
 # ユーザーのみ
 curl -H "Authorization: Bearer $ADMIN_TOKEN" \
   "http://localhost:3000/admin/metrics/plan-distribution?view=users"
 
-# トライアル除外
+# 組織のみ
 curl -H "Authorization: Bearer $ADMIN_TOKEN" \
-  "http://localhost:3000/admin/metrics/plan-distribution?includeTrialing=false"
+  "http://localhost:3000/admin/metrics/plan-distribution?view=organizations"
 ```
 
 ### 7.2 確認ポイント
 
+- [ ] 時系列データ（data配列）が正しく返される
 - [ ] 各プランの件数が正しい
 - [ ] 割合（percentage）の合計が100%になる
 - [ ] アクティブ数が30日以内のセッションを持つユーザーのみカウント
 - [ ] 組織メンバー数が正しく集計される
+- [ ] granularity（day/week/month）で正しく集計される
 - [ ] キャッシュが5分間有効
 
 ---
 
 ## 8. 主要ファイル
 
+### データベース
+- `packages/db/prisma/schema.prisma` - PlanDistributionMetric テーブル追加
+
 ### バックエンド
 - `apps/api/src/services/admin/admin-metrics.service.ts`
 - `apps/api/src/controllers/admin/metrics.controller.ts`
 - `apps/api/src/routes/admin/metrics.ts`
+- `apps/api/src/jobs/aggregate-plan-distribution.ts`（新規）
 
 ### フロントエンド
 - `apps/admin/src/pages/MetricsPage.tsx`
