@@ -8,6 +8,8 @@
 
 /**
  * メトリクス粒度（集計単位）
+ * @note Prisma enum (MetricGranularity) は大文字（DAY, WEEK, MONTH）。
+ *       API入出力は小文字で行い、サービス層で変換する。
  */
 export const MetricGranularity = {
   DAY: 'day',

@@ -533,7 +533,9 @@ export const activeUserMetricsQuerySchema = z.object({
   granularity: z.enum(['day', 'week', 'month']).default('day'),
   startDate: z.string().datetime().optional(),
   endDate: z.string().datetime().optional(),
-  timezone: z.string().default('Asia/Tokyo'),
+  timezone: z.string()
+    .regex(/^[A-Za-z_]+\/[A-Za-z_]+$/, '無効なタイムゾーン形式です')
+    .default('Asia/Tokyo'),
 }).refine(
   (data) => {
     if (data.startDate && data.endDate) {
@@ -551,7 +553,7 @@ export const activeUserMetricsQuerySchema = z.object({
     }
     return true;
   },
-  { message: '期間は最大365日までです', path: ['startDate'] }
+  { message: '期間は最大365日までです' }
 );
 
 export type ActiveUserMetricsQuery = z.infer<typeof activeUserMetricsQuerySchema>;
