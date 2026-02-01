@@ -1407,3 +1407,27 @@ model ActiveUserMetric {
   @@index([granularity, periodStart])
   @@map("active_user_metrics")
 }
+
+// プラン分布メトリクス（日次/週次/月次の集計データ）
+model PlanDistributionMetric {
+  id          String            @id @default(uuid())
+  granularity MetricGranularity
+  periodStart DateTime          @map("period_start") @db.Date
+
+  // ユーザープラン
+  freeUserCount Int @default(0) @map("free_user_count")
+  proUserCount  Int @default(0) @map("pro_user_count")
+
+  // 組織プラン
+  teamOrgCount          Int @default(0) @map("team_org_count")
+  teamMemberCount       Int @default(0) @map("team_member_count")
+  enterpriseOrgCount    Int @default(0) @map("enterprise_org_count")
+  enterpriseMemberCount Int @default(0) @map("enterprise_member_count")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([granularity, periodStart])
+  @@index([granularity, periodStart])
+  @@map("plan_distribution_metrics")
+}
