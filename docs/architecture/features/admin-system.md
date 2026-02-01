@@ -78,7 +78,8 @@
 
 | ID | 機能名 | 説明 | 状態 |
 |----|--------|------|------|
-| ADM-AUD-001 | 監査ログ記録 | 管理者の全操作を自動記録 | 実装済 |
+| ADM-AUD-001 | 全体監査ログ閲覧 | 全組織の監査ログを横断検索・閲覧 | 実装済 |
+| ADM-AUD-002 | 監査ログ記録 | 管理者の全操作を自動記録 | 実装済 |
 
 ## 業務フロー
 
@@ -418,6 +419,7 @@ erDiagram
 | admin:user:detail:${id} | 30秒 | ユーザー詳細 |
 | admin:organizations:${hash} | 60秒 | 組織一覧 |
 | admin:organization:detail:${id} | 30秒 | 組織詳細 |
+| admin:audit-logs:${hash} | 30秒 | 全体監査ログ一覧 |
 
 ## セキュリティ考慮事項
 
@@ -437,7 +439,8 @@ erDiagram
 - [管理者認証 API](../../api/admin-auth.md) - ログイン、2FA、セッション管理
 - [管理者ダッシュボード API](../../api/admin-dashboard.md) - システム統計
 - [管理者ユーザー管理 API](../../api/admin-users.md) - ユーザー一覧・詳細
-- [管理者組織管理 API](../../api/admin-organizations.md) - 組織一覧
+- [管理者組織管理 API](../../api/admin-organizations.md) - 組織一覧・詳細
+- [管理者監査ログ API](../../api/admin-audit-logs.md) - 全体監査ログ閲覧
 
 ### データベース設計
 
