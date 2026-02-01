@@ -17,17 +17,24 @@ export class ProjectService {
   /**
    * プロジェクトを作成
    * プロジェクト作成時に作成者をOWNERロールでProjectMemberに登録する
+   *
+   * TODO: プランがTEAM→NONEに変更された場合の既存プロジェクトの扱いは別途検討
    */
   async create(userId: string, data: { name: string; description?: string | null; organizationId?: string | null }) {
-    // 組織プロジェクトの場合、プランチェックを実行
+    // 組織プロジェクトの場合、組織の存在確認とプランチェックを実行
     if (data.organizationId) {
       const org = await prisma.organization.findUnique({
-        where: { id: data.organizationId },
+        where: { id: data.organizationId, deletedAt: null },
         select: { plan: true },
       });
 
+      // 組織が存在しない（または削除済み）場合はエラー
+      if (!org) {
+        throw new NotFoundError('Organization', data.organizationId);
+      }
+
       // 契約なしプランはプロジェクト作成不可
-      if (org?.plan === 'NONE') {
+      if (org.plan === 'NONE') {
         throw new BusinessError(
           'PLAN_REQUIRED',
           'プロジェクトを作成するにはプランの契約が必要です'

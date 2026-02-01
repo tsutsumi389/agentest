@@ -70,7 +70,7 @@ export function OrganizationFilters({
               onClick={() => togglePlan('NONE')}
               className={`px-3 py-1 text-sm rounded border ${
                 plan.includes('NONE')
-                  ? 'bg-accent-muted text-accent border-accent'
+                  ? 'bg-error-muted text-error border-error'
                   : 'bg-background-secondary text-foreground-muted border-border hover:border-foreground-muted'
               }`}
             >

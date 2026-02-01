@@ -100,6 +100,11 @@ export function getStripePriceId(
 // 組織プラン料金設定
 // ============================================
 
+/**
+ * セルフサービスで契約可能な組織プラン
+ * 注: ENTERPRISEプランはDBスキーマに定義されているが、個別営業契約のため
+ * セルフサービス料金設定・制限には含めない。ENTERPRISE契約は管理者が直接設定する。
+ */
 export type OrgPlan = 'NONE' | 'TEAM';
 
 export interface OrgPlanPricing extends PlanPricing {

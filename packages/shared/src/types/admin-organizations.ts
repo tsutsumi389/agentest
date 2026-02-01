@@ -167,10 +167,13 @@ export interface AdminOrganizationProject {
 
 /**
  * 組織サブスクリプション情報
+ * 注: Subscriptionテーブルはユーザー・組織共用のため、planにはFREE/PROも含まれる。
+ * 組織のサブスクリプションでは通常TEAM/ENTERPRISEが使用される。
+ * (NONEはOrganization.planの値であり、Subscription.planには含まれない)
  */
 export interface AdminOrganizationSubscription {
-  /** プラン */
-  plan: 'FREE' | 'PRO' | 'NONE' | 'TEAM' | 'ENTERPRISE';
+  /** プラン（SubscriptionPlan enum） */
+  plan: 'FREE' | 'PRO' | 'TEAM' | 'ENTERPRISE';
   /** ステータス */
   status: 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'TRIALING';
   /** 請求サイクル */

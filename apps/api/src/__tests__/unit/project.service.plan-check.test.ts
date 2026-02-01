@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { BusinessError } from '@agentest/shared';
+import { BusinessError, NotFoundError } from '@agentest/shared';
 
 // Prismaモック（vi.mockより先に定義してはいけないのでvi.hoisted使用）
 const { mockPrisma, mockProjectRepo, mockNotificationService } = vi.hoisted(() => ({
@@ -65,22 +65,33 @@ describe('ProjectService - プランチェック', () => {
         plan: 'NONE',
       });
 
-      await expect(
-        service.create(TEST_USER_ID, {
-          name: 'Test Project',
-          organizationId: TEST_ORG_ID,
-        })
-      ).rejects.toThrow(BusinessError);
+      // BusinessErrorがスローされ、適切なコードとメッセージを持つことを検証
+      const error = await service.create(TEST_USER_ID, {
+        name: 'Test Project',
+        organizationId: TEST_ORG_ID,
+      }).catch((e) => e);
 
-      await expect(
-        service.create(TEST_USER_ID, {
-          name: 'Test Project',
-          organizationId: TEST_ORG_ID,
-        })
-      ).rejects.toMatchObject({
+      expect(error).toBeInstanceOf(BusinessError);
+      expect(error).toMatchObject({
         code: 'PLAN_REQUIRED',
         message: 'プロジェクトを作成するにはプランの契約が必要です',
       });
+
+      // トランザクションが呼ばれていないことを確認
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('存在しない組織ではプロジェクトを作成できない', async () => {
+      // 組織が見つからない
+      mockPrisma.organization.findUnique.mockResolvedValue(null);
+
+      const error = await service.create(TEST_USER_ID, {
+        name: 'Test Project',
+        organizationId: TEST_ORG_ID,
+      }).catch((e) => e);
+
+      expect(error).toBeInstanceOf(NotFoundError);
+      expect(error.message).toContain(TEST_ORG_ID);
 
       // トランザクションが呼ばれていないことを確認
       expect(mockPrisma.$transaction).not.toHaveBeenCalled();
