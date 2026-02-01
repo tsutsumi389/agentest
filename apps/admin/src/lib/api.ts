@@ -168,6 +168,8 @@ import type {
   AdminOrganizationListResponse,
   AdminOrganizationSearchParams,
   AdminOrganizationDetailResponse,
+  AdminAuditLogListResponse,
+  AdminAuditLogSearchParams,
 } from '@agentest/shared';
 
 export const adminDashboardApi = {
@@ -253,4 +255,39 @@ export const adminOrganizationsApi = {
    */
   getById: (organizationId: string) =>
     api.get<AdminOrganizationDetailResponse>(`/admin/organizations/${organizationId}`),
+};
+
+// ============================================
+// 管理者監査ログAPI
+// ============================================
+
+/**
+ * 監査ログ検索パラメータをクエリ文字列に変換
+ */
+function toAuditLogQueryString(params: AdminAuditLogSearchParams): string {
+  const searchParams = new URLSearchParams();
+
+  if (params.q) searchParams.set('q', params.q);
+  if (params.category && params.category.length > 0) {
+    searchParams.set('category', params.category.join(','));
+  }
+  if (params.organizationId) searchParams.set('organizationId', params.organizationId);
+  if (params.userId) searchParams.set('userId', params.userId);
+  if (params.startDate) searchParams.set('startDate', params.startDate);
+  if (params.endDate) searchParams.set('endDate', params.endDate);
+  if (params.page) searchParams.set('page', String(params.page));
+  if (params.limit) searchParams.set('limit', String(params.limit));
+  if (params.sortBy) searchParams.set('sortBy', params.sortBy);
+  if (params.sortOrder) searchParams.set('sortOrder', params.sortOrder);
+
+  const qs = searchParams.toString();
+  return qs ? `?${qs}` : '';
+}
+
+export const adminAuditLogsApi = {
+  /**
+   * 監査ログ一覧を取得
+   */
+  list: (params: AdminAuditLogSearchParams = {}) =>
+    api.get<AdminAuditLogListResponse>(`/admin/audit-logs${toAuditLogQueryString(params)}`),
 };

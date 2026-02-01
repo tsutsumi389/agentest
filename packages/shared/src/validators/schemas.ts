@@ -474,3 +474,53 @@ export const adminOrganizationSearchSchema = z.object({
 );
 
 export type AdminOrganizationSearch = z.infer<typeof adminOrganizationSearchSchema>;
+
+// ============================================
+// 管理者向け監査ログ検索スキーマ
+// ============================================
+
+export const adminAuditLogSearchSchema = z.object({
+  // 検索クエリ（アクション名で部分一致）
+  q: z.string().max(100).optional(),
+  // カテゴリフィルタ（カンマ区切り → 配列変換）
+  category: z
+    .string()
+    .optional()
+    .transform((val) => val?.split(',').map((s) => s.trim()))
+    .pipe(z.array(z.enum([
+      AuditLogCategory.AUTH,
+      AuditLogCategory.USER,
+      AuditLogCategory.ORGANIZATION,
+      AuditLogCategory.MEMBER,
+      AuditLogCategory.PROJECT,
+      AuditLogCategory.API_TOKEN,
+      AuditLogCategory.BILLING,
+    ])).optional()),
+  // 組織IDフィルタ
+  organizationId: z.string().uuid().optional(),
+  // ユーザーIDフィルタ
+  userId: z.string().uuid().optional(),
+  // 日付フィルタ
+  startDate: z.string().datetime().optional(),
+  endDate: z.string().datetime().optional(),
+  // ページネーション
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+  // ソート
+  sortBy: z.enum(['createdAt']).default('createdAt'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+}).refine(
+  (data) => {
+    // 両方指定されている場合のみ日付の前後関係をチェック
+    if (data.startDate && data.endDate) {
+      return new Date(data.startDate) <= new Date(data.endDate);
+    }
+    return true;
+  },
+  {
+    message: 'startDateはendDate以前の日付を指定してください',
+    path: ['startDate'],
+  }
+);
+
+export type AdminAuditLogSearch = z.infer<typeof adminAuditLogSearchSchema>;

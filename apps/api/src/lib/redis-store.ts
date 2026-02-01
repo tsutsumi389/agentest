@@ -16,6 +16,7 @@ const KEY_PREFIX = {
   ADMIN_USER_DETAIL: 'admin:user:detail:',
   ADMIN_ORGANIZATIONS: 'admin:organizations:',
   ADMIN_ORGANIZATION_DETAIL: 'admin:organization:detail:',
+  ADMIN_AUDIT_LOGS: 'admin:audit-logs:',
   USER_INVOICES: 'invoices:user:',
   ORG_INVOICES: 'invoices:org:',
 } as const;
@@ -771,4 +772,72 @@ export async function invalidateOrgInvoicesCache(
     `${KEY_PREFIX.ORG_INVOICES}${organizationId}`,
     '組織請求履歴キャッシュの無効化に失敗:'
   );
+}
+
+// ============================================
+// 管理者監査ログキャッシュ
+// ============================================
+
+/**
+ * 検索パラメータからキャッシュキーを生成
+ */
+function generateAdminAuditLogsKey(params: Record<string, unknown>): string {
+  // パラメータをソートして一意のキーを生成
+  const sortedParams = Object.keys(params)
+    .sort()
+    .filter((key) => params[key] !== undefined && params[key] !== null)
+    .map((key) => `${key}:${JSON.stringify(params[key])}`)
+    .join('|');
+  return `${KEY_PREFIX.ADMIN_AUDIT_LOGS}${sortedParams}`;
+}
+
+/**
+ * 管理者監査ログ一覧をキャッシュに保存
+ * @param params 検索パラメータ
+ * @param data キャッシュデータ
+ * @param ttlSeconds 有効期限（秒）、デフォルト30秒
+ */
+export async function setAdminAuditLogsCache<T>(
+  params: Record<string, unknown>,
+  data: T,
+  ttlSeconds: number = 30
+): Promise<boolean> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    const key = generateAdminAuditLogsKey(params);
+    await redis.setex(key, ttlSeconds, JSON.stringify(data));
+    return true;
+  } catch (error) {
+    console.error('管理者監査ログキャッシュの保存に失敗:', error);
+    return false;
+  }
+}
+
+/**
+ * 管理者監査ログ一覧をキャッシュから取得
+ * @param params 検索パラメータ
+ */
+export async function getAdminAuditLogsCache<T>(
+  params: Record<string, unknown>
+): Promise<T | null> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return null;
+  }
+
+  try {
+    const key = generateAdminAuditLogsKey(params);
+    const data = await redis.get(key);
+    if (!data) {
+      return null;
+    }
+    return JSON.parse(data) as T;
+  } catch (error) {
+    console.error('管理者監査ログキャッシュの取得に失敗:', error);
+    return null;
+  }
 }
