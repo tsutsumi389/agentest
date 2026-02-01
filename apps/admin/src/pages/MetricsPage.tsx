@@ -168,6 +168,37 @@ export function MetricsPage() {
     ];
   }, [planData]);
 
+  // プラン分布の時系列チャートデータを生成
+  const planTimeSeriesData = useMemo<{
+    users: { free: LineChartDataPoint[]; pro: LineChartDataPoint[] };
+    organizations: { team: LineChartDataPoint[]; enterprise: LineChartDataPoint[] };
+  }>(() => {
+    const users: { free: LineChartDataPoint[]; pro: LineChartDataPoint[] } = {
+      free: [],
+      pro: [],
+    };
+    const organizations: { team: LineChartDataPoint[]; enterprise: LineChartDataPoint[] } = {
+      team: [],
+      enterprise: [],
+    };
+
+    if (!planData?.data) return { users, organizations };
+
+    planData.data.forEach((d) => {
+      const label = formatDateLabel(d.date, planGranularity);
+      if (d.users) {
+        users.free.push({ label, value: d.users.free });
+        users.pro.push({ label, value: d.users.pro });
+      }
+      if (d.organizations) {
+        organizations.team.push({ label, value: d.organizations.team });
+        organizations.enterprise.push({ label, value: d.organizations.enterprise });
+      }
+    });
+
+    return { users, organizations };
+  }, [planData, planGranularity]);
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="space-y-8">
@@ -645,6 +676,109 @@ export function MetricsPage() {
                               <span>TEAM: {planData.current.organizations.byPlan.team.activeCount ?? '-'}</span>
                               <span>ENT: {planData.current.organizations.byPlan.enterprise.activeCount ?? '-'}</span>
                             </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* 時系列推移グラフ */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* ユーザープラン時系列 */}
+                  {(planView === 'users' || planView === 'combined') && planTimeSeriesData.users.free.length > 0 && (
+                    <div className="bg-background-secondary rounded-lg border border-border p-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Users className="w-5 h-5 text-accent" />
+                        <h2 className="text-lg font-semibold text-foreground">ユーザープラン推移</h2>
+                      </div>
+                      <div className="space-y-4">
+                        {/* FREEプラン */}
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: PLAN_COLORS.free }} />
+                            <span className="text-sm text-foreground-muted">FREE</span>
+                          </div>
+                          <div className="overflow-x-auto">
+                            <LineChart
+                              data={planTimeSeriesData.users.free}
+                              width={Math.max(400, planTimeSeriesData.users.free.length * 25)}
+                              height={120}
+                              strokeColor={PLAN_COLORS.free}
+                              fillColor="rgba(110, 118, 129, 0.1)"
+                              xLabelInterval={calculateXLabelInterval(planTimeSeriesData.users.free.length)}
+                              yTickCount={3}
+                              showTooltip={true}
+                            />
+                          </div>
+                        </div>
+                        {/* PROプラン */}
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: PLAN_COLORS.pro }} />
+                            <span className="text-sm text-foreground-muted">PRO</span>
+                          </div>
+                          <div className="overflow-x-auto">
+                            <LineChart
+                              data={planTimeSeriesData.users.pro}
+                              width={Math.max(400, planTimeSeriesData.users.pro.length * 25)}
+                              height={120}
+                              strokeColor={PLAN_COLORS.pro}
+                              fillColor="rgba(88, 166, 255, 0.1)"
+                              xLabelInterval={calculateXLabelInterval(planTimeSeriesData.users.pro.length)}
+                              yTickCount={3}
+                              showTooltip={true}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 組織プラン時系列 */}
+                  {(planView === 'organizations' || planView === 'combined') && planTimeSeriesData.organizations.team.length > 0 && (
+                    <div className="bg-background-secondary rounded-lg border border-border p-6">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Building2 className="w-5 h-5 text-success" />
+                        <h2 className="text-lg font-semibold text-foreground">組織プラン推移</h2>
+                      </div>
+                      <div className="space-y-4">
+                        {/* TEAMプラン */}
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: PLAN_COLORS.team }} />
+                            <span className="text-sm text-foreground-muted">TEAM</span>
+                          </div>
+                          <div className="overflow-x-auto">
+                            <LineChart
+                              data={planTimeSeriesData.organizations.team}
+                              width={Math.max(400, planTimeSeriesData.organizations.team.length * 25)}
+                              height={120}
+                              strokeColor={PLAN_COLORS.team}
+                              fillColor="rgba(63, 185, 80, 0.1)"
+                              xLabelInterval={calculateXLabelInterval(planTimeSeriesData.organizations.team.length)}
+                              yTickCount={3}
+                              showTooltip={true}
+                            />
+                          </div>
+                        </div>
+                        {/* ENTERPRISEプラン */}
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: PLAN_COLORS.enterprise }} />
+                            <span className="text-sm text-foreground-muted">ENTERPRISE</span>
+                          </div>
+                          <div className="overflow-x-auto">
+                            <LineChart
+                              data={planTimeSeriesData.organizations.enterprise}
+                              width={Math.max(400, planTimeSeriesData.organizations.enterprise.length * 25)}
+                              height={120}
+                              strokeColor={PLAN_COLORS.enterprise}
+                              fillColor="rgba(163, 113, 247, 0.1)"
+                              xLabelInterval={calculateXLabelInterval(planTimeSeriesData.organizations.enterprise.length)}
+                              yTickCount={3}
+                              showTooltip={true}
+                            />
                           </div>
                         </div>
                       </div>

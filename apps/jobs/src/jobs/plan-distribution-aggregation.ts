@@ -14,13 +14,23 @@ import {
   formatDateStringJST,
 } from '../lib/date-utils.js';
 
+/** 集計結果の型 */
+interface AggregationResult {
+  freeUsers: number;
+  proUsers: number;
+  teamOrgs: number;
+  enterpriseOrgs: number;
+  teamMembers: number;
+  enterpriseMembers: number;
+}
+
 /**
  * プラン分布を集計してテーブルに保存
  */
 async function aggregateAndSave(
   periodStart: Date,
   granularity: MetricGranularity
-): Promise<void> {
+): Promise<AggregationResult> {
   // ユーザープラン分布を集計
   const [freeUsers, proUsers] = await Promise.all([
     // FREE: サブスクリプションがない、またはFREEプラン
@@ -111,6 +121,8 @@ async function aggregateAndSave(
       enterpriseMemberCount: enterpriseMembers,
     },
   });
+
+  return { freeUsers, proUsers, teamOrgs, enterpriseOrgs, teamMembers, enterpriseMembers };
 }
 
 /**
@@ -118,8 +130,11 @@ async function aggregateAndSave(
  */
 async function aggregateDAY(now: Date): Promise<void> {
   const yesterday = getJSTYesterdayStart(now);
-  await aggregateAndSave(yesterday, 'DAY');
-  console.log(`DAY ${formatDateStringJST(yesterday)}: 集計完了`);
+  const result = await aggregateAndSave(yesterday, 'DAY');
+  console.log(
+    `DAY ${formatDateStringJST(yesterday)}: FREE=${result.freeUsers}, PRO=${result.proUsers}, ` +
+    `TEAM=${result.teamOrgs}(${result.teamMembers}), ENT=${result.enterpriseOrgs}(${result.enterpriseMembers})`
+  );
 }
 
 /**
@@ -130,8 +145,11 @@ async function aggregateWEEK(now: Date): Promise<void> {
   // 直近の月曜日（今日が月曜なら今日）から7日前の月曜日
   const thisMonday = getJSTLastMonday(now);
   const lastMonday = new Date(thisMonday.getTime() - 7 * 24 * 60 * 60 * 1000);
-  await aggregateAndSave(lastMonday, 'WEEK');
-  console.log(`WEEK ${formatDateStringJST(lastMonday)}: 集計完了`);
+  const result = await aggregateAndSave(lastMonday, 'WEEK');
+  console.log(
+    `WEEK ${formatDateStringJST(lastMonday)}: FREE=${result.freeUsers}, PRO=${result.proUsers}, ` +
+    `TEAM=${result.teamOrgs}(${result.teamMembers}), ENT=${result.enterpriseOrgs}(${result.enterpriseMembers})`
+  );
 }
 
 /**
@@ -140,8 +158,11 @@ async function aggregateWEEK(now: Date): Promise<void> {
  */
 async function aggregateMONTH(now: Date): Promise<void> {
   const lastMonthStart = getJSTLastMonthStart(now);
-  await aggregateAndSave(lastMonthStart, 'MONTH');
-  console.log(`MONTH ${formatDateStringJST(lastMonthStart)}: 集計完了`);
+  const result = await aggregateAndSave(lastMonthStart, 'MONTH');
+  console.log(
+    `MONTH ${formatDateStringJST(lastMonthStart)}: FREE=${result.freeUsers}, PRO=${result.proUsers}, ` +
+    `TEAM=${result.teamOrgs}(${result.teamMembers}), ENT=${result.enterpriseOrgs}(${result.enterpriseMembers})`
+  );
 }
 
 /**
