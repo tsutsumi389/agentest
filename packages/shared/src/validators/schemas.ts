@@ -595,3 +595,71 @@ export const planDistributionQuerySchema = z.object({
 );
 
 export type PlanDistributionQuery = z.infer<typeof planDistributionQuerySchema>;
+
+// ============================================
+// システム管理者（AdminUser）検索スキーマ
+// ============================================
+
+// システム管理者ロール
+const systemAdminRoleSchema = z.enum(['SUPER_ADMIN', 'ADMIN', 'VIEWER']);
+
+export const systemAdminSearchSchema = z.object({
+  // 検索クエリ（メール・名前で部分一致）
+  q: z.string().max(100).optional(),
+  // ロールフィルタ（カンマ区切り → 配列変換）
+  role: z
+    .string()
+    .optional()
+    .transform((val) => val?.split(',').map((s) => s.trim()))
+    .pipe(z.array(systemAdminRoleSchema).optional()),
+  // ステータスフィルタ
+  status: z.enum(['active', 'deleted', 'locked', 'all']).default('active'),
+  // 2FA有効状態フィルタ
+  totpEnabled: z.preprocess(
+    (val) => {
+      if (val === 'true') return true;
+      if (val === 'false') return false;
+      return undefined;
+    },
+    z.boolean().optional()
+  ),
+  // 日付フィルタ
+  createdFrom: z.string().datetime().optional(),
+  createdTo: z.string().datetime().optional(),
+  // ページネーション
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  // ソート
+  sortBy: z.enum(['createdAt', 'name', 'email', 'role', 'lastLoginAt']).default('createdAt'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+}).refine(
+  (data) => {
+    if (data.createdFrom && data.createdTo) {
+      return new Date(data.createdFrom) <= new Date(data.createdTo);
+    }
+    return true;
+  },
+  {
+    message: 'createdFromはcreatedTo以前の日付を指定してください',
+    path: ['createdFrom'],
+  }
+);
+
+export type SystemAdminSearch = z.infer<typeof systemAdminSearchSchema>;
+
+// システム管理者招待スキーマ
+export const systemAdminInviteSchema = z.object({
+  email: z.string().email('有効なメールアドレスを入力してください').max(255),
+  name: z.string().min(1, '名前は必須です').max(100),
+  role: systemAdminRoleSchema,
+});
+
+export type SystemAdminInvite = z.infer<typeof systemAdminInviteSchema>;
+
+// システム管理者更新スキーマ
+export const systemAdminUpdateSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  role: systemAdminRoleSchema.optional(),
+});
+
+export type SystemAdminUpdate = z.infer<typeof systemAdminUpdateSchema>;

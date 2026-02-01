@@ -80,6 +80,16 @@ export class ConflictError extends AppError {
 }
 
 /**
+ * ビジネスロジックエラー
+ * 明確なエラーコードを指定してクライアントに返却する
+ */
+export class BusinessError extends AppError {
+  constructor(code: string, message: string) {
+    super(400, code, message);
+  }
+}
+
+/**
  * ロック保持者の情報
  * ユーザーまたはエージェントがロックを保持できる
  */

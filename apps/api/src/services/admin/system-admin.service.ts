@@ -1,0 +1,705 @@
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
+import { prisma, type Prisma, AdminRoleType } from '@agentest/db';
+import type {
+  SystemAdminSearchParams,
+  SystemAdminListResponse,
+  SystemAdminListItem,
+  SystemAdminDetailResponse,
+  SystemAdminDetail,
+  SystemAdminInviteRequest,
+  SystemAdminInviteResponse,
+  SystemAdminUpdateRequest,
+  SystemAdminUpdateResponse,
+  SystemAdminDeleteResponse,
+  SystemAdminUnlockResponse,
+  SystemAdminReset2FAResponse,
+  SystemAdminRole,
+} from '@agentest/shared';
+import {
+  getSystemAdminsCache,
+  setSystemAdminsCache,
+  getSystemAdminDetailCache,
+  setSystemAdminDetailCache,
+  invalidateSystemAdminsCache,
+  invalidateSystemAdminDetailCache,
+} from '../../lib/redis-store.js';
+import { BusinessError, NotFoundError } from '@agentest/shared';
+
+// キャッシュ有効期限（秒）
+const CACHE_TTL_SECONDS = 60;
+const DETAIL_CACHE_TTL_SECONDS = 30;
+
+// 仮パスワード生成用の文字セット
+const PASSWORD_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+
+/**
+ * システム管理者管理サービス
+ */
+export class SystemAdminService {
+  /**
+   * システム管理者一覧を取得
+   */
+  async findAdminUsers(params: SystemAdminSearchParams): Promise<SystemAdminListResponse> {
+    const {
+      q,
+      role,
+      status = 'active',
+      totpEnabled,
+      createdFrom,
+      createdTo,
+      page = 1,
+      limit = 20,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+    } = params;
+
+    // キャッシュパラメータを構築
+    const cacheParams = {
+      q,
+      role,
+      status,
+      totpEnabled,
+      createdFrom,
+      createdTo,
+      page,
+      limit,
+      sortBy,
+      sortOrder,
+    };
+
+    // キャッシュをチェック
+    const cached = await getSystemAdminsCache<SystemAdminListResponse>(cacheParams);
+    if (cached) {
+      return cached;
+    }
+
+    // WHERE句を構築
+    const where = this.buildWhereClause({
+      q,
+      role,
+      status,
+      totpEnabled,
+      createdFrom,
+      createdTo,
+    });
+
+    // ORDER BY句を構築
+    const orderBy = this.buildOrderBy(sortBy, sortOrder);
+
+    // オフセット計算
+    const skip = (page - 1) * limit;
+
+    // 並列でデータを取得
+    const [adminUsers, total] = await Promise.all([
+      prisma.adminUser.findMany({
+        where,
+        orderBy,
+        skip,
+        take: limit,
+        include: {
+          sessions: {
+            where: {
+              revokedAt: null,
+              expiresAt: { gt: new Date() },
+            },
+            orderBy: { lastActiveAt: 'desc' },
+            take: 1,
+            select: { lastActiveAt: true },
+          },
+          _count: {
+            select: {
+              sessions: {
+                where: {
+                  revokedAt: null,
+                  expiresAt: { gt: new Date() },
+                },
+              },
+            },
+          },
+        },
+      }),
+      prisma.adminUser.count({ where }),
+    ]);
+
+    // レスポンス形式に変換
+    const adminUserItems: SystemAdminListItem[] = adminUsers.map((admin) => ({
+      id: admin.id,
+      email: admin.email,
+      name: admin.name,
+      role: admin.role as SystemAdminRole,
+      totpEnabled: admin.totpEnabled,
+      failedAttempts: admin.failedAttempts,
+      lockedUntil: admin.lockedUntil?.toISOString() ?? null,
+      createdAt: admin.createdAt.toISOString(),
+      updatedAt: admin.updatedAt.toISOString(),
+      deletedAt: admin.deletedAt?.toISOString() ?? null,
+      activity: {
+        lastLoginAt: admin.sessions[0]?.lastActiveAt?.toISOString() ?? null,
+        activeSessionCount: admin._count.sessions,
+      },
+    }));
+
+    const response: SystemAdminListResponse = {
+      adminUsers: adminUserItems,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+
+    // キャッシュに保存
+    await setSystemAdminsCache(cacheParams, response, CACHE_TTL_SECONDS);
+
+    return response;
+  }
+
+  /**
+   * WHERE句を構築
+   */
+  private buildWhereClause(params: {
+    q?: string;
+    role?: SystemAdminRole[];
+    status?: string;
+    totpEnabled?: boolean;
+    createdFrom?: string;
+    createdTo?: string;
+  }): Prisma.AdminUserWhereInput {
+    const { q, role, status, totpEnabled, createdFrom, createdTo } = params;
+    const where: Prisma.AdminUserWhereInput = {};
+
+    // 検索クエリ（OR条件）
+    if (q) {
+      where.OR = [
+        { email: { contains: q, mode: 'insensitive' } },
+        { name: { contains: q, mode: 'insensitive' } },
+      ];
+    }
+
+    // ロールフィルタ
+    if (role && role.length > 0) {
+      where.role = { in: role as AdminRoleType[] };
+    }
+
+    // ステータスフィルタ
+    if (status === 'active') {
+      // アクティブ = 削除されておらず、ロックもされていない
+      where.deletedAt = null;
+      const andConditions = Array.isArray(where.AND) ? where.AND : (where.AND ? [where.AND] : []);
+      where.AND = [
+        ...andConditions,
+        {
+          OR: [
+            { lockedUntil: null },
+            { lockedUntil: { lt: new Date() } },
+          ],
+        },
+      ];
+    } else if (status === 'deleted') {
+      where.deletedAt = { not: null };
+    } else if (status === 'locked') {
+      // ロック中 = 削除されておらず、lockedUntilが未来日
+      where.deletedAt = null;
+      where.lockedUntil = { gt: new Date() };
+    }
+    // status === 'all' の場合は条件追加なし
+
+    // 2FA有効状態フィルタ
+    if (totpEnabled !== undefined) {
+      where.totpEnabled = totpEnabled;
+    }
+
+    // 日付フィルタ
+    if (createdFrom || createdTo) {
+      where.createdAt = {};
+      if (createdFrom) {
+        where.createdAt.gte = new Date(createdFrom);
+      }
+      if (createdTo) {
+        where.createdAt.lte = new Date(createdTo);
+      }
+    }
+
+    return where;
+  }
+
+  /**
+   * ORDER BY句を構築
+   */
+  private buildOrderBy(
+    sortBy: string,
+    sortOrder: 'asc' | 'desc'
+  ): Prisma.AdminUserOrderByWithRelationInput | Prisma.AdminUserOrderByWithRelationInput[] {
+    switch (sortBy) {
+      case 'name':
+        return { name: sortOrder };
+      case 'email':
+        return { email: sortOrder };
+      case 'role':
+        return { role: sortOrder };
+      case 'lastLoginAt':
+        // セッション経由でソートするため、最新セッションの日時でソート
+        return [
+          { sessions: { _count: sortOrder } },
+          { createdAt: sortOrder },
+        ];
+      case 'createdAt':
+      default:
+        return { createdAt: sortOrder };
+    }
+  }
+
+  /**
+   * システム管理者詳細を取得
+   */
+  async findAdminUserById(adminUserId: string): Promise<SystemAdminDetailResponse | null> {
+    // キャッシュをチェック
+    const cached = await getSystemAdminDetailCache<SystemAdminDetailResponse>(adminUserId);
+    if (cached) {
+      return cached;
+    }
+
+    const adminUser = await prisma.adminUser.findUnique({
+      where: { id: adminUserId },
+      include: {
+        sessions: {
+          where: {
+            revokedAt: null,
+            expiresAt: { gt: new Date() },
+          },
+          orderBy: { lastActiveAt: 'desc' },
+          select: {
+            id: true,
+            ipAddress: true,
+            userAgent: true,
+            lastActiveAt: true,
+            createdAt: true,
+          },
+        },
+        auditLogs: {
+          orderBy: { createdAt: 'desc' },
+          take: 10,
+          select: {
+            id: true,
+            action: true,
+            targetType: true,
+            targetId: true,
+            ipAddress: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    if (!adminUser) {
+      return null;
+    }
+
+    // 最終ログイン日時を取得
+    const lastLoginAt = adminUser.sessions[0]?.lastActiveAt ?? null;
+
+    const adminUserDetail: SystemAdminDetail = {
+      id: adminUser.id,
+      email: adminUser.email,
+      name: adminUser.name,
+      role: adminUser.role as SystemAdminRole,
+      totpEnabled: adminUser.totpEnabled,
+      failedAttempts: adminUser.failedAttempts,
+      lockedUntil: adminUser.lockedUntil?.toISOString() ?? null,
+      createdAt: adminUser.createdAt.toISOString(),
+      updatedAt: adminUser.updatedAt.toISOString(),
+      deletedAt: adminUser.deletedAt?.toISOString() ?? null,
+      activity: {
+        lastLoginAt: lastLoginAt?.toISOString() ?? null,
+        activeSessionCount: adminUser.sessions.length,
+        currentSessions: adminUser.sessions.map((session) => ({
+          id: session.id,
+          ipAddress: session.ipAddress,
+          userAgent: session.userAgent,
+          lastActiveAt: session.lastActiveAt.toISOString(),
+          createdAt: session.createdAt.toISOString(),
+        })),
+      },
+      recentAuditLogs: adminUser.auditLogs.map((log) => ({
+        id: log.id,
+        action: log.action,
+        targetType: log.targetType,
+        targetId: log.targetId,
+        ipAddress: log.ipAddress,
+        createdAt: log.createdAt.toISOString(),
+      })),
+    };
+
+    const response: SystemAdminDetailResponse = { adminUser: adminUserDetail };
+
+    // キャッシュに保存
+    await setSystemAdminDetailCache(adminUserId, response, DETAIL_CACHE_TTL_SECONDS);
+
+    return response;
+  }
+
+  /**
+   * システム管理者を招待（作成）
+   */
+  async inviteAdminUser(
+    request: SystemAdminInviteRequest,
+    currentAdminId: string
+  ): Promise<SystemAdminInviteResponse> {
+    const { email, name, role } = request;
+
+    // 既存のメールアドレスをチェック
+    const existing = await prisma.adminUser.findUnique({
+      where: { email },
+      select: { id: true, deletedAt: true },
+    });
+
+    if (existing && !existing.deletedAt) {
+      throw new BusinessError('ADMIN_USER_ALREADY_EXISTS', 'このメールアドレスは既に登録されています');
+    }
+
+    // 仮パスワードを生成
+    const temporaryPassword = this.generateTemporaryPassword();
+    const passwordHash = await bcrypt.hash(temporaryPassword, 12);
+
+    // 新しい管理者を作成（または削除済みを復元）
+    let adminUser;
+    if (existing) {
+      // 削除済みアカウントを復元
+      adminUser = await prisma.adminUser.update({
+        where: { id: existing.id },
+        data: {
+          name,
+          role: role as AdminRoleType,
+          passwordHash,
+          totpEnabled: false,
+          totpSecret: null,
+          failedAttempts: 0,
+          lockedUntil: null,
+          deletedAt: null,
+        },
+      });
+    } else {
+      // 新規作成
+      adminUser = await prisma.adminUser.create({
+        data: {
+          email,
+          name,
+          role: role as AdminRoleType,
+          passwordHash,
+        },
+      });
+    }
+
+    // 監査ログを記録
+    await prisma.adminAuditLog.create({
+      data: {
+        adminUserId: currentAdminId,
+        action: 'ADMIN_USER_CREATE',
+        targetType: 'AdminUser',
+        targetId: adminUser.id,
+        details: { email, name, role },
+      },
+    });
+
+    // キャッシュを無効化
+    await invalidateSystemAdminsCache();
+
+    // TODO: 招待メールを送信（仮パスワード含む）
+    // 現時点ではメール送信は未実装
+    const invitationSent = false;
+
+    return {
+      adminUser: {
+        id: adminUser.id,
+        email: adminUser.email,
+        name: adminUser.name,
+        role: adminUser.role as SystemAdminRole,
+        totpEnabled: adminUser.totpEnabled,
+        createdAt: adminUser.createdAt.toISOString(),
+      },
+      invitationSent,
+    };
+  }
+
+  /**
+   * システム管理者を更新
+   */
+  async updateAdminUser(
+    adminUserId: string,
+    request: SystemAdminUpdateRequest,
+    currentAdminId: string
+  ): Promise<SystemAdminUpdateResponse> {
+    const { name, role } = request;
+
+    // 対象の管理者を取得
+    const targetAdmin = await prisma.adminUser.findUnique({
+      where: { id: adminUserId },
+      select: { id: true, name: true, role: true, deletedAt: true },
+    });
+
+    if (!targetAdmin) {
+      throw new NotFoundError('管理者が見つかりません');
+    }
+
+    if (targetAdmin.deletedAt) {
+      throw new NotFoundError('管理者が見つかりません');
+    }
+
+    // ロール変更時のビジネスルールチェック
+    if (role && role !== targetAdmin.role) {
+      // 自分自身のロール変更は禁止
+      if (adminUserId === currentAdminId) {
+        throw new BusinessError('CANNOT_EDIT_SELF_ROLE', '自分自身のロールは変更できません');
+      }
+
+      // 最後のSUPER_ADMINの降格は禁止
+      if (targetAdmin.role === 'SUPER_ADMIN') {
+        const superAdminCount = await prisma.adminUser.count({
+          where: {
+            role: 'SUPER_ADMIN',
+            deletedAt: null,
+          },
+        });
+        if (superAdminCount <= 1) {
+          throw new BusinessError(
+            'CANNOT_DEMOTE_LAST_SUPER_ADMIN',
+            '最後のSUPER_ADMINのロールは変更できません'
+          );
+        }
+      }
+    }
+
+    // 更新データを構築
+    const updateData: Prisma.AdminUserUpdateInput = {};
+    if (name !== undefined) updateData.name = name;
+    if (role !== undefined) updateData.role = role as AdminRoleType;
+
+    // 更新
+    const updatedAdmin = await prisma.adminUser.update({
+      where: { id: adminUserId },
+      data: updateData,
+    });
+
+    // 監査ログを記録
+    await prisma.adminAuditLog.create({
+      data: {
+        adminUserId: currentAdminId,
+        action: 'ADMIN_USER_UPDATE',
+        targetType: 'AdminUser',
+        targetId: adminUserId,
+        details: {
+          before: { name: targetAdmin.name, role: targetAdmin.role },
+          after: { name: updatedAdmin.name, role: updatedAdmin.role },
+        },
+      },
+    });
+
+    // キャッシュを無効化
+    await Promise.all([
+      invalidateSystemAdminsCache(),
+      invalidateSystemAdminDetailCache(adminUserId),
+    ]);
+
+    return {
+      adminUser: {
+        id: updatedAdmin.id,
+        email: updatedAdmin.email,
+        name: updatedAdmin.name,
+        role: updatedAdmin.role as SystemAdminRole,
+        totpEnabled: updatedAdmin.totpEnabled,
+        createdAt: updatedAdmin.createdAt.toISOString(),
+        updatedAt: updatedAdmin.updatedAt.toISOString(),
+      },
+    };
+  }
+
+  /**
+   * システム管理者を削除（論理削除）
+   */
+  async deleteAdminUser(
+    adminUserId: string,
+    currentAdminId: string
+  ): Promise<SystemAdminDeleteResponse> {
+    // 自分自身の削除は禁止
+    if (adminUserId === currentAdminId) {
+      throw new BusinessError('CANNOT_DELETE_SELF', '自分自身は削除できません');
+    }
+
+    // 対象の管理者を取得
+    const targetAdmin = await prisma.adminUser.findUnique({
+      where: { id: adminUserId },
+      select: { id: true, role: true, deletedAt: true },
+    });
+
+    if (!targetAdmin) {
+      throw new NotFoundError('管理者が見つかりません');
+    }
+
+    if (targetAdmin.deletedAt) {
+      throw new NotFoundError('管理者が見つかりません');
+    }
+
+    // 最後のSUPER_ADMINの削除は禁止
+    if (targetAdmin.role === 'SUPER_ADMIN') {
+      const superAdminCount = await prisma.adminUser.count({
+        where: {
+          role: 'SUPER_ADMIN',
+          deletedAt: null,
+        },
+      });
+      if (superAdminCount <= 1) {
+        throw new BusinessError(
+          'CANNOT_DELETE_LAST_SUPER_ADMIN',
+          '最後のSUPER_ADMINは削除できません'
+        );
+      }
+    }
+
+    // 論理削除 & セッション無効化
+    const now = new Date();
+    await prisma.$transaction([
+      prisma.adminUser.update({
+        where: { id: adminUserId },
+        data: { deletedAt: now },
+      }),
+      prisma.adminSession.updateMany({
+        where: { adminUserId, revokedAt: null },
+        data: { revokedAt: now },
+      }),
+    ]);
+
+    // 監査ログを記録
+    await prisma.adminAuditLog.create({
+      data: {
+        adminUserId: currentAdminId,
+        action: 'ADMIN_USER_DELETE',
+        targetType: 'AdminUser',
+        targetId: adminUserId,
+      },
+    });
+
+    // キャッシュを無効化
+    await Promise.all([
+      invalidateSystemAdminsCache(),
+      invalidateSystemAdminDetailCache(adminUserId),
+    ]);
+
+    return {
+      message: '管理者を削除しました',
+      deletedAt: now.toISOString(),
+    };
+  }
+
+  /**
+   * アカウントロックを解除
+   */
+  async unlockAdminUser(
+    adminUserId: string,
+    currentAdminId: string
+  ): Promise<SystemAdminUnlockResponse> {
+    // 対象の管理者を取得
+    const targetAdmin = await prisma.adminUser.findUnique({
+      where: { id: adminUserId },
+      select: { id: true, lockedUntil: true, deletedAt: true },
+    });
+
+    if (!targetAdmin) {
+      throw new NotFoundError('管理者が見つかりません');
+    }
+
+    if (targetAdmin.deletedAt) {
+      throw new NotFoundError('管理者が見つかりません');
+    }
+
+    // ロック解除
+    await prisma.adminUser.update({
+      where: { id: adminUserId },
+      data: {
+        lockedUntil: null,
+        failedAttempts: 0,
+      },
+    });
+
+    // 監査ログを記録
+    await prisma.adminAuditLog.create({
+      data: {
+        adminUserId: currentAdminId,
+        action: 'ADMIN_USER_UNLOCK',
+        targetType: 'AdminUser',
+        targetId: adminUserId,
+      },
+    });
+
+    // キャッシュを無効化
+    await Promise.all([
+      invalidateSystemAdminsCache(),
+      invalidateSystemAdminDetailCache(adminUserId),
+    ]);
+
+    return {
+      message: 'アカウントロックを解除しました',
+    };
+  }
+
+  /**
+   * 2FAをリセット
+   */
+  async reset2FA(
+    adminUserId: string,
+    currentAdminId: string
+  ): Promise<SystemAdminReset2FAResponse> {
+    // 対象の管理者を取得
+    const targetAdmin = await prisma.adminUser.findUnique({
+      where: { id: adminUserId },
+      select: { id: true, totpEnabled: true, deletedAt: true },
+    });
+
+    if (!targetAdmin) {
+      throw new NotFoundError('管理者が見つかりません');
+    }
+
+    if (targetAdmin.deletedAt) {
+      throw new NotFoundError('管理者が見つかりません');
+    }
+
+    // 2FAをリセット
+    await prisma.adminUser.update({
+      where: { id: adminUserId },
+      data: {
+        totpEnabled: false,
+        totpSecret: null,
+      },
+    });
+
+    // 監査ログを記録
+    await prisma.adminAuditLog.create({
+      data: {
+        adminUserId: currentAdminId,
+        action: 'ADMIN_USER_RESET_2FA',
+        targetType: 'AdminUser',
+        targetId: adminUserId,
+      },
+    });
+
+    // キャッシュを無効化
+    await invalidateSystemAdminDetailCache(adminUserId);
+
+    return {
+      message: '2FA設定をリセットしました',
+    };
+  }
+
+  /**
+   * 仮パスワードを生成
+   */
+  private generateTemporaryPassword(): string {
+    let password = '';
+    const randomBytes = crypto.randomBytes(16);
+    for (let i = 0; i < 16; i++) {
+      password += PASSWORD_CHARS[randomBytes[i] % PASSWORD_CHARS.length];
+    }
+    return password;
+  }
+}

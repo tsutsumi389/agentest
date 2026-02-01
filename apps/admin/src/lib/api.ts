@@ -174,6 +174,16 @@ import type {
   MetricGranularity,
   PlanDistributionResponse,
   PlanDistributionView,
+  SystemAdminSearchParams,
+  SystemAdminListResponse,
+  SystemAdminDetailResponse,
+  SystemAdminInviteRequest,
+  SystemAdminInviteResponse,
+  SystemAdminUpdateRequest,
+  SystemAdminUpdateResponse,
+  SystemAdminDeleteResponse,
+  SystemAdminUnlockResponse,
+  SystemAdminReset2FAResponse,
 } from '@agentest/shared/types';
 
 export const adminDashboardApi = {
@@ -369,3 +379,81 @@ function toPlanDistributionQueryString(params: PlanDistributionParams): string {
   const qs = searchParams.toString();
   return qs ? `?${qs}` : '';
 }
+
+// ============================================
+// システム管理者アカウント管理API
+// ============================================
+
+/**
+ * システム管理者検索パラメータをクエリ文字列に変換
+ */
+function toSystemAdminQueryString(params: SystemAdminSearchParams): string {
+  const searchParams = new URLSearchParams();
+
+  if (params.q) searchParams.set('q', params.q);
+  if (params.role && params.role.length > 0) {
+    searchParams.set('role', params.role.join(','));
+  }
+  if (params.status) searchParams.set('status', params.status);
+  if (params.totpEnabled !== undefined) {
+    searchParams.set('totpEnabled', String(params.totpEnabled));
+  }
+  if (params.createdFrom) searchParams.set('createdFrom', params.createdFrom);
+  if (params.createdTo) searchParams.set('createdTo', params.createdTo);
+  if (params.page) searchParams.set('page', String(params.page));
+  if (params.limit) searchParams.set('limit', String(params.limit));
+  if (params.sortBy) searchParams.set('sortBy', params.sortBy);
+  if (params.sortOrder) searchParams.set('sortOrder', params.sortOrder);
+
+  const qs = searchParams.toString();
+  return qs ? `?${qs}` : '';
+}
+
+export const systemAdminApi = {
+  /**
+   * システム管理者一覧を取得
+   */
+  list: (params: SystemAdminSearchParams = {}) =>
+    api.get<SystemAdminListResponse>(`/admin/admin-users${toSystemAdminQueryString(params)}`),
+
+  /**
+   * システム管理者詳細を取得
+   */
+  getById: (adminUserId: string) =>
+    api.get<SystemAdminDetailResponse>(`/admin/admin-users/${adminUserId}`),
+
+  /**
+   * システム管理者を招待（作成）
+   */
+  invite: (data: SystemAdminInviteRequest) =>
+    api.post<SystemAdminInviteResponse>('/admin/admin-users', data),
+
+  /**
+   * システム管理者を更新
+   */
+  update: (adminUserId: string, data: SystemAdminUpdateRequest) =>
+    request<SystemAdminUpdateResponse>(`/admin/admin-users/${adminUserId}`, {
+      method: 'PATCH',
+      body: data,
+    }),
+
+  /**
+   * システム管理者を削除
+   */
+  delete: (adminUserId: string) =>
+    request<SystemAdminDeleteResponse>(`/admin/admin-users/${adminUserId}`, {
+      method: 'DELETE',
+    }),
+
+  /**
+   * アカウントロックを解除
+   */
+  unlock: (adminUserId: string) =>
+    api.post<SystemAdminUnlockResponse>(`/admin/admin-users/${adminUserId}/unlock`),
+
+  /**
+   * 2FAをリセット
+   */
+  reset2FA: (adminUserId: string) =>
+    api.post<SystemAdminReset2FAResponse>(`/admin/admin-users/${adminUserId}/reset-2fa`),
+};
