@@ -195,18 +195,27 @@ model PlanDistributionMetric {
 }
 ```
 
-### 3.2 バッチジョブ
+### 3.2 バッチジョブ（Cloud Run Jobs形式）
 
-日次でプラン分布を集計し、テーブルに保存（アクティブユーザー集計と同じタイミング）
+日次でプラン分布を集計し、テーブルに保存。`apps/jobs/` 配下でCloud Run Jobs形式として実装。
+
+**実行方法**:
+```bash
+# Docker環境で実行
+docker compose exec dev sh -c "cd apps/jobs && JOB_NAME=plan-distribution-aggregation pnpm start"
+```
+
+**集計タイミング**（metrics-aggregation.ts と統一）:
+- **DAY**: 毎日、前日分を集計
+- **WEEK**: 月曜日に前週分を集計
+- **MONTH**: 月初に前月分を集計
 
 ```typescript
-// 実行タイミング: 毎日 00:05 JST
-async function aggregatePlanDistribution(date: Date): Promise<void> {
-  // 1. ユーザープラン分布を集計（FREE/PRO）
-  // 2. 組織プラン分布を集計（TEAM/ENTERPRISE + メンバー数）
-  // 3. DAY粒度でテーブルに保存
-  // 4. 週末の場合はWEEK粒度も保存
-  // 5. 月末の場合はMONTH粒度も保存
+// apps/jobs/src/jobs/plan-distribution-aggregation.ts
+export async function runPlanDistributionAggregation(): Promise<void> {
+  // 1. 前日のDAY粒度を集計
+  // 2. 月曜日の場合、前週のWEEK粒度も集計
+  // 3. 月初の場合、前月のMONTH粒度も集計
 }
 ```
 
@@ -307,24 +316,24 @@ const PLAN_COLORS = {
 
 ### Phase 1: データベース・バックエンド
 
-| 順序 | タスク | ファイル |
-|:----:|--------|----------|
-| 1 | Prismaスキーマ追加 | `packages/db/prisma/schema.prisma` |
-| 2 | マイグレーション実行 | `pnpm db:migrate` |
-| 3 | 型定義追加 | `packages/shared/src/types/admin-metrics.ts` |
-| 4 | バリデーション追加 | `packages/shared/src/validators/schemas.ts` |
-| 5 | サービス実装 | `apps/api/src/services/admin/admin-metrics.service.ts` |
-| 6 | コントローラー追加 | `apps/api/src/controllers/admin/metrics.controller.ts` |
-| 7 | ルート追加 | `apps/api/src/routes/admin/metrics.ts` |
-| 8 | バッチジョブ追加 | `apps/api/src/jobs/aggregate-plan-distribution.ts` |
+| 順序 | タスク | ファイル | 状態 |
+|:----:|--------|----------|:----:|
+| 1 | Prismaスキーマ追加 | `packages/db/prisma/schema.prisma` | ✅ |
+| 2 | マイグレーション実行 | `pnpm db:migrate` | ✅ |
+| 3 | 型定義追加 | `packages/shared/src/types/admin-metrics.ts` | ✅ |
+| 4 | バリデーション追加 | `packages/shared/src/validators/schemas.ts` | ✅ |
+| 5 | サービス実装 | `apps/api/src/services/admin/admin-metrics.service.ts` | ✅ |
+| 6 | コントローラー追加 | `apps/api/src/controllers/admin/metrics.controller.ts` | ✅ |
+| 7 | ルート追加 | `apps/api/src/routes/admin/metrics.ts` | ✅ |
+| 8 | バッチジョブ追加 | `apps/jobs/src/jobs/plan-distribution-aggregation.ts` | ✅ |
 
 ### Phase 2: フロントエンド
 
-| 順序 | タスク | ファイル |
-|:----:|--------|----------|
-| 9 | DonutChartコピー | `apps/admin/src/components/ui/DonutChart.tsx` |
-| 10 | フック作成 | `apps/admin/src/hooks/useAdminPlanDistribution.ts` |
-| 11 | UI実装 | `apps/admin/src/pages/MetricsPage.tsx` にタブ追加 |
+| 順序 | タスク | ファイル | 状態 |
+|:----:|--------|----------|:----:|
+| 9 | DonutChartコピー | `apps/admin/src/components/ui/DonutChart.tsx` | ✅ |
+| 10 | フック作成 | `apps/admin/src/hooks/useAdminPlanDistribution.ts` | ✅ |
+| 11 | UI実装 | `apps/admin/src/pages/MetricsPage.tsx` にタブ追加 | ✅ |
 
 ### Phase 3: 拡張（オプション）
 
@@ -375,12 +384,15 @@ curl -H "Authorization: Bearer $ADMIN_TOKEN" \
 - `apps/api/src/services/admin/admin-metrics.service.ts`
 - `apps/api/src/controllers/admin/metrics.controller.ts`
 - `apps/api/src/routes/admin/metrics.ts`
-- `apps/api/src/jobs/aggregate-plan-distribution.ts`（新規）
+
+### バッチジョブ（Cloud Run Jobs形式）
+- `apps/jobs/src/jobs/plan-distribution-aggregation.ts` - プラン分布集計ジョブ
+- `apps/jobs/src/index.ts` - ジョブ登録
 
 ### フロントエンド
 - `apps/admin/src/pages/MetricsPage.tsx`
-- `apps/admin/src/components/ui/DonutChart.tsx`（新規コピー）
-- `apps/admin/src/hooks/useAdminPlanDistribution.ts`（新規）
+- `apps/admin/src/components/ui/DonutChart.tsx`
+- `apps/admin/src/hooks/useAdminPlanDistribution.ts`
 
 ### 共有
 - `packages/shared/src/types/admin-metrics.ts`
