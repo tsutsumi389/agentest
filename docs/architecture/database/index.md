@@ -231,7 +231,7 @@ Coding Agent が理解しやすい英語の文字列を使用。
 | ENUM | 値 | 説明 |
 |------|-----|------|
 | `UserPlan` | FREE, PRO | 個人プラン |
-| `OrganizationPlan` | TEAM, ENTERPRISE | 組織プラン |
+| `OrganizationPlan` | NONE, TEAM, ENTERPRISE | 組織プラン |
 | `SubscriptionPlan` | FREE, PRO, TEAM, ENTERPRISE | サブスクリプションプラン |
 
 ## インデックス戦略

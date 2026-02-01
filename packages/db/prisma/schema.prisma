@@ -17,6 +17,7 @@ enum UserPlan {
 }
 
 enum OrganizationPlan {
+  NONE
   TEAM
   ENTERPRISE
 }
@@ -304,7 +305,7 @@ model Organization {
   name              String           @db.VarChar(100)
   description       String?          @db.Text
   avatarUrl         String?          @map("avatar_url")
-  plan              OrganizationPlan @default(TEAM)
+  plan              OrganizationPlan @default(NONE)
   paymentCustomerId String?          @unique @map("payment_customer_id") @db.VarChar(255) // 決済サービス顧客ID
   billingEmail      String?          @map("billing_email") @db.VarChar(255)
   createdAt         DateTime         @default(now()) @map("created_at")

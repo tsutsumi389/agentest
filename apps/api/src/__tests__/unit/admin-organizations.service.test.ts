@@ -49,7 +49,7 @@ describe('AdminOrganizationsService', () => {
       name: string;
       description: string | null;
       avatarUrl: string | null;
-      plan: 'TEAM' | 'ENTERPRISE';
+      plan: 'NONE' | 'TEAM' | 'ENTERPRISE';
       billingEmail: string | null;
       createdAt: Date;
       updatedAt: Date;
@@ -435,7 +435,7 @@ describe('AdminOrganizationsService', () => {
       name: string;
       description: string | null;
       avatarUrl: string | null;
-      plan: 'TEAM' | 'ENTERPRISE';
+      plan: 'NONE' | 'TEAM' | 'ENTERPRISE';
       billingEmail: string | null;
       paymentCustomerId: string | null;
       createdAt: Date;

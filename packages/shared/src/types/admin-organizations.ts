@@ -26,7 +26,7 @@ export interface AdminOrganizationSearchParams {
   /** 検索クエリ（名前で部分一致） */
   q?: string;
   /** プランフィルタ（カンマ区切り） */
-  plan?: ('TEAM' | 'ENTERPRISE')[];
+  plan?: ('NONE' | 'TEAM' | 'ENTERPRISE')[];
   /** ステータスフィルタ */
   status?: AdminOrganizationStatus;
   /** 登録日From */
@@ -84,7 +84,7 @@ export interface AdminOrganizationListItem {
   /** アバターURL */
   avatarUrl: string | null;
   /** プラン */
-  plan: 'TEAM' | 'ENTERPRISE';
+  plan: 'NONE' | 'TEAM' | 'ENTERPRISE';
   /** 請求先メールアドレス */
   billingEmail: string | null;
   /** 作成日時 */
@@ -167,9 +167,12 @@ export interface AdminOrganizationProject {
 
 /**
  * 組織サブスクリプション情報
+ * 注: Subscriptionテーブルはユーザー・組織共用のため、planにはFREE/PROも含まれる。
+ * 組織のサブスクリプションでは通常TEAM/ENTERPRISEが使用される。
+ * (NONEはOrganization.planの値であり、Subscription.planには含まれない)
  */
 export interface AdminOrganizationSubscription {
-  /** プラン */
+  /** プラン（SubscriptionPlan enum） */
   plan: 'FREE' | 'PRO' | 'TEAM' | 'ENTERPRISE';
   /** ステータス */
   status: 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'TRIALING';
@@ -232,7 +235,7 @@ export interface AdminOrganizationDetail {
   /** アバターURL */
   avatarUrl: string | null;
   /** プラン */
-  plan: 'TEAM' | 'ENTERPRISE';
+  plan: 'NONE' | 'TEAM' | 'ENTERPRISE';
   /** 請求先メールアドレス */
   billingEmail: string | null;
   /** 決済顧客ID */

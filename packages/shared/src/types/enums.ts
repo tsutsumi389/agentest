@@ -6,6 +6,7 @@ export const UserPlan = {
 export type UserPlan = (typeof UserPlan)[keyof typeof UserPlan];
 
 export const OrganizationPlan = {
+  NONE: 'NONE',
   TEAM: 'TEAM',
   ENTERPRISE: 'ENTERPRISE',
 } as const;
