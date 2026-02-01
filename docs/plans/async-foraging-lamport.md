@@ -33,30 +33,47 @@
 
 ## 2. データストレージ設計
 
-### 方式: ハイブリッド（日次集計テーブル + 当日リアルタイム）
+### 方式: 粒度別集計テーブル（DAU/WAU/MAU）
 
 **理由**:
-- 過去データは不変のため、事前集計により高速化
-- 当日データはリアルタイム性を確保
-- Sessionテーブルへのフルスキャンを回避
+- DAUのみだとWAU/MAUのユニークユーザー数を正確に計算できない
+- 各粒度で事前集計することで高速かつ正確なデータを提供
+- 過去データは不変のため、キャッシュと組み合わせて最適化
 
 ### Prismaスキーマ追加
 
 ```prisma
 // packages/db/prisma/schema.prisma
 
-model DailyActiveUserMetric {
-  id        String   @id @default(uuid())
-  date      DateTime @db.Date
-  userCount Int      @map("user_count")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+// アクティブユーザー集計の粒度
+enum MetricGranularity {
+  DAY
+  WEEK
+  MONTH
+}
 
-  @@unique([date])
-  @@index([date])
-  @@map("daily_active_user_metrics")
+// アクティブユーザーメトリクス（共通テーブル）
+model ActiveUserMetric {
+  id          String            @id @default(uuid())
+  granularity MetricGranularity
+  periodStart DateTime          @map("period_start") @db.Date  // 期間開始日
+  userCount   Int               @map("user_count")
+  createdAt   DateTime          @default(now()) @map("created_at")
+  updatedAt   DateTime          @updatedAt @map("updated_at")
+
+  @@unique([granularity, periodStart])
+  @@index([granularity, periodStart])
+  @@map("active_user_metrics")
 }
 ```
+
+### データ例
+
+| granularity | periodStart | userCount | 説明 |
+|-------------|-------------|-----------|------|
+| DAY | 2026-01-15 | 150 | 1/15のDAU |
+| WEEK | 2026-01-13 | 420 | 1/13週（月曜）のWAU |
+| MONTH | 2026-01-01 | 980 | 1月のMAU |
 
 ---
 
@@ -184,7 +201,7 @@ export const activeUserMetricsQuerySchema = z.object({
 
 | ファイル | 変更内容 |
 |---------|---------|
-| `packages/db/prisma/schema.prisma` | DailyActiveUserMetric テーブル追加 |
+| `packages/db/prisma/schema.prisma` | ActiveUserMetric テーブル + MetricGranularity enum 追加 |
 | `apps/api/src/lib/redis-store.ts` | メトリクスキャッシュ関数追加 |
 | `apps/api/src/routes/admin/index.ts` | メトリクスルーター追加 |
 | `packages/shared/src/validators/schemas.ts` | バリデーションスキーマ追加 |
@@ -192,7 +209,7 @@ export const activeUserMetricsQuerySchema = z.object({
 
 ---
 
-## 7. 日次集計ジョブ（apps/jobs）
+## 7. 集計ジョブ（apps/jobs）
 
 ### ジョブ設計
 
@@ -201,7 +218,7 @@ export const activeUserMetricsQuerySchema = z.object({
 
 /**
  * メトリクス集計ジョブ
- * 前日のアクティブユーザー数を集計してテーブルに保存
+ * DAU/WAU/MAUを集計してテーブルに保存
  * 毎日 1:00 JST に実行
  */
 import { prisma } from '../lib/prisma.js';
@@ -209,7 +226,24 @@ import { prisma } from '../lib/prisma.js';
 export async function runMetricsAggregation(): Promise<void> {
   const now = new Date();
 
-  // 前日の期間を計算（JST基準）
+  // 前日のDAU集計
+  await aggregateDAU(now);
+
+  // 週初（月曜）の場合、前週のWAU集計
+  if (now.getDay() === 1) {
+    await aggregateWAU(now);
+  }
+
+  // 月初の場合、前月のMAU集計
+  if (now.getDate() === 1) {
+    await aggregateMAU(now);
+  }
+}
+
+/**
+ * DAU（日次アクティブユーザー）集計
+ */
+async function aggregateDAU(now: Date): Promise<void> {
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
   yesterday.setHours(0, 0, 0, 0);
@@ -217,37 +251,102 @@ export async function runMetricsAggregation(): Promise<void> {
   const today = new Date(yesterday);
   today.setDate(today.getDate() + 1);
 
-  console.log(`集計対象日: ${yesterday.toISOString().split('T')[0]}`);
-
-  // アクティブユーザー数を集計
   const count = await prisma.user.count({
     where: {
       deletedAt: null,
       sessions: {
         some: {
-          lastActiveAt: {
-            gte: yesterday,
-            lt: today,
-          },
+          lastActiveAt: { gte: yesterday, lt: today },
           revokedAt: null,
         },
       },
     },
   });
 
-  // 集計テーブルに保存（upsert）
-  await prisma.dailyActiveUserMetric.upsert({
-    where: { date: yesterday },
-    create: {
-      date: yesterday,
-      userCount: count,
+  await prisma.activeUserMetric.upsert({
+    where: {
+      granularity_periodStart: {
+        granularity: 'DAY',
+        periodStart: yesterday,
+      },
     },
-    update: {
-      userCount: count,
+    create: { granularity: 'DAY', periodStart: yesterday, userCount: count },
+    update: { userCount: count },
+  });
+
+  console.log(`DAU ${yesterday.toISOString().split('T')[0]}: ${count}`);
+}
+
+/**
+ * WAU（週次アクティブユーザー）集計
+ */
+async function aggregateWAU(now: Date): Promise<void> {
+  // 前週の月曜日を計算
+  const lastMonday = new Date(now);
+  lastMonday.setDate(lastMonday.getDate() - 7);
+  lastMonday.setHours(0, 0, 0, 0);
+
+  const thisMonday = new Date(lastMonday);
+  thisMonday.setDate(thisMonday.getDate() + 7);
+
+  const count = await prisma.user.count({
+    where: {
+      deletedAt: null,
+      sessions: {
+        some: {
+          lastActiveAt: { gte: lastMonday, lt: thisMonday },
+          revokedAt: null,
+        },
+      },
     },
   });
 
-  console.log(`${yesterday.toISOString().split('T')[0]}: ${count}名のアクティブユーザー`);
+  await prisma.activeUserMetric.upsert({
+    where: {
+      granularity_periodStart: {
+        granularity: 'WEEK',
+        periodStart: lastMonday,
+      },
+    },
+    create: { granularity: 'WEEK', periodStart: lastMonday, userCount: count },
+    update: { userCount: count },
+  });
+
+  console.log(`WAU ${lastMonday.toISOString().split('T')[0]}: ${count}`);
+}
+
+/**
+ * MAU（月次アクティブユーザー）集計
+ */
+async function aggregateMAU(now: Date): Promise<void> {
+  // 前月の1日を計算
+  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const count = await prisma.user.count({
+    where: {
+      deletedAt: null,
+      sessions: {
+        some: {
+          lastActiveAt: { gte: lastMonthStart, lt: thisMonthStart },
+          revokedAt: null,
+        },
+      },
+    },
+  });
+
+  await prisma.activeUserMetric.upsert({
+    where: {
+      granularity_periodStart: {
+        granularity: 'MONTH',
+        periodStart: lastMonthStart,
+      },
+    },
+    create: { granularity: 'MONTH', periodStart: lastMonthStart, userCount: count },
+    update: { userCount: count },
+  });
+
+  console.log(`MAU ${lastMonthStart.toISOString().split('T')[0]}: ${count}`);
 }
 ```
 
@@ -328,7 +427,7 @@ describe('GET /admin/metrics/active-users', () => {
 ## 10. 実装順序
 
 ### Phase 1: バックエンド基盤
-1. Prismaスキーマ追加（DailyActiveUserMetric）
+1. Prismaスキーマ追加（MetricGranularity enum + ActiveUserMetric）
 2. マイグレーション実行
 3. 型定義追加（admin-metrics.ts）
 4. バリデーションスキーマ追加
