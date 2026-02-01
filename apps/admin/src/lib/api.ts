@@ -170,6 +170,8 @@ import type {
   AdminOrganizationDetailResponse,
   AdminAuditLogListResponse,
   AdminAuditLogSearchParams,
+  ActiveUserMetricsResponse,
+  MetricGranularity,
 } from '@agentest/shared/types';
 
 export const adminDashboardApi = {
@@ -290,4 +292,39 @@ export const adminAuditLogsApi = {
    */
   list: (params: AdminAuditLogSearchParams = {}) =>
     api.get<AdminAuditLogListResponse>(`/admin/audit-logs${toAuditLogQueryString(params)}`),
+};
+
+// ============================================
+// 管理者メトリクスAPI
+// ============================================
+
+/** メトリクス取得パラメータ */
+export interface AdminMetricsParams {
+  granularity?: MetricGranularity;
+  startDate?: string;
+  endDate?: string;
+  timezone?: string;
+}
+
+/**
+ * メトリクスパラメータをクエリ文字列に変換
+ */
+function toMetricsQueryString(params: AdminMetricsParams): string {
+  const searchParams = new URLSearchParams();
+
+  if (params.granularity) searchParams.set('granularity', params.granularity);
+  if (params.startDate) searchParams.set('startDate', params.startDate);
+  if (params.endDate) searchParams.set('endDate', params.endDate);
+  if (params.timezone) searchParams.set('timezone', params.timezone);
+
+  const qs = searchParams.toString();
+  return qs ? `?${qs}` : '';
+}
+
+export const adminMetricsApi = {
+  /**
+   * アクティブユーザーメトリクスを取得
+   */
+  getActiveUsers: (params: AdminMetricsParams = {}) =>
+    api.get<ActiveUserMetricsResponse>(`/admin/metrics/active-users${toMetricsQueryString(params)}`),
 };

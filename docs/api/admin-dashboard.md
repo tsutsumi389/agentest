@@ -171,6 +171,124 @@ console.log(data.users.total); // ユーザー総数
 console.log(data.systemHealth.database.status); // DBステータス
 ```
 
+---
+
+## アクティブユーザーメトリクス API
+
+### GET /admin/metrics/active-users
+
+DAU/WAU/MAUの時系列データを取得する。
+
+#### 認証
+
+Cookie認証が必要。
+
+```
+Cookie: admin_session=<session_id>
+```
+
+#### クエリパラメータ
+
+| パラメータ | 型 | 必須 | デフォルト | 説明 |
+|-----------|-----|-----|-----------|------|
+| `granularity` | enum | - | `day` | 粒度: `day`, `week`, `month` |
+| `startDate` | string | - | 30日前 | 開始日 (ISO 8601) |
+| `endDate` | string | - | 本日 | 終了日 (ISO 8601) |
+| `timezone` | string | - | `Asia/Tokyo` | タイムゾーン |
+
+#### レスポンス
+
+##### 成功時 (200 OK)
+
+```json
+{
+  "granularity": "day",
+  "startDate": "2026-01-01T00:00:00.000Z",
+  "endDate": "2026-01-31T23:59:59.999Z",
+  "timezone": "Asia/Tokyo",
+  "data": [
+    { "date": "2026-01-01", "count": 150 },
+    { "date": "2026-01-02", "count": 142 }
+  ],
+  "summary": {
+    "average": 130,
+    "max": 150,
+    "min": 98,
+    "changeRate": 5.2
+  },
+  "fetchedAt": "2026-02-01T10:00:00.000Z"
+}
+```
+
+#### レスポンス型定義
+
+##### ActiveUserMetricsResponse
+
+| フィールド | 型 | 説明 |
+|-----------|------|------|
+| granularity | string | 粒度（day/week/month） |
+| startDate | string | 開始日時（ISO 8601形式） |
+| endDate | string | 終了日時（ISO 8601形式） |
+| timezone | string | タイムゾーン |
+| data | ActiveUserMetricDataPoint[] | 時系列データ |
+| summary | ActiveUserMetricSummary | サマリー統計 |
+| fetchedAt | string | 取得日時（ISO 8601形式） |
+
+##### ActiveUserMetricDataPoint
+
+| フィールド | 型 | 説明 |
+|-----------|------|------|
+| date | string | 日付（YYYY-MM-DD形式） |
+| count | number | アクティブユーザー数 |
+
+##### ActiveUserMetricSummary
+
+| フィールド | 型 | 説明 |
+|-----------|------|------|
+| average | number | 期間内平均 |
+| max | number | 最大値 |
+| min | number | 最小値 |
+| changeRate | number \| null | 前期間比（%） |
+
+#### バリデーション
+
+- `startDate` は `endDate` 以前の日付を指定
+- 期間は最大365日まで
+- `timezone` は有効なタイムゾーン識別子
+
+#### キャッシュ仕様
+
+- **過去データのみ**: TTL 5分
+- **当日データ含む**: TTL 1分
+- **キャッシュキー**: `admin:metrics:active-users:${hash}`
+
+#### 使用例
+
+##### cURL
+
+```bash
+curl -X GET "http://localhost:3001/api/v1/admin/metrics/active-users?granularity=day&startDate=2026-01-01" \
+  -H "Cookie: admin_session=your-session-id"
+```
+
+##### TypeScript (fetch)
+
+```typescript
+const params = new URLSearchParams({
+  granularity: 'day',
+  startDate: '2026-01-01',
+  endDate: '2026-01-31',
+});
+
+const response = await fetch(`/api/v1/admin/metrics/active-users?${params}`, {
+  method: 'GET',
+  credentials: 'include',
+});
+
+const data = await response.json();
+console.log(data.summary.average); // 期間平均
+```
+
 ## 関連ドキュメント
 
 - [管理者認証 API](./admin-auth.md)

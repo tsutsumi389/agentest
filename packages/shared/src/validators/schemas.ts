@@ -524,3 +524,36 @@ export const adminAuditLogSearchSchema = z.object({
 );
 
 export type AdminAuditLogSearch = z.infer<typeof adminAuditLogSearchSchema>;
+
+// ============================================
+// アクティブユーザーメトリクスクエリスキーマ
+// ============================================
+
+export const activeUserMetricsQuerySchema = z.object({
+  granularity: z.enum(['day', 'week', 'month']).default('day'),
+  startDate: z.string().datetime().optional(),
+  endDate: z.string().datetime().optional(),
+  timezone: z.string()
+    .regex(/^[A-Za-z_]+\/[A-Za-z_]+$/, '無効なタイムゾーン形式です')
+    .default('Asia/Tokyo'),
+}).refine(
+  (data) => {
+    if (data.startDate && data.endDate) {
+      return new Date(data.startDate) <= new Date(data.endDate);
+    }
+    return true;
+  },
+  { message: 'startDateはendDate以前の日付を指定してください', path: ['startDate'] }
+).refine(
+  (data) => {
+    if (data.startDate && data.endDate) {
+      const diffDays = (new Date(data.endDate).getTime() -
+                        new Date(data.startDate).getTime()) / (1000 * 60 * 60 * 24);
+      return diffDays <= 365;
+    }
+    return true;
+  },
+  { message: '期間は最大365日までです' }
+);
+
+export type ActiveUserMetricsQuery = z.infer<typeof activeUserMetricsQuerySchema>;
