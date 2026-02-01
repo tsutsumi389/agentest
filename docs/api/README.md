@@ -49,6 +49,22 @@ Authorization: Bearer <access_token>
 
 → [管理者認証 API 詳細](./admin-auth.md)
 
+### システム管理者管理
+
+| メソッド | パス | 説明 |
+|---------|------|------|
+| GET | `/admin/admin-users` | システム管理者一覧取得 |
+| GET | `/admin/admin-users/:id` | システム管理者詳細取得 |
+| POST | `/admin/admin-users` | システム管理者招待 |
+| PATCH | `/admin/admin-users/:id` | システム管理者更新 |
+| DELETE | `/admin/admin-users/:id` | システム管理者削除（論理削除） |
+| POST | `/admin/admin-users/:id/unlock` | アカウントロック解除 |
+| POST | `/admin/admin-users/:id/reset-2fa` | 2FA リセット |
+| GET | `/admin/invitations/:token` | 招待情報取得（認証不要） |
+| POST | `/admin/invitations/:token/accept` | 招待受諾（認証不要） |
+
+→ [システム管理者管理 API 詳細](./admin-admin-users.md)
+
 ### 管理者ダッシュボード
 
 | メソッド | パス | 説明 |

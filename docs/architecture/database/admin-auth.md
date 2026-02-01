@@ -11,6 +11,7 @@
 | `AdminUser` | 管理者ユーザー |
 | `AdminSession` | 管理者セッション |
 | `AdminAuditLog` | 管理者監査ログ |
+| `AdminInvitation` | 管理者招待 |
 
 ## AdminUser
 
@@ -118,6 +119,51 @@ CREATE INDEX idx_admin_audit_logs_created ON "admin_audit_logs"("created_at");
 | `2FA_DISABLED` | 2FA 無効化 |
 | `SESSION_REFRESH` | セッション延長 |
 | `ACCOUNT_LOCKED` | アカウントロック |
+| `ADMIN_USER_LIST` | システム管理者一覧閲覧 |
+| `ADMIN_USER_VIEW` | システム管理者詳細閲覧 |
+| `ADMIN_USER_INVITE` | システム管理者招待 |
+| `ADMIN_USER_UPDATE` | システム管理者更新 |
+| `ADMIN_USER_DELETE` | システム管理者削除 |
+| `ADMIN_USER_UNLOCK` | アカウントロック解除 |
+| `ADMIN_USER_RESET_2FA` | 2FA リセット |
+| `ADMIN_INVITATION_ACCEPTED` | 招待受諾 |
+
+## AdminInvitation
+
+管理者招待情報を管理するテーブル。
+
+### カラム定義
+
+| カラム | 型 | NULL | 説明 |
+|--------|-----|------|------|
+| `id` | UUID | NO | 主キー |
+| `email` | VARCHAR(255) | NO | 招待先メールアドレス |
+| `name` | VARCHAR(100) | NO | 表示名 |
+| `role` | AdminRoleType | NO | 付与するロール |
+| `token` | VARCHAR(255) | NO | 招待トークン（一意） |
+| `invited_by_id` | UUID | NO | 招待者 ID（FK） |
+| `accepted_at` | TIMESTAMP | YES | 招待受諾日時 |
+| `expires_at` | TIMESTAMP | NO | 有効期限 |
+| `created_at` | TIMESTAMP | NO | 作成日時 |
+
+### インデックス
+
+```sql
+CREATE UNIQUE INDEX idx_admin_invitations_token ON "admin_invitations"("token");
+CREATE INDEX idx_admin_invitations_email ON "admin_invitations"("email");
+```
+
+### 外部キー
+
+- `invited_by_id` → `admin_users.id`
+
+### 招待仕様
+
+| 項目 | 値 |
+|------|-----|
+| 有効期限 | 24 時間 |
+| トークン長 | 32 バイトの暗号的に安全なランダム値 |
+| 重複制約 | 同一メールアドレスへの未受諾招待は 1 件のみ |
 
 ## AdminRoleType
 
@@ -146,6 +192,7 @@ CREATE INDEX idx_admin_audit_logs_created ON "admin_audit_logs"("created_at");
 erDiagram
     AdminUser ||--o{ AdminSession : "has"
     AdminUser ||--o{ AdminAuditLog : "has"
+    AdminUser ||--o{ AdminInvitation : "invites"
 
     AdminUser {
         uuid id PK
@@ -185,6 +232,18 @@ erDiagram
         string user_agent
         timestamp created_at
     }
+
+    AdminInvitation {
+        uuid id PK
+        string email
+        string name
+        AdminRoleType role
+        string token UK
+        uuid invited_by_id FK
+        timestamp accepted_at
+        timestamp expires_at
+        timestamp created_at
+    }
 ```
 
 ## セキュリティ考慮事項
@@ -219,3 +278,4 @@ erDiagram
 - [データベース設計概要](./index.md)
 - [認証機能](../features/authentication.md)
 - [管理者認証 API](../../api/admin-auth.md)
+- [システム管理者管理 API](../../api/admin-admin-users.md)
