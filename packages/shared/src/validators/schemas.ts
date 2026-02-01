@@ -663,3 +663,18 @@ export const systemAdminUpdateSchema = z.object({
 });
 
 export type SystemAdminUpdate = z.infer<typeof systemAdminUpdateSchema>;
+
+// 招待受諾スキーマ（パスワード設定）
+// パスワード要件: 8文字以上、大文字・小文字・数字・記号を含む
+export const acceptInvitationSchema = z.object({
+  password: z
+    .string()
+    .min(8, 'パスワードは8文字以上で入力してください')
+    .max(100, 'パスワードは100文字以内で入力してください')
+    .regex(/[A-Z]/, 'パスワードには大文字を含めてください')
+    .regex(/[a-z]/, 'パスワードには小文字を含めてください')
+    .regex(/[0-9]/, 'パスワードには数字を含めてください')
+    .regex(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/, 'パスワードには記号を含めてください'),
+});
+
+export type AcceptInvitation = z.infer<typeof acceptInvitationSchema>;

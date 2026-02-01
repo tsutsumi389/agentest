@@ -289,3 +289,46 @@ export interface SystemAdminReset2FAResponse {
   /** メッセージ */
   message: string;
 }
+
+// ============================================
+// 招待関連
+// ============================================
+
+/**
+ * 招待受諾リクエスト
+ */
+export interface AcceptInvitationRequest {
+  /** パスワード（8文字以上、大小英字・数字・記号を含む） */
+  password: string;
+}
+
+/**
+ * 招待情報レスポンス
+ */
+export interface AdminInvitationResponse {
+  /** メールアドレス */
+  email: string;
+  /** 表示名 */
+  name: string;
+  /** ロール */
+  role: SystemAdminRole;
+  /** 招待者名 */
+  invitedBy: string;
+  /** 有効期限（ISO 8601形式） */
+  expiresAt: string;
+}
+
+/**
+ * 招待受諾レスポンス
+ */
+export interface AcceptInvitationResponse {
+  /** 作成された管理者情報 */
+  adminUser: {
+    id: string;
+    email: string;
+    name: string;
+    role: SystemAdminRole;
+  };
+  /** メッセージ */
+  message: string;
+}

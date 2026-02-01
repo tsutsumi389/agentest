@@ -11,6 +11,7 @@ import { SystemAdmins } from './pages/SystemAdmins';
 import { SystemAdminDetail } from './pages/SystemAdminDetail';
 import { LoginPage } from './pages/auth/Login';
 import { TwoFactorAuthPage } from './pages/auth/TwoFactorAuth';
+import { AcceptInvitationPage } from './pages/auth/AcceptInvitation';
 import { AuthGuard, AdminLayout } from './components/layout';
 import { useAdminAuthStore } from './stores/admin-auth.store';
 
@@ -36,6 +37,7 @@ export function App() {
         {/* 認証不要 */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/2fa" element={<TwoFactorAuthPage />} />
+        <Route path="/invitation/:token" element={<AcceptInvitationPage />} />
 
         {/* 認証必須（AdminLayout内にネスト） */}
         <Route

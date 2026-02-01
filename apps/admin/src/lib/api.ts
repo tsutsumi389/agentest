@@ -184,6 +184,9 @@ import type {
   SystemAdminDeleteResponse,
   SystemAdminUnlockResponse,
   SystemAdminReset2FAResponse,
+  AdminInvitationResponse,
+  AcceptInvitationRequest,
+  AcceptInvitationResponse,
 } from '@agentest/shared/types';
 
 export const adminDashboardApi = {
@@ -456,4 +459,22 @@ export const systemAdminApi = {
    */
   reset2FA: (adminUserId: string) =>
     api.post<SystemAdminReset2FAResponse>(`/admin/admin-users/${adminUserId}/reset-2fa`),
+};
+
+// ============================================
+// 招待API（認証不要）
+// ============================================
+
+export const invitationApi = {
+  /**
+   * 招待情報を取得
+   */
+  getInvitation: (token: string) =>
+    api.get<AdminInvitationResponse>(`/admin/admin-users/invitations/${token}`),
+
+  /**
+   * 招待を受諾してパスワードを設定
+   */
+  acceptInvitation: (token: string, data: AcceptInvitationRequest) =>
+    api.post<AcceptInvitationResponse>(`/admin/admin-users/invitations/${token}/accept`, data),
 };

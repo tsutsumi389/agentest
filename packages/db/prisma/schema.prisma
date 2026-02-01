@@ -1336,12 +1336,33 @@ model AdminUser {
   updatedAt DateTime  @updatedAt @map("updated_at")
   deletedAt DateTime? @map("deleted_at")
 
-  sessions  AdminSession[]
-  auditLogs AdminAuditLog[]
+  sessions    AdminSession[]
+  auditLogs   AdminAuditLog[]
+  invitations AdminInvitation[]
 
   @@index([email])
   @@index([deletedAt])
   @@map("admin_users")
+}
+
+// 管理者招待
+model AdminInvitation {
+  id          String        @id @default(uuid())
+  email       String        @db.VarChar(255)
+  name        String        @db.VarChar(100)
+  role        AdminRoleType
+  token       String        @unique @db.VarChar(255)
+  invitedById String        @map("invited_by_id")
+
+  acceptedAt DateTime? @map("accepted_at")
+  expiresAt  DateTime  @map("expires_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  invitedBy AdminUser @relation(fields: [invitedById], references: [id])
+
+  @@index([token])
+  @@index([email])
+  @@map("admin_invitations")
 }
 
 // 管理者セッション

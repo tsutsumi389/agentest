@@ -19,12 +19,30 @@ vi.mock('@agentest/db', () => ({
     adminAuditLog: {
       create: vi.fn(),
     },
+    adminInvitation: {
+      findFirst: vi.fn(),
+      findUnique: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+    },
     $transaction: vi.fn((callbacks) => Promise.all(callbacks)),
   },
   AdminRoleType: {
     SUPER_ADMIN: 'SUPER_ADMIN',
     ADMIN: 'ADMIN',
     VIEWER: 'VIEWER',
+  },
+}));
+
+// メールサービスモック
+vi.mock('../../services/email.service', () => ({
+  emailService: {
+    send: vi.fn().mockResolvedValue(undefined),
+    generateAdminInvitationEmail: vi.fn().mockReturnValue({
+      subject: 'Test Subject',
+      text: 'Test Text',
+      html: '<p>Test HTML</p>',
+    }),
   },
 }));
 
@@ -220,17 +238,22 @@ describe('SystemAdminService', () => {
 
   describe('inviteAdminUser', () => {
     it('新しい管理者を招待できる', async () => {
-      const newAdmin = {
-        id: 'new-admin',
+      const invitation = {
+        id: 'invitation-1',
         email: 'new@example.com',
         name: 'New Admin',
         role: 'ADMIN',
-        totpEnabled: false,
+        token: 'test-token',
         createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       };
+      const inviter = { name: 'Current Admin' };
 
-      vi.mocked(prisma.adminUser.findUnique).mockResolvedValue(null);
-      vi.mocked(prisma.adminUser.create).mockResolvedValue(newAdmin as never);
+      vi.mocked(prisma.adminUser.findUnique)
+        .mockResolvedValueOnce(null) // アクティブユーザーチェック
+        .mockResolvedValueOnce(inviter as never); // 招待者情報取得
+      vi.mocked(prisma.adminInvitation.findFirst).mockResolvedValue(null);
+      vi.mocked(prisma.adminInvitation.create).mockResolvedValue(invitation as never);
       vi.mocked(prisma.adminAuditLog.create).mockResolvedValue({} as never);
 
       const result = await service.inviteAdminUser(
@@ -240,6 +263,7 @@ describe('SystemAdminService', () => {
 
       expect(result.adminUser.email).toBe('new@example.com');
       expect(result.adminUser.role).toBe('ADMIN');
+      expect(result.invitationSent).toBe(true);
     });
 
     it('既に登録されているメールアドレスの場合はエラーになる', async () => {
@@ -262,6 +286,157 @@ describe('SystemAdminService', () => {
           'current-admin'
         )
       ).rejects.toThrow('このメールアドレスは既に登録されています');
+    });
+
+    it('有効な招待が既に存在する場合はエラーになる', async () => {
+      const existingInvitation = {
+        id: 'invitation-1',
+        email: 'invited@example.com',
+        acceptedAt: null,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      };
+
+      vi.mocked(prisma.adminUser.findUnique).mockResolvedValue(null);
+      vi.mocked(prisma.adminInvitation.findFirst).mockResolvedValue(existingInvitation as never);
+
+      await expect(
+        service.inviteAdminUser(
+          { email: 'invited@example.com', name: 'Invited', role: 'ADMIN' },
+          'current-admin'
+        )
+      ).rejects.toThrow(BusinessError);
+      await expect(
+        service.inviteAdminUser(
+          { email: 'invited@example.com', name: 'Invited', role: 'ADMIN' },
+          'current-admin'
+        )
+      ).rejects.toThrow('有効な招待が既に存在します');
+    });
+  });
+
+  describe('getInvitation', () => {
+    it('有効な招待情報を取得できる', async () => {
+      const invitation = {
+        id: 'invitation-1',
+        email: 'invited@example.com',
+        name: 'Invited User',
+        role: 'ADMIN',
+        token: 'valid-token',
+        acceptedAt: null,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        invitedBy: { name: 'Inviter' },
+      };
+
+      vi.mocked(prisma.adminInvitation.findUnique).mockResolvedValue(invitation as never);
+
+      const result = await service.getInvitation('valid-token');
+
+      expect(result.email).toBe('invited@example.com');
+      expect(result.name).toBe('Invited User');
+      expect(result.role).toBe('ADMIN');
+      expect(result.invitedBy).toBe('Inviter');
+    });
+
+    it('存在しないトークンの場合はエラーになる', async () => {
+      vi.mocked(prisma.adminInvitation.findUnique).mockResolvedValue(null);
+
+      await expect(service.getInvitation('invalid-token')).rejects.toThrow(NotFoundError);
+    });
+
+    it('既に受諾済みの招待はエラーになる', async () => {
+      const acceptedInvitation = {
+        id: 'invitation-1',
+        acceptedAt: new Date(),
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+        invitedBy: { name: 'Inviter' },
+      };
+
+      vi.mocked(prisma.adminInvitation.findUnique).mockResolvedValue(acceptedInvitation as never);
+
+      await expect(service.getInvitation('used-token')).rejects.toThrow(BusinessError);
+      await expect(service.getInvitation('used-token')).rejects.toThrow(
+        'この招待は既に受諾されています'
+      );
+    });
+
+    it('期限切れの招待はエラーになる', async () => {
+      const expiredInvitation = {
+        id: 'invitation-1',
+        acceptedAt: null,
+        expiresAt: new Date(Date.now() - 1000), // 過去の日時
+        invitedBy: { name: 'Inviter' },
+      };
+
+      vi.mocked(prisma.adminInvitation.findUnique).mockResolvedValue(expiredInvitation as never);
+
+      await expect(service.getInvitation('expired-token')).rejects.toThrow(BusinessError);
+      await expect(service.getInvitation('expired-token')).rejects.toThrow(
+        'この招待は有効期限が切れています'
+      );
+    });
+  });
+
+  describe('acceptInvitation', () => {
+    it('招待を受諾してアカウントを作成できる', async () => {
+      const invitation = {
+        id: 'invitation-1',
+        email: 'invited@example.com',
+        name: 'Invited User',
+        role: 'ADMIN',
+        acceptedAt: null,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      };
+      const newAdmin = {
+        id: 'new-admin-1',
+        email: 'invited@example.com',
+        name: 'Invited User',
+        role: 'ADMIN',
+      };
+
+      vi.mocked(prisma.adminInvitation.findUnique).mockResolvedValue(invitation as never);
+      vi.mocked(prisma.adminUser.findUnique).mockResolvedValue(null); // 既存ユーザーなし
+      vi.mocked(prisma.adminUser.create).mockResolvedValue(newAdmin as never);
+      vi.mocked(prisma.$transaction).mockResolvedValue([{}, {}] as never);
+
+      const result = await service.acceptInvitation('valid-token', 'StrongPassword123!');
+
+      expect(result.adminUser.email).toBe('invited@example.com');
+      expect(result.adminUser.name).toBe('Invited User');
+      expect(result.message).toContain('有効化');
+    });
+
+    it('期限切れのトークンではエラーになる', async () => {
+      const expiredInvitation = {
+        id: 'invitation-1',
+        acceptedAt: null,
+        expiresAt: new Date(Date.now() - 1000),
+      };
+
+      vi.mocked(prisma.adminInvitation.findUnique).mockResolvedValue(expiredInvitation as never);
+
+      await expect(
+        service.acceptInvitation('expired-token', 'StrongPassword123!')
+      ).rejects.toThrow(BusinessError);
+      await expect(
+        service.acceptInvitation('expired-token', 'StrongPassword123!')
+      ).rejects.toThrow('この招待は有効期限が切れています');
+    });
+
+    it('既に使用済みのトークンではエラーになる', async () => {
+      const usedInvitation = {
+        id: 'invitation-1',
+        acceptedAt: new Date(),
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      };
+
+      vi.mocked(prisma.adminInvitation.findUnique).mockResolvedValue(usedInvitation as never);
+
+      await expect(
+        service.acceptInvitation('used-token', 'StrongPassword123!')
+      ).rejects.toThrow(BusinessError);
+      await expect(
+        service.acceptInvitation('used-token', 'StrongPassword123!')
+      ).rejects.toThrow('この招待は既に受諾されています');
     });
   });
 

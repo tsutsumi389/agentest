@@ -13,6 +13,7 @@ describe('System Admin API Integration Tests', () => {
   let superAdminId: string;
   let adminId: string;
   let testAdminId: string;
+  let testInvitationToken: string;
 
   beforeAll(async () => {
     // Expressアプリを作成
@@ -64,6 +65,9 @@ describe('System Admin API Integration Tests', () => {
 
   afterAll(async () => {
     // テストデータをクリーンアップ
+    await prisma.adminInvitation.deleteMany({
+      where: { invitedById: superAdminId },
+    });
     await prisma.adminSession.deleteMany({
       where: { adminUserId: { in: [superAdminId, adminId, testAdminId].filter(Boolean) } },
     });
@@ -83,6 +87,8 @@ describe('System Admin API Integration Tests', () => {
       await prisma.adminUser.deleteMany({ where: { id: testAdminId } });
       testAdminId = '';
     }
+    // テスト用の招待トークンをクリア
+    testInvitationToken = '';
   });
 
   describe('GET /admin/admin-users', () => {
@@ -178,8 +184,14 @@ describe('System Admin API Integration Tests', () => {
       expect(response.body).toHaveProperty('adminUser');
       expect(response.body.adminUser.email).toBe('new-admin@example.com');
       expect(response.body.adminUser.role).toBe('VIEWER');
+      expect(response.body).toHaveProperty('invitationSent');
 
-      testAdminId = response.body.adminUser.id;
+      // 招待が作成されていることを確認
+      const invitation = await prisma.adminInvitation.findFirst({
+        where: { email: 'new-admin@example.com' },
+      });
+      expect(invitation).not.toBeNull();
+      testInvitationToken = invitation!.token;
     });
 
     it('既存のメールアドレスではエラーを返す', async () => {
@@ -205,6 +217,198 @@ describe('System Admin API Integration Tests', () => {
         });
 
       expect(response.status).toBe(400);
+    });
+
+    it('有効な招待が既に存在する場合はエラーを返す', async () => {
+      // 最初の招待を作成
+      await request(app)
+        .post('/admin/admin-users')
+        .set('Cookie', superAdminCookie)
+        .send({
+          email: 'duplicate-invite@example.com',
+          name: 'Duplicate Invite',
+          role: 'VIEWER',
+        });
+
+      // 同じメールアドレスで再度招待しようとする
+      const response = await request(app)
+        .post('/admin/admin-users')
+        .set('Cookie', superAdminCookie)
+        .send({
+          email: 'duplicate-invite@example.com',
+          name: 'Duplicate Invite',
+          role: 'VIEWER',
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('INVITATION_ALREADY_EXISTS');
+    });
+  });
+
+  describe('GET /admin/admin-users/invitations/:token', () => {
+    it('有効な招待情報を取得できる（認証不要）', async () => {
+      // 招待を作成
+      const inviteResponse = await request(app)
+        .post('/admin/admin-users')
+        .set('Cookie', superAdminCookie)
+        .send({
+          email: 'invitation-test@example.com',
+          name: 'Invitation Test',
+          role: 'ADMIN',
+        });
+
+      const invitation = await prisma.adminInvitation.findFirst({
+        where: { email: 'invitation-test@example.com' },
+      });
+
+      const response = await request(app)
+        .get(`/admin/admin-users/invitations/${invitation!.token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.email).toBe('invitation-test@example.com');
+      expect(response.body.name).toBe('Invitation Test');
+      expect(response.body.role).toBe('ADMIN');
+      expect(response.body).toHaveProperty('invitedBy');
+      expect(response.body).toHaveProperty('expiresAt');
+    });
+
+    it('存在しないトークンでは404を返す', async () => {
+      const response = await request(app)
+        .get('/admin/admin-users/invitations/invalid-token-12345');
+
+      expect(response.status).toBe(404);
+    });
+
+    it('期限切れの招待ではエラーを返す', async () => {
+      // 期限切れの招待を作成
+      const expiredInvitation = await prisma.adminInvitation.create({
+        data: {
+          email: 'expired@example.com',
+          name: 'Expired User',
+          role: 'VIEWER',
+          token: crypto.randomBytes(16).toString('hex'),
+          invitedById: superAdminId,
+          expiresAt: new Date(Date.now() - 1000), // 過去の日時
+        },
+      });
+
+      const response = await request(app)
+        .get(`/admin/admin-users/invitations/${expiredInvitation.token}`);
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('INVITATION_EXPIRED');
+
+      // クリーンアップ
+      await prisma.adminInvitation.delete({ where: { id: expiredInvitation.id } });
+    });
+  });
+
+  describe('POST /admin/admin-users/invitations/:token/accept', () => {
+    it('招待を受諾してアカウントを作成できる（認証不要）', async () => {
+      // 招待を作成
+      await request(app)
+        .post('/admin/admin-users')
+        .set('Cookie', superAdminCookie)
+        .send({
+          email: 'accept-test@example.com',
+          name: 'Accept Test',
+          role: 'VIEWER',
+        });
+
+      const invitation = await prisma.adminInvitation.findFirst({
+        where: { email: 'accept-test@example.com' },
+      });
+
+      // 招待を受諾
+      const response = await request(app)
+        .post(`/admin/admin-users/invitations/${invitation!.token}/accept`)
+        .send({
+          password: 'StrongPassword123!',
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.adminUser.email).toBe('accept-test@example.com');
+      expect(response.body.adminUser.name).toBe('Accept Test');
+      expect(response.body).toHaveProperty('message');
+
+      // アカウントが作成されていることを確認
+      const adminUser = await prisma.adminUser.findUnique({
+        where: { email: 'accept-test@example.com' },
+      });
+      expect(adminUser).not.toBeNull();
+      testAdminId = adminUser!.id;
+
+      // 招待が受諾済みになっていることを確認
+      const updatedInvitation = await prisma.adminInvitation.findUnique({
+        where: { id: invitation!.id },
+      });
+      expect(updatedInvitation?.acceptedAt).not.toBeNull();
+    });
+
+    it('弱いパスワードではバリデーションエラーを返す', async () => {
+      // 招待を作成
+      await request(app)
+        .post('/admin/admin-users')
+        .set('Cookie', superAdminCookie)
+        .send({
+          email: 'weak-password@example.com',
+          name: 'Weak Password Test',
+          role: 'VIEWER',
+        });
+
+      const invitation = await prisma.adminInvitation.findFirst({
+        where: { email: 'weak-password@example.com' },
+      });
+
+      // 弱いパスワードで受諾を試みる
+      const response = await request(app)
+        .post(`/admin/admin-users/invitations/${invitation!.token}/accept`)
+        .send({
+          password: 'weak',
+        });
+
+      expect(response.status).toBe(400);
+    });
+
+    it('既に受諾済みの招待ではエラーを返す', async () => {
+      // 招待を作成して受諾
+      await request(app)
+        .post('/admin/admin-users')
+        .set('Cookie', superAdminCookie)
+        .send({
+          email: 'already-accepted@example.com',
+          name: 'Already Accepted',
+          role: 'VIEWER',
+        });
+
+      const invitation = await prisma.adminInvitation.findFirst({
+        where: { email: 'already-accepted@example.com' },
+      });
+
+      // 1回目の受諾
+      await request(app)
+        .post(`/admin/admin-users/invitations/${invitation!.token}/accept`)
+        .send({
+          password: 'StrongPassword123!',
+        });
+
+      // 2回目の受諾を試みる
+      const response = await request(app)
+        .post(`/admin/admin-users/invitations/${invitation!.token}/accept`)
+        .send({
+          password: 'AnotherPassword123!',
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe('INVITATION_ALREADY_ACCEPTED');
+
+      // クリーンアップ
+      const adminUser = await prisma.adminUser.findUnique({
+        where: { email: 'already-accepted@example.com' },
+      });
+      if (adminUser) {
+        testAdminId = adminUser.id;
+      }
     });
   });
 

@@ -15,6 +15,8 @@ import type {
   SystemAdminUnlockResponse,
   SystemAdminReset2FAResponse,
   SystemAdminRole,
+  AdminInvitationResponse,
+  AcceptInvitationResponse,
 } from '@agentest/shared';
 import {
   getSystemAdminsCache,
@@ -25,13 +27,15 @@ import {
   invalidateSystemAdminDetailCache,
 } from '../../lib/redis-store.js';
 import { BusinessError, NotFoundError } from '@agentest/shared';
+import { emailService } from '../email.service.js';
+import { env } from '../../config/env.js';
 
 // キャッシュ有効期限（秒）
 const CACHE_TTL_SECONDS = 60;
 const DETAIL_CACHE_TTL_SECONDS = 30;
 
-// 仮パスワード生成用の文字セット
-const PASSWORD_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+// 招待トークン有効期限（24時間）
+const INVITATION_EXPIRES_HOURS = 24;
 
 /**
  * システム管理者管理サービス
@@ -349,7 +353,7 @@ export class SystemAdminService {
   }
 
   /**
-   * システム管理者を招待（作成）
+   * システム管理者を招待（招待メール送信）
    */
   async inviteAdminUser(
     request: SystemAdminInviteRequest,
@@ -357,66 +361,240 @@ export class SystemAdminService {
   ): Promise<SystemAdminInviteResponse> {
     const { email, name, role } = request;
 
-    // 既存のメールアドレスをチェック
-    const existing = await prisma.adminUser.findUnique({
+    // 既存のアクティブなメールアドレスをチェック
+    const existingUser = await prisma.adminUser.findUnique({
       where: { email },
       select: { id: true, deletedAt: true },
     });
 
-    if (existing && !existing.deletedAt) {
+    if (existingUser && !existingUser.deletedAt) {
       throw new BusinessError('ADMIN_USER_ALREADY_EXISTS', 'このメールアドレスは既に登録されています');
     }
 
-    // 仮パスワードを生成
-    const temporaryPassword = this.generateTemporaryPassword();
-    const passwordHash = await bcrypt.hash(temporaryPassword, 12);
+    // 既存の未使用招待をチェック
+    const existingInvitation = await prisma.adminInvitation.findFirst({
+      where: {
+        email,
+        acceptedAt: null,
+        expiresAt: { gt: new Date() },
+      },
+    });
 
-    // 新しい管理者を作成（または削除済みを復元）
-    let adminUser;
-    if (existing) {
-      // 削除済みアカウントを復元
-      adminUser = await prisma.adminUser.update({
-        where: { id: existing.id },
-        data: {
-          name,
-          role: role as AdminRoleType,
-          passwordHash,
-          totpEnabled: false,
-          totpSecret: null,
-          failedAttempts: 0,
-          lockedUntil: null,
-          deletedAt: null,
-        },
-      });
-    } else {
-      // 新規作成
-      adminUser = await prisma.adminUser.create({
-        data: {
-          email,
-          name,
-          role: role as AdminRoleType,
-          passwordHash,
-        },
-      });
+    if (existingInvitation) {
+      throw new BusinessError('INVITATION_ALREADY_EXISTS', '有効な招待が既に存在します');
     }
+
+    // 招待者情報を取得
+    const inviter = await prisma.adminUser.findUnique({
+      where: { id: currentAdminId },
+      select: { name: true },
+    });
+
+    if (!inviter) {
+      throw new NotFoundError('招待者情報が見つかりません');
+    }
+
+    // 招待トークンを生成
+    const token = crypto.randomUUID();
+
+    // 有効期限を設定（24時間）
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + INVITATION_EXPIRES_HOURS);
+
+    // 招待を作成
+    const invitation = await prisma.adminInvitation.create({
+      data: {
+        email,
+        name,
+        role: role as AdminRoleType,
+        token,
+        invitedById: currentAdminId,
+        expiresAt,
+      },
+    });
 
     // 監査ログを記録
     await prisma.adminAuditLog.create({
       data: {
         adminUserId: currentAdminId,
-        action: 'ADMIN_USER_CREATE',
-        targetType: 'AdminUser',
-        targetId: adminUser.id,
+        action: 'ADMIN_USER_INVITE',
+        targetType: 'AdminInvitation',
+        targetId: invitation.id,
         details: { email, name, role },
       },
     });
 
+    // 招待メールを送信
+    let invitationSent = false;
+    try {
+      // 管理画面のベースURLを取得（環境変数がない場合はAPIのURLから推測）
+      const adminBaseUrl = env.FRONTEND_URL.replace(':5173', ':5174');
+      const invitationUrl = `${adminBaseUrl}/invitation/${token}`;
+
+      const emailContent = emailService.generateAdminInvitationEmail({
+        name,
+        inviterName: inviter.name,
+        role,
+        invitationUrl,
+        expiresAt,
+      });
+
+      await emailService.send({
+        to: email,
+        subject: emailContent.subject,
+        text: emailContent.text,
+        html: emailContent.html,
+      });
+
+      invitationSent = true;
+    } catch (error) {
+      // メール送信失敗してもエラーにはしない（招待自体は作成済み）
+      console.error('招待メール送信失敗:', error);
+    }
+
+    return {
+      adminUser: {
+        id: invitation.id,
+        email: invitation.email,
+        name: invitation.name,
+        role: invitation.role as SystemAdminRole,
+        totpEnabled: false,
+        createdAt: invitation.createdAt.toISOString(),
+      },
+      invitationSent,
+    };
+  }
+
+  /**
+   * 招待情報を取得
+   */
+  async getInvitation(token: string): Promise<AdminInvitationResponse> {
+    const invitation = await prisma.adminInvitation.findUnique({
+      where: { token },
+      include: {
+        invitedBy: {
+          select: { name: true },
+        },
+      },
+    });
+
+    if (!invitation) {
+      throw new NotFoundError('招待が見つかりません');
+    }
+
+    // 既に受諾済みかチェック
+    if (invitation.acceptedAt) {
+      throw new BusinessError('INVITATION_ALREADY_ACCEPTED', 'この招待は既に受諾されています');
+    }
+
+    // 有効期限をチェック
+    if (invitation.expiresAt < new Date()) {
+      throw new BusinessError('INVITATION_EXPIRED', 'この招待は有効期限が切れています');
+    }
+
+    return {
+      email: invitation.email,
+      name: invitation.name,
+      role: invitation.role as SystemAdminRole,
+      invitedBy: invitation.invitedBy.name,
+      expiresAt: invitation.expiresAt.toISOString(),
+    };
+  }
+
+  /**
+   * 招待を受諾してパスワードを設定
+   */
+  async acceptInvitation(token: string, password: string): Promise<AcceptInvitationResponse> {
+    const invitation = await prisma.adminInvitation.findUnique({
+      where: { token },
+    });
+
+    if (!invitation) {
+      throw new NotFoundError('招待が見つかりません');
+    }
+
+    // 既に受諾済みかチェック
+    if (invitation.acceptedAt) {
+      throw new BusinessError('INVITATION_ALREADY_ACCEPTED', 'この招待は既に受諾されています');
+    }
+
+    // 有効期限をチェック
+    if (invitation.expiresAt < new Date()) {
+      throw new BusinessError('INVITATION_EXPIRED', 'この招待は有効期限が切れています');
+    }
+
+    // パスワードをハッシュ化
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    // 既存の削除済みアカウントをチェック
+    const existingUser = await prisma.adminUser.findUnique({
+      where: { email: invitation.email },
+      select: { id: true, deletedAt: true },
+    });
+
+    let adminUser;
+
+    // トランザクションで処理
+    if (existingUser) {
+      // 削除済みアカウントを復元
+      [adminUser] = await prisma.$transaction([
+        prisma.adminUser.update({
+          where: { id: existingUser.id },
+          data: {
+            name: invitation.name,
+            role: invitation.role,
+            passwordHash,
+            totpEnabled: false,
+            totpSecret: null,
+            failedAttempts: 0,
+            lockedUntil: null,
+            deletedAt: null,
+          },
+        }),
+        prisma.adminInvitation.update({
+          where: { id: invitation.id },
+          data: { acceptedAt: new Date() },
+        }),
+        prisma.adminAuditLog.create({
+          data: {
+            adminUserId: existingUser.id,
+            action: 'ADMIN_USER_ACTIVATE',
+            targetType: 'AdminUser',
+            targetId: existingUser.id,
+            details: { restoredFromDeleted: true },
+          },
+        }),
+      ]);
+    } else {
+      // 新規作成
+      adminUser = await prisma.adminUser.create({
+        data: {
+          email: invitation.email,
+          name: invitation.name,
+          role: invitation.role,
+          passwordHash,
+        },
+      });
+
+      await prisma.$transaction([
+        prisma.adminInvitation.update({
+          where: { id: invitation.id },
+          data: { acceptedAt: new Date() },
+        }),
+        prisma.adminAuditLog.create({
+          data: {
+            adminUserId: adminUser.id,
+            action: 'ADMIN_USER_ACTIVATE',
+            targetType: 'AdminUser',
+            targetId: adminUser.id,
+            details: { invitationId: invitation.id },
+          },
+        }),
+      ]);
+    }
+
     // キャッシュを無効化
     await invalidateSystemAdminsCache();
-
-    // TODO: 招待メールを送信（仮パスワード含む）
-    // 現時点ではメール送信は未実装
-    const invitationSent = false;
 
     return {
       adminUser: {
@@ -424,10 +602,8 @@ export class SystemAdminService {
         email: adminUser.email,
         name: adminUser.name,
         role: adminUser.role as SystemAdminRole,
-        totpEnabled: adminUser.totpEnabled,
-        createdAt: adminUser.createdAt.toISOString(),
       },
-      invitationSent,
+      message: 'アカウントが有効化されました。ログインしてください。',
     };
   }
 
@@ -697,15 +873,4 @@ export class SystemAdminService {
     };
   }
 
-  /**
-   * 仮パスワードを生成
-   */
-  private generateTemporaryPassword(): string {
-    let password = '';
-    const randomBytes = crypto.randomBytes(16);
-    for (let i = 0; i < 16; i++) {
-      password += PASSWORD_CHARS[randomBytes[i] % PASSWORD_CHARS.length];
-    }
-    return password;
-  }
 }

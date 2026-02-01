@@ -4,6 +4,7 @@ import {
   systemAdminSearchSchema,
   systemAdminInviteSchema,
   systemAdminUpdateSchema,
+  acceptInvitationSchema,
   uuidSchema,
 } from '@agentest/shared/validators';
 import { SystemAdminService } from '../../services/admin/system-admin.service.js';
@@ -225,6 +226,55 @@ export class AdminAdminUsersController {
       );
 
       res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 招待情報を取得（認証不要）
+   * GET /admin/invitations/:token
+   */
+  getInvitation = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const token = req.params.token;
+
+      if (!token || typeof token !== 'string') {
+        throw new ValidationError('無効なトークンです', { token: ['トークンを指定してください'] });
+      }
+
+      const result = await this.service.getInvitation(token);
+
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 招待を受諾してパスワードを設定（認証不要）
+   * POST /admin/invitations/:token/accept
+   */
+  acceptInvitation = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const token = req.params.token;
+
+      if (!token || typeof token !== 'string') {
+        throw new ValidationError('無効なトークンです', { token: ['トークンを指定してください'] });
+      }
+
+      // リクエストボディをバリデーション
+      const parseResult = acceptInvitationSchema.safeParse(req.body);
+      if (!parseResult.success) {
+        throw new ValidationError(
+          'リクエストボディが不正です',
+          parseResult.error.flatten().fieldErrors as Record<string, string[]>
+        );
+      }
+
+      const result = await this.service.acceptInvitation(token, parseResult.data.password);
+
+      res.status(201).json(result);
     } catch (error) {
       next(error);
     }
