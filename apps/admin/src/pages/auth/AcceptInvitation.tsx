@@ -195,7 +195,7 @@ export function AcceptInvitationPage() {
 
           {/* フッター */}
           <p className="text-xs text-foreground-subtle text-center mt-6">
-            &copy; 2026 Agentest. All rights reserved.
+            &copy; {new Date().getFullYear()} Agentest. All rights reserved.
           </p>
         </div>
       </div>
@@ -254,7 +254,7 @@ export function AcceptInvitationPage() {
 
           {/* フッター */}
           <p className="text-xs text-foreground-subtle text-center mt-6">
-            &copy; 2026 Agentest. All rights reserved.
+            &copy; {new Date().getFullYear()} Agentest. All rights reserved.
           </p>
         </div>
       </div>
@@ -492,7 +492,7 @@ export function AcceptInvitationPage() {
 
         {/* フッター */}
         <p className="text-xs text-foreground-subtle text-center mt-6">
-          &copy; 2026 Agentest. All rights reserved.
+          &copy; {new Date().getFullYear()} Agentest. All rights reserved.
         </p>
       </div>
     </div>

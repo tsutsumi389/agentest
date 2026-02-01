@@ -9,7 +9,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 // ============================================
 
 /** 管理者ロール */
-export type AdminRole = 'SUPER_ADMIN' | 'ADMIN' | 'OPERATOR' | 'VIEWER';
+export type AdminRole = 'SUPER_ADMIN' | 'ADMIN' | 'VIEWER';
 
 /** 管理者ユーザー */
 export interface AdminUser {

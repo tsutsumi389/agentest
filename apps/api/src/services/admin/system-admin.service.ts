@@ -427,9 +427,8 @@ export class SystemAdminService {
     // 招待メールを送信
     let invitationSent = false;
     try {
-      // 管理画面のベースURLを取得（環境変数がない場合はAPIのURLから推測）
-      const adminBaseUrl = env.FRONTEND_URL.replace(':5173', ':5174');
-      const invitationUrl = `${adminBaseUrl}/invitation/${token}`;
+      // 管理画面のベースURLを取得
+      const invitationUrl = `${env.ADMIN_FRONTEND_URL}/invitation/${token}`;
 
       const emailContent = emailService.generateAdminInvitationEmail({
         name,
@@ -527,6 +526,8 @@ export class SystemAdminService {
     const passwordHash = await bcrypt.hash(password, 12);
 
     // 既存の削除済みアカウントをチェック
+    // 同じメールアドレスで過去に削除されたアカウントが存在する場合、
+    // 新規作成ではなく復元を行う（メールアドレスのユニーク制約を維持するため）
     const existingUser = await prisma.adminUser.findUnique({
       where: { email: invitation.email },
       select: { id: true, deletedAt: true },
@@ -536,7 +537,7 @@ export class SystemAdminService {
 
     // トランザクションで処理
     if (existingUser) {
-      // 削除済みアカウントを復元
+      // 削除済みアカウントを復元（2FA、ロック状態、ログイン失敗回数はリセット）
       [adminUser] = await prisma.$transaction([
         prisma.adminUser.update({
           where: { id: existingUser.id },

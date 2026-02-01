@@ -13,6 +13,7 @@ const envSchema = z.object({
   // OAuth 2.1 Authorization Server
   API_BASE_URL: z.string().url().default('http://localhost:3001'),
   FRONTEND_URL: z.string().url().default('http://localhost:5173'),
+  ADMIN_FRONTEND_URL: z.string().url().default('http://localhost:5174'),
 
   // データベース
   DATABASE_URL: z.string().url(),
