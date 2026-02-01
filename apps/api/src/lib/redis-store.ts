@@ -17,6 +17,7 @@ const KEY_PREFIX = {
   ADMIN_ORGANIZATIONS: 'admin:organizations:',
   ADMIN_ORGANIZATION_DETAIL: 'admin:organization:detail:',
   ADMIN_AUDIT_LOGS: 'admin:audit-logs:',
+  ADMIN_METRICS: 'admin:metrics:',
   USER_INVOICES: 'invoices:user:',
   ORG_INVOICES: 'invoices:org:',
 } as const;
@@ -839,5 +840,94 @@ export async function getAdminAuditLogsCache<T>(
   } catch (error) {
     console.error('管理者監査ログキャッシュの取得に失敗:', error);
     return null;
+  }
+}
+
+// ============================================
+// アクティブユーザーメトリクスキャッシュ（DAU/WAU/MAU）
+// ============================================
+
+/**
+ * 検索パラメータからキャッシュキーを生成
+ */
+function generateAdminMetricsKey(params: Record<string, unknown>): string {
+  const sortedParams = Object.keys(params)
+    .sort()
+    .filter((key) => params[key] !== undefined && params[key] !== null)
+    .map((key) => `${key}:${JSON.stringify(params[key])}`)
+    .join('|');
+  return `${KEY_PREFIX.ADMIN_METRICS}${sortedParams}`;
+}
+
+/**
+ * アクティブユーザーメトリクスをキャッシュに保存
+ * @param params クエリパラメータ
+ * @param data キャッシュデータ
+ * @param ttlSeconds 有効期限（秒）、デフォルト5分（過去データ用）
+ */
+export async function setAdminMetricsCache<T>(
+  params: Record<string, unknown>,
+  data: T,
+  ttlSeconds: number = 300
+): Promise<boolean> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    const key = generateAdminMetricsKey(params);
+    await redis.setex(key, ttlSeconds, JSON.stringify(data));
+    return true;
+  } catch (error) {
+    console.error('アクティブユーザーメトリクスキャッシュの保存に失敗:', error);
+    return false;
+  }
+}
+
+/**
+ * アクティブユーザーメトリクスをキャッシュから取得
+ * @param params クエリパラメータ
+ */
+export async function getAdminMetricsCache<T>(
+  params: Record<string, unknown>
+): Promise<T | null> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return null;
+  }
+
+  try {
+    const key = generateAdminMetricsKey(params);
+    const data = await redis.get(key);
+    if (!data) {
+      return null;
+    }
+    return JSON.parse(data) as T;
+  } catch (error) {
+    console.error('アクティブユーザーメトリクスキャッシュの取得に失敗:', error);
+    return null;
+  }
+}
+
+/**
+ * アクティブユーザーメトリクスキャッシュを無効化（パターンマッチで全キャッシュを削除）
+ */
+export async function invalidateAdminMetricsCache(): Promise<boolean> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    const pattern = `${KEY_PREFIX.ADMIN_METRICS}*`;
+    const keys = await redis.keys(pattern);
+    if (keys.length > 0) {
+      await redis.del(...keys);
+    }
+    return true;
+  } catch (error) {
+    console.error('アクティブユーザーメトリクスキャッシュの無効化に失敗:', error);
+    return false;
   }
 }
