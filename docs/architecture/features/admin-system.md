@@ -25,6 +25,8 @@
 | 組織管理（一覧） | ✅ 実装済 | APIのみ |
 | 組織管理（詳細） | ✅ 実装済 | APIのみ |
 | 課金管理 | 🔲 未実装 | Phase 2 |
+| システム管理者アカウント管理 | ✅ 実装済 | API + UI |
+| システム管理者招待 | ✅ 実装済 | API + UI |
 
 ## 機能一覧
 
@@ -80,6 +82,17 @@
 |----|--------|------|------|
 | ADM-AUD-001 | 全体監査ログ閲覧 | 全組織の監査ログを横断検索・閲覧 | 実装済 |
 | ADM-AUD-002 | 監査ログ記録 | 管理者の全操作を自動記録 | 実装済 |
+
+### システム管理者アカウント管理
+
+| ID | 機能名 | 説明 | 状態 |
+|----|--------|------|------|
+| ADM-SEC-001-1 | 管理者一覧取得 | 検索・フィルタ・ソート対応 | 実装済 |
+| ADM-SEC-001-2 | 管理者詳細取得 | セッション・監査ログ情報付き | 実装済 |
+| ADM-SEC-001-3 | 管理者招待 | メール送信、24時間有効 | 実装済 |
+| ADM-SEC-001-4 | 管理者更新 | ロール変更制約あり | 実装済 |
+| ADM-SEC-001-5 | 管理者削除 | 論理削除、最後のSUPER_ADMIN保護 | 実装済 |
+| ADM-SEC-001-6 | ロック解除・2FAリセット | セキュリティ管理 | 実装済 |
 
 ## 業務フロー
 
@@ -258,12 +271,63 @@ sequenceDiagram
     F->>A: 組織詳細画面表示
 ```
 
+### 管理者招待フロー
+
+```mermaid
+sequenceDiagram
+    participant SA as SUPER_ADMIN
+    participant F as Admin App
+    participant B as API
+    participant DB as データベース
+    participant Mail as メールサービス
+    participant NA as 新管理者
+
+    SA->>F: 管理者招待モーダルを開く
+    F->>SA: 入力フォーム表示
+    SA->>F: メール・名前・ロール入力
+    F->>B: POST /admin/admin-users
+    B->>B: セッション検証（SUPER_ADMIN権限確認）
+    B->>DB: メールアドレス重複チェック
+    alt メール重複
+        B->>F: 409 ADMIN_USER_ALREADY_EXISTS
+        F->>SA: エラー表示
+    else 重複なし
+        B->>DB: 招待トークン生成・保存（24時間有効）
+        B->>Mail: 招待メール送信
+        B->>DB: 監査ログ記録（ADMIN_USER_INVITE）
+        B->>F: 201 Created + 招待情報
+        F->>SA: 成功メッセージ表示
+    end
+
+    Note over NA: 招待メール受信
+
+    NA->>F: 招待リンクアクセス
+    F->>B: GET /admin/invitations/:token
+    alt 招待期限切れ or 無効
+        B->>F: 400/404 エラー
+        F->>NA: エラーページ表示
+    else 有効
+        B->>F: 招待情報
+        F->>NA: パスワード設定フォーム表示
+    end
+
+    NA->>F: パスワード入力
+    F->>B: POST /admin/invitations/:token/accept
+    B->>DB: パスワードハッシュ化
+    B->>DB: 管理者アカウント作成
+    B->>DB: 招待トークン無効化（acceptedAt設定）
+    B->>DB: 監査ログ記録（ADMIN_INVITATION_ACCEPTED）
+    B->>F: 201 Created
+    F->>NA: ログイン画面へリダイレクト
+```
+
 ## データモデル
 
 ```mermaid
 erDiagram
     AdminUser ||--o{ AdminSession : "has"
     AdminUser ||--o{ AdminAuditLog : "performs"
+    AdminUser ||--o{ AdminInvitation : "invites"
 
     AdminUser {
         uuid id PK
@@ -303,6 +367,18 @@ erDiagram
         string user_agent
         timestamp created_at
     }
+
+    AdminInvitation {
+        uuid id PK
+        string email
+        string name
+        AdminRoleType role
+        string token UK
+        uuid invited_by_id FK
+        timestamp accepted_at
+        timestamp expires_at
+        timestamp created_at
+    }
 ```
 
 ### テーブル概要
@@ -312,6 +388,7 @@ erDiagram
 | AdminUser | 管理者ユーザー情報 |
 | AdminSession | 管理者セッション情報 |
 | AdminAuditLog | 管理者操作の監査ログ |
+| AdminInvitation | 管理者招待情報 |
 
 ### 監査ログアクション一覧
 
@@ -325,6 +402,14 @@ erDiagram
 | 2FA_DISABLED | 2FA無効化 |
 | SESSION_REFRESH | セッション延長 |
 | ACCOUNT_LOCKED | アカウントロック |
+| ADMIN_USER_LIST | システム管理者一覧閲覧 |
+| ADMIN_USER_VIEW | システム管理者詳細閲覧 |
+| ADMIN_USER_INVITE | システム管理者招待 |
+| ADMIN_USER_UPDATE | システム管理者更新 |
+| ADMIN_USER_DELETE | システム管理者削除 |
+| ADMIN_USER_UNLOCK | アカウントロック解除 |
+| ADMIN_USER_RESET_2FA | 2FAリセット |
+| ADMIN_INVITATION_ACCEPTED | 招待受諾 |
 
 ## ビジネスルール
 
@@ -445,6 +530,7 @@ erDiagram
 - [管理者ユーザー管理 API](../../api/admin-users.md) - ユーザー一覧・詳細
 - [管理者組織管理 API](../../api/admin-organizations.md) - 組織一覧・詳細
 - [管理者監査ログ API](../../api/admin-audit-logs.md) - 全体監査ログ閲覧
+- [システム管理者管理 API](../../api/admin-admin-users.md) - システム管理者の一覧・招待・更新・削除
 
 ### データベース設計
 

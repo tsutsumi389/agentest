@@ -20,6 +20,8 @@ const KEY_PREFIX = {
   ADMIN_METRICS: 'admin:metrics:',
   USER_INVOICES: 'invoices:user:',
   ORG_INVOICES: 'invoices:org:',
+  SYSTEM_ADMINS: 'admin:system-admins:',
+  SYSTEM_ADMIN_DETAIL: 'admin:system-admin:detail:',
 } as const;
 
 // Redis未設定時の警告メッセージ（開発環境用）
@@ -928,6 +930,172 @@ export async function invalidateAdminMetricsCache(): Promise<boolean> {
     return true;
   } catch (error) {
     console.error('アクティブユーザーメトリクスキャッシュの無効化に失敗:', error);
+    return false;
+  }
+}
+
+// ============================================
+// システム管理者（AdminUser）一覧キャッシュ
+// ============================================
+
+/**
+ * 検索パラメータからキャッシュキーを生成
+ */
+function generateSystemAdminsKey(params: Record<string, unknown>): string {
+  const sortedParams = Object.keys(params)
+    .sort()
+    .filter((key) => params[key] !== undefined && params[key] !== null)
+    .map((key) => `${key}:${JSON.stringify(params[key])}`)
+    .join('|');
+  return `${KEY_PREFIX.SYSTEM_ADMINS}${sortedParams}`;
+}
+
+/**
+ * システム管理者一覧をキャッシュに保存
+ * @param params 検索パラメータ
+ * @param data キャッシュデータ
+ * @param ttlSeconds 有効期限（秒）、デフォルト1分
+ */
+export async function setSystemAdminsCache<T>(
+  params: Record<string, unknown>,
+  data: T,
+  ttlSeconds: number = 60
+): Promise<boolean> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    const key = generateSystemAdminsKey(params);
+    await redis.setex(key, ttlSeconds, JSON.stringify(data));
+    return true;
+  } catch (error) {
+    console.error('システム管理者一覧キャッシュの保存に失敗:', error);
+    return false;
+  }
+}
+
+/**
+ * システム管理者一覧をキャッシュから取得
+ * @param params 検索パラメータ
+ */
+export async function getSystemAdminsCache<T>(
+  params: Record<string, unknown>
+): Promise<T | null> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return null;
+  }
+
+  try {
+    const key = generateSystemAdminsKey(params);
+    const data = await redis.get(key);
+    if (!data) {
+      return null;
+    }
+    return JSON.parse(data) as T;
+  } catch (error) {
+    console.error('システム管理者一覧キャッシュの取得に失敗:', error);
+    return null;
+  }
+}
+
+/**
+ * システム管理者一覧キャッシュを無効化（パターンマッチで全キャッシュを削除）
+ */
+export async function invalidateSystemAdminsCache(): Promise<boolean> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    const pattern = `${KEY_PREFIX.SYSTEM_ADMINS}*`;
+    const keys = await redis.keys(pattern);
+    if (keys.length > 0) {
+      await redis.del(...keys);
+    }
+    return true;
+  } catch (error) {
+    console.error('システム管理者一覧キャッシュの無効化に失敗:', error);
+    return false;
+  }
+}
+
+// ============================================
+// システム管理者（AdminUser）詳細キャッシュ
+// ============================================
+
+/**
+ * システム管理者詳細をキャッシュから取得
+ * @param adminUserId システム管理者ID
+ */
+export async function getSystemAdminDetailCache<T>(
+  adminUserId: string
+): Promise<T | null> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return null;
+  }
+
+  try {
+    const key = `${KEY_PREFIX.SYSTEM_ADMIN_DETAIL}${adminUserId}`;
+    const data = await redis.get(key);
+    if (!data) {
+      return null;
+    }
+    return JSON.parse(data) as T;
+  } catch (error) {
+    console.error('システム管理者詳細キャッシュの取得に失敗:', error);
+    return null;
+  }
+}
+
+/**
+ * システム管理者詳細をキャッシュに保存
+ * @param adminUserId システム管理者ID
+ * @param data キャッシュデータ
+ * @param ttlSeconds 有効期限（秒）、デフォルト30秒
+ */
+export async function setSystemAdminDetailCache<T>(
+  adminUserId: string,
+  data: T,
+  ttlSeconds: number = 30
+): Promise<boolean> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    const key = `${KEY_PREFIX.SYSTEM_ADMIN_DETAIL}${adminUserId}`;
+    await redis.setex(key, ttlSeconds, JSON.stringify(data));
+    return true;
+  } catch (error) {
+    console.error('システム管理者詳細キャッシュの保存に失敗:', error);
+    return false;
+  }
+}
+
+/**
+ * システム管理者詳細キャッシュを無効化
+ * @param adminUserId システム管理者ID
+ */
+export async function invalidateSystemAdminDetailCache(
+  adminUserId: string
+): Promise<boolean> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    const key = `${KEY_PREFIX.SYSTEM_ADMIN_DETAIL}${adminUserId}`;
+    await redis.del(key);
+    return true;
+  } catch (error) {
+    console.error('システム管理者詳細キャッシュの無効化に失敗:', error);
     return false;
   }
 }

@@ -7,8 +7,11 @@ import { UserDetail } from './pages/UserDetail';
 import { Organizations } from './pages/Organizations';
 import { OrganizationDetail } from './pages/OrganizationDetail';
 import { AuditLogs } from './pages/AuditLogs';
+import { SystemAdmins } from './pages/SystemAdmins';
+import { SystemAdminDetail } from './pages/SystemAdminDetail';
 import { LoginPage } from './pages/auth/Login';
 import { TwoFactorAuthPage } from './pages/auth/TwoFactorAuth';
+import { AcceptInvitationPage } from './pages/auth/AcceptInvitation';
 import { AuthGuard, AdminLayout } from './components/layout';
 import { useAdminAuthStore } from './stores/admin-auth.store';
 
@@ -34,6 +37,7 @@ export function App() {
         {/* 認証不要 */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/2fa" element={<TwoFactorAuthPage />} />
+        <Route path="/invitation/:token" element={<AcceptInvitationPage />} />
 
         {/* 認証必須（AdminLayout内にネスト） */}
         <Route
@@ -50,6 +54,8 @@ export function App() {
           <Route path="/organizations" element={<Organizations />} />
           <Route path="/organizations/:id" element={<OrganizationDetail />} />
           <Route path="/audit-logs" element={<AuditLogs />} />
+          <Route path="/system-admins" element={<SystemAdmins />} />
+          <Route path="/system-admins/:id" element={<SystemAdminDetail />} />
         </Route>
 
         {/* その他のルートはダッシュボードにリダイレクト */}
