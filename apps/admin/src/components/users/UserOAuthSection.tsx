@@ -1,5 +1,5 @@
 import { Github, Mail } from 'lucide-react';
-import type { AdminUserOAuthProvider } from '@agentest/shared';
+import type { AdminUserOAuthProvider } from '@agentest/shared/types';
 import { formatDate } from '../../lib/date-utils';
 
 interface UserOAuthSectionProps {

@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, Building2 } from 'lucide-react';
+import { LayoutDashboard, Users, Building2, ClipboardList } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 /**
@@ -19,6 +19,7 @@ export const adminNavLinks: NavLink[] = [
   { to: '/', label: 'ダッシュボード', icon: LayoutDashboard, exact: true },
   { to: '/users', label: 'ユーザー', icon: Users },
   { to: '/organizations', label: '組織', icon: Building2 },
+  { to: '/audit-logs', label: '監査ログ', icon: ClipboardList },
 ];
 
 /**

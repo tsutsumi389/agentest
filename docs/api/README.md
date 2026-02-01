@@ -75,6 +75,14 @@ Authorization: Bearer <access_token>
 
 → [管理者組織 API 詳細](./admin-organizations.md)
 
+### 管理者監査ログ
+
+| メソッド | パス | 説明 |
+|---------|------|------|
+| GET | `/admin/audit-logs` | 全体監査ログ一覧取得（検索・フィルタ・ソート対応） |
+
+→ [管理者監査ログ API 詳細](./admin-audit-logs.md)
+
 ### OAuth 2.1（MCP クライアント向け）
 
 | メソッド | パス | 説明 |

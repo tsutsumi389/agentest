@@ -1,5 +1,5 @@
 import { Building2, FolderKanban, FileCheck, Play } from 'lucide-react';
-import type { AdminUserDetail } from '@agentest/shared';
+import type { AdminUserDetail } from '@agentest/shared/types';
 
 interface UserStatsSectionProps {
   stats: AdminUserDetail['stats'];

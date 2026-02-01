@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import type { AdminOrganizationAuditLogEntry } from '@agentest/shared';
+import type { AdminOrganizationAuditLogEntry } from '@agentest/shared/types';
 import { formatRelativeTime } from '../../lib/date-utils';
 
 interface OrganizationAuditLogSectionProps {

@@ -1,5 +1,5 @@
 import { Activity, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
-import type { AdminDashboardSystemHealth, SystemHealthStatus } from '@agentest/shared';
+import type { AdminDashboardSystemHealth, SystemHealthStatus } from '@agentest/shared/types';
 
 interface SystemHealthCardProps {
   health: AdminDashboardSystemHealth;

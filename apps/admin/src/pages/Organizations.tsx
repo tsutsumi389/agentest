@@ -5,7 +5,7 @@ import type {
   AdminOrganizationSearchParams,
   AdminOrganizationSortBy,
   AdminOrganizationStatus,
-} from '@agentest/shared';
+} from '@agentest/shared/types';
 import { useAdminOrganizations } from '../hooks/useAdminOrganizations';
 import { OrganizationTable, OrganizationSearchForm, OrganizationFilters } from '../components/organizations';
 

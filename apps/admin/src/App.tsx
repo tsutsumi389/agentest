@@ -5,6 +5,7 @@ import { Users } from './pages/Users';
 import { UserDetail } from './pages/UserDetail';
 import { Organizations } from './pages/Organizations';
 import { OrganizationDetail } from './pages/OrganizationDetail';
+import { AuditLogs } from './pages/AuditLogs';
 import { LoginPage } from './pages/auth/Login';
 import { TwoFactorAuthPage } from './pages/auth/TwoFactorAuth';
 import { AuthGuard, AdminLayout } from './components/layout';
@@ -46,6 +47,7 @@ export function App() {
           <Route path="/users/:id" element={<UserDetail />} />
           <Route path="/organizations" element={<Organizations />} />
           <Route path="/organizations/:id" element={<OrganizationDetail />} />
+          <Route path="/audit-logs" element={<AuditLogs />} />
         </Route>
 
         {/* その他のルートはダッシュボードにリダイレクト */}

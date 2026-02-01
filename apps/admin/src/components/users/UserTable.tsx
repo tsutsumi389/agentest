@@ -4,7 +4,7 @@ import type {
   AdminUserListItem,
   AdminUserSortBy,
   AdminUserPagination,
-} from '@agentest/shared';
+} from '@agentest/shared/types';
 import { formatDate, formatRelativeTime } from '../../lib/date-utils';
 import { PlanBadge } from '../common';
 

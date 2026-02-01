@@ -1,4 +1,4 @@
-import type { AdminUserOrganization } from '@agentest/shared';
+import type { AdminUserOrganization } from '@agentest/shared/types';
 import { formatDate } from '../../lib/date-utils';
 
 interface UserOrganizationsSectionProps {

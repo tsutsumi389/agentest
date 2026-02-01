@@ -1,5 +1,5 @@
 import { Users, FolderKanban, FileCheck, Play } from 'lucide-react';
-import type { AdminOrganizationDetailStats } from '@agentest/shared';
+import type { AdminOrganizationDetailStats } from '@agentest/shared/types';
 
 interface OrganizationStatsSectionProps {
   stats: AdminOrganizationDetailStats;

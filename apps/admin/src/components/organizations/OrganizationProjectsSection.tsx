@@ -1,5 +1,5 @@
 import { Users, FileCheck } from 'lucide-react';
-import type { AdminOrganizationProject } from '@agentest/shared';
+import type { AdminOrganizationProject } from '@agentest/shared/types';
 import { formatDate } from '../../lib/date-utils';
 
 interface OrganizationProjectsSectionProps {

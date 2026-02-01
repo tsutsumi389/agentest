@@ -1,6 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router';
-import type { AdminOrganizationDetail } from '@agentest/shared';
+import type { AdminOrganizationDetail } from '@agentest/shared/types';
 import { OrganizationPlanBadge } from '../common';
 
 interface OrganizationDetailHeaderProps {

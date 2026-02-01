@@ -1,5 +1,5 @@
 import { Filter, X } from 'lucide-react';
-import type { AdminUserStatus } from '@agentest/shared';
+import type { AdminUserStatus } from '@agentest/shared/types';
 
 interface UserFiltersProps {
   plan: ('FREE' | 'PRO')[];

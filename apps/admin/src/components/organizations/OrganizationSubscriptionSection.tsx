@@ -1,5 +1,5 @@
 import { CreditCard, Mail } from 'lucide-react';
-import type { AdminOrganizationSubscription } from '@agentest/shared';
+import type { AdminOrganizationSubscription } from '@agentest/shared/types';
 import { formatDate } from '../../lib/date-utils';
 
 interface OrganizationSubscriptionSectionProps {

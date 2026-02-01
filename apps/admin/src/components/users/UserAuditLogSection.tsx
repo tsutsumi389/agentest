@@ -1,4 +1,4 @@
-import type { AdminUserAuditLogEntry } from '@agentest/shared';
+import type { AdminUserAuditLogEntry } from '@agentest/shared/types';
 import { formatRelativeTime } from '../../lib/date-utils';
 
 interface UserAuditLogSectionProps {

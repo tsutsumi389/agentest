@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import type { AdminOrganizationMember } from '@agentest/shared';
+import type { AdminOrganizationMember } from '@agentest/shared/types';
 import { formatDate } from '../../lib/date-utils';
 
 interface OrganizationMembersSectionProps {

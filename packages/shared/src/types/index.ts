@@ -11,3 +11,4 @@ export * from './admin-dashboard.js';
 export * from './admin-users.js';
 export * from './admin-organizations.js';
 export * from './user-dashboard.js';
+export * from './admin-audit-logs.js';

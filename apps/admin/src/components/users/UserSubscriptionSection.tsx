@@ -1,5 +1,5 @@
 import { CreditCard } from 'lucide-react';
-import type { AdminUserSubscription } from '@agentest/shared';
+import type { AdminUserSubscription } from '@agentest/shared/types';
 import { formatDate } from '../../lib/date-utils';
 
 interface UserSubscriptionSectionProps {

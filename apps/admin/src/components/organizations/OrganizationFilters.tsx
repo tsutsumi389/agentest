@@ -1,5 +1,5 @@
 import { Filter, X } from 'lucide-react';
-import type { AdminOrganizationStatus } from '@agentest/shared';
+import type { AdminOrganizationStatus } from '@agentest/shared/types';
 
 interface OrganizationFiltersProps {
   plan: ('TEAM' | 'ENTERPRISE')[];
