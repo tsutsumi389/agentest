@@ -18,9 +18,12 @@ describe('Admin Metrics API Integration Tests', () => {
   let testAdminUser: Awaited<ReturnType<typeof createTestAdminUser>>;
   let testAdminSession: Awaited<ReturnType<typeof createTestAdminSession>>;
   const testPassword = 'TestPassword123!';
+  // bcryptは意図的に遅いため、beforeAllで一度だけ計算してキャッシュ
+  let cachedPasswordHash: string;
 
   beforeAll(async () => {
     app = createApp();
+    cachedPasswordHash = bcryptjs.hashSync(testPassword, 12);
   });
 
   afterAll(async () => {
@@ -32,11 +35,10 @@ describe('Admin Metrics API Integration Tests', () => {
     await cleanupTestData();
 
     // テスト用の管理者ユーザーとセッションを作成
-    const passwordHash = bcryptjs.hashSync(testPassword, 12);
     testAdminUser = await createTestAdminUser({
       email: 'admin@example.com',
       name: 'Test Admin',
-      passwordHash,
+      passwordHash: cachedPasswordHash,
     });
 
     testAdminSession = await createTestAdminSession(testAdminUser.id, {
@@ -163,37 +165,44 @@ describe('Admin Metrics API Integration Tests', () => {
 
     it('サマリーが正しく計算される', async () => {
       // テスト用のメトリクスデータを作成
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
+      // 固定の日付範囲を使用して、当日データの影響を排除
+      const baseDate = new Date('2026-01-10');
+      baseDate.setHours(0, 0, 0, 0);
 
-      for (let i = 1; i <= 5; i++) {
-        const date = new Date(today);
+      // userCount: 10, 20, 30, 40, 50 を作成
+      // 期待値: average = (10+20+30+40+50)/5 = 30, max = 50, min = 10
+      const testCounts = [10, 20, 30, 40, 50];
+      for (let i = 0; i < testCounts.length; i++) {
+        const date = new Date(baseDate);
         date.setDate(date.getDate() - i);
         await createTestActiveUserMetric({
           granularity: 'DAY',
           periodStart: date,
-          userCount: i * 10, // 10, 20, 30, 40, 50
+          userCount: testCounts[i],
         });
       }
 
+      // 固定期間を指定してリクエスト（当日データの影響を排除）
+      const startDate = new Date('2026-01-06').toISOString();
+      const endDate = new Date('2026-01-10').toISOString();
+
       const response = await request(app)
-        .get('/admin/metrics/active-users')
+        .get(`/admin/metrics/active-users?startDate=${startDate}&endDate=${endDate}`)
         .set('Cookie', `admin_session=${testAdminSession.token}`);
 
       expect(response.status).toBe(200);
-      expect(response.body.summary).toHaveProperty('average');
-      expect(response.body.summary).toHaveProperty('max');
-      expect(response.body.summary).toHaveProperty('min');
+      expect(response.body.summary.average).toBe(30);
+      expect(response.body.summary.max).toBe(50);
+      expect(response.body.summary.min).toBe(10);
       expect(response.body.summary).toHaveProperty('changeRate');
     });
 
     it('VIEWERロールの管理者もアクセスできる', async () => {
-      // VIEWERロールの管理者を作成
-      const passwordHash = bcryptjs.hashSync(testPassword, 12);
+      // VIEWERロールの管理者を作成（キャッシュされたパスワードハッシュを使用）
       const viewerAdmin = await createTestAdminUser({
         email: 'viewer@example.com',
         name: 'Viewer Admin',
-        passwordHash,
+        passwordHash: cachedPasswordHash,
         role: 'VIEWER',
       });
       const viewerSession = await createTestAdminSession(viewerAdmin.id, {
@@ -236,16 +245,19 @@ describe('Admin Metrics API Integration Tests', () => {
     });
 
     it('カスタム期間でデータを取得できる', async () => {
-      const startDate = new Date('2026-01-01').toISOString();
-      const endDate = new Date('2026-01-31').toISOString();
+      // 日次粒度ではstartDateはそのまま返される
+      const startDate = new Date('2026-01-01T00:00:00.000Z');
+      const endDate = new Date('2026-01-31T00:00:00.000Z');
 
       const response = await request(app)
-        .get(`/admin/metrics/active-users?startDate=${startDate}&endDate=${endDate}`)
+        .get(`/admin/metrics/active-users?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`)
         .set('Cookie', `admin_session=${testAdminSession.token}`);
 
       expect(response.status).toBe(200);
-      expect(new Date(response.body.startDate).getTime()).toBeLessThanOrEqual(new Date(startDate).getTime());
-      expect(new Date(response.body.endDate).toISOString()).toBe(endDate);
+      // 日次粒度の場合、startDateは00:00:00に調整されてそのまま返される
+      expect(response.body.startDate).toBe(startDate.toISOString());
+      expect(response.body.endDate).toBe(endDate.toISOString());
+      expect(response.body.granularity).toBe('day');
     });
   });
 });
