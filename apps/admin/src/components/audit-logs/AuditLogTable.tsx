@@ -7,6 +7,7 @@ import type {
   AdminAuditLogCategory,
 } from '@agentest/shared';
 import { formatRelativeTime } from '../../lib/date-utils';
+import { CATEGORY_LABELS } from '../../lib/audit-log-utils';
 
 interface AuditLogTableProps {
   auditLogs: AdminAuditLogEntry[];
@@ -17,19 +18,6 @@ interface AuditLogTableProps {
   onPageChange: (page: number) => void;
   onViewDetails: (log: AdminAuditLogEntry) => void;
 }
-
-/**
- * カテゴリの日本語ラベル
- */
-const CATEGORY_LABELS: Record<AdminAuditLogCategory, string> = {
-  AUTH: '認証',
-  USER: 'ユーザー',
-  ORGANIZATION: '組織',
-  MEMBER: 'メンバー',
-  PROJECT: 'プロジェクト',
-  API_TOKEN: 'APIトークン',
-  BILLING: '課金',
-};
 
 // ============================================
 // ヘルパーコンポーネント

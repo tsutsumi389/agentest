@@ -1,6 +1,8 @@
+import { useEffect } from 'react';
 import { X } from 'lucide-react';
-import type { AdminAuditLogEntry, AdminAuditLogCategory } from '@agentest/shared';
+import type { AdminAuditLogEntry } from '@agentest/shared';
 import { formatDateTime } from '../../lib/date-utils';
+import { CATEGORY_LABELS } from '../../lib/audit-log-utils';
 
 interface AuditLogDetailModalProps {
   log: AdminAuditLogEntry;
@@ -8,22 +10,20 @@ interface AuditLogDetailModalProps {
 }
 
 /**
- * カテゴリの日本語ラベル
- */
-const CATEGORY_LABELS: Record<AdminAuditLogCategory, string> = {
-  AUTH: '認証',
-  USER: 'ユーザー',
-  ORGANIZATION: '組織',
-  MEMBER: 'メンバー',
-  PROJECT: 'プロジェクト',
-  API_TOKEN: 'APIトークン',
-  BILLING: '課金',
-};
-
-/**
  * 監査ログ詳細モーダル
  */
 export function AuditLogDetailModal({ log, onClose }: AuditLogDetailModalProps) {
+  // Escapeキーで閉じる
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   // 背景クリックで閉じる
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget) {

@@ -1,5 +1,6 @@
 import { Filter, X } from 'lucide-react';
 import { ADMIN_AUDIT_LOG_CATEGORIES, type AdminAuditLogCategory } from '@agentest/shared';
+import { CATEGORY_LABELS } from '../../lib/audit-log-utils';
 
 interface AuditLogFiltersProps {
   category: AdminAuditLogCategory[];
@@ -14,19 +15,6 @@ interface AuditLogFiltersProps {
   onEndDateChange: (date: string) => void;
   onClear: () => void;
 }
-
-/**
- * カテゴリの日本語ラベル
- */
-const CATEGORY_LABELS: Record<AdminAuditLogCategory, string> = {
-  AUTH: '認証',
-  USER: 'ユーザー',
-  ORGANIZATION: '組織',
-  MEMBER: 'メンバー',
-  PROJECT: 'プロジェクト',
-  API_TOKEN: 'APIトークン',
-  BILLING: '課金',
-};
 
 /**
  * 監査ログフィルターUI
