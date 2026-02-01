@@ -6,10 +6,21 @@
  * 環境変数:
  * - BACKFILL_DAYS: 遡る日数（デフォルト: 90日）
  */
-import { prisma } from '../lib/prisma.js';
+import { countActiveUsers, upsertMetric } from '../lib/metrics-utils.js';
+import {
+  getJSTStartOfDay,
+  getJSTLastMonday,
+  formatDateStringJST,
+} from '../lib/date-utils.js';
 
 // デフォルトのバックフィル期間（日数）
 const DEFAULT_BACKFILL_DAYS = 90;
+
+// 1日のミリ秒
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+
+// JSTオフセット（ミリ秒）
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
 /**
  * メトリクスバックフィルジョブのエントリーポイント
@@ -23,7 +34,6 @@ export async function runMetricsBackfill(): Promise<void> {
   console.log(`メトリクスバックフィル開始: 過去${backfillDays}日分`);
 
   const now = new Date();
-  now.setHours(0, 0, 0, 0);
 
   // DAUをバックフィル
   await backfillDAU(now, backfillDays);
@@ -44,42 +54,20 @@ async function backfillDAU(now: Date, days: number): Promise<void> {
   console.log(`DAUバックフィル開始: ${days}日分`);
 
   let totalUpserted = 0;
+  const todayStart = getJSTStartOfDay(now);
 
   for (let i = 1; i <= days; i++) {
-    const targetDate = new Date(now);
-    targetDate.setDate(targetDate.getDate() - i);
+    const targetDate = new Date(todayStart.getTime() - i * ONE_DAY_MS);
+    const nextDate = new Date(targetDate.getTime() + ONE_DAY_MS);
 
-    const nextDate = new Date(targetDate);
-    nextDate.setDate(nextDate.getDate() + 1);
-
-    // 対象日にアクティブだったユニークユーザー数をカウント
-    const count = await prisma.user.count({
-      where: {
-        deletedAt: null,
-        sessions: {
-          some: {
-            lastActiveAt: { gte: targetDate, lt: nextDate },
-            revokedAt: null,
-          },
-        },
-      },
-    });
-
-    // upsertで保存
-    await prisma.activeUserMetric.upsert({
-      where: {
-        granularity_periodStart: {
-          granularity: 'DAY',
-          periodStart: targetDate,
-        },
-      },
-      create: { granularity: 'DAY', periodStart: targetDate, userCount: count },
-      update: { userCount: count },
-    });
+    const count = await countActiveUsers(targetDate, nextDate);
+    await upsertMetric('DAY', targetDate, count);
 
     totalUpserted++;
     if (i % 30 === 0) {
-      console.log(`DAU進捗: ${i}/${days}日 (${count} users)`);
+      console.log(
+        `DAU進捗: ${i}/${days}日 (${formatDateStringJST(targetDate)}: ${count} users)`
+      );
     }
   }
 
@@ -96,39 +84,15 @@ async function backfillWAU(now: Date, days: number): Promise<void> {
 
   let totalUpserted = 0;
 
-  // 直近の月曜日を取得
-  const lastMonday = getLastMonday(now);
+  // 直近の月曜日を取得（JST基準）
+  const lastMonday = getJSTLastMonday(now);
 
   for (let i = 1; i <= weeks; i++) {
-    const weekStart = new Date(lastMonday);
-    weekStart.setDate(weekStart.getDate() - i * 7);
+    const weekStart = new Date(lastMonday.getTime() - i * 7 * ONE_DAY_MS);
+    const weekEnd = new Date(weekStart.getTime() + 7 * ONE_DAY_MS);
 
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekEnd.getDate() + 7);
-
-    // 対象週にアクティブだったユニークユーザー数をカウント
-    const count = await prisma.user.count({
-      where: {
-        deletedAt: null,
-        sessions: {
-          some: {
-            lastActiveAt: { gte: weekStart, lt: weekEnd },
-            revokedAt: null,
-          },
-        },
-      },
-    });
-
-    await prisma.activeUserMetric.upsert({
-      where: {
-        granularity_periodStart: {
-          granularity: 'WEEK',
-          periodStart: weekStart,
-        },
-      },
-      create: { granularity: 'WEEK', periodStart: weekStart, userCount: count },
-      update: { userCount: count },
-    });
+    const count = await countActiveUsers(weekStart, weekEnd);
+    await upsertMetric('WEEK', weekStart, count);
 
     totalUpserted++;
   }
@@ -146,52 +110,39 @@ async function backfillMAU(now: Date, days: number): Promise<void> {
 
   let totalUpserted = 0;
 
+  // JSTで現在の月を計算
+  const jstNow = new Date(now.getTime() + JST_OFFSET_MS);
+  const currentYear = jstNow.getUTCFullYear();
+  const currentMonth = jstNow.getUTCMonth();
+
   for (let i = 1; i <= months; i++) {
-    const monthStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() - i + 1, 1);
+    // i ヶ月前の月を計算
+    let targetMonth = currentMonth - i;
+    let targetYear = currentYear;
+    while (targetMonth < 0) {
+      targetMonth += 12;
+      targetYear -= 1;
+    }
 
-    // 対象月にアクティブだったユニークユーザー数をカウント
-    const count = await prisma.user.count({
-      where: {
-        deletedAt: null,
-        sessions: {
-          some: {
-            lastActiveAt: { gte: monthStart, lt: monthEnd },
-            revokedAt: null,
-          },
-        },
-      },
-    });
+    // 対象月の開始・終了（JSTで計算してUTCに変換）
+    const monthStartJST = new Date(Date.UTC(targetYear, targetMonth, 1));
+    const monthStart = new Date(monthStartJST.getTime() - JST_OFFSET_MS);
 
-    await prisma.activeUserMetric.upsert({
-      where: {
-        granularity_periodStart: {
-          granularity: 'MONTH',
-          periodStart: monthStart,
-        },
-      },
-      create: {
-        granularity: 'MONTH',
-        periodStart: monthStart,
-        userCount: count,
-      },
-      update: { userCount: count },
-    });
+    // 翌月の開始
+    let nextMonth = targetMonth + 1;
+    let nextYear = targetYear;
+    if (nextMonth > 11) {
+      nextMonth = 0;
+      nextYear += 1;
+    }
+    const monthEndJST = new Date(Date.UTC(nextYear, nextMonth, 1));
+    const monthEnd = new Date(monthEndJST.getTime() - JST_OFFSET_MS);
+
+    const count = await countActiveUsers(monthStart, monthEnd);
+    await upsertMetric('MONTH', monthStart, count);
 
     totalUpserted++;
   }
 
   console.log(`MAUバックフィル完了: ${totalUpserted}件`);
-}
-
-/**
- * 直近の月曜日を取得
- */
-function getLastMonday(date: Date): Date {
-  const result = new Date(date);
-  const dayOfWeek = result.getDay();
-  // 日曜(0)の場合は6日前、それ以外は (曜日-1) 日前
-  const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-  result.setDate(result.getDate() - daysToSubtract);
-  return result;
 }
