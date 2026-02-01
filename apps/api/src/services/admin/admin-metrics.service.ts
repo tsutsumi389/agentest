@@ -49,12 +49,15 @@ function calculatePeriodStart(
   result.setHours(0, 0, 0, 0);
 
   switch (granularity) {
-    case 'week':
-      // 月曜日起点に調整（getDay: 0=日曜, 1=月曜, ...）
+    case 'week': {
+      // 月曜日起点に調整
+      // getDay(): 0=日曜, 1=月曜, 2=火曜, ..., 6=土曜
+      // 日曜(0)の場合は6日前の月曜、それ以外は (曜日-1) 日前の月曜
       const dayOfWeek = result.getDay();
       const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
       result.setDate(result.getDate() - daysToSubtract);
       break;
+    }
     case 'month':
       // 月初に調整
       result.setDate(1);
@@ -97,6 +100,9 @@ export class AdminMetricsService {
     query: ActiveUserMetricsQuery
   ): Promise<ActiveUserMetricsResponse> {
     const granularity = query.granularity || 'day';
+    // タイムゾーンはレスポンスに含めて返却。
+    // 日付計算はUTCで行い、フロントエンドでタイムゾーン変換を行う想定。
+    // サーバー側でのタイムゾーン考慮が必要な場合は date-fns-tz 等の導入を検討。
     const timezone = query.timezone || 'Asia/Tokyo';
     const now = new Date();
 
@@ -217,17 +223,21 @@ export class AdminMetricsService {
   ): Promise<ActiveUserMetricDataPoint | null> {
     const now = new Date();
     const periodStart = calculatePeriodStart(now, granularity);
-    const periodEnd = new Date();
 
-    // 期間終了日を計算
+    // 期間終了日を計算（periodStartを基準に粒度分の期間を加算）
+    // periodEndは排他的境界として使用（lt: periodEnd）
+    const periodEnd = new Date(periodStart);
     switch (granularity) {
       case 'week':
+        // 週次: 7日後
         periodEnd.setDate(periodStart.getDate() + 7);
         break;
       case 'month':
+        // 月次: 翌月1日
         periodEnd.setMonth(periodStart.getMonth() + 1);
         break;
       default:
+        // 日次: 翌日
         periodEnd.setDate(periodStart.getDate() + 1);
     }
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { ActiveUserMetricsResponse } from '@agentest/shared';
 
 // Prismaをモック
@@ -32,6 +32,11 @@ describe('AdminMetricsService', () => {
     // デフォルトでキャッシュなし
     vi.mocked(getAdminMetricsCache).mockResolvedValue(null);
     vi.mocked(setAdminMetricsCache).mockResolvedValue(true);
+  });
+
+  afterEach(() => {
+    // システム時刻のモックをリセット
+    vi.useRealTimers();
   });
 
   describe('getActiveUserMetrics', () => {
@@ -184,8 +189,6 @@ describe('AdminMetricsService', () => {
       // 当日データがリアルタイムで取得されることを確認
       expect(prisma.user.count).toHaveBeenCalled();
       expect(result.data).toContainEqual({ date: '2026-01-15', count: 125 });
-
-      vi.useRealTimers();
     });
 
     it('サマリーが正しく計算される', async () => {
@@ -290,8 +293,6 @@ describe('AdminMetricsService', () => {
         expect.any(Object),
         60
       );
-
-      vi.useRealTimers();
     });
 
     it('過去データのみの場合は長いTTLでキャッシュされる', async () => {
@@ -313,8 +314,6 @@ describe('AdminMetricsService', () => {
         expect.any(Object),
         300
       );
-
-      vi.useRealTimers();
     });
   });
 });
