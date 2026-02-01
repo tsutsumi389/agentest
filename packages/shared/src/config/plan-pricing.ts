@@ -100,7 +100,7 @@ export function getStripePriceId(
 // 組織プラン料金設定
 // ============================================
 
-export type OrgPlan = 'TEAM';
+export type OrgPlan = 'NONE' | 'TEAM';
 
 export interface OrgPlanPricing extends PlanPricing {
   /** 1ユーザーあたりの月額単価。課金額は pricePerUser * メンバー数 で計算する */
@@ -114,6 +114,24 @@ export interface OrgPlanPricing extends PlanPricing {
  * 組織全体の課金額は pricePerUser * メンバー数 で算出する。
  */
 export const ORG_PLAN_PRICING: Record<OrgPlan, OrgPlanPricing> = {
+  NONE: {
+    // 契約なしプラン（プロジェクト作成不可）
+    monthlyPrice: 0,
+    yearlyPrice: 0,
+    pricePerUser: 0,
+    stripePriceId: {
+      monthly: null,
+      yearly: null,
+    },
+    features: [
+      { name: 'プロジェクト数', description: '作成不可', included: false },
+      { name: 'テストケース数', description: '作成不可', included: false },
+      { name: 'MCP連携', description: '利用不可', included: false },
+      { name: 'チーム機能', description: '利用不可', included: false },
+      { name: 'メンバー管理', description: '利用不可', included: false },
+      { name: '優先サポート', description: '利用不可', included: false },
+    ],
+  },
   TEAM: {
     // 1ユーザーあたりの料金（基本料金なし）
     monthlyPrice: 1200,
@@ -193,6 +211,11 @@ export const PLAN_LIMITS: Record<PersonalPlan, PlanLimits> = {
  * 組織プランの制限
  */
 export const ORG_PLAN_LIMITS: Record<OrgPlan, PlanLimits> = {
+  NONE: {
+    maxProjects: 0,
+    maxTestCases: 0,
+    changeHistoryDays: 0,
+  },
   TEAM: {
     maxProjects: -1,
     maxTestCases: -1,

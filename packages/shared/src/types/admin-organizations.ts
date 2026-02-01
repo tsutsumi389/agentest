@@ -26,7 +26,7 @@ export interface AdminOrganizationSearchParams {
   /** 検索クエリ（名前で部分一致） */
   q?: string;
   /** プランフィルタ（カンマ区切り） */
-  plan?: ('TEAM' | 'ENTERPRISE')[];
+  plan?: ('NONE' | 'TEAM' | 'ENTERPRISE')[];
   /** ステータスフィルタ */
   status?: AdminOrganizationStatus;
   /** 登録日From */
@@ -84,7 +84,7 @@ export interface AdminOrganizationListItem {
   /** アバターURL */
   avatarUrl: string | null;
   /** プラン */
-  plan: 'TEAM' | 'ENTERPRISE';
+  plan: 'NONE' | 'TEAM' | 'ENTERPRISE';
   /** 請求先メールアドレス */
   billingEmail: string | null;
   /** 作成日時 */
@@ -170,7 +170,7 @@ export interface AdminOrganizationProject {
  */
 export interface AdminOrganizationSubscription {
   /** プラン */
-  plan: 'FREE' | 'PRO' | 'TEAM' | 'ENTERPRISE';
+  plan: 'FREE' | 'PRO' | 'NONE' | 'TEAM' | 'ENTERPRISE';
   /** ステータス */
   status: 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'TRIALING';
   /** 請求サイクル */
@@ -232,7 +232,7 @@ export interface AdminOrganizationDetail {
   /** アバターURL */
   avatarUrl: string | null;
   /** プラン */
-  plan: 'TEAM' | 'ENTERPRISE';
+  plan: 'NONE' | 'TEAM' | 'ENTERPRISE';
   /** 請求先メールアドレス */
   billingEmail: string | null;
   /** 決済顧客ID */

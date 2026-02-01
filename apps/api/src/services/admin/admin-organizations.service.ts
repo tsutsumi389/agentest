@@ -164,7 +164,7 @@ export class AdminOrganizationsService {
    */
   private buildWhereClause(params: {
     q?: string;
-    plan?: ('TEAM' | 'ENTERPRISE')[];
+    plan?: ('NONE' | 'TEAM' | 'ENTERPRISE')[];
     status?: string;
     createdFrom?: string;
     createdTo?: string;

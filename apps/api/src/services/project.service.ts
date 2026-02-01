@@ -1,5 +1,5 @@
 import { prisma, type ProjectRole, type ChangeType, type Prisma } from '@agentest/db';
-import { NotFoundError, ConflictError, ValidationError } from '@agentest/shared';
+import { NotFoundError, ConflictError, ValidationError, BusinessError } from '@agentest/shared';
 import { ProjectRepository } from '../repositories/project.repository.js';
 import { TestSuiteRepository, type TestSuiteSearchOptions } from '../repositories/test-suite.repository.js';
 import { notificationService } from './notification.service.js';
@@ -19,6 +19,22 @@ export class ProjectService {
    * プロジェクト作成時に作成者をOWNERロールでProjectMemberに登録する
    */
   async create(userId: string, data: { name: string; description?: string | null; organizationId?: string | null }) {
+    // 組織プロジェクトの場合、プランチェックを実行
+    if (data.organizationId) {
+      const org = await prisma.organization.findUnique({
+        where: { id: data.organizationId },
+        select: { plan: true },
+      });
+
+      // 契約なしプランはプロジェクト作成不可
+      if (org?.plan === 'NONE') {
+        throw new BusinessError(
+          'PLAN_REQUIRED',
+          'プロジェクトを作成するにはプランの契約が必要です'
+        );
+      }
+    }
+
     const project = await prisma.$transaction(async (tx) => {
       const newProject = await tx.project.create({
         data: {

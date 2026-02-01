@@ -2,11 +2,11 @@ import { Filter, X } from 'lucide-react';
 import type { AdminOrganizationStatus } from '@agentest/shared/types';
 
 interface OrganizationFiltersProps {
-  plan: ('TEAM' | 'ENTERPRISE')[];
+  plan: ('NONE' | 'TEAM' | 'ENTERPRISE')[];
   status: AdminOrganizationStatus;
   createdFrom: string;
   createdTo: string;
-  onPlanChange: (plan: ('TEAM' | 'ENTERPRISE')[]) => void;
+  onPlanChange: (plan: ('NONE' | 'TEAM' | 'ENTERPRISE')[]) => void;
   onStatusChange: (status: AdminOrganizationStatus) => void;
   onCreatedFromChange: (date: string) => void;
   onCreatedToChange: (date: string) => void;
@@ -35,7 +35,7 @@ export function OrganizationFilters({
     createdTo !== '';
 
   // プランをトグル
-  const togglePlan = (p: 'TEAM' | 'ENTERPRISE') => {
+  const togglePlan = (p: 'NONE' | 'TEAM' | 'ENTERPRISE') => {
     if (plan.includes(p)) {
       onPlanChange(plan.filter((x) => x !== p));
     } else {
@@ -66,6 +66,16 @@ export function OrganizationFilters({
         <div className="space-y-2">
           <label className="text-xs text-foreground-muted">プラン</label>
           <div className="flex gap-2">
+            <button
+              onClick={() => togglePlan('NONE')}
+              className={`px-3 py-1 text-sm rounded border ${
+                plan.includes('NONE')
+                  ? 'bg-accent-muted text-accent border-accent'
+                  : 'bg-background-secondary text-foreground-muted border-border hover:border-foreground-muted'
+              }`}
+            >
+              契約なし
+            </button>
             <button
               onClick={() => togglePlan('TEAM')}
               className={`px-3 py-1 text-sm rounded border ${

@@ -13,6 +13,7 @@ interface OrganizationSubscriptionSectionProps {
 const PLAN_LABELS: Record<AdminOrganizationSubscription['plan'], string> = {
   FREE: 'フリー',
   PRO: 'プロ',
+  NONE: '契約なし',
   TEAM: 'チーム',
   ENTERPRISE: 'エンタープライズ',
 };

@@ -82,7 +82,7 @@ export async function createTestOrganization(
     id: string;
     name: string;
     description: string | null;
-    plan: 'TEAM' | 'ENTERPRISE';
+    plan: 'NONE' | 'TEAM' | 'ENTERPRISE';
   }> = {}
 ) {
   const id = overrides.id ?? randomUUID();
