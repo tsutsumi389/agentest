@@ -172,6 +172,8 @@ import type {
   AdminAuditLogSearchParams,
   ActiveUserMetricsResponse,
   MetricGranularity,
+  PlanDistributionResponse,
+  PlanDistributionView,
 } from '@agentest/shared/types';
 
 export const adminDashboardApi = {
@@ -327,4 +329,43 @@ export const adminMetricsApi = {
    */
   getActiveUsers: (params: AdminMetricsParams = {}) =>
     api.get<ActiveUserMetricsResponse>(`/admin/metrics/active-users${toMetricsQueryString(params)}`),
+
+  /**
+   * プラン分布メトリクスを取得
+   */
+  getPlanDistribution: (params: PlanDistributionParams = {}) =>
+    api.get<PlanDistributionResponse>(`/admin/metrics/plan-distribution${toPlanDistributionQueryString(params)}`),
 };
+
+// ============================================
+// プラン分布メトリクスAPI
+// ============================================
+
+/** プラン分布取得パラメータ */
+export interface PlanDistributionParams {
+  granularity?: MetricGranularity;
+  startDate?: string;
+  endDate?: string;
+  timezone?: string;
+  view?: PlanDistributionView;
+  includeMembers?: boolean;
+}
+
+/**
+ * プラン分布パラメータをクエリ文字列に変換
+ */
+function toPlanDistributionQueryString(params: PlanDistributionParams): string {
+  const searchParams = new URLSearchParams();
+
+  if (params.granularity) searchParams.set('granularity', params.granularity);
+  if (params.startDate) searchParams.set('startDate', params.startDate);
+  if (params.endDate) searchParams.set('endDate', params.endDate);
+  if (params.timezone) searchParams.set('timezone', params.timezone);
+  if (params.view) searchParams.set('view', params.view);
+  if (params.includeMembers !== undefined) {
+    searchParams.set('includeMembers', String(params.includeMembers));
+  }
+
+  const qs = searchParams.toString();
+  return qs ? `?${qs}` : '';
+}

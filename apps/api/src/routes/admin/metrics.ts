@@ -11,4 +11,10 @@ const controller = new AdminMetricsController();
  */
 router.get('/active-users', requireAdminAuth(), controller.getActiveUserMetrics);
 
+/**
+ * プラン分布メトリクスを取得
+ * GET /admin/metrics/plan-distribution
+ */
+router.get('/plan-distribution', requireAdminAuth(), controller.getPlanDistribution);
+
 export default router;

@@ -9,6 +9,7 @@ import { runSubscriptionSync } from './jobs/subscription-sync.js';
 import { runProjectCleanup } from './jobs/project-cleanup.js';
 import { runMetricsAggregation } from './jobs/metrics-aggregation.js';
 import { runMetricsBackfill } from './jobs/metrics-backfill.js';
+import { runPlanDistributionAggregation } from './jobs/plan-distribution-aggregation.js';
 import { closeRedis } from './lib/redis.js';
 import { closePrisma } from './lib/prisma.js';
 
@@ -21,6 +22,7 @@ const jobs: Record<string, () => Promise<void>> = {
   'project-cleanup': runProjectCleanup,
   'metrics-aggregation': runMetricsAggregation,
   'metrics-backfill': runMetricsBackfill,
+  'plan-distribution-aggregation': runPlanDistributionAggregation,
 };
 
 async function main() {
