@@ -22,6 +22,7 @@ import adminDashboardRoutes from './admin/dashboard.js';
 import adminUsersRoutes from './admin/users.js';
 import adminOrganizationsRoutes from './admin/organizations.js';
 import adminAuditLogsRoutes from './admin/audit-logs.js';
+import adminMetricsRoutes from './admin/metrics.js';
 import { oauthController } from '../controllers/oauth.controller.js';
 
 const router: Router = Router();
@@ -70,6 +71,9 @@ router.use('/admin/organizations', adminOrganizationsRoutes);
 
 // 管理者監査ログ
 router.use('/admin/audit-logs', adminAuditLogsRoutes);
+
+// 管理者メトリクス
+router.use('/admin/metrics', adminMetricsRoutes);
 
 // 内部API（MCPサーバーからの呼び出し用）
 router.use('/internal/api', internalRoutes);

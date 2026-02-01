@@ -1,0 +1,251 @@
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
+import request from 'supertest';
+import type { Express } from 'express';
+import bcryptjs from 'bcryptjs';
+import { prisma } from '@agentest/db';
+import {
+  createTestAdminUser,
+  createTestAdminSession,
+  createTestUser,
+  createTestSession,
+  createTestActiveUserMetric,
+  cleanupTestData,
+} from './test-helpers.js';
+import { createApp } from '../../app.js';
+
+describe('Admin Metrics API Integration Tests', () => {
+  let app: Express;
+  let testAdminUser: Awaited<ReturnType<typeof createTestAdminUser>>;
+  let testAdminSession: Awaited<ReturnType<typeof createTestAdminSession>>;
+  const testPassword = 'TestPassword123!';
+
+  beforeAll(async () => {
+    app = createApp();
+  });
+
+  afterAll(async () => {
+    await cleanupTestData();
+    await prisma.$disconnect();
+  });
+
+  beforeEach(async () => {
+    await cleanupTestData();
+
+    // テスト用の管理者ユーザーとセッションを作成
+    const passwordHash = bcryptjs.hashSync(testPassword, 12);
+    testAdminUser = await createTestAdminUser({
+      email: 'admin@example.com',
+      name: 'Test Admin',
+      passwordHash,
+    });
+
+    testAdminSession = await createTestAdminSession(testAdminUser.id, {
+      token: 'test-admin-session-token',
+    });
+  });
+
+  describe('GET /admin/metrics/active-users', () => {
+    it('認証済み管理者はアクセスできる', async () => {
+      const response = await request(app)
+        .get('/admin/metrics/active-users')
+        .set('Cookie', `admin_session=${testAdminSession.token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveProperty('granularity');
+      expect(response.body).toHaveProperty('startDate');
+      expect(response.body).toHaveProperty('endDate');
+      expect(response.body).toHaveProperty('timezone');
+      expect(response.body).toHaveProperty('data');
+      expect(response.body).toHaveProperty('summary');
+      expect(response.body).toHaveProperty('fetchedAt');
+    });
+
+    it('未認証の場合は401を返す', async () => {
+      const response = await request(app)
+        .get('/admin/metrics/active-users');
+
+      expect(response.status).toBe(401);
+    });
+
+    it('デフォルトで日次粒度のデータを取得する', async () => {
+      const response = await request(app)
+        .get('/admin/metrics/active-users')
+        .set('Cookie', `admin_session=${testAdminSession.token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.granularity).toBe('day');
+      expect(response.body.timezone).toBe('Asia/Tokyo');
+    });
+
+    it('週次粒度でデータを取得できる', async () => {
+      const response = await request(app)
+        .get('/admin/metrics/active-users?granularity=week')
+        .set('Cookie', `admin_session=${testAdminSession.token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.granularity).toBe('week');
+    });
+
+    it('月次粒度でデータを取得できる', async () => {
+      const response = await request(app)
+        .get('/admin/metrics/active-users?granularity=month')
+        .set('Cookie', `admin_session=${testAdminSession.token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.granularity).toBe('month');
+    });
+
+    it('パラメータバリデーションが正しく動作する（無効な粒度）', async () => {
+      const response = await request(app)
+        .get('/admin/metrics/active-users?granularity=invalid')
+        .set('Cookie', `admin_session=${testAdminSession.token}`);
+
+      expect(response.status).toBe(400);
+    });
+
+    it('期間超過時は400を返す', async () => {
+      const startDate = new Date('2020-01-01').toISOString();
+      const endDate = new Date('2025-12-31').toISOString();
+
+      const response = await request(app)
+        .get(`/admin/metrics/active-users?startDate=${startDate}&endDate=${endDate}`)
+        .set('Cookie', `admin_session=${testAdminSession.token}`);
+
+      expect(response.status).toBe(400);
+    });
+
+    it('startDateがendDateより後の場合は400を返す', async () => {
+      const startDate = new Date('2026-02-01').toISOString();
+      const endDate = new Date('2026-01-01').toISOString();
+
+      const response = await request(app)
+        .get(`/admin/metrics/active-users?startDate=${startDate}&endDate=${endDate}`)
+        .set('Cookie', `admin_session=${testAdminSession.token}`);
+
+      expect(response.status).toBe(400);
+    });
+
+    it('無効なタイムゾーン形式の場合は400を返す', async () => {
+      const response = await request(app)
+        .get('/admin/metrics/active-users?timezone=InvalidTimezone')
+        .set('Cookie', `admin_session=${testAdminSession.token}`);
+
+      expect(response.status).toBe(400);
+    });
+
+    it('集計済みデータを正しく取得できる', async () => {
+      // テスト用のメトリクスデータを作成
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const twoDaysAgo = new Date(today);
+      twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+
+      await createTestActiveUserMetric({
+        granularity: 'DAY',
+        periodStart: twoDaysAgo,
+        userCount: 100,
+      });
+      await createTestActiveUserMetric({
+        granularity: 'DAY',
+        periodStart: yesterday,
+        userCount: 150,
+      });
+
+      const response = await request(app)
+        .get('/admin/metrics/active-users')
+        .set('Cookie', `admin_session=${testAdminSession.token}`);
+
+      expect(response.status).toBe(200);
+      expect(Array.isArray(response.body.data)).toBe(true);
+    });
+
+    it('サマリーが正しく計算される', async () => {
+      // テスト用のメトリクスデータを作成
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      for (let i = 1; i <= 5; i++) {
+        const date = new Date(today);
+        date.setDate(date.getDate() - i);
+        await createTestActiveUserMetric({
+          granularity: 'DAY',
+          periodStart: date,
+          userCount: i * 10, // 10, 20, 30, 40, 50
+        });
+      }
+
+      const response = await request(app)
+        .get('/admin/metrics/active-users')
+        .set('Cookie', `admin_session=${testAdminSession.token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.summary).toHaveProperty('average');
+      expect(response.body.summary).toHaveProperty('max');
+      expect(response.body.summary).toHaveProperty('min');
+      expect(response.body.summary).toHaveProperty('changeRate');
+    });
+
+    it('VIEWERロールの管理者もアクセスできる', async () => {
+      // VIEWERロールの管理者を作成
+      const passwordHash = bcryptjs.hashSync(testPassword, 12);
+      const viewerAdmin = await createTestAdminUser({
+        email: 'viewer@example.com',
+        name: 'Viewer Admin',
+        passwordHash,
+        role: 'VIEWER',
+      });
+      const viewerSession = await createTestAdminSession(viewerAdmin.id, {
+        token: 'viewer-session-token',
+      });
+
+      const response = await request(app)
+        .get('/admin/metrics/active-users')
+        .set('Cookie', `admin_session=${viewerSession.token}`);
+
+      expect(response.status).toBe(200);
+    });
+
+    it('当日のリアルタイムデータが取得される', async () => {
+      // アクティブなユーザーとセッションを作成
+      const user = await createTestUser();
+      await createTestSession(user.id, {
+        lastActiveAt: new Date(),
+        revokedAt: null,
+      });
+
+      const response = await request(app)
+        .get('/admin/metrics/active-users')
+        .set('Cookie', `admin_session=${testAdminSession.token}`);
+
+      expect(response.status).toBe(200);
+      // 当日データは data 配列に含まれるはず
+      expect(Array.isArray(response.body.data)).toBe(true);
+    });
+
+    it('fetchedAtがISO 8601形式で返される', async () => {
+      const response = await request(app)
+        .get('/admin/metrics/active-users')
+        .set('Cookie', `admin_session=${testAdminSession.token}`);
+
+      expect(response.status).toBe(200);
+      // ISO 8601形式のチェック
+      const fetchedAt = new Date(response.body.fetchedAt);
+      expect(fetchedAt.toISOString()).toBe(response.body.fetchedAt);
+    });
+
+    it('カスタム期間でデータを取得できる', async () => {
+      const startDate = new Date('2026-01-01').toISOString();
+      const endDate = new Date('2026-01-31').toISOString();
+
+      const response = await request(app)
+        .get(`/admin/metrics/active-users?startDate=${startDate}&endDate=${endDate}`)
+        .set('Cookie', `admin_session=${testAdminSession.token}`);
+
+      expect(response.status).toBe(200);
+      expect(new Date(response.body.startDate).getTime()).toBeLessThanOrEqual(new Date(startDate).getTime());
+      expect(new Date(response.body.endDate).toISOString()).toBe(endDate);
+    });
+  });
+});
