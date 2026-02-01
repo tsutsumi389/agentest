@@ -67,7 +67,7 @@ export function MetricsPage() {
   const dateRange = useMemo(() => calculateDateRange(selectedPreset), [selectedPreset]);
 
   // APIフック
-  const { data, isLoading, refetch, isFetching } = useAdminMetrics({
+  const { data, isLoading, isError, refetch, isFetching } = useAdminMetrics({
     granularity,
     startDate: dateRange.startDate,
     endDate: dateRange.endDate,
@@ -138,11 +138,12 @@ export function MetricsPage() {
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-foreground-muted" />
             <span className="text-sm text-foreground-muted">粒度:</span>
-            <div className="flex gap-1">
+            <div className="flex gap-1" role="group" aria-label="粒度選択">
               {GRANULARITY_OPTIONS.map((option) => (
                 <button
                   key={option.value}
                   onClick={() => setGranularity(option.value)}
+                  aria-pressed={granularity === option.value}
                   className={`px-3 py-1 text-sm rounded transition-colors ${
                     granularity === option.value
                       ? 'bg-accent text-white'
@@ -158,11 +159,12 @@ export function MetricsPage() {
           {/* 期間プリセット */}
           <div className="flex items-center gap-2">
             <span className="text-sm text-foreground-muted">期間:</span>
-            <div className="flex gap-1">
+            <div className="flex gap-1" role="group" aria-label="期間選択">
               {DATE_PRESETS.map((preset) => (
                 <button
                   key={preset.label}
                   onClick={() => setSelectedPreset(preset)}
+                  aria-pressed={selectedPreset.label === preset.label}
                   className={`px-3 py-1 text-sm rounded transition-colors ${
                     selectedPreset.label === preset.label
                       ? 'bg-accent text-white'
@@ -232,6 +234,10 @@ export function MetricsPage() {
           {isLoading ? (
             <div className="flex items-center justify-center h-[300px] text-foreground-muted">
               読み込み中...
+            </div>
+          ) : isError ? (
+            <div className="flex items-center justify-center h-[300px] text-error">
+              データの取得に失敗しました
             </div>
           ) : chartData.length === 0 ? (
             <div className="flex items-center justify-center h-[300px] text-foreground-muted">

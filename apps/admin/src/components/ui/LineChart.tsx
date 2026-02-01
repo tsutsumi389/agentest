@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useId, useMemo } from 'react';
 
 /** 折れ線グラフのデータポイント */
 export interface LineChartDataPoint {
@@ -31,14 +31,16 @@ interface LineChartProps {
   showTooltip?: boolean;
 }
 
+/** チャートの余白（定数） */
+const CHART_PADDING = { top: 20, right: 20, bottom: 40, left: 50 } as const;
+
 /**
  * SVGの折れ線パスを構築
  */
 function buildLinePath(
   data: LineChartDataPoint[],
   chartWidth: number,
-  chartHeight: number,
-  padding: { top: number; right: number; bottom: number; left: number }
+  chartHeight: number
 ): string {
   if (data.length === 0) return '';
 
@@ -47,12 +49,12 @@ function buildLinePath(
   const maxValue = Math.max(...values);
   const range = maxValue - minValue || 1;
 
-  const plotWidth = chartWidth - padding.left - padding.right;
-  const plotHeight = chartHeight - padding.top - padding.bottom;
+  const plotWidth = chartWidth - CHART_PADDING.left - CHART_PADDING.right;
+  const plotHeight = chartHeight - CHART_PADDING.top - CHART_PADDING.bottom;
 
   const points = data.map((d, i) => {
-    const x = padding.left + (i / (data.length - 1 || 1)) * plotWidth;
-    const y = padding.top + plotHeight - ((d.value - minValue) / range) * plotHeight;
+    const x = CHART_PADDING.left + (i / (data.length - 1 || 1)) * plotWidth;
+    const y = CHART_PADDING.top + plotHeight - ((d.value - minValue) / range) * plotHeight;
     return { x, y };
   });
 
@@ -70,19 +72,18 @@ function buildLinePath(
 function buildAreaPath(
   data: LineChartDataPoint[],
   chartWidth: number,
-  chartHeight: number,
-  padding: { top: number; right: number; bottom: number; left: number }
+  chartHeight: number
 ): string {
   if (data.length === 0) return '';
 
-  const linePath = buildLinePath(data, chartWidth, chartHeight, padding);
+  const linePath = buildLinePath(data, chartWidth, chartHeight);
   if (!linePath) return '';
 
-  const plotWidth = chartWidth - padding.left - padding.right;
-  const plotHeight = chartHeight - padding.top - padding.bottom;
-  const bottomY = padding.top + plotHeight;
-  const startX = padding.left;
-  const endX = padding.left + plotWidth;
+  const plotWidth = chartWidth - CHART_PADDING.left - CHART_PADDING.right;
+  const plotHeight = chartHeight - CHART_PADDING.top - CHART_PADDING.bottom;
+  const bottomY = CHART_PADDING.top + plotHeight;
+  const startX = CHART_PADDING.left;
+  const endX = CHART_PADDING.left + plotWidth;
 
   // 線のパス + 下端を閉じる
   return `${linePath} L ${endX} ${bottomY} L ${startX} ${bottomY} Z`;
@@ -129,24 +130,44 @@ export function LineChart({
   yTickCount = 5,
   showTooltip = true,
 }: LineChartProps) {
-  const padding = { top: 20, right: 20, bottom: 40, left: 50 };
+  // グラデーションIDをユニークに（複数インスタンス対応）
+  const gradientId = useId();
+
   const isEmpty = data.length === 0;
 
-  // Y軸の目盛り
-  const yTicks = calculateYTicks(data, yTickCount);
-  const minValue = data.length > 0 ? Math.min(...data.map((d) => d.value)) : 0;
-  const maxValue = data.length > 0 ? Math.max(...data.map((d) => d.value)) : 0;
-  const range = maxValue - minValue || 1;
+  // Y軸の目盛り（メモ化）
+  const yTicks = useMemo(() => calculateYTicks(data, yTickCount), [data, yTickCount]);
 
-  const plotHeight = height - padding.top - padding.bottom;
-  const plotWidth = width - padding.left - padding.right;
+  // 最小値・最大値・範囲を計算（メモ化）
+  const { minValue, maxValue, range } = useMemo(() => {
+    const min = data.length > 0 ? Math.min(...data.map((d) => d.value)) : 0;
+    const max = data.length > 0 ? Math.max(...data.map((d) => d.value)) : 0;
+    return { minValue: min, maxValue: max, range: max - min || 1 };
+  }, [data]);
 
-  // データポイントの座標を計算
-  const dataPoints = data.map((d, i) => {
-    const x = padding.left + (i / (data.length - 1 || 1)) * plotWidth;
-    const y = padding.top + plotHeight - ((d.value - minValue) / range) * plotHeight;
-    return { x, y, ...d };
-  });
+  const plotHeight = height - CHART_PADDING.top - CHART_PADDING.bottom;
+  const plotWidth = width - CHART_PADDING.left - CHART_PADDING.right;
+
+  // 折れ線パス（メモ化）
+  const linePath = useMemo(
+    () => buildLinePath(data, width, height),
+    [data, width, height]
+  );
+
+  // 塗りつぶしパス（メモ化）
+  const areaPath = useMemo(
+    () => buildAreaPath(data, width, height),
+    [data, width, height]
+  );
+
+  // データポイントの座標を計算（メモ化）
+  const dataPoints = useMemo(() => {
+    return data.map((d, i) => {
+      const x = CHART_PADDING.left + (i / (data.length - 1 || 1)) * plotWidth;
+      const y = CHART_PADDING.top + plotHeight - ((d.value - minValue) / range) * plotHeight;
+      return { x, y, ...d };
+    });
+  }, [data, plotWidth, plotHeight, minValue, range]);
 
   // アクセシビリティ用の説明文を構築
   const defaultAriaLabel = isEmpty
@@ -167,7 +188,7 @@ export function LineChart({
       >
         {/* グラデーション定義 */}
         <defs>
-          <linearGradient id="areaGradient" x1="0" y1="0" x2="0" y2="1">
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={fillColor} stopOpacity="0.8" />
             <stop offset="100%" stopColor={fillColor} stopOpacity="0" />
           </linearGradient>
@@ -186,20 +207,20 @@ export function LineChart({
           <>
             {/* Y軸グリッド線と目盛り */}
             {yTicks.map((tick) => {
-              const y = padding.top + plotHeight - ((tick - minValue) / range) * plotHeight;
+              const y = CHART_PADDING.top + plotHeight - ((tick - minValue) / range) * plotHeight;
               return (
                 <g key={tick}>
                   <line
-                    x1={padding.left}
+                    x1={CHART_PADDING.left}
                     y1={y}
-                    x2={width - padding.right}
+                    x2={width - CHART_PADDING.right}
                     y2={y}
                     stroke="var(--border)"
                     strokeDasharray="4,4"
                     strokeOpacity="0.5"
                   />
                   <text
-                    x={padding.left - 8}
+                    x={CHART_PADDING.left - 8}
                     y={y + 4}
                     textAnchor="end"
                     className="fill-foreground-muted text-xs"
@@ -212,10 +233,10 @@ export function LineChart({
 
             {/* X軸ライン */}
             <line
-              x1={padding.left}
-              y1={height - padding.bottom}
-              x2={width - padding.right}
-              y2={height - padding.bottom}
+              x1={CHART_PADDING.left}
+              y1={height - CHART_PADDING.bottom}
+              x2={width - CHART_PADDING.right}
+              y2={height - CHART_PADDING.bottom}
               stroke="var(--border)"
             />
 
@@ -223,12 +244,12 @@ export function LineChart({
             {xLabelInterval > 0 &&
               data.map((d, i) => {
                 if (i % xLabelInterval !== 0 && i !== data.length - 1) return null;
-                const x = padding.left + (i / (data.length - 1 || 1)) * plotWidth;
+                const x = CHART_PADDING.left + (i / (data.length - 1 || 1)) * plotWidth;
                 return (
                   <text
                     key={d.label}
                     x={x}
-                    y={height - padding.bottom + 20}
+                    y={height - CHART_PADDING.bottom + 20}
                     textAnchor="middle"
                     className="fill-foreground-muted text-xs"
                   >
@@ -239,13 +260,13 @@ export function LineChart({
 
             {/* 塗りつぶしエリア */}
             <path
-              d={buildAreaPath(data, width, height, padding)}
-              fill="url(#areaGradient)"
+              d={areaPath}
+              fill={`url(#${gradientId})`}
             />
 
             {/* 折れ線 */}
             <path
-              d={buildLinePath(data, width, height, padding)}
+              d={linePath}
               fill="none"
               stroke={strokeColor}
               strokeWidth="2"
