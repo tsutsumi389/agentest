@@ -60,6 +60,44 @@ docker compose exec dev pnpm -r build
 - `apps/api` - tsx watch
 - `apps/ws` - tsx watch
 
+## MCP Apps開発
+
+MCP Server には MCP Apps 機能が含まれており、AI クライアント内にインタラクティブ UI を表示できます。
+
+### UIファイル構成
+
+```
+apps/mcp-server/src/apps/
+├── index.ts              # Apps登録（registerApps関数）
+├── types.ts              # 共通型定義
+└── test-suites-app/      # テストスイート一覧App
+    ├── index.html        # UIテンプレート
+    └── app.ts            # UIロジック
+```
+
+### UIビルド
+
+MCP Apps の UI は Vite + vite-plugin-singlefile で単一 HTML にバンドルされます。
+
+```bash
+docker compose exec dev pnpm --filter @agentest/mcp-server build:ui
+```
+
+ビルド出力先: `apps/mcp-server/dist/src/apps/test-suites-app/index.html`
+
+### 開発時の注意点
+
+1. **UI変更後**: `build:ui` を実行してHTMLを再生成
+2. **型定義**: `apps/mcp-server/src/apps/types.ts` に共通型を定義
+3. **ホットリロード未対応**: MCP Apps UI は開発時もビルドが必要
+
+### 新しいAppの追加
+
+1. `apps/mcp-server/src/apps/` に新しいディレクトリを作成
+2. `index.html`（テンプレート）と `app.ts`（ロジック）を作成
+3. `apps/mcp-server/src/apps/index.ts` に `registerAppTool` と `registerAppResource` を追加
+4. `package.json` の `build:ui` スクリプトに新しいAppのビルドを追加
+
 ## メール送信テスト（Mailpit）
 
 開発環境では Mailpit を使用してメール送信をテストできます。
