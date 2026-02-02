@@ -99,23 +99,20 @@ UIを単一HTMLファイルにバンドル。
 
 ## テスト実行依頼の方式
 
-**採用: Sampling使用**
-- UIから`app.requestSampling()`でLLMにテスト実行を依頼
-- LLMが`create_execution`ツールを呼び出して実行
-- ホストのSampling対応が必要（Claude Desktop等）
+**採用: sendMessage()使用**
+- UIから`app.sendMessage()`で会話にメッセージを追加
+- LLMがメッセージに応答し、`create_execution`ツールを呼び出して実行
+- MCP Apps標準の通信方式
 
 ```typescript
-// UIからのSamplingリクエスト例
-await app.requestSampling({
-  messages: [{
-    role: 'user',
-    content: {
-      type: 'text',
-      text: `テストスイート「${suiteName}」のテスト実行を開始してください。`,
-    },
-  }],
-  systemPrompt: 'テスト実行を行うAIアシスタントです。',
-  maxTokens: 2000,
+// UIからのメッセージ送信例
+await app.sendMessage({
+  role: 'user',
+  content: {
+    type: 'text',
+    text: `テストスイート「${suiteName}」（ID: ${suiteId}）のテスト実行を開始してください。
+create_executionツールを使用してテスト実行を開始し、結果を記録してください。`,
+  },
 });
 ```
 
