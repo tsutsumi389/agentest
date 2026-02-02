@@ -1,38 +1,5 @@
 import { App } from '@modelcontextprotocol/ext-apps';
-
-// テストスイートの型定義
-interface TestSuite {
-  id: string;
-  name: string;
-  description: string | null;
-  status: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
-  projectId: string;
-  project: {
-    id: string;
-    name: string;
-  };
-  createdByUser: {
-    id: string;
-    name: string;
-    avatarUrl: string | null;
-  } | null;
-  _count: {
-    testCases: number;
-    preconditions: number;
-  };
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface ToolResult {
-  testSuites: TestSuite[];
-  pagination: {
-    total: number;
-    limit: number;
-    offset: number;
-    hasMore: boolean;
-  };
-}
+import type { TestSuite, SearchTestSuiteResponse } from '../types';
 
 // DOM要素
 const appEl = document.getElementById('app')!;
@@ -116,7 +83,9 @@ create_executionツールを使用してテスト実行を開始し、get_test_s
     // UIを更新
     render();
   } catch (error) {
-    console.error('メッセージ送信に失敗:', error);
+    if (import.meta.env.DEV) {
+      console.error('メッセージ送信に失敗:', error);
+    }
     showError('テスト実行依頼の送信に失敗しました');
   }
 }
@@ -174,6 +143,7 @@ function render(): void {
             class="btn btn-primary"
             data-action="execute"
             data-suite-id="${suite.id}"
+            aria-label="${escapeHtml(suite.name)}のテスト実行を依頼"
             ${suite.status !== 'ACTIVE' || messageSentIds.has(suite.id) ? 'disabled' : ''}
           >
             ${messageSentIds.has(suite.id) ? '依頼済み' : 'テスト実行を依頼'}
@@ -215,14 +185,16 @@ app.ontoolresult = (result) => {
     if (result.content && result.content.length > 0) {
       const textContent = result.content.find((c) => c.type === 'text');
       if (textContent && 'text' in textContent) {
-        const data = JSON.parse(textContent.text) as ToolResult;
+        const data = JSON.parse(textContent.text) as SearchTestSuiteResponse;
         testSuites = data.testSuites;
         total = data.pagination.total;
         render();
       }
     }
   } catch (error) {
-    console.error('ツール結果の解析に失敗:', error);
+    if (import.meta.env.DEV) {
+      console.error('ツール結果の解析に失敗:', error);
+    }
     showError('データの読み込みに失敗しました');
   }
 };

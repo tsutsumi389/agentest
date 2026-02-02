@@ -11,13 +11,16 @@ import { fileURLToPath } from 'node:url';
 import type { ToolContext } from '../tools/index.js';
 import { requestContext } from '../transport/streamable-http.js';
 import { apiClient } from '../clients/api-client.js';
+import type { SearchTestSuiteResponse } from './types.js';
 
 // ディレクトリパスを取得
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // ビルドされたUIファイルのディレクトリ
-// Viteの出力先は dist/src/apps/test-suites-app/
+// TypeScriptビルド後: dist/apps/index.js
+// そこから見たViteの出力先: ../../dist/src/apps/test-suites-app/
+// 実際のパス: dist/src/apps/test-suites-app/index.html
 const DIST_DIR = path.resolve(__dirname, '../../dist/src/apps/test-suites-app');
 
 // リソースURI
@@ -44,40 +47,6 @@ const showTestSuitesAppInputSchema = z.object({
 });
 
 type ShowTestSuitesAppInput = z.infer<typeof showTestSuitesAppInputSchema>;
-
-/**
- * レスポンス型
- */
-interface SearchTestSuiteResponse {
-  testSuites: Array<{
-    id: string;
-    name: string;
-    description: string | null;
-    status: string;
-    projectId: string;
-    project: {
-      id: string;
-      name: string;
-    };
-    createdByUser: {
-      id: string;
-      name: string;
-      avatarUrl: string | null;
-    } | null;
-    _count: {
-      testCases: number;
-      preconditions: number;
-    };
-    createdAt: string;
-    updatedAt: string;
-  }>;
-  pagination: {
-    total: number;
-    limit: number;
-    offset: number;
-    hasMore: boolean;
-  };
-}
 
 /**
  * MCPサーバーにAppsを登録
@@ -157,7 +126,14 @@ export function registerApps(server: McpServer): void {
     async () => {
       // ビルドされたHTMLファイルを読み込む
       const htmlPath = path.join(DIST_DIR, 'index.html');
-      const html = await fs.readFile(htmlPath, 'utf-8');
+
+      let html: string;
+      try {
+        html = await fs.readFile(htmlPath, 'utf-8');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        throw new Error(`UIファイルの読み込みに失敗しました: ${htmlPath} - ${message}`);
+      }
 
       return {
         contents: [
