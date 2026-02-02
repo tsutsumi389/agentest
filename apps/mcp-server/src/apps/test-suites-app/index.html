@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test Suites - Agentest</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+        background: #0a0a0a;
+        color: #e5e5e5;
+        padding: 16px;
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #262626;
+      }
+
+      .header h1 {
+        font-size: 16px;
+        font-weight: 500;
+        color: #fafafa;
+      }
+
+      .header .count {
+        font-size: 12px;
+        color: #737373;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 32px;
+        color: #737373;
+      }
+
+      .error {
+        background: #450a0a;
+        border: 1px solid #dc2626;
+        color: #fca5a5;
+        padding: 12px;
+        border-radius: 4px;
+        margin-bottom: 16px;
+      }
+
+      .empty {
+        text-align: center;
+        padding: 32px;
+        color: #737373;
+      }
+
+      .test-suite-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .test-suite-card {
+        background: #171717;
+        border: 1px solid #262626;
+        border-radius: 6px;
+        padding: 12px;
+        transition: border-color 0.2s;
+      }
+
+      .test-suite-card:hover {
+        border-color: #404040;
+      }
+
+      .test-suite-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 8px;
+      }
+
+      .test-suite-name {
+        font-weight: 500;
+        color: #fafafa;
+        font-size: 14px;
+      }
+
+      .test-suite-status {
+        font-size: 11px;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-weight: 500;
+      }
+
+      .status-draft {
+        background: #1c1917;
+        color: #a8a29e;
+        border: 1px solid #44403c;
+      }
+
+      .status-active {
+        background: #052e16;
+        color: #4ade80;
+        border: 1px solid #166534;
+      }
+
+      .status-archived {
+        background: #1e1b4b;
+        color: #a5b4fc;
+        border: 1px solid #3730a3;
+      }
+
+      .test-suite-description {
+        font-size: 12px;
+        color: #a3a3a3;
+        margin-bottom: 8px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .test-suite-meta {
+        display: flex;
+        gap: 16px;
+        font-size: 11px;
+        color: #737373;
+        margin-bottom: 12px;
+      }
+
+      .test-suite-meta span {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .test-suite-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      .btn {
+        font-family: inherit;
+        font-size: 12px;
+        padding: 6px 12px;
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+        transition: background-color 0.2s, border-color 0.2s;
+      }
+
+      .btn-primary {
+        background: #16a34a;
+        color: #fff;
+      }
+
+      .btn-primary:hover:not(:disabled) {
+        background: #15803d;
+      }
+
+      .btn-primary:disabled {
+        background: #14532d;
+        color: #6b7280;
+        cursor: not-allowed;
+      }
+
+      .btn-secondary {
+        background: #262626;
+        color: #e5e5e5;
+        border: 1px solid #404040;
+      }
+
+      .btn-secondary:hover:not(:disabled) {
+        background: #333333;
+        border-color: #525252;
+      }
+
+      .project-badge {
+        display: inline-block;
+        font-size: 11px;
+        background: #1e1b4b;
+        color: #c4b5fd;
+        padding: 2px 6px;
+        border-radius: 3px;
+        margin-bottom: 4px;
+      }
+
+      .message-sent {
+        font-size: 11px;
+        color: #4ade80;
+        margin-top: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div class="loading">読み込み中...</div>
+    </div>
+    <script type="module" src="./app.ts"></script>
+  </body>
+</html>
