@@ -34,7 +34,7 @@
 
 | 機能 | 説明 | ドキュメント |
 |------|------|-------------|
-| MCP連携 | AIエージェント連携（MCPサーバー）- プロジェクト/テストスイート/テストケース/実行履歴検索ツール実装済 | [mcp-integration.md](./mcp-integration.md) |
+| MCP連携 | AIエージェント連携（MCPサーバー）- 検索/取得/作成/更新/削除ツール、MCP Apps（テストスイート一覧App）実装済 | [mcp-integration.md](./mcp-integration.md) |
 
 ### 通知・課金
 

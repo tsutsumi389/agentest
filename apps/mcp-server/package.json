@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "pnpm build:ui && tsc",
+    "build:ui": "cross-env INPUT=src/apps/test-suites-app/index.html vite build",
     "start": "node dist/index.js",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -16,6 +17,7 @@
     "@agentest/auth": "workspace:*",
     "@agentest/db": "workspace:*",
     "@agentest/shared": "workspace:*",
+    "@modelcontextprotocol/ext-apps": "^1.0.1",
     "@modelcontextprotocol/sdk": "^1.10.0",
     "cookie-parser": "catalog:",
     "cors": "catalog:",
@@ -30,9 +32,12 @@
     "@types/express": "catalog:",
     "@types/node": "catalog:",
     "@types/supertest": "catalog:",
+    "cross-env": "^10.1.0",
     "supertest": "catalog:",
     "tsx": "^4.7.0",
     "typescript": "catalog:",
+    "vite": "^6.0.0",
+    "vite-plugin-singlefile": "^2.3.0",
     "vitest": "catalog:"
   }
 }
