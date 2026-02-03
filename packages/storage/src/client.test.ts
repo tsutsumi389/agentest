@@ -426,6 +426,29 @@ describe('StorageClient', () => {
 
       expect(result).toEqual(['file1.txt', 'file2.txt']);
     });
+
+    it('空のprefixを許可する（ルートリスト用）', async () => {
+      mockSend.mockResolvedValue({
+        Contents: [{ Key: 'file1.txt' }],
+      });
+
+      const result = await client.list('');
+
+      expect(ListObjectsV2Command).toHaveBeenCalledWith({
+        Bucket: 'test-bucket',
+        Prefix: '',
+        MaxKeys: 1000,
+      });
+      expect(result).toEqual(['file1.txt']);
+    });
+
+    it('パストラバーサルを含むprefixを拒否する', async () => {
+      await expect(client.list('../secret/')).rejects.toThrow('path traversal');
+    });
+
+    it('絶対パスのprefixを拒否する', async () => {
+      await expect(client.list('/etc/')).rejects.toThrow('must not start with "/"');
+    });
   });
 
   describe('copy', () => {

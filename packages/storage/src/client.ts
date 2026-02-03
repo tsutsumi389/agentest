@@ -19,17 +19,10 @@ function isNotFoundError(error: unknown): boolean {
   if (error instanceof NotFound) {
     return true;
   }
-  // S3クライアントは他の形式でNotFoundを返すことがある
-  if (error instanceof Error && error.name === 'NotFound') {
-    return true;
-  }
-  // HeadObjectはNoSuchKeyではなく404エラーコードを返すことがある
-  if (
-    error instanceof Error &&
-    'name' in error &&
-    (error.name === 'NoSuchKey' || error.name === '404')
-  ) {
-    return true;
+  // S3クライアントは様々な形式でNotFoundエラーを返すことがある
+  if (error instanceof Error) {
+    // HeadObjectはNoSuchKey、404、またはNotFoundを返すことがある
+    return error.name === 'NotFound' || error.name === 'NoSuchKey' || error.name === '404';
   }
   return false;
 }
@@ -212,6 +205,10 @@ export class StorageClient {
    * プレフィックスでファイル一覧を取得
    */
   async list(prefix: string, maxKeys = 1000): Promise<string[]> {
+    // prefixは空文字列を許可（ルートリスト用）だが、それ以外は検証
+    if (prefix) {
+      validateKey(prefix);
+    }
     const command = new ListObjectsV2Command({
       Bucket: this.bucket,
       Prefix: prefix,
