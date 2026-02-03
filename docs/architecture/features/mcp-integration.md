@@ -199,15 +199,60 @@ create_executionツールを使用してテスト実行を開始し、get_test_s
 
 ### UIデザイン
 
-| 要素 | スタイル |
-|------|---------|
-| 背景色 | ダークテーマ（#1a1a2e） |
-| カード背景 | 半透明ダーク（#16213e） |
-| テキスト色 | 白（#eee） |
-| アクセントカラー | 紫系（#7c3aed） |
-| ステータス: DRAFT | グレー（#6b7280） |
-| ステータス: ACTIVE | 緑（#10b981） |
-| ステータス: ARCHIVED | オレンジ（#f59e0b） |
+CSS変数を使用し、ホストのテーマに動的に適応します。フォールバック値によりスタンドアロンでも動作します。
+
+| 要素 | CSS変数 | フォールバック値 |
+|------|---------|-----------------|
+| 背景色 | `--color-background-primary` | `#0a0a0a` |
+| カード背景 | `--color-background-secondary` | `#171717` |
+| テキスト色 | `--color-text-primary` | `#e5e5e5` |
+| 補助テキスト | `--color-text-secondary` | `#737373` |
+| ボーダー | `--color-border-primary` | `#262626` |
+| アクセント（ボタン） | `--color-accent-primary` | `#16a34a` |
+| フォント | `--font-mono` | SF Mono, Monaco, monospace |
+
+### ホストスタイル統合
+
+MCP Appsは`@modelcontextprotocol/ext-apps`のスタイル適用機能を使用して、AIクライアントのテーマに動的に適応します。
+
+#### 適用機能
+
+| 機能 | 関数 | 説明 |
+|------|------|------|
+| テーマ適用 | `applyDocumentTheme()` | ライト/ダークテーマを切り替え |
+| CSS変数適用 | `applyHostStyleVariables()` | ホストのCSS変数をdocumentに適用 |
+| フォント適用 | `applyHostFonts()` | ホストのフォント設定を適用 |
+| セーフエリア | `safeAreaInsets` | モバイル向けパディング調整 |
+
+#### 適用タイミング
+
+1. `onhostcontextchanged` ハンドラーでホストのテーマ変更を検知
+2. `connect()` 後に `getHostContext()` で初期コンテキストを取得・適用
+
+#### 実装例
+
+```typescript
+import {
+  App,
+  applyDocumentTheme,
+  applyHostStyleVariables,
+  applyHostFonts,
+  type McpUiHostContext,
+} from '@modelcontextprotocol/ext-apps';
+
+function handleHostContextChanged(ctx: McpUiHostContext): void {
+  if (ctx.theme) applyDocumentTheme(ctx.theme);
+  if (ctx.styles?.variables) applyHostStyleVariables(ctx.styles.variables);
+  if (ctx.styles?.css?.fonts) applyHostFonts(ctx.styles.css.fonts);
+}
+
+app.onhostcontextchanged = handleHostContextChanged;
+
+app.connect().then(() => {
+  const ctx = app.getHostContext();
+  if (ctx) handleHostContextChanged(ctx);
+});
+```
 
 ## システム構成
 

@@ -1,8 +1,39 @@
-import { App } from '@modelcontextprotocol/ext-apps';
+import {
+  App,
+  applyDocumentTheme,
+  applyHostStyleVariables,
+  applyHostFonts,
+  type McpUiHostContext,
+} from '@modelcontextprotocol/ext-apps';
 import type { TestSuite, SearchTestSuiteResponse } from '../types';
 
 // DOM要素
 const appEl = document.getElementById('app')!;
+
+/**
+ * ホストコンテキストの変更を処理し、スタイルを適用する
+ */
+function handleHostContextChanged(ctx: McpUiHostContext): void {
+  // テーマを適用
+  if (ctx.theme) {
+    applyDocumentTheme(ctx.theme);
+  }
+  // CSS変数を適用
+  if (ctx.styles?.variables) {
+    applyHostStyleVariables(ctx.styles.variables);
+  }
+  // フォントを適用
+  if (ctx.styles?.css?.fonts) {
+    applyHostFonts(ctx.styles.css.fonts);
+  }
+  // セーフエリアのパディングを適用
+  if (ctx.safeAreaInsets) {
+    appEl.style.paddingTop = `${ctx.safeAreaInsets.top}px`;
+    appEl.style.paddingRight = `${ctx.safeAreaInsets.right}px`;
+    appEl.style.paddingBottom = `${ctx.safeAreaInsets.bottom}px`;
+    appEl.style.paddingLeft = `${ctx.safeAreaInsets.left}px`;
+  }
+}
 
 // MCPアプリケーションインスタンスを作成
 const app = new App({
@@ -178,6 +209,23 @@ function render(): void {
   });
 }
 
+// ===== ハンドラー登録（connect前に行う必要あり）=====
+
+// アプリ終了時の処理
+app.onteardown = async () => {
+  if (import.meta.env.DEV) {
+    console.info('App is being torn down');
+  }
+  return {};
+};
+
+// ツール入力を受け取ったとき
+app.ontoolinput = (params) => {
+  if (import.meta.env.DEV) {
+    console.info('Received tool input:', params);
+  }
+};
+
 // ツール結果を受け取るハンドラ
 app.ontoolresult = (result) => {
   try {
@@ -199,5 +247,21 @@ app.ontoolresult = (result) => {
   }
 };
 
-// ホストに接続
-app.connect();
+// ツールキャンセル時の処理
+app.ontoolcancelled = (params) => {
+  if (import.meta.env.DEV) {
+    console.info('Tool was cancelled:', params);
+  }
+};
+
+// ホストコンテキスト変更時の処理
+app.onhostcontextchanged = handleHostContextChanged;
+
+// ===== ホストに接続 =====
+app.connect().then(() => {
+  // 接続後に初期コンテキストを取得・適用
+  const ctx = app.getHostContext();
+  if (ctx) {
+    handleHostContextChanged(ctx);
+  }
+});
