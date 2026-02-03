@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useAuth, useRequireAuth } from '../useAuth';
 import { useAuthStore } from '../../stores/auth';
+import { createMockUser } from '../../__tests__/factories';
 
 describe('auth hooks', () => {
   beforeEach(() => {
@@ -23,13 +24,9 @@ describe('auth hooks', () => {
     });
 
     it('認証済み状態を返す', () => {
-      const mockUser = {
-        id: 'user-1',
-        email: 'test@example.com',
-        name: 'テストユーザー',
-      };
+      const mockUser = createMockUser();
       useAuthStore.setState({
-        user: mockUser as any,
+        user: mockUser,
         isAuthenticated: true,
         isLoading: false,
       });
@@ -77,13 +74,9 @@ describe('auth hooks', () => {
     });
 
     it('認証済みの場合はユーザー情報を返す', () => {
-      const mockUser = {
-        id: 'user-1',
-        email: 'test@example.com',
-        name: 'テストユーザー',
-      };
+      const mockUser = createMockUser();
       useAuthStore.setState({
-        user: mockUser as any,
+        user: mockUser,
         isAuthenticated: true,
         isLoading: false,
       });

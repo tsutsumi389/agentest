@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { useAuthStore } from '../auth';
+import { createMockUser } from '../../__tests__/factories';
 
 // APIとWebSocketをモック
 vi.mock('../../lib/api', () => ({
@@ -42,8 +43,8 @@ describe('auth store', () => {
 
   describe('initialize', () => {
     it('認証済みの場合はユーザー情報を設定する', async () => {
-      const mockUser = { id: 'user-1', email: 'test@example.com', name: 'テスト' };
-      mockAuthApi.me.mockResolvedValue({ user: mockUser } as any);
+      const mockUser = createMockUser({ name: 'テスト' });
+      mockAuthApi.me.mockResolvedValue({ user: mockUser });
 
       await useAuthStore.getState().initialize();
 
@@ -68,11 +69,11 @@ describe('auth store', () => {
   describe('logout', () => {
     it('ログアウトして状態をクリアする', async () => {
       useAuthStore.setState({
-        user: { id: 'user-1' } as any,
+        user: createMockUser(),
         isAuthenticated: true,
         isLoading: false,
       });
-      mockAuthApi.logout.mockResolvedValue(undefined as any);
+      mockAuthApi.logout.mockResolvedValue(undefined);
 
       await useAuthStore.getState().logout();
 
@@ -84,7 +85,7 @@ describe('auth store', () => {
 
     it('APIエラーでもローカル状態はクリアする', async () => {
       useAuthStore.setState({
-        user: { id: 'user-1' } as any,
+        user: createMockUser(),
         isAuthenticated: true,
       });
       mockAuthApi.logout.mockRejectedValue(new Error('サーバーエラー'));
@@ -93,13 +94,17 @@ describe('auth store', () => {
 
       expect(useAuthStore.getState().user).toBeNull();
       expect(useAuthStore.getState().isAuthenticated).toBe(false);
+      expect(console.error).toHaveBeenCalledWith(
+        'ログアウトエラー:',
+        expect.any(Error)
+      );
     });
   });
 
   describe('setUser', () => {
     it('ユーザーを設定して認証状態にする', () => {
-      const mockUser = { id: 'user-1', email: 'test@example.com' };
-      useAuthStore.getState().setUser(mockUser as any);
+      const mockUser = createMockUser();
+      useAuthStore.getState().setUser(mockUser);
 
       const state = useAuthStore.getState();
       expect(state.user).toEqual(mockUser);
@@ -111,13 +116,13 @@ describe('auth store', () => {
   describe('updateUser', () => {
     it('ユーザー情報を更新する', async () => {
       useAuthStore.setState({
-        user: { id: 'user-1', name: '旧名前' } as any,
+        user: createMockUser({ name: '旧名前' }),
         isAuthenticated: true,
       });
-      const updatedUser = { id: 'user-1', name: '新名前' };
-      mockUsersApi.update.mockResolvedValue({ user: updatedUser } as any);
+      const updatedUser = createMockUser({ name: '新名前' });
+      mockUsersApi.update.mockResolvedValue({ user: updatedUser });
 
-      await useAuthStore.getState().updateUser({ name: '新名前' } as any);
+      await useAuthStore.getState().updateUser({ name: '新名前' });
 
       expect(useAuthStore.getState().user).toEqual(updatedUser);
     });
@@ -126,19 +131,19 @@ describe('auth store', () => {
       useAuthStore.setState({ user: null });
 
       await expect(
-        useAuthStore.getState().updateUser({ name: '新名前' } as any)
+        useAuthStore.getState().updateUser({ name: '新名前' })
       ).rejects.toThrow('ユーザーが見つかりません');
     });
 
     it('API失敗時はエラーが伝播する', async () => {
       useAuthStore.setState({
-        user: { id: 'user-1', name: '旧名前' } as any,
+        user: createMockUser({ name: '旧名前' }),
         isAuthenticated: true,
       });
       mockUsersApi.update.mockRejectedValue(new Error('サーバーエラー'));
 
       await expect(
-        useAuthStore.getState().updateUser({ name: '新名前' } as any)
+        useAuthStore.getState().updateUser({ name: '新名前' })
       ).rejects.toThrow('サーバーエラー');
 
       // ユーザー情報は変更されない

@@ -50,16 +50,23 @@ describe('usePageVisibility', () => {
   });
 
   it('アンマウント時にイベントリスナーが解除される', () => {
-    const { unmount } = renderHook(() => usePageVisibility());
+    const { result, unmount } = renderHook(() => usePageVisibility());
+
+    // アンマウント前の状態を確認
+    expect(result.current.isVisible).toBe(true);
 
     unmount();
 
-    // アンマウント後にイベントが発火してもエラーにならない
+    // アンマウント後にイベントが発火しても状態は変わらない
     Object.defineProperty(document, 'visibilityState', {
       value: 'hidden',
       writable: true,
       configurable: true,
     });
     document.dispatchEvent(new Event('visibilitychange'));
+
+    // アンマウント後は最後の状態が維持される
+    expect(result.current.isVisible).toBe(true);
+    expect(result.current.isHidden).toBe(false);
   });
 });

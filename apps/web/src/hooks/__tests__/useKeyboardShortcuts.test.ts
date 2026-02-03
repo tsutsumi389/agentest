@@ -70,6 +70,51 @@ describe('useKeyboardShortcuts', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k' }));
     expect(action).not.toHaveBeenCalled();
   });
+
+  it('meta修飾キー付きのショートカットが動作する', () => {
+    const action = vi.fn();
+    renderHook(() =>
+      useKeyboardShortcuts([{ key: 'k', meta: true, action }])
+    );
+
+    // metaなしでは発火しない
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k' }));
+    expect(action).not.toHaveBeenCalled();
+
+    // meta付きで発火する（Ctrl = non-Mac環境でのmeta相当）
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }));
+    expect(action).toHaveBeenCalledTimes(1);
+  });
+
+  it('shift修飾キー付きのショートカットが動作する', () => {
+    const action = vi.fn();
+    renderHook(() =>
+      useKeyboardShortcuts([{ key: 'k', shift: true, action }])
+    );
+
+    // shiftなしでは発火しない
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k' }));
+    expect(action).not.toHaveBeenCalled();
+
+    // shift付きで発火する
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', shiftKey: true }));
+    expect(action).toHaveBeenCalledTimes(1);
+  });
+
+  it('alt修飾キー付きのショートカットが動作する', () => {
+    const action = vi.fn();
+    renderHook(() =>
+      useKeyboardShortcuts([{ key: 'k', alt: true, action }])
+    );
+
+    // altなしでは発火しない
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k' }));
+    expect(action).not.toHaveBeenCalled();
+
+    // alt付きで発火する
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', altKey: true }));
+    expect(action).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('useShortcut', () => {
@@ -108,5 +153,13 @@ describe('formatShortcut', () => {
     expect(formatShortcut({ key: 'arrowdown' })).toBe('↓');
     expect(formatShortcut({ key: 'arrowleft' })).toBe('←');
     expect(formatShortcut({ key: 'arrowright' })).toBe('→');
+  });
+
+  it('修飾キー付きショートカットをフォーマットする', () => {
+    // non-Mac環境（jsdom）での表示
+    const result = formatShortcut({ key: 'k', meta: true, shift: true });
+    expect(result).toContain('Ctrl');
+    expect(result).toContain('Shift');
+    expect(result).toContain('K');
   });
 });

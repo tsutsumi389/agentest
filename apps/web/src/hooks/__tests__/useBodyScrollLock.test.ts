@@ -14,13 +14,14 @@ describe('useBodyScrollLock', () => {
     expect(document.body.style.overflow).toBe(originalOverflow);
   });
 
-  it('アンマウント時にoverflowを復元する', () => {
+  it('アンマウント時にoverflowを復元しスクロール位置を戻す', () => {
     document.body.style.overflow = '';
     const { unmount } = renderHook(() => useBodyScrollLock(true));
     expect(document.body.style.overflow).toBe('hidden');
 
     unmount();
     expect(document.body.style.overflow).not.toBe('hidden');
+    expect(window.scrollTo).toHaveBeenCalled();
   });
 
   it('isLockedをfalseに変更するとoverflowが復元される', () => {

@@ -5,20 +5,7 @@ import {
   useSelectedOrganization,
   useCurrentOrganizationRole,
 } from '../organization';
-import type { Organization } from '../../lib/api';
-
-// テスト用のモック組織データ
-function createMockOrganization(overrides: Partial<Organization> = {}): Organization {
-  return {
-    id: 'org-1',
-    name: 'テスト組織',
-    slug: 'test-org',
-    plan: 'FREE' as const,
-    createdAt: '2024-01-01T00:00:00Z',
-    updatedAt: '2024-01-01T00:00:00Z',
-    ...overrides,
-  } as Organization;
-}
+import { createMockOrganization } from '../../__tests__/factories';
 
 describe('organization store', () => {
   beforeEach(() => {
