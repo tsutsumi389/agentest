@@ -11,7 +11,7 @@
 | apps/jobs | 13 | vitest.config.ts | ✅ 成熟 |
 | packages/shared | 4 | vitest.config.ts (80%閾値) | ✅ 成熟 |
 | apps/admin | 0 | なし | ❌ 未構築 |
-| apps/web | 0 | なし | ❌ 未構築 |
+| apps/web | 16 | vitest.config.ts (80%閾値) | ✅ 完了 |
 | apps/ws | 5 | vitest.config.ts (80%閾値) | ✅ 完了 |
 | packages/auth | 6 | vitest.config.ts (80%閾値) | ✅ 完了 |
 | packages/db | 0 | なし | ❌ 未構築 |
@@ -19,7 +19,7 @@
 | packages/ui | 2 | vitest.config.ts (80%閾値) | ✅ 完了 |
 | packages/ws-types | 0 | なし | ⏭️ 型定義のみ |
 
-**総計**: 195テストファイル（7ディレクトリ）
+**総計**: 211テストファイル（8ディレクトリ）
 
 ---
 
@@ -111,16 +111,21 @@
 **理由**: メインのユーザー向けアプリケーション。
 
 **対象**:
-- ページコンポーネント
-- カスタムフック
-- 状態管理
-- APIクライアント
+- カスタムフック（useDebounce, useAuth, useBodyScrollLock, usePageVisibility, useKeyboardShortcuts）
+- Zustandストア（auth, toast, organization, notification）
+- ユーティリティ（date, billing, color-utils, url, audit-log, constants, execution-status）
 
 **タスク**:
-- [ ] vitest.config.ts + testing-library設定
-- [ ] カスタムフックのテスト
-- [ ] ページコンポーネントのテスト
+- [x] vitest.config.ts + @testing-library/react設定
+- [x] テストセットアップファイル作成（jsdom環境）
+- [x] カスタムフックのテスト（5フック、renderHook使用）
+- [x] Zustandストアのテスト（4ストア、APIモック使用）
+- [x] ユーティリティ関数のテスト（7ファイル）
 - [ ] E2Eテスト環境（Playwright）の検討
+
+**完了**: 2026-02-04（カバレッジ94.6%）
+
+**備考**: ページコンポーネントとWebSocket/API依存フック（useEditLock, useNotifications, usePictureInPicture等）はE2E/統合テストで対応予定。
 
 ### 3.3 apps/admin
 
@@ -151,8 +156,8 @@ Phase 1.1: packages/auth      ✅ 完了（カバレッジ99.14%）
 Phase 1.2: packages/storage   ✅ 完了（カバレッジ100%）
 Phase 2.1: apps/ws            ✅ 完了（カバレッジ99.31%）
 Phase 3.1: packages/ui        ✅ 完了（カバレッジ100%）
-Phase 3.2: apps/web           ← 次（ユーザー向けSPA）
-Phase 3.3: apps/admin         ← 管理者向けSPA
+Phase 3.2: apps/web           ✅ 完了（カバレッジ94.6%）
+Phase 3.3: apps/admin         ← 次（管理者向けSPA）
 ```
 
 ---
@@ -209,7 +214,8 @@ export default defineConfig({
 - [x] packages/storage: カバレッジ80%達成 (100%)
 - [x] apps/ws: 主要機能のテストカバー (99.31%)
 - [x] packages/ui: コンポーネントのレンダリングテスト完備 (100%)
-- [ ] apps/web, apps/admin: カスタムフック・ユーティリティのテスト完備
+- [x] apps/web: カスタムフック・ユーティリティのテスト完備 (94.6%)
+- [ ] apps/admin: カスタムフック・ユーティリティのテスト完備
 
 ---
 
@@ -219,10 +225,11 @@ export default defineConfig({
 2. ~~**packages/storage** のテスト環境構築~~ ✅ 完了
 3. ~~**apps/ws** のテスト環境構築~~ ✅ 完了
 4. ~~**packages/ui** のテスト環境構築~~ ✅ 完了
-5. **apps/web** のテスト環境構築
-6. TDDワークフローで新機能開発を開始
+5. ~~**apps/web** のテスト環境構築~~ ✅ 完了
+6. **apps/admin** のテスト環境構築
+7. TDDワークフローで新機能開発を開始
 
 ---
 
 *作成日: 2026-02-03*
-*更新日: 2026-02-04* - packages/ui完了
+*更新日: 2026-02-04* - apps/web完了（カバレッジ94.6%）
