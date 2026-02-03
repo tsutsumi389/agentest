@@ -17,7 +17,10 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "clean": "rm -rf dist",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@agentest/db": "workspace:*",
@@ -33,6 +36,8 @@
     "@types/passport": "catalog:",
     "@types/passport-github2": "catalog:",
     "@types/passport-google-oauth20": "catalog:",
-    "typescript": "catalog:"
+    "@vitest/coverage-v8": "^2.1.0",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }
