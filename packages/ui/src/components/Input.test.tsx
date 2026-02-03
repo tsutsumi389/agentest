@@ -187,5 +187,45 @@ describe('Input', () => {
       const input = screen.getByLabelText('Email');
       expect(input).toBeInTheDocument();
     });
+
+    it('エラー時にaria-invalid="true"が設定される', () => {
+      render(<Input label="Email" error="Invalid email" />);
+      const input = screen.getByRole('textbox');
+      expect(input).toHaveAttribute('aria-invalid', 'true');
+    });
+
+    it('エラーがない場合はaria-invalidが設定されない', () => {
+      render(<Input label="Email" />);
+      const input = screen.getByRole('textbox');
+      expect(input).not.toHaveAttribute('aria-invalid');
+    });
+
+    it('エラーメッセージがaria-describedbyで関連付けられる', () => {
+      render(<Input label="Email" error="Invalid email" />);
+      const input = screen.getByRole('textbox');
+      const errorMessage = screen.getByText('Invalid email');
+      expect(input).toHaveAttribute('aria-describedby', 'email-error');
+      expect(errorMessage).toHaveAttribute('id', 'email-error');
+    });
+
+    it('ヘルパーテキストがaria-describedbyで関連付けられる', () => {
+      render(<Input label="Email" helperText="Enter your email address" />);
+      const input = screen.getByRole('textbox');
+      const helperText = screen.getByText('Enter your email address');
+      expect(input).toHaveAttribute('aria-describedby', 'email-helper');
+      expect(helperText).toHaveAttribute('id', 'email-helper');
+    });
+
+    it('エラーメッセージにrole="alert"が設定される', () => {
+      render(<Input label="Email" error="Invalid email" />);
+      const errorMessage = screen.getByRole('alert');
+      expect(errorMessage).toHaveTextContent('Invalid email');
+    });
+
+    it('カスタムidを使用した場合もaria-describedbyが正しく設定される', () => {
+      render(<Input id="my-input" error="Error message" />);
+      const input = screen.getByRole('textbox');
+      expect(input).toHaveAttribute('aria-describedby', 'my-input-error');
+    });
   });
 });

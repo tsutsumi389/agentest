@@ -9,6 +9,10 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ label, error, helperText, className = '', id, ...props }, ref) => {
     const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
+    // アクセシビリティ: エラーとヘルパーテキストのID
+    const errorId = error && inputId ? `${inputId}-error` : undefined;
+    const helperId = helperText && !error && inputId ? `${inputId}-helper` : undefined;
+    const describedBy = [errorId, helperId].filter(Boolean).join(' ') || undefined;
 
     return (
       <div className="w-full">
@@ -23,6 +27,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         <input
           ref={ref}
           id={inputId}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedBy}
           className={`
             w-full px-3 py-2 text-sm
             bg-white border rounded-md
@@ -38,10 +44,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           {...props}
         />
         {error && (
-          <p className="mt-1 text-sm text-red-600">{error}</p>
+          <p id={errorId} className="mt-1 text-sm text-red-600" role="alert">{error}</p>
         )}
         {helperText && !error && (
-          <p className="mt-1 text-sm text-zinc-500">{helperText}</p>
+          <p id={helperId} className="mt-1 text-sm text-zinc-500">{helperText}</p>
         )}
       </div>
     );
