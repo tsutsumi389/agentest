@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { useNotificationStore } from '../notification';
 
 // APIモジュールをモック
@@ -22,6 +22,11 @@ describe('notification store', () => {
   beforeEach(() => {
     useNotificationStore.getState().reset();
     vi.clearAllMocks();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe('初期状態', () => {
@@ -130,6 +135,15 @@ describe('notification store', () => {
 
       expect(useNotificationStore.getState().unreadCount).toBe(5);
     });
+
+    it('エラー時は未読数を変更しない', async () => {
+      useNotificationStore.setState({ unreadCount: 3 });
+      mockApi.getUnreadCount.mockRejectedValue(new Error('エラー'));
+
+      await useNotificationStore.getState().fetchUnreadCount();
+
+      expect(useNotificationStore.getState().unreadCount).toBe(3);
+    });
   });
 
   describe('fetchPreferences', () => {
@@ -140,6 +154,16 @@ describe('notification store', () => {
       await useNotificationStore.getState().fetchPreferences();
 
       expect(useNotificationStore.getState().preferences).toEqual(prefs);
+    });
+
+    it('エラー時は設定を変更しない', async () => {
+      const existingPrefs = [{ type: 'EXECUTION_COMPLETED' }] as any;
+      useNotificationStore.setState({ preferences: existingPrefs });
+      mockApi.getPreferences.mockRejectedValue(new Error('エラー'));
+
+      await useNotificationStore.getState().fetchPreferences();
+
+      expect(useNotificationStore.getState().preferences).toEqual(existingPrefs);
     });
   });
 
@@ -159,6 +183,20 @@ describe('notification store', () => {
       const state = useNotificationStore.getState();
       expect(state.notifications[0].readAt).toBeTruthy();
       expect(state.notifications[1].readAt).toBeNull();
+      expect(state.unreadCount).toBe(1);
+    });
+
+    it('エラー時は状態を変更しない', async () => {
+      useNotificationStore.setState({
+        notifications: [{ id: 'n-1', readAt: null }] as any,
+        unreadCount: 1,
+      });
+      mockApi.markAsRead.mockRejectedValue(new Error('エラー'));
+
+      await useNotificationStore.getState().markAsRead('n-1');
+
+      const state = useNotificationStore.getState();
+      expect(state.notifications[0].readAt).toBeNull();
       expect(state.unreadCount).toBe(1);
     });
 
@@ -192,6 +230,20 @@ describe('notification store', () => {
       expect(state.notifications.every((n) => n.readAt)).toBe(true);
       expect(state.unreadCount).toBe(0);
     });
+
+    it('エラー時は状態を変更しない', async () => {
+      useNotificationStore.setState({
+        notifications: [{ id: 'n-1', readAt: null }] as any,
+        unreadCount: 1,
+      });
+      mockApi.markAllAsRead.mockRejectedValue(new Error('エラー'));
+
+      await useNotificationStore.getState().markAllAsRead();
+
+      const state = useNotificationStore.getState();
+      expect(state.notifications[0].readAt).toBeNull();
+      expect(state.unreadCount).toBe(1);
+    });
   });
 
   describe('deleteNotification', () => {
@@ -211,6 +263,19 @@ describe('notification store', () => {
       expect(state.notifications).toHaveLength(1);
       expect(state.notifications[0].id).toBe('n-2');
       expect(state.unreadCount).toBe(0);
+    });
+
+    it('エラー時は状態を変更しない', async () => {
+      useNotificationStore.setState({
+        notifications: [{ id: 'n-1', readAt: null }] as any,
+        unreadCount: 1,
+      });
+      mockApi.delete.mockRejectedValue(new Error('エラー'));
+
+      await useNotificationStore.getState().deleteNotification('n-1');
+
+      expect(useNotificationStore.getState().notifications).toHaveLength(1);
+      expect(useNotificationStore.getState().unreadCount).toBe(1);
     });
 
     it('既読の通知を削除しても未読数は変わらない', async () => {

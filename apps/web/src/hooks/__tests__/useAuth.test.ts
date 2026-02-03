@@ -3,7 +3,7 @@ import { renderHook } from '@testing-library/react';
 import { useAuth, useRequireAuth } from '../useAuth';
 import { useAuthStore } from '../../stores/auth';
 
-describe('useAuth', () => {
+describe('auth hooks', () => {
   beforeEach(() => {
     useAuthStore.setState({
       user: null,

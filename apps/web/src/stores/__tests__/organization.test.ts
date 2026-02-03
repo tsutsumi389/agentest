@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { renderHook } from '@testing-library/react';
 import {
   useOrganizationStore,
   useSelectedOrganization,
@@ -180,22 +181,38 @@ describe('organization store', () => {
 
   describe('useSelectedOrganization セレクター', () => {
     it('選択中の組織が無い場合はnullを返す', () => {
-      // セレクターはフック経由なのでストアの直接アクセスでテスト
-      const state = useOrganizationStore.getState();
-      const selected = state.selectedOrganizationId
-        ? state.organizations.find((o) => o.organization.id === state.selectedOrganizationId)
-        : null;
-      expect(selected).toBeNull();
+      const { result } = renderHook(() => useSelectedOrganization());
+      expect(result.current).toBeNull();
+    });
+
+    it('選択中の組織を返す', () => {
+      const org = createMockOrganization({ id: 'org-1' });
+      useOrganizationStore.getState().setOrganizations([
+        { organization: org, role: 'OWNER' },
+      ]);
+      useOrganizationStore.getState().selectOrganization('org-1');
+
+      const { result } = renderHook(() => useSelectedOrganization());
+      expect(result.current).not.toBeNull();
+      expect(result.current!.organization.id).toBe('org-1');
+      expect(result.current!.role).toBe('OWNER');
     });
   });
 
   describe('useCurrentOrganizationRole セレクター', () => {
     it('選択中の組織が無い場合はnullを返す', () => {
-      const state = useOrganizationStore.getState();
-      const found = state.selectedOrganizationId
-        ? state.organizations.find((o) => o.organization.id === state.selectedOrganizationId)
-        : null;
-      expect(found?.role || null).toBeNull();
+      const { result } = renderHook(() => useCurrentOrganizationRole());
+      expect(result.current).toBeNull();
+    });
+
+    it('選択中の組織のロールを返す', () => {
+      useOrganizationStore.getState().setOrganizations([
+        { organization: createMockOrganization({ id: 'org-1' }), role: 'ADMIN' },
+      ]);
+      useOrganizationStore.getState().selectOrganization('org-1');
+
+      const { result } = renderHook(() => useCurrentOrganizationRole());
+      expect(result.current).toBe('ADMIN');
     });
   });
 });

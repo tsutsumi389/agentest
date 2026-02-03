@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { useAuthStore } from '../auth';
 
 // APIとWebSocketをモック
@@ -33,6 +33,11 @@ describe('auth store', () => {
       error: null,
     });
     vi.clearAllMocks();
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe('initialize', () => {
@@ -123,6 +128,21 @@ describe('auth store', () => {
       await expect(
         useAuthStore.getState().updateUser({ name: '新名前' } as any)
       ).rejects.toThrow('ユーザーが見つかりません');
+    });
+
+    it('API失敗時はエラーが伝播する', async () => {
+      useAuthStore.setState({
+        user: { id: 'user-1', name: '旧名前' } as any,
+        isAuthenticated: true,
+      });
+      mockUsersApi.update.mockRejectedValue(new Error('サーバーエラー'));
+
+      await expect(
+        useAuthStore.getState().updateUser({ name: '新名前' } as any)
+      ).rejects.toThrow('サーバーエラー');
+
+      // ユーザー情報は変更されない
+      expect(useAuthStore.getState().user!.name).toBe('旧名前');
     });
   });
 

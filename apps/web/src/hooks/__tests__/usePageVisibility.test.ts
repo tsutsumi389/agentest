@@ -1,8 +1,17 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { usePageVisibility } from '../usePageVisibility';
 
 describe('usePageVisibility', () => {
+  afterEach(() => {
+    // visibilityStateをデフォルトに復元
+    Object.defineProperty(document, 'visibilityState', {
+      value: 'visible',
+      writable: true,
+      configurable: true,
+    });
+  });
+
   it('初期状態でisVisible=true, isHidden=falseを返す', () => {
     const { result } = renderHook(() => usePageVisibility());
     // jsdomではデフォルトでvisible
