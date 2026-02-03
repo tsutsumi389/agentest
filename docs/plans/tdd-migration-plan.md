@@ -15,11 +15,11 @@
 | apps/ws | 0 | なし | ❌ 未構築 |
 | packages/auth | 6 | vitest.config.ts (80%閾値) | ✅ 完了 |
 | packages/db | 0 | なし | ❌ 未構築 |
-| packages/storage | 0 | なし | ❌ 未構築 |
+| packages/storage | 1 | vitest.config.ts (80%閾値) | ✅ 完了 |
 | packages/ui | 0 | なし | ❌ 未構築 |
 | packages/ws-types | 0 | なし | ⏭️ 型定義のみ |
 
-**総計**: 192テストファイル（5ディレクトリ）
+**総計**: 193テストファイル（6ディレクトリ）
 
 ---
 
@@ -55,11 +55,12 @@
 - `src/presigned/` - 署名付きURL生成
 
 **タスク**:
-- [ ] vitest.config.ts作成
-- [ ] MinIOモックの作成
-- [ ] アップロード処理のユニットテスト
-- [ ] 署名付きURL生成のテスト
-- [ ] エラーハンドリングのテスト
+- [x] vitest.config.ts作成
+- [x] AWS SDK（S3Client）モックの作成
+- [x] アップロード・ダウンロード・削除のユニットテスト
+- [x] 署名付きURL生成のテスト
+- [x] ファイル存在確認・メタデータ取得のテスト
+- [x] ファイル一覧・コピーのテスト
 
 ---
 
@@ -143,8 +144,8 @@
 
 ```
 Phase 1.1: packages/auth      ✅ 完了（カバレッジ99.14%）
-Phase 1.2: packages/storage   ← 次（データ永続化）
-Phase 2.1: apps/ws            ← リアルタイム機能
+Phase 1.2: packages/storage   ✅ 完了（カバレッジ100%）
+Phase 2.1: apps/ws            ← 次（リアルタイム機能）
 Phase 3.1: packages/ui        ← UIの品質保証
 Phase 3.2: apps/web           ← ユーザー向けSPA
 Phase 3.3: apps/admin         ← 管理者向けSPA
@@ -201,7 +202,7 @@ export default defineConfig({
 
 - [ ] 全パッケージにvitest.config.ts設置
 - [x] packages/auth: カバレッジ80%達成 (99.14%)
-- [ ] packages/storage: カバレッジ80%達成
+- [x] packages/storage: カバレッジ80%達成 (100%)
 - [ ] apps/ws: 主要機能のテストカバー
 - [ ] packages/ui: コンポーネントのレンダリングテスト完備
 - [ ] apps/web, apps/admin: カスタムフック・ユーティリティのテスト完備
@@ -210,11 +211,12 @@ export default defineConfig({
 
 ## 次のアクション
 
-1. ~~**packages/auth** のテスト環境構築から開始~~ ✅ 完了
-2. **packages/storage** のテスト環境構築
-3. TDDワークフローで新機能開発を開始
+1. ~~**packages/auth** のテスト環境構築~~ ✅ 完了
+2. ~~**packages/storage** のテスト環境構築~~ ✅ 完了
+3. **apps/ws** のテスト環境構築
+4. TDDワークフローで新機能開発を開始
 
 ---
 
 *作成日: 2026-02-03*
-*更新日: 2026-02-03* - packages/auth完了
+*更新日: 2026-02-03* - packages/auth, packages/storage完了

@@ -13,13 +13,18 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "clean": "rm -rf dist",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "catalog:",
     "@aws-sdk/s3-request-presigner": "catalog:"
   },
   "devDependencies": {
-    "typescript": "catalog:"
+    "@vitest/coverage-v8": "^2.1.0",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }
