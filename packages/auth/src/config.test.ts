@@ -33,6 +33,8 @@ describe('config', () => {
     it('本番環境でセキュアなクッキー設定を使用する', () => {
       const env = {
         NODE_ENV: 'production',
+        JWT_ACCESS_SECRET: 'prod-access-secret',
+        JWT_REFRESH_SECRET: 'prod-refresh-secret',
       } as unknown as NodeJS.ProcessEnv;
 
       const config = createAuthConfig(env);
@@ -41,6 +43,28 @@ describe('config', () => {
       expect(config.cookie.secure).toBe(true);
       expect(config.cookie.sameSite).toBe('strict');
       expect(config.cookie.path).toBe('/');
+    });
+
+    it('本番環境でJWT_ACCESS_SECRETがない場合エラーをスローする', () => {
+      const env = {
+        NODE_ENV: 'production',
+        JWT_REFRESH_SECRET: 'prod-refresh-secret',
+      } as unknown as NodeJS.ProcessEnv;
+
+      expect(() => createAuthConfig(env)).toThrow(
+        'JWT_ACCESS_SECRET is required in production environment'
+      );
+    });
+
+    it('本番環境でJWT_REFRESH_SECRETがない場合エラーをスローする', () => {
+      const env = {
+        NODE_ENV: 'production',
+        JWT_ACCESS_SECRET: 'prod-access-secret',
+      } as unknown as NodeJS.ProcessEnv;
+
+      expect(() => createAuthConfig(env)).toThrow(
+        'JWT_REFRESH_SECRET is required in production environment'
+      );
     });
 
     it('開発環境でセキュアでないクッキー設定を使用する', () => {

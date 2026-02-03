@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { AuthConfig, OAuthProfile } from './types.js';
+import type { AuthConfig } from './types.js';
 
 // passportのモック
 const mockPassportUse = vi.hoisted(() => vi.fn());
@@ -56,6 +56,28 @@ const createTestConfig = (overrides: Partial<AuthConfig['oauth']> = {}): AuthCon
     ...overrides,
   },
 });
+
+// ストラテジーモックのヘルパー関数
+type StrategyCallback = (
+  accessToken: string,
+  refreshToken: string,
+  profile: Record<string, unknown>,
+  done: (error: Error | null, user?: unknown) => void
+) => Promise<void>;
+
+function setupStrategyMock(
+  StrategyClass: typeof GitHubStrategy | typeof GoogleStrategy,
+  strategyName: string
+): () => StrategyCallback {
+  let capturedCallback: StrategyCallback;
+  (StrategyClass as unknown as ReturnType<typeof vi.fn>).mockImplementation(
+    (_options: unknown, callback: StrategyCallback) => {
+      capturedCallback = callback;
+      return { name: strategyName };
+    }
+  );
+  return () => capturedCallback;
+}
 
 describe('passport', () => {
   const mockOnOAuth: OAuthCallback = vi.fn().mockResolvedValue({
@@ -137,15 +159,11 @@ describe('passport', () => {
   describe('GitHub Strategy callback', () => {
     it('GitHubプロファイルからOAuthProfileを構築してコールバックを呼ぶ', async () => {
       const config = createTestConfig();
-      let capturedCallback: any;
-
-      (GitHubStrategy as any).mockImplementation((_options: any, callback: any) => {
-        capturedCallback = callback;
-        return { name: 'github' };
-      });
+      const getCallback = setupStrategyMock(GitHubStrategy, 'github');
 
       configurePassport(config, mockOnOAuth);
 
+      const callback = getCallback();
       const mockDone = vi.fn();
       const mockProfile = {
         id: 'github-user-123',
@@ -155,7 +173,7 @@ describe('passport', () => {
         photos: [{ value: 'https://github.com/avatar.jpg' }],
       };
 
-      await capturedCallback('access-token', 'refresh-token', mockProfile, mockDone);
+      await callback('access-token', 'refresh-token', mockProfile, mockDone);
 
       expect(mockOnOAuth).toHaveBeenCalledWith({
         provider: 'github',
@@ -171,15 +189,11 @@ describe('passport', () => {
 
     it('メールがない場合はnoreplyアドレスを使用する', async () => {
       const config = createTestConfig();
-      let capturedCallback: any;
-
-      (GitHubStrategy as any).mockImplementation((_options: any, callback: any) => {
-        capturedCallback = callback;
-        return { name: 'github' };
-      });
+      const getCallback = setupStrategyMock(GitHubStrategy, 'github');
 
       configurePassport(config, mockOnOAuth);
 
+      const callback = getCallback();
       const mockDone = vi.fn();
       const mockProfile = {
         id: 'github-user-123',
@@ -189,7 +203,7 @@ describe('passport', () => {
         photos: [],
       };
 
-      await capturedCallback('access-token', 'refresh-token', mockProfile, mockDone);
+      await callback('access-token', 'refresh-token', mockProfile, mockDone);
 
       expect(mockOnOAuth).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -200,15 +214,11 @@ describe('passport', () => {
 
     it('displayNameがない場合はusernameを使用する', async () => {
       const config = createTestConfig();
-      let capturedCallback: any;
-
-      (GitHubStrategy as any).mockImplementation((_options: any, callback: any) => {
-        capturedCallback = callback;
-        return { name: 'github' };
-      });
+      const getCallback = setupStrategyMock(GitHubStrategy, 'github');
 
       configurePassport(config, mockOnOAuth);
 
+      const callback = getCallback();
       const mockDone = vi.fn();
       const mockProfile = {
         id: 'github-user-123',
@@ -218,7 +228,7 @@ describe('passport', () => {
         photos: [],
       };
 
-      await capturedCallback('access-token', 'refresh-token', mockProfile, mockDone);
+      await callback('access-token', 'refresh-token', mockProfile, mockDone);
 
       expect(mockOnOAuth).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -229,15 +239,11 @@ describe('passport', () => {
 
     it('displayNameもusernameもない場合はデフォルト名を使用する', async () => {
       const config = createTestConfig();
-      let capturedCallback: any;
-
-      (GitHubStrategy as any).mockImplementation((_options: any, callback: any) => {
-        capturedCallback = callback;
-        return { name: 'github' };
-      });
+      const getCallback = setupStrategyMock(GitHubStrategy, 'github');
 
       configurePassport(config, mockOnOAuth);
 
+      const callback = getCallback();
       const mockDone = vi.fn();
       const mockProfile = {
         id: 'github-user-123',
@@ -247,7 +253,7 @@ describe('passport', () => {
         photos: [],
       };
 
-      await capturedCallback('access-token', 'refresh-token', mockProfile, mockDone);
+      await callback('access-token', 'refresh-token', mockProfile, mockDone);
 
       expect(mockOnOAuth).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -258,16 +264,12 @@ describe('passport', () => {
 
     it('エラーが発生した場合doneにエラーを渡す', async () => {
       const config = createTestConfig();
-      let capturedCallback: any;
-
-      (GitHubStrategy as any).mockImplementation((_options: any, callback: any) => {
-        capturedCallback = callback;
-        return { name: 'github' };
-      });
+      const getCallback = setupStrategyMock(GitHubStrategy, 'github');
 
       const errorOnOAuth: OAuthCallback = vi.fn().mockRejectedValue(new Error('OAuth failed'));
       configurePassport(config, errorOnOAuth);
 
+      const callback = getCallback();
       const mockDone = vi.fn();
       const mockProfile = {
         id: 'github-user-123',
@@ -276,7 +278,7 @@ describe('passport', () => {
         photos: [],
       };
 
-      await capturedCallback('access-token', 'refresh-token', mockProfile, mockDone);
+      await callback('access-token', 'refresh-token', mockProfile, mockDone);
 
       expect(mockDone).toHaveBeenCalledWith(expect.any(Error));
     });
@@ -285,15 +287,11 @@ describe('passport', () => {
   describe('Google Strategy callback', () => {
     it('GoogleプロファイルからOAuthProfileを構築してコールバックを呼ぶ', async () => {
       const config = createTestConfig();
-      let capturedCallback: any;
-
-      (GoogleStrategy as any).mockImplementation((_options: any, callback: any) => {
-        capturedCallback = callback;
-        return { name: 'google' };
-      });
+      const getCallback = setupStrategyMock(GoogleStrategy, 'google');
 
       configurePassport(config, mockOnOAuth);
 
+      const callback = getCallback();
       const mockDone = vi.fn();
       const mockProfile = {
         id: 'google-user-123',
@@ -302,7 +300,7 @@ describe('passport', () => {
         photos: [{ value: 'https://google.com/avatar.jpg' }],
       };
 
-      await capturedCallback('access-token', 'refresh-token', mockProfile, mockDone);
+      await callback('access-token', 'refresh-token', mockProfile, mockDone);
 
       expect(mockOnOAuth).toHaveBeenCalledWith({
         provider: 'google',
@@ -318,15 +316,11 @@ describe('passport', () => {
 
     it('メールがない場合はエラーをスローする', async () => {
       const config = createTestConfig();
-      let capturedCallback: any;
-
-      (GoogleStrategy as any).mockImplementation((_options: any, callback: any) => {
-        capturedCallback = callback;
-        return { name: 'google' };
-      });
+      const getCallback = setupStrategyMock(GoogleStrategy, 'google');
 
       configurePassport(config, mockOnOAuth);
 
+      const callback = getCallback();
       const mockDone = vi.fn();
       const mockProfile = {
         id: 'google-user-123',
@@ -335,22 +329,18 @@ describe('passport', () => {
         photos: [],
       };
 
-      await capturedCallback('access-token', 'refresh-token', mockProfile, mockDone);
+      await callback('access-token', 'refresh-token', mockProfile, mockDone);
 
       expect(mockDone).toHaveBeenCalledWith(expect.any(Error));
     });
 
     it('displayNameがない場合はデフォルト名を使用する', async () => {
       const config = createTestConfig();
-      let capturedCallback: any;
-
-      (GoogleStrategy as any).mockImplementation((_options: any, callback: any) => {
-        capturedCallback = callback;
-        return { name: 'google' };
-      });
+      const getCallback = setupStrategyMock(GoogleStrategy, 'google');
 
       configurePassport(config, mockOnOAuth);
 
+      const callback = getCallback();
       const mockDone = vi.fn();
       const mockProfile = {
         id: 'google-user-123',
@@ -359,7 +349,7 @@ describe('passport', () => {
         photos: [],
       };
 
-      await capturedCallback('access-token', 'refresh-token', mockProfile, mockDone);
+      await callback('access-token', 'refresh-token', mockProfile, mockDone);
 
       expect(mockOnOAuth).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -370,16 +360,12 @@ describe('passport', () => {
 
     it('エラーが発生した場合doneにエラーを渡す', async () => {
       const config = createTestConfig();
-      let capturedCallback: any;
-
-      (GoogleStrategy as any).mockImplementation((_options: any, callback: any) => {
-        capturedCallback = callback;
-        return { name: 'google' };
-      });
+      const getCallback = setupStrategyMock(GoogleStrategy, 'google');
 
       const errorOnOAuth: OAuthCallback = vi.fn().mockRejectedValue(new Error('OAuth failed'));
       configurePassport(config, errorOnOAuth);
 
+      const callback = getCallback();
       const mockDone = vi.fn();
       const mockProfile = {
         id: 'google-user-123',
@@ -388,7 +374,7 @@ describe('passport', () => {
         photos: [],
       };
 
-      await capturedCallback('access-token', 'refresh-token', mockProfile, mockDone);
+      await callback('access-token', 'refresh-token', mockProfile, mockDone);
 
       expect(mockDone).toHaveBeenCalledWith(expect.any(Error));
     });

@@ -15,6 +15,7 @@ export default defineConfig({
         '**/*.test.ts',
         '**/index.ts',
         'src/types.ts', // 型定義のみ
+        'src/__tests__/helpers.ts', // テストヘルパー
         'vitest.config.ts',
       ],
       thresholds: {

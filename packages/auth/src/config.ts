@@ -1,10 +1,27 @@
 import type { AuthConfig } from './types.js';
 
+/**
+ * 本番環境ではJWTシークレットが必須
+ */
+function getJwtSecret(env: NodeJS.ProcessEnv, key: string, defaultValue: string): string {
+  const value = env[key];
+  if (value) {
+    return value;
+  }
+
+  // 本番環境ではデフォルト値を許可しない
+  if (env.NODE_ENV === 'production') {
+    throw new Error(`${key} is required in production environment`);
+  }
+
+  return defaultValue;
+}
+
 export function createAuthConfig(env: NodeJS.ProcessEnv): AuthConfig {
   return {
     jwt: {
-      accessSecret: env.JWT_ACCESS_SECRET || 'dev-access-secret',
-      refreshSecret: env.JWT_REFRESH_SECRET || 'dev-refresh-secret',
+      accessSecret: getJwtSecret(env, 'JWT_ACCESS_SECRET', 'dev-access-secret'),
+      refreshSecret: getJwtSecret(env, 'JWT_REFRESH_SECRET', 'dev-refresh-secret'),
       accessExpiry: env.JWT_ACCESS_EXPIRES_IN || '15m',
       refreshExpiry: env.JWT_REFRESH_EXPIRES_IN || '7d',
     },
