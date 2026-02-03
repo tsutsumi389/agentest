@@ -283,6 +283,7 @@ export function TestSuiteCasesPage() {
           <div className="card h-full overflow-hidden">
             <TestSuiteForm
               mode="edit"
+              projectId={suite.projectId}
               testSuite={suite}
               preconditions={sortedPreconditions}
               onSave={() => {

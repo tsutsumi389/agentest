@@ -1,6 +1,6 @@
-import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import { useParams, Link, useSearchParams } from 'react-router';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useParams, Link, useSearchParams, useNavigate } from 'react-router';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   FolderKanban,
   Plus,
@@ -8,15 +8,14 @@ import {
   ChevronLeft,
   Settings,
   ChevronRight,
-  X,
-  Loader2,
   BarChart3,
 } from 'lucide-react';
-import { projectsApi, testSuitesApi, usersApi, labelsApi, type Project, type TestSuite, type TestSuiteSearchParams, type ProjectMemberRole, type Label } from '../lib/api';
+import { projectsApi, usersApi, labelsApi, type Project, type TestSuite, type TestSuiteSearchParams, type ProjectMemberRole, type Label } from '../lib/api';
 import { TestSuiteSearchFilter } from '../components/test-suite/TestSuiteSearchFilter';
 import { useAuth } from '../hooks/useAuth';
 import { ProjectOverviewTab } from '../components/project/ProjectOverviewTab';
 import { ProjectSettingsTab, type SettingsSection } from '../components/project/ProjectSettingsTab';
+import { TestSuiteForm } from '../components/test-suite/TestSuiteForm';
 
 /**
  * プロジェクト詳細ページ
@@ -39,19 +38,21 @@ const DEFAULT_SEARCH_PARAMS: TestSuiteSearchParams = {
 export function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [urlSearchParams, setUrlSearchParams] = useSearchParams();
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [suiteSearchParams, setSuiteSearchParams] = useState<TestSuiteSearchParams>(DEFAULT_SEARCH_PARAMS);
   const queryClient = useQueryClient();
 
-  // URLクエリパラメータからタブ状態を取得
+  // URLクエリパラメータからタブ状態と作成モードを取得
   const currentTab = (urlSearchParams.get('tab') as ProjectTab) || 'overview';
   const settingsSection = (urlSearchParams.get('section') as SettingsSection) || 'general';
+  const isCreateMode = urlSearchParams.get('mode') === 'create';
 
   // タブ変更ハンドラ
   const handleTabChange = useCallback((tab: ProjectTab) => {
     const newParams = new URLSearchParams(urlSearchParams);
     newParams.set('tab', tab);
+    newParams.delete('mode');  // タブ切り替え時は作成モードを解除
     if (tab !== 'settings') {
       newParams.delete('section');
     }
@@ -64,6 +65,27 @@ export function ProjectDetailPage() {
     newParams.set('section', section);
     setUrlSearchParams(newParams, { replace: true });
   }, [urlSearchParams, setUrlSearchParams]);
+
+  // 作成モード開始
+  const handleStartCreateMode = useCallback(() => {
+    const newParams = new URLSearchParams(urlSearchParams);
+    newParams.set('tab', 'suites');
+    newParams.set('mode', 'create');
+    setUrlSearchParams(newParams);
+  }, [urlSearchParams, setUrlSearchParams]);
+
+  // 作成モード終了
+  const handleExitCreateMode = useCallback((createdTestSuiteId?: string) => {
+    if (createdTestSuiteId) {
+      // 作成成功時は詳細画面へ遷移
+      navigate(`/test-suites/${createdTestSuiteId}`);
+    } else {
+      // キャンセル時は一覧に戻る
+      const newParams = new URLSearchParams(urlSearchParams);
+      newParams.delete('mode');
+      setUrlSearchParams(newParams);
+    }
+  }, [urlSearchParams, setUrlSearchParams, navigate]);
 
   // プロジェクト情報を取得
   const { data: projectData, isLoading: isLoadingProject } = useQuery({
@@ -195,10 +217,10 @@ export function ProjectDetailPage() {
             </div>
           </div>
 
-          {/* テストスイートタブの時のみ作成ボタンを表示 */}
-          {currentTab === 'suites' && (
+          {/* テストスイートタブの時のみ作成ボタンを表示（作成モード中は非表示） */}
+          {currentTab === 'suites' && !isCreateMode && (
             <button
-              onClick={() => setIsCreateModalOpen(true)}
+              onClick={handleStartCreateMode}
               className="btn btn-primary"
             >
               <Plus className="w-4 h-4" />
@@ -241,21 +263,32 @@ export function ProjectDetailPage() {
       )}
 
       {currentTab === 'suites' && (
-        <TestSuiteListContent
-          testSuites={testSuites}
-          isLoadingSuites={isLoadingSuites}
-          suiteSearchParams={suiteSearchParams}
-          onFiltersChange={handleFiltersChange}
-          totalCount={totalCount}
-          isAdmin={isAdmin}
-          labels={labels}
-          currentPage={currentPage}
-          totalPages={totalPages}
-          offset={offset}
-          limit={limit}
-          onPageChange={handlePageChange}
-          onCreateClick={() => setIsCreateModalOpen(true)}
-        />
+        isCreateMode ? (
+          <div className="card min-h-[500px] max-h-[calc(100vh-200px)] overflow-hidden">
+            <TestSuiteForm
+              mode="create"
+              projectId={projectId!}
+              onSave={handleExitCreateMode}
+              onCancel={() => handleExitCreateMode()}
+            />
+          </div>
+        ) : (
+          <TestSuiteListContent
+            testSuites={testSuites}
+            isLoadingSuites={isLoadingSuites}
+            suiteSearchParams={suiteSearchParams}
+            onFiltersChange={handleFiltersChange}
+            totalCount={totalCount}
+            isAdmin={isAdmin}
+            labels={labels}
+            currentPage={currentPage}
+            totalPages={totalPages}
+            offset={offset}
+            limit={limit}
+            onPageChange={handlePageChange}
+            onCreateClick={handleStartCreateMode}
+          />
+        )
       )}
 
       {currentTab === 'settings' && isAdmin && project && (
@@ -269,13 +302,6 @@ export function ProjectDetailPage() {
         />
       )}
 
-      {/* 作成モーダル */}
-      {isCreateModalOpen && projectId && (
-        <CreateTestSuiteModal
-          projectId={projectId}
-          onClose={() => setIsCreateModalOpen(false)}
-        />
-      )}
     </div>
   );
 }
@@ -565,152 +591,3 @@ function TestSuiteRow({ suite }: { suite: TestSuite }) {
   );
 }
 
-/**
- * テストスイート作成モーダル
- */
-function CreateTestSuiteModal({
-  projectId,
-  onClose,
-}: {
-  projectId: string;
-  onClose: () => void;
-}) {
-  const queryClient = useQueryClient();
-  const nameInputRef = useRef<HTMLInputElement>(null);
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
-
-  const createMutation = useMutation({
-    mutationFn: (data: { projectId: string; name: string; description?: string }) =>
-      testSuitesApi.create(data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project-test-suites', projectId] });
-      handleClose();
-    },
-  });
-
-  // フォームをリセットしてモーダルを閉じる
-  const handleClose = useCallback(() => {
-    setName('');
-    setDescription('');
-    createMutation.reset();
-    onClose();
-  }, [onClose, createMutation]);
-
-  // モーダルオープン時にフォーカス設定
-  useEffect(() => {
-    requestAnimationFrame(() => {
-      nameInputRef.current?.focus();
-    });
-  }, []);
-
-  // ESCキーでモーダルを閉じる
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !createMutation.isPending) {
-        handleClose();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [createMutation.isPending, handleClose]);
-
-  // 背景クリックでモーダルを閉じる
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget && !createMutation.isPending) {
-      handleClose();
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    createMutation.mutate({
-      projectId,
-      name,
-      description: description || undefined,
-    });
-  };
-
-  return (
-    <div
-      className="fixed inset-0 z-modal flex items-center justify-center p-4 bg-black/50"
-      onClick={handleBackdropClick}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="create-test-suite-modal-title"
-    >
-      <div className="card w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between mb-4">
-          <h2 id="create-test-suite-modal-title" className="text-lg font-semibold text-foreground">
-            新規テストスイート
-          </h2>
-          <button
-            onClick={handleClose}
-            className="p-1 text-foreground-muted hover:text-foreground hover:bg-background-tertiary rounded transition-colors"
-            aria-label="閉じる"
-            disabled={createMutation.isPending}
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              スイート名 <span className="text-danger">*</span>
-            </label>
-            <input
-              ref={nameInputRef}
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="input"
-              placeholder="例: ログイン機能テスト"
-              required
-              disabled={createMutation.isPending}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              説明
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="input min-h-[80px]"
-              placeholder="テストスイートの説明を入力..."
-              disabled={createMutation.isPending}
-            />
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="btn btn-secondary"
-              disabled={createMutation.isPending}
-            >
-              キャンセル
-            </button>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={!name || createMutation.isPending}
-            >
-              {createMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  作成中...
-                </>
-              ) : (
-                '作成'
-              )}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
