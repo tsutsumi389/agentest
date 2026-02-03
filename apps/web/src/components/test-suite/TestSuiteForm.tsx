@@ -32,42 +32,45 @@ const MAX_NAME_LENGTH = 100;
 const MAX_DESCRIPTION_LENGTH = 500;
 
 interface TestSuiteFormProps {
-  /** フォームモード（現状は編集のみ） */
-  mode: 'edit';
-  /** 編集対象のテストスイート */
-  testSuite: TestSuite;
-  /** 前提条件一覧 */
-  preconditions: Precondition[];
-  /** 保存完了時のコールバック */
-  onSave: () => void;
+  /** フォームモード */
+  mode: 'create' | 'edit';
+  /** プロジェクトID（作成時に必須） */
+  projectId: string;
+  /** 編集対象のテストスイート（編集時に必須） */
+  testSuite?: TestSuite;
+  /** 前提条件一覧（編集時に使用） */
+  preconditions?: Precondition[];
+  /** 保存完了時のコールバック（作成時は作成されたIDを渡す） */
+  onSave: (createdTestSuiteId?: string) => void;
   /** キャンセル時のコールバック */
   onCancel: () => void;
 }
 
 /**
- * テストスイート編集フォーム
+ * テストスイート編集・作成フォーム
  */
 export function TestSuiteForm({
-  mode: _mode,
+  mode,
+  projectId,
   testSuite,
   preconditions: initialPreconditions,
   onSave,
   onCancel,
 }: TestSuiteFormProps) {
-  // _modeは将来の拡張用（新規作成モード対応時に使用）
+  const isCreateMode = mode === 'create';
 
-  // フォーム値の状態
-  const [name, setName] = useState(testSuite.name);
-  const [description, setDescription] = useState(testSuite.description || '');
-  const [status, setStatus] = useState<'DRAFT' | 'ACTIVE' | 'ARCHIVED'>(testSuite.status);
+  // フォーム値の状態（作成時は空、編集時は既存値）
+  const [name, setName] = useState(testSuite?.name || '');
+  const [description, setDescription] = useState(testSuite?.description || '');
+  const [status, setStatus] = useState<'DRAFT' | 'ACTIVE' | 'ARCHIVED'>(testSuite?.status || 'DRAFT');
 
-  // 前提条件の状態
+  // 前提条件の状態（作成時は空配列、編集時は既存値）
   const [preconditions, setPreconditions] = useState<ListItem[]>(
-    initialPreconditions.map((p) => ({
+    initialPreconditions?.map((p) => ({
       id: p.id,
       content: p.content,
       originalContent: p.content,
-    }))
+    })) || []
   );
 
   // セクションの展開状態
@@ -83,22 +86,32 @@ export function TestSuiteForm({
 
   // フォームに変更があるかどうかを判定
   const hasChanges = useMemo(() => {
-    const nameChanged = name.trim() !== testSuite.name;
-    const descriptionChanged = description.trim() !== (testSuite.description || '');
-    const statusChanged = status !== testSuite.status;
+    if (isCreateMode) {
+      // 作成モード: 何か入力があれば変更ありと判定
+      const hasName = name.trim().length > 0;
+      const hasDescription = description.trim().length > 0;
+      const hasPreconditions = preconditions.filter((p) => !p.isDeleted && p.content.trim()).length > 0;
+      return hasName || hasDescription || hasPreconditions;
+    }
+
+    // 編集モード: 既存値との比較
+    const nameChanged = name.trim() !== (testSuite?.name || '');
+    const descriptionChanged = description.trim() !== (testSuite?.description || '');
+    const statusChanged = status !== (testSuite?.status || 'DRAFT');
 
     // 前提条件の変更チェック
     const activePreconditions = preconditions.filter((p) => !p.isDeleted);
+    const originalPreconditions = initialPreconditions || [];
     const preconditionsChanged =
-      activePreconditions.length !== initialPreconditions.length ||
+      activePreconditions.length !== originalPreconditions.length ||
       activePreconditions.some((p, i) => {
         if (p.isNew) return true;
-        const original = initialPreconditions[i];
+        const original = originalPreconditions[i];
         return !original || p.content.trim() !== original.content;
       });
 
     return nameChanged || descriptionChanged || statusChanged || preconditionsChanged;
-  }, [testSuite, name, description, status, preconditions, initialPreconditions]);
+  }, [isCreateMode, testSuite, name, description, status, preconditions, initialPreconditions]);
 
   // キャンセル確認ダイアログの状態
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
@@ -151,44 +164,71 @@ export function TestSuiteForm({
     setIsSaving(true);
 
     try {
-      // 複数の変更をグループ化するためのgroupIdを生成
-      const groupId = crypto.randomUUID();
+      if (isCreateMode) {
+        // 作成モード
+        const result = await testSuitesApi.create({
+          projectId,
+          name: trimmedName,
+          description: trimmedDescription || undefined,
+        });
 
-      // 基本情報の更新
-      const updates: { name?: string; description?: string; status?: string; groupId?: string } = {};
-      if (trimmedName !== testSuite.name) {
-        updates.name = trimmedName;
-      }
-      if (trimmedDescription !== (testSuite.description || '')) {
-        updates.description = trimmedDescription;
-      }
-      if (status !== testSuite.status) {
-        updates.status = status;
-      }
+        // 前提条件がある場合は追加
+        const activePreconditions = preconditions.filter((p) => !p.isDeleted && p.content.trim());
+        if (activePreconditions.length > 0) {
+          const groupId = crypto.randomUUID();
+          for (const item of activePreconditions) {
+            await testSuitesApi.addPrecondition(result.testSuite.id, {
+              content: item.content.trim(),
+              groupId,
+            });
+          }
+        }
 
-      if (Object.keys(updates).length > 0) {
-        updates.groupId = groupId;
-        await testSuitesApi.update(testSuite.id, updates);
+        toast.success('テストスイートを作成しました');
+        onSave(result.testSuite.id);
+      } else {
+        // 編集モード
+        // 複数の変更をグループ化するためのgroupIdを生成
+        const groupId = crypto.randomUUID();
+
+        // 基本情報の更新
+        const updates: { name?: string; description?: string; status?: string; groupId?: string } = {};
+        if (trimmedName !== (testSuite?.name || '')) {
+          updates.name = trimmedName;
+        }
+        if (trimmedDescription !== (testSuite?.description || '')) {
+          updates.description = trimmedDescription;
+        }
+        if (status !== (testSuite?.status || 'DRAFT')) {
+          updates.status = status;
+        }
+
+        if (Object.keys(updates).length > 0) {
+          updates.groupId = groupId;
+          await testSuitesApi.update(testSuite!.id, updates);
+        }
+
+        // 前提条件の差分更新
+        await updatePreconditions(groupId);
+
+        toast.success('テストスイートを更新しました');
+        onSave();
       }
-
-      // 前提条件の差分更新
-      await updatePreconditions(groupId);
-
-      toast.success('テストスイートを更新しました');
-      onSave();
     } catch (err) {
       if (err instanceof ApiError) {
         toast.error(err.message);
       } else {
-        toast.error('保存に失敗しました');
+        toast.error(isCreateMode ? '作成に失敗しました' : '保存に失敗しました');
       }
     } finally {
       setIsSaving(false);
     }
   };
 
-  // 前提条件の差分更新
+  // 前提条件の差分更新（編集モード専用）
   const updatePreconditions = async (groupId: string) => {
+    if (!testSuite) return;
+
     // 削除された項目を処理
     for (const item of preconditions.filter((i) => i.isDeleted && !i.isNew)) {
       await testSuitesApi.deletePrecondition(testSuite.id, item.id, { groupId });
@@ -276,7 +316,7 @@ export function TestSuiteForm({
       {/* ヘッダー */}
       <div className="flex-shrink-0 p-4 border-b border-border">
         <h2 className="text-lg font-semibold text-foreground">
-          テストスイート編集
+          {isCreateMode ? '新規テストスイート作成' : 'テストスイート編集'}
         </h2>
       </div>
 
@@ -371,10 +411,10 @@ export function TestSuiteForm({
           {isSaving ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              保存中...
+              {isCreateMode ? '作成中...' : '保存中...'}
             </>
           ) : (
-            '保存'
+            isCreateMode ? '作成' : '保存'
           )}
         </button>
       </div>
