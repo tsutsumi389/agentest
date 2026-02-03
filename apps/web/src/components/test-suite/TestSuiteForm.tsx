@@ -172,16 +172,18 @@ export function TestSuiteForm({
           description: trimmedDescription || undefined,
         });
 
-        // 前提条件がある場合は追加
+        // 前提条件がある場合は並列で追加
         const activePreconditions = preconditions.filter((p) => !p.isDeleted && p.content.trim());
         if (activePreconditions.length > 0) {
           const groupId = crypto.randomUUID();
-          for (const item of activePreconditions) {
-            await testSuitesApi.addPrecondition(result.testSuite.id, {
-              content: item.content.trim(),
-              groupId,
-            });
-          }
+          await Promise.all(
+            activePreconditions.map((item) =>
+              testSuitesApi.addPrecondition(result.testSuite.id, {
+                content: item.content.trim(),
+                groupId,
+              })
+            )
+          );
         }
 
         toast.success('テストスイートを作成しました');

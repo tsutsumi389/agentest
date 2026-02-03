@@ -264,7 +264,7 @@ export function ProjectDetailPage() {
 
       {currentTab === 'suites' && (
         isCreateMode ? (
-          <div className="card h-[calc(100vh-250px)]">
+          <div className="card min-h-[500px] max-h-[calc(100vh-200px)] overflow-hidden">
             <TestSuiteForm
               mode="create"
               projectId={projectId!}
