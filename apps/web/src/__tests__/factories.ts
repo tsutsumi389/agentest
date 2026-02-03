@@ -10,8 +10,7 @@ import type {
   UpdateUserRequest,
 } from '../lib/api';
 
-/** デフォルトの通知取得件数 */
-export const DEFAULT_NOTIFICATION_LIMIT = 20;
+export { DEFAULT_NOTIFICATION_LIMIT } from '../stores/notification';
 
 export function createMockUser(overrides: Partial<User> = {}): User {
   return {

@@ -147,7 +147,9 @@ describe('auth store', () => {
       ).rejects.toThrow('サーバーエラー');
 
       // ユーザー情報は変更されない
-      expect(useAuthStore.getState().user!.name).toBe('旧名前');
+      const user = useAuthStore.getState().user;
+      expect(user).not.toBeNull();
+      expect(user?.name).toBe('旧名前');
     });
   });
 

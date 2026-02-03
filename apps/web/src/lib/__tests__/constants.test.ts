@@ -61,19 +61,19 @@ describe('constants', () => {
     it('承認オプションが含まれる', () => {
       const approved = VERDICT_OPTIONS.find((o) => o.value === 'APPROVED');
       expect(approved).toBeDefined();
-      expect(approved!.label).toBe('承認');
+      expect(approved?.label).toBe('承認');
     });
 
     it('要修正オプションが含まれる', () => {
       const changes = VERDICT_OPTIONS.find((o) => o.value === 'CHANGES_REQUESTED');
       expect(changes).toBeDefined();
-      expect(changes!.label).toBe('要修正');
+      expect(changes?.label).toBe('要修正');
     });
 
     it('コメントのみオプションが含まれる', () => {
       const comment = VERDICT_OPTIONS.find((o) => o.value === 'COMMENT_ONLY');
       expect(comment).toBeDefined();
-      expect(comment!.label).toBe('コメントのみ');
+      expect(comment?.label).toBe('コメントのみ');
     });
   });
 });

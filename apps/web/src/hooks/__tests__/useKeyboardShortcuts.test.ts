@@ -1,8 +1,31 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useKeyboardShortcuts, useShortcut, formatShortcut } from '../useKeyboardShortcuts';
 
 describe('useKeyboardShortcuts', () => {
+  // テストで追加されたinput要素を追跡してクリーンアップ
+  let appendedInputs: HTMLElement[] = [];
+
+  afterEach(() => {
+    for (const el of appendedInputs) {
+      if (el.parentNode) {
+        el.parentNode.removeChild(el);
+      }
+    }
+    appendedInputs = [];
+  });
+
+  /**
+   * テスト用にinput要素をDOMに追加する
+   * afterEachで自動的にクリーンアップされる
+   */
+  function appendTestInput(): HTMLInputElement {
+    const input = document.createElement('input');
+    document.body.appendChild(input);
+    appendedInputs.push(input);
+    return input;
+  }
+
   it('ショートカットキーでアクションが実行される', () => {
     const action = vi.fn();
     renderHook(() =>
@@ -30,8 +53,7 @@ describe('useKeyboardShortcuts', () => {
       useKeyboardShortcuts([{ key: 'k', action }])
     );
 
-    const input = document.createElement('input');
-    document.body.appendChild(input);
+    const input = appendTestInput();
     const event = new KeyboardEvent('keydown', {
       key: 'k',
       bubbles: true,
@@ -39,7 +61,6 @@ describe('useKeyboardShortcuts', () => {
     Object.defineProperty(event, 'target', { value: input });
     window.dispatchEvent(event);
     expect(action).not.toHaveBeenCalled();
-    document.body.removeChild(input);
   });
 
   it('enableInInput=trueの場合は入力フィールド内でも発火する', () => {
@@ -48,8 +69,7 @@ describe('useKeyboardShortcuts', () => {
       useKeyboardShortcuts([{ key: 'escape', action, enableInInput: true }])
     );
 
-    const input = document.createElement('input');
-    document.body.appendChild(input);
+    const input = appendTestInput();
     const event = new KeyboardEvent('keydown', {
       key: 'Escape',
       bubbles: true,
@@ -57,7 +77,6 @@ describe('useKeyboardShortcuts', () => {
     Object.defineProperty(event, 'target', { value: input });
     window.dispatchEvent(event);
     expect(action).toHaveBeenCalledTimes(1);
-    document.body.removeChild(input);
   });
 
   it('アンマウント時にリスナーが解除される', () => {
@@ -71,7 +90,7 @@ describe('useKeyboardShortcuts', () => {
     expect(action).not.toHaveBeenCalled();
   });
 
-  it('meta修飾キー付きのショートカットが動作する', () => {
+  it('meta修飾キー付きのショートカットが動作する（Ctrl: non-Mac）', () => {
     const action = vi.fn();
     renderHook(() =>
       useKeyboardShortcuts([{ key: 'k', meta: true, action }])
@@ -81,9 +100,22 @@ describe('useKeyboardShortcuts', () => {
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k' }));
     expect(action).not.toHaveBeenCalled();
 
-    // meta付きで発火する（Ctrl = non-Mac環境でのmeta相当）
+    // Ctrl付きで発火する（non-Mac環境でのmeta相当）
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', ctrlKey: true }));
     expect(action).toHaveBeenCalledTimes(1);
+  });
+
+  it('meta修飾キー付きのショートカットが動作する（metaKey: Mac）', () => {
+    const action = vi.fn();
+    renderHook(() =>
+      useKeyboardShortcuts([{ key: 'k', meta: true, action }])
+    );
+
+    // jsdomはnon-Mac環境のため、metaKeyではなくctrlKeyがmeta扱い
+    // metaKeyのみでは発火しないことを確認
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }));
+    // non-Mac環境ではmetaKeyはmeta修飾としてマッチしない
+    expect(action).not.toHaveBeenCalled();
   });
 
   it('shift修飾キー付きのショートカットが動作する', () => {

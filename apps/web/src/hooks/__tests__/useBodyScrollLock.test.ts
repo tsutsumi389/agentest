@@ -1,8 +1,15 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useBodyScrollLock } from '../useBodyScrollLock';
 
 describe('useBodyScrollLock', () => {
+  beforeEach(() => {
+    document.body.style.overflow = '';
+  });
+
+  afterEach(() => {
+    document.body.style.overflow = '';
+  });
   it('isLocked=trueの場合にbodyのoverflowをhiddenにする', () => {
     renderHook(() => useBodyScrollLock(true));
     expect(document.body.style.overflow).toBe('hidden');

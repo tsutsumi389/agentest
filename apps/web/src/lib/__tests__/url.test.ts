@@ -13,9 +13,16 @@ describe('url', () => {
       expect(result).toBe(`${window.location.origin}/invitations/token-with-dashes`);
     });
 
-    it('特殊文字を含むトークンをそのまま埋め込む', () => {
-      const result = getInvitationUrl('token/with%20special&chars');
-      expect(result).toBe(`${window.location.origin}/invitations/token/with%20special&chars`);
+    it('特殊文字を含むトークンはエンコードされる', () => {
+      const result = getInvitationUrl('token/with special&chars');
+      expect(result).toBe(
+        `${window.location.origin}/invitations/${encodeURIComponent('token/with special&chars')}`
+      );
+    });
+
+    it('空文字列のトークンでもURLを生成する', () => {
+      const result = getInvitationUrl('');
+      expect(result).toBe(`${window.location.origin}/invitations/`);
     });
   });
 });

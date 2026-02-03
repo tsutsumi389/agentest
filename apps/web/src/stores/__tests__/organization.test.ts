@@ -181,8 +181,8 @@ describe('organization store', () => {
 
       const { result } = renderHook(() => useSelectedOrganization());
       expect(result.current).not.toBeNull();
-      expect(result.current!.organization.id).toBe('org-1');
-      expect(result.current!.role).toBe('OWNER');
+      expect(result.current?.organization.id).toBe('org-1');
+      expect(result.current?.role).toBe('OWNER');
     });
   });
 
