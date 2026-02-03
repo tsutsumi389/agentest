@@ -13,13 +13,13 @@
 | apps/admin | 0 | なし | ❌ 未構築 |
 | apps/web | 0 | なし | ❌ 未構築 |
 | apps/ws | 0 | なし | ❌ 未構築 |
-| packages/auth | 0 | なし | ❌ 未構築 |
+| packages/auth | 6 | vitest.config.ts (80%閾値) | ✅ 完了 |
 | packages/db | 0 | なし | ❌ 未構築 |
 | packages/storage | 0 | なし | ❌ 未構築 |
 | packages/ui | 0 | なし | ❌ 未構築 |
 | packages/ws-types | 0 | なし | ⏭️ 型定義のみ |
 
-**総計**: 186テストファイル（4ディレクトリのみ）
+**総計**: 192テストファイル（5ディレクトリ）
 
 ---
 
@@ -38,12 +38,12 @@
 - `src/middleware/` - 認証ミドルウェア
 
 **タスク**:
-- [ ] vitest.config.ts作成
-- [ ] テストセットアップファイル作成
-- [ ] JWTユーティリティのユニットテスト
-- [ ] OAuth認証フローのテスト
-- [ ] セッション管理のテスト
-- [ ] ミドルウェアの統合テスト
+- [x] vitest.config.ts作成
+- [x] テストセットアップファイル作成 (`src/__tests__/helpers.ts`)
+- [x] JWTユーティリティのユニットテスト (`jwt.test.ts`)
+- [x] OAuth認証フローのテスト (`passport.test.ts`)
+- [x] 設定バリデーションのテスト (`config.test.ts`)
+- [x] ミドルウェアのユニットテスト (`authenticate.test.ts`, `require-org-role.test.ts`, `require-project-role.test.ts`)
 
 ### 1.2 packages/storage
 
@@ -142,8 +142,8 @@
 ## 実装順序（推奨）
 
 ```
-Phase 1.1: packages/auth      ← 最重要（セキュリティ基盤）
-Phase 1.2: packages/storage   ← 重要（データ永続化）
+Phase 1.1: packages/auth      ✅ 完了（カバレッジ99.14%）
+Phase 1.2: packages/storage   ← 次（データ永続化）
 Phase 2.1: apps/ws            ← リアルタイム機能
 Phase 3.1: packages/ui        ← UIの品質保証
 Phase 3.2: apps/web           ← ユーザー向けSPA
@@ -200,7 +200,8 @@ export default defineConfig({
 ## 成功指標
 
 - [ ] 全パッケージにvitest.config.ts設置
-- [ ] packages/auth, packages/storage: カバレッジ80%達成
+- [x] packages/auth: カバレッジ80%達成 (99.14%)
+- [ ] packages/storage: カバレッジ80%達成
 - [ ] apps/ws: 主要機能のテストカバー
 - [ ] packages/ui: コンポーネントのレンダリングテスト完備
 - [ ] apps/web, apps/admin: カスタムフック・ユーティリティのテスト完備
@@ -209,10 +210,11 @@ export default defineConfig({
 
 ## 次のアクション
 
-1. **packages/auth** のテスト環境構築から開始
-2. 既存のパターン（apps/api, packages/shared）を参考に設定
+1. ~~**packages/auth** のテスト環境構築から開始~~ ✅ 完了
+2. **packages/storage** のテスト環境構築
 3. TDDワークフローで新機能開発を開始
 
 ---
 
 *作成日: 2026-02-03*
+*更新日: 2026-02-03* - packages/auth完了
