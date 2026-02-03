@@ -6,10 +6,55 @@ import {
   HeadObjectCommand,
   ListObjectsV2Command,
   CopyObjectCommand,
+  NotFound,
   type PutObjectCommandInput,
   type GetObjectCommandOutput,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+
+/**
+ * S3エラーがNotFoundエラーかどうかを判定
+ */
+function isNotFoundError(error: unknown): boolean {
+  if (error instanceof NotFound) {
+    return true;
+  }
+  // S3クライアントは他の形式でNotFoundを返すことがある
+  if (error instanceof Error && error.name === 'NotFound') {
+    return true;
+  }
+  // HeadObjectはNoSuchKeyではなく404エラーコードを返すことがある
+  if (
+    error instanceof Error &&
+    'name' in error &&
+    (error.name === 'NoSuchKey' || error.name === '404')
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * ストレージキーを検証（パストラバーサル攻撃を防ぐ）
+ */
+function validateKey(key: string): void {
+  if (!key || typeof key !== 'string') {
+    throw new Error('Storage key must be a non-empty string');
+  }
+  // パストラバーサルパターンを検出
+  if (key.includes('..')) {
+    throw new Error('Storage key must not contain ".." (path traversal)');
+  }
+  // 絶対パスを禁止
+  if (key.startsWith('/')) {
+    throw new Error('Storage key must not start with "/"');
+  }
+  // 危険な文字をチェック
+  const invalidChars = /[\x00-\x1f\x7f]/;
+  if (invalidChars.test(key)) {
+    throw new Error('Storage key contains invalid characters');
+  }
+}
 
 export interface StorageConfig {
   endpoint: string;
@@ -65,6 +110,7 @@ export class StorageClient {
     body: Buffer | Uint8Array | string | ReadableStream,
     options: UploadOptions = {}
   ): Promise<UploadResult> {
+    validateKey(key);
     const params: PutObjectCommandInput = {
       Bucket: this.bucket,
       Key: key,
@@ -90,6 +136,7 @@ export class StorageClient {
    * ストレージからファイルをダウンロード
    */
   async download(key: string): Promise<GetObjectCommandOutput> {
+    validateKey(key);
     const command = new GetObjectCommand({
       Bucket: this.bucket,
       Key: key,
@@ -102,6 +149,7 @@ export class StorageClient {
    * ストレージからファイルを削除
    */
   async delete(key: string): Promise<void> {
+    validateKey(key);
     const command = new DeleteObjectCommand({
       Bucket: this.bucket,
       Key: key,
@@ -114,6 +162,7 @@ export class StorageClient {
    * ファイルの存在確認
    */
   async exists(key: string): Promise<boolean> {
+    validateKey(key);
     try {
       const command = new HeadObjectCommand({
         Bucket: this.bucket,
@@ -121,8 +170,11 @@ export class StorageClient {
       });
       await this.client.send(command);
       return true;
-    } catch {
-      return false;
+    } catch (error) {
+      if (isNotFoundError(error)) {
+        return false;
+      }
+      throw error;
     }
   }
 
@@ -135,6 +187,7 @@ export class StorageClient {
     lastModified?: Date;
     metadata?: Record<string, string>;
   } | null> {
+    validateKey(key);
     try {
       const command = new HeadObjectCommand({
         Bucket: this.bucket,
@@ -147,8 +200,11 @@ export class StorageClient {
         lastModified: response.LastModified,
         metadata: response.Metadata,
       };
-    } catch {
-      return null;
+    } catch (error) {
+      if (isNotFoundError(error)) {
+        return null;
+      }
+      throw error;
     }
   }
 
@@ -170,6 +226,8 @@ export class StorageClient {
    * ストレージ内でファイルをコピー
    */
   async copy(sourceKey: string, destinationKey: string): Promise<void> {
+    validateKey(sourceKey);
+    validateKey(destinationKey);
     const command = new CopyObjectCommand({
       Bucket: this.bucket,
       CopySource: `${this.bucket}/${sourceKey}`,
@@ -183,6 +241,7 @@ export class StorageClient {
    * アップロード用の署名付きURLを生成
    */
   async getUploadUrl(key: string, options: PresignedUrlOptions = {}): Promise<string> {
+    validateKey(key);
     const command = new PutObjectCommand({
       Bucket: this.bucket,
       Key: key,
@@ -198,6 +257,7 @@ export class StorageClient {
    * ダウンロード用の署名付きURLを生成
    */
   async getDownloadUrl(key: string, options: PresignedUrlOptions = {}): Promise<string> {
+    validateKey(key);
     const command = new GetObjectCommand({
       Bucket: this.bucket,
       Key: key,
@@ -212,8 +272,28 @@ export class StorageClient {
    * 公開URL取得（public-readオブジェクト用）
    */
   getPublicUrl(key: string): string {
+    validateKey(key);
     return `${this.endpoint}/${this.bucket}/${key}`;
   }
+}
+
+/**
+ * 本番環境で必須の環境変数を取得
+ */
+function getRequiredEnvVar(
+  env: NodeJS.ProcessEnv,
+  key: string,
+  fallbackKey: string | undefined,
+  defaultValue: string
+): string {
+  const value = env[key] || (fallbackKey ? env[fallbackKey] : undefined);
+  if (value) {
+    return value;
+  }
+  if (env.NODE_ENV === 'production') {
+    throw new Error(`${key} is required in production environment`);
+  }
+  return defaultValue;
 }
 
 /**
@@ -221,9 +301,9 @@ export class StorageClient {
  */
 export function createStorageClient(env: NodeJS.ProcessEnv = process.env): StorageClient {
   return new StorageClient({
-    endpoint: env.MINIO_ENDPOINT || 'http://localhost:9000',
-    accessKeyId: env.MINIO_ACCESS_KEY || env.MINIO_ROOT_USER || 'agentest',
-    secretAccessKey: env.MINIO_SECRET_KEY || env.MINIO_ROOT_PASSWORD || 'agentest123',
-    bucket: env.MINIO_BUCKET || 'agentest',
+    endpoint: getRequiredEnvVar(env, 'MINIO_ENDPOINT', undefined, 'http://localhost:9000'),
+    accessKeyId: getRequiredEnvVar(env, 'MINIO_ACCESS_KEY', 'MINIO_ROOT_USER', 'agentest'),
+    secretAccessKey: getRequiredEnvVar(env, 'MINIO_SECRET_KEY', 'MINIO_ROOT_PASSWORD', 'agentest123'),
+    bucket: getRequiredEnvVar(env, 'MINIO_BUCKET', undefined, 'agentest'),
   });
 }
