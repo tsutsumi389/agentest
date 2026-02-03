@@ -8,5 +8,5 @@
  * @returns 招待URL
  */
 export function getInvitationUrl(token: string): string {
-  return `${window.location.origin}/invitations/${token}`;
+  return `${window.location.origin}/invitations/${encodeURIComponent(token)}`;
 }

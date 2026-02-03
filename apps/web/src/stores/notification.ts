@@ -6,6 +6,9 @@ import {
   type GetNotificationsParams,
 } from '../lib/api';
 
+/** デフォルトの通知取得件数 */
+export const DEFAULT_NOTIFICATION_LIMIT = 20;
+
 interface NotificationState {
   // 状態
   notifications: Notification[];
@@ -56,7 +59,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   fetchNotifications: async (params?: GetNotificationsParams) => {
     try {
       set({ isLoading: true, error: null });
-      const limit = params?.limit ?? 20;
+      const limit = params?.limit ?? DEFAULT_NOTIFICATION_LIMIT;
       const { notifications } = await notificationsApi.list(params);
       set({
         notifications,
@@ -74,7 +77,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
   /**
    * 追加の通知を取得（リストに追加）
    */
-  fetchMoreNotifications: async (limit = 20) => {
+  fetchMoreNotifications: async (limit = DEFAULT_NOTIFICATION_LIMIT) => {
     const { notifications: currentNotifications, isLoadingMore, hasMore } = get();
     if (isLoadingMore || !hasMore) return;
 
