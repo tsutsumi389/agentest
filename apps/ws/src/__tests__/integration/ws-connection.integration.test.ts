@@ -44,16 +44,11 @@ vi.mock('../../handlers/presence.js', () => ({
   handlePresenceLeave: vi.fn().mockResolvedValue(undefined),
 }));
 
-// config モジュールのモック
-vi.mock('../../config.js', () => ({
-  env: {
-    NODE_ENV: 'test',
-    PORT: 0,
-    HOST: '127.0.0.1',
-    REDIS_URL: 'redis://localhost:6379',
-    JWT_ACCESS_SECRET: 'test-secret-key-for-jwt-testing-32ch',
-  },
-}));
+// config モジュールのモック（共有定数を使用）
+vi.mock('../../config.js', async () => {
+  const { TEST_ENV_CONFIG } = await import('./test-helpers.js');
+  return { env: TEST_ENV_CONFIG };
+});
 
 // ============================================
 // インポート

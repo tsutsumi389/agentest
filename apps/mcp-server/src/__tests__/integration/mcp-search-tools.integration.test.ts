@@ -11,6 +11,11 @@ import {
   createEmptyResponse,
   createMcpInitializeRequest,
   createMcpToolCallRequest,
+  parseToolResultJson as parseToolResult,
+  isToolError,
+  getToolErrorMessage,
+  initializeMcpSession,
+  callMcpTool,
 } from './mcp-tools-helpers.js';
 import { createApp } from '../../app.js';
 
@@ -146,123 +151,6 @@ function setApiError(message: string, statusCode: number = 500) {
 function clearApiMock() {
   mockApiResponses = {};
   mockApiError = null;
-}
-
-/**
- * MCPセッションを初期化し、セッションIDを取得
- * ツール呼び出しの前に必ず実行する
- */
-async function initializeMcpSession(app: Express): Promise<string> {
-  const response = await request(app)
-    .post('/mcp')
-    .set('Cookie', 'access_token=valid-test-token')
-    .set('Content-Type', 'application/json')
-    .set('Accept', 'application/json, text/event-stream')
-    .send(createMcpInitializeRequest());
-
-  expect(response.status).toBe(200);
-
-  // レスポンスヘッダーからセッションIDを取得
-  const sessionId = response.headers['mcp-session-id'];
-  expect(sessionId).toBeDefined();
-  return sessionId as string;
-}
-
-/**
- * MCPツールを呼び出し、レスポンスを返す
- */
-async function callMcpTool(
-  app: Express,
-  sessionId: string,
-  toolName: string,
-  args: Record<string, unknown> = {},
-  requestId: number = 2
-) {
-  const response = await request(app)
-    .post('/mcp')
-    .set('Cookie', 'access_token=valid-test-token')
-    .set('Content-Type', 'application/json')
-    .set('Accept', 'application/json, text/event-stream')
-    .set('Mcp-Session-Id', sessionId)
-    .send(createMcpToolCallRequest(toolName, args, requestId));
-
-  return response;
-}
-
-/**
- * SSEレスポンスからJSON-RPCメッセージを抽出するヘルパー
- * MCP SDK v1.25.1ではツール呼び出しの応答がSSE(text/event-stream)で返されるため、
- * response.bodyではなくresponse.textからSSEイベントデータをパースする必要がある
- */
-function extractJsonRpcFromSse(response: request.Response): Record<string, unknown> | null {
-  // まずbodyにJSON-RPCレスポンスがある場合（JSONモードの場合）
-  if (response.body && typeof response.body === 'object' && ('result' in response.body || 'error' in response.body)) {
-    return response.body as Record<string, unknown>;
-  }
-  // SSEレスポンスからJSON-RPCメッセージを抽出
-  const text = response.text;
-  if (!text) return null;
-  // SSEフォーマット: "event: message\ndata: {JSON}\n\n" を解析
-  const dataLines = text.split('\n').filter((line: string) => line.startsWith('data: '));
-  for (const line of dataLines) {
-    const jsonStr = line.slice(6); // "data: " を除去
-    if (!jsonStr.trim()) continue;
-    try {
-      const parsed = JSON.parse(jsonStr);
-      // JSON-RPCレスポンス（resultまたはerror）を返す
-      if (parsed && (parsed.result !== undefined || parsed.error !== undefined)) {
-        return parsed;
-      }
-    } catch {
-      // パース失敗は無視して次の行へ
-    }
-  }
-  return null;
-}
-
-/**
- * MCPツールレスポンスからコンテンツテキストを抽出してパース
- */
-function parseToolResult(response: request.Response): unknown {
-  const jsonRpc = extractJsonRpcFromSse(response);
-  const result = jsonRpc?.result as { content?: Array<{ type: string; text: string }>; isError?: boolean } | undefined;
-  if (!result?.content?.[0]?.text) {
-    return null;
-  }
-  try {
-    return JSON.parse(result.content[0].text);
-  } catch {
-    return result.content[0].text;
-  }
-}
-
-/**
- * MCPツールレスポンスがエラーかどうかを判定
- */
-function isToolError(response: request.Response): boolean {
-  const jsonRpc = extractJsonRpcFromSse(response);
-  if (!jsonRpc) return false;
-  // JSON-RPCレベルのエラー
-  if (jsonRpc.error !== undefined) return true;
-  // ツールレベルのisErrorフラグ
-  const result = jsonRpc.result as { isError?: boolean } | undefined;
-  return result?.isError === true;
-}
-
-/**
- * MCPツールレスポンスのエラーメッセージを取得
- */
-function getToolErrorMessage(response: request.Response): string {
-  const jsonRpc = extractJsonRpcFromSse(response);
-  if (!jsonRpc) return '';
-  // JSON-RPCレベルのエラー
-  if (jsonRpc.error) {
-    const error = jsonRpc.error as { message?: string; data?: string };
-    return error.message ?? error.data ?? '';
-  }
-  // ツールレベルのエラー
-  const result = jsonRpc.result as { content?: Array<{ type: string; text: string }> } | undefined;
-  return result?.content?.[0]?.text ?? '';
 }
 
 // --- テスト本体 ---

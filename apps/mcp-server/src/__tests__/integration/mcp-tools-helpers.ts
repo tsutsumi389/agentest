@@ -1,4 +1,6 @@
 import { vi } from 'vitest';
+import request from 'supertest';
+import type { Express } from 'express';
 
 /**
  * MCPツールテスト用のヘルパー
@@ -321,4 +323,187 @@ export function createMcpToolCallRequest(
     },
     id,
   };
+}
+
+// --- SSE/JSON-RPC共有ヘルパー ---
+
+/**
+ * SSEレスポンスからJSON-RPCメッセージを抽出する
+ * MCP SDK v1.25.1ではツール呼び出しの応答がSSE(text/event-stream)で返されるため、
+ * response.bodyではなくresponse.textからSSEイベントデータをパースする必要がある
+ */
+export function extractJsonRpcFromSse(response: request.Response): Record<string, unknown> | null {
+  // まずbodyにJSON-RPCレスポンスがある場合（JSONモードの場合）
+  if (response.body && typeof response.body === 'object' && ('result' in response.body || 'error' in response.body)) {
+    return response.body as Record<string, unknown>;
+  }
+  // SSEレスポンスからJSON-RPCメッセージを抽出
+  const text = response.text;
+  if (!text) return null;
+  // SSEフォーマット: "event: message\ndata: {JSON}\n\n" を解析
+  const dataLines = text.split('\n').filter((line: string) => line.startsWith('data: '));
+  for (const line of dataLines) {
+    const jsonStr = line.slice(6); // "data: " を除去
+    if (!jsonStr.trim()) continue;
+    try {
+      const parsed = JSON.parse(jsonStr);
+      if (parsed && (parsed.result !== undefined || parsed.error !== undefined)) {
+        return parsed;
+      }
+    } catch {
+      // パース失敗は無視して次の行へ
+    }
+  }
+  return null;
+}
+
+/**
+ * MCPツール応答のcontentテキストをJSON.parseして返す
+ * crud-tools, search-tools向け
+ */
+export function parseToolResultJson(response: request.Response): unknown {
+  const jsonRpc = extractJsonRpcFromSse(response);
+  const result = jsonRpc?.result as { content?: Array<{ type: string; text: string }>; isError?: boolean } | undefined;
+  if (!result?.content?.[0]?.text) return null;
+  try {
+    return JSON.parse(result.content[0].text);
+  } catch {
+    return result.content[0].text;
+  }
+}
+
+/**
+ * MCPツール応答のresultオブジェクトをそのまま返す
+ * execution-tools, workflow向け
+ */
+export function parseToolResultRaw(response: request.Response): { content: Array<{ type: string; text: string }>; isError?: boolean } {
+  const jsonRpc = extractJsonRpcFromSse(response);
+  if (jsonRpc?.result) {
+    return jsonRpc.result as { content: Array<{ type: string; text: string }>; isError?: boolean };
+  }
+  // JSON-RPCレベルのエラーの場合、エラー内容をcontentとして返す
+  if (jsonRpc?.error) {
+    const error = jsonRpc.error as { message?: string; data?: string };
+    return {
+      content: [{ type: 'text', text: error.message ?? error.data ?? 'Unknown error' }],
+      isError: true,
+    };
+  }
+  return { content: [], isError: undefined };
+}
+
+/**
+ * MCPツール応答がエラー（JSON-RPCレベルまたはツールレベル）かどうかを判定
+ */
+export function isToolError(response: request.Response): boolean {
+  const jsonRpc = extractJsonRpcFromSse(response);
+  if (!jsonRpc) return false;
+  // JSON-RPCレベルのエラー
+  if (jsonRpc.error !== undefined) return true;
+  // ツールレベルのisErrorフラグ
+  const result = jsonRpc.result as { isError?: boolean } | undefined;
+  return result?.isError === true;
+}
+
+/**
+ * MCPツール応答のcontentテキストを直接取得する
+ */
+export function getToolContentText(response: request.Response): string {
+  const jsonRpc = extractJsonRpcFromSse(response);
+  const result = jsonRpc?.result as { content?: Array<{ type: string; text: string }> } | undefined;
+  return result?.content?.[0]?.text ?? '';
+}
+
+/**
+ * MCPツール応答のエラーメッセージを取得する
+ */
+export function getToolErrorMessage(response: request.Response): string {
+  const jsonRpc = extractJsonRpcFromSse(response);
+  if (!jsonRpc) return '';
+  // JSON-RPCレベルのエラー
+  if (jsonRpc.error) {
+    const error = jsonRpc.error as { message?: string; data?: string };
+    return error.message ?? error.data ?? '';
+  }
+  // ツールレベルのエラー
+  const result = jsonRpc.result as { content?: Array<{ type: string; text: string }> } | undefined;
+  return result?.content?.[0]?.text ?? '';
+}
+
+// --- MCPセッション・ツール呼び出し共有ヘルパー ---
+
+/**
+ * MCPセッション初期化のオプション
+ */
+export interface InitializeSessionOptions {
+  projectId?: string;
+  clientId?: string;
+  clientName?: string;
+}
+
+/**
+ * MCPセッションを初期化してセッションIDを取得する
+ */
+export async function initializeMcpSession(
+  app: Express,
+  options?: InitializeSessionOptions
+): Promise<string> {
+  const req = request(app)
+    .post('/mcp')
+    .set('Cookie', 'access_token=valid-test-token')
+    .set('Content-Type', 'application/json')
+    .set('Accept', 'application/json, text/event-stream');
+
+  if (options?.projectId) {
+    req.set('X-MCP-Project-Id', options.projectId);
+  }
+  if (options?.clientId) {
+    req.set('X-MCP-Client-Id', options.clientId);
+  }
+  if (options?.clientName) {
+    req.set('X-MCP-Client-Name', options.clientName);
+  }
+
+  const response = await req.send({
+    jsonrpc: '2.0',
+    method: 'initialize',
+    params: {
+      protocolVersion: '2024-11-05',
+      clientInfo: { name: 'test-client', version: '1.0.0' },
+      capabilities: {},
+    },
+    id: 1,
+  });
+
+  const sessionId = response.headers['mcp-session-id'];
+  return sessionId as string;
+}
+
+/**
+ * MCPツールを呼び出す
+ */
+export async function callMcpTool(
+  app: Express,
+  sessionId: string,
+  toolName: string,
+  args: Record<string, unknown> = {},
+  requestId: number = 2
+) {
+  const response = await request(app)
+    .post('/mcp')
+    .set('Cookie', 'access_token=valid-test-token')
+    .set('Content-Type', 'application/json')
+    .set('Accept', 'application/json, text/event-stream')
+    .set('Mcp-Session-Id', sessionId)
+    .send({
+      jsonrpc: '2.0',
+      method: 'tools/call',
+      params: {
+        name: toolName,
+        arguments: args,
+      },
+      id: requestId,
+    });
+
+  return response;
 }

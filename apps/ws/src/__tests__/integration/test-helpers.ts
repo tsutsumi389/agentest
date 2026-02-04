@@ -17,6 +17,15 @@ export const TEST_LOCK_ID = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
 export const VALID_TOKEN = 'valid-test-token';
 export const INVALID_TOKEN = 'invalid-test-token';
 
+// configモジュールモック用の共有定数
+export const TEST_ENV_CONFIG = {
+  NODE_ENV: 'test',
+  PORT: 0,
+  HOST: '127.0.0.1',
+  REDIS_URL: 'redis://localhost:6379',
+  JWT_ACCESS_SECRET: 'test-secret-key-for-jwt-testing-32ch',
+} as const;
+
 // テスト用ユーザー
 export const testUser: AuthenticatedUser = {
   id: TEST_USER_ID,

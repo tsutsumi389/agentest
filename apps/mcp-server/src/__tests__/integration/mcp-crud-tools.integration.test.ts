@@ -1,6 +1,12 @@
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
-import request from 'supertest';
 import type { Express } from 'express';
+import {
+  parseToolResultJson as parseToolResult,
+  isToolError,
+  getToolContentText,
+  initializeMcpSession,
+  callMcpTool,
+} from './mcp-tools-helpers.js';
 import { createApp } from '../../app.js';
 
 // --- テスト用モックデータ ---
@@ -103,141 +109,8 @@ function setTestAuth() {
   mockVerifyAccessTokenResult = { sub: TEST_USER_ID, email: TEST_USER_EMAIL };
 }
 
-/**
- * MCPセッションを初期化してセッションIDを取得する
- */
-async function initializeSession(app: Express): Promise<string> {
-  const response = await request(app)
-    .post('/mcp')
-    .set('Cookie', 'access_token=valid-test-token')
-    .set('Content-Type', 'application/json')
-    .set('Accept', 'application/json, text/event-stream')
-    .send({
-      jsonrpc: '2.0',
-      method: 'initialize',
-      params: {
-        protocolVersion: '2024-11-05',
-        clientInfo: { name: 'test-client', version: '1.0.0' },
-        capabilities: {},
-      },
-      id: 1,
-    });
-
-  expect(response.status).toBe(200);
-
-  // レスポンスヘッダーからセッションIDを取得
-  const sessionId = response.headers['mcp-session-id'];
-  expect(sessionId).toBeDefined();
-
-  return sessionId as string;
-}
-
-/**
- * MCPツールを呼び出す
- */
-async function callTool(
-  app: Express,
-  sessionId: string,
-  toolName: string,
-  args: Record<string, unknown>,
-  requestId: number = 2
-) {
-  const response = await request(app)
-    .post('/mcp')
-    .set('Cookie', 'access_token=valid-test-token')
-    .set('Content-Type', 'application/json')
-    .set('Accept', 'application/json, text/event-stream')
-    .set('Mcp-Session-Id', sessionId)
-    .send({
-      jsonrpc: '2.0',
-      method: 'tools/call',
-      params: {
-        name: toolName,
-        arguments: args,
-      },
-      id: requestId,
-    });
-
-  return response;
-}
-
-/**
- * SSEレスポンスからJSON-RPCメッセージを抽出するヘルパー
- * MCP SDK v1.25.1ではツール呼び出しの応答がSSE(text/event-stream)で返されるため、
- * response.bodyではなくresponse.textからSSEイベントデータをパースする必要がある
- */
-function extractJsonRpcFromSse(response: request.Response): Record<string, unknown> | null {
-  // まずbodyにJSON-RPCレスポンスがある場合（JSONモードの場合）
-  if (response.body && typeof response.body === 'object' && ('result' in response.body || 'error' in response.body)) {
-    return response.body as Record<string, unknown>;
-  }
-  // SSEレスポンスからJSON-RPCメッセージを抽出
-  const text = response.text;
-  if (!text) return null;
-  // SSEフォーマット: "event: message\ndata: {JSON}\n\n" を解析
-  const dataLines = text.split('\n').filter((line: string) => line.startsWith('data: '));
-  for (const line of dataLines) {
-    const jsonStr = line.slice(6); // "data: " を除去
-    if (!jsonStr.trim()) continue;
-    try {
-      const parsed = JSON.parse(jsonStr);
-      if (parsed && (parsed.result !== undefined || parsed.error !== undefined)) {
-        return parsed;
-      }
-    } catch {
-      // パース失敗は無視して次の行へ
-    }
-  }
-  return null;
-}
-
-/**
- * MCPツール応答のcontentテキストをパースする
- */
-function parseToolResult(response: request.Response): unknown {
-  const jsonRpc = extractJsonRpcFromSse(response);
-  const result = jsonRpc?.result as { content?: Array<{ type: string; text: string }>; isError?: boolean } | undefined;
-  if (!result?.content?.[0]?.text) return null;
-  try {
-    return JSON.parse(result.content[0].text);
-  } catch {
-    return result.content[0].text;
-  }
-}
-
-/**
- * MCPツール応答がエラーかどうかを判定
- */
-function isToolError(response: request.Response): boolean {
-  const jsonRpc = extractJsonRpcFromSse(response);
-  if (!jsonRpc) return false;
-  // JSON-RPCレベルのエラー
-  if (jsonRpc.error !== undefined) return true;
-  // ツールレベルのisErrorフラグ
-  const result = jsonRpc.result as { isError?: boolean } | undefined;
-  return result?.isError === true;
-}
-
-/**
- * MCPツール応答のcontentテキストを直接取得する
- */
-function getToolContentText(response: request.Response): string {
-  const jsonRpc = extractJsonRpcFromSse(response);
-  const result = jsonRpc?.result as { content?: Array<{ type: string; text: string }> } | undefined;
-  return result?.content?.[0]?.text ?? '';
-}
-
-/**
- * MCPツール応答がエラー（JSON-RPCレベルまたはツールレベル）かどうかを判定
- * Zodバリデーションエラーなど、JSON-RPCのerrorフィールドで返るケースにも対応
- */
-function hasAnyError(response: request.Response): boolean {
-  const jsonRpc = extractJsonRpcFromSse(response);
-  if (!jsonRpc) return false;
-  if (jsonRpc.error !== undefined) return true;
-  const result = jsonRpc.result as { isError?: boolean } | undefined;
-  return result?.isError === true;
-}
+// hasAnyErrorはisToolErrorに統一（同一ロジック）
+const hasAnyError = isToolError;
 
 describe('MCP CRUDツール統合テスト', () => {
   let app: Express;
@@ -256,7 +129,7 @@ describe('MCP CRUDツール統合テスト', () => {
     vi.mocked(checkLockStatus).mockResolvedValue(undefined);
 
     // 新しいセッションを初期化
-    sessionId = await initializeSession(app);
+    sessionId = await initializeMcpSession(app);
   });
 
   // ========================================
@@ -293,7 +166,7 @@ describe('MCP CRUDツール統合テスト', () => {
 
       mockApiGet.mockResolvedValueOnce(mockProject);
 
-      const response = await callTool(app, sessionId, 'get_project', {
+      const response = await callMcpTool(app, sessionId, 'get_project', {
         projectId: TEST_PROJECT_ID,
       });
 
@@ -312,7 +185,7 @@ describe('MCP CRUDツール統合テスト', () => {
         new Error('Internal API error: 404 - プロジェクトが見つかりません')
       );
 
-      const response = await callTool(app, sessionId, 'get_project', {
+      const response = await callMcpTool(app, sessionId, 'get_project', {
         projectId: TEST_PROJECT_ID,
       });
 
@@ -349,7 +222,7 @@ describe('MCP CRUDツール統合テスト', () => {
 
       mockApiGet.mockResolvedValueOnce(mockSuite);
 
-      const response = await callTool(app, sessionId, 'get_test_suite', {
+      const response = await callMcpTool(app, sessionId, 'get_test_suite', {
         testSuiteId: TEST_SUITE_ID,
       });
 
@@ -397,7 +270,7 @@ describe('MCP CRUDツール統合テスト', () => {
 
       mockApiGet.mockResolvedValueOnce(mockSuite);
 
-      const response = await callTool(app, sessionId, 'get_test_suite', {
+      const response = await callMcpTool(app, sessionId, 'get_test_suite', {
         testSuiteId: TEST_SUITE_ID,
       });
 
@@ -443,7 +316,7 @@ describe('MCP CRUDツール統合テスト', () => {
 
       mockApiGet.mockResolvedValueOnce(mockCase);
 
-      const response = await callTool(app, sessionId, 'get_test_case', {
+      const response = await callMcpTool(app, sessionId, 'get_test_case', {
         testCaseId: TEST_CASE_ID,
       });
 
@@ -463,7 +336,7 @@ describe('MCP CRUDツール統合テスト', () => {
         new Error('Internal API error: 500 - サーバー内部エラー')
       );
 
-      const response = await callTool(app, sessionId, 'get_test_case', {
+      const response = await callMcpTool(app, sessionId, 'get_test_case', {
         testCaseId: TEST_CASE_ID,
       });
 
@@ -499,7 +372,7 @@ describe('MCP CRUDツール統合テスト', () => {
 
       mockApiGet.mockResolvedValueOnce(mockExecution);
 
-      const response = await callTool(app, sessionId, 'get_execution', {
+      const response = await callMcpTool(app, sessionId, 'get_execution', {
         executionId: TEST_EXECUTION_ID,
       });
 
@@ -532,7 +405,7 @@ describe('MCP CRUDツール統合テスト', () => {
 
       mockApiPost.mockResolvedValueOnce(mockResponse);
 
-      const response = await callTool(app, sessionId, 'create_test_suite', {
+      const response = await callMcpTool(app, sessionId, 'create_test_suite', {
         projectId: TEST_PROJECT_ID,
         name: '新しいテストスイート',
         description: 'テストスイートの説明',
@@ -559,7 +432,7 @@ describe('MCP CRUDツール統合テスト', () => {
     });
 
     it('名前なしでバリデーションエラーが返る', async () => {
-      const response = await callTool(app, sessionId, 'create_test_suite', {
+      const response = await callMcpTool(app, sessionId, 'create_test_suite', {
         projectId: TEST_PROJECT_ID,
         // name を指定しない
       });
@@ -575,7 +448,7 @@ describe('MCP CRUDツール統合テスト', () => {
         new Error('Internal API error: 403 - このプロジェクトへのアクセス権がありません')
       );
 
-      const response = await callTool(app, sessionId, 'create_test_suite', {
+      const response = await callMcpTool(app, sessionId, 'create_test_suite', {
         projectId: TEST_PROJECT_ID,
         name: '権限なしテスト',
       });
@@ -617,7 +490,7 @@ describe('MCP CRUDツール統合テスト', () => {
 
       mockApiPost.mockResolvedValueOnce(mockResponse);
 
-      const response = await callTool(app, sessionId, 'create_test_case', {
+      const response = await callMcpTool(app, sessionId, 'create_test_case', {
         testSuiteId: TEST_SUITE_ID,
         title: '新しいテストケース',
         description: 'テストケースの説明',
@@ -651,7 +524,7 @@ describe('MCP CRUDツール統合テスト', () => {
 
       mockApiPost.mockResolvedValueOnce(mockResponse);
 
-      const response = await callTool(app, sessionId, 'create_test_case', {
+      const response = await callMcpTool(app, sessionId, 'create_test_case', {
         testSuiteId: TEST_SUITE_ID,
         title: 'クリティカルテスト',
         priority: 'CRITICAL',
@@ -696,7 +569,7 @@ describe('MCP CRUDツール統合テスト', () => {
 
       mockApiPatch.mockResolvedValueOnce(mockResponse);
 
-      const response = await callTool(app, sessionId, 'update_test_suite', {
+      const response = await callMcpTool(app, sessionId, 'update_test_suite', {
         testSuiteId: TEST_SUITE_ID,
         name: '更新後のテストスイート',
         description: '更新後の説明',
@@ -735,7 +608,7 @@ describe('MCP CRUDツール統合テスト', () => {
 
       mockApiPatch.mockResolvedValueOnce(mockResponse);
 
-      const response = await callTool(app, sessionId, 'update_test_suite', {
+      const response = await callMcpTool(app, sessionId, 'update_test_suite', {
         testSuiteId: TEST_SUITE_ID,
         status: 'ACTIVE',
       });
@@ -771,7 +644,7 @@ describe('MCP CRUDツール統合テスト', () => {
 
       mockApiPatch.mockResolvedValueOnce(mockResponse);
 
-      const response = await callTool(app, sessionId, 'update_test_case', {
+      const response = await callMcpTool(app, sessionId, 'update_test_case', {
         testCaseId: TEST_CASE_ID,
         title: '更新後のテストケース',
         description: '更新後の説明',
@@ -803,7 +676,7 @@ describe('MCP CRUDツール統合テスト', () => {
 
       mockApiPatch.mockResolvedValueOnce(mockResponse);
 
-      const response = await callTool(app, sessionId, 'update_test_case', {
+      const response = await callMcpTool(app, sessionId, 'update_test_case', {
         testCaseId: TEST_CASE_ID,
         priority: 'LOW',
       });
@@ -837,7 +710,7 @@ describe('MCP CRUDツール統合テスト', () => {
 
       mockApiDelete.mockResolvedValueOnce(mockResponse);
 
-      const response = await callTool(app, sessionId, 'delete_test_suite', {
+      const response = await callMcpTool(app, sessionId, 'delete_test_suite', {
         testSuiteId: TEST_SUITE_ID,
       });
 
@@ -868,7 +741,7 @@ describe('MCP CRUDツール統合テスト', () => {
 
       mockApiDelete.mockResolvedValueOnce(mockResponse);
 
-      const response = await callTool(app, sessionId, 'delete_test_case', {
+      const response = await callMcpTool(app, sessionId, 'delete_test_case', {
         testCaseId: TEST_CASE_ID,
       });
 
@@ -891,7 +764,7 @@ describe('MCP CRUDツール統合テスト', () => {
         new Error('Internal API error: 404 - テストケースが見つかりません')
       );
 
-      const response = await callTool(app, sessionId, 'delete_test_case', {
+      const response = await callMcpTool(app, sessionId, 'delete_test_case', {
         testCaseId: TEST_CASE_ID,
       });
 
@@ -909,7 +782,7 @@ describe('MCP CRUDツール統合テスト', () => {
   // ========================================
   describe('Zodバリデーション', () => {
     it('無効なUUIDでエラーが返る（get_project）', async () => {
-      const response = await callTool(app, sessionId, 'get_project', {
+      const response = await callMcpTool(app, sessionId, 'get_project', {
         projectId: 'not-a-valid-uuid',
       });
 
@@ -919,7 +792,7 @@ describe('MCP CRUDツール統合テスト', () => {
     });
 
     it('無効なUUIDでエラーが返る（get_test_suite）', async () => {
-      const response = await callTool(app, sessionId, 'get_test_suite', {
+      const response = await callMcpTool(app, sessionId, 'get_test_suite', {
         testSuiteId: 'invalid-uuid',
       });
 
@@ -928,7 +801,7 @@ describe('MCP CRUDツール統合テスト', () => {
     });
 
     it('無効なUUIDでエラーが返る（get_test_case）', async () => {
-      const response = await callTool(app, sessionId, 'get_test_case', {
+      const response = await callMcpTool(app, sessionId, 'get_test_case', {
         testCaseId: 'bad-uuid-format',
       });
 
@@ -937,7 +810,7 @@ describe('MCP CRUDツール統合テスト', () => {
     });
 
     it('無効なUUIDでエラーが返る（get_execution）', async () => {
-      const response = await callTool(app, sessionId, 'get_execution', {
+      const response = await callMcpTool(app, sessionId, 'get_execution', {
         executionId: '12345',
       });
 
@@ -946,7 +819,7 @@ describe('MCP CRUDツール統合テスト', () => {
     });
 
     it('必須パラメータ不足でエラーが返る（create_test_suite: projectIdなし）', async () => {
-      const response = await callTool(app, sessionId, 'create_test_suite', {
+      const response = await callMcpTool(app, sessionId, 'create_test_suite', {
         name: 'テスト',
         // projectId を指定しない
       });
@@ -956,7 +829,7 @@ describe('MCP CRUDツール統合テスト', () => {
     });
 
     it('必須パラメータ不足でエラーが返る（create_test_case: testSuiteIdなし）', async () => {
-      const response = await callTool(app, sessionId, 'create_test_case', {
+      const response = await callMcpTool(app, sessionId, 'create_test_case', {
         title: 'テストケース',
         // testSuiteId を指定しない
       });
@@ -966,7 +839,7 @@ describe('MCP CRUDツール統合テスト', () => {
     });
 
     it('必須パラメータ不足でエラーが返る（create_test_case: titleなし）', async () => {
-      const response = await callTool(app, sessionId, 'create_test_case', {
+      const response = await callMcpTool(app, sessionId, 'create_test_case', {
         testSuiteId: TEST_SUITE_ID,
         // title を指定しない
       });
@@ -976,7 +849,7 @@ describe('MCP CRUDツール統合テスト', () => {
     });
 
     it('必須パラメータ不足でエラーが返る（delete_test_suite: testSuiteIdなし）', async () => {
-      const response = await callTool(app, sessionId, 'delete_test_suite', {
+      const response = await callMcpTool(app, sessionId, 'delete_test_suite', {
         // testSuiteId を指定しない
       });
 
@@ -985,7 +858,7 @@ describe('MCP CRUDツール統合テスト', () => {
     });
 
     it('無効な優先度でエラーが返る（create_test_case）', async () => {
-      const response = await callTool(app, sessionId, 'create_test_case', {
+      const response = await callMcpTool(app, sessionId, 'create_test_case', {
         testSuiteId: TEST_SUITE_ID,
         title: 'テスト',
         priority: 'INVALID_PRIORITY',
@@ -1016,7 +889,7 @@ describe('MCP CRUDツール統合テスト', () => {
         },
       });
 
-      const createResponse = await callTool(app, sessionId, 'create_test_suite', {
+      const createResponse = await callMcpTool(app, sessionId, 'create_test_suite', {
         projectId: TEST_PROJECT_ID,
         name: '一連操作テストスイート',
       }, 10);
@@ -1043,7 +916,7 @@ describe('MCP CRUDツール統合テスト', () => {
         },
       });
 
-      const getResponse = await callTool(app, sessionId, 'get_test_suite', {
+      const getResponse = await callMcpTool(app, sessionId, 'get_test_suite', {
         testSuiteId: suiteId,
       }, 11);
 
@@ -1065,7 +938,7 @@ describe('MCP CRUDツール統合テスト', () => {
         },
       });
 
-      const updateResponse = await callTool(app, sessionId, 'update_test_suite', {
+      const updateResponse = await callMcpTool(app, sessionId, 'update_test_suite', {
         testSuiteId: suiteId,
         name: '更新済みテストスイート',
         description: '説明を追加',
@@ -1084,7 +957,7 @@ describe('MCP CRUDツール統合テスト', () => {
         deletedId: suiteId,
       });
 
-      const deleteResponse = await callTool(app, sessionId, 'delete_test_suite', {
+      const deleteResponse = await callMcpTool(app, sessionId, 'delete_test_suite', {
         testSuiteId: suiteId,
       }, 13);
 
@@ -1113,7 +986,7 @@ describe('MCP CRUDツール統合テスト', () => {
         },
       });
 
-      const createResponse = await callTool(app, sessionId, 'create_test_case', {
+      const createResponse = await callMcpTool(app, sessionId, 'create_test_case', {
         testSuiteId: TEST_SUITE_ID,
         title: '一連操作テストケース',
         steps: [{ content: '初期手順' }],
@@ -1143,7 +1016,7 @@ describe('MCP CRUDツール統合テスト', () => {
         },
       });
 
-      const getResponse = await callTool(app, sessionId, 'get_test_case', {
+      const getResponse = await callMcpTool(app, sessionId, 'get_test_case', {
         testCaseId: caseId,
       }, 21);
 
@@ -1170,7 +1043,7 @@ describe('MCP CRUDツール統合テスト', () => {
         },
       });
 
-      const updateResponse = await callTool(app, sessionId, 'update_test_case', {
+      const updateResponse = await callMcpTool(app, sessionId, 'update_test_case', {
         testCaseId: caseId,
         title: '更新済みテストケース',
         description: 'ケース説明追加',
@@ -1194,7 +1067,7 @@ describe('MCP CRUDツール統合テスト', () => {
         deletedId: caseId,
       });
 
-      const deleteResponse = await callTool(app, sessionId, 'delete_test_case', {
+      const deleteResponse = await callMcpTool(app, sessionId, 'delete_test_case', {
         testCaseId: caseId,
       }, 23);
 

@@ -8,6 +8,11 @@ import {
   createTestAgentSession,
   cleanupTestData,
 } from './test-helpers.js';
+import {
+  parseToolResultRaw as parseToolResult,
+  initializeMcpSession,
+  callMcpTool,
+} from './mcp-tools-helpers.js';
 import { createApp } from '../../app.js';
 
 // グローバルな認証状態（モック用）
@@ -104,120 +109,6 @@ const TEST_EVIDENCE_ID = '22222222-2222-2222-2222-222222222222';
 const TEST_EXEC_SUITE_ID = '33333333-3333-3333-3333-333333333333';
 const TEST_EXEC_CASE_ID = '44444444-4444-4444-4444-444444444444';
 
-/**
- * MCPプロトコルでinitializeしてセッションIDを取得するヘルパー
- */
-async function initializeMcpSession(
-  app: Express,
-  projectId: string,
-  options?: { clientId?: string; clientName?: string }
-): Promise<string> {
-  const req = request(app)
-    .post('/mcp')
-    .set('Cookie', 'access_token=valid-test-token')
-    .set('X-MCP-Project-Id', projectId)
-    .set('Content-Type', 'application/json')
-    .set('Accept', 'application/json, text/event-stream');
-
-  if (options?.clientId) {
-    req.set('X-MCP-Client-Id', options.clientId);
-  }
-  if (options?.clientName) {
-    req.set('X-MCP-Client-Name', options.clientName);
-  }
-
-  const response = await req.send({
-    jsonrpc: '2.0',
-    method: 'initialize',
-    params: {
-      protocolVersion: '2024-11-05',
-      clientInfo: { name: 'test-client', version: '1.0.0' },
-      capabilities: {},
-    },
-    id: 1,
-  });
-
-  const sessionId = response.headers['mcp-session-id'];
-  return sessionId;
-}
-
-/**
- * MCPツールを呼び出すヘルパー
- */
-async function callMcpTool(
-  app: Express,
-  sessionId: string,
-  toolName: string,
-  args: Record<string, unknown>,
-  requestId: number = 2
-) {
-  const response = await request(app)
-    .post('/mcp')
-    .set('Cookie', 'access_token=valid-test-token')
-    .set('Content-Type', 'application/json')
-    .set('Accept', 'application/json, text/event-stream')
-    .set('Mcp-Session-Id', sessionId)
-    .send({
-      jsonrpc: '2.0',
-      method: 'tools/call',
-      params: {
-        name: toolName,
-        arguments: args,
-      },
-      id: requestId,
-    });
-
-  return response;
-}
-
-/**
- * SSEレスポンスからJSON-RPCメッセージを抽出するヘルパー
- * MCP SDK v1.25.1ではツール呼び出しの応答がSSE(text/event-stream)で返されるため、
- * response.bodyではなくresponse.textからSSEイベントデータをパースする必要がある
- */
-function extractJsonRpcFromSse(response: request.Response): Record<string, unknown> | null {
-  // まずbodyにJSON-RPCレスポンスがある場合（JSONモードの場合）
-  if (response.body && typeof response.body === 'object' && ('result' in response.body || 'error' in response.body)) {
-    return response.body as Record<string, unknown>;
-  }
-  // SSEレスポンスからJSON-RPCメッセージを抽出
-  const text = response.text;
-  if (!text) return null;
-  const dataLines = text.split('\n').filter((line: string) => line.startsWith('data: '));
-  for (const line of dataLines) {
-    const jsonStr = line.slice(6);
-    if (!jsonStr.trim()) continue;
-    try {
-      const parsed = JSON.parse(jsonStr);
-      if (parsed && (parsed.result !== undefined || parsed.error !== undefined)) {
-        return parsed;
-      }
-    } catch {
-      // パース失敗は無視
-    }
-  }
-  return null;
-}
-
-/**
- * MCPレスポンスからツール結果のJSONをパースするヘルパー
- */
-function parseToolResult(response: request.Response): { content: Array<{ type: string; text: string }>; isError?: boolean } {
-  const jsonRpc = extractJsonRpcFromSse(response);
-  if (jsonRpc?.result) {
-    return jsonRpc.result as { content: Array<{ type: string; text: string }>; isError?: boolean };
-  }
-  // JSON-RPCレベルのエラーの場合、エラー内容をcontentとして返す
-  if (jsonRpc?.error) {
-    const error = jsonRpc.error as { message?: string; data?: string };
-    return {
-      content: [{ type: 'text', text: error.message ?? error.data ?? 'Unknown error' }],
-      isError: true,
-    };
-  }
-  return { content: [], isError: undefined };
-}
-
 describe('MCPワークフロー統合テスト', () => {
   let app: Express;
   let testUser: Awaited<ReturnType<typeof createTestUser>>;
@@ -258,7 +149,7 @@ describe('MCPワークフロー統合テスト', () => {
 
   describe('E2Eシナリオ: 検索→テストスイート作成→テストケース作成→実行作成→結果入力', () => {
     it('プロジェクト検索からテスト結果入力までの一連の操作が完了できる', async () => {
-      const sessionId = await initializeMcpSession(app, testProject.id);
+      const sessionId = await initializeMcpSession(app, { projectId: testProject.id });
 
       // ステップ1: プロジェクト検索
       mockApiClientGet.mockResolvedValueOnce({
@@ -522,7 +413,7 @@ describe('MCPワークフロー統合テスト', () => {
     });
 
     it('テストスイート検索→実行作成→結果入力の短縮ワークフローが完了できる', async () => {
-      const sessionId = await initializeMcpSession(app, testProject.id);
+      const sessionId = await initializeMcpSession(app, { projectId: testProject.id });
 
       // テストスイート検索
       mockApiClientGet.mockResolvedValueOnce({
@@ -575,7 +466,8 @@ describe('MCPワークフロー統合テスト', () => {
       const clientName = 'Workflow Session Client';
 
       // セッション作成（initialize）
-      const sessionId = await initializeMcpSession(app, testProject.id, {
+      const sessionId = await initializeMcpSession(app, {
+        projectId: testProject.id,
         clientId,
         clientName,
       });
@@ -673,7 +565,7 @@ describe('MCPワークフロー統合テスト', () => {
 
   describe('複数ツールの連続呼び出し時のコンテキスト保持', () => {
     it('同一セッション内で複数のツールを順次呼び出しても認証コンテキストが保持される', async () => {
-      const sessionId = await initializeMcpSession(app, testProject.id);
+      const sessionId = await initializeMcpSession(app, { projectId: testProject.id });
 
       // 1回目: プロジェクト検索
       mockApiClientGet.mockResolvedValueOnce({
@@ -752,7 +644,7 @@ describe('MCPワークフロー統合テスト', () => {
     });
 
     it('異なるツールタイプ（検索・作成・更新）を混在して呼び出してもセッションが維持される', async () => {
-      const sessionId = await initializeMcpSession(app, testProject.id);
+      const sessionId = await initializeMcpSession(app, { projectId: testProject.id });
 
       // 検索ツール
       mockApiClientGet.mockResolvedValueOnce({
@@ -797,7 +689,7 @@ describe('MCPワークフロー統合テスト', () => {
 
   describe('エラーリカバリ: ツール失敗後の再試行', () => {
     it('APIエラー後に再試行して成功できる', async () => {
-      const sessionId = await initializeMcpSession(app, testProject.id);
+      const sessionId = await initializeMcpSession(app, { projectId: testProject.id });
 
       // 1回目: APIエラー（500 Internal Server Error）
       mockApiClientPost.mockRejectedValueOnce(
@@ -836,7 +728,7 @@ describe('MCPワークフロー統合テスト', () => {
     });
 
     it('404エラー後にパラメータを変更して再試行できる', async () => {
-      const sessionId = await initializeMcpSession(app, testProject.id);
+      const sessionId = await initializeMcpSession(app, { projectId: testProject.id });
       const wrongSuiteId = '99999999-9999-9999-9999-999999999999';
 
       // 1回目: 存在しないテストスイートIDでエラー
@@ -875,7 +767,7 @@ describe('MCPワークフロー統合テスト', () => {
     });
 
     it('ネットワークエラー後にセッションが維持されて再試行できる', async () => {
-      const sessionId = await initializeMcpSession(app, testProject.id);
+      const sessionId = await initializeMcpSession(app, { projectId: testProject.id });
 
       // 1回目: ネットワークエラー
       mockApiClientGet.mockRejectedValueOnce(
@@ -911,7 +803,7 @@ describe('MCPワークフロー統合テスト', () => {
     });
 
     it('エビデンスアップロード失敗後に再試行して成功できる', async () => {
-      const sessionId = await initializeMcpSession(app, testProject.id);
+      const sessionId = await initializeMcpSession(app, { projectId: testProject.id });
 
       const testFileData = Buffer.from('test-evidence-data').toString('base64');
 
@@ -965,7 +857,7 @@ describe('MCPワークフロー統合テスト', () => {
     });
 
     it('連続したエラーの後でもセッションが破壊されず回復できる', async () => {
-      const sessionId = await initializeMcpSession(app, testProject.id);
+      const sessionId = await initializeMcpSession(app, { projectId: testProject.id });
 
       // 3回連続でエラー
       for (let i = 0; i < 3; i++) {
