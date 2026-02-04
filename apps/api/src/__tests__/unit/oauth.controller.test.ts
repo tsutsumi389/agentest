@@ -214,7 +214,7 @@ describe('OAuthController', () => {
         expect.stringContaining('https://app.example.com/login'),
       );
       // リダイレクトURLにreturnパラメータが含まれることを確認
-      const redirectUrl = (res.redirect as any).mock.calls[0][0];
+      const redirectUrl = vi.mocked(res.redirect!).mock.calls[0][0] as string;
       const url = new URL(redirectUrl);
       expect(url.searchParams.get('redirect')).toContain('/oauth/authorize');
     });
@@ -231,7 +231,7 @@ describe('OAuthController', () => {
         expect.stringContaining('https://app.example.com/oauth/consent'),
       );
       // 同意画面URLに必要なパラメータが含まれることを確認
-      const redirectUrl = (res.redirect as any).mock.calls[0][0];
+      const redirectUrl = vi.mocked(res.redirect!).mock.calls[0][0] as string;
       const url = new URL(redirectUrl);
       expect(url.searchParams.get('client_id')).toBe(TEST_CLIENT_ID);
       expect(url.searchParams.get('client_name')).toBe('Test App');
@@ -318,7 +318,7 @@ describe('OAuthController', () => {
         }),
       );
       // リダイレクトURLにaccess_deniedエラーが含まれることを確認
-      const result = (res.json as any).mock.calls[0][0];
+      const result = vi.mocked(res.json!).mock.calls[0][0] as { redirect_url: string };
       const redirectUrl = new URL(result.redirect_url);
       expect(redirectUrl.searchParams.get('error')).toBe('access_denied');
       expect(redirectUrl.searchParams.get('error_description')).toBe('User denied access');
@@ -346,7 +346,7 @@ describe('OAuthController', () => {
       });
 
       // レスポンスのリダイレクトURLに認可コードとstateが含まれることを確認
-      const result = (res.json as any).mock.calls[0][0];
+      const result = vi.mocked(res.json!).mock.calls[0][0] as { redirect_url: string };
       const redirectUrl = new URL(result.redirect_url);
       expect(redirectUrl.searchParams.get('code')).toBe(authorizationCode);
       expect(redirectUrl.searchParams.get('state')).toBe('random-state-value');
@@ -368,7 +368,7 @@ describe('OAuthController', () => {
           redirect_url: expect.any(String),
         }),
       );
-      const result = (res.json as any).mock.calls[0][0];
+      const result = vi.mocked(res.json!).mock.calls[0][0] as { redirect_url: string };
       const redirectUrl = new URL(result.redirect_url);
       expect(redirectUrl.searchParams.get('error')).toBe('server_error');
       expect(redirectUrl.searchParams.get('error_description')).toBe('Internal error');

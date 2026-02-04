@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
 
 // PaymentMethodServiceのモック
-const mockPaymentMethodService = {
+const mockPaymentMethodService = vi.hoisted(() => ({
   createSetupIntent: vi.fn(),
   getPaymentMethods: vi.fn(),
   addPaymentMethod: vi.fn(),
   deletePaymentMethod: vi.fn(),
   setDefaultPaymentMethod: vi.fn(),
-};
+}));
 
 vi.mock('../../services/payment-method.service.js', () => ({
   PaymentMethodService: vi.fn().mockImplementation(() => mockPaymentMethodService),
@@ -29,21 +29,21 @@ const mockRequest = (overrides = {}): Partial<Request> => ({
 });
 
 const mockResponse = (): Partial<Response> => {
-  const res: any = {};
+  const res: Partial<Response> = {};
   res.status = vi.fn().mockReturnValue(res);
   res.json = vi.fn().mockReturnValue(res);
   res.send = vi.fn().mockReturnValue(res);
   return res;
 };
 
-const mockNext = vi.fn();
-
 describe('PaymentMethodController', () => {
   let controller: PaymentMethodController;
+  let mockNext: NextFunction;
 
   beforeEach(() => {
     vi.clearAllMocks();
     controller = new PaymentMethodController();
+    mockNext = vi.fn();
   });
 
   describe('createSetupIntent', () => {

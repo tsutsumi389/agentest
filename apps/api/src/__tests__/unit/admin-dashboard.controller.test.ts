@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
 
 // ダッシュボードサービスのモック
-const mockDashboardService = {
+const mockDashboardService = vi.hoisted(() => ({
   getDashboard: vi.fn(),
-};
+}));
 
 vi.mock('../../services/admin/admin-dashboard.service.js', () => ({
   AdminDashboardService: vi.fn().mockImplementation(() => mockDashboardService),

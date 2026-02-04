@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
 
 // メトリクスサービスのモック
-const mockMetricsService = {
+const mockMetricsService = vi.hoisted(() => ({
   getActiveUserMetrics: vi.fn(),
   getPlanDistribution: vi.fn(),
-};
+}));
 
 vi.mock('../../services/admin/admin-metrics.service.js', () => ({
   AdminMetricsService: vi.fn().mockImplementation(() => mockMetricsService),

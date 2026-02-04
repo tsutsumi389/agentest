@@ -52,22 +52,24 @@ describe('logger', () => {
 
   it('debugレベルはLOG_LEVEL=debugの場合のみ出力する', () => {
     const originalLogLevel = process.env.LOG_LEVEL;
-    process.env.LOG_LEVEL = 'debug';
-
-    logger.debug('デバッグメッセージ');
-    expect(debugSpy).toHaveBeenCalledTimes(1);
-
-    process.env.LOG_LEVEL = originalLogLevel;
+    try {
+      process.env.LOG_LEVEL = 'debug';
+      logger.debug('デバッグメッセージ');
+      expect(debugSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      process.env.LOG_LEVEL = originalLogLevel;
+    }
   });
 
   it('debugレベルはLOG_LEVELが未設定の場合は出力しない', () => {
     const originalLogLevel = process.env.LOG_LEVEL;
-    delete process.env.LOG_LEVEL;
-
-    logger.debug('デバッグメッセージ');
-    expect(debugSpy).not.toHaveBeenCalled();
-
-    process.env.LOG_LEVEL = originalLogLevel;
+    try {
+      delete process.env.LOG_LEVEL;
+      logger.debug('デバッグメッセージ');
+      expect(debugSpy).not.toHaveBeenCalled();
+    } finally {
+      process.env.LOG_LEVEL = originalLogLevel;
+    }
   });
 
   it('タイムスタンプがISO 8601形式である', () => {

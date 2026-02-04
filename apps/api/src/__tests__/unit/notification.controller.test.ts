@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
 
 // NotificationService のモック
-const mockNotificationService = {
+const mockNotificationService = vi.hoisted(() => ({
   getNotifications: vi.fn(),
   getUnreadCount: vi.fn(),
   markAsRead: vi.fn(),
@@ -10,7 +10,7 @@ const mockNotificationService = {
   deleteNotification: vi.fn(),
   getPreferences: vi.fn(),
   updatePreference: vi.fn(),
-};
+}));
 
 vi.mock('../../services/notification.service.js', () => ({
   NotificationService: vi.fn().mockImplementation(() => mockNotificationService),

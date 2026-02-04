@@ -58,7 +58,6 @@ vi.mock('@agentest/shared', () => ({
 }));
 
 import { OrganizationController } from '../../controllers/organization.controller.js';
-import { auditLogExportSchema, generateTimestamp } from '@agentest/shared';
 
 // テスト用の固定値
 const TEST_USER_ID = '11111111-1111-1111-1111-111111111111';
@@ -85,7 +84,7 @@ const mockResponse = (): Partial<Response> => {
   return res;
 };
 
-describe('OrganizationController', () => {
+describe('OrganizationController（CRUD・メンバー・招待・プロジェクト・オーナー権限）', () => {
   let controller: OrganizationController;
   let mockNext: NextFunction;
 
@@ -282,6 +281,20 @@ describe('OrganizationController', () => {
       expect(mockOrgService.restore).toHaveBeenCalledWith(TEST_ORG_ID, TEST_USER_ID);
       expect(res.json).toHaveBeenCalledWith({ organization: mockOrg });
     });
+
+    it('サービスエラー時にnextにエラーを渡す', async () => {
+      const error = new Error('復元に失敗しました');
+      mockOrgService.restore.mockRejectedValue(error);
+
+      const req = mockRequest({
+        params: { organizationId: TEST_ORG_ID },
+      }) as Request;
+      const res = mockResponse() as Response;
+
+      await controller.restore(req, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(error);
+    });
   });
 
   // ==========================================================================
@@ -305,6 +318,20 @@ describe('OrganizationController', () => {
 
       expect(mockOrgService.getMembers).toHaveBeenCalledWith(TEST_ORG_ID);
       expect(res.json).toHaveBeenCalledWith({ members: mockMembers });
+    });
+
+    it('サービスエラー時にnextにエラーを渡す', async () => {
+      const error = new Error('メンバー取得に失敗しました');
+      mockOrgService.getMembers.mockRejectedValue(error);
+
+      const req = mockRequest({
+        params: { organizationId: TEST_ORG_ID },
+      }) as Request;
+      const res = mockResponse() as Response;
+
+      await controller.getMembers(req, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(error);
     });
   });
 
@@ -425,6 +452,20 @@ describe('OrganizationController', () => {
       expect(res.status).toHaveBeenCalledWith(204);
       expect(res.send).toHaveBeenCalled();
     });
+
+    it('サービスエラー時にnextにエラーを渡す', async () => {
+      const error = new Error('メンバー削除に失敗しました');
+      mockOrgService.removeMember.mockRejectedValue(error);
+
+      const req = mockRequest({
+        params: { organizationId: TEST_ORG_ID, userId: TEST_MEMBER_ID },
+      }) as Request;
+      const res = mockResponse() as Response;
+
+      await controller.removeMember(req, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(error);
+    });
   });
 
   // ==========================================================================
@@ -481,6 +522,20 @@ describe('OrganizationController', () => {
       expect(mockOrgService.acceptInvitation).toHaveBeenCalledWith(TEST_TOKEN, TEST_USER_ID);
       expect(res.json).toHaveBeenCalledWith({ member: mockMember });
     });
+
+    it('サービスエラー時にnextにエラーを渡す', async () => {
+      const error = new Error('招待の承認に失敗しました');
+      mockOrgService.acceptInvitation.mockRejectedValue(error);
+
+      const req = mockRequest({
+        params: { token: TEST_TOKEN },
+      }) as Request;
+      const res = mockResponse() as Response;
+
+      await controller.acceptInvitation(req, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(error);
+    });
   });
 
   describe('getInvitations', () => {
@@ -500,6 +555,20 @@ describe('OrganizationController', () => {
 
       expect(mockOrgService.getPendingInvitations).toHaveBeenCalledWith(TEST_ORG_ID);
       expect(res.json).toHaveBeenCalledWith({ invitations: mockInvitations });
+    });
+
+    it('サービスエラー時にnextにエラーを渡す', async () => {
+      const error = new Error('招待一覧の取得に失敗しました');
+      mockOrgService.getPendingInvitations.mockRejectedValue(error);
+
+      const req = mockRequest({
+        params: { organizationId: TEST_ORG_ID },
+      }) as Request;
+      const res = mockResponse() as Response;
+
+      await controller.getInvitations(req, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(error);
     });
   });
 
@@ -521,6 +590,20 @@ describe('OrganizationController', () => {
       );
       expect(res.status).toHaveBeenCalledWith(204);
       expect(res.send).toHaveBeenCalled();
+    });
+
+    it('サービスエラー時にnextにエラーを渡す', async () => {
+      const error = new Error('招待の取消に失敗しました');
+      mockOrgService.cancelInvitation.mockRejectedValue(error);
+
+      const req = mockRequest({
+        params: { organizationId: TEST_ORG_ID, invitationId: TEST_INVITATION_ID },
+      }) as Request;
+      const res = mockResponse() as Response;
+
+      await controller.cancelInvitation(req, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(error);
     });
   });
 
@@ -619,196 +702,6 @@ describe('OrganizationController', () => {
 
       expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
       expect(mockOrgService.transferOwnership).not.toHaveBeenCalled();
-    });
-  });
-
-  // ==========================================================================
-  // 監査ログ
-  // ==========================================================================
-
-  describe('getAuditLogs', () => {
-    const mockLogs = [
-      {
-        id: 'log-1',
-        organizationId: TEST_ORG_ID,
-        category: 'ORGANIZATION',
-        action: 'organization.update',
-        createdAt: new Date('2024-01-15'),
-      },
-    ];
-
-    it('監査ログをページネーション付きで取得できる', async () => {
-      mockAuditLogService.getByOrganization.mockResolvedValue({
-        logs: mockLogs,
-        total: 50,
-      });
-
-      const req = mockRequest({
-        params: { organizationId: TEST_ORG_ID },
-        query: { page: '2', limit: '10' },
-      }) as Request;
-      const res = mockResponse() as Response;
-
-      await controller.getAuditLogs(req, res, mockNext);
-
-      expect(mockAuditLogService.getByOrganization).toHaveBeenCalledWith(TEST_ORG_ID, {
-        page: 2,
-        limit: 10,
-        category: undefined,
-        startDate: undefined,
-        endDate: undefined,
-      });
-      expect(res.json).toHaveBeenCalledWith({
-        logs: mockLogs,
-        total: 50,
-        page: 2,
-        limit: 10,
-        totalPages: 5,
-      });
-    });
-
-    it('デフォルト値で監査ログを取得できる', async () => {
-      mockAuditLogService.getByOrganization.mockResolvedValue({
-        logs: mockLogs,
-        total: 1,
-      });
-
-      const req = mockRequest({
-        params: { organizationId: TEST_ORG_ID },
-      }) as Request;
-      const res = mockResponse() as Response;
-
-      await controller.getAuditLogs(req, res, mockNext);
-
-      // デフォルト: page=1, limit=20 (AUDIT_LOG_DEFAULT_LIMIT)
-      expect(mockAuditLogService.getByOrganization).toHaveBeenCalledWith(TEST_ORG_ID, {
-        page: 1,
-        limit: 20,
-        category: undefined,
-        startDate: undefined,
-        endDate: undefined,
-      });
-      expect(res.json).toHaveBeenCalledWith({
-        logs: mockLogs,
-        total: 1,
-        page: 1,
-        limit: 20,
-        totalPages: 1,
-      });
-    });
-
-    it('サービスエラー時にnextにエラーを渡す', async () => {
-      const error = new Error('DB接続エラー');
-      mockAuditLogService.getByOrganization.mockRejectedValue(error);
-
-      const req = mockRequest({
-        params: { organizationId: TEST_ORG_ID },
-      }) as Request;
-      const res = mockResponse() as Response;
-
-      await controller.getAuditLogs(req, res, mockNext);
-
-      expect(mockNext).toHaveBeenCalledWith(error);
-    });
-  });
-
-  describe('exportAuditLogs', () => {
-    const mockLogsForExport = [
-      {
-        id: 'log-1',
-        organizationId: TEST_ORG_ID,
-        category: 'ORGANIZATION',
-        action: 'organization.update',
-        createdAt: new Date('2024-01-15'),
-        user: { id: TEST_USER_ID, email: 'test@example.com', name: 'テストユーザー' },
-      },
-    ];
-
-    it('CSV形式でエクスポートできる', async () => {
-      const parsedQuery = { format: 'csv', category: undefined, startDate: undefined, endDate: undefined };
-      (auditLogExportSchema.parse as ReturnType<typeof vi.fn>).mockReturnValue(parsedQuery);
-      mockAuditLogService.getForExport.mockResolvedValue(mockLogsForExport);
-      mockAuditLogService.formatAsCSV.mockReturnValue('id,category,action\nlog-1,ORGANIZATION,organization.update');
-
-      const req = mockRequest({
-        params: { organizationId: TEST_ORG_ID },
-        query: { format: 'csv' },
-      }) as Request;
-      const res = mockResponse() as Response;
-
-      await controller.exportAuditLogs(req, res, mockNext);
-
-      expect(mockAuditLogService.getForExport).toHaveBeenCalledWith(TEST_ORG_ID, {
-        category: undefined,
-        startDate: undefined,
-        endDate: undefined,
-      });
-      expect(mockAuditLogService.formatAsCSV).toHaveBeenCalledWith(mockLogsForExport);
-      expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'text/csv; charset=utf-8');
-      expect(res.setHeader).toHaveBeenCalledWith(
-        'Content-Disposition',
-        'attachment; filename="audit-logs-20260115-120000.csv"',
-      );
-      expect(res.send).toHaveBeenCalledWith('id,category,action\nlog-1,ORGANIZATION,organization.update');
-    });
-
-    it('JSON形式でエクスポートできる', async () => {
-      const parsedQuery = { format: 'json', category: undefined, startDate: undefined, endDate: undefined };
-      (auditLogExportSchema.parse as ReturnType<typeof vi.fn>).mockReturnValue(parsedQuery);
-      mockAuditLogService.getForExport.mockResolvedValue(mockLogsForExport);
-      const jsonContent = JSON.stringify(mockLogsForExport);
-      mockAuditLogService.formatAsJSON.mockReturnValue(jsonContent);
-
-      const req = mockRequest({
-        params: { organizationId: TEST_ORG_ID },
-        query: { format: 'json' },
-      }) as Request;
-      const res = mockResponse() as Response;
-
-      await controller.exportAuditLogs(req, res, mockNext);
-
-      expect(mockAuditLogService.formatAsJSON).toHaveBeenCalledWith(mockLogsForExport);
-      expect(res.setHeader).toHaveBeenCalledWith('Content-Type', 'application/json');
-      expect(res.setHeader).toHaveBeenCalledWith(
-        'Content-Disposition',
-        'attachment; filename="audit-logs-20260115-120000.json"',
-      );
-      expect(res.send).toHaveBeenCalledWith(jsonContent);
-    });
-
-    it('エクスポートスキーマのバリデーションエラー時にnextにエラーを渡す', async () => {
-      const parseError = new Error('Invalid format');
-      (auditLogExportSchema.parse as ReturnType<typeof vi.fn>).mockImplementation(() => {
-        throw parseError;
-      });
-
-      const req = mockRequest({
-        params: { organizationId: TEST_ORG_ID },
-        query: {},
-      }) as Request;
-      const res = mockResponse() as Response;
-
-      await controller.exportAuditLogs(req, res, mockNext);
-
-      expect(mockNext).toHaveBeenCalledWith(parseError);
-      expect(mockAuditLogService.getForExport).not.toHaveBeenCalled();
-    });
-
-    it('サービスエラー時にnextにエラーを渡す', async () => {
-      const parsedQuery = { format: 'csv', category: undefined, startDate: undefined, endDate: undefined };
-      (auditLogExportSchema.parse as ReturnType<typeof vi.fn>).mockReturnValue(parsedQuery);
-      const error = new Error('エクスポートに失敗しました');
-      mockAuditLogService.getForExport.mockRejectedValue(error);
-
-      const req = mockRequest({
-        params: { organizationId: TEST_ORG_ID },
-        query: { format: 'csv' },
-      }) as Request;
-      const res = mockResponse() as Response;
-
-      await controller.exportAuditLogs(req, res, mockNext);
-
-      expect(mockNext).toHaveBeenCalledWith(error);
     });
   });
 });

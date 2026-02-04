@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
 
 // ReviewServiceモック
-const mockReviewService = {
+const mockReviewService = vi.hoisted(() => ({
   startReview: vi.fn(),
   searchByTestSuite: vi.fn(),
   getDraftsByUser: vi.fn(),
@@ -18,7 +18,7 @@ const mockReviewService = {
   addReply: vi.fn(),
   updateReply: vi.fn(),
   deleteReply: vi.fn(),
-};
+}));
 
 vi.mock('../../services/review.service.js', () => ({
   ReviewService: vi.fn().mockImplementation(() => mockReviewService),
@@ -161,6 +161,18 @@ describe('ReviewController', () => {
       expect(mockReviewService.getDraftsByUser).toHaveBeenCalledWith(TEST_USER_ID);
       expect(res.json).toHaveBeenCalledWith({ reviews: mockDrafts });
     });
+
+    it('サービスエラーをnextに渡す', async () => {
+      const error = new Error('Service error');
+      mockReviewService.getDraftsByUser.mockRejectedValue(error);
+
+      const req = mockRequest() as Request;
+      const res = mockResponse() as Response;
+
+      await controller.getDrafts(req, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(error);
+    });
   });
 
   describe('getById', () => {
@@ -219,6 +231,21 @@ describe('ReviewController', () => {
       );
       expect(res.json).toHaveBeenCalledWith({ review: mockReview });
     });
+
+    it('サービスエラーをnextに渡す', async () => {
+      const error = new Error('Service error');
+      mockReviewService.update.mockRejectedValue(error);
+
+      const req = mockRequest({
+        params: { reviewId: TEST_REVIEW_ID },
+        body: { summary: '更新' },
+      }) as Request;
+      const res = mockResponse() as Response;
+
+      await controller.update(req, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(error);
+    });
   });
 
   describe('submit', () => {
@@ -240,6 +267,21 @@ describe('ReviewController', () => {
         expect.objectContaining({ verdict: 'APPROVED' })
       );
       expect(res.json).toHaveBeenCalledWith({ review: mockReview });
+    });
+
+    it('サービスエラーをnextに渡す', async () => {
+      const error = new Error('Service error');
+      mockReviewService.submit.mockRejectedValue(error);
+
+      const req = mockRequest({
+        params: { reviewId: TEST_REVIEW_ID },
+        body: { verdict: 'APPROVED' },
+      }) as Request;
+      const res = mockResponse() as Response;
+
+      await controller.submit(req, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(error);
     });
   });
 
@@ -263,6 +305,21 @@ describe('ReviewController', () => {
       );
       expect(res.json).toHaveBeenCalledWith({ review: mockReview });
     });
+
+    it('サービスエラーをnextに渡す', async () => {
+      const error = new Error('Service error');
+      mockReviewService.updateVerdict.mockRejectedValue(error);
+
+      const req = mockRequest({
+        params: { reviewId: TEST_REVIEW_ID },
+        body: { verdict: 'CHANGES_REQUESTED' },
+      }) as Request;
+      const res = mockResponse() as Response;
+
+      await controller.updateVerdict(req, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(error);
+    });
   });
 
   describe('delete', () => {
@@ -277,6 +334,20 @@ describe('ReviewController', () => {
       expect(mockReviewService.delete).toHaveBeenCalledWith(TEST_REVIEW_ID, TEST_USER_ID);
       expect(res.status).toHaveBeenCalledWith(204);
       expect(res.send).toHaveBeenCalled();
+    });
+
+    it('サービスエラーをnextに渡す', async () => {
+      const error = new Error('Service error');
+      mockReviewService.delete.mockRejectedValue(error);
+
+      const req = mockRequest({
+        params: { reviewId: TEST_REVIEW_ID },
+      }) as Request;
+      const res = mockResponse() as Response;
+
+      await controller.delete(req, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(error);
     });
   });
 
@@ -344,6 +415,21 @@ describe('ReviewController', () => {
       );
       expect(res.json).toHaveBeenCalledWith({ comment: mockComment });
     });
+
+    it('サービスエラーをnextに渡す', async () => {
+      const error = new Error('Service error');
+      mockReviewService.updateComment.mockRejectedValue(error);
+
+      const req = mockRequest({
+        params: { reviewId: TEST_REVIEW_ID, commentId: TEST_COMMENT_ID },
+        body: { content: '更新' },
+      }) as Request;
+      const res = mockResponse() as Response;
+
+      await controller.updateComment(req, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(error);
+    });
   });
 
   describe('updateCommentStatus', () => {
@@ -367,6 +453,21 @@ describe('ReviewController', () => {
       );
       expect(res.json).toHaveBeenCalledWith({ comment: mockComment });
     });
+
+    it('サービスエラーをnextに渡す', async () => {
+      const error = new Error('Service error');
+      mockReviewService.updateCommentStatus.mockRejectedValue(error);
+
+      const req = mockRequest({
+        params: { reviewId: TEST_REVIEW_ID, commentId: TEST_COMMENT_ID },
+        body: { status: 'RESOLVED' },
+      }) as Request;
+      const res = mockResponse() as Response;
+
+      await controller.updateCommentStatus(req, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(error);
+    });
   });
 
   describe('deleteComment', () => {
@@ -383,6 +484,20 @@ describe('ReviewController', () => {
       expect(mockReviewService.deleteComment).toHaveBeenCalledWith(TEST_REVIEW_ID, TEST_COMMENT_ID, TEST_USER_ID);
       expect(res.status).toHaveBeenCalledWith(204);
       expect(res.send).toHaveBeenCalled();
+    });
+
+    it('サービスエラーをnextに渡す', async () => {
+      const error = new Error('Service error');
+      mockReviewService.deleteComment.mockRejectedValue(error);
+
+      const req = mockRequest({
+        params: { reviewId: TEST_REVIEW_ID, commentId: TEST_COMMENT_ID },
+      }) as Request;
+      const res = mockResponse() as Response;
+
+      await controller.deleteComment(req, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(error);
     });
   });
 
@@ -408,6 +523,21 @@ describe('ReviewController', () => {
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith({ reply: mockReply });
     });
+
+    it('サービスエラーをnextに渡す', async () => {
+      const error = new Error('Service error');
+      mockReviewService.addReply.mockRejectedValue(error);
+
+      const req = mockRequest({
+        params: { reviewId: TEST_REVIEW_ID, commentId: TEST_COMMENT_ID },
+        body: { content: '返信' },
+      }) as Request;
+      const res = mockResponse() as Response;
+
+      await controller.addReply(req, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(error);
+    });
   });
 
   describe('updateReply', () => {
@@ -431,6 +561,21 @@ describe('ReviewController', () => {
         expect.objectContaining({ content: '更新' })
       );
       expect(res.json).toHaveBeenCalledWith({ reply: mockReply });
+    });
+
+    it('サービスエラーをnextに渡す', async () => {
+      const error = new Error('Service error');
+      mockReviewService.updateReply.mockRejectedValue(error);
+
+      const req = mockRequest({
+        params: { reviewId: TEST_REVIEW_ID, commentId: TEST_COMMENT_ID, replyId: TEST_REPLY_ID },
+        body: { content: '更新' },
+      }) as Request;
+      const res = mockResponse() as Response;
+
+      await controller.updateReply(req, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(error);
     });
   });
 

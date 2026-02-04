@@ -88,224 +88,12 @@ const createMockReview = (overrides = {}) => ({
   ...overrides,
 });
 
-describe('ReviewService', () => {
+describe('ReviewService（コメント操作）', () => {
   let service: ReviewService;
 
   beforeEach(() => {
     vi.clearAllMocks();
     service = new ReviewService();
-  });
-
-  describe('findById', () => {
-    it('レビューを取得できる', async () => {
-      const mockReview = createMockReview();
-      mockReviewRepo.findById.mockResolvedValue(mockReview);
-
-      const result = await service.findById(TEST_REVIEW_ID);
-
-      expect(result).toEqual(mockReview);
-      expect(mockReviewRepo.findById).toHaveBeenCalledWith(TEST_REVIEW_ID);
-    });
-
-    it('存在しないレビューはNotFoundErrorを投げる', async () => {
-      mockReviewRepo.findById.mockResolvedValue(null);
-
-      await expect(service.findById(TEST_REVIEW_ID)).rejects.toThrow(NotFoundError);
-    });
-  });
-
-  describe('searchByTestSuite', () => {
-    it('テストスイートのレビュー一覧を検索できる', async () => {
-      mockPrisma.testSuite.findFirst.mockResolvedValue({ projectId: TEST_PROJECT_ID });
-      mockReviewRepo.searchByTestSuite.mockResolvedValue({ items: [], total: 0 });
-
-      const result = await service.searchByTestSuite(TEST_SUITE_ID, { limit: 10, offset: 0 });
-
-      expect(result).toEqual({ items: [], total: 0 });
-      expect(mockReviewRepo.searchByTestSuite).toHaveBeenCalledWith(TEST_SUITE_ID, { limit: 10, offset: 0 });
-    });
-
-    it('テストスイートが存在しない場合はNotFoundErrorを投げる', async () => {
-      mockPrisma.testSuite.findFirst.mockResolvedValue(null);
-
-      await expect(service.searchByTestSuite(TEST_SUITE_ID, { limit: 10, offset: 0 })).rejects.toThrow(NotFoundError);
-    });
-  });
-
-  describe('getDraftsByUser', () => {
-    it('ユーザーの下書き一覧を取得できる', async () => {
-      const mockDrafts = [createMockReview()];
-      mockReviewRepo.findDraftsByUser.mockResolvedValue(mockDrafts);
-
-      const result = await service.getDraftsByUser(TEST_USER_ID);
-
-      expect(result).toEqual(mockDrafts);
-      expect(mockReviewRepo.findDraftsByUser).toHaveBeenCalledWith(TEST_USER_ID);
-    });
-  });
-
-  describe('startReview', () => {
-    beforeEach(() => {
-      mockPrisma.testSuite.findFirst.mockResolvedValue({ projectId: TEST_PROJECT_ID });
-      mockAuthorizationService.checkProjectRole.mockResolvedValue(true);
-      mockReviewRepo.findDraftByUserAndTestSuite.mockResolvedValue(null);
-    });
-
-    it('レビューを開始できる', async () => {
-      const mockReview = createMockReview();
-      mockReviewRepo.create.mockResolvedValue(mockReview);
-
-      const result = await service.startReview(TEST_USER_ID, {
-        testSuiteId: TEST_SUITE_ID,
-        summary: 'テストサマリー',
-      });
-
-      expect(result).toEqual(mockReview);
-      expect(mockAuthorizationService.checkProjectRole).toHaveBeenCalledWith(
-        TEST_USER_ID,
-        TEST_PROJECT_ID,
-        ['ADMIN', 'WRITE']
-      );
-      expect(mockReviewRepo.create).toHaveBeenCalledWith({
-        testSuiteId: TEST_SUITE_ID,
-        authorUserId: TEST_USER_ID,
-        summary: 'テストサマリー',
-      });
-    });
-
-    it('テストスイートが存在しない場合はNotFoundErrorを投げる', async () => {
-      mockPrisma.testSuite.findFirst.mockResolvedValue(null);
-
-      await expect(
-        service.startReview(TEST_USER_ID, { testSuiteId: TEST_SUITE_ID })
-      ).rejects.toThrow(NotFoundError);
-    });
-
-    it('権限がない場合はAuthorizationErrorを投げる', async () => {
-      mockAuthorizationService.checkProjectRole.mockResolvedValue(false);
-
-      await expect(
-        service.startReview(TEST_USER_ID, { testSuiteId: TEST_SUITE_ID })
-      ).rejects.toThrow(AuthorizationError);
-    });
-
-    it('既存の下書きがある場合はBadRequestErrorを投げる', async () => {
-      mockReviewRepo.findDraftByUserAndTestSuite.mockResolvedValue(createMockReview());
-
-      await expect(
-        service.startReview(TEST_USER_ID, { testSuiteId: TEST_SUITE_ID })
-      ).rejects.toThrow(BadRequestError);
-    });
-  });
-
-  describe('update', () => {
-    it('投稿者本人がDRAFTレビューを更新できる', async () => {
-      const mockReview = createMockReview();
-      mockReviewRepo.findById.mockResolvedValue(mockReview);
-      const updatedReview = { ...mockReview, summary: '更新' };
-      mockReviewRepo.update.mockResolvedValue(updatedReview);
-
-      const result = await service.update(TEST_REVIEW_ID, TEST_USER_ID, { summary: '更新' });
-
-      expect(result).toEqual(updatedReview);
-    });
-
-    it('他人のレビューはAuthorizationErrorを投げる', async () => {
-      mockReviewRepo.findById.mockResolvedValue(createMockReview());
-
-      await expect(
-        service.update(TEST_REVIEW_ID, OTHER_USER_ID, { summary: '更新' })
-      ).rejects.toThrow(AuthorizationError);
-    });
-
-    it('SUBMITTED状態のレビューはBadRequestErrorを投げる', async () => {
-      mockReviewRepo.findById.mockResolvedValue(createMockReview({ status: 'SUBMITTED' }));
-
-      await expect(
-        service.update(TEST_REVIEW_ID, TEST_USER_ID, { summary: '更新' })
-      ).rejects.toThrow(BadRequestError);
-    });
-  });
-
-  describe('submit', () => {
-    it('投稿者本人がDRAFTレビューを提出できる', async () => {
-      mockReviewRepo.findById.mockResolvedValue(createMockReview());
-      const submittedReview = createMockReview({ status: 'SUBMITTED', verdict: 'APPROVED' });
-      mockReviewRepo.submit.mockResolvedValue(submittedReview);
-
-      const result = await service.submit(TEST_REVIEW_ID, TEST_USER_ID, { verdict: 'APPROVED' });
-
-      expect(result).toEqual(submittedReview);
-      expect(mockReviewRepo.submit).toHaveBeenCalledWith(TEST_REVIEW_ID, { verdict: 'APPROVED' });
-    });
-
-    it('他人のレビューはAuthorizationErrorを投げる', async () => {
-      mockReviewRepo.findById.mockResolvedValue(createMockReview());
-
-      await expect(
-        service.submit(TEST_REVIEW_ID, OTHER_USER_ID, { verdict: 'APPROVED' })
-      ).rejects.toThrow(AuthorizationError);
-    });
-
-    it('SUBMITTED状態のレビューはBadRequestErrorを投げる', async () => {
-      mockReviewRepo.findById.mockResolvedValue(createMockReview({ status: 'SUBMITTED' }));
-
-      await expect(
-        service.submit(TEST_REVIEW_ID, TEST_USER_ID, { verdict: 'APPROVED' })
-      ).rejects.toThrow(BadRequestError);
-    });
-  });
-
-  describe('updateVerdict', () => {
-    it('投稿者本人がSUBMITTED状態の評価を変更できる', async () => {
-      mockReviewRepo.findById.mockResolvedValue(createMockReview({ status: 'SUBMITTED' }));
-      const updatedReview = createMockReview({ status: 'SUBMITTED', verdict: 'REJECTED' });
-      mockReviewRepo.updateVerdict.mockResolvedValue(updatedReview);
-
-      const result = await service.updateVerdict(TEST_REVIEW_ID, TEST_USER_ID, { verdict: 'REJECTED' });
-
-      expect(result).toEqual(updatedReview);
-      expect(mockReviewRepo.updateVerdict).toHaveBeenCalledWith(TEST_REVIEW_ID, 'REJECTED');
-    });
-
-    it('他人のレビューはAuthorizationErrorを投げる', async () => {
-      mockReviewRepo.findById.mockResolvedValue(createMockReview({ status: 'SUBMITTED' }));
-
-      await expect(
-        service.updateVerdict(TEST_REVIEW_ID, OTHER_USER_ID, { verdict: 'REJECTED' })
-      ).rejects.toThrow(AuthorizationError);
-    });
-
-    it('DRAFT状態のレビューはBadRequestErrorを投げる', async () => {
-      mockReviewRepo.findById.mockResolvedValue(createMockReview({ status: 'DRAFT' }));
-
-      await expect(
-        service.updateVerdict(TEST_REVIEW_ID, TEST_USER_ID, { verdict: 'REJECTED' })
-      ).rejects.toThrow(BadRequestError);
-    });
-  });
-
-  describe('delete', () => {
-    it('投稿者本人がDRAFTレビューを削除できる', async () => {
-      mockReviewRepo.findById.mockResolvedValue(createMockReview());
-      mockReviewRepo.delete.mockResolvedValue({ id: TEST_REVIEW_ID });
-
-      await service.delete(TEST_REVIEW_ID, TEST_USER_ID);
-
-      expect(mockReviewRepo.delete).toHaveBeenCalledWith(TEST_REVIEW_ID);
-    });
-
-    it('他人のレビューはAuthorizationErrorを投げる', async () => {
-      mockReviewRepo.findById.mockResolvedValue(createMockReview());
-
-      await expect(service.delete(TEST_REVIEW_ID, OTHER_USER_ID)).rejects.toThrow(AuthorizationError);
-    });
-
-    it('SUBMITTED状態のレビューはBadRequestErrorを投げる', async () => {
-      mockReviewRepo.findById.mockResolvedValue(createMockReview({ status: 'SUBMITTED' }));
-
-      await expect(service.delete(TEST_REVIEW_ID, TEST_USER_ID)).rejects.toThrow(BadRequestError);
-    });
   });
 
   describe('addComment', () => {
@@ -456,7 +244,7 @@ describe('ReviewService', () => {
           content: 'コメント',
         });
 
-        expect(mockPrisma.testSuitePrecondition).toBeUndefined;
+        expect(mockPrisma.testSuitePrecondition.findFirst).not.toHaveBeenCalled();
       });
 
       it('TITLE/DESCRIPTIONフィールドの場合はtargetItemIdの検証をスキップする', async () => {
@@ -472,13 +260,7 @@ describe('ReviewService', () => {
         expect(mockReviewRepo.addComment).toHaveBeenCalled();
       });
 
-      it('スイートの前提条件が存在しない場合はNotFoundErrorを投げる', async () => {
-        mockPrisma.testSuitePrecondition = { findFirst: vi.fn().mockResolvedValue(null) };
-        (mockPrisma as any).testSuitePrecondition = { findFirst: vi.fn().mockResolvedValue(null) };
-
-        // テストケースの前提条件検証は直接Prismaを使うため、このテストは
-        // Prismaモック構造の制約によりスキップ
-      });
+      it.todo('スイートの前提条件が存在しない場合はNotFoundErrorを投げる');
     });
   });
 
@@ -798,43 +580,6 @@ describe('ReviewService', () => {
       await expect(
         service.deleteReply(TEST_REVIEW_ID, TEST_COMMENT_ID, TEST_REPLY_ID, TEST_USER_ID)
       ).rejects.toThrow(AuthorizationError);
-    });
-  });
-
-  describe('getAccessibleReview', () => {
-    it('SUBMITTEDレビューは誰でもアクセスできる', async () => {
-      const review = createMockReview({ status: 'SUBMITTED' });
-      mockReviewRepo.findById.mockResolvedValue(review);
-
-      const result = await service.getAccessibleReview(TEST_REVIEW_ID, OTHER_USER_ID);
-
-      expect(result).toEqual(review);
-    });
-
-    it('DRAFTレビューは投稿者本人のみアクセスできる', async () => {
-      const review = createMockReview({ status: 'DRAFT' });
-      mockReviewRepo.findById.mockResolvedValue(review);
-
-      const result = await service.getAccessibleReview(TEST_REVIEW_ID, TEST_USER_ID);
-
-      expect(result).toEqual(review);
-    });
-
-    it('他人のDRAFTレビューはnullを返す', async () => {
-      const review = createMockReview({ status: 'DRAFT' });
-      mockReviewRepo.findById.mockResolvedValue(review);
-
-      const result = await service.getAccessibleReview(TEST_REVIEW_ID, OTHER_USER_ID);
-
-      expect(result).toBeNull();
-    });
-
-    it('レビューが存在しない場合はnullを返す', async () => {
-      mockReviewRepo.findById.mockResolvedValue(null);
-
-      const result = await service.getAccessibleReview(TEST_REVIEW_ID, TEST_USER_ID);
-
-      expect(result).toBeNull();
     });
   });
 });
