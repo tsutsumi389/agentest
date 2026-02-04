@@ -10,7 +10,7 @@
 | apps/mcp-server | 29 | vitest.config.ts | ✅ 成熟 |
 | apps/jobs | 13 | vitest.config.ts | ✅ 成熟 |
 | packages/shared | 4 | vitest.config.ts (80%閾値) | ✅ 成熟 |
-| apps/admin | 0 | なし | ❌ 未構築 |
+| apps/admin | 13 | vitest.config.ts (80%閾値) | ✅ 完了 |
 | apps/web | 16 | vitest.config.ts (80%閾値) | ✅ 完了 |
 | apps/ws | 5 | vitest.config.ts (80%閾値) | ✅ 完了 |
 | packages/auth | 6 | vitest.config.ts (80%閾値) | ✅ 完了 |
@@ -19,7 +19,7 @@
 | packages/ui | 2 | vitest.config.ts (80%閾値) | ✅ 完了 |
 | packages/ws-types | 0 | なし | ⏭️ 型定義のみ |
 
-**総計**: 211テストファイル（8ディレクトリ）
+**総計**: 224テストファイル（9ディレクトリ）
 
 ---
 
@@ -131,9 +131,22 @@
 
 **理由**: 管理機能の信頼性確保。
 
+**対象**:
+- カスタムフック（useAdminAuth, useAdminDashboard, useAdminUsers, useAdminOrganizations, useAdminAuditLogs, useAdminUserDetail, useAdminOrganizationDetail, useAdminMetrics, useAdminPlanDistribution, useSystemAdmins）
+- Zustandストア（admin-auth）
+- ユーティリティ（date-utils, audit-log-utils）
+
 **タスク**:
-- [ ] apps/webと同様のテスト環境構築
-- [ ] 管理機能特有のテスト
+- [x] vitest.config.ts + @testing-library/react設定
+- [x] テストセットアップファイル作成（jsdom環境）
+- [x] テストファクトリ・QueryClientラッパー作成
+- [x] ユーティリティ関数のテスト（date-utils, audit-log-utils）
+- [x] Zustandストアのテスト（admin-auth、APIモック使用）
+- [x] カスタムフックのテスト（10フック、renderHook・React Query使用）
+
+**完了**: 2026-02-04（カバレッジ100%）
+
+**備考**: ページコンポーネントとAPIクライアント層（api.ts）はE2E/統合テストで対応予定。
 
 ---
 
@@ -157,7 +170,7 @@ Phase 1.2: packages/storage   ✅ 完了（カバレッジ100%）
 Phase 2.1: apps/ws            ✅ 完了（カバレッジ99.31%）
 Phase 3.1: packages/ui        ✅ 完了（カバレッジ100%）
 Phase 3.2: apps/web           ✅ 完了（カバレッジ94.6%）
-Phase 3.3: apps/admin         ← 次（管理者向けSPA）
+Phase 3.3: apps/admin         ✅ 完了（カバレッジ100%）
 ```
 
 ---
@@ -215,7 +228,7 @@ export default defineConfig({
 - [x] apps/ws: 主要機能のテストカバー (99.31%)
 - [x] packages/ui: コンポーネントのレンダリングテスト完備 (100%)
 - [x] apps/web: カスタムフック・ユーティリティのテスト完備 (94.6%)
-- [ ] apps/admin: カスタムフック・ユーティリティのテスト完備
+- [x] apps/admin: カスタムフック・ユーティリティのテスト完備 (100%)
 
 ---
 
@@ -226,10 +239,10 @@ export default defineConfig({
 3. ~~**apps/ws** のテスト環境構築~~ ✅ 完了
 4. ~~**packages/ui** のテスト環境構築~~ ✅ 完了
 5. ~~**apps/web** のテスト環境構築~~ ✅ 完了
-6. **apps/admin** のテスト環境構築
+6. ~~**apps/admin** のテスト環境構築~~ ✅ 完了
 7. TDDワークフローで新機能開発を開始
 
 ---
 
 *作成日: 2026-02-03*
-*更新日: 2026-02-04* - apps/web完了（カバレッジ94.6%）
+*更新日: 2026-02-04* - apps/admin完了（カバレッジ100%）
