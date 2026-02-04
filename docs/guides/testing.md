@@ -7,7 +7,7 @@
 | Vitest | ユニットテスト、統合テスト |
 | Supertest | API エンドポイントテスト |
 | Testing Library | React コンポーネントテスト |
-| Playwright | E2E テスト（将来） |
+| Playwright | E2E テスト |
 
 ## テストの種類
 
@@ -138,6 +138,66 @@ DATABASE_URL=postgresql://agentest:agentest@db:5432/agentest_test
 | `packages/shared` | 90% |
 | `apps/api` | 80% |
 | `apps/web` | 70% |
+
+## E2E テスト
+
+Playwright を使用してブラウザ上での操作をテストする。ホスト上で実行し、Docker サービスに対してテストする。
+
+### セットアップ
+
+```bash
+# Playwrightインストール
+cd e2e && npm install && npx playwright install chromium
+```
+
+### 実行
+
+```bash
+# 全E2Eテスト実行
+cd e2e && npx playwright test
+
+# Webアプリテストのみ
+cd e2e && npx playwright test --project=web
+
+# ブラウザ表示付き
+cd e2e && npx playwright test --headed
+
+# UIモード
+cd e2e && npx playwright test --ui
+
+# HTMLレポート表示
+cd e2e && npx playwright show-report
+```
+
+### 認証
+
+テスト専用ログインエンドポイント（`POST /api/auth/test-login`）を使用して OAuth 認証をバイパスする。このエンドポイントは `NODE_ENV !== 'production'` の場合のみ有効。
+
+認証状態は `e2e/.auth/web-user.json` に保存され、テスト間で共有される。
+
+### ディレクトリ構成
+
+```
+e2e/
+├── playwright.config.ts    # Playwright設定
+├── auth/
+│   └── web.setup.ts        # 認証セットアップ
+├── fixtures/
+│   └── index.ts            # カスタムフィクスチャ
+├── helpers/
+│   └── api-client.ts       # APIヘルパー
+└── tests/
+    └── web/                # Webアプリテスト
+        ├── login.spec.ts
+        ├── dashboard.spec.ts
+        ├── projects.spec.ts
+        └── test-suites.spec.ts
+```
+
+### 前提条件
+
+- Docker サービスが起動していること（Web:3000, API:3001）
+- シードデータが投入済みであること
 
 ## CI でのテスト
 

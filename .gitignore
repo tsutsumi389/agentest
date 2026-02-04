@@ -45,5 +45,10 @@ tmp
 temp
 .cache
 
+# E2E
+e2e/.auth/
+e2e/test-results/
+e2e/playwright-report/
+
 # OS files
 Thumbs.db

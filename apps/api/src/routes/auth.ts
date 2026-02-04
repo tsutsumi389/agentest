@@ -1,8 +1,11 @@
 import { Router } from 'express';
-import { passport, requireAuth } from '@agentest/auth';
+import { passport, requireAuth, generateTokens } from '@agentest/auth';
+import { prisma } from '@agentest/db';
 import { AuthController } from '../controllers/auth.controller.js';
 import { authConfig } from '../config/auth.js';
 import { env } from '../config/env.js';
+import { SessionService } from '../services/session.service.js';
+import { extractClientInfo } from '../middleware/session.middleware.js';
 
 const router: Router = Router();
 const authController = new AuthController();
@@ -98,6 +101,73 @@ if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
     }), linkCookieOptions);
     // 通常のOAuth開始エンドポイントにリダイレクト
     res.redirect('/api/auth/google');
+  });
+}
+
+// テスト用ログインエンドポイント（非本番環境のみ）
+if (env.NODE_ENV !== 'production') {
+  const sessionService = new SessionService();
+  const SESSION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
+
+  const cookieOptions = {
+    httpOnly: true,
+    secure: false,
+    sameSite: 'strict' as const,
+    path: '/',
+  };
+
+  router.post('/test-login', async (req, res, next) => {
+    try {
+      const { email } = req.body;
+      if (!email) {
+        res.status(400).json({ error: 'メールアドレスが必要です' });
+        return;
+      }
+
+      const user = await prisma.user.findUnique({ where: { email } });
+      if (!user) {
+        res.status(404).json({ error: 'ユーザーが見つかりません' });
+        return;
+      }
+
+      // トークン生成
+      const tokens = generateTokens(user.id, user.email, authConfig);
+
+      // クライアント情報を抽出
+      const clientInfo = extractClientInfo(req);
+
+      // リフレッシュトークンとセッションを保存
+      await Promise.all([
+        prisma.refreshToken.create({
+          data: {
+            userId: user.id,
+            token: tokens.refreshToken,
+            expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
+          },
+        }),
+        sessionService.createSession({
+          userId: user.id,
+          token: tokens.refreshToken,
+          userAgent: clientInfo.userAgent,
+          ipAddress: clientInfo.ipAddress,
+          expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
+        }),
+      ]);
+
+      // クッキーに設定
+      res.cookie('access_token', tokens.accessToken, {
+        ...cookieOptions,
+        maxAge: 15 * 60 * 1000, // 15分
+      });
+      res.cookie('refresh_token', tokens.refreshToken, {
+        ...cookieOptions,
+        maxAge: SESSION_EXPIRY_MS,
+      });
+
+      res.json({ user: { id: user.id, email: user.email, name: user.name } });
+    } catch (error) {
+      next(error);
+    }
   });
 }
 
