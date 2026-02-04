@@ -24,7 +24,7 @@ const TEST_PAYMENT_METHOD_ID = '22222222-2222-2222-2222-222222222222';
 const mockRequest = (overrides = {}): Partial<Request> => ({
   params: {},
   body: {},
-  user: { id: TEST_USER_ID } as any,
+  user: { id: TEST_USER_ID } as Request['user'],
   ...overrides,
 });
 

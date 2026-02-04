@@ -49,7 +49,7 @@ const TEST_CLIENT_ID = '22222222-2222-2222-2222-222222222222';
 
 // Express モックヘルパー
 const mockRequest = (overrides = {}): Partial<Request> => ({
-  user: { id: TEST_USER_ID } as any,
+  user: { id: TEST_USER_ID } as Request['user'],
   params: {},
   body: {},
   query: {},

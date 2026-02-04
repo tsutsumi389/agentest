@@ -68,7 +68,7 @@ const TEST_TOKEN = 'test-invitation-token';
 
 // Express のモック
 const mockRequest = (overrides = {}): Partial<Request> => ({
-  user: { id: TEST_USER_ID } as any,
+  user: { id: TEST_USER_ID } as Request['user'],
   params: {},
   body: {},
   query: {},

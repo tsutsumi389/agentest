@@ -14,7 +14,7 @@ const mockPrisma = vi.hoisted(() => ({
   testSuite: { findUnique: vi.fn() },
   testCase: { findFirst: vi.fn(), create: vi.fn() },
   organizationMember: { findUnique: vi.fn() },
-  $transaction: vi.fn((fn: any) => fn(mockTx)),
+  $transaction: vi.fn((fn: (tx: typeof mockTx) => Promise<unknown>) => fn(mockTx)),
 }));
 
 vi.mock('@agentest/db', () => ({

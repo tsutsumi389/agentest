@@ -16,24 +16,26 @@ import {
 import { AuthenticationError, AuthorizationError, NotFoundError } from '@agentest/shared';
 import { createApp } from '../../app.js';
 
-// グローバルな認証状態（モック用）
-let mockAuthUser: { id: string; email: string } | null = null;
-let mockTestSuiteRole: string | null = null;
+// グローバルな認証状態（モック用）- vi.hoisted()でvi.mock()ファクトリから安全に参照
+const mockState = vi.hoisted(() => ({
+  authUser: null as { id: string; email: string } | null,
+  testSuiteRole: null as string | null,
+}));
 
 // 認証ミドルウェアをモック
 vi.mock('@agentest/auth', () => ({
   requireAuth: () => (req: any, _res: any, next: any) => {
-    if (!mockAuthUser) {
+    if (!mockState.authUser) {
       return next(new AuthenticationError('認証が必要です'));
     }
-    req.user = mockAuthUser;
+    req.user = mockState.authUser;
     next();
   },
   optionalAuth: () => (_req: any, _res: any, next: any) => next(),
   requireOrgRole: () => (_req: any, _res: any, next: any) => next(),
   requireProjectRole: () => (_req: any, _res: any, next: any) => next(),
   authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => {
-    if (mockAuthUser) req.user = mockAuthUser;
+    if (mockState.authUser) req.user = mockState.authUser;
     next();
   },
   configurePassport: vi.fn(),
@@ -50,7 +52,7 @@ vi.mock('@agentest/auth', () => ({
 // テストスイート権限ミドルウェアをモック
 vi.mock('../../middleware/require-test-suite-role.js', () => ({
   requireTestSuiteRole: (roles: string[], _options?: { allowDeletedSuite?: boolean }) => async (req: any, _res: any, next: any) => {
-    if (!mockTestSuiteRole || !roles.includes(mockTestSuiteRole)) {
+    if (!mockState.testSuiteRole || !roles.includes(mockState.testSuiteRole)) {
       return next(new AuthorizationError('権限がありません'));
     }
     const testSuiteId = req.params.testSuiteId;
@@ -78,13 +80,13 @@ function setTestAuth(
   user: { id: string; email: string } | null,
   testSuiteRole: string | null = null
 ) {
-  mockAuthUser = user;
-  mockTestSuiteRole = testSuiteRole;
+  mockState.authUser = user;
+  mockState.testSuiteRole = testSuiteRole;
 }
 
 function clearTestAuth() {
-  mockAuthUser = null;
-  mockTestSuiteRole = null;
+  mockState.authUser = null;
+  mockState.testSuiteRole = null;
 }
 
 describe('Reviews API Integration Tests', () => {

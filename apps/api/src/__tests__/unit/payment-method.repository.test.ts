@@ -263,6 +263,7 @@ describe('PaymentMethodRepository', () => {
       await repository.create({
         userId,
         externalId,
+        // 将来的なenum拡張を想定し、非標準の決済方法タイプでの動作を検証
         type: 'BANK_TRANSFER' as any,
       });
 

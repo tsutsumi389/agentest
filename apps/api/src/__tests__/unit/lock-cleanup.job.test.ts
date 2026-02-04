@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // EditLockServiceモック
-const mockProcessExpiredLocks = vi.fn();
+const mockProcessExpiredLocks = vi.hoisted(() => vi.fn());
 
 vi.mock('../../services/edit-lock.service.js', () => ({
   EditLockService: vi.fn().mockImplementation(() => ({

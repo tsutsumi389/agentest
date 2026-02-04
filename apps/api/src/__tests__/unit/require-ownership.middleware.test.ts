@@ -9,7 +9,7 @@ const OTHER_USER_ID = '22222222-2222-2222-2222-222222222222';
 
 function createMockRequest(overrides: Partial<Request> = {}): Partial<Request> {
   return {
-    user: { id: TEST_USER_ID } as any,
+    user: { id: TEST_USER_ID } as Request['user'],
     params: { userId: TEST_USER_ID },
     ...overrides,
   };

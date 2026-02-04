@@ -24,7 +24,7 @@ import { AdminDashboardController } from '../../controllers/admin/dashboard.cont
 
 // モックリクエストヘルパー
 const mockRequest = (overrides = {}): Partial<Request> => ({
-  adminUser: { id: 'admin-1', role: 'SUPER_ADMIN' } as any,
+  adminUser: { id: 'admin-1', email: 'admin@test.com', name: 'Admin', role: 'SUPER_ADMIN', totpEnabled: false },
   params: {},
   body: {},
   query: {},

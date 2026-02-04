@@ -35,7 +35,7 @@ const TEST_REPLY_ID = '55555555-5555-5555-5555-555555555555';
 
 // req/resモックファクトリ
 const mockRequest = (overrides = {}): Partial<Request> => ({
-  user: { id: TEST_USER_ID } as any,
+  user: { id: TEST_USER_ID } as Request['user'],
   params: {},
   body: {},
   query: {},

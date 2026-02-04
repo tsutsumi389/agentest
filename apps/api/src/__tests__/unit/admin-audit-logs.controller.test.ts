@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
 
 // 監査ログサービスのモック
-const mockAuditLogsService = {
+const mockAuditLogsService = vi.hoisted(() => ({
   findAuditLogs: vi.fn(),
-};
+}));
 
 vi.mock('../../services/admin/admin-audit-logs.service.js', () => ({
   AdminAuditLogsService: vi.fn().mockImplementation(() => mockAuditLogsService),
@@ -39,7 +39,7 @@ import { AdminAuditLogsController } from '../../controllers/admin/audit-logs.con
 
 // モックリクエストヘルパー
 const mockRequest = (overrides = {}): Partial<Request> => ({
-  adminUser: { id: 'admin-1', role: 'SUPER_ADMIN' } as any,
+  adminUser: { id: 'admin-1', email: 'admin@test.com', name: 'Admin', role: 'SUPER_ADMIN', totpEnabled: false },
   params: {},
   body: {},
   query: {},

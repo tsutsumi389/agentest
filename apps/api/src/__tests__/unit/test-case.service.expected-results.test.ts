@@ -3,64 +3,27 @@ import { NotFoundError, BadRequestError } from '@agentest/shared';
 
 // トランザクション内モック
 const mockTx = vi.hoisted(() => ({
-  testCasePrecondition: {
-    findFirst: vi.fn(),
-    findMany: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-  },
-  testCaseStep: {
-    findFirst: vi.fn(),
-    findMany: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-  },
-  testCaseExpectedResult: {
-    findFirst: vi.fn(),
-    findMany: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-  },
+  testCasePrecondition: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
+  testCaseStep: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
+  testCaseExpectedResult: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
   testCaseHistory: { create: vi.fn() },
   testCase: { findUnique: vi.fn(), update: vi.fn() },
   user: { findUnique: vi.fn() },
 }));
 
 const mockPrisma = vi.hoisted(() => ({
-  testCasePrecondition: {
-    findMany: vi.fn(),
-    findFirst: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-  },
-  testCaseStep: {
-    findMany: vi.fn(),
-    findFirst: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-  },
-  testCaseExpectedResult: {
-    findMany: vi.fn(),
-    findFirst: vi.fn(),
-    create: vi.fn(),
-    update: vi.fn(),
-    delete: vi.fn(),
-  },
+  testCasePrecondition: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
+  testCaseStep: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
+  testCaseExpectedResult: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
   testCaseHistory: { create: vi.fn() },
   testCase: { findUnique: vi.fn(), update: vi.fn() },
-  $transaction: vi.fn((fn: any) => fn(mockTx)),
+  $transaction: vi.fn((fn: (tx: typeof mockTx) => Promise<unknown>) => fn(mockTx)),
 }));
 
 vi.mock('@agentest/db', () => ({
   prisma: mockPrisma,
 }));
 
-// TestCaseRepositoryモック
 const mockTestCaseRepo = vi.hoisted(() => ({
   findById: vi.fn(),
   update: vi.fn(),
@@ -71,42 +34,11 @@ vi.mock('../../repositories/test-case.repository.js', () => ({
   TestCaseRepository: vi.fn().mockImplementation(() => mockTestCaseRepo),
 }));
 
-// redis-publisherモック
-vi.mock('../../lib/redis-publisher.js', () => ({
-  publishDashboardUpdated: vi.fn(),
-}));
-
-// eventsモック
-vi.mock('../../lib/events.js', () => ({
-  publishTestCaseUpdated: vi.fn(),
-}));
+vi.mock('../../lib/redis-publisher.js', () => ({ publishDashboardUpdated: vi.fn() }));
+vi.mock('../../lib/events.js', () => ({ publishTestCaseUpdated: vi.fn() }));
 
 import { TestCaseService } from '../../services/test-case.service.js';
-
-// テスト用固定ID
-const TEST_USER_ID = '11111111-1111-1111-1111-111111111111';
-const TEST_CASE_ID = '22222222-2222-2222-2222-222222222222';
-const TEST_SUITE_ID = '33333333-3333-3333-3333-333333333333';
-const TEST_PROJECT_ID = '44444444-4444-4444-4444-444444444444';
-const EXPECTED_RESULT_ID = '77777777-7777-7777-7777-777777777777';
-
-// テスト用テストケースモック
-const createMockTestCase = (overrides = {}) => ({
-  id: TEST_CASE_ID,
-  testSuiteId: TEST_SUITE_ID,
-  title: 'テストケース',
-  description: 'テスト説明',
-  priority: 'MEDIUM',
-  status: 'DRAFT',
-  orderKey: '00001',
-  deletedAt: null,
-  testSuite: { id: TEST_SUITE_ID, name: 'スイート', projectId: TEST_PROJECT_ID },
-  createdByUser: { id: TEST_USER_ID, name: 'User', avatarUrl: null },
-  preconditions: [],
-  steps: [],
-  expectedResults: [],
-  ...overrides,
-});
+import { TEST_USER_ID, TEST_CASE_ID, TEST_SUITE_ID, TEST_PROJECT_ID, EXPECTED_RESULT_ID, createMockTestCase } from './test-case.service.test-helpers.js';
 
 describe('TestCaseService（期待結果CRUD）', () => {
   let service: TestCaseService;
