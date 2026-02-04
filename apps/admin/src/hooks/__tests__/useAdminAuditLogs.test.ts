@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useAdminAuditLogs } from '../useAdminAuditLogs';
 import { createQueryWrapper } from '../../__tests__/test-utils';
@@ -13,6 +13,10 @@ import { adminAuditLogsApi } from '../../lib/api';
 const mockApi = vi.mocked(adminAuditLogsApi);
 
 describe('useAdminAuditLogs', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('監査ログ一覧を取得する', async () => {
     const mockResponse = { auditLogs: [], pagination: { total: 0 } };
     mockApi.list.mockResolvedValue(mockResponse as never);

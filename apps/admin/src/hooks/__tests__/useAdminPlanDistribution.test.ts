@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useAdminPlanDistribution } from '../useAdminPlanDistribution';
 import { createQueryWrapper } from '../../__tests__/test-utils';
@@ -13,6 +13,10 @@ import { adminMetricsApi } from '../../lib/api';
 const mockApi = vi.mocked(adminMetricsApi);
 
 describe('useAdminPlanDistribution', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('プラン分布メトリクスを取得する', async () => {
     const mockResponse = { distribution: [] };
     mockApi.getPlanDistribution.mockResolvedValue(mockResponse as never);

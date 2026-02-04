@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useAdminDashboard } from '../useAdminDashboard';
 import { createQueryWrapper } from '../../__tests__/test-utils';
@@ -14,6 +14,10 @@ import { adminDashboardApi } from '../../lib/api';
 const mockApi = vi.mocked(adminDashboardApi);
 
 describe('useAdminDashboard', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('ダッシュボード統計を取得する', async () => {
     const mockStats = {
       users: { total: 100, active: 80 },

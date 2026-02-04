@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { useAdminOrganizations } from '../useAdminOrganizations';
 import { createQueryWrapper } from '../../__tests__/test-utils';
@@ -13,6 +13,10 @@ import { adminOrganizationsApi } from '../../lib/api';
 const mockApi = vi.mocked(adminOrganizationsApi);
 
 describe('useAdminOrganizations', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('組織一覧を取得する', async () => {
     const mockResponse = { organizations: [], pagination: { total: 0 } };
     mockApi.list.mockResolvedValue(mockResponse as never);

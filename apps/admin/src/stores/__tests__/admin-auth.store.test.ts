@@ -2,34 +2,19 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { useAdminAuthStore } from '../admin-auth.store';
 import { createMockAdminUser } from '../../__tests__/factories';
 
-// APIをモック
-vi.mock('../../lib/api', () => ({
-  adminAuthApi: {
-    me: vi.fn(),
-    login: vi.fn(),
-    verify2FA: vi.fn(),
-    logout: vi.fn(),
-  },
-  ApiError: class ApiError extends Error {
-    constructor(
-      public statusCode: number,
-      public code: string,
-      message: string,
-      public details?: Record<string, string[]>
-    ) {
-      super(message);
-      this.name = 'ApiError';
-    }
-
-    get isLocked(): boolean {
-      return this.code === 'ACCOUNT_LOCKED';
-    }
-
-    get isRateLimited(): boolean {
-      return this.code === 'RATE_LIMITED' || this.statusCode === 429;
-    }
-  },
-}));
+// APIをモック（ApiErrorは実際のクラスを使用し、APIメソッドのみモック）
+vi.mock('../../lib/api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../lib/api')>();
+  return {
+    ...actual,
+    adminAuthApi: {
+      me: vi.fn(),
+      login: vi.fn(),
+      verify2FA: vi.fn(),
+      logout: vi.fn(),
+    },
+  };
+});
 
 import { adminAuthApi, ApiError } from '../../lib/api';
 const mockAuthApi = vi.mocked(adminAuthApi);
