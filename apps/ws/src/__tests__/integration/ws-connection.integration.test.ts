@@ -45,6 +45,7 @@ vi.mock('../../handlers/presence.js', () => ({
 }));
 
 // config モジュールのモック（共有定数を使用）
+// 注意: test-helpers.jsが../../config.jsを直接・間接的にインポートしないこと
 vi.mock('../../config.js', async () => {
   const { TEST_ENV_CONFIG } = await import('./test-helpers.js');
   return { env: TEST_ENV_CONFIG };

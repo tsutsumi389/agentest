@@ -394,6 +394,7 @@ export function parseToolResultRaw(response: request.Response): { content: Array
 
 /**
  * MCPツール応答がエラー（JSON-RPCレベルまたはツールレベル）かどうかを判定
+ * レスポンスがJSON-RPCとして解析できない場合はfalseを返す
  */
 export function isToolError(response: request.Response): boolean {
   const jsonRpc = extractJsonRpcFromSse(response);
@@ -475,8 +476,20 @@ export async function initializeMcpSession(
     id: 1,
   });
 
+  if (response.status !== 200) {
+    throw new Error(
+      `MCPセッション初期化失敗: HTTP ${response.status} (body: ${JSON.stringify(response.body)})`
+    );
+  }
+
   const sessionId = response.headers['mcp-session-id'];
-  return sessionId as string;
+  if (!sessionId || typeof sessionId !== 'string') {
+    throw new Error(
+      `MCPセッション初期化失敗: mcp-session-idヘッダーが返されませんでした (status: ${response.status})`
+    );
+  }
+
+  return sessionId;
 }
 
 /**
@@ -488,7 +501,7 @@ export async function callMcpTool(
   toolName: string,
   args: Record<string, unknown> = {},
   requestId: number = 2
-) {
+): Promise<request.Response> {
   const response = await request(app)
     .post('/mcp')
     .set('Cookie', 'access_token=valid-test-token')

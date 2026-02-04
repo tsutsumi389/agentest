@@ -109,9 +109,6 @@ function setTestAuth() {
   mockVerifyAccessTokenResult = { sub: TEST_USER_ID, email: TEST_USER_EMAIL };
 }
 
-// hasAnyErrorはisToolErrorに統一（同一ロジック）
-const hasAnyError = isToolError;
-
 describe('MCP CRUDツール統合テスト', () => {
   let app: Express;
   let sessionId: string;
@@ -440,7 +437,7 @@ describe('MCP CRUDツール統合テスト', () => {
       expect(response.status).toBe(200);
       // Zodバリデーションエラーはツール呼び出し前にMCP SDKレベルで処理される
       // MCP SDKがZodバリデーションエラーをerrorレスポンスとして返す
-      expect(hasAnyError(response)).toBe(true);
+      expect(isToolError(response)).toBe(true);
     });
 
     it('API 403エラー時にMCPエラーに変換される', async () => {
@@ -788,7 +785,7 @@ describe('MCP CRUDツール統合テスト', () => {
 
       expect(response.status).toBe(200);
       // 無効なUUIDの場合、MCP SDKがZodバリデーションエラーを返す
-      expect(hasAnyError(response)).toBe(true);
+      expect(isToolError(response)).toBe(true);
     });
 
     it('無効なUUIDでエラーが返る（get_test_suite）', async () => {
@@ -797,7 +794,7 @@ describe('MCP CRUDツール統合テスト', () => {
       });
 
       expect(response.status).toBe(200);
-      expect(hasAnyError(response)).toBe(true);
+      expect(isToolError(response)).toBe(true);
     });
 
     it('無効なUUIDでエラーが返る（get_test_case）', async () => {
@@ -806,7 +803,7 @@ describe('MCP CRUDツール統合テスト', () => {
       });
 
       expect(response.status).toBe(200);
-      expect(hasAnyError(response)).toBe(true);
+      expect(isToolError(response)).toBe(true);
     });
 
     it('無効なUUIDでエラーが返る（get_execution）', async () => {
@@ -815,7 +812,7 @@ describe('MCP CRUDツール統合テスト', () => {
       });
 
       expect(response.status).toBe(200);
-      expect(hasAnyError(response)).toBe(true);
+      expect(isToolError(response)).toBe(true);
     });
 
     it('必須パラメータ不足でエラーが返る（create_test_suite: projectIdなし）', async () => {
@@ -825,7 +822,7 @@ describe('MCP CRUDツール統合テスト', () => {
       });
 
       expect(response.status).toBe(200);
-      expect(hasAnyError(response)).toBe(true);
+      expect(isToolError(response)).toBe(true);
     });
 
     it('必須パラメータ不足でエラーが返る（create_test_case: testSuiteIdなし）', async () => {
@@ -835,7 +832,7 @@ describe('MCP CRUDツール統合テスト', () => {
       });
 
       expect(response.status).toBe(200);
-      expect(hasAnyError(response)).toBe(true);
+      expect(isToolError(response)).toBe(true);
     });
 
     it('必須パラメータ不足でエラーが返る（create_test_case: titleなし）', async () => {
@@ -845,7 +842,7 @@ describe('MCP CRUDツール統合テスト', () => {
       });
 
       expect(response.status).toBe(200);
-      expect(hasAnyError(response)).toBe(true);
+      expect(isToolError(response)).toBe(true);
     });
 
     it('必須パラメータ不足でエラーが返る（delete_test_suite: testSuiteIdなし）', async () => {
@@ -854,7 +851,7 @@ describe('MCP CRUDツール統合テスト', () => {
       });
 
       expect(response.status).toBe(200);
-      expect(hasAnyError(response)).toBe(true);
+      expect(isToolError(response)).toBe(true);
     });
 
     it('無効な優先度でエラーが返る（create_test_case）', async () => {
@@ -865,7 +862,7 @@ describe('MCP CRUDツール統合テスト', () => {
       });
 
       expect(response.status).toBe(200);
-      expect(hasAnyError(response)).toBe(true);
+      expect(isToolError(response)).toBe(true);
     });
   });
 
