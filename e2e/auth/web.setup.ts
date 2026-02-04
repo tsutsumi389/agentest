@@ -1,19 +1,28 @@
 import { test as setup, expect } from '@playwright/test';
 
-const API_URL = process.env.E2E_API_URL || 'http://localhost:3001';
-const authFile = 'e2e/.auth/web-user.json';
+const WEB_URL = process.env.E2E_WEB_URL || 'http://localhost:3000';
+const authFile = '.auth/web-user.json';
 
-setup('Webアプリの認証状態を作成', async ({ request }) => {
-  // テスト用ログインエンドポイントで認証
-  const response = await request.post(`${API_URL}/api/auth/test-login`, {
-    data: { email: 'demo@agentest.dev' },
+setup('Webアプリの認証状態を作成', async ({ page }) => {
+  // ブラウザでページを開く
+  await page.goto(`${WEB_URL}/login`);
+
+  // Viteプロキシ経由でテストログインAPIを呼び出し、クッキーをブラウザに保存させる
+  const result = await page.evaluate(async () => {
+    const res = await fetch('/api/auth/test-login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'demo@agentest.dev' }),
+      credentials: 'include',
+    });
+    const body = await res.json();
+    return { ok: res.ok, status: res.status, body };
   });
-  expect(response.ok()).toBeTruthy();
 
-  const body = await response.json();
-  expect(body.user).toBeDefined();
-  expect(body.user.email).toBe('demo@agentest.dev');
+  expect(result.ok).toBeTruthy();
+  expect(result.body.user).toBeDefined();
+  expect(result.body.user.email).toBe('demo@agentest.dev');
 
-  // 認証状態（クッキー含む）を保存
-  await request.storageState({ path: authFile });
+  // ブラウザコンテキストの認証状態を保存
+  await page.context().storageState({ path: authFile });
 });

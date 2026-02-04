@@ -26,7 +26,7 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         baseURL: process.env.E2E_WEB_URL || 'http://localhost:3000',
-        storageState: 'e2e/.auth/web-user.json',
+        storageState: '.auth/web-user.json',
       },
       dependencies: ['web-setup'],
     },

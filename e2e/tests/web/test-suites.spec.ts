@@ -40,9 +40,8 @@ test.describe('テストスイートCRUD', () => {
     // 「テストスイート」タブをクリック
     await page.getByText('テストスイート').first().click();
 
-    // 「テストスイートを作成」ボタンをクリック
-    const createButton = page.getByRole('button', { name: /テストスイート/ });
-    await createButton.click();
+    // 「テストスイートを作成」ボタンをクリック（btn-primaryクラスで絞り込み）
+    await page.locator('button.btn-primary', { hasText: 'テストスイート' }).click();
 
     // フォームが表示される
     await expect(page.getByPlaceholder('テストスイートの名前')).toBeVisible();
