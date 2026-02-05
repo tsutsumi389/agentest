@@ -1,5 +1,7 @@
 # テストスイート新規作成フォームのルーティング変更
 
+> **ステータス: 実装済み**
+
 ## 概要
 
 テストスイート新規作成フォームを `/projects/:projectId?tab=suites&mode=create`（プロジェクト詳細ページ内の条件付きレンダリング）から、独立ページ `/test-suites/new?projectId=xxx` へ分離する。
