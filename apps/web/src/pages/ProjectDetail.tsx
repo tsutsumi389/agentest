@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { useParams, Link, useSearchParams, useNavigate } from 'react-router';
+import { useParams, Link, useSearchParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   FolderKanban,
@@ -15,7 +15,6 @@ import { TestSuiteSearchFilter } from '../components/test-suite/TestSuiteSearchF
 import { useAuth } from '../hooks/useAuth';
 import { ProjectOverviewTab } from '../components/project/ProjectOverviewTab';
 import { ProjectSettingsTab, type SettingsSection } from '../components/project/ProjectSettingsTab';
-import { TestSuiteForm } from '../components/test-suite/TestSuiteForm';
 
 /**
  * プロジェクト詳細ページ
@@ -38,21 +37,18 @@ const DEFAULT_SEARCH_PARAMS: TestSuiteSearchParams = {
 export function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [urlSearchParams, setUrlSearchParams] = useSearchParams();
   const [suiteSearchParams, setSuiteSearchParams] = useState<TestSuiteSearchParams>(DEFAULT_SEARCH_PARAMS);
   const queryClient = useQueryClient();
 
-  // URLクエリパラメータからタブ状態と作成モードを取得
+  // URLクエリパラメータからタブ状態を取得
   const currentTab = (urlSearchParams.get('tab') as ProjectTab) || 'overview';
   const settingsSection = (urlSearchParams.get('section') as SettingsSection) || 'general';
-  const isCreateMode = urlSearchParams.get('mode') === 'create';
 
   // タブ変更ハンドラ
   const handleTabChange = useCallback((tab: ProjectTab) => {
     const newParams = new URLSearchParams(urlSearchParams);
     newParams.set('tab', tab);
-    newParams.delete('mode');  // タブ切り替え時は作成モードを解除
     if (tab !== 'settings') {
       newParams.delete('section');
     }
@@ -65,27 +61,6 @@ export function ProjectDetailPage() {
     newParams.set('section', section);
     setUrlSearchParams(newParams, { replace: true });
   }, [urlSearchParams, setUrlSearchParams]);
-
-  // 作成モード開始
-  const handleStartCreateMode = useCallback(() => {
-    const newParams = new URLSearchParams(urlSearchParams);
-    newParams.set('tab', 'suites');
-    newParams.set('mode', 'create');
-    setUrlSearchParams(newParams);
-  }, [urlSearchParams, setUrlSearchParams]);
-
-  // 作成モード終了
-  const handleExitCreateMode = useCallback((createdTestSuiteId?: string) => {
-    if (createdTestSuiteId) {
-      // 作成成功時は詳細画面へ遷移
-      navigate(`/test-suites/${createdTestSuiteId}`);
-    } else {
-      // キャンセル時は一覧に戻る
-      const newParams = new URLSearchParams(urlSearchParams);
-      newParams.delete('mode');
-      setUrlSearchParams(newParams);
-    }
-  }, [urlSearchParams, setUrlSearchParams, navigate]);
 
   // プロジェクト情報を取得
   const { data: projectData, isLoading: isLoadingProject } = useQuery({
@@ -217,15 +192,15 @@ export function ProjectDetailPage() {
             </div>
           </div>
 
-          {/* テストスイートタブの時のみ作成ボタンを表示（作成モード中は非表示） */}
-          {currentTab === 'suites' && !isCreateMode && (
-            <button
-              onClick={handleStartCreateMode}
+          {/* テストスイートタブの時のみ作成ボタンを表示 */}
+          {currentTab === 'suites' && (
+            <Link
+              to={`/test-suites/new?projectId=${projectId!}`}
               className="btn btn-primary"
             >
               <Plus className="w-4 h-4" />
               テストスイート
-            </button>
+            </Link>
           )}
         </div>
 
@@ -263,32 +238,21 @@ export function ProjectDetailPage() {
       )}
 
       {currentTab === 'suites' && (
-        isCreateMode ? (
-          <div className="card min-h-[500px] max-h-[calc(100vh-200px)] overflow-hidden">
-            <TestSuiteForm
-              mode="create"
-              projectId={projectId!}
-              onSave={handleExitCreateMode}
-              onCancel={() => handleExitCreateMode()}
-            />
-          </div>
-        ) : (
-          <TestSuiteListContent
-            testSuites={testSuites}
-            isLoadingSuites={isLoadingSuites}
-            suiteSearchParams={suiteSearchParams}
-            onFiltersChange={handleFiltersChange}
-            totalCount={totalCount}
-            isAdmin={isAdmin}
-            labels={labels}
-            currentPage={currentPage}
-            totalPages={totalPages}
-            offset={offset}
-            limit={limit}
-            onPageChange={handlePageChange}
-            onCreateClick={handleStartCreateMode}
-          />
-        )
+        <TestSuiteListContent
+          testSuites={testSuites}
+          isLoadingSuites={isLoadingSuites}
+          suiteSearchParams={suiteSearchParams}
+          onFiltersChange={handleFiltersChange}
+          totalCount={totalCount}
+          isAdmin={isAdmin}
+          labels={labels}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          offset={offset}
+          limit={limit}
+          onPageChange={handlePageChange}
+          projectId={projectId!}
+        />
       )}
 
       {currentTab === 'settings' && isAdmin && project && (
@@ -322,7 +286,7 @@ interface TestSuiteListContentProps {
   offset: number;
   limit: number;
   onPageChange: (page: number) => void;
-  onCreateClick: () => void;
+  projectId: string;
 }
 
 function TestSuiteListContent({
@@ -338,7 +302,7 @@ function TestSuiteListContent({
   offset,
   limit,
   onPageChange,
-  onCreateClick,
+  projectId,
 }: TestSuiteListContentProps) {
   return (
     <div className="card">
@@ -367,13 +331,13 @@ function TestSuiteListContent({
               : 'テストスイートがありません'}
           </p>
           {!(suiteSearchParams.q || suiteSearchParams.labelIds?.length || suiteSearchParams.status !== 'ACTIVE') && (
-            <button
-              onClick={onCreateClick}
+            <Link
+              to={`/test-suites/new?projectId=${projectId}`}
               className="btn btn-primary"
             >
               <Plus className="w-4 h-4" />
               テストスイートを作成
-            </button>
+            </Link>
           )}
         </div>
       ) : (

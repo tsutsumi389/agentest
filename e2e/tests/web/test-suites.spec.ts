@@ -40,8 +40,11 @@ test.describe('テストスイートCRUD', () => {
     // 「テストスイート」タブをクリック
     await page.getByText('テストスイート').first().click();
 
-    // 「テストスイートを作成」ボタンをクリック（btn-primaryクラスで絞り込み）
-    await page.locator('button.btn-primary', { hasText: 'テストスイート' }).click();
+    // 「テストスイート」リンクをクリックして新規作成ページへ遷移
+    await page.locator('a.btn-primary', { hasText: 'テストスイート' }).click();
+
+    // 新規作成ページに遷移したことを確認
+    await expect(page).toHaveURL(/\/test-suites\/new\?projectId=/);
 
     // フォームが表示される
     await expect(page.getByPlaceholder('テストスイートの名前')).toBeVisible();
@@ -55,10 +58,13 @@ test.describe('テストスイートCRUD', () => {
     // 「作成」ボタンをクリック
     await page.getByRole('button', { name: '作成', exact: true }).click();
 
-    // テストスイートが作成されたことを確認（トーストメッセージまたは詳細ページへ遷移）
+    // テストスイート詳細ページへ遷移し、作成が確認できる
     await expect(
       page.getByText('テストスイートを作成しました').or(page.getByText(suiteName))
     ).toBeVisible({ timeout: 10000 });
+
+    // テストスイート詳細ページに遷移していることを確認
+    await expect(page).toHaveURL(/\/test-suites\/[^/]+$/);
   });
 });
 
