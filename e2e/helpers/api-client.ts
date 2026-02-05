@@ -351,4 +351,344 @@ export class TestApiClient {
     });
     return response.json();
   }
+
+  // =====================
+  // 組織管理
+  // =====================
+
+  async createOrganization(data: { name: string; description?: string }) {
+    const response = await this.request.post(`${this.baseUrl}/api/organizations`, {
+      data,
+      headers: E2E_HEADERS,
+    });
+    return response.json();
+  }
+
+  async getOrganization(organizationId: string) {
+    const response = await this.request.get(`${this.baseUrl}/api/organizations/${organizationId}`, {
+      headers: E2E_HEADERS,
+    });
+    return response.json();
+  }
+
+  async updateOrganization(
+    organizationId: string,
+    data: { name?: string; description?: string | null; billingEmail?: string | null },
+  ) {
+    const response = await this.request.patch(`${this.baseUrl}/api/organizations/${organizationId}`, {
+      data,
+      headers: E2E_HEADERS,
+    });
+    return response.json();
+  }
+
+  async deleteOrganization(organizationId: string) {
+    const response = await this.request.delete(`${this.baseUrl}/api/organizations/${organizationId}`, {
+      headers: E2E_HEADERS,
+    });
+    return response;
+  }
+
+  async restoreOrganization(organizationId: string) {
+    const response = await this.request.post(
+      `${this.baseUrl}/api/organizations/${organizationId}/restore`,
+      { headers: E2E_HEADERS },
+    );
+    return response.json();
+  }
+
+  // 組織メンバー管理
+  async getOrganizationMembers(organizationId: string) {
+    const response = await this.request.get(
+      `${this.baseUrl}/api/organizations/${organizationId}/members`,
+      { headers: E2E_HEADERS },
+    );
+    return response.json();
+  }
+
+  async updateMemberRole(organizationId: string, memberId: string, role: 'OWNER' | 'ADMIN' | 'MEMBER') {
+    const response = await this.request.patch(
+      `${this.baseUrl}/api/organizations/${organizationId}/members/${memberId}`,
+      { data: { role }, headers: E2E_HEADERS },
+    );
+    return response.json();
+  }
+
+  async removeMember(organizationId: string, memberId: string) {
+    const response = await this.request.delete(
+      `${this.baseUrl}/api/organizations/${organizationId}/members/${memberId}`,
+      { headers: E2E_HEADERS },
+    );
+    return response;
+  }
+
+  // 招待管理
+  async inviteMember(organizationId: string, data: { email: string; role: 'ADMIN' | 'MEMBER' }) {
+    const response = await this.request.post(
+      `${this.baseUrl}/api/organizations/${organizationId}/invitations`,
+      { data, headers: E2E_HEADERS },
+    );
+    return response.json();
+  }
+
+  async getInvitations(organizationId: string) {
+    const response = await this.request.get(
+      `${this.baseUrl}/api/organizations/${organizationId}/invitations`,
+      { headers: E2E_HEADERS },
+    );
+    return response.json();
+  }
+
+  async resendInvitation(organizationId: string, invitationId: string) {
+    const response = await this.request.post(
+      `${this.baseUrl}/api/organizations/${organizationId}/invitations/${invitationId}/resend`,
+      { headers: E2E_HEADERS },
+    );
+    return response.json();
+  }
+
+  async cancelInvitation(organizationId: string, invitationId: string) {
+    const response = await this.request.delete(
+      `${this.baseUrl}/api/organizations/${organizationId}/invitations/${invitationId}`,
+      { headers: E2E_HEADERS },
+    );
+    return response;
+  }
+
+  // 監査ログ
+  async getAuditLogs(organizationId: string, params?: { limit?: number; offset?: number }) {
+    const searchParams = new URLSearchParams();
+    if (params?.limit) searchParams.set('limit', String(params.limit));
+    if (params?.offset) searchParams.set('offset', String(params.offset));
+    const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
+    const response = await this.request.get(
+      `${this.baseUrl}/api/organizations/${organizationId}/audit-logs${query}`,
+      { headers: E2E_HEADERS },
+    );
+    return response.json();
+  }
+
+  // =====================
+  // ユーザー設定
+  // =====================
+
+  async getUserProfile() {
+    const response = await this.request.get(`${this.baseUrl}/api/users/me`, {
+      headers: E2E_HEADERS,
+    });
+    return response.json();
+  }
+
+  async updateUserProfile(data: { name?: string }) {
+    const response = await this.request.patch(`${this.baseUrl}/api/users/me`, {
+      data,
+      headers: E2E_HEADERS,
+    });
+    return response.json();
+  }
+
+  // セッション管理
+  async getSessions() {
+    const response = await this.request.get(`${this.baseUrl}/api/sessions`, {
+      headers: E2E_HEADERS,
+    });
+    return response.json();
+  }
+
+  async revokeSession(sessionId: string) {
+    const response = await this.request.delete(`${this.baseUrl}/api/sessions/${sessionId}`, {
+      headers: E2E_HEADERS,
+    });
+    return response;
+  }
+
+  async revokeOtherSessions() {
+    const response = await this.request.delete(`${this.baseUrl}/api/sessions`, {
+      headers: E2E_HEADERS,
+    });
+    return response.json();
+  }
+
+  // APIトークン管理
+  async createApiToken(data: { name: string; expiresInDays?: number }) {
+    const response = await this.request.post(`${this.baseUrl}/api/api-tokens`, {
+      data,
+      headers: E2E_HEADERS,
+    });
+    return response.json();
+  }
+
+  async getApiTokens() {
+    const response = await this.request.get(`${this.baseUrl}/api/api-tokens`, {
+      headers: E2E_HEADERS,
+    });
+    return response.json();
+  }
+
+  async revokeApiToken(tokenId: string) {
+    const response = await this.request.delete(`${this.baseUrl}/api/api-tokens/${tokenId}`, {
+      headers: E2E_HEADERS,
+    });
+    return response;
+  }
+
+  // =====================
+  // プロジェクト設定
+  // =====================
+
+  async updateProject(projectId: string, data: { name?: string; description?: string | null }) {
+    const response = await this.request.patch(`${this.baseUrl}/api/projects/${projectId}`, {
+      data,
+      headers: E2E_HEADERS,
+    });
+    return response.json();
+  }
+
+  // 環境管理
+  async createEnvironment(projectId: string, data: { name: string; description?: string }) {
+    const response = await this.request.post(
+      `${this.baseUrl}/api/projects/${projectId}/environments`,
+      { data, headers: E2E_HEADERS },
+    );
+    return response.json();
+  }
+
+  async getEnvironments(projectId: string) {
+    const response = await this.request.get(
+      `${this.baseUrl}/api/projects/${projectId}/environments`,
+      { headers: E2E_HEADERS },
+    );
+    return response.json();
+  }
+
+  async updateEnvironment(
+    projectId: string,
+    environmentId: string,
+    data: { name?: string; description?: string | null },
+  ) {
+    const response = await this.request.patch(
+      `${this.baseUrl}/api/projects/${projectId}/environments/${environmentId}`,
+      { data, headers: E2E_HEADERS },
+    );
+    return response.json();
+  }
+
+  async deleteEnvironment(projectId: string, environmentId: string) {
+    const response = await this.request.delete(
+      `${this.baseUrl}/api/projects/${projectId}/environments/${environmentId}`,
+      { headers: E2E_HEADERS },
+    );
+    return response;
+  }
+
+  // ラベル管理
+  async createLabel(projectId: string, data: { name: string; color: string; description?: string | null }) {
+    const response = await this.request.post(
+      `${this.baseUrl}/api/projects/${projectId}/labels`,
+      { data, headers: E2E_HEADERS },
+    );
+    return response.json();
+  }
+
+  async getLabels(projectId: string) {
+    const response = await this.request.get(`${this.baseUrl}/api/projects/${projectId}/labels`, {
+      headers: E2E_HEADERS,
+    });
+    return response.json();
+  }
+
+  async updateLabel(
+    projectId: string,
+    labelId: string,
+    data: { name?: string; color?: string; description?: string | null },
+  ) {
+    const response = await this.request.patch(
+      `${this.baseUrl}/api/projects/${projectId}/labels/${labelId}`,
+      { data, headers: E2E_HEADERS },
+    );
+    return response.json();
+  }
+
+  async deleteLabel(projectId: string, labelId: string) {
+    const response = await this.request.delete(
+      `${this.baseUrl}/api/projects/${projectId}/labels/${labelId}`,
+      { headers: E2E_HEADERS },
+    );
+    return response;
+  }
+
+  // 削除済みテストスイートの復元
+  async restoreTestSuite(testSuiteId: string) {
+    const response = await this.request.post(
+      `${this.baseUrl}/api/test-suites/${testSuiteId}/restore`,
+      { headers: E2E_HEADERS },
+    );
+    return response.json();
+  }
+
+  async getDeletedTestSuites(projectId: string) {
+    const response = await this.request.get(
+      `${this.baseUrl}/api/projects/${projectId}/test-suites?deleted=true`,
+      { headers: E2E_HEADERS },
+    );
+    return response.json();
+  }
+
+  // =====================
+  // 通知
+  // =====================
+
+  async getNotifications(params?: { limit?: number; offset?: number; unreadOnly?: boolean }) {
+    const searchParams = new URLSearchParams();
+    if (params?.limit) searchParams.set('limit', String(params.limit));
+    if (params?.offset) searchParams.set('offset', String(params.offset));
+    if (params?.unreadOnly) searchParams.set('unreadOnly', 'true');
+    const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
+    const response = await this.request.get(`${this.baseUrl}/api/notifications${query}`, {
+      headers: E2E_HEADERS,
+    });
+    return response.json();
+  }
+
+  async markNotificationAsRead(notificationId: string) {
+    const response = await this.request.patch(
+      `${this.baseUrl}/api/notifications/${notificationId}/read`,
+      { headers: E2E_HEADERS },
+    );
+    return response.json();
+  }
+
+  async markAllNotificationsAsRead() {
+    const response = await this.request.post(`${this.baseUrl}/api/notifications/read-all`, {
+      headers: E2E_HEADERS,
+    });
+    return response.json();
+  }
+
+  async deleteNotification(notificationId: string) {
+    const response = await this.request.delete(
+      `${this.baseUrl}/api/notifications/${notificationId}`,
+      { headers: E2E_HEADERS },
+    );
+    return response;
+  }
+
+  // 通知設定
+  async getNotificationPreferences() {
+    const response = await this.request.get(`${this.baseUrl}/api/notifications/preferences`, {
+      headers: E2E_HEADERS,
+    });
+    return response.json();
+  }
+
+  async updateNotificationPreference(
+    type: string,
+    data: { emailEnabled?: boolean; inAppEnabled?: boolean },
+  ) {
+    const response = await this.request.patch(
+      `${this.baseUrl}/api/notifications/preferences/${type}`,
+      { data, headers: E2E_HEADERS },
+    );
+    return response.json();
+  }
 }
