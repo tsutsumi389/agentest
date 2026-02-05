@@ -63,6 +63,24 @@ async function main() {
 
   console.log('デモプロジェクトを作成:', demoProject.name);
 
+  // デモユーザーをプロジェクトメンバーとして追加（OWNERロール）
+  await prisma.projectMember.upsert({
+    where: {
+      projectId_userId: {
+        projectId: demoProject.id,
+        userId: demoUser.id,
+      },
+    },
+    update: {},
+    create: {
+      projectId: demoProject.id,
+      userId: demoUser.id,
+      role: 'OWNER',
+    },
+  });
+
+  console.log('デモユーザーをプロジェクトメンバーとして追加');
+
   // デモ環境を作成
   await prisma.projectEnvironment.upsert({
     where: { id: '00000000-0000-0000-0000-000000000010' },
