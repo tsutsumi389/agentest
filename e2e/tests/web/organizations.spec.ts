@@ -22,22 +22,20 @@ test.describe('組織一覧', () => {
     await page.getByRole('button', { name: '組織を作成' }).click();
 
     // モーダルが表示される
-    await expect(page.getByRole('heading', { name: /組織.*作成/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '組織を作成' })).toBeVisible();
 
-    // 組織名を入力
-    await page.getByPlaceholder(/組織.*名/).fill(orgName);
+    // 組織名を入力（プレースホルダー「My Organization」で特定）
+    const nameInput = page.getByPlaceholder('My Organization');
+    await nameInput.fill(orgName);
 
     // 作成ボタンをクリック
     await page.getByRole('button', { name: '作成', exact: true }).click();
 
-    // ダッシュボードに遷移するか、成功メッセージが表示される
+    // 組織作成後はダッシュボードにリダイレクトされる
+    // 成功メッセージまたはダッシュボードの見出しが表示される
     await expect(
-      page.getByText(/作成しました/).or(page.getByRole('heading', { name: 'ダッシュボード' }))
+      page.getByText(/作成しました/).or(page.getByRole('heading', { name: '最近のプロジェクト' }))
     ).toBeVisible({ timeout: 15000 });
-
-    // クリーンアップ: APIで組織を取得して削除
-    // Note: 組織作成後にダッシュボードに遷移するため、組織IDを取得する必要がある
-    // この例では、手動クリーンアップが必要な場合がある
   });
 
   test('組織を検索できる', async ({ page }) => {
@@ -133,21 +131,22 @@ test.describe('メンバー管理', () => {
     // メンバー設定に遷移
     await page.goto(`/organizations/${testOrgId}/settings?tab=members`);
 
-    // メンバータブがアクティブになる
-    await expect(page.getByText(/メンバー.*一覧|メンバー/).first()).toBeVisible({ timeout: 10000 });
+    // メンバー管理セクションが表示される
+    await expect(page.getByRole('heading', { name: 'メンバー管理' })).toBeVisible({ timeout: 10000 });
 
-    // 少なくとも1人のメンバー（自分）が表示される
-    await expect(page.getByText('OWNER').or(page.getByText('オーナー'))).toBeVisible({ timeout: 10000 });
+    // 少なくとも1人のメンバー（自分）が表示される - 「オーナー」ロールを確認
+    await expect(page.getByText('オーナー')).toBeVisible({ timeout: 10000 });
   });
 
   test('メンバーの役割表示が確認できる', async ({ page }) => {
     // メンバー設定に遷移
     await page.goto(`/organizations/${testOrgId}/settings?tab=members`);
 
-    // ロール表示が見える
-    await expect(
-      page.getByText('OWNER').or(page.getByText('オーナー')).or(page.getByText('ADMIN')).or(page.getByText('MEMBER'))
-    ).toBeVisible({ timeout: 10000 });
+    // メンバー管理セクションが表示される
+    await expect(page.getByRole('heading', { name: 'メンバー管理' })).toBeVisible({ timeout: 10000 });
+
+    // ロール表示（オーナー）が見える
+    await expect(page.getByText('オーナー')).toBeVisible({ timeout: 10000 });
   });
 });
 
@@ -175,30 +174,29 @@ test.describe('招待管理', () => {
     // 招待設定に遷移
     await page.goto(`/organizations/${testOrgId}/settings?tab=invitations`);
 
-    // 招待に関する要素が表示される
-    await expect(
-      page.getByRole('button', { name: /招待|メンバー.*追加/ }).or(
-        page.getByText(/招待.*一覧|保留中/)
-      )
-    ).toBeVisible({ timeout: 10000 });
+    // 招待管理セクションが表示される
+    await expect(page.getByRole('heading', { name: '招待管理' })).toBeVisible({ timeout: 10000 });
+
+    // メンバーを招待ボタンが表示される
+    await expect(page.getByRole('button', { name: 'メンバーを招待' }).first()).toBeVisible();
   });
 
   test('メンバーを招待できる', async ({ page }) => {
     // 招待設定に遷移
     await page.goto(`/organizations/${testOrgId}/settings?tab=invitations`);
 
-    // 招待ボタンをクリック
-    await page.getByRole('button', { name: /招待|メンバー.*追加/ }).click();
+    // 「メンバーを招待」ボタンをクリック
+    await page.getByRole('button', { name: 'メンバーを招待' }).first().click();
 
-    // モーダルが表示される
-    await expect(page.getByPlaceholder(/メール/)).toBeVisible({ timeout: 10000 });
+    // モーダルが表示される（プレースホルダー「member@example.com」）
+    await expect(page.getByPlaceholder('member@example.com')).toBeVisible({ timeout: 10000 });
 
     // メールアドレスを入力
     const testEmail = `e2e-test-${Date.now()}@example.com`;
-    await page.getByPlaceholder(/メール/).fill(testEmail);
+    await page.getByPlaceholder('member@example.com').fill(testEmail);
 
-    // 招待ボタンをクリック
-    await page.getByRole('button', { name: /招待する|送信/, exact: true }).click();
+    // 招待ボタンをクリック（「招待を送信」）
+    await page.getByRole('button', { name: '招待を送信' }).click();
 
     // 成功メッセージが表示される
     await expect(page.getByText(/招待.*送信|招待しました/)).toBeVisible({ timeout: 10000 });
@@ -227,15 +225,18 @@ test.describe('招待管理', () => {
     // 招待が表示されるまで待機
     await expect(page.getByText(testEmail)).toBeVisible({ timeout: 10000 });
 
-    // キャンセルボタンをクリック
-    const inviteRow = page.locator('div', { hasText: testEmail }).first();
-    await inviteRow.getByRole('button', { name: /キャンセル|取り消し/ }).click();
+    // 対象メールを含む招待行を見つけて「招待を取り消す」ボタンをクリック
+    const inviteRow = page.locator('div').filter({ hasText: testEmail }).filter({ has: page.getByRole('button', { name: '招待を取り消す' }) });
+    await inviteRow.getByRole('button', { name: '招待を取り消す' }).first().click();
 
-    // 確認ダイアログで確定
-    await page.getByRole('button', { name: /キャンセル|取り消し|削除/, exact: false }).last().click();
+    // 確認ダイアログが表示される
+    await expect(page.getByRole('heading', { name: /招待.*取り消/ })).toBeVisible({ timeout: 5000 });
+
+    // 確認ダイアログで確定ボタンをクリック
+    await page.getByRole('button', { name: /取り消す/ }).last().click();
 
     // 成功メッセージが表示される
-    await expect(page.getByText(/キャンセル|取り消|削除.*しました/)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/取り消しました/)).toBeVisible({ timeout: 10000 });
   });
 });
 
@@ -264,14 +265,10 @@ test.describe('監査ログ', () => {
     await page.goto(`/organizations/${testOrgId}/settings?tab=audit-logs`);
 
     // 監査ログセクションが表示される
-    await expect(
-      page.getByText(/監査ログ/).or(page.getByText(/アクティビティ/))
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: '監査ログ' })).toBeVisible({ timeout: 10000 });
 
-    // 組織作成のログが表示されるはず
-    await expect(
-      page.getByText(/作成/).or(page.getByText(/CREATED/)).or(page.getByText(/ログ.*ありません/))
-    ).toBeVisible({ timeout: 10000 });
+    // 組織作成のログ（organization.created）が表示されるはず
+    await expect(page.getByText('organization.created')).toBeVisible({ timeout: 10000 });
   });
 });
 
@@ -287,10 +284,10 @@ test.describe('危険な操作', () => {
       await page.goto(`/organizations/${testOrgId}/settings?tab=danger`);
 
       // 組織削除セクションが表示される
-      await expect(page.getByText(/組織.*削除/)).toBeVisible({ timeout: 10000 });
+      await expect(page.getByRole('heading', { name: '組織を削除' })).toBeVisible({ timeout: 10000 });
 
       // 削除ボタンが表示される
-      await expect(page.getByRole('button', { name: /組織を削除/ })).toBeVisible();
+      await expect(page.getByRole('button', { name: '組織を削除' })).toBeVisible();
     } finally {
       // クリーンアップ
       await apiClient.deleteOrganization(testOrgId);
@@ -306,24 +303,25 @@ test.describe('危険な操作', () => {
     // 危険な操作に遷移
     await page.goto(`/organizations/${testOrgId}/settings?tab=danger`);
 
-    // 削除ボタンをクリック
-    await page.getByRole('button', { name: /組織を削除/ }).click();
+    // 「組織を削除」セクション内のボタンをクリック（最初の「組織を削除」ボタン）
+    await page.getByRole('button', { name: '組織を削除' }).first().click();
 
     // 確認モーダルが表示される
-    await expect(page.getByText(/削除.*確認|本当に削除/)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: '組織を削除' }).last()).toBeVisible({ timeout: 10000 });
 
     // 組織名を入力して確認
-    const confirmInput = page.getByPlaceholder(/組織名/).or(page.locator('input[type="text"]'));
-    if (await confirmInput.isVisible()) {
-      await confirmInput.fill(orgName);
-    }
+    const confirmInput = page.getByPlaceholder(orgName);
+    await confirmInput.fill(orgName);
 
-    // 削除ボタンをクリック
-    await page.getByRole('button', { name: /削除する/, exact: false }).click();
+    // ボタンが有効化されるまで待機してからクリック（モーダル内の削除ボタン）
+    const deleteButton = page.getByRole('button', { name: '組織を削除' }).last();
+    await expect(deleteButton).toBeEnabled({ timeout: 5000 });
+    await deleteButton.click();
 
+    // 削除処理が完了するまで待機（ボタンが「削除中...」に変わり、その後リダイレクト）
     // 組織一覧に戻るか、成功メッセージが表示される
     await expect(
-      page.getByText(/削除しました/).or(page.getByRole('heading', { name: '組織' }))
-    ).toBeVisible({ timeout: 15000 });
+      page.getByText(/削除しました/).or(page.getByRole('heading', { name: '組織', level: 1 })).first()
+    ).toBeVisible({ timeout: 30000 });
   });
 });

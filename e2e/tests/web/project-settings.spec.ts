@@ -63,31 +63,31 @@ test.describe('環境管理', () => {
   });
 
   test('環境一覧が表示される', async ({ page }) => {
-    // 環境セクションのヘッダーまたはコンテンツが表示される
-    await expect(
-      page.getByRole('heading', { name: '環境' }).or(page.getByText('テスト環境'))
-    ).toBeVisible({ timeout: 10000 });
+    // 環境設定セクションが表示される
+    await expect(page.getByRole('heading', { name: '環境設定' })).toBeVisible({ timeout: 10000 });
+
+    // 既存の環境（Development）が表示される
+    await expect(page.getByText('Development')).toBeVisible();
   });
 
   test('テスト環境を作成できる', async ({ page }) => {
     const envName = `E2E Env ${Date.now()}`;
 
-    // 環境作成ボタンをクリック
-    await page.getByRole('button', { name: /環境.*作成|新規.*環境/ }).click();
+    // 「環境を追加」ボタンをクリック
+    await page.getByRole('button', { name: '環境を追加' }).click();
 
     // モーダルが表示される
-    await expect(page.getByPlaceholder(/環境.*名前|名前/)).toBeVisible();
+    await expect(page.getByRole('heading', { name: '環境を作成' })).toBeVisible();
 
-    // 環境名を入力
-    await page.getByPlaceholder(/環境.*名前|名前/).first().fill(envName);
+    // 環境名を入力（環境名フィールド）
+    const envNameInput = page.locator('input[type="text"]').first();
+    await envNameInput.fill(envName);
 
     // 作成ボタンをクリック
     await page.getByRole('button', { name: '作成', exact: true }).click();
 
-    // 成功メッセージが表示されるか、環境が一覧に追加される
-    await expect(
-      page.getByText(/作成しました/).or(page.getByText(envName))
-    ).toBeVisible({ timeout: 10000 });
+    // 成功メッセージが表示される
+    await expect(page.getByText('環境を作成しました')).toBeVisible({ timeout: 10000 });
   });
 
   test('テスト環境を編集できる', async ({ page, apiClient }) => {
@@ -101,22 +101,27 @@ test.describe('環境管理', () => {
     // 作成した環境が表示されるまで待機
     await expect(page.getByText(envName)).toBeVisible({ timeout: 10000 });
 
-    // 環境の編集ボタンをクリック
-    const envRow = page.locator('div', { hasText: envName }).first();
-    await envRow.getByRole('button', { name: /編集/ }).or(
-      envRow.locator('button').first()
-    ).click();
+    // 環境名を含む行を特定し、その行のメニューボタンをクリック
+    const envNameElement = page.getByText(envName, { exact: true });
+    const envRow = page.locator('div').filter({ has: envNameElement }).filter({ has: page.getByRole('button', { name: '環境操作メニュー' }) }).last();
+    await envRow.getByRole('button', { name: '環境操作メニュー' }).click();
+
+    // メニューが開くまで待機し、編集オプションをクリック
+    await expect(page.getByRole('menuitem', { name: '編集' })).toBeVisible({ timeout: 5000 });
+    await page.getByRole('menuitem', { name: '編集' }).click();
 
     // 編集モーダルが表示される
-    const editInput = page.getByPlaceholder(/環境.*名前|名前/).first();
+    await expect(page.getByRole('heading', { name: '環境を編集' })).toBeVisible({ timeout: 5000 });
+
+    // 環境名フィールドに新しい名前を入力
+    const editInput = page.getByPlaceholder('Production');
     await expect(editInput).toBeVisible();
 
-    // 新しい名前を入力
     const updatedName = `${envName} Updated`;
     await editInput.fill(updatedName);
 
-    // 保存ボタンをクリック
-    await page.getByRole('button', { name: /保存|更新/, exact: true }).click();
+    // 更新ボタンをクリック
+    await page.getByRole('button', { name: '更新' }).click();
 
     // 成功メッセージが表示される
     await expect(page.getByText(/更新しました/)).toBeVisible({ timeout: 10000 });
@@ -136,14 +141,15 @@ test.describe('環境管理', () => {
     // 作成した環境が表示されるまで待機
     await expect(page.getByText(envName)).toBeVisible({ timeout: 10000 });
 
-    // 環境の削除ボタンをクリック
+    // 環境行の3点メニューをクリック
     const envRow = page.locator('div', { hasText: envName }).first();
-    await envRow.getByRole('button', { name: /削除/ }).or(
-      envRow.locator('button').last()
-    ).click();
+    await envRow.locator('button').last().click();
+
+    // 削除オプションをクリック
+    await page.getByRole('menuitem', { name: /削除/ }).or(page.getByText('削除')).click();
 
     // 確認ダイアログで「削除」をクリック
-    await page.getByRole('button', { name: /削除する|削除/, exact: false }).click();
+    await page.getByRole('button', { name: '削除する' }).click();
 
     // 成功メッセージが表示される
     await expect(page.getByText(/削除しました/)).toBeVisible({ timeout: 10000 });
@@ -158,24 +164,23 @@ test.describe('ラベル管理', () => {
 
   test('ラベル一覧が表示される', async ({ page }) => {
     // ラベルセクションが表示される
-    await expect(
-      page.getByRole('heading', { name: 'ラベル' }).or(
-        page.getByText(/ラベル.*管理|ラベル一覧/)
-      )
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'ラベル' })).toBeVisible({ timeout: 10000 });
+
+    // 新規ラベルボタンが表示される
+    await expect(page.getByRole('button', { name: '新規ラベル' })).toBeVisible();
   });
 
   test('ラベルを作成できる', async ({ page }) => {
     const labelName = `E2E Label ${Date.now()}`;
 
-    // ラベル作成ボタンをクリック
-    await page.getByRole('button', { name: /ラベル.*作成|新規.*ラベル/ }).click();
+    // 「新規ラベル」ボタンをクリック
+    await page.getByRole('button', { name: '新規ラベル' }).click();
 
     // モーダルが表示される
-    await expect(page.getByPlaceholder(/ラベル.*名|名前/)).toBeVisible();
+    await expect(page.getByRole('heading', { name: '新しいラベル' })).toBeVisible();
 
-    // ラベル名を入力
-    await page.getByPlaceholder(/ラベル.*名|名前/).first().fill(labelName);
+    // ラベル名を入力（プレースホルダー「例: 回帰テスト」）
+    await page.getByPlaceholder('例: 回帰テスト').fill(labelName);
 
     // 作成ボタンをクリック
     await page.getByRole('button', { name: '作成', exact: true }).click();
@@ -200,22 +205,23 @@ test.describe('ラベル管理', () => {
     // 作成したラベルが表示されるまで待機
     await expect(page.getByText(labelName)).toBeVisible({ timeout: 10000 });
 
-    // ラベルの編集ボタンをクリック
-    const labelRow = page.locator('div', { hasText: labelName }).first();
-    await labelRow.getByRole('button', { name: /編集/ }).or(
-      labelRow.locator('button').first()
-    ).click();
+    // ラベル行を見つけて、その中の編集ボタンをクリック
+    const labelRow = page.locator('div').filter({ hasText: labelName }).filter({ has: page.getByRole('button', { name: '編集' }) });
+    await labelRow.getByRole('button', { name: '編集' }).first().click();
 
     // 編集モーダルが表示される
-    const editInput = page.getByPlaceholder(/ラベル.*名|名前/).first();
+    await expect(page.getByRole('heading', { name: 'ラベルを編集' })).toBeVisible({ timeout: 5000 });
+
+    // 編集フィールドを取得
+    const editInput = page.getByPlaceholder('例: 回帰テスト');
     await expect(editInput).toBeVisible();
 
     // 新しい名前を入力
     const updatedName = `${labelName} Updated`;
     await editInput.fill(updatedName);
 
-    // 保存ボタンをクリック
-    await page.getByRole('button', { name: /保存|更新/, exact: true }).click();
+    // 更新ボタンをクリック（モーダル内）
+    await page.getByRole('button', { name: '更新' }).click();
 
     // 成功メッセージが表示される
     await expect(page.getByText(/更新しました/)).toBeVisible({ timeout: 10000 });
@@ -238,14 +244,14 @@ test.describe('ラベル管理', () => {
     // 作成したラベルが表示されるまで待機
     await expect(page.getByText(labelName)).toBeVisible({ timeout: 10000 });
 
-    // ラベルの削除ボタンをクリック
-    const labelRow = page.locator('div', { hasText: labelName }).first();
-    await labelRow.getByRole('button', { name: /削除/ }).or(
-      labelRow.locator('button').last()
-    ).click();
+    // ラベル名の隣にある削除ボタンをクリック
+    await page.getByText(labelName).locator('..').locator('..').getByRole('button', { name: '削除' }).click();
 
-    // 確認ダイアログで「削除」をクリック
-    await page.getByRole('button', { name: /削除する|削除/, exact: false }).click();
+    // 確認ダイアログが表示される
+    await expect(page.getByRole('heading', { name: 'ラベルを削除' })).toBeVisible({ timeout: 5000 });
+
+    // 確認ダイアログで「削除」をクリック（ダイアログ内の削除ボタン）
+    await page.getByRole('button', { name: '削除' }).last().click();
 
     // 成功メッセージが表示される
     await expect(page.getByText(/削除しました/)).toBeVisible({ timeout: 10000 });
@@ -257,8 +263,11 @@ test.describe('削除済みテストスイート', () => {
     // 危険な操作セクションに遷移
     await page.goto(`/projects/${DEMO_PROJECT_ID}?tab=settings&section=danger`);
 
-    // 危険な操作セクションが表示される
-    await expect(page.getByText(/削除|危険/)).toBeVisible({ timeout: 10000 });
+    // プロジェクト削除セクションが表示される
+    await expect(page.getByRole('heading', { name: 'プロジェクトを削除' })).toBeVisible({ timeout: 10000 });
+
+    // 削除ボタンが表示される
+    await expect(page.getByRole('button', { name: 'プロジェクトを削除' })).toBeVisible();
   });
 
   test('削除済みスイートを復元できる', async ({ page, apiClient }) => {
