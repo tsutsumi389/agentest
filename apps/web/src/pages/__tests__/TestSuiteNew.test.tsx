@@ -34,17 +34,14 @@ const mockedProjectsApi = vi.mocked(projectsApi);
 /**
  * テスト用ラッパー
  */
-function renderWithProviders(
-  searchParams: string = '',
-  { initialPath }: { initialPath?: string } = {}
-) {
+function renderWithProviders(searchParams: string = '') {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
     },
   });
 
-  const path = initialPath || `/test-suites/new${searchParams ? `?${searchParams}` : ''}`;
+  const path = `/test-suites/new${searchParams ? `?${searchParams}` : ''}`;
 
   return render(
     <QueryClientProvider client={queryClient}>

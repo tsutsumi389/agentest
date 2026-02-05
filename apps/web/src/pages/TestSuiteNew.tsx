@@ -15,9 +15,10 @@ export function TestSuiteNewPage() {
   const projectId = searchParams.get('projectId');
 
   // プロジェクト情報を取得（パンくずリスト用、キャッシュ済みなら即表示）
+  // enabled で projectId の存在を保証しているため、queryFn 内では non-null
   const { data: projectData, error: projectError } = useQuery({
     queryKey: ['project', projectId],
-    queryFn: () => projectsApi.getById(projectId!),
+    queryFn: () => projectsApi.getById(projectId as string),
     enabled: !!projectId,
   });
 

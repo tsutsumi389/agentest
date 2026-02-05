@@ -195,7 +195,7 @@ export function ProjectDetailPage() {
           {/* テストスイートタブの時のみ作成ボタンを表示 */}
           {currentTab === 'suites' && (
             <Link
-              to={`/test-suites/new?projectId=${projectId}`}
+              to={`/test-suites/new?projectId=${projectId!}`}
               className="btn btn-primary"
             >
               <Plus className="w-4 h-4" />
