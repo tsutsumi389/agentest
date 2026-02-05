@@ -1,7 +1,18 @@
 import rateLimit from 'express-rate-limit';
+import type { Request } from 'express';
 
 // テスト環境ではレートリミットをスキップ
 const isTest = process.env.NODE_ENV === 'test';
+
+// E2Eテスト用バイパスをチェック（開発環境のみ）
+const shouldSkipRateLimit = (req: Request): boolean => {
+  if (isTest) return true;
+  // 開発環境でX-E2E-Testヘッダーがある場合はスキップ
+  if (process.env.NODE_ENV === 'development' && req.headers['x-e2e-test'] === 'true') {
+    return true;
+  }
+  return false;
+};
 
 /**
  * 一般API用レート制限
@@ -23,7 +34,7 @@ export const apiLimiter = rateLimit({
     // X-Forwarded-For ヘッダーまたはIPアドレスを使用
     return (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.ip || 'unknown';
   },
-  skip: () => isTest, // テスト環境ではスキップ
+  skip: shouldSkipRateLimit, // テスト環境またはE2Eテストではスキップ
 });
 
 /**
@@ -43,7 +54,7 @@ export const authLimiter = rateLimit({
     },
   },
   skipSuccessfulRequests: true, // 成功したリクエストはカウントしない
-  skip: () => isTest, // テスト環境ではスキップ
+  skip: shouldSkipRateLimit, // テスト環境またはE2Eテストではスキップ
 });
 
 /**
@@ -62,7 +73,7 @@ export const strictLimiter = rateLimit({
       statusCode: 429,
     },
   },
-  skip: () => isTest, // テスト環境ではスキップ
+  skip: shouldSkipRateLimit, // テスト環境またはE2Eテストではスキップ
 });
 
 /**
@@ -91,7 +102,7 @@ export const billingLimiter = rateLimit({
     // 認証前はIPアドレスを使用
     return (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.ip || 'unknown';
   },
-  skip: () => isTest, // テスト環境ではスキップ
+  skip: shouldSkipRateLimit, // テスト環境またはE2Eテストではスキップ
 });
 
 /**
@@ -115,5 +126,5 @@ export const adminAuthLimiter = rateLimit({
     return (req.headers['x-forwarded-for'] as string)?.split(',')[0] || req.ip || 'unknown';
   },
   skipSuccessfulRequests: true, // 成功したリクエストはカウントしない
-  skip: () => isTest, // テスト環境ではスキップ
+  skip: shouldSkipRateLimit, // テスト環境またはE2Eテストではスキップ
 });

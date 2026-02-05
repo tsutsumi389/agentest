@@ -1,5 +1,10 @@
 import type { APIRequestContext } from '@playwright/test';
 
+// E2Eテスト用の共通ヘッダー（レートリミットをバイパス）
+const E2E_HEADERS = {
+  'X-E2E-Test': 'true',
+};
+
 /**
  * E2Eテスト用APIクライアント
  * APIに直接リクエストを送信してテストデータの作成・削除を行う
@@ -14,28 +19,38 @@ export class TestApiClient {
   async createProject(data: { name: string; description?: string; organizationId: string }) {
     const response = await this.request.post(`${this.baseUrl}/api/projects`, {
       data,
+      headers: E2E_HEADERS,
     });
     return response.json();
   }
 
   async deleteProject(projectId: string) {
-    const response = await this.request.delete(`${this.baseUrl}/api/projects/${projectId}`);
+    const response = await this.request.delete(`${this.baseUrl}/api/projects/${projectId}`, {
+      headers: E2E_HEADERS,
+    });
     return response;
   }
 
   // テストスイート操作
   async createTestSuite(data: { name: string; description?: string; projectId: string }) {
-    const response = await this.request.post(`${this.baseUrl}/api/test-suites`, { data });
+    const response = await this.request.post(`${this.baseUrl}/api/test-suites`, {
+      data,
+      headers: E2E_HEADERS,
+    });
     return response.json();
   }
 
   async getTestSuite(testSuiteId: string) {
-    const response = await this.request.get(`${this.baseUrl}/api/test-suites/${testSuiteId}`);
+    const response = await this.request.get(`${this.baseUrl}/api/test-suites/${testSuiteId}`, {
+      headers: E2E_HEADERS,
+    });
     return response.json();
   }
 
   async deleteTestSuite(projectId: string, testSuiteId: string) {
-    const response = await this.request.delete(`${this.baseUrl}/api/test-suites/${testSuiteId}`);
+    const response = await this.request.delete(`${this.baseUrl}/api/test-suites/${testSuiteId}`, {
+      headers: E2E_HEADERS,
+    });
     return response;
   }
 
@@ -45,6 +60,7 @@ export class TestApiClient {
     const query = params.toString() ? `?${params.toString()}` : '';
     const response = await this.request.get(
       `${this.baseUrl}/api/test-suites/${testSuiteId}/executions${query}`,
+      { headers: E2E_HEADERS },
     );
     return response.json();
   }
@@ -57,12 +73,17 @@ export class TestApiClient {
     testSuiteId: string;
     projectId: string;
   }) {
-    const response = await this.request.post(`${this.baseUrl}/api/test-cases`, { data });
+    const response = await this.request.post(`${this.baseUrl}/api/test-cases`, {
+      data,
+      headers: E2E_HEADERS,
+    });
     return response.json();
   }
 
   async getTestCase(testCaseId: string) {
-    const response = await this.request.get(`${this.baseUrl}/api/test-cases/${testCaseId}`);
+    const response = await this.request.get(`${this.baseUrl}/api/test-cases/${testCaseId}`, {
+      headers: E2E_HEADERS,
+    });
     return response.json();
   }
 
@@ -72,18 +93,22 @@ export class TestApiClient {
   ) {
     const response = await this.request.patch(`${this.baseUrl}/api/test-cases/${testCaseId}`, {
       data,
+      headers: E2E_HEADERS,
     });
     return response.json();
   }
 
   async deleteTestCase(projectId: string, testSuiteId: string, testCaseId: string) {
-    const response = await this.request.delete(`${this.baseUrl}/api/test-cases/${testCaseId}`);
+    const response = await this.request.delete(`${this.baseUrl}/api/test-cases/${testCaseId}`, {
+      headers: E2E_HEADERS,
+    });
     return response;
   }
 
   async restoreTestCase(testCaseId: string) {
     const response = await this.request.post(
       `${this.baseUrl}/api/test-cases/${testCaseId}/restore`,
+      { headers: E2E_HEADERS },
     );
     return response.json();
   }
@@ -91,7 +116,7 @@ export class TestApiClient {
   async copyTestCase(testCaseId: string, data?: { targetTestSuiteId?: string }) {
     const response = await this.request.post(
       `${this.baseUrl}/api/test-cases/${testCaseId}/copy`,
-      { data },
+      { data, headers: E2E_HEADERS },
     );
     return response.json();
   }
@@ -99,7 +124,7 @@ export class TestApiClient {
   async reorderTestCases(testSuiteId: string, testCaseIds: string[]) {
     const response = await this.request.post(
       `${this.baseUrl}/api/test-suites/${testSuiteId}/test-cases/reorder`,
-      { data: { testCaseIds } },
+      { data: { testCaseIds }, headers: E2E_HEADERS },
     );
     return response.json();
   }
@@ -108,7 +133,7 @@ export class TestApiClient {
   async addPrecondition(testCaseId: string, data: { content: string }) {
     const response = await this.request.post(
       `${this.baseUrl}/api/test-cases/${testCaseId}/preconditions`,
-      { data },
+      { data, headers: E2E_HEADERS },
     );
     return response.json();
   }
@@ -116,7 +141,7 @@ export class TestApiClient {
   async updatePrecondition(testCaseId: string, preconditionId: string, data: { content: string }) {
     const response = await this.request.patch(
       `${this.baseUrl}/api/test-cases/${testCaseId}/preconditions/${preconditionId}`,
-      { data },
+      { data, headers: E2E_HEADERS },
     );
     return response.json();
   }
@@ -124,6 +149,7 @@ export class TestApiClient {
   async deletePrecondition(testCaseId: string, preconditionId: string) {
     const response = await this.request.delete(
       `${this.baseUrl}/api/test-cases/${testCaseId}/preconditions/${preconditionId}`,
+      { headers: E2E_HEADERS },
     );
     return response;
   }
@@ -131,7 +157,7 @@ export class TestApiClient {
   async reorderPreconditions(testCaseId: string, preconditionIds: string[]) {
     const response = await this.request.post(
       `${this.baseUrl}/api/test-cases/${testCaseId}/preconditions/reorder`,
-      { data: { preconditionIds } },
+      { data: { preconditionIds }, headers: E2E_HEADERS },
     );
     return response.json();
   }
@@ -140,7 +166,7 @@ export class TestApiClient {
   async addStep(testCaseId: string, data: { content: string }) {
     const response = await this.request.post(
       `${this.baseUrl}/api/test-cases/${testCaseId}/steps`,
-      { data },
+      { data, headers: E2E_HEADERS },
     );
     return response.json();
   }
@@ -148,7 +174,7 @@ export class TestApiClient {
   async updateStep(testCaseId: string, stepId: string, data: { content: string }) {
     const response = await this.request.patch(
       `${this.baseUrl}/api/test-cases/${testCaseId}/steps/${stepId}`,
-      { data },
+      { data, headers: E2E_HEADERS },
     );
     return response.json();
   }
@@ -156,6 +182,7 @@ export class TestApiClient {
   async deleteStep(testCaseId: string, stepId: string) {
     const response = await this.request.delete(
       `${this.baseUrl}/api/test-cases/${testCaseId}/steps/${stepId}`,
+      { headers: E2E_HEADERS },
     );
     return response;
   }
@@ -163,7 +190,7 @@ export class TestApiClient {
   async reorderSteps(testCaseId: string, stepIds: string[]) {
     const response = await this.request.post(
       `${this.baseUrl}/api/test-cases/${testCaseId}/steps/reorder`,
-      { data: { stepIds } },
+      { data: { stepIds }, headers: E2E_HEADERS },
     );
     return response.json();
   }
@@ -172,7 +199,7 @@ export class TestApiClient {
   async addExpectedResult(testCaseId: string, data: { content: string }) {
     const response = await this.request.post(
       `${this.baseUrl}/api/test-cases/${testCaseId}/expected-results`,
-      { data },
+      { data, headers: E2E_HEADERS },
     );
     return response.json();
   }
@@ -180,7 +207,7 @@ export class TestApiClient {
   async updateExpectedResult(testCaseId: string, expectedResultId: string, data: { content: string }) {
     const response = await this.request.patch(
       `${this.baseUrl}/api/test-cases/${testCaseId}/expected-results/${expectedResultId}`,
-      { data },
+      { data, headers: E2E_HEADERS },
     );
     return response.json();
   }
@@ -188,6 +215,7 @@ export class TestApiClient {
   async deleteExpectedResult(testCaseId: string, expectedResultId: string) {
     const response = await this.request.delete(
       `${this.baseUrl}/api/test-cases/${testCaseId}/expected-results/${expectedResultId}`,
+      { headers: E2E_HEADERS },
     );
     return response;
   }
@@ -195,7 +223,7 @@ export class TestApiClient {
   async reorderExpectedResults(testCaseId: string, expectedResultIds: string[]) {
     const response = await this.request.post(
       `${this.baseUrl}/api/test-cases/${testCaseId}/expected-results/reorder`,
-      { data: { expectedResultIds } },
+      { data: { expectedResultIds }, headers: E2E_HEADERS },
     );
     return response.json();
   }
@@ -204,19 +232,22 @@ export class TestApiClient {
   async startExecution(testSuiteId: string, data?: { environmentId?: string }) {
     const response = await this.request.post(
       `${this.baseUrl}/api/test-suites/${testSuiteId}/executions`,
-      { data: data || {} },
+      { data: data || {}, headers: E2E_HEADERS },
     );
     return response.json();
   }
 
   async getExecution(executionId: string) {
-    const response = await this.request.get(`${this.baseUrl}/api/executions/${executionId}`);
+    const response = await this.request.get(`${this.baseUrl}/api/executions/${executionId}`, {
+      headers: E2E_HEADERS,
+    });
     return response.json();
   }
 
   async getExecutionWithDetails(executionId: string) {
     const response = await this.request.get(
       `${this.baseUrl}/api/executions/${executionId}/details`,
+      { headers: E2E_HEADERS },
     );
     return response.json();
   }
@@ -228,7 +259,7 @@ export class TestApiClient {
   ) {
     const response = await this.request.patch(
       `${this.baseUrl}/api/executions/${executionId}/preconditions/${resultId}`,
-      { data },
+      { data, headers: E2E_HEADERS },
     );
     return response.json();
   }
@@ -240,7 +271,7 @@ export class TestApiClient {
   ) {
     const response = await this.request.patch(
       `${this.baseUrl}/api/executions/${executionId}/steps/${resultId}`,
-      { data },
+      { data, headers: E2E_HEADERS },
     );
     return response.json();
   }
@@ -252,7 +283,7 @@ export class TestApiClient {
   ) {
     const response = await this.request.patch(
       `${this.baseUrl}/api/executions/${executionId}/expected-results/${resultId}`,
-      { data },
+      { data, headers: E2E_HEADERS },
     );
     return response.json();
   }
@@ -268,6 +299,7 @@ export class TestApiClient {
             buffer: Buffer.from('fake-image-data'),
           },
         },
+        headers: E2E_HEADERS,
       },
     );
     return response.json();
@@ -276,6 +308,7 @@ export class TestApiClient {
   async deleteEvidence(executionId: string, evidenceId: string) {
     const response = await this.request.delete(
       `${this.baseUrl}/api/executions/${executionId}/evidences/${evidenceId}`,
+      { headers: E2E_HEADERS },
     );
     return response;
   }
@@ -283,6 +316,7 @@ export class TestApiClient {
   async getEvidenceDownloadUrl(executionId: string, evidenceId: string) {
     const response = await this.request.get(
       `${this.baseUrl}/api/executions/${executionId}/evidences/${evidenceId}/download-url`,
+      { headers: E2E_HEADERS },
     );
     return response.json();
   }
@@ -291,22 +325,30 @@ export class TestApiClient {
   async getLockStatus(targetType: 'SUITE' | 'CASE', targetId: string) {
     const response = await this.request.get(
       `${this.baseUrl}/api/locks?targetType=${targetType}&targetId=${targetId}`,
+      { headers: E2E_HEADERS },
     );
     return response.json();
   }
 
   async acquireLock(data: { targetType: 'SUITE' | 'CASE'; targetId: string }) {
-    const response = await this.request.post(`${this.baseUrl}/api/locks`, { data });
+    const response = await this.request.post(`${this.baseUrl}/api/locks`, {
+      data,
+      headers: E2E_HEADERS,
+    });
     return response.json();
   }
 
   async releaseLock(lockId: string) {
-    const response = await this.request.delete(`${this.baseUrl}/api/locks/${lockId}`);
+    const response = await this.request.delete(`${this.baseUrl}/api/locks/${lockId}`, {
+      headers: E2E_HEADERS,
+    });
     return response;
   }
 
   async heartbeatLock(lockId: string) {
-    const response = await this.request.patch(`${this.baseUrl}/api/locks/${lockId}/heartbeat`);
+    const response = await this.request.patch(`${this.baseUrl}/api/locks/${lockId}/heartbeat`, {
+      headers: E2E_HEADERS,
+    });
     return response.json();
   }
 }
