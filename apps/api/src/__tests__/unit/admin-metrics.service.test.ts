@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import type { ActiveUserMetricsResponse } from '@agentest/shared';
+import type { MetricGranularity } from '@agentest/db';
 
 // Prismaをモック
 vi.mock('@agentest/db', () => ({
@@ -75,8 +76,8 @@ describe('AdminMetricsService', () => {
 
     it('キャッシュがない場合はDBから取得してキャッシュに保存する', async () => {
       const mockMetrics = [
-        { id: '1', granularity: 'DAY', periodStart: new Date('2026-01-01'), userCount: 100, createdAt: new Date(), updatedAt: new Date() },
-        { id: '2', granularity: 'DAY', periodStart: new Date('2026-01-02'), userCount: 120, createdAt: new Date(), updatedAt: new Date() },
+        { id: '1', granularity: 'DAY' as MetricGranularity, periodStart: new Date('2026-01-01'), userCount: 100, createdAt: new Date(), updatedAt: new Date() },
+        { id: '2', granularity: 'DAY' as MetricGranularity, periodStart: new Date('2026-01-02'), userCount: 120, createdAt: new Date(), updatedAt: new Date() },
       ];
 
       vi.mocked(prisma.activeUserMetric.findMany).mockResolvedValue(mockMetrics);
@@ -96,9 +97,9 @@ describe('AdminMetricsService', () => {
 
     it('日次粒度でデータを取得できる', async () => {
       const mockMetrics = [
-        { id: '1', granularity: 'DAY', periodStart: new Date('2026-01-15'), userCount: 150, createdAt: new Date(), updatedAt: new Date() },
-        { id: '2', granularity: 'DAY', periodStart: new Date('2026-01-16'), userCount: 142, createdAt: new Date(), updatedAt: new Date() },
-        { id: '3', granularity: 'DAY', periodStart: new Date('2026-01-17'), userCount: 98, createdAt: new Date(), updatedAt: new Date() },
+        { id: '1', granularity: 'DAY' as MetricGranularity, periodStart: new Date('2026-01-15'), userCount: 150, createdAt: new Date(), updatedAt: new Date() },
+        { id: '2', granularity: 'DAY' as MetricGranularity, periodStart: new Date('2026-01-16'), userCount: 142, createdAt: new Date(), updatedAt: new Date() },
+        { id: '3', granularity: 'DAY' as MetricGranularity, periodStart: new Date('2026-01-17'), userCount: 98, createdAt: new Date(), updatedAt: new Date() },
       ];
 
       vi.mocked(prisma.activeUserMetric.findMany).mockResolvedValue(mockMetrics);
@@ -121,8 +122,8 @@ describe('AdminMetricsService', () => {
 
     it('週次粒度でデータを取得できる', async () => {
       const mockMetrics = [
-        { id: '1', granularity: 'WEEK', periodStart: new Date('2026-01-06'), userCount: 420, createdAt: new Date(), updatedAt: new Date() },
-        { id: '2', granularity: 'WEEK', periodStart: new Date('2026-01-13'), userCount: 450, createdAt: new Date(), updatedAt: new Date() },
+        { id: '1', granularity: 'WEEK' as MetricGranularity, periodStart: new Date('2026-01-06'), userCount: 420, createdAt: new Date(), updatedAt: new Date() },
+        { id: '2', granularity: 'WEEK' as MetricGranularity, periodStart: new Date('2026-01-13'), userCount: 450, createdAt: new Date(), updatedAt: new Date() },
       ];
 
       vi.mocked(prisma.activeUserMetric.findMany).mockResolvedValue(mockMetrics);
@@ -144,8 +145,8 @@ describe('AdminMetricsService', () => {
 
     it('月次粒度でデータを取得できる', async () => {
       const mockMetrics = [
-        { id: '1', granularity: 'MONTH', periodStart: new Date('2025-12-01'), userCount: 950, createdAt: new Date(), updatedAt: new Date() },
-        { id: '2', granularity: 'MONTH', periodStart: new Date('2026-01-01'), userCount: 980, createdAt: new Date(), updatedAt: new Date() },
+        { id: '1', granularity: 'MONTH' as MetricGranularity, periodStart: new Date('2025-12-01'), userCount: 950, createdAt: new Date(), updatedAt: new Date() },
+        { id: '2', granularity: 'MONTH' as MetricGranularity, periodStart: new Date('2026-01-01'), userCount: 980, createdAt: new Date(), updatedAt: new Date() },
       ];
 
       vi.mocked(prisma.activeUserMetric.findMany).mockResolvedValue(mockMetrics);
@@ -172,7 +173,7 @@ describe('AdminMetricsService', () => {
 
       // 過去の集計データ
       const mockMetrics = [
-        { id: '1', granularity: 'DAY', periodStart: new Date('2026-01-14'), userCount: 100, createdAt: new Date(), updatedAt: new Date() },
+        { id: '1', granularity: 'DAY' as MetricGranularity, periodStart: new Date('2026-01-14'), userCount: 100, createdAt: new Date(), updatedAt: new Date() },
       ];
 
       vi.mocked(prisma.activeUserMetric.findMany).mockResolvedValue(mockMetrics);
@@ -193,9 +194,9 @@ describe('AdminMetricsService', () => {
 
     it('サマリーが正しく計算される', async () => {
       const mockMetrics = [
-        { id: '1', granularity: 'DAY', periodStart: new Date('2026-01-01'), userCount: 100, createdAt: new Date(), updatedAt: new Date() },
-        { id: '2', granularity: 'DAY', periodStart: new Date('2026-01-02'), userCount: 150, createdAt: new Date(), updatedAt: new Date() },
-        { id: '3', granularity: 'DAY', periodStart: new Date('2026-01-03'), userCount: 80, createdAt: new Date(), updatedAt: new Date() },
+        { id: '1', granularity: 'DAY' as MetricGranularity, periodStart: new Date('2026-01-01'), userCount: 100, createdAt: new Date(), updatedAt: new Date() },
+        { id: '2', granularity: 'DAY' as MetricGranularity, periodStart: new Date('2026-01-02'), userCount: 150, createdAt: new Date(), updatedAt: new Date() },
+        { id: '3', granularity: 'DAY' as MetricGranularity, periodStart: new Date('2026-01-03'), userCount: 80, createdAt: new Date(), updatedAt: new Date() },
       ];
 
       // 現在の期間データ
@@ -203,9 +204,9 @@ describe('AdminMetricsService', () => {
         .mockResolvedValueOnce(mockMetrics)
         // 前期間データ（changeRate計算用）
         .mockResolvedValueOnce([
-          { id: '4', granularity: 'DAY', periodStart: new Date('2025-12-29'), userCount: 90, createdAt: new Date(), updatedAt: new Date() },
-          { id: '5', granularity: 'DAY', periodStart: new Date('2025-12-30'), userCount: 100, createdAt: new Date(), updatedAt: new Date() },
-          { id: '6', granularity: 'DAY', periodStart: new Date('2025-12-31'), userCount: 110, createdAt: new Date(), updatedAt: new Date() },
+          { id: '4', granularity: 'DAY' as MetricGranularity, periodStart: new Date('2025-12-29'), userCount: 90, createdAt: new Date(), updatedAt: new Date() },
+          { id: '5', granularity: 'DAY' as MetricGranularity, periodStart: new Date('2025-12-30'), userCount: 100, createdAt: new Date(), updatedAt: new Date() },
+          { id: '6', granularity: 'DAY' as MetricGranularity, periodStart: new Date('2025-12-31'), userCount: 110, createdAt: new Date(), updatedAt: new Date() },
         ]);
       vi.mocked(prisma.user.count).mockResolvedValue(0);
 
@@ -243,7 +244,7 @@ describe('AdminMetricsService', () => {
 
     it('前期間データがない場合はchangeRateがnullになる', async () => {
       const mockMetrics = [
-        { id: '1', granularity: 'DAY', periodStart: new Date('2026-01-01'), userCount: 100, createdAt: new Date(), updatedAt: new Date() },
+        { id: '1', granularity: 'DAY' as MetricGranularity, periodStart: new Date('2026-01-01'), userCount: 100, createdAt: new Date(), updatedAt: new Date() },
       ];
 
       vi.mocked(prisma.activeUserMetric.findMany)
@@ -266,7 +267,7 @@ describe('AdminMetricsService', () => {
       vi.mocked(prisma.activeUserMetric.findMany).mockResolvedValue([]);
       vi.mocked(prisma.user.count).mockResolvedValue(0);
 
-      const result = await service.getActiveUserMetrics({});
+      const result = await service.getActiveUserMetrics({ granularity: 'day', timezone: 'Asia/Tokyo' });
 
       expect(result.granularity).toBe('day');
       expect(result.timezone).toBe('Asia/Tokyo');
@@ -284,6 +285,7 @@ describe('AdminMetricsService', () => {
 
       await service.getActiveUserMetrics({
         granularity: 'day',
+        timezone: 'Asia/Tokyo',
         endDate: '2026-01-15T23:59:59.000Z',
       });
 
@@ -304,6 +306,7 @@ describe('AdminMetricsService', () => {
 
       await service.getActiveUserMetrics({
         granularity: 'day',
+        timezone: 'Asia/Tokyo',
         startDate: '2026-01-01T00:00:00.000Z',
         endDate: '2026-01-10T00:00:00.000Z',
       });

@@ -31,7 +31,7 @@ describe('useAdminMetrics', () => {
   });
 
   it('パラメータ付きで取得する', async () => {
-    const params = { granularity: 'daily' as const, startDate: '2024-01-01' };
+    const params = { granularity: 'day' as const, startDate: '2024-01-01' };
     mockApi.getActiveUsers.mockResolvedValue({ metrics: [] } as never);
 
     const { wrapper } = createQueryWrapper();

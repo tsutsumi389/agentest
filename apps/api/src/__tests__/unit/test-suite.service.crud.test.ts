@@ -108,12 +108,12 @@ describe('TestSuiteService（コアCRUD）', () => {
       await service.create(TEST_USER_ID, {
         projectId: TEST_PROJECT_ID,
         name: 'Suite',
-        status: 'READY',
+        status: 'ACTIVE',
       });
 
       expect(mockPrisma.testSuite.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ status: 'READY' }),
+          data: expect.objectContaining({ status: 'ACTIVE' }),
         })
       );
     });

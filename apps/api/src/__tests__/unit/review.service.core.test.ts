@@ -257,20 +257,20 @@ describe('ReviewService（コア操作）', () => {
   describe('updateVerdict', () => {
     it('投稿者本人がSUBMITTED状態の評価を変更できる', async () => {
       mockReviewRepo.findById.mockResolvedValue(createMockReview({ status: 'SUBMITTED' }));
-      const updatedReview = createMockReview({ status: 'SUBMITTED', verdict: 'REJECTED' });
+      const updatedReview = createMockReview({ status: 'SUBMITTED', verdict: 'CHANGES_REQUESTED' });
       mockReviewRepo.updateVerdict.mockResolvedValue(updatedReview);
 
-      const result = await service.updateVerdict(TEST_REVIEW_ID, TEST_USER_ID, { verdict: 'REJECTED' });
+      const result = await service.updateVerdict(TEST_REVIEW_ID, TEST_USER_ID, { verdict: 'CHANGES_REQUESTED' });
 
       expect(result).toEqual(updatedReview);
-      expect(mockReviewRepo.updateVerdict).toHaveBeenCalledWith(TEST_REVIEW_ID, 'REJECTED');
+      expect(mockReviewRepo.updateVerdict).toHaveBeenCalledWith(TEST_REVIEW_ID, 'CHANGES_REQUESTED');
     });
 
     it('他人のレビューはAuthorizationErrorを投げる', async () => {
       mockReviewRepo.findById.mockResolvedValue(createMockReview({ status: 'SUBMITTED' }));
 
       await expect(
-        service.updateVerdict(TEST_REVIEW_ID, OTHER_USER_ID, { verdict: 'REJECTED' })
+        service.updateVerdict(TEST_REVIEW_ID, OTHER_USER_ID, { verdict: 'CHANGES_REQUESTED' })
       ).rejects.toThrow(AuthorizationError);
     });
 
@@ -278,7 +278,7 @@ describe('ReviewService（コア操作）', () => {
       mockReviewRepo.findById.mockResolvedValue(createMockReview({ status: 'DRAFT' }));
 
       await expect(
-        service.updateVerdict(TEST_REVIEW_ID, TEST_USER_ID, { verdict: 'REJECTED' })
+        service.updateVerdict(TEST_REVIEW_ID, TEST_USER_ID, { verdict: 'CHANGES_REQUESTED' })
       ).rejects.toThrow(BadRequestError);
     });
   });

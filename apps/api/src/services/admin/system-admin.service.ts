@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import { prisma, type Prisma, AdminRoleType } from '@agentest/db';
+import { prisma, type Prisma, type AdminRoleType } from '@agentest/db';
 import { logger as baseLogger } from '../../utils/logger.js';
 
 const logger = baseLogger.child({ module: 'system-admin' });

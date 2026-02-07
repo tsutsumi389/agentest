@@ -38,7 +38,7 @@ vi.mock('../../lib/redis-publisher.js', () => ({ publishDashboardUpdated: vi.fn(
 vi.mock('../../lib/events.js', () => ({ publishTestCaseUpdated: vi.fn() }));
 
 import { TestCaseService } from '../../services/test-case.service.js';
-import { TEST_USER_ID, TEST_CASE_ID, TEST_SUITE_ID, TEST_PROJECT_ID, PRECONDITION_ID, createMockTestCase } from './test-case.service.test-helpers.js';
+import { TEST_USER_ID, TEST_CASE_ID, PRECONDITION_ID, createMockTestCase } from './test-case.service.test-helpers.js';
 
 describe('TestCaseService（前提条件CRUD）', () => {
   let service: TestCaseService;

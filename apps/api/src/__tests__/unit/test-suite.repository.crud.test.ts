@@ -81,12 +81,12 @@ describe('TestSuiteRepository（コアCRUD）', () => {
       await repository.update(TEST_SUITE_ID, {
         name: '新名前',
         description: '新説明',
-        status: 'READY',
+        status: 'ACTIVE',
       });
 
       expect(mockPrismaTestSuite.update).toHaveBeenCalledWith({
         where: { id: TEST_SUITE_ID },
-        data: { name: '新名前', description: '新説明', status: 'READY' },
+        data: { name: '新名前', description: '新説明', status: 'ACTIVE' },
       });
     });
   });

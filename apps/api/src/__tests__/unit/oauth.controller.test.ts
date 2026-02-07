@@ -214,7 +214,7 @@ describe('OAuthController', () => {
         expect.stringContaining('https://app.example.com/login'),
       );
       // リダイレクトURLにreturnパラメータが含まれることを確認
-      const redirectUrl = vi.mocked(res.redirect!).mock.calls[0][0] as string;
+      const redirectUrl = vi.mocked(res.redirect!).mock.calls[0][0] as unknown as string;
       const url = new URL(redirectUrl);
       expect(url.searchParams.get('redirect')).toContain('/oauth/authorize');
     });
@@ -231,7 +231,7 @@ describe('OAuthController', () => {
         expect.stringContaining('https://app.example.com/oauth/consent'),
       );
       // 同意画面URLに必要なパラメータが含まれることを確認
-      const redirectUrl = vi.mocked(res.redirect!).mock.calls[0][0] as string;
+      const redirectUrl = vi.mocked(res.redirect!).mock.calls[0][0] as unknown as string;
       const url = new URL(redirectUrl);
       expect(url.searchParams.get('client_id')).toBe(TEST_CLIENT_ID);
       expect(url.searchParams.get('client_name')).toBe('Test App');

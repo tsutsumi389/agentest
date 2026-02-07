@@ -31,7 +31,7 @@ describe('useAdminOrganizations', () => {
   });
 
   it('検索パラメータ付きで取得する', async () => {
-    const params = { q: 'テスト組織', status: 'active' };
+    const params = { q: 'テスト組織', status: 'active' as const };
     mockApi.list.mockResolvedValue({ organizations: [] } as never);
 
     const { wrapper } = createQueryWrapper();

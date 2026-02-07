@@ -10,7 +10,6 @@ import {
   createExecutionSearchResponse,
   createEmptyResponse,
   createMcpInitializeRequest,
-  createMcpToolCallRequest,
   parseToolResultJson as parseToolResult,
   isToolError,
   getToolErrorMessage,
@@ -565,7 +564,9 @@ describe('MCP検索ツール統合テスト', () => {
       expect(response.status).toBe(200);
       expect(isToolError(response)).toBe(false);
 
-      const result = parseToolResult(response) as ReturnType<typeof createExecutionSearchResponse>;
+      const result = parseToolResult(response) as {
+        executions: Array<{ id: string; executedByUser?: { name: string } }>;
+      };
       expect(result.executions).toHaveLength(1);
       expect(result.executions[0].id).toBe('exec-001');
       expect(result.executions[0].executedByUser?.name).toBe('MCP Tools Test User');
