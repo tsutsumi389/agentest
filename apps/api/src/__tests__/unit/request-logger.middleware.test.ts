@@ -27,7 +27,7 @@ vi.mock('../../utils/logger.js', () => ({
 
 // pino-httpのモック（実際のpino-httpはloggerを受け取ってミドルウェアを返す）
 vi.mock('pino-http', () => ({
-  default: vi.fn(() => mockPinoHttpMiddleware),
+  pinoHttp: vi.fn(() => mockPinoHttpMiddleware),
 }));
 
 // crypto.randomUUIDのモック
