@@ -140,5 +140,34 @@ describe('EmailService', () => {
       expect(result.html).toContain('アカウントを設定する');
       expect(result.html).toContain(baseParams.invitationUrl);
     });
+
+    it('HTMLの特殊文字をエスケープしてXSSを防止する', () => {
+      const xssParams = {
+        ...baseParams,
+        name: '<script>alert("xss")</script>',
+        inviterName: '"><img src=x onerror=alert(1)>',
+      };
+
+      const result = emailService.generateAdminInvitationEmail(xssParams);
+
+      // HTML部分ではタグとして解釈されないようエスケープされている
+      expect(result.html).not.toContain('<script>');
+      expect(result.html).not.toContain('<img ');
+      expect(result.html).toContain('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
+      expect(result.html).toContain('&quot;&gt;&lt;img src=x onerror=alert(1)&gt;');
+
+      // テキスト部分はエスケープ不要（プレーンテキスト）
+      expect(result.text).toContain('<script>alert("xss")</script>');
+    });
+
+    it('未知のロールにHTML特殊文字が含まれてもエスケープする', () => {
+      const result = emailService.generateAdminInvitationEmail({
+        ...baseParams,
+        role: '<b>HACKED</b>',
+      });
+
+      expect(result.html).not.toContain('<b>HACKED</b>');
+      expect(result.html).toContain('&lt;b&gt;HACKED&lt;/b&gt;');
+    });
   });
 });
