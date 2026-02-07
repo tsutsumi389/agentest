@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser';
 import { configurePassport, type OAuthProfile } from '@agentest/auth';
 import { prisma } from '@agentest/db';
 import { env } from './config/env.js';
+import { encryptToken } from './utils/crypto.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { httpLogger, attachRequestId } from './middleware/request-logger.js';
 import { apiLimiter, authLimiter } from './middleware/rate-limiter.js';
@@ -142,14 +143,14 @@ export function createApp(): Express {
         });
       }
 
-      // OAuth アカウント連携を作成
+      // OAuth アカウント連携を作成（トークンは暗号化して保存）
       await prisma.account.create({
         data: {
           userId: user.id,
           provider: profile.provider,
           providerAccountId: profile.providerAccountId,
-          accessToken: profile.accessToken,
-          refreshToken: profile.refreshToken,
+          accessToken: encryptToken(profile.accessToken, env.TOKEN_ENCRYPTION_KEY),
+          refreshToken: encryptToken(profile.refreshToken, env.TOKEN_ENCRYPTION_KEY),
         },
       });
 

@@ -71,6 +71,12 @@ const envSchema = z.object({
   STRIPE_PRICE_TEAM_MONTHLY: z.string().optional(),
   STRIPE_PRICE_TEAM_YEARLY: z.string().optional(),
 
+  // OAuthトークン暗号化キー
+  // 本番環境ではデフォルト値なし（必須）、開発環境ではデフォルト値あり
+  TOKEN_ENCRYPTION_KEY: isProduction
+    ? z.string().min(32)
+    : z.string().min(32).default('development-token-encryption-key-32ch'),
+
   // SMTP（メール送信）
   SMTP_HOST: z.string().default('mailpit'),       // dev/staging: mailpit
   SMTP_PORT: z.coerce.number().default(1025),     // dev/staging: 1025

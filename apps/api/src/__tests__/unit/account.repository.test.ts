@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AccountRepository } from '../../repositories/account.repository.js';
+import { encrypt } from '../../utils/crypto.js';
 
 // Prisma のモック（vi.hoistedでホイスティング問題を回避）
 const mockPrismaAccount = vi.hoisted(() => ({
@@ -14,6 +15,23 @@ vi.mock('@agentest/db', () => ({
     account: mockPrismaAccount,
   },
 }));
+
+// 環境変数のモック
+vi.mock('../../config/env.js', () => ({
+  env: {
+    TOKEN_ENCRYPTION_KEY: 'test-encryption-key-for-unit-tests-32ch',
+  },
+}));
+
+// ロガーのモック
+const { mockLogger } = vi.hoisted(() => {
+  const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn(), fatal: vi.fn(), child: vi.fn() };
+  mockLogger.child.mockReturnValue(mockLogger);
+  return { mockLogger };
+});
+vi.mock('../../utils/logger.js', () => ({ logger: mockLogger }));
+
+const TEST_ENCRYPTION_KEY = 'test-encryption-key-for-unit-tests-32ch';
 
 describe('AccountRepository', () => {
   let repository: AccountRepository;
@@ -96,6 +114,8 @@ describe('AccountRepository', () => {
         userId: 'user-1',
         provider: 'github',
         providerAccountId: 'github-123',
+        accessToken: null,
+        refreshToken: null,
       };
       mockPrismaAccount.findUnique.mockResolvedValue(mockAccount);
 
@@ -107,6 +127,42 @@ describe('AccountRepository', () => {
         },
       });
       expect(result).toEqual(mockAccount);
+    });
+
+    it('暗号化されたトークンを復号して返す', async () => {
+      const encryptedAccess = encrypt('gho_abc123', TEST_ENCRYPTION_KEY);
+      const encryptedRefresh = encrypt('ghr_def456', TEST_ENCRYPTION_KEY);
+      const mockAccount = {
+        id: 'account-1',
+        userId: 'user-1',
+        provider: 'github',
+        providerAccountId: 'github-123',
+        accessToken: encryptedAccess,
+        refreshToken: encryptedRefresh,
+      };
+      mockPrismaAccount.findUnique.mockResolvedValue(mockAccount);
+
+      const result = await repository.findByUserIdAndProvider('user-1', 'github');
+
+      expect(result?.accessToken).toBe('gho_abc123');
+      expect(result?.refreshToken).toBe('ghr_def456');
+    });
+
+    it('トークンがnullの場合はnullのまま返す', async () => {
+      const mockAccount = {
+        id: 'account-1',
+        userId: 'user-1',
+        provider: 'github',
+        providerAccountId: 'github-123',
+        accessToken: null,
+        refreshToken: null,
+      };
+      mockPrismaAccount.findUnique.mockResolvedValue(mockAccount);
+
+      const result = await repository.findByUserIdAndProvider('user-1', 'github');
+
+      expect(result?.accessToken).toBeNull();
+      expect(result?.refreshToken).toBeNull();
     });
 
     it('存在しない組み合わせはnullを返す', async () => {
@@ -164,6 +220,8 @@ describe('AccountRepository', () => {
         userId: 'user-1',
         provider: 'github',
         providerAccountId: 'github-123',
+        accessToken: null,
+        refreshToken: null,
       };
       mockPrismaAccount.findUnique.mockResolvedValue(mockAccount);
 
@@ -177,12 +235,73 @@ describe('AccountRepository', () => {
       expect(result).toEqual(mockAccount);
     });
 
+    it('暗号化されたトークンを復号して返す', async () => {
+      const encryptedAccess = encrypt('gho_xyz789', TEST_ENCRYPTION_KEY);
+      const encryptedRefresh = encrypt('ghr_uvw012', TEST_ENCRYPTION_KEY);
+      const mockAccount = {
+        id: 'account-1',
+        userId: 'user-1',
+        provider: 'github',
+        providerAccountId: 'github-123',
+        accessToken: encryptedAccess,
+        refreshToken: encryptedRefresh,
+      };
+      mockPrismaAccount.findUnique.mockResolvedValue(mockAccount);
+
+      const result = await repository.findByProviderAccountId('github', 'github-123');
+
+      expect(result?.accessToken).toBe('gho_xyz789');
+      expect(result?.refreshToken).toBe('ghr_uvw012');
+    });
+
     it('存在しない場合はnullを返す', async () => {
       mockPrismaAccount.findUnique.mockResolvedValue(null);
 
       const result = await repository.findByProviderAccountId('github', 'non-existent');
 
       expect(result).toBeNull();
+    });
+
+    it('平文トークン（既存データ）はそのまま返す', async () => {
+      const mockAccount = {
+        id: 'account-1',
+        userId: 'user-1',
+        provider: 'github',
+        providerAccountId: 'github-123',
+        accessToken: 'gho_plaintext_token',
+        refreshToken: 'ghr_plaintext_token',
+      };
+      mockPrismaAccount.findUnique.mockResolvedValue(mockAccount);
+
+      const result = await repository.findByProviderAccountId('github', 'github-123');
+
+      expect(result?.accessToken).toBe('gho_plaintext_token');
+      expect(result?.refreshToken).toBe('ghr_plaintext_token');
+    });
+  });
+
+  describe('decryptAccountTokens エラーハンドリング', () => {
+    it('復号に失敗した場合はnullを返しエラーをログに記録する', async () => {
+      // 異なるキーで暗号化されたトークン（正しいフォーマットだが復号不能）
+      const encryptedWithDifferentKey = encrypt('secret', 'completely-different-key-for-testing');
+      const mockAccount = {
+        id: 'account-1',
+        userId: 'user-1',
+        provider: 'github',
+        providerAccountId: 'github-123',
+        accessToken: encryptedWithDifferentKey,
+        refreshToken: null,
+      };
+      mockPrismaAccount.findUnique.mockResolvedValue(mockAccount);
+
+      const result = await repository.findByProviderAccountId('github', 'github-123');
+
+      expect(result?.accessToken).toBeNull();
+      expect(result?.refreshToken).toBeNull();
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.objectContaining({ accountId: 'account-1' }),
+        'トークンの復号に失敗'
+      );
     });
   });
 });

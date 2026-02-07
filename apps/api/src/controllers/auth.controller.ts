@@ -5,6 +5,7 @@ import { AuthenticationError } from '@agentest/shared';
 import { env } from '../config/env.js';
 import { SessionService } from '../services/session.service.js';
 import { extractClientInfo } from '../middleware/session.middleware.js';
+import { encryptToken } from '../utils/crypto.js';
 
 const authConfig = {
   jwt: {
@@ -318,14 +319,14 @@ export class AuthController {
       return { success: false, error: `${profile.provider}は既に別のアカウントで連携されています` };
     }
 
-    // 新しい連携を作成
+    // 新しい連携を作成（トークンは暗号化して保存）
     await prisma.account.create({
       data: {
         userId,
         provider: profile.provider,
         providerAccountId: profile.providerAccountId,
-        accessToken: profile.accessToken,
-        refreshToken: profile.refreshToken,
+        accessToken: encryptToken(profile.accessToken, env.TOKEN_ENCRYPTION_KEY),
+        refreshToken: encryptToken(profile.refreshToken, env.TOKEN_ENCRYPTION_KEY),
       },
     });
 
