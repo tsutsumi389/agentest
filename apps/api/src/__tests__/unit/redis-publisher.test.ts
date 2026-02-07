@@ -30,9 +30,9 @@ vi.mock('ioredis', () => ({
   Redis: vi.fn().mockImplementation(() => mockRedisInstance),
 }));
 
-// uuidモック
-vi.mock('uuid', () => ({
-  v4: vi.fn().mockReturnValue('test-uuid-1234'),
+// randomUUIDモック
+vi.mock('node:crypto', () => ({
+  randomUUID: vi.fn().mockReturnValue('test-uuid-1234'),
 }));
 
 // ws-typesモック
@@ -104,8 +104,9 @@ describe('redis-publisher', () => {
         timestamp: expect.any(Number),
         projectId: 'project-1',
         trigger: 'test_suite',
-        resourceId: undefined,
       });
+      // resourceId 未指定時はプロパティ自体が存在しないことを確認
+      expect(event).not.toHaveProperty('resourceId');
     });
 
     it('resourceIdはオプション', async () => {

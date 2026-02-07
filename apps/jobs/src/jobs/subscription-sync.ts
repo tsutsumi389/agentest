@@ -33,7 +33,8 @@ function mapStripeStatus(stripeStatus: string): SubscriptionStatus {
     case 'trialing':
       return 'TRIALING';
     default:
-      return 'ACTIVE';
+      logger.warn({ stripeStatus }, '未知のStripeステータスです。PAST_DUEとして扱います');
+      return 'PAST_DUE';
   }
 }
 

@@ -1,7 +1,7 @@
 import { prisma, type PreconditionStatus, type StepStatus, type JudgmentStatus } from '@agentest/db';
 import { NotFoundError, BadRequestError } from '@agentest/shared';
 import { createStorageClient } from '@agentest/storage';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import { ExecutionRepository } from '../repositories/execution.repository.js';
 import { MAX_EVIDENCES_PER_RESULT } from '../config/upload.js';
 import { publishDashboardUpdated } from '../lib/redis-publisher.js';
@@ -335,7 +335,7 @@ export class ExecutionService {
     }
 
     // MinIOへのアップロード
-    const fileKey = `evidences/${executionId}/${expectedResultId}/${uuidv4()}_${file.originalname}`;
+    const fileKey = `evidences/${executionId}/${expectedResultId}/${randomUUID()}_${file.originalname}`;
     await this.storage.upload(fileKey, file.buffer, {
       contentType: file.mimetype,
     });

@@ -1,51 +1,16 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type {
   publishTestSuiteUpdated as PublishTestSuiteUpdatedFn,
   publishTestCaseUpdated as PublishTestCaseUpdatedFn,
-  closeEventsPublisher as CloseEventsPublisherFn,
 } from '../../lib/events.js';
 
-// ロガーのモック
-const { mockLogger } = vi.hoisted(() => {
-  const mockLogger = {
-    info: vi.fn(),
-    error: vi.fn(),
-    warn: vi.fn(),
-    debug: vi.fn(),
-    fatal: vi.fn(),
-    trace: vi.fn(),
-    child: vi.fn(),
-  };
-  mockLogger.child.mockReturnValue(mockLogger);
-  return { mockLogger };
-});
-
-vi.mock('../../utils/logger.js', () => ({
-  logger: mockLogger,
+// redis-publisher の publishEvent をモック
+const { mockPublishEvent } = vi.hoisted(() => ({
+  mockPublishEvent: vi.fn().mockResolvedValue(undefined),
 }));
 
-// Redis Publisherのモック
-const { mockPublish, mockQuit, mockOn } = vi.hoisted(() => ({
-  mockPublish: vi.fn(),
-  mockQuit: vi.fn(),
-  mockOn: vi.fn(),
-}));
-
-vi.mock('ioredis', () => ({
-  Redis: vi.fn().mockImplementation(() => ({
-    publish: mockPublish,
-    quit: mockQuit,
-    on: mockOn,
-  })),
-}));
-
-// 環境変数のモック
-const mockEnv = vi.hoisted(() => ({
-  REDIS_URL: 'redis://localhost:6379',
-}));
-
-vi.mock('../../config/env.js', () => ({
-  env: mockEnv,
+vi.mock('../../lib/redis-publisher.js', () => ({
+  publishEvent: mockPublishEvent,
 }));
 
 // randomUUIDのモック
@@ -57,46 +22,19 @@ vi.mock('node:crypto', () => ({
 // 動的インポートのためのモジュール
 let publishTestSuiteUpdated: typeof PublishTestSuiteUpdatedFn;
 let publishTestCaseUpdated: typeof PublishTestCaseUpdatedFn;
-let closeEventsPublisher: typeof CloseEventsPublisherFn;
 
 describe('events.ts - イベント発行ヘルパー', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
-    mockEnv.REDIS_URL = 'redis://localhost:6379';
-    mockPublish.mockResolvedValue(1);
-    mockQuit.mockResolvedValue('OK');
 
     // モジュールキャッシュをクリアして再インポート
     vi.resetModules();
     const eventsModule = await import('../../lib/events.js');
     publishTestSuiteUpdated = eventsModule.publishTestSuiteUpdated;
     publishTestCaseUpdated = eventsModule.publishTestCaseUpdated;
-    closeEventsPublisher = eventsModule.closeEventsPublisher;
-  });
-
-  afterEach(async () => {
-    // 各テスト後にRedis接続をクリーンアップ
-    await closeEventsPublisher();
   });
 
   describe('publishTestSuiteUpdated', () => {
-    it('REDIS_URL未設定時は何もしない', async () => {
-      // 環境変数をクリアして再インポート
-      vi.resetModules();
-      mockEnv.REDIS_URL = '';
-
-      const eventsModule = await import('../../lib/events.js');
-
-      await eventsModule.publishTestSuiteUpdated(
-        'suite-1',
-        'project-1',
-        [{ field: 'name', oldValue: 'old', newValue: 'new' }],
-        { type: 'user', id: 'user-1', name: 'Test User' }
-      );
-
-      expect(mockPublish).not.toHaveBeenCalled();
-    });
-
     it('2つのチャンネル（project, testSuite）にイベントを発行する', async () => {
       await publishTestSuiteUpdated(
         'suite-1',
@@ -105,18 +43,18 @@ describe('events.ts - イベント発行ヘルパー', () => {
         { type: 'user', id: 'user-1', name: 'Test User' }
       );
 
-      expect(mockPublish).toHaveBeenCalledTimes(2);
+      expect(mockPublishEvent).toHaveBeenCalledTimes(2);
 
       // プロジェクトチャンネルへの発行
-      expect(mockPublish).toHaveBeenCalledWith(
+      expect(mockPublishEvent).toHaveBeenCalledWith(
         'project:project-1',
-        expect.any(String)
+        expect.objectContaining({ type: 'test_suite:updated' })
       );
 
       // テストスイートチャンネルへの発行
-      expect(mockPublish).toHaveBeenCalledWith(
+      expect(mockPublishEvent).toHaveBeenCalledWith(
         'test_suite:suite-1',
-        expect.any(String)
+        expect.objectContaining({ type: 'test_suite:updated' })
       );
     });
 
@@ -132,8 +70,7 @@ describe('events.ts - イベント発行ヘルパー', () => {
 
       const afterTime = Date.now();
 
-      // publishの第2引数（JSON文字列）をパース
-      const publishedEvent = JSON.parse(mockPublish.mock.calls[0][1]);
+      const publishedEvent = mockPublishEvent.mock.calls[0][1];
 
       expect(publishedEvent).toMatchObject({
         type: 'test_suite:updated',
@@ -144,52 +81,12 @@ describe('events.ts - イベント発行ヘルパー', () => {
         updatedBy: { type: 'user', id: 'user-1', name: 'Test User' },
       });
 
-      // timestampがテスト実行時の範囲内にあることを確認
       expect(publishedEvent.timestamp).toBeGreaterThanOrEqual(beforeTime);
       expect(publishedEvent.timestamp).toBeLessThanOrEqual(afterTime);
-    });
-
-    it('Redis publish失敗時はログ出力のみで例外を投げない', async () => {
-      const mockError = new Error('Redis connection failed');
-      mockPublish.mockRejectedValue(mockError);
-
-      // 例外が投げられないことを確認
-      await expect(
-        publishTestSuiteUpdated(
-          'suite-1',
-          'project-1',
-          [{ field: 'precondition:delete', oldValue: 'precondition-1', newValue: null }],
-          { type: 'user', id: 'user-1', name: 'Test User' }
-        )
-      ).resolves.toBeUndefined();
-
-      // エラーログが出力されることを確認
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        { err: mockError },
-        'Redis publish エラー'
-      );
     });
   });
 
   describe('publishTestCaseUpdated', () => {
-    it('REDIS_URL未設定時は何もしない', async () => {
-      // 環境変数をクリアして再インポート
-      vi.resetModules();
-      mockEnv.REDIS_URL = '';
-
-      const eventsModule = await import('../../lib/events.js');
-
-      await eventsModule.publishTestCaseUpdated(
-        'case-1',
-        'suite-1',
-        'project-1',
-        [{ field: 'step:add', oldValue: null, newValue: 'step-1' }],
-        { type: 'user', id: 'user-1', name: 'Test User' }
-      );
-
-      expect(mockPublish).not.toHaveBeenCalled();
-    });
-
     it('3つのチャンネル（project, testSuite, testCase）にイベントを発行する', async () => {
       await publishTestCaseUpdated(
         'case-1',
@@ -199,24 +96,21 @@ describe('events.ts - イベント発行ヘルパー', () => {
         { type: 'user', id: 'user-1', name: 'Test User' }
       );
 
-      expect(mockPublish).toHaveBeenCalledTimes(3);
+      expect(mockPublishEvent).toHaveBeenCalledTimes(3);
 
-      // プロジェクトチャンネルへの発行
-      expect(mockPublish).toHaveBeenCalledWith(
+      expect(mockPublishEvent).toHaveBeenCalledWith(
         'project:project-1',
-        expect.any(String)
+        expect.objectContaining({ type: 'test_case:updated' })
       );
 
-      // テストスイートチャンネルへの発行
-      expect(mockPublish).toHaveBeenCalledWith(
+      expect(mockPublishEvent).toHaveBeenCalledWith(
         'test_suite:suite-1',
-        expect.any(String)
+        expect.objectContaining({ type: 'test_case:updated' })
       );
 
-      // テストケースチャンネルへの発行
-      expect(mockPublish).toHaveBeenCalledWith(
+      expect(mockPublishEvent).toHaveBeenCalledWith(
         'test_case:case-1',
-        expect.any(String)
+        expect.objectContaining({ type: 'test_case:updated' })
       );
     });
 
@@ -236,8 +130,7 @@ describe('events.ts - イベント発行ヘルパー', () => {
 
       const afterTime = Date.now();
 
-      // publishの第2引数（JSON文字列）をパース
-      const publishedEvent = JSON.parse(mockPublish.mock.calls[0][1]);
+      const publishedEvent = mockPublishEvent.mock.calls[0][1];
 
       expect(publishedEvent).toMatchObject({
         type: 'test_case:updated',
@@ -254,53 +147,6 @@ describe('events.ts - イベント発行ヘルパー', () => {
 
       expect(publishedEvent.timestamp).toBeGreaterThanOrEqual(beforeTime);
       expect(publishedEvent.timestamp).toBeLessThanOrEqual(afterTime);
-    });
-
-    it('Redis publish失敗時はログ出力のみで例外を投げない', async () => {
-      const mockError = new Error('Redis connection timeout');
-      mockPublish.mockRejectedValue(mockError);
-
-      // 例外が投げられないことを確認
-      await expect(
-        publishTestCaseUpdated(
-          'case-1',
-          'suite-1',
-          'project-1',
-          [{ field: 'step:delete', oldValue: 'step-1', newValue: null }],
-          { type: 'user', id: 'user-1', name: 'Test User' }
-        )
-      ).resolves.toBeUndefined();
-
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        { err: mockError },
-        'Redis publish エラー'
-      );
-    });
-  });
-
-  describe('closeEventsPublisher', () => {
-    it('Redisクライアントを終了する', async () => {
-      // まずpublishでRedisクライアントを初期化
-      await publishTestSuiteUpdated(
-        'suite-1',
-        'project-1',
-        [{ field: 'name', oldValue: 'old', newValue: 'new' }],
-        { type: 'user', id: 'user-1', name: 'Test User' }
-      );
-
-      await closeEventsPublisher();
-
-      expect(mockQuit).toHaveBeenCalled();
-    });
-
-    it('複数回呼び出しても安全', async () => {
-      await closeEventsPublisher();
-      await closeEventsPublisher();
-
-      // quitは最初のpublisher初期化後の1回のみ
-      // 2回目以降はpublisherがnullなので呼ばれない
-      // この場合、publisherが初期化されていないためquitも呼ばれない
-      expect(mockQuit).not.toHaveBeenCalled();
     });
   });
 });

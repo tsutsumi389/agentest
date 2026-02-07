@@ -41,8 +41,8 @@ export const envSchema = z.object({
   WEB_URL: z.string().url().default('http://localhost:3000'),
 
   // ポート設定
-  API_PORT: z.coerce.number().default(3001),
-  WS_PORT: z.coerce.number().default(3002),
+  API_PORT: z.coerce.number().int().min(1).max(65535).default(3001),
+  WS_PORT: z.coerce.number().int().min(1).max(65535).default(3002),
 
   // ログ設定（Pinoのログレベルと一致）
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
