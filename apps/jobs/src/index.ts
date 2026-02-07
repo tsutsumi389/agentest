@@ -12,6 +12,7 @@ import { runMetricsBackfill } from './jobs/metrics-backfill.js';
 import { runPlanDistributionAggregation } from './jobs/plan-distribution-aggregation.js';
 import { closeRedis } from './lib/redis.js';
 import { closePrisma } from './lib/prisma.js';
+import { registerProcessHandlers } from '@agentest/shared';
 
 // リソースクリーンアップ
 async function cleanup() {
@@ -24,34 +25,11 @@ async function cleanup() {
 }
 
 // プロセスレベルの例外ハンドラ（main実行前に登録）
-process.on('uncaughtException', (error) => {
-  console.error(JSON.stringify({
-    timestamp: new Date().toISOString(),
-    level: 'error',
-    message: 'キャッチされない例外が発生しました',
-    error: error.message,
-    stack: error.stack,
-  }));
-  // ベストエフォートでクリーンアップし、確実に終了する
-  cleanup()
-    .catch(() => {})
-    .finally(() => process.exit(1));
-  // クリーンアップがハングした場合のセーフティネット
-  setTimeout(() => process.exit(1), 5000).unref();
-});
-
-process.on('unhandledRejection', (reason) => {
-  console.error(JSON.stringify({
-    timestamp: new Date().toISOString(),
-    level: 'error',
-    message: '未処理のPromise拒否が発生しました',
-    reason: reason instanceof Error ? reason.message : String(reason),
-    stack: reason instanceof Error ? reason.stack : undefined,
-  }));
-  cleanup()
-    .catch(() => {})
-    .finally(() => process.exit(1));
-  setTimeout(() => process.exit(1), 5000).unref();
+registerProcessHandlers({
+  getShutdownFn: () => async (_signal, exitCode = 1) => {
+    await cleanup().catch(() => {});
+    process.exit(exitCode);
+  },
 });
 
 // 利用可能なジョブの定義

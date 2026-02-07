@@ -23,6 +23,10 @@
     "./config": {
       "import": "./dist/config/index.js",
       "types": "./dist/config/index.d.ts"
+    },
+    "./process": {
+      "import": "./dist/process/index.js",
+      "types": "./dist/process/index.d.ts"
     }
   },
   "scripts": {

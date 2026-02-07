@@ -142,7 +142,7 @@ severity: Critical
 notification: "@slack-alerts @pagerduty-oncall"
 ```
 
-### 4.3 ログ保持ポリシー
+### 4.4 ログ保持ポリシー
 
 | ログ種別 | 保持期間 | 保存先 |
 |---------|---------|--------|
