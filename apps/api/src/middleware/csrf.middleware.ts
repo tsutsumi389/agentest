@@ -23,6 +23,7 @@ export function csrfProtection() {
     // 許可するオリジンのリスト
     const allowedOrigins = [
       env.FRONTEND_URL,
+      env.ADMIN_FRONTEND_URL,
       env.API_BASE_URL,
     ].map((url) => url.replace(/\/$/, '')); // 末尾スラッシュを除去
 

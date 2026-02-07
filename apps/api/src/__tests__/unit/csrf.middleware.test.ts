@@ -6,6 +6,7 @@ import { csrfProtection } from '../../middleware/csrf.middleware.js';
 vi.mock('../../config/env.js', () => ({
   env: {
     FRONTEND_URL: 'http://localhost:5173',
+    ADMIN_FRONTEND_URL: 'http://localhost:5174',
     API_BASE_URL: 'http://localhost:3001',
   },
 }));
@@ -58,6 +59,15 @@ describe('csrfProtection', () => {
   describe('Originヘッダー検証', () => {
     it('許可されたOrigin（フロントエンド）からのリクエストを許可する', () => {
       mockReq.headers = { origin: 'http://localhost:5173' };
+
+      csrfProtection()(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalled();
+      expect(mockRes.status).not.toHaveBeenCalled();
+    });
+
+    it('許可されたOrigin（管理者フロントエンド）からのリクエストを許可する', () => {
+      mockReq.headers = { origin: 'http://localhost:5174' };
 
       csrfProtection()(mockReq as Request, mockRes as Response, mockNext);
 
