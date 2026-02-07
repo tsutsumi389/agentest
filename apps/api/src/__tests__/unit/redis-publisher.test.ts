@@ -105,6 +105,8 @@ describe('redis-publisher', () => {
         projectId: 'project-1',
         trigger: 'test_suite',
       });
+      // resourceId 未指定時はプロパティ自体が存在しないことを確認
+      expect(event).not.toHaveProperty('resourceId');
     });
 
     it('resourceIdはオプション', async () => {

@@ -1,6 +1,7 @@
 import { Channels, type TestSuiteUpdatedEvent, type TestCaseUpdatedEvent } from '@agentest/ws-types';
 import { randomUUID } from 'node:crypto';
 import { publishEvent } from './redis-publisher.js';
+// publishEvent は内部で try-catch しエラーをログ出力するのみでスローしない設計
 
 // 更新者の型
 type UpdatedBy = { type: 'user' | 'agent'; id: string; name: string };

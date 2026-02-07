@@ -387,6 +387,7 @@ async function getCache<T>(
     if (!data) {
       return null;
     }
+    // NOTE: ランタイム型チェックなし。呼び出し元が正しい型パラメータを指定する前提
     return JSON.parse(data) as T;
   } catch (error) {
     logger.error({ err: error }, errorMessage);

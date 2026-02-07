@@ -314,12 +314,12 @@ export class TestCaseChildrenService {
       try {
         const user = await tx.user.findUnique({ where: { id: userId } });
         await publishTestCaseUpdated(
-        testCaseId,
-        testCase.testSuiteId,
-        testCase.testSuite.projectId,
-        [{ field: 'precondition:delete', oldValue: preconditionId, newValue: null }],
-        { type: 'user', id: userId, name: user?.name || 'Unknown' }
-      );
+          testCaseId,
+          testCase.testSuiteId,
+          testCase.testSuite.projectId,
+          [{ field: 'precondition:delete', oldValue: preconditionId, newValue: null }],
+          { type: 'user', id: userId, name: user?.name || 'Unknown' }
+        );
       } catch (error) {
         this.logger.error({ err: error }, 'イベント発行エラー');
       }
@@ -412,12 +412,12 @@ export class TestCaseChildrenService {
       try {
         const user = await tx.user.findUnique({ where: { id: userId } });
         await publishTestCaseUpdated(
-        testCaseId,
-        testCase.testSuiteId,
-        testCase.testSuite.projectId,
-        [{ field: 'precondition:reorder', oldValue: currentOrder, newValue: preconditionIds }],
-        { type: 'user', id: userId, name: user?.name || 'Unknown' }
-      );
+          testCaseId,
+          testCase.testSuiteId,
+          testCase.testSuite.projectId,
+          [{ field: 'precondition:reorder', oldValue: currentOrder, newValue: preconditionIds }],
+          { type: 'user', id: userId, name: user?.name || 'Unknown' }
+        );
       } catch (error) {
         this.logger.error({ err: error }, 'イベント発行エラー');
       }
@@ -498,12 +498,12 @@ export class TestCaseChildrenService {
       try {
         const user = await tx.user.findUnique({ where: { id: userId } });
         await publishTestCaseUpdated(
-        testCaseId,
-        testCase.testSuiteId,
-        testCase.testSuite.projectId,
-        [{ field: 'step:add', oldValue: null, newValue: step.id }],
-        { type: 'user', id: userId, name: user?.name || 'Unknown' }
-      );
+          testCaseId,
+          testCase.testSuiteId,
+          testCase.testSuite.projectId,
+          [{ field: 'step:add', oldValue: null, newValue: step.id }],
+          { type: 'user', id: userId, name: user?.name || 'Unknown' }
+        );
       } catch (error) {
         this.logger.error({ err: error }, 'イベント発行エラー');
       }
@@ -570,12 +570,12 @@ export class TestCaseChildrenService {
       try {
         const user = await tx.user.findUnique({ where: { id: userId } });
         await publishTestCaseUpdated(
-        testCaseId,
-        testCase.testSuiteId,
-        testCase.testSuite.projectId,
-        [{ field: 'step:update', oldValue: step.content, newValue: data.content }],
-        { type: 'user', id: userId, name: user?.name || 'Unknown' }
-      );
+          testCaseId,
+          testCase.testSuiteId,
+          testCase.testSuite.projectId,
+          [{ field: 'step:update', oldValue: step.content, newValue: data.content }],
+          { type: 'user', id: userId, name: user?.name || 'Unknown' }
+        );
       } catch (error) {
         this.logger.error({ err: error }, 'イベント発行エラー');
       }
@@ -652,12 +652,12 @@ export class TestCaseChildrenService {
       try {
         const user = await tx.user.findUnique({ where: { id: userId } });
         await publishTestCaseUpdated(
-        testCaseId,
-        testCase.testSuiteId,
-        testCase.testSuite.projectId,
-        [{ field: 'step:delete', oldValue: stepId, newValue: null }],
-        { type: 'user', id: userId, name: user?.name || 'Unknown' }
-      );
+          testCaseId,
+          testCase.testSuiteId,
+          testCase.testSuite.projectId,
+          [{ field: 'step:delete', oldValue: stepId, newValue: null }],
+          { type: 'user', id: userId, name: user?.name || 'Unknown' }
+        );
       } catch (error) {
         this.logger.error({ err: error }, 'イベント発行エラー');
       }
@@ -750,12 +750,12 @@ export class TestCaseChildrenService {
       try {
         const user = await tx.user.findUnique({ where: { id: userId } });
         await publishTestCaseUpdated(
-        testCaseId,
-        testCase.testSuiteId,
-        testCase.testSuite.projectId,
-        [{ field: 'step:reorder', oldValue: currentOrder, newValue: stepIds }],
-        { type: 'user', id: userId, name: user?.name || 'Unknown' }
-      );
+          testCaseId,
+          testCase.testSuiteId,
+          testCase.testSuite.projectId,
+          [{ field: 'step:reorder', oldValue: currentOrder, newValue: stepIds }],
+          { type: 'user', id: userId, name: user?.name || 'Unknown' }
+        );
       } catch (error) {
         this.logger.error({ err: error }, 'イベント発行エラー');
       }
@@ -836,12 +836,12 @@ export class TestCaseChildrenService {
       try {
         const user = await tx.user.findUnique({ where: { id: userId } });
         await publishTestCaseUpdated(
-        testCaseId,
-        testCase.testSuiteId,
-        testCase.testSuite.projectId,
-        [{ field: 'expectedResult:add', oldValue: null, newValue: expectedResult.id }],
-        { type: 'user', id: userId, name: user?.name || 'Unknown' }
-      );
+          testCaseId,
+          testCase.testSuiteId,
+          testCase.testSuite.projectId,
+          [{ field: 'expectedResult:add', oldValue: null, newValue: expectedResult.id }],
+          { type: 'user', id: userId, name: user?.name || 'Unknown' }
+        );
       } catch (error) {
         this.logger.error({ err: error }, 'イベント発行エラー');
       }
@@ -908,12 +908,12 @@ export class TestCaseChildrenService {
       try {
         const user = await tx.user.findUnique({ where: { id: userId } });
         await publishTestCaseUpdated(
-        testCaseId,
-        testCase.testSuiteId,
-        testCase.testSuite.projectId,
-        [{ field: 'expectedResult:update', oldValue: expectedResult.content, newValue: data.content }],
-        { type: 'user', id: userId, name: user?.name || 'Unknown' }
-      );
+          testCaseId,
+          testCase.testSuiteId,
+          testCase.testSuite.projectId,
+          [{ field: 'expectedResult:update', oldValue: expectedResult.content, newValue: data.content }],
+          { type: 'user', id: userId, name: user?.name || 'Unknown' }
+        );
       } catch (error) {
         this.logger.error({ err: error }, 'イベント発行エラー');
       }
@@ -990,12 +990,12 @@ export class TestCaseChildrenService {
       try {
         const user = await tx.user.findUnique({ where: { id: userId } });
         await publishTestCaseUpdated(
-        testCaseId,
-        testCase.testSuiteId,
-        testCase.testSuite.projectId,
-        [{ field: 'expectedResult:delete', oldValue: expectedResultId, newValue: null }],
-        { type: 'user', id: userId, name: user?.name || 'Unknown' }
-      );
+          testCaseId,
+          testCase.testSuiteId,
+          testCase.testSuite.projectId,
+          [{ field: 'expectedResult:delete', oldValue: expectedResultId, newValue: null }],
+          { type: 'user', id: userId, name: user?.name || 'Unknown' }
+        );
       } catch (error) {
         this.logger.error({ err: error }, 'イベント発行エラー');
       }
@@ -1088,12 +1088,12 @@ export class TestCaseChildrenService {
       try {
         const user = await tx.user.findUnique({ where: { id: userId } });
         await publishTestCaseUpdated(
-        testCaseId,
-        testCase.testSuiteId,
-        testCase.testSuite.projectId,
-        [{ field: 'expectedResult:reorder', oldValue: currentOrder, newValue: expectedResultIds }],
-        { type: 'user', id: userId, name: user?.name || 'Unknown' }
-      );
+          testCaseId,
+          testCase.testSuiteId,
+          testCase.testSuite.projectId,
+          [{ field: 'expectedResult:reorder', oldValue: currentOrder, newValue: expectedResultIds }],
+          { type: 'user', id: userId, name: user?.name || 'Unknown' }
+        );
       } catch (error) {
         this.logger.error({ err: error }, 'イベント発行エラー');
       }
