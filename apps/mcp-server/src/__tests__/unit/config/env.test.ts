@@ -8,6 +8,7 @@ const { mockLogger } = vi.hoisted(() => {
 });
 vi.mock('../../../utils/logger.js', () => ({ logger: mockLogger }));
 
+import { nodeEnvSchema } from '@agentest/shared/config';
 import { createEnvSchema } from '../../../config/env.js';
 
 type EnvSchema = ReturnType<typeof createEnvSchema>;
@@ -130,6 +131,20 @@ describe('config/env', () => {
       if (result.success) {
         expect(result.data.NODE_ENV).toBe('test');
       }
+    });
+  });
+
+  describe('nodeEnvSchema', () => {
+    it('未定義の場合はdevelopmentがデフォルト', () => {
+      expect(nodeEnvSchema.parse(undefined)).toBe('development');
+    });
+
+    it('productionを正しくパース', () => {
+      expect(nodeEnvSchema.parse('production')).toBe('production');
+    });
+
+    it('不正な値でエラー', () => {
+      expect(() => nodeEnvSchema.parse('invalid')).toThrow();
     });
   });
 

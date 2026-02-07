@@ -1,16 +1,18 @@
 import { z } from 'zod';
+import { nodeEnvSchema } from '@agentest/shared/config';
 import { createLogger } from '@agentest/shared/logger';
 
 // env.ts は他のモジュールより先に評価されるため、共有loggerではなく直接生成する
 const logger = createLogger({ service: 'api' }).child({ module: 'env' });
 
-// 本番環境かどうかを判定
-const isProduction = process.env.NODE_ENV === 'production';
+// NODE_ENVをZodスキーマでパースしてから本番環境かどうかを判定
+// （process.env.NODE_ENVの直接参照ではZodスキーマのデフォルト値と乖離する可能性があるため）
+const isProduction = nodeEnvSchema.parse(process.env.NODE_ENV) === 'production';
 
 // 環境変数スキーマ
 const envSchema = z.object({
   // サーバー設定
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  NODE_ENV: nodeEnvSchema,
   PORT: z.coerce.number().default(3001),
   HOST: z.string().default('0.0.0.0'),
 
