@@ -1,7 +1,4 @@
 import { z } from 'zod';
-import { createLogger } from '../logger/index.js';
-
-const logger = createLogger({ service: 'shared' }).child({ module: 'env' });
 
 export const envSchema = z.object({
   // ノード環境
@@ -49,11 +46,25 @@ export const envSchema = z.object({
 
 export type Env = z.infer<typeof envSchema>;
 
+/**
+ * 環境変数をパース・バリデーションする（バックエンド専用）
+ *
+ * 注意: createLogger をモジュールレベルで呼び出すと、バレルエクスポート経由で
+ * ブラウザにもロードされ、process 未定義エラーを引き起こす。
+ * そのためエラー出力は console.error を使用する。
+ */
 export function parseEnv(env: NodeJS.ProcessEnv = process.env): Env {
   const result = envSchema.safeParse(env);
   if (!result.success) {
     const formatted = result.error.format();
-    logger.fatal({ errors: formatted }, 'Environment validation failed');
+    console.error(JSON.stringify({
+      level: 'fatal',
+      service: 'shared',
+      module: 'env',
+      msg: 'Environment validation failed',
+      errors: formatted,
+      time: new Date().toISOString(),
+    }));
     throw new Error('Invalid environment configuration');
   }
   return result.data;
