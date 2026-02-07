@@ -14,17 +14,17 @@ import { logger as baseLogger } from './utils/logger.js';
 const clientMessageSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('authenticate'),
-    token: z.string(),
+    token: z.string().min(1).max(4096),
     timestamp: z.number(),
   }),
   z.object({
     type: z.literal('subscribe'),
-    channels: z.array(z.string()).min(1).max(50),
+    channels: z.array(z.string().max(200)).min(1).max(50),
     timestamp: z.number(),
   }),
   z.object({
     type: z.literal('unsubscribe'),
-    channels: z.array(z.string()).min(1).max(50),
+    channels: z.array(z.string().max(200)).min(1).max(50),
     timestamp: z.number(),
   }),
   z.object({
@@ -43,7 +43,7 @@ const CHANNEL_PATTERN = /^(project|test_suite|test_case|execution|user):[0-9a-f]
 
 const logger = baseLogger.child({ module: 'server' });
 
-// 認証タイムアウト（秒）
+// 認証タイムアウト（ミリ秒）
 const AUTH_TIMEOUT_MS = 10_000;
 
 // 認証試行回数の上限
@@ -72,7 +72,7 @@ const channelSubscribers = new Map<string, Set<ExtendedWebSocket>>();
  * WebSocketサーバーを作成
  */
 export function createWebSocketServer(port: number, host: string): WebSocketServer {
-  wss = new WebSocketServer({ port, host });
+  wss = new WebSocketServer({ port, host, maxPayload: 64 * 1024 });
 
   logger.info({ host, port }, 'WebSocketサーバーが起動しました');
 
@@ -87,7 +87,9 @@ export function createWebSocketServer(port: number, host: string): WebSocketServ
     wss.clients.forEach((ws) => {
       const extWs = ws as ExtendedWebSocket;
       if (!extWs.isAlive) {
-        cleanupConnection(extWs);
+        cleanupConnection(extWs).catch((err) => {
+          logger.error({ err }, 'クリーンアップ中のエラー');
+        });
         return extWs.terminate();
       }
       extWs.isAlive = false;
@@ -131,7 +133,9 @@ async function handleConnection(ws: WebSocket, _request: IncomingMessage): Promi
     if (extWs.authTimeout) {
       clearTimeout(extWs.authTimeout);
     }
-    cleanupConnection(extWs);
+    cleanupConnection(extWs).catch((err) => {
+      logger.error({ err }, 'クローズ時のクリーンアップエラー');
+    });
   });
 
   // エラーハンドラ
@@ -140,7 +144,9 @@ async function handleConnection(ws: WebSocket, _request: IncomingMessage): Promi
       clearTimeout(extWs.authTimeout);
     }
     logger.error({ err: error }, 'WebSocketエラー');
-    cleanupConnection(extWs);
+    cleanupConnection(extWs).catch((err) => {
+      logger.error({ err }, 'エラー時のクリーンアップエラー');
+    });
   });
 }
 
@@ -331,8 +337,8 @@ async function handleUnsubscribe(ws: ExtendedWebSocket, channels: string[]): Pro
  */
 function handleRedisMessage(channel: string, message: string): void {
   try {
-    // 型チェックのためにパース（送信時は元のメッセージを使用）
-    JSON.parse(message) as ServerEvent;
+    // JSONとして有効であることを確認（不正なデータのブロードキャストを防止）
+    JSON.parse(message);
     const subscribers = channelSubscribers.get(channel);
 
     if (subscribers) {

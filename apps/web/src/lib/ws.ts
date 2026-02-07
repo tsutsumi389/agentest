@@ -37,11 +37,13 @@ class WebSocketClient {
       this.reconnectAttempts = 0;
 
       // authenticateメッセージでトークンを送信
-      this.send({
-        type: 'authenticate',
-        token,
-        timestamp: Date.now(),
-      });
+      if (this.token) {
+        this.send({
+          type: 'authenticate',
+          token: this.token,
+          timestamp: Date.now(),
+        });
+      }
     };
 
     this.ws.onmessage = (event) => {
@@ -58,6 +60,14 @@ class WebSocketClient {
               channels: Array.from(this.subscribedChannels),
               timestamp: Date.now(),
             });
+          }
+        }
+
+        // 認証エラー時は再接続を停止（期限切れトークンでの無限ループを防止）
+        if (data.type === 'error' && 'code' in data) {
+          const code = (data as { code: string }).code;
+          if (code === 'AUTHENTICATION_FAILED' || code === 'AUTH_TIMEOUT' || code === 'TOO_MANY_ATTEMPTS') {
+            this.token = null;
           }
         }
 
