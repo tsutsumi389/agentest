@@ -205,9 +205,9 @@ test.describe('ラベル管理', () => {
     // 作成したラベルが表示されるまで待機
     await expect(page.getByText(labelName)).toBeVisible({ timeout: 10000 });
 
-    // ラベル行を見つけて、その中の編集ボタンをクリック
-    const labelRow = page.locator('div').filter({ hasText: labelName }).filter({ has: page.getByRole('button', { name: '編集' }) });
-    await labelRow.getByRole('button', { name: '編集' }).first().click();
+    // ラベル名テキスト → LabelBadge(span) → 行div の順に親を辿る
+    const labelRow = page.getByText(labelName, { exact: true }).locator('..').locator('..');
+    await labelRow.getByRole('button', { name: '編集' }).click();
 
     // 編集モーダルが表示される
     await expect(page.getByRole('heading', { name: 'ラベルを編集' })).toBeVisible({ timeout: 5000 });

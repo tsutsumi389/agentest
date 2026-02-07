@@ -1539,7 +1539,7 @@ export class TestCaseService {
           expectedResults: { orderBy: { orderKey: 'asc' } },
         },
       });
-    });
+    }, { timeout: 15000 });
   }
 
   /**
