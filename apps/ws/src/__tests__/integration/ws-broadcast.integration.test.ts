@@ -34,14 +34,6 @@ vi.mock('../../redis.js', () => ({
 // 認証モジュールのモック
 vi.mock('../../auth.js', () => ({
   authenticateToken: vi.fn(),
-  extractTokenFromUrl: vi.fn((url: string) => {
-    try {
-      const urlObj = new URL(url, 'ws://localhost');
-      return urlObj.searchParams.get('token');
-    } catch {
-      return null;
-    }
-  }),
 }));
 
 // プレゼンスハンドラのモック
@@ -150,8 +142,19 @@ describe('WebSocketブロードキャスト 統合テスト', () => {
     token: string,
     channels: string[]
   ): Promise<WebSocket> {
-    const ws = new WebSocket(`${serverUrl}/?token=${token}`);
+    const ws = new WebSocket(serverUrl);
     clients.push(ws);
+
+    await new Promise<void>((resolve) => {
+      ws.on('open', resolve);
+    });
+
+    // authenticateメッセージで認証
+    sendMessage(ws, {
+      type: 'authenticate',
+      token,
+      timestamp: Date.now(),
+    });
 
     await waitForMessage(ws, 'authenticated');
 
@@ -445,10 +448,27 @@ describe('WebSocketブロードキャスト 統合テスト', () => {
 
   it('sendToUserで特定ユーザーにイベントを送信', async () => {
     // ユーザー1とユーザー2が接続
-    const ws1 = new WebSocket(`${serverUrl}/?token=${VALID_TOKEN}`);
+    const ws1 = new WebSocket(serverUrl);
     clients.push(ws1);
-    const ws2 = new WebSocket(`${serverUrl}/?token=valid-token-user2`);
+    const ws2 = new WebSocket(serverUrl);
     clients.push(ws2);
+
+    await Promise.all([
+      new Promise<void>((resolve) => { ws1.on('open', resolve); }),
+      new Promise<void>((resolve) => { ws2.on('open', resolve); }),
+    ]);
+
+    // authenticateメッセージで認証
+    sendMessage(ws1, {
+      type: 'authenticate',
+      token: VALID_TOKEN,
+      timestamp: Date.now(),
+    });
+    sendMessage(ws2, {
+      type: 'authenticate',
+      token: 'valid-token-user2',
+      timestamp: Date.now(),
+    });
 
     await Promise.all([
       waitForMessage(ws1, 'authenticated'),
@@ -483,10 +503,27 @@ describe('WebSocketブロードキャスト 統合テスト', () => {
 
   it('sendToUserで同一ユーザーの複数接続にイベント送信', async () => {
     // 同じユーザーが2つの接続を持つ
-    const ws1 = new WebSocket(`${serverUrl}/?token=${VALID_TOKEN}`);
+    const ws1 = new WebSocket(serverUrl);
     clients.push(ws1);
-    const ws2 = new WebSocket(`${serverUrl}/?token=${VALID_TOKEN}`);
+    const ws2 = new WebSocket(serverUrl);
     clients.push(ws2);
+
+    await Promise.all([
+      new Promise<void>((resolve) => { ws1.on('open', resolve); }),
+      new Promise<void>((resolve) => { ws2.on('open', resolve); }),
+    ]);
+
+    // authenticateメッセージで認証
+    sendMessage(ws1, {
+      type: 'authenticate',
+      token: VALID_TOKEN,
+      timestamp: Date.now(),
+    });
+    sendMessage(ws2, {
+      type: 'authenticate',
+      token: VALID_TOKEN,
+      timestamp: Date.now(),
+    });
 
     await Promise.all([
       waitForMessage(ws1, 'authenticated'),

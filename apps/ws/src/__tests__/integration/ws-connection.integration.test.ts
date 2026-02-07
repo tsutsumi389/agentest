@@ -28,14 +28,6 @@ vi.mock('../../redis.js', () => ({
 // 認証モジュールのモック
 vi.mock('../../auth.js', () => ({
   authenticateToken: vi.fn(),
-  extractTokenFromUrl: vi.fn((url: string) => {
-    try {
-      const urlObj = new URL(url, 'ws://localhost');
-      return urlObj.searchParams.get('token');
-    } catch {
-      return null;
-    }
-  }),
 }));
 
 // プレゼンスハンドラのモック
@@ -135,8 +127,8 @@ describe('WebSocket接続 統合テスト', () => {
   // 認証テスト
   // ------------------------------------------
 
-  it('認証済みWebSocket接続の確立', async () => {
-    const ws = new WebSocket(`${serverUrl}/?token=${VALID_TOKEN}`);
+  it('authenticateメッセージによるWebSocket認証', async () => {
+    const ws = new WebSocket(serverUrl);
     clients.push(ws);
 
     await new Promise<void>((resolve, reject) => {
@@ -145,19 +137,15 @@ describe('WebSocket接続 統合テスト', () => {
     });
 
     expect(ws.readyState).toBe(WebSocket.OPEN);
-  });
 
-  it('authenticatedメッセージの受信確認', async () => {
-    const ws = new WebSocket(`${serverUrl}/?token=${VALID_TOKEN}`);
-    clients.push(ws);
-
-    const messagePromise = waitForMessage(ws, 'authenticated');
-
-    await new Promise<void>((resolve) => {
-      ws.on('open', resolve);
+    // authenticateメッセージで認証
+    sendMessage(ws, {
+      type: 'authenticate',
+      token: VALID_TOKEN,
+      timestamp: Date.now(),
     });
 
-    const message = await messagePromise as {
+    const message = await waitForMessage(ws, 'authenticated') as {
       type: string;
       userId: string;
       timestamp: number;
@@ -168,7 +156,31 @@ describe('WebSocket接続 統合テスト', () => {
     expect(message.timestamp).toBeTypeOf('number');
   });
 
-  it('未認証接続の拒否（トークンなし）', async () => {
+  it('URLにトークンを含めても認証されない（セキュリティ対策）', async () => {
+    const ws = new WebSocket(`${serverUrl}/?token=${VALID_TOKEN}`);
+    clients.push(ws);
+
+    await new Promise<void>((resolve) => {
+      ws.on('open', resolve);
+    });
+
+    // URLにトークンがあっても自動認証されない
+    // subscribeを試みて未認証エラーを確認
+    sendMessage(ws, {
+      type: 'subscribe',
+      channels: [`project:${TEST_PROJECT_ID}`],
+      timestamp: Date.now(),
+    });
+
+    const errorMsg = await waitForMessage(ws, 'error') as {
+      type: string;
+      code: string;
+    };
+
+    expect(errorMsg.code).toBe('NOT_AUTHENTICATED');
+  });
+
+  it('未認証状態でのsubscribe拒否', async () => {
     const ws = new WebSocket(serverUrl);
     clients.push(ws);
 
@@ -176,8 +188,7 @@ describe('WebSocket接続 統合テスト', () => {
       ws.on('open', resolve);
     });
 
-    // トークンなしの接続は確立されるが、authenticatedメッセージは送信されない
-    // 認証メッセージを手動で送信してエラーを確認
+    // 認証せずにsubscribeを試みてエラーを確認
     sendMessage(ws, {
       type: 'subscribe',
       channels: [`project:${TEST_PROJECT_ID}`],
@@ -194,21 +205,18 @@ describe('WebSocket接続 統合テスト', () => {
     expect(errorMsg.code).toBe('NOT_AUTHENTICATED');
   });
 
-  it('無効なトークンでの接続拒否', async () => {
-    const ws = new WebSocket(`${serverUrl}/?token=${INVALID_TOKEN}`);
+  it('無効なトークンでのauthenticate拒否', async () => {
+    const ws = new WebSocket(serverUrl);
     clients.push(ws);
 
     await new Promise<void>((resolve) => {
       ws.on('open', resolve);
     });
 
-    // 無効なトークンでは認証されない
-    // subscribeを試みてエラーを確認
-    await wait(100); // サーバーの認証処理を待つ
-
+    // 無効なトークンでauthenticateメッセージを送信
     sendMessage(ws, {
-      type: 'subscribe',
-      channels: [`project:${TEST_PROJECT_ID}`],
+      type: 'authenticate',
+      token: INVALID_TOKEN,
       timestamp: Date.now(),
     });
 
@@ -217,12 +225,22 @@ describe('WebSocket接続 統合テスト', () => {
       code: string;
     };
 
-    expect(errorMsg.code).toBe('NOT_AUTHENTICATED');
+    expect(errorMsg.code).toBe('AUTHENTICATION_FAILED');
   });
 
   it('接続切断時のクリーンアップ', async () => {
-    const ws = new WebSocket(`${serverUrl}/?token=${VALID_TOKEN}`);
+    const ws = new WebSocket(serverUrl);
     clients.push(ws);
+
+    await new Promise<void>((resolve) => {
+      ws.on('open', resolve);
+    });
+
+    sendMessage(ws, {
+      type: 'authenticate',
+      token: VALID_TOKEN,
+      timestamp: Date.now(),
+    });
 
     await waitForMessage(ws, 'authenticated');
 
@@ -245,8 +263,18 @@ describe('WebSocket接続 統合テスト', () => {
   // ------------------------------------------
 
   it('ping/pongハートビート動作', async () => {
-    const ws = new WebSocket(`${serverUrl}/?token=${VALID_TOKEN}`);
+    const ws = new WebSocket(serverUrl);
     clients.push(ws);
+
+    await new Promise<void>((resolve) => {
+      ws.on('open', resolve);
+    });
+
+    sendMessage(ws, {
+      type: 'authenticate',
+      token: VALID_TOKEN,
+      timestamp: Date.now(),
+    });
 
     await waitForMessage(ws, 'authenticated');
 
@@ -268,8 +296,18 @@ describe('WebSocket接続 統合テスト', () => {
   // ------------------------------------------
 
   it('subscribeメッセージでチャネル購読', async () => {
-    const ws = new WebSocket(`${serverUrl}/?token=${VALID_TOKEN}`);
+    const ws = new WebSocket(serverUrl);
     clients.push(ws);
+
+    await new Promise<void>((resolve) => {
+      ws.on('open', resolve);
+    });
+
+    sendMessage(ws, {
+      type: 'authenticate',
+      token: VALID_TOKEN,
+      timestamp: Date.now(),
+    });
 
     await waitForMessage(ws, 'authenticated');
 
@@ -292,8 +330,18 @@ describe('WebSocket接続 統合テスト', () => {
   });
 
   it('unsubscribeメッセージでチャネル購読解除', async () => {
-    const ws = new WebSocket(`${serverUrl}/?token=${VALID_TOKEN}`);
+    const ws = new WebSocket(serverUrl);
     clients.push(ws);
+
+    await new Promise<void>((resolve) => {
+      ws.on('open', resolve);
+    });
+
+    sendMessage(ws, {
+      type: 'authenticate',
+      token: VALID_TOKEN,
+      timestamp: Date.now(),
+    });
 
     await waitForMessage(ws, 'authenticated');
 
@@ -320,8 +368,18 @@ describe('WebSocket接続 統合テスト', () => {
   });
 
   it('subscribedレスポンスの確認', async () => {
-    const ws = new WebSocket(`${serverUrl}/?token=${VALID_TOKEN}`);
+    const ws = new WebSocket(serverUrl);
     clients.push(ws);
+
+    await new Promise<void>((resolve) => {
+      ws.on('open', resolve);
+    });
+
+    sendMessage(ws, {
+      type: 'authenticate',
+      token: VALID_TOKEN,
+      timestamp: Date.now(),
+    });
 
     await waitForMessage(ws, 'authenticated');
 
@@ -352,8 +410,18 @@ describe('WebSocket接続 統合テスト', () => {
   // ------------------------------------------
 
   it('無効なメッセージフォーマットのエラーハンドリング', async () => {
-    const ws = new WebSocket(`${serverUrl}/?token=${VALID_TOKEN}`);
+    const ws = new WebSocket(serverUrl);
     clients.push(ws);
+
+    await new Promise<void>((resolve) => {
+      ws.on('open', resolve);
+    });
+
+    sendMessage(ws, {
+      type: 'authenticate',
+      token: VALID_TOKEN,
+      timestamp: Date.now(),
+    });
 
     await waitForMessage(ws, 'authenticated');
 
@@ -376,12 +444,30 @@ describe('WebSocket接続 統合テスト', () => {
 
   it('複数クライアント同時接続', async () => {
     // ユーザー1の接続
-    const ws1 = new WebSocket(`${serverUrl}/?token=${VALID_TOKEN}`);
+    const ws1 = new WebSocket(serverUrl);
     clients.push(ws1);
 
     // ユーザー2の接続
-    const ws2 = new WebSocket(`${serverUrl}/?token=valid-token-user2`);
+    const ws2 = new WebSocket(serverUrl);
     clients.push(ws2);
+
+    // 両方の接続確立を待つ
+    await Promise.all([
+      new Promise<void>((resolve) => { ws1.on('open', resolve); }),
+      new Promise<void>((resolve) => { ws2.on('open', resolve); }),
+    ]);
+
+    // authenticateメッセージで認証
+    sendMessage(ws1, {
+      type: 'authenticate',
+      token: VALID_TOKEN,
+      timestamp: Date.now(),
+    });
+    sendMessage(ws2, {
+      type: 'authenticate',
+      token: 'valid-token-user2',
+      timestamp: Date.now(),
+    });
 
     // 両方の認証メッセージを並行して待つ
     const [auth1, auth2] = await Promise.all([
@@ -407,5 +493,99 @@ describe('WebSocket接続 統合テスト', () => {
 
     expect(pong1).toBeDefined();
     expect(pong2).toBeDefined();
+  });
+
+  // ------------------------------------------
+  // セキュリティテスト
+  // ------------------------------------------
+
+  it('未認証状態でのpingは拒否される', async () => {
+    const ws = new WebSocket(serverUrl);
+    clients.push(ws);
+
+    await new Promise<void>((resolve) => {
+      ws.on('open', resolve);
+    });
+
+    // 認証せずにpingを送信
+    sendMessage(ws, { type: 'ping', timestamp: Date.now() });
+
+    const errorMsg = await waitForMessage(ws, 'error') as {
+      type: string;
+      code: string;
+    };
+
+    expect(errorMsg.code).toBe('NOT_AUTHENTICATED');
+  });
+
+  it('認証済みの場合は再認証を拒否', async () => {
+    const ws = new WebSocket(serverUrl);
+    clients.push(ws);
+
+    await new Promise<void>((resolve) => {
+      ws.on('open', resolve);
+    });
+
+    // 最初の認証
+    sendMessage(ws, {
+      type: 'authenticate',
+      token: VALID_TOKEN,
+      timestamp: Date.now(),
+    });
+
+    await waitForMessage(ws, 'authenticated');
+
+    // 再認証を試行
+    sendMessage(ws, {
+      type: 'authenticate',
+      token: 'valid-token-user2',
+      timestamp: Date.now(),
+    });
+
+    const errorMsg = await waitForMessage(ws, 'error') as {
+      type: string;
+      code: string;
+    };
+
+    expect(errorMsg.code).toBe('ALREADY_AUTHENTICATED');
+  });
+
+  it('認証試行回数の上限を超えると切断される', async () => {
+    const ws = new WebSocket(serverUrl);
+    clients.push(ws);
+
+    await new Promise<void>((resolve) => {
+      ws.on('open', resolve);
+    });
+
+    // 6回の認証試行（上限5回を超える）
+    for (let i = 0; i < 6; i++) {
+      sendMessage(ws, {
+        type: 'authenticate',
+        token: INVALID_TOKEN,
+        timestamp: Date.now(),
+      });
+    }
+
+    // TOO_MANY_ATTEMPTSエラーを受信
+    const errorMsg = await waitForMessage(ws, 'error') as {
+      type: string;
+      code: string;
+    };
+
+    // AUTHENTICATION_FAILED または TOO_MANY_ATTEMPTS のいずれかを受信
+    // （最初の5回はAUTHENTICATION_FAILED、6回目はTOO_MANY_ATTEMPTSで切断）
+    expect(['AUTHENTICATION_FAILED', 'TOO_MANY_ATTEMPTS']).toContain(errorMsg.code);
+
+    // 接続が切断されるのを待つ
+    await new Promise<void>((resolve) => {
+      if (ws.readyState === WebSocket.CLOSED) {
+        resolve();
+      } else {
+        ws.on('close', () => resolve());
+      }
+    });
+
+    expect(ws.readyState).toBe(WebSocket.CLOSED);
   });
 });

@@ -21,6 +21,9 @@ class WebSocketClient {
 
   /**
    * WebSocket接続を確立
+   * セキュリティ対策: トークンはURLクエリパラメータではなく、
+   * 接続確立後にauthenticateメッセージで送信する。
+   * これにより、プロキシログやブラウザ履歴へのトークン露出を防止。
    */
   connect(token: string): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
@@ -28,40 +31,49 @@ class WebSocketClient {
     }
 
     this.token = token;
-    this.ws = new WebSocket(`${WS_URL}?token=${token}`);
+    this.ws = new WebSocket(WS_URL);
 
     this.ws.onopen = () => {
-      console.log('WebSocket接続確立');
       this.reconnectAttempts = 0;
-      this.connectHandlers.forEach((handler) => handler());
 
-      // 購読中のチャンネルを再購読
-      if (this.subscribedChannels.size > 0) {
-        this.send({
-          type: 'subscribe',
-          channels: Array.from(this.subscribedChannels),
-          timestamp: Date.now(),
-        });
-      }
+      // authenticateメッセージでトークンを送信
+      this.send({
+        type: 'authenticate',
+        token,
+        timestamp: Date.now(),
+      });
     };
 
     this.ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data) as ServerMessage | ServerEvent;
+
+        // 認証成功後に接続ハンドラを呼び出し、チャンネルを再購読
+        if (data.type === 'authenticated') {
+          this.connectHandlers.forEach((handler) => handler());
+
+          if (this.subscribedChannels.size > 0) {
+            this.send({
+              type: 'subscribe',
+              channels: Array.from(this.subscribedChannels),
+              timestamp: Date.now(),
+            });
+          }
+        }
+
         this.handleMessage(data);
-      } catch (error) {
-        console.error('WebSocketメッセージのパースに失敗:', error);
+      } catch {
+        // WebSocketメッセージのパースに失敗
       }
     };
 
     this.ws.onclose = () => {
-      console.log('WebSocket接続が閉じられました');
       this.disconnectHandlers.forEach((handler) => handler());
       this.attemptReconnect();
     };
 
-    this.ws.onerror = (error) => {
-      console.error('WebSocketエラー:', error);
+    this.ws.onerror = () => {
+      // WebSocketエラー発生時はoncloseで処理される
     };
   }
 
@@ -70,7 +82,6 @@ class WebSocketClient {
    */
   private attemptReconnect(): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      console.log('最大再接続試行回数に達しました');
       return;
     }
 
@@ -80,8 +91,6 @@ class WebSocketClient {
 
     this.reconnectAttempts++;
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
-
-    console.log(`${delay}ms後に再接続を試行します (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
 
     setTimeout(() => {
       if (this.token) {

@@ -18,7 +18,7 @@ vi.mock('@agentest/db', () => ({
 // モジュールインポート
 import { verifyAccessToken } from '@agentest/auth';
 import { prisma } from '@agentest/db';
-import { authenticateToken, extractTokenFromUrl } from '../auth.js';
+import { authenticateToken } from '../auth.js';
 
 describe('auth', () => {
   beforeEach(() => {
@@ -27,45 +27,6 @@ describe('auth', () => {
 
   afterEach(() => {
     vi.resetAllMocks();
-  });
-
-  describe('extractTokenFromUrl', () => {
-    it('URLからトークンを抽出できる', () => {
-      const url = '/?token=abc123';
-      const result = extractTokenFromUrl(url);
-      expect(result).toBe('abc123');
-    });
-
-    it('完全なURLからトークンを抽出できる', () => {
-      const url = 'ws://localhost:3002/?token=xyz789';
-      const result = extractTokenFromUrl(url);
-      expect(result).toBe('xyz789');
-    });
-
-    it('トークンがない場合はnullを返す', () => {
-      const url = '/';
-      const result = extractTokenFromUrl(url);
-      expect(result).toBeNull();
-    });
-
-    it('空のURLでもエラーにならない', () => {
-      const result = extractTokenFromUrl('');
-      expect(result).toBeNull();
-    });
-
-    it('複数のクエリパラメータからtokenを抽出できる', () => {
-      const url = '/?foo=bar&token=mytoken&baz=qux';
-      const result = extractTokenFromUrl(url);
-      expect(result).toBe('mytoken');
-    });
-
-    it('不正なURLでもエラーにならない', () => {
-      // URLパースでエラーになるケースをテスト
-      // new URL()は相対URLでもbaseがあれば動作するため、
-      // この関数はほとんどのケースで動作する
-      const result = extractTokenFromUrl('invalid-url');
-      expect(result).toBeNull();
-    });
   });
 
   describe('authenticateToken', () => {
