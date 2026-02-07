@@ -37,13 +37,22 @@
 
 ---
 
-### C-2: プロセスレベルの例外ハンドラ追加
+### C-2: プロセスレベルの例外ハンドラ追加 ✅ 対応済み
 
-**現状**: `process.on('unhandledRejection')` / `process.on('uncaughtException')` が未実装。キャッチされないPromise拒否でプロセスがサイレントにクラッシュする可能性がある。
+**現状**: ~~`process.on('unhandledRejection')` / `process.on('uncaughtException')` が未実装。キャッチされないPromise拒否でプロセスがサイレントにクラッシュする可能性がある。~~
 
 **対応内容**:
 - API, WS, MCP, Jobs の各エントリポイントに追加
 - エラーログ記録後、graceful shutdownを実行
+
+**実装詳細**:
+- `uncaughtException` / `unhandledRejection` ハンドラをモジュールレベルで登録（起動中のエラーもカバー）
+- 構造化JSON形式でエラーログを出力（timestamp, level, message, error/reason, stack）
+- サーバーアプリ（API, WS, MCP）: `shutdownFn` 参照経由でgraceful shutdownを呼び出し、起動前は即座に `process.exit(1)`
+- Jobsアプリ: ベストエフォートでリソースクリーンアップ後に `process.exit(1)`
+- `isShuttingDown` フラグで重複シャットダウンを防止
+- 例外起因のシャットダウンはexit code 1（プロセスマネージャが異常終了として検知可能）
+- 全サーバーに強制終了タイムアウト（10秒、`.unref()` 付き）を設置
 
 **対象ファイル**:
 - `apps/api/src/index.ts`
