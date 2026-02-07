@@ -3,18 +3,24 @@ import { logger as baseLogger } from './utils/logger.js';
 
 const logger = baseLogger.child({ module: 'config' });
 
-// 環境変数スキーマ
-const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.coerce.number().default(3002),
-  HOST: z.string().default('0.0.0.0'),
+// 環境変数スキーマを生成する（本番環境ではJWTシークレットの明示的な設定を必須にする）
+export function createEnvSchema(isProduction: boolean) {
+  return z.object({
+    NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+    PORT: z.coerce.number().default(3002),
+    HOST: z.string().default('0.0.0.0'),
 
-  // Redis
-  REDIS_URL: z.string().url(),
+    // Redis
+    REDIS_URL: z.string().url(),
 
-  // JWT
-  JWT_ACCESS_SECRET: z.string().min(32).default('development-access-secret-key-32ch'),
-});
+    // JWT
+    JWT_ACCESS_SECRET: isProduction
+      ? z.string().min(32)
+      : z.string().min(32).default('development-access-secret-key-32ch'),
+  });
+}
+
+const envSchema = createEnvSchema(process.env.NODE_ENV === 'production');
 
 // 環境変数を検証
 function validateEnv() {

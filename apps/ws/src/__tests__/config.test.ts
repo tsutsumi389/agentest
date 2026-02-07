@@ -1,21 +1,23 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { z } from 'zod';
 
-// 環境変数スキーマ（config.tsから抽出してテスト用にエクスポート）
-const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.coerce.number().default(3002),
-  HOST: z.string().default('0.0.0.0'),
-  REDIS_URL: z.string().url(),
-  JWT_ACCESS_SECRET: z.string().min(32).default('development-access-secret-key-32ch'),
+const { mockLogger } = vi.hoisted(() => {
+  const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn(), fatal: vi.fn(), child: vi.fn() };
+  mockLogger.child.mockReturnValue(mockLogger);
+  return { mockLogger };
 });
+vi.mock('../utils/logger.js', () => ({ logger: mockLogger }));
 
-type EnvType = z.infer<typeof envSchema>;
+import { createEnvSchema } from '../config.js';
+
+type EnvSchema = ReturnType<typeof createEnvSchema>;
+type EnvType = z.infer<EnvSchema>;
 type ValidationResult =
   | { success: true; data: EnvType }
-  | { success: false; errors: z.inferFlattenedErrors<typeof envSchema>['fieldErrors'] };
+  | { success: false; errors: z.inferFlattenedErrors<EnvSchema>['fieldErrors'] };
 
-function validateEnv(envVars: Record<string, string | undefined>): ValidationResult {
+function validateEnv(envVars: Record<string, string | undefined>, isProduction = false): ValidationResult {
+  const envSchema = createEnvSchema(isProduction);
   const parsed = envSchema.safeParse(envVars);
   if (!parsed.success) {
     return { success: false, errors: parsed.error.flatten().fieldErrors };
@@ -24,16 +26,6 @@ function validateEnv(envVars: Record<string, string | undefined>): ValidationRes
 }
 
 describe('config', () => {
-  const originalEnv = process.env;
-
-  beforeEach(() => {
-    process.env = { ...originalEnv };
-  });
-
-  afterEach(() => {
-    process.env = originalEnv;
-  });
-
   describe('envSchema', () => {
     it('有効な環境変数でバリデーション成功', () => {
       const result = validateEnv({
@@ -42,7 +34,7 @@ describe('config', () => {
         HOST: 'localhost',
         REDIS_URL: 'redis://localhost:6379',
         JWT_ACCESS_SECRET: 'this-is-a-super-secret-key-32chars!',
-      });
+      }, true);
 
       expect(result.success).toBe(true);
       if (result.success) {
@@ -54,7 +46,7 @@ describe('config', () => {
       }
     });
 
-    it('デフォルト値が適用される', () => {
+    it('デフォルト値が適用される（development）', () => {
       const result = validateEnv({
         REDIS_URL: 'redis://localhost:6379',
       });
@@ -116,7 +108,7 @@ describe('config', () => {
     it('JWT_ACCESS_SECRETが32文字未満でエラー', () => {
       const result = validateEnv({
         REDIS_URL: 'redis://localhost:6379',
-        JWT_ACCESS_SECRET: 'short-secret', // 32文字未満
+        JWT_ACCESS_SECRET: 'short-secret',
       });
 
       expect(result.success).toBe(false);
@@ -134,6 +126,53 @@ describe('config', () => {
       expect(result.success).toBe(true);
       if (result.success) {
         expect(result.data.NODE_ENV).toBe('test');
+      }
+    });
+  });
+
+  describe('productionガード', () => {
+    it('production環境でJWT_ACCESS_SECRET未設定はエラー', () => {
+      const result = validateEnv(
+        {
+          NODE_ENV: 'production',
+          REDIS_URL: 'redis://localhost:6379',
+        },
+        true,
+      );
+
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.errors.JWT_ACCESS_SECRET).toBeDefined();
+      }
+    });
+
+    it('production環境でJWT_ACCESS_SECRETを明示的に設定すれば成功', () => {
+      const result = validateEnv(
+        {
+          NODE_ENV: 'production',
+          REDIS_URL: 'redis://localhost:6379',
+          JWT_ACCESS_SECRET: 'production-secret-key-must-be-at-least-32-chars',
+        },
+        true,
+      );
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.JWT_ACCESS_SECRET).toBe('production-secret-key-must-be-at-least-32-chars');
+      }
+    });
+
+    it('非production環境ではJWT_ACCESS_SECRETのデフォルト値が使用される', () => {
+      const result = validateEnv(
+        {
+          REDIS_URL: 'redis://localhost:6379',
+        },
+        false,
+      );
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.JWT_ACCESS_SECRET).toBe('development-access-secret-key-32ch');
       }
     });
   });
