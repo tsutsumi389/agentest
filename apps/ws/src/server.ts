@@ -5,7 +5,7 @@ import type {
   ServerEvent,
 } from '@agentest/ws-types';
 import { z } from 'zod';
-import { authenticateToken, extractTokenFromUrl, type AuthenticatedUser } from './auth.js';
+import { authenticateToken, type AuthenticatedUser } from './auth.js';
 import { subscriber, subscribeToChannel, unsubscribeFromChannel } from './redis.js';
 import { handlePresenceJoin, handlePresenceLeave } from './handlers/presence.js';
 import { logger as baseLogger } from './utils/logger.js';
@@ -14,17 +14,17 @@ import { logger as baseLogger } from './utils/logger.js';
 const clientMessageSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('authenticate'),
-    token: z.string(),
+    token: z.string().min(1).max(4096),
     timestamp: z.number(),
   }),
   z.object({
     type: z.literal('subscribe'),
-    channels: z.array(z.string()).min(1).max(50),
+    channels: z.array(z.string().max(200)).min(1).max(50),
     timestamp: z.number(),
   }),
   z.object({
     type: z.literal('unsubscribe'),
-    channels: z.array(z.string()).min(1).max(50),
+    channels: z.array(z.string().max(200)).min(1).max(50),
     timestamp: z.number(),
   }),
   z.object({
@@ -43,12 +43,20 @@ const CHANNEL_PATTERN = /^(project|test_suite|test_case|execution|user):[0-9a-f]
 
 const logger = baseLogger.child({ module: 'server' });
 
+// 認証タイムアウト（ミリ秒）
+const AUTH_TIMEOUT_MS = 10_000;
+
+// 認証試行回数の上限
+const MAX_AUTH_ATTEMPTS = 5;
+
 // クライアント情報を拡張
 interface ExtendedWebSocket extends WebSocket {
   userId?: string;
   user?: AuthenticatedUser;
   channels: Set<string>;
   isAlive: boolean;
+  authTimeout?: ReturnType<typeof setTimeout>;
+  authAttempts: number;
 }
 
 // WebSocketサーバー
@@ -64,7 +72,7 @@ const channelSubscribers = new Map<string, Set<ExtendedWebSocket>>();
  * WebSocketサーバーを作成
  */
 export function createWebSocketServer(port: number, host: string): WebSocketServer {
-  wss = new WebSocketServer({ port, host });
+  wss = new WebSocketServer({ port, host, maxPayload: 64 * 1024 });
 
   logger.info({ host, port }, 'WebSocketサーバーが起動しました');
 
@@ -79,7 +87,9 @@ export function createWebSocketServer(port: number, host: string): WebSocketServ
     wss.clients.forEach((ws) => {
       const extWs = ws as ExtendedWebSocket;
       if (!extWs.isAlive) {
-        cleanupConnection(extWs);
+        cleanupConnection(extWs).catch((err) => {
+          logger.error({ err }, 'クリーンアップ中のエラー');
+        });
         return extWs.terminate();
       }
       extWs.isAlive = false;
@@ -92,43 +102,51 @@ export function createWebSocketServer(port: number, host: string): WebSocketServ
 
 /**
  * 接続ハンドラ
+ * セキュリティ対策: URLクエリパラメータでのトークン送信を廃止し、
+ * 接続後にauthenticateメッセージで認証する方式を採用。
+ * これにより、トークンがプロキシログやブラウザ履歴に露出するリスクを排除。
  */
-async function handleConnection(ws: WebSocket, request: IncomingMessage): Promise<void> {
+async function handleConnection(ws: WebSocket, _request: IncomingMessage): Promise<void> {
   const extWs = ws as ExtendedWebSocket;
   extWs.channels = new Set();
   extWs.isAlive = true;
+  extWs.authAttempts = 0;
+
+  // 認証タイムアウト: 一定時間内に認証しなければ切断
+  extWs.authTimeout = setTimeout(() => {
+    if (!extWs.userId) {
+      sendError(extWs, 'AUTH_TIMEOUT', '認証がタイムアウトしました');
+      extWs.close();
+    }
+  }, AUTH_TIMEOUT_MS);
 
   // Pongレスポンス
   extWs.on('pong', () => {
     extWs.isAlive = true;
   });
 
-  // URLからトークンを取得して認証
-  const token = extractTokenFromUrl(request.url || '');
-  if (token) {
-    const user = await authenticateToken(token);
-    if (user) {
-      extWs.userId = user.id;
-      extWs.user = user;
-      registerConnection(extWs);
-      sendMessage(extWs, {
-        type: 'authenticated',
-        userId: user.id,
-        timestamp: Date.now(),
-      });
-    }
-  }
-
   // メッセージハンドラ
   extWs.on('message', (data) => handleMessage(extWs, data.toString()));
 
   // クローズハンドラ
-  extWs.on('close', () => cleanupConnection(extWs));
+  extWs.on('close', () => {
+    if (extWs.authTimeout) {
+      clearTimeout(extWs.authTimeout);
+    }
+    cleanupConnection(extWs).catch((err) => {
+      logger.error({ err }, 'クローズ時のクリーンアップエラー');
+    });
+  });
 
   // エラーハンドラ
   extWs.on('error', (error) => {
+    if (extWs.authTimeout) {
+      clearTimeout(extWs.authTimeout);
+    }
     logger.error({ err: error }, 'WebSocketエラー');
-    cleanupConnection(extWs);
+    cleanupConnection(extWs).catch((err) => {
+      logger.error({ err }, 'エラー時のクリーンアップエラー');
+    });
   });
 }
 
@@ -147,6 +165,12 @@ async function handleMessage(ws: ExtendedWebSocket, data: string): Promise<void>
     }
 
     const message = result.data;
+
+    // authenticateメッセージ以外は認証済みでないと処理しない
+    if (message.type !== 'authenticate' && !ws.userId) {
+      sendError(ws, 'NOT_AUTHENTICATED', '認証が必要です');
+      return;
+    }
 
     switch (message.type) {
       case 'authenticate':
@@ -180,6 +204,21 @@ async function handleMessage(ws: ExtendedWebSocket, data: string): Promise<void>
  * 認証処理
  */
 async function handleAuthenticate(ws: ExtendedWebSocket, token: string): Promise<void> {
+  // 認証済みの場合は再認証を拒否
+  if (ws.userId) {
+    sendError(ws, 'ALREADY_AUTHENTICATED', '既に認証済みです');
+    return;
+  }
+
+  // 認証試行回数の制限（ブルートフォース対策）
+  ws.authAttempts++;
+  if (ws.authAttempts > MAX_AUTH_ATTEMPTS) {
+    logger.warn({ authAttempts: ws.authAttempts }, '認証試行回数の上限に達しました');
+    sendError(ws, 'TOO_MANY_ATTEMPTS', '認証試行回数の上限に達しました');
+    ws.close();
+    return;
+  }
+
   const user = await authenticateToken(token);
 
   if (!user) {
@@ -187,9 +226,10 @@ async function handleAuthenticate(ws: ExtendedWebSocket, token: string): Promise
     return;
   }
 
-  // 既存の接続があればクリーンアップ
-  if (ws.userId && ws.userId !== user.id) {
-    cleanupConnection(ws);
+  // 認証タイムアウトをクリア
+  if (ws.authTimeout) {
+    clearTimeout(ws.authTimeout);
+    ws.authTimeout = undefined;
   }
 
   ws.userId = user.id;
@@ -230,11 +270,6 @@ function isAuthorizedForChannel(ws: ExtendedWebSocket, channel: string): boolean
 }
 
 async function handleSubscribe(ws: ExtendedWebSocket, channels: string[]): Promise<void> {
-  if (!ws.userId) {
-    sendError(ws, 'NOT_AUTHENTICATED', '認証が必要です');
-    return;
-  }
-
   const subscribedChannels: string[] = [];
 
   for (const channel of channels) {
@@ -302,8 +337,8 @@ async function handleUnsubscribe(ws: ExtendedWebSocket, channels: string[]): Pro
  */
 function handleRedisMessage(channel: string, message: string): void {
   try {
-    // 型チェックのためにパース（送信時は元のメッセージを使用）
-    JSON.parse(message) as ServerEvent;
+    // JSONとして有効であることを確認（不正なデータのブロードキャストを防止）
+    JSON.parse(message);
     const subscribers = channelSubscribers.get(channel);
 
     if (subscribers) {

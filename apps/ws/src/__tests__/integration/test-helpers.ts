@@ -105,18 +105,8 @@ export function createAuthMock() {
     return tokenUserMap.get(token) || null;
   });
 
-  const extractTokenFromUrl = vi.fn((url: string) => {
-    try {
-      const urlObj = new URL(url, 'ws://localhost');
-      return urlObj.searchParams.get('token');
-    } catch {
-      return null;
-    }
-  });
-
   return {
     authenticateToken,
-    extractTokenFromUrl,
     /**
      * トークンとユーザーの紐付けを登録
      */
@@ -167,14 +157,14 @@ export async function createTestServer(): Promise<TestServerContext> {
 
 /**
  * 認証済みのWebSocketクライアント接続を作成
- * URLのクエリパラメータにトークンを付与して接続
+ * 接続後にauthenticateメッセージでトークンを送信する方式（セキュリティ対策）
  */
 export function createAuthenticatedClient(
   serverUrl: string,
   token: string
 ): Promise<WebSocket> {
   return new Promise((resolve, reject) => {
-    const ws = new WebSocket(`${serverUrl}/?token=${token}`);
+    const ws = new WebSocket(serverUrl);
 
     const timeout = setTimeout(() => {
       ws.close();
@@ -182,8 +172,27 @@ export function createAuthenticatedClient(
     }, 5000);
 
     ws.on('open', () => {
-      clearTimeout(timeout);
-      resolve(ws);
+      // 接続確立後にauthenticateメッセージで認証
+      ws.send(JSON.stringify({
+        type: 'authenticate',
+        token,
+        timestamp: Date.now(),
+      }));
+    });
+
+    ws.on('message', (data) => {
+      try {
+        const message = JSON.parse(data.toString());
+        if (message.type === 'authenticated') {
+          clearTimeout(timeout);
+          resolve(ws);
+        } else if (message.type === 'error') {
+          clearTimeout(timeout);
+          reject(new Error(`認証エラー: ${message.code}`));
+        }
+      } catch {
+        // パースエラーは無視
+      }
     });
 
     ws.on('error', (error) => {

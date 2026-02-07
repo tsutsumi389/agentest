@@ -42,14 +42,3 @@ export async function authenticateToken(token: string): Promise<AuthenticatedUse
   }
 }
 
-/**
- * URLのクエリパラメータからトークンを抽出
- */
-export function extractTokenFromUrl(url: string): string | null {
-  try {
-    const urlObj = new URL(url, 'ws://localhost');
-    return urlObj.searchParams.get('token');
-  } catch {
-    return null;
-  }
-}
