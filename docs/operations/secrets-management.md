@@ -132,7 +132,8 @@ gcloud run services update agentest-api \
   --set-secrets="
     JWT_SECRET=JWT_SECRET:latest,
     DB_PASSWORD=DB_PASSWORD:latest,
-    GITHUB_CLIENT_SECRET=GITHUB_CLIENT_SECRET:latest
+    GITHUB_CLIENT_SECRET=GITHUB_CLIENT_SECRET:latest,
+    TOKEN_ENCRYPTION_KEY=TOKEN_ENCRYPTION_KEY:latest
   "
 ```
 
@@ -146,6 +147,7 @@ gcloud run services update agentest-api \
 | `GITHUB_CLIENT_SECRET` | GitHub OAuth | 必要時 |
 | `GOOGLE_CLIENT_SECRET` | Google OAuth | 必要時 |
 | `MINIO_ROOT_PASSWORD` | MinIO管理者 | 年次 |
+| `TOKEN_ENCRYPTION_KEY` | OAuthトークン暗号化（AES-256-GCM） | 年次 |
 | `SENTRY_DSN` | エラー監視 | - |
 | `STRIPE_SECRET_KEY` | 決済 | 必要時 |
 
@@ -170,7 +172,30 @@ gcloud run services update agentest-api \
 gcloud secrets versions disable VERSION_ID --secret=JWT_SECRET
 ```
 
-### 5.2 DB パスワードのローテーション
+### 5.2 TOKEN_ENCRYPTION_KEY のローテーション
+
+> **注意**: 暗号化キーを変更すると、既存の暗号化済みOAuthトークンが復号できなくなります。ローテーション時はマイグレーションスクリプトで既存トークンを再暗号化してください。
+
+```bash
+# 1. 新しい暗号化キーを生成
+NEW_KEY=$(openssl rand -base64 32)
+
+# 2. Secret Manager に追加
+echo -n "$NEW_KEY" | \
+  gcloud secrets versions add TOKEN_ENCRYPTION_KEY --data-file=-
+
+# 3. マイグレーションスクリプトで既存トークンを再暗号化
+#    （旧キーで復号 → 新キーで暗号化）
+
+# 4. アプリケーションを再デプロイ
+gcloud run services update agentest-api \
+  --set-secrets=TOKEN_ENCRYPTION_KEY=TOKEN_ENCRYPTION_KEY:latest
+
+# 5. 古いバージョンを無効化
+gcloud secrets versions disable VERSION_ID --secret=TOKEN_ENCRYPTION_KEY
+```
+
+### 5.3 DB パスワードのローテーション
 
 ```bash
 # 1. 新しいパスワードを生成
@@ -220,6 +245,9 @@ export const envSchema = z.object({
   GITHUB_CLIENT_SECRET: z.string().optional(),
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
+
+  // トークン暗号化
+  TOKEN_ENCRYPTION_KEY: z.string().min(32),
 
   // ストレージ
   S3_ENDPOINT: z.string().url(),

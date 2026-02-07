@@ -162,8 +162,8 @@ erDiagram
         uuid userId FK
         string provider
         string providerAccountId
-        string accessToken
-        string refreshToken
+        string accessToken "AES-256-GCM暗号化"
+        string refreshToken "AES-256-GCM暗号化"
         timestamp createdAt
         timestamp updatedAt
     }
@@ -229,6 +229,7 @@ erDiagram
 | JWT_ACCESS_EXPIRES_IN | 15m | アクセストークン有効期限 |
 | JWT_REFRESH_EXPIRES_IN | 7d | リフレッシュトークン有効期限 |
 | SESSION_EXPIRY | 7d | セッション有効期限 |
+| TOKEN_ENCRYPTION_KEY | - | OAuthトークン暗号化キー（本番必須） |
 
 ## セキュリティ考慮事項
 
@@ -240,6 +241,11 @@ erDiagram
   - アクセストークン: HttpOnly Cookie
   - リフレッシュトークン: HttpOnly Cookie
   - クライアント側のJavaScriptからはアクセス不可
+- **OAuthトークンの暗号化保存**
+  - OAuthプロバイダー（GitHub/Google）から取得した accessToken / refreshToken は AES-256-GCM で暗号化してDB保存
+  - 暗号化形式: `v1:iv:authTag:ciphertext`（バージョン付き、Base64エンコード、コロン区切り）
+  - IV: 12バイトのランダム値（毎回生成）、AuthTag: 16バイト（改ざん検知）
+  - 暗号化キーは環境変数 `TOKEN_ENCRYPTION_KEY` で管理
 - **トークン署名**
   - アクセストークンとリフレッシュトークンで異なる秘密鍵を使用
 
