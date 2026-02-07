@@ -36,6 +36,9 @@ DB_NAME=agentest
 # Redis
 REDIS_PASSWORD=agentest
 
+# トークン暗号化（OAuthトークンのDB保存時に使用）
+TOKEN_ENCRYPTION_KEY=dev-token-encryption-key-change-in-production
+
 # OAuth（後で設定可）
 GITHUB_CLIENT_ID=
 GITHUB_CLIENT_SECRET=

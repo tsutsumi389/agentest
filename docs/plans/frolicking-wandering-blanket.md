@@ -1,5 +1,7 @@
 # M-2: OAuth accessToken/refreshToken の暗号化
 
+> **ステータス**: 完了 (2026-02)
+
 ## Context
 
 `Account` モデル（GitHub/Google OAuth連携）の `accessToken` / `refreshToken` が平文でDBに保存されている。
