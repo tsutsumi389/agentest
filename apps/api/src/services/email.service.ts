@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 import { env } from '../config/env.js';
-import { escapeHtml } from '../utils/html.js';
+import { escapeHtml, sanitizeUrl } from '../utils/html.js';
 import { logger as baseLogger } from '../utils/logger.js';
 
 const logger = baseLogger.child({ module: 'email' });
@@ -152,12 +152,15 @@ ${invitationUrl}
 Agentest システム管理チーム
 `;
 
+    // URLプロトコル検証（javascript: URI等を防止）
+    const validatedUrl = sanitizeUrl(invitationUrl);
+
     // XSS防止: HTMLテンプレートに挿入する値をエスケープ
     const safeName = escapeHtml(name);
     const safeInviterName = escapeHtml(inviterName);
     const safeRoleLabel = escapeHtml(roleLabel);
     const safeExpiresAt = escapeHtml(expiresAtFormatted);
-    const safeInvitationUrl = escapeHtml(invitationUrl);
+    const safeInvitationUrl = escapeHtml(validatedUrl);
 
     const html = `
 <!DOCTYPE html>

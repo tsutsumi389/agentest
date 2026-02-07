@@ -169,5 +169,23 @@ describe('EmailService', () => {
       expect(result.html).not.toContain('<b>HACKED</b>');
       expect(result.html).toContain('&lt;b&gt;HACKED&lt;/b&gt;');
     });
+
+    it('javascript: URIの招待URLを拒否する', () => {
+      expect(() =>
+        emailService.generateAdminInvitationEmail({
+          ...baseParams,
+          invitationUrl: 'javascript:alert(document.cookie)',
+        })
+      ).toThrow('許可されないURLプロトコル');
+    });
+
+    it('data: URIの招待URLを拒否する', () => {
+      expect(() =>
+        emailService.generateAdminInvitationEmail({
+          ...baseParams,
+          invitationUrl: 'data:text/html,<script>alert(1)</script>',
+        })
+      ).toThrow('許可されないURLプロトコル');
+    });
   });
 });

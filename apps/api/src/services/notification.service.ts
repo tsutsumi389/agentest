@@ -213,8 +213,11 @@ Agentest - テスト管理ツール
 </html>
 `;
 
+    // SMTPヘッダーインジェクション防止: 改行文字を除去
+    const sanitizedTitle = title.replace(/[\r\n]/g, '');
+
     return {
-      subject: `[Agentest] ${title}`,
+      subject: `[Agentest] ${sanitizedTitle}`,
       text,
       html,
     };
