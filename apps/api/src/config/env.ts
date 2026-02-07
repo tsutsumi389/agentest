@@ -5,7 +5,7 @@ import { createLogger } from '@agentest/shared/logger';
 const logger = createLogger({ service: 'api' }).child({ module: 'env' });
 
 // NODE_ENVスキーマ（isProduction判定とenvSchemaで共有）
-const nodeEnvSchema = z.enum(['development', 'production', 'test']).default('development');
+export const nodeEnvSchema = z.enum(['development', 'production', 'test']).default('development');
 
 // NODE_ENVをZodスキーマでパースしてから本番環境かどうかを判定
 // （process.env.NODE_ENVの直接参照ではZodスキーマのデフォルト値と乖離する可能性があるため）
