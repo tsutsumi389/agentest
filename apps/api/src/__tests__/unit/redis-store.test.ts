@@ -7,7 +7,7 @@ const mockRedis = vi.hoisted(() => ({
   get: vi.fn(),
   del: vi.fn().mockResolvedValue(1),
   exists: vi.fn(),
-  keys: vi.fn().mockResolvedValue([]),
+  scan: vi.fn().mockResolvedValue(['0', []]),
   quit: vi.fn().mockResolvedValue('OK'),
   on: vi.fn(),
   publish: vi.fn(),
@@ -336,16 +336,28 @@ describe('redis-store', () => {
       expect(result).toEqual(data);
     });
 
-    it('パターンマッチで全キャッシュを無効化する', async () => {
-      mockRedis.keys.mockResolvedValue(['admin:organizations:key1', 'admin:organizations:key2']);
+    it('SCANでパターンマッチし全キャッシュを無効化する', async () => {
+      mockRedis.scan.mockResolvedValue(['0', ['admin:organizations:key1', 'admin:organizations:key2']]);
       const result = await invalidateAdminOrganizationsCache();
       expect(result).toBe(true);
-      expect(mockRedis.keys).toHaveBeenCalledWith('admin:organizations:*');
+      expect(mockRedis.scan).toHaveBeenCalledWith('0', 'MATCH', 'admin:organizations:*', 'COUNT', 100);
+      expect(mockRedis.del).toHaveBeenCalledWith('admin:organizations:key1', 'admin:organizations:key2');
+    });
+
+    it('SCANが複数イテレーションに分かれる場合も全キーを収集して削除する', async () => {
+      mockRedis.scan
+        .mockResolvedValueOnce(['5', ['admin:organizations:key1']])
+        .mockResolvedValueOnce(['0', ['admin:organizations:key2']]);
+      const result = await invalidateAdminOrganizationsCache();
+      expect(result).toBe(true);
+      expect(mockRedis.scan).toHaveBeenCalledTimes(2);
+      expect(mockRedis.scan).toHaveBeenNthCalledWith(1, '0', 'MATCH', 'admin:organizations:*', 'COUNT', 100);
+      expect(mockRedis.scan).toHaveBeenNthCalledWith(2, '5', 'MATCH', 'admin:organizations:*', 'COUNT', 100);
       expect(mockRedis.del).toHaveBeenCalledWith('admin:organizations:key1', 'admin:organizations:key2');
     });
 
     it('キャッシュキーが0件の場合はdelを呼ばない', async () => {
-      mockRedis.keys.mockResolvedValue([]);
+      mockRedis.scan.mockResolvedValue(['0', []]);
       await invalidateAdminOrganizationsCache();
       expect(mockRedis.del).not.toHaveBeenCalled();
     });
@@ -445,11 +457,11 @@ describe('redis-store', () => {
       expect(result).toEqual(data);
     });
 
-    it('パターンマッチで全キャッシュを無効化する', async () => {
-      mockRedis.keys.mockResolvedValue(['admin:metrics:key1']);
+    it('SCANでパターンマッチし全キャッシュを無効化する', async () => {
+      mockRedis.scan.mockResolvedValue(['0', ['admin:metrics:key1']]);
       const result = await invalidateAdminMetricsCache();
       expect(result).toBe(true);
-      expect(mockRedis.keys).toHaveBeenCalledWith('admin:metrics:*');
+      expect(mockRedis.scan).toHaveBeenCalledWith('0', 'MATCH', 'admin:metrics:*', 'COUNT', 100);
     });
   });
 
@@ -467,10 +479,10 @@ describe('redis-store', () => {
       expect(result).toEqual(data);
     });
 
-    it('パターンマッチで全キャッシュを無効化する', async () => {
-      mockRedis.keys.mockResolvedValue(['admin:system-admins:key1']);
+    it('SCANでパターンマッチし全キャッシュを無効化する', async () => {
+      mockRedis.scan.mockResolvedValue(['0', ['admin:system-admins:key1']]);
       await invalidateSystemAdminsCache();
-      expect(mockRedis.keys).toHaveBeenCalledWith('admin:system-admins:*');
+      expect(mockRedis.scan).toHaveBeenCalledWith('0', 'MATCH', 'admin:system-admins:*', 'COUNT', 100);
     });
   });
 
@@ -533,7 +545,7 @@ describe('redis-store', () => {
     });
 
     it('パターンマッチ無効化でRedisエラー時はfalseを返す', async () => {
-      mockRedis.keys.mockRejectedValueOnce(new Error('connection error'));
+      mockRedis.scan.mockRejectedValueOnce(new Error('connection error'));
       const result = await invalidateAdminOrganizationsCache();
       expect(result).toBe(false);
     });

@@ -4,6 +4,21 @@ import { logger as baseLogger } from '../utils/logger.js';
 
 const logger = baseLogger.child({ module: 'redis-store' });
 
+/**
+ * SCANコマンドでパターンにマッチするキーを収集する
+ * KEYSコマンドと違い、O(N)で全体をブロックしない
+ */
+async function scanKeys(redis: Redis, pattern: string): Promise<string[]> {
+  const keys: string[] = [];
+  let cursor = '0';
+  do {
+    const [nextCursor, foundKeys] = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+    cursor = nextCursor;
+    keys.push(...foundKeys);
+  } while (cursor !== '0');
+  return keys;
+}
+
 // Redis接続インスタンス（遅延初期化）
 let redisClient: Redis | null = null;
 
@@ -518,7 +533,7 @@ export async function invalidateAdminOrganizationsCache(): Promise<boolean> {
   try {
     // パターンマッチで全ての組織一覧キャッシュを削除
     const pattern = `${KEY_PREFIX.ADMIN_ORGANIZATIONS}*`;
-    const keys = await redis.keys(pattern);
+    const keys = await scanKeys(redis, pattern);
     if (keys.length > 0) {
       await redis.del(...keys);
     }
@@ -926,7 +941,7 @@ export async function invalidateAdminMetricsCache(): Promise<boolean> {
 
   try {
     const pattern = `${KEY_PREFIX.ADMIN_METRICS}*`;
-    const keys = await redis.keys(pattern);
+    const keys = await scanKeys(redis, pattern);
     if (keys.length > 0) {
       await redis.del(...keys);
     }
@@ -1015,7 +1030,7 @@ export async function invalidateSystemAdminsCache(): Promise<boolean> {
 
   try {
     const pattern = `${KEY_PREFIX.SYSTEM_ADMINS}*`;
-    const keys = await redis.keys(pattern);
+    const keys = await scanKeys(redis, pattern);
     if (keys.length > 0) {
       await redis.del(...keys);
     }
