@@ -344,6 +344,18 @@ describe('redis-store', () => {
       expect(mockRedis.del).toHaveBeenCalledWith('admin:organizations:key1', 'admin:organizations:key2');
     });
 
+    it('SCANが複数イテレーションに分かれる場合も全キーを収集して削除する', async () => {
+      mockRedis.scan
+        .mockResolvedValueOnce(['5', ['admin:organizations:key1']])
+        .mockResolvedValueOnce(['0', ['admin:organizations:key2']]);
+      const result = await invalidateAdminOrganizationsCache();
+      expect(result).toBe(true);
+      expect(mockRedis.scan).toHaveBeenCalledTimes(2);
+      expect(mockRedis.scan).toHaveBeenNthCalledWith(1, '0', 'MATCH', 'admin:organizations:*', 'COUNT', 100);
+      expect(mockRedis.scan).toHaveBeenNthCalledWith(2, '5', 'MATCH', 'admin:organizations:*', 'COUNT', 100);
+      expect(mockRedis.del).toHaveBeenCalledWith('admin:organizations:key1', 'admin:organizations:key2');
+    });
+
     it('キャッシュキーが0件の場合はdelを呼ばない', async () => {
       mockRedis.scan.mockResolvedValue(['0', []]);
       await invalidateAdminOrganizationsCache();
