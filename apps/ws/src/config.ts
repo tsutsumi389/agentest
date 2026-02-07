@@ -3,10 +3,13 @@ import { logger as baseLogger } from './utils/logger.js';
 
 const logger = baseLogger.child({ module: 'config' });
 
+// NODE_ENVスキーマ（isProduction判定とenvSchemaで共有）
+export const nodeEnvSchema = z.enum(['development', 'production', 'test']).default('development');
+
 // 環境変数スキーマを生成する（本番環境ではJWTシークレットの明示的な設定を必須にする）
 export function createEnvSchema(isProduction: boolean) {
   return z.object({
-    NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+    NODE_ENV: nodeEnvSchema,
     PORT: z.coerce.number().default(3002),
     HOST: z.string().default('0.0.0.0'),
 
@@ -20,7 +23,10 @@ export function createEnvSchema(isProduction: boolean) {
   });
 }
 
-const envSchema = createEnvSchema(process.env.NODE_ENV === 'production');
+// NODE_ENVをZodスキーマでパースしてから本番環境かどうかを判定
+// （process.env.NODE_ENVの直接参照ではZodスキーマのデフォルト値と乖離する可能性があるため）
+const nodeEnv = nodeEnvSchema.parse(process.env.NODE_ENV);
+const envSchema = createEnvSchema(nodeEnv === 'production');
 
 // 環境変数を検証
 function validateEnv() {
