@@ -1,5 +1,5 @@
 import { Redis } from 'ioredis';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 import { Channels, type DashboardUpdatedEvent } from '@agentest/ws-types';
 import { env } from '../config/env.js';
 import { logger as baseLogger } from '../utils/logger.js';
@@ -62,7 +62,7 @@ export async function publishDashboardUpdated(
 ): Promise<void> {
   const event: DashboardUpdatedEvent = {
     type: 'dashboard:updated',
-    eventId: uuidv4(),
+    eventId: randomUUID(),
     timestamp: Date.now(),
     projectId,
     trigger,

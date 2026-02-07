@@ -455,6 +455,7 @@ function mapSubscriptionStatus(
     case 'trialing':
       return 'TRIALING';
     default:
-      return 'ACTIVE';
+      logger.warn({ stripeStatus: status }, '未知のStripeステータスです。PAST_DUEとして扱います');
+      return 'PAST_DUE';
   }
 }

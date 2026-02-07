@@ -1,14 +1,45 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import type { IncomingMessage } from 'http';
 import type {
-  ClientMessage,
   ServerMessage,
   ServerEvent,
 } from '@agentest/ws-types';
+import { z } from 'zod';
 import { authenticateToken, extractTokenFromUrl, type AuthenticatedUser } from './auth.js';
 import { subscriber, subscribeToChannel, unsubscribeFromChannel } from './redis.js';
 import { handlePresenceJoin, handlePresenceLeave } from './handlers/presence.js';
 import { logger as baseLogger } from './utils/logger.js';
+
+// クライアントメッセージのZodスキーマ（ランタイムバリデーション）
+const clientMessageSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal('authenticate'),
+    token: z.string(),
+    timestamp: z.number(),
+  }),
+  z.object({
+    type: z.literal('subscribe'),
+    channels: z.array(z.string()).min(1).max(50),
+    timestamp: z.number(),
+  }),
+  z.object({
+    type: z.literal('unsubscribe'),
+    channels: z.array(z.string()).min(1).max(50),
+    timestamp: z.number(),
+  }),
+  z.object({
+    type: z.literal('ping'),
+    timestamp: z.number(),
+  }),
+  z.object({
+    type: z.literal('heartbeat'),
+    lockId: z.string().optional(),
+    timestamp: z.number(),
+  }),
+]);
+
+// 許可されたチャンネル名のパターン（UUID v4形式）
+const CHANNEL_PATTERN = /^(project|test_suite|test_case|execution|user):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 const logger = baseLogger.child({ module: 'server' });
 
@@ -106,7 +137,16 @@ async function handleConnection(ws: WebSocket, request: IncomingMessage): Promis
  */
 async function handleMessage(ws: ExtendedWebSocket, data: string): Promise<void> {
   try {
-    const message = JSON.parse(data) as ClientMessage;
+    const parsed = JSON.parse(data);
+    const result = clientMessageSchema.safeParse(parsed);
+
+    if (!result.success) {
+      logger.warn({ errors: result.error.flatten() }, 'メッセージバリデーションエラー');
+      sendError(ws, 'INVALID_MESSAGE', 'メッセージの形式が不正です');
+      return;
+    }
+
+    const message = result.data;
 
     switch (message.type) {
       case 'authenticate':
@@ -129,9 +169,6 @@ async function handleMessage(ws: ExtendedWebSocket, data: string): Promise<void>
         // ハートビート処理（ロック延長など）
         ws.isAlive = true;
         break;
-
-      default:
-        sendError(ws, 'UNKNOWN_MESSAGE_TYPE', '不明なメッセージタイプです');
     }
   } catch (error) {
     logger.error({ err: error }, 'メッセージ処理エラー');
@@ -169,6 +206,29 @@ async function handleAuthenticate(ws: ExtendedWebSocket, token: string): Promise
 /**
  * サブスクライブ処理
  */
+/**
+ * チャンネル名のフォーマットを検証
+ */
+function isValidChannel(channel: string): boolean {
+  return CHANNEL_PATTERN.test(channel);
+}
+
+/**
+ * ユーザーがチャンネルにアクセス可能か検証
+ * user:チャンネルは自分自身のIDのみ許可
+ */
+function isAuthorizedForChannel(ws: ExtendedWebSocket, channel: string): boolean {
+  // user:チャンネルは自分のIDのみ許可
+  if (channel.startsWith('user:')) {
+    const targetUserId = channel.slice('user:'.length);
+    return targetUserId === ws.userId;
+  }
+
+  // その他のチャンネル（project, test_suite等）はフォーマット検証済みなら許可
+  // NOTE: プロジェクトレベルの認可はAPI経由で担保する
+  return true;
+}
+
 async function handleSubscribe(ws: ExtendedWebSocket, channels: string[]): Promise<void> {
   if (!ws.userId) {
     sendError(ws, 'NOT_AUTHENTICATED', '認証が必要です');
@@ -178,6 +238,18 @@ async function handleSubscribe(ws: ExtendedWebSocket, channels: string[]): Promi
   const subscribedChannels: string[] = [];
 
   for (const channel of channels) {
+    // チャンネル名のフォーマット検証
+    if (!isValidChannel(channel)) {
+      logger.warn({ channel, userId: ws.userId }, '不正なチャンネル名');
+      continue;
+    }
+
+    // 認可チェック
+    if (!isAuthorizedForChannel(ws, channel)) {
+      logger.warn({ channel, userId: ws.userId }, 'チャンネルへのアクセス権限なし');
+      continue;
+    }
+
     // チャンネルにサブスクライブ
     if (!channelSubscribers.has(channel)) {
       channelSubscribers.set(channel, new Set());

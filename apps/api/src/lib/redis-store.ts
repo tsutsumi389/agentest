@@ -242,383 +242,99 @@ export async function closeRedisStore(): Promise<void> {
 // 管理者ダッシュボードキャッシュ
 // ============================================
 
-/**
- * 管理者ダッシュボード統計をキャッシュに保存
- * @param stats ダッシュボード統計
- * @param ttlSeconds 有効期限（秒）、デフォルト5分
- */
 export async function setAdminDashboardCache<T>(
   stats: T,
   ttlSeconds: number = 300
 ): Promise<boolean> {
-  const redis = getRedisClient();
-  if (!redis) {
-    return false;
-  }
-
-  try {
-    const key = KEY_PREFIX.ADMIN_DASHBOARD;
-    await redis.setex(key, ttlSeconds, JSON.stringify(stats));
-    return true;
-  } catch (error) {
-    logger.error({ err: error }, '管理者ダッシュボードキャッシュの保存に失敗');
-    return false;
-  }
+  return setCache(KEY_PREFIX.ADMIN_DASHBOARD, stats, ttlSeconds, '管理者ダッシュボードキャッシュの保存に失敗');
 }
 
-/**
- * 管理者ダッシュボード統計をキャッシュから取得
- */
 export async function getAdminDashboardCache<T>(): Promise<T | null> {
-  const redis = getRedisClient();
-  if (!redis) {
-    return null;
-  }
-
-  try {
-    const key = KEY_PREFIX.ADMIN_DASHBOARD;
-    const data = await redis.get(key);
-    if (!data) {
-      return null;
-    }
-    return JSON.parse(data) as T;
-  } catch (error) {
-    logger.error({ err: error }, '管理者ダッシュボードキャッシュの取得に失敗');
-    return null;
-  }
+  return getCache<T>(KEY_PREFIX.ADMIN_DASHBOARD, '管理者ダッシュボードキャッシュの取得に失敗');
 }
 
-/**
- * 管理者ダッシュボードキャッシュを無効化
- */
 export async function invalidateAdminDashboardCache(): Promise<boolean> {
-  const redis = getRedisClient();
-  if (!redis) {
-    return false;
-  }
-
-  try {
-    const key = KEY_PREFIX.ADMIN_DASHBOARD;
-    await redis.del(key);
-    return true;
-  } catch (error) {
-    logger.error({ err: error }, '管理者ダッシュボードキャッシュの無効化に失敗');
-    return false;
-  }
+  return invalidateCache(KEY_PREFIX.ADMIN_DASHBOARD, '管理者ダッシュボードキャッシュの無効化に失敗');
 }
 
 // ============================================
 // 管理者ユーザー一覧キャッシュ
 // ============================================
 
-/**
- * 検索パラメータからキャッシュキーを生成
- */
-function generateAdminUsersKey(params: Record<string, unknown>): string {
-  // パラメータをソートして一意のキーを生成
-  const sortedParams = Object.keys(params)
-    .sort()
-    .filter((key) => params[key] !== undefined && params[key] !== null)
-    .map((key) => `${key}:${JSON.stringify(params[key])}`)
-    .join('|');
-  return `${KEY_PREFIX.ADMIN_USERS}${sortedParams}`;
-}
-
-/**
- * 管理者ユーザー一覧をキャッシュに保存
- * @param params 検索パラメータ
- * @param data キャッシュデータ
- * @param ttlSeconds 有効期限（秒）、デフォルト1分
- */
 export async function setAdminUsersCache<T>(
   params: Record<string, unknown>,
   data: T,
   ttlSeconds: number = 60
 ): Promise<boolean> {
-  const redis = getRedisClient();
-  if (!redis) {
-    return false;
-  }
-
-  try {
-    const key = generateAdminUsersKey(params);
-    await redis.setex(key, ttlSeconds, JSON.stringify(data));
-    return true;
-  } catch (error) {
-    logger.error({ err: error }, '管理者ユーザー一覧キャッシュの保存に失敗');
-    return false;
-  }
+  return setCache(
+    generateParamsKey(KEY_PREFIX.ADMIN_USERS, params),
+    data, ttlSeconds, '管理者ユーザー一覧キャッシュの保存に失敗'
+  );
 }
 
-/**
- * 管理者ユーザー一覧をキャッシュから取得
- * @param params 検索パラメータ
- */
 export async function getAdminUsersCache<T>(
   params: Record<string, unknown>
 ): Promise<T | null> {
-  const redis = getRedisClient();
-  if (!redis) {
-    return null;
-  }
-
-  try {
-    const key = generateAdminUsersKey(params);
-    const data = await redis.get(key);
-    if (!data) {
-      return null;
-    }
-    return JSON.parse(data) as T;
-  } catch (error) {
-    logger.error({ err: error }, '管理者ユーザー一覧キャッシュの取得に失敗');
-    return null;
-  }
+  return getCache<T>(
+    generateParamsKey(KEY_PREFIX.ADMIN_USERS, params),
+    '管理者ユーザー一覧キャッシュの取得に失敗'
+  );
 }
 
 // ============================================
 // 管理者ユーザー詳細キャッシュ
 // ============================================
 
-/**
- * 管理者ユーザー詳細をキャッシュから取得
- * @param userId ユーザーID
- */
-export async function getAdminUserDetailCache<T>(
-  userId: string
-): Promise<T | null> {
-  const redis = getRedisClient();
-  if (!redis) {
-    return null;
-  }
-
-  try {
-    const key = `${KEY_PREFIX.ADMIN_USER_DETAIL}${userId}`;
-    const data = await redis.get(key);
-    if (!data) {
-      return null;
-    }
-    return JSON.parse(data) as T;
-  } catch (error) {
-    logger.error({ err: error }, '管理者ユーザー詳細キャッシュの取得に失敗');
-    return null;
-  }
+export async function getAdminUserDetailCache<T>(userId: string): Promise<T | null> {
+  return getCache<T>(`${KEY_PREFIX.ADMIN_USER_DETAIL}${userId}`, '管理者ユーザー詳細キャッシュの取得に失敗');
 }
 
-/**
- * 管理者ユーザー詳細をキャッシュに保存
- * @param userId ユーザーID
- * @param data キャッシュデータ
- * @param ttlSeconds 有効期限（秒）、デフォルト30秒
- */
-export async function setAdminUserDetailCache<T>(
-  userId: string,
-  data: T,
-  ttlSeconds: number = 30
-): Promise<boolean> {
-  const redis = getRedisClient();
-  if (!redis) {
-    return false;
-  }
-
-  try {
-    const key = `${KEY_PREFIX.ADMIN_USER_DETAIL}${userId}`;
-    await redis.setex(key, ttlSeconds, JSON.stringify(data));
-    return true;
-  } catch (error) {
-    logger.error({ err: error }, '管理者ユーザー詳細キャッシュの保存に失敗');
-    return false;
-  }
+export async function setAdminUserDetailCache<T>(userId: string, data: T, ttlSeconds: number = 30): Promise<boolean> {
+  return setCache(`${KEY_PREFIX.ADMIN_USER_DETAIL}${userId}`, data, ttlSeconds, '管理者ユーザー詳細キャッシュの保存に失敗');
 }
 
-/**
- * 管理者ユーザー詳細キャッシュを無効化
- * @param userId ユーザーID
- */
-export async function invalidateAdminUserDetailCache(
-  userId: string
-): Promise<boolean> {
-  const redis = getRedisClient();
-  if (!redis) {
-    return false;
-  }
-
-  try {
-    const key = `${KEY_PREFIX.ADMIN_USER_DETAIL}${userId}`;
-    await redis.del(key);
-    return true;
-  } catch (error) {
-    logger.error({ err: error }, '管理者ユーザー詳細キャッシュの無効化に失敗');
-    return false;
-  }
+export async function invalidateAdminUserDetailCache(userId: string): Promise<boolean> {
+  return invalidateCache(`${KEY_PREFIX.ADMIN_USER_DETAIL}${userId}`, '管理者ユーザー詳細キャッシュの無効化に失敗');
 }
 
 // ============================================
 // 管理者組織一覧キャッシュ
 // ============================================
 
-/**
- * 検索パラメータからキャッシュキーを生成
- */
-function generateAdminOrganizationsKey(params: Record<string, unknown>): string {
-  // パラメータをソートして一意のキーを生成
-  const sortedParams = Object.keys(params)
-    .sort()
-    .filter((key) => params[key] !== undefined && params[key] !== null)
-    .map((key) => `${key}:${JSON.stringify(params[key])}`)
-    .join('|');
-  return `${KEY_PREFIX.ADMIN_ORGANIZATIONS}${sortedParams}`;
-}
-
-/**
- * 管理者組織一覧をキャッシュに保存
- * @param params 検索パラメータ
- * @param data キャッシュデータ
- * @param ttlSeconds 有効期限（秒）、デフォルト1分
- */
 export async function setAdminOrganizationsCache<T>(
-  params: Record<string, unknown>,
-  data: T,
-  ttlSeconds: number = 60
+  params: Record<string, unknown>, data: T, ttlSeconds: number = 60
 ): Promise<boolean> {
-  const redis = getRedisClient();
-  if (!redis) {
-    return false;
-  }
-
-  try {
-    const key = generateAdminOrganizationsKey(params);
-    await redis.setex(key, ttlSeconds, JSON.stringify(data));
-    return true;
-  } catch (error) {
-    logger.error({ err: error }, '管理者組織一覧キャッシュの保存に失敗');
-    return false;
-  }
+  return setCache(
+    generateParamsKey(KEY_PREFIX.ADMIN_ORGANIZATIONS, params),
+    data, ttlSeconds, '管理者組織一覧キャッシュの保存に失敗'
+  );
 }
 
-/**
- * 管理者組織一覧をキャッシュから取得
- * @param params 検索パラメータ
- */
-export async function getAdminOrganizationsCache<T>(
-  params: Record<string, unknown>
-): Promise<T | null> {
-  const redis = getRedisClient();
-  if (!redis) {
-    return null;
-  }
-
-  try {
-    const key = generateAdminOrganizationsKey(params);
-    const data = await redis.get(key);
-    if (!data) {
-      return null;
-    }
-    return JSON.parse(data) as T;
-  } catch (error) {
-    logger.error({ err: error }, '管理者組織一覧キャッシュの取得に失敗');
-    return null;
-  }
+export async function getAdminOrganizationsCache<T>(params: Record<string, unknown>): Promise<T | null> {
+  return getCache<T>(
+    generateParamsKey(KEY_PREFIX.ADMIN_ORGANIZATIONS, params),
+    '管理者組織一覧キャッシュの取得に失敗'
+  );
 }
 
-/**
- * 管理者組織一覧キャッシュを無効化（パターンマッチで全キャッシュを削除）
- * 組織の作成・更新・削除時に呼び出す
- */
 export async function invalidateAdminOrganizationsCache(): Promise<boolean> {
-  const redis = getRedisClient();
-  if (!redis) {
-    return false;
-  }
-
-  try {
-    // パターンマッチで全ての組織一覧キャッシュを削除
-    const pattern = `${KEY_PREFIX.ADMIN_ORGANIZATIONS}*`;
-    const keys = await scanKeys(redis, pattern);
-    if (keys.length > 0) {
-      await redis.del(...keys);
-    }
-    return true;
-  } catch (error) {
-    logger.error({ err: error }, '管理者組織一覧キャッシュの無効化に失敗');
-    return false;
-  }
+  return invalidateCacheByPattern(`${KEY_PREFIX.ADMIN_ORGANIZATIONS}*`, '管理者組織一覧キャッシュの無効化に失敗');
 }
 
 // ============================================
 // 管理者組織詳細キャッシュ
 // ============================================
 
-/**
- * 管理者組織詳細をキャッシュから取得
- * @param organizationId 組織ID
- */
-export async function getAdminOrganizationDetailCache<T>(
-  organizationId: string
-): Promise<T | null> {
-  const redis = getRedisClient();
-  if (!redis) {
-    return null;
-  }
-
-  try {
-    const key = `${KEY_PREFIX.ADMIN_ORGANIZATION_DETAIL}${organizationId}`;
-    const data = await redis.get(key);
-    if (!data) {
-      return null;
-    }
-    return JSON.parse(data) as T;
-  } catch (error) {
-    logger.error({ err: error }, '管理者組織詳細キャッシュの取得に失敗');
-    return null;
-  }
+export async function getAdminOrganizationDetailCache<T>(organizationId: string): Promise<T | null> {
+  return getCache<T>(`${KEY_PREFIX.ADMIN_ORGANIZATION_DETAIL}${organizationId}`, '管理者組織詳細キャッシュの取得に失敗');
 }
 
-/**
- * 管理者組織詳細をキャッシュに保存
- * @param organizationId 組織ID
- * @param data キャッシュデータ
- * @param ttlSeconds 有効期限（秒）、デフォルト30秒
- */
-export async function setAdminOrganizationDetailCache<T>(
-  organizationId: string,
-  data: T,
-  ttlSeconds: number = 30
-): Promise<boolean> {
-  const redis = getRedisClient();
-  if (!redis) {
-    return false;
-  }
-
-  try {
-    const key = `${KEY_PREFIX.ADMIN_ORGANIZATION_DETAIL}${organizationId}`;
-    await redis.setex(key, ttlSeconds, JSON.stringify(data));
-    return true;
-  } catch (error) {
-    logger.error({ err: error }, '管理者組織詳細キャッシュの保存に失敗');
-    return false;
-  }
+export async function setAdminOrganizationDetailCache<T>(organizationId: string, data: T, ttlSeconds: number = 30): Promise<boolean> {
+  return setCache(`${KEY_PREFIX.ADMIN_ORGANIZATION_DETAIL}${organizationId}`, data, ttlSeconds, '管理者組織詳細キャッシュの保存に失敗');
 }
 
-/**
- * 管理者組織詳細キャッシュを無効化
- * @param organizationId 組織ID
- */
-export async function invalidateAdminOrganizationDetailCache(
-  organizationId: string
-): Promise<boolean> {
-  const redis = getRedisClient();
-  if (!redis) {
-    return false;
-  }
-
-  try {
-    const key = `${KEY_PREFIX.ADMIN_ORGANIZATION_DETAIL}${organizationId}`;
-    await redis.del(key);
-    return true;
-  } catch (error) {
-    logger.error({ err: error }, '管理者組織詳細キャッシュの無効化に失敗');
-    return false;
-  }
+export async function invalidateAdminOrganizationDetailCache(organizationId: string): Promise<boolean> {
+  return invalidateCache(`${KEY_PREFIX.ADMIN_ORGANIZATION_DETAIL}${organizationId}`, '管理者組織詳細キャッシュの無効化に失敗');
 }
 
 // ============================================
@@ -699,6 +415,46 @@ async function invalidateCache(
     logger.error({ err: error }, errorMessage);
     return false;
   }
+}
+
+/**
+ * パターンマッチでキャッシュを無効化する汎用関数（SCAN使用）
+ * @param pattern キーパターン（例: "admin:users:*"）
+ * @param errorMessage エラー時のログメッセージ
+ */
+async function invalidateCacheByPattern(
+  pattern: string,
+  errorMessage: string
+): Promise<boolean> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    const keys = await scanKeys(redis, pattern);
+    if (keys.length > 0) {
+      await redis.del(...keys);
+    }
+    return true;
+  } catch (error) {
+    logger.error({ err: error }, errorMessage);
+    return false;
+  }
+}
+
+/**
+ * 検索パラメータからソート済みキャッシュキーを生成する汎用関数
+ * @param prefix キープレフィックス
+ * @param params 検索パラメータ
+ */
+function generateParamsKey(prefix: string, params: Record<string, unknown>): string {
+  const sortedParams = Object.keys(params)
+    .sort()
+    .filter((key) => params[key] !== undefined && params[key] !== null)
+    .map((key) => `${key}:${JSON.stringify(params[key])}`)
+    .join('|');
+  return `${prefix}${sortedParams}`;
 }
 
 // ============================================
@@ -799,321 +555,82 @@ export async function invalidateOrgInvoicesCache(
 // 管理者監査ログキャッシュ
 // ============================================
 
-/**
- * 検索パラメータからキャッシュキーを生成
- */
-function generateAdminAuditLogsKey(params: Record<string, unknown>): string {
-  // パラメータをソートして一意のキーを生成
-  const sortedParams = Object.keys(params)
-    .sort()
-    .filter((key) => params[key] !== undefined && params[key] !== null)
-    .map((key) => `${key}:${JSON.stringify(params[key])}`)
-    .join('|');
-  return `${KEY_PREFIX.ADMIN_AUDIT_LOGS}${sortedParams}`;
-}
-
-/**
- * 管理者監査ログ一覧をキャッシュに保存
- * @param params 検索パラメータ
- * @param data キャッシュデータ
- * @param ttlSeconds 有効期限（秒）、デフォルト30秒
- */
 export async function setAdminAuditLogsCache<T>(
-  params: Record<string, unknown>,
-  data: T,
-  ttlSeconds: number = 30
+  params: Record<string, unknown>, data: T, ttlSeconds: number = 30
 ): Promise<boolean> {
-  const redis = getRedisClient();
-  if (!redis) {
-    return false;
-  }
-
-  try {
-    const key = generateAdminAuditLogsKey(params);
-    await redis.setex(key, ttlSeconds, JSON.stringify(data));
-    return true;
-  } catch (error) {
-    logger.error({ err: error }, '管理者監査ログキャッシュの保存に失敗');
-    return false;
-  }
+  return setCache(
+    generateParamsKey(KEY_PREFIX.ADMIN_AUDIT_LOGS, params),
+    data, ttlSeconds, '管理者監査ログキャッシュの保存に失敗'
+  );
 }
 
-/**
- * 管理者監査ログ一覧をキャッシュから取得
- * @param params 検索パラメータ
- */
-export async function getAdminAuditLogsCache<T>(
-  params: Record<string, unknown>
-): Promise<T | null> {
-  const redis = getRedisClient();
-  if (!redis) {
-    return null;
-  }
-
-  try {
-    const key = generateAdminAuditLogsKey(params);
-    const data = await redis.get(key);
-    if (!data) {
-      return null;
-    }
-    return JSON.parse(data) as T;
-  } catch (error) {
-    logger.error({ err: error }, '管理者監査ログキャッシュの取得に失敗');
-    return null;
-  }
+export async function getAdminAuditLogsCache<T>(params: Record<string, unknown>): Promise<T | null> {
+  return getCache<T>(
+    generateParamsKey(KEY_PREFIX.ADMIN_AUDIT_LOGS, params),
+    '管理者監査ログキャッシュの取得に失敗'
+  );
 }
 
 // ============================================
 // アクティブユーザーメトリクスキャッシュ（DAU/WAU/MAU）
 // ============================================
 
-/**
- * 検索パラメータからキャッシュキーを生成
- */
-function generateAdminMetricsKey(params: Record<string, unknown>): string {
-  const sortedParams = Object.keys(params)
-    .sort()
-    .filter((key) => params[key] !== undefined && params[key] !== null)
-    .map((key) => `${key}:${JSON.stringify(params[key])}`)
-    .join('|');
-  return `${KEY_PREFIX.ADMIN_METRICS}${sortedParams}`;
-}
-
-/**
- * アクティブユーザーメトリクスをキャッシュに保存
- * @param params クエリパラメータ
- * @param data キャッシュデータ
- * @param ttlSeconds 有効期限（秒）、デフォルト5分（過去データ用）
- */
 export async function setAdminMetricsCache<T>(
-  params: Record<string, unknown>,
-  data: T,
-  ttlSeconds: number = 300
+  params: Record<string, unknown>, data: T, ttlSeconds: number = 300
 ): Promise<boolean> {
-  const redis = getRedisClient();
-  if (!redis) {
-    return false;
-  }
-
-  try {
-    const key = generateAdminMetricsKey(params);
-    await redis.setex(key, ttlSeconds, JSON.stringify(data));
-    return true;
-  } catch (error) {
-    logger.error({ err: error }, 'アクティブユーザーメトリクスキャッシュの保存に失敗');
-    return false;
-  }
+  return setCache(
+    generateParamsKey(KEY_PREFIX.ADMIN_METRICS, params),
+    data, ttlSeconds, 'アクティブユーザーメトリクスキャッシュの保存に失敗'
+  );
 }
 
-/**
- * アクティブユーザーメトリクスをキャッシュから取得
- * @param params クエリパラメータ
- */
-export async function getAdminMetricsCache<T>(
-  params: Record<string, unknown>
-): Promise<T | null> {
-  const redis = getRedisClient();
-  if (!redis) {
-    return null;
-  }
-
-  try {
-    const key = generateAdminMetricsKey(params);
-    const data = await redis.get(key);
-    if (!data) {
-      return null;
-    }
-    return JSON.parse(data) as T;
-  } catch (error) {
-    logger.error({ err: error }, 'アクティブユーザーメトリクスキャッシュの取得に失敗');
-    return null;
-  }
+export async function getAdminMetricsCache<T>(params: Record<string, unknown>): Promise<T | null> {
+  return getCache<T>(
+    generateParamsKey(KEY_PREFIX.ADMIN_METRICS, params),
+    'アクティブユーザーメトリクスキャッシュの取得に失敗'
+  );
 }
 
-/**
- * アクティブユーザーメトリクスキャッシュを無効化（パターンマッチで全キャッシュを削除）
- */
 export async function invalidateAdminMetricsCache(): Promise<boolean> {
-  const redis = getRedisClient();
-  if (!redis) {
-    return false;
-  }
-
-  try {
-    const pattern = `${KEY_PREFIX.ADMIN_METRICS}*`;
-    const keys = await scanKeys(redis, pattern);
-    if (keys.length > 0) {
-      await redis.del(...keys);
-    }
-    return true;
-  } catch (error) {
-    logger.error({ err: error }, 'アクティブユーザーメトリクスキャッシュの無効化に失敗');
-    return false;
-  }
+  return invalidateCacheByPattern(`${KEY_PREFIX.ADMIN_METRICS}*`, 'アクティブユーザーメトリクスキャッシュの無効化に失敗');
 }
 
 // ============================================
 // システム管理者（AdminUser）一覧キャッシュ
 // ============================================
 
-/**
- * 検索パラメータからキャッシュキーを生成
- */
-function generateSystemAdminsKey(params: Record<string, unknown>): string {
-  const sortedParams = Object.keys(params)
-    .sort()
-    .filter((key) => params[key] !== undefined && params[key] !== null)
-    .map((key) => `${key}:${JSON.stringify(params[key])}`)
-    .join('|');
-  return `${KEY_PREFIX.SYSTEM_ADMINS}${sortedParams}`;
-}
-
-/**
- * システム管理者一覧をキャッシュに保存
- * @param params 検索パラメータ
- * @param data キャッシュデータ
- * @param ttlSeconds 有効期限（秒）、デフォルト1分
- */
 export async function setSystemAdminsCache<T>(
-  params: Record<string, unknown>,
-  data: T,
-  ttlSeconds: number = 60
+  params: Record<string, unknown>, data: T, ttlSeconds: number = 60
 ): Promise<boolean> {
-  const redis = getRedisClient();
-  if (!redis) {
-    return false;
-  }
-
-  try {
-    const key = generateSystemAdminsKey(params);
-    await redis.setex(key, ttlSeconds, JSON.stringify(data));
-    return true;
-  } catch (error) {
-    logger.error({ err: error }, 'システム管理者一覧キャッシュの保存に失敗');
-    return false;
-  }
+  return setCache(
+    generateParamsKey(KEY_PREFIX.SYSTEM_ADMINS, params),
+    data, ttlSeconds, 'システム管理者一覧キャッシュの保存に失敗'
+  );
 }
 
-/**
- * システム管理者一覧をキャッシュから取得
- * @param params 検索パラメータ
- */
-export async function getSystemAdminsCache<T>(
-  params: Record<string, unknown>
-): Promise<T | null> {
-  const redis = getRedisClient();
-  if (!redis) {
-    return null;
-  }
-
-  try {
-    const key = generateSystemAdminsKey(params);
-    const data = await redis.get(key);
-    if (!data) {
-      return null;
-    }
-    return JSON.parse(data) as T;
-  } catch (error) {
-    logger.error({ err: error }, 'システム管理者一覧キャッシュの取得に失敗');
-    return null;
-  }
+export async function getSystemAdminsCache<T>(params: Record<string, unknown>): Promise<T | null> {
+  return getCache<T>(
+    generateParamsKey(KEY_PREFIX.SYSTEM_ADMINS, params),
+    'システム管理者一覧キャッシュの取得に失敗'
+  );
 }
 
-/**
- * システム管理者一覧キャッシュを無効化（パターンマッチで全キャッシュを削除）
- */
 export async function invalidateSystemAdminsCache(): Promise<boolean> {
-  const redis = getRedisClient();
-  if (!redis) {
-    return false;
-  }
-
-  try {
-    const pattern = `${KEY_PREFIX.SYSTEM_ADMINS}*`;
-    const keys = await scanKeys(redis, pattern);
-    if (keys.length > 0) {
-      await redis.del(...keys);
-    }
-    return true;
-  } catch (error) {
-    logger.error({ err: error }, 'システム管理者一覧キャッシュの無効化に失敗');
-    return false;
-  }
+  return invalidateCacheByPattern(`${KEY_PREFIX.SYSTEM_ADMINS}*`, 'システム管理者一覧キャッシュの無効化に失敗');
 }
 
 // ============================================
 // システム管理者（AdminUser）詳細キャッシュ
 // ============================================
 
-/**
- * システム管理者詳細をキャッシュから取得
- * @param adminUserId システム管理者ID
- */
-export async function getSystemAdminDetailCache<T>(
-  adminUserId: string
-): Promise<T | null> {
-  const redis = getRedisClient();
-  if (!redis) {
-    return null;
-  }
-
-  try {
-    const key = `${KEY_PREFIX.SYSTEM_ADMIN_DETAIL}${adminUserId}`;
-    const data = await redis.get(key);
-    if (!data) {
-      return null;
-    }
-    return JSON.parse(data) as T;
-  } catch (error) {
-    logger.error({ err: error }, 'システム管理者詳細キャッシュの取得に失敗');
-    return null;
-  }
+export async function getSystemAdminDetailCache<T>(adminUserId: string): Promise<T | null> {
+  return getCache<T>(`${KEY_PREFIX.SYSTEM_ADMIN_DETAIL}${adminUserId}`, 'システム管理者詳細キャッシュの取得に失敗');
 }
 
-/**
- * システム管理者詳細をキャッシュに保存
- * @param adminUserId システム管理者ID
- * @param data キャッシュデータ
- * @param ttlSeconds 有効期限（秒）、デフォルト30秒
- */
-export async function setSystemAdminDetailCache<T>(
-  adminUserId: string,
-  data: T,
-  ttlSeconds: number = 30
-): Promise<boolean> {
-  const redis = getRedisClient();
-  if (!redis) {
-    return false;
-  }
-
-  try {
-    const key = `${KEY_PREFIX.SYSTEM_ADMIN_DETAIL}${adminUserId}`;
-    await redis.setex(key, ttlSeconds, JSON.stringify(data));
-    return true;
-  } catch (error) {
-    logger.error({ err: error }, 'システム管理者詳細キャッシュの保存に失敗');
-    return false;
-  }
+export async function setSystemAdminDetailCache<T>(adminUserId: string, data: T, ttlSeconds: number = 30): Promise<boolean> {
+  return setCache(`${KEY_PREFIX.SYSTEM_ADMIN_DETAIL}${adminUserId}`, data, ttlSeconds, 'システム管理者詳細キャッシュの保存に失敗');
 }
 
-/**
- * システム管理者詳細キャッシュを無効化
- * @param adminUserId システム管理者ID
- */
-export async function invalidateSystemAdminDetailCache(
-  adminUserId: string
-): Promise<boolean> {
-  const redis = getRedisClient();
-  if (!redis) {
-    return false;
-  }
-
-  try {
-    const key = `${KEY_PREFIX.SYSTEM_ADMIN_DETAIL}${adminUserId}`;
-    await redis.del(key);
-    return true;
-  } catch (error) {
-    logger.error({ err: error }, 'システム管理者詳細キャッシュの無効化に失敗');
-    return false;
-  }
+export async function invalidateSystemAdminDetailCache(adminUserId: string): Promise<boolean> {
+  return invalidateCache(`${KEY_PREFIX.SYSTEM_ADMIN_DETAIL}${adminUserId}`, 'システム管理者詳細キャッシュの無効化に失敗');
 }
