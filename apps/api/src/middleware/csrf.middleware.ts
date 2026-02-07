@@ -11,6 +11,13 @@ const logger = baseLogger.child({ module: 'csrf' });
  * フロントエンドからのPOSTリクエスト（同意画面など）に使用。
  */
 export function csrfProtection() {
+  // 許可するオリジンのリスト（環境変数は起動時に確定するため一度だけ構築）
+  const allowedOrigins = [
+    env.FRONTEND_URL,
+    env.ADMIN_FRONTEND_URL,
+    env.API_BASE_URL,
+  ].map((url) => url.replace(/\/$/, '')); // 末尾スラッシュを除去
+
   return (req: Request, res: Response, next: NextFunction) => {
     // GET/HEAD/OPTIONSリクエストはCSRF対策不要
     if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
@@ -19,12 +26,6 @@ export function csrfProtection() {
 
     const origin = req.headers.origin;
     const referer = req.headers.referer;
-
-    // 許可するオリジンのリスト
-    const allowedOrigins = [
-      env.FRONTEND_URL,
-      env.API_BASE_URL,
-    ].map((url) => url.replace(/\/$/, '')); // 末尾スラッシュを除去
 
     // Originヘッダーがある場合は検証
     if (origin) {
