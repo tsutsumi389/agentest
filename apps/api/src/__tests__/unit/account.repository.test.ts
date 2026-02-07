@@ -281,8 +281,34 @@ describe('AccountRepository', () => {
   });
 
   describe('decryptAccountTokens エラーハンドリング', () => {
-    it('復号に失敗した場合はnullを返しエラーをログに記録する', async () => {
-      // 異なるキーで暗号化されたトークン（正しいフォーマットだが復号不能）
+    it('accessTokenの復号に失敗した場合、accessTokenはnullだがrefreshTokenは復号される', async () => {
+      // accessToken: 異なるキーで暗号化（復号不能）
+      const encryptedWithDifferentKey = encrypt('secret', 'completely-different-key-for-testing');
+      // refreshToken: 正しいキーで暗号化（復号可能）
+      const encryptedRefresh = encrypt('valid-refresh', TEST_ENCRYPTION_KEY);
+      const mockAccount = {
+        id: 'account-1',
+        userId: 'user-1',
+        provider: 'github',
+        providerAccountId: 'github-123',
+        accessToken: encryptedWithDifferentKey,
+        refreshToken: encryptedRefresh,
+      };
+      mockPrismaAccount.findUnique.mockResolvedValue(mockAccount);
+
+      const result = await repository.findByProviderAccountId('github', 'github-123');
+
+      // accessTokenは復号失敗でnull
+      expect(result?.accessToken).toBeNull();
+      // refreshTokenは独立して復号成功
+      expect(result?.refreshToken).toBe('valid-refresh');
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({ accountId: 'account-1' }),
+        'accessTokenの復号に失敗（データ改ざんまたはキー不整合の可能性）'
+      );
+    });
+
+    it('両方のトークンの復号に失敗した場合は両方nullを返す', async () => {
       const encryptedWithDifferentKey = encrypt('secret', 'completely-different-key-for-testing');
       const mockAccount = {
         id: 'account-1',
@@ -290,7 +316,7 @@ describe('AccountRepository', () => {
         provider: 'github',
         providerAccountId: 'github-123',
         accessToken: encryptedWithDifferentKey,
-        refreshToken: null,
+        refreshToken: encryptedWithDifferentKey,
       };
       mockPrismaAccount.findUnique.mockResolvedValue(mockAccount);
 
@@ -298,10 +324,7 @@ describe('AccountRepository', () => {
 
       expect(result?.accessToken).toBeNull();
       expect(result?.refreshToken).toBeNull();
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        expect.objectContaining({ accountId: 'account-1' }),
-        'トークンの復号に失敗'
-      );
+      expect(mockLogger.warn).toHaveBeenCalledTimes(2);
     });
   });
 });

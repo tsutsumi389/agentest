@@ -30,7 +30,7 @@ describe('crypto', () => {
     });
 
     it('マルチバイト文字を含むテキストも暗号化/復号できる', () => {
-      const plaintext = 'テスト用トークン🔑';
+      const plaintext = 'テスト用トークン';
       const encrypted = encrypt(plaintext, TEST_KEY);
       const decrypted = decrypt(encrypted, TEST_KEY);
 
@@ -53,28 +53,34 @@ describe('crypto', () => {
   });
 
   describe('暗号文のフォーマット', () => {
-    it('iv:authTag:ciphertext のコロン区切り形式になる', () => {
+    it('enc:v1:iv:authTag:ciphertext のプレフィックス付き形式になる', () => {
       const encrypted = encrypt('test', TEST_KEY);
-      const parts = encrypted.split(':');
 
+      expect(encrypted.startsWith('enc:v1:')).toBe(true);
+
+      const payload = encrypted.slice('enc:v1:'.length);
+      const parts = payload.split(':');
       expect(parts).toHaveLength(3);
+
       // 各パートがBase64デコード可能であること
       for (const part of parts) {
         expect(() => Buffer.from(part, 'base64')).not.toThrow();
       }
     });
 
-    it('IVは12バイト（Base64で16文字）', () => {
+    it('IVは12バイト', () => {
       const encrypted = encrypt('test', TEST_KEY);
-      const ivBase64 = encrypted.split(':')[0];
+      const payload = encrypted.slice('enc:v1:'.length);
+      const ivBase64 = payload.split(':')[0];
       const iv = Buffer.from(ivBase64, 'base64');
 
       expect(iv.length).toBe(12);
     });
 
-    it('AuthTagは16バイト（Base64で24文字）', () => {
+    it('AuthTagは16バイト', () => {
       const encrypted = encrypt('test', TEST_KEY);
-      const authTagBase64 = encrypted.split(':')[1];
+      const payload = encrypted.slice('enc:v1:'.length);
+      const authTagBase64 = payload.split(':')[1];
       const authTag = Buffer.from(authTagBase64, 'base64');
 
       expect(authTag.length).toBe(16);
@@ -82,36 +88,38 @@ describe('crypto', () => {
   });
 
   describe('復号エラー', () => {
-    it('不正な形式の暗号文で例外が発生する', () => {
-      expect(() => decrypt('invalid-format', TEST_KEY)).toThrow('不正な暗号文形式です');
+    it('プレフィックスのない暗号文で例外が発生する', () => {
+      expect(() => decrypt('invalid-format', TEST_KEY)).toThrow('プレフィックスが一致しません');
+    });
+
+    it('プレフィックスはあるがパーツ数が不正な場合に例外が発生する', () => {
+      expect(() => decrypt('enc:v1:part1:part2', TEST_KEY)).toThrow('不正な暗号文形式です');
     });
 
     it('パーツ数が足りない場合に例外が発生する', () => {
-      expect(() => decrypt('part1:part2', TEST_KEY)).toThrow('不正な暗号文形式です');
-    });
-
-    it('パーツ数が多い場合に例外が発生する', () => {
-      expect(() => decrypt('p1:p2:p3:p4', TEST_KEY)).toThrow('不正な暗号文形式です');
+      expect(() => decrypt('enc:v1:part1', TEST_KEY)).toThrow('不正な暗号文形式です');
     });
 
     it('異なるキーで復号するとエラーになる', () => {
       const encrypted = encrypt('secret-token', TEST_KEY);
-      expect(() => decrypt(encrypted, 'wrong-key')).toThrow();
+      expect(() => decrypt(encrypted, 'wrong-key-that-is-long-enough-32ch')).toThrow();
     });
 
     it('改ざんされた暗号文で復号するとエラーになる', () => {
       const encrypted = encrypt('secret-token', TEST_KEY);
-      const parts = encrypted.split(':');
+      const payload = encrypted.slice('enc:v1:'.length);
+      const parts = payload.split(':');
       // 暗号文の先頭を改ざん
-      const tampered = parts[0] + ':' + parts[1] + ':' + 'AAAA' + parts[2].slice(4);
+      const tampered = 'enc:v1:' + parts[0] + ':' + parts[1] + ':' + 'AAAA' + parts[2].slice(4);
       expect(() => decrypt(tampered, TEST_KEY)).toThrow();
     });
 
     it('改ざんされたAuthTagで復号するとエラーになる', () => {
       const encrypted = encrypt('secret-token', TEST_KEY);
-      const parts = encrypted.split(':');
+      const payload = encrypted.slice('enc:v1:'.length);
+      const parts = payload.split(':');
       // AuthTagを改ざん
-      const tampered = parts[0] + ':' + 'AAAA' + parts[1].slice(4) + ':' + parts[2];
+      const tampered = 'enc:v1:' + parts[0] + ':' + 'AAAA' + parts[1].slice(4) + ':' + parts[2];
       expect(() => decrypt(tampered, TEST_KEY)).toThrow();
     });
   });
@@ -146,6 +154,11 @@ describe('crypto', () => {
 
     it('コロンを含むが暗号化形式でない文字列はそのまま返す', () => {
       expect(decryptToken('not:encrypted:format', TEST_KEY)).toBe('not:encrypted:format');
+    });
+
+    it('enc:v1:プレフィックスのない旧形式の暗号文は平文として返す', () => {
+      // プレフィックスがないため暗号化形式と判定されない
+      expect(decryptToken('abc:def:ghi', TEST_KEY)).toBe('abc:def:ghi');
     });
   });
 });

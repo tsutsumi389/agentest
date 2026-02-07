@@ -3,26 +3,40 @@ import crypto from 'crypto';
 /**
  * AES-256-GCM によるトークン暗号化ユーティリティ
  *
- * 形式: iv:authTag:ciphertext （Base64エンコード、コロン区切り）
+ * 形式: enc:v1:iv:authTag:ciphertext （Base64エンコード、コロン区切り）
+ * - プレフィックス: enc:v1:（バージョニング・将来のキーローテーション対応）
  * - IV: 12バイトのランダム値（毎回生成）
  * - AuthTag: 16バイト（GCMの改ざん検知）
- * - キー: 環境変数の文字列をSHA-256でハッシュして32バイトに正規化
+ * - キー: 環境変数の文字列をHKDFで32バイトに導出
  */
 
 const IV_LENGTH = 12;
 const AUTH_TAG_LENGTH = 16;
 const ALGORITHM = 'aes-256-gcm';
+const ENCRYPTED_PREFIX = 'enc:v1:';
+const HKDF_SALT = 'agentest-token-encryption-salt';
+const HKDF_INFO = 'aes-256-gcm-key';
+
+// 導出済みキーのキャッシュ（同一キーの再計算を避ける）
+let cachedKey: { raw: string; derived: Buffer } | null = null;
 
 /**
- * 暗号化キーをSHA-256で32バイトに正規化
+ * 暗号化キーをHKDFで32バイトに導出（キャッシュ付き）
  */
 function deriveKey(key: string): Buffer {
-  return crypto.createHash('sha256').update(key).digest();
+  if (cachedKey && cachedKey.raw === key) {
+    return cachedKey.derived;
+  }
+  const derived = Buffer.from(
+    crypto.hkdfSync('sha256', key, HKDF_SALT, HKDF_INFO, 32)
+  );
+  cachedKey = { raw: key, derived };
+  return derived;
 }
 
 /**
  * 平文を AES-256-GCM で暗号化する
- * @returns iv:authTag:ciphertext 形式の暗号文（各パートはBase64エンコード）
+ * @returns enc:v1:iv:authTag:ciphertext 形式の暗号文（各パートはBase64エンコード）
  */
 export function encrypt(plaintext: string, key: string): string {
   const derivedKey = deriveKey(key);
@@ -39,7 +53,7 @@ export function encrypt(plaintext: string, key: string): string {
 
   const authTag = cipher.getAuthTag();
 
-  return [
+  return ENCRYPTED_PREFIX + [
     iv.toString('base64'),
     authTag.toString('base64'),
     encrypted.toString('base64'),
@@ -48,10 +62,15 @@ export function encrypt(plaintext: string, key: string): string {
 
 /**
  * AES-256-GCM で暗号化されたテキストを復号する
- * @param ciphertext iv:authTag:ciphertext 形式の暗号文
+ * @param ciphertext enc:v1:iv:authTag:ciphertext 形式の暗号文
  */
 export function decrypt(ciphertext: string, key: string): string {
-  const parts = ciphertext.split(':');
+  if (!ciphertext.startsWith(ENCRYPTED_PREFIX)) {
+    throw new Error('不正な暗号文形式です: プレフィックスが一致しません');
+  }
+
+  const payload = ciphertext.slice(ENCRYPTED_PREFIX.length);
+  const parts = payload.split(':');
   if (parts.length !== 3) {
     throw new Error('不正な暗号文形式です');
   }
@@ -95,19 +114,10 @@ export function encryptToken(token: string | null | undefined, key: string): str
 }
 
 /**
- * トークンが暗号化形式（iv:authTag:ciphertext）かどうかを判定する
+ * トークンが暗号化形式（enc:v1:...）かどうかを判定する
  */
 function isEncryptedFormat(token: string): boolean {
-  const parts = token.split(':');
-  if (parts.length !== 3) return false;
-  // IVが12バイト（Base64で16文字）、AuthTagが16バイト（Base64で24文字）
-  try {
-    const iv = Buffer.from(parts[0], 'base64');
-    const authTag = Buffer.from(parts[1], 'base64');
-    return iv.length === IV_LENGTH && authTag.length === AUTH_TAG_LENGTH;
-  } catch {
-    return false;
-  }
+  return token.startsWith(ENCRYPTED_PREFIX);
 }
 
 /**
