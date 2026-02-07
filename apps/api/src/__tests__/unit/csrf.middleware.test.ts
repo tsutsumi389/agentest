@@ -114,6 +114,14 @@ describe('csrfProtection', () => {
       expect(mockNext).toHaveBeenCalled();
     });
 
+    it('Originがない場合、管理者フロントエンドのRefererからのリクエストを許可する', () => {
+      mockReq.headers = { referer: 'http://localhost:5174/admin/page' };
+
+      csrfProtection()(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalled();
+    });
+
     it('Refererのパスが違っても同じオリジンなら許可する', () => {
       mockReq.headers = { referer: 'http://localhost:5173/some/deep/path?query=value' };
 
