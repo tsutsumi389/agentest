@@ -8,8 +8,8 @@
 /** シャットダウン関数の型 */
 export type ShutdownFn = (signal: string, exitCode?: number) => Promise<void>;
 
-/** セーフティネットのデフォルトタイムアウト（ミリ秒） */
-const DEFAULT_SAFETY_TIMEOUT_MS = 5_000;
+/** セーフティネットのデフォルトタイムアウト（ミリ秒）。各アプリのgraceful shutdownタイムアウト（10秒）と統一。 */
+const DEFAULT_SAFETY_TIMEOUT_MS = 10_000;
 
 export interface ProcessHandlersOptions {
   /**
@@ -18,7 +18,7 @@ export interface ProcessHandlersOptions {
    * nullの場合は即座にprocess.exit(1)する。
    */
   getShutdownFn: () => ShutdownFn | null;
-  /** セーフティネットの強制終了タイムアウト（ミリ秒）。デフォルト: 5000 */
+  /** セーフティネットの強制終了タイムアウト（ミリ秒）。デフォルト: 10000 */
   safetyTimeoutMs?: number;
 }
 
