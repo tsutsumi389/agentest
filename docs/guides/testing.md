@@ -199,6 +199,54 @@ e2e/
 - Docker サービスが起動していること（Web:3000, API:3001）
 - シードデータが投入済みであること
 
+## ロガーのモック
+
+バックエンドサービスのテストでは Pino ロガーをモックする必要があります。以下の標準パターンを使用してください。
+
+### 標準モックパターン
+
+```typescript
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// vi.hoisted でモックロガーを定義（ホイスティング対応）
+const { mockLogger } = vi.hoisted(() => {
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    trace: vi.fn(),
+    child: vi.fn(),
+  };
+  mockLogger.child.mockReturnValue(mockLogger);
+  return { mockLogger };
+});
+
+// ロガーモジュールをモック
+vi.mock('../../utils/logger.js', () => ({ logger: mockLogger }));
+
+describe('MyService', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should log on success', async () => {
+    await myService.doSomething();
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'doSomething' }),
+      expect.any(String),
+    );
+  });
+});
+```
+
+### 注意点
+
+- テスト環境（`NODE_ENV=test`）ではログレベルがデフォルトで `silent` に設定されるため、実際のロガーインスタンスではログが出力されません
+- テスト中にログ出力を確認したい場合は、`createLogger({ service: 'test', level: 'debug' })` のように明示的にレベルを指定してください
+- `child()` が自身を返すようにモックすることで、child logger を使うモジュールでもテストが可能になります
+
 ## CI でのテスト
 
 GitHub Actions で自動実行：

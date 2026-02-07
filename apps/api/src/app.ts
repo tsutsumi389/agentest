@@ -2,12 +2,11 @@ import express, { type Express } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
-import morgan from 'morgan';
 import { configurePassport, type OAuthProfile } from '@agentest/auth';
 import { prisma } from '@agentest/db';
 import { env } from './config/env.js';
 import { errorHandler } from './middleware/error-handler.js';
-import { requestLogger } from './middleware/request-logger.js';
+import { httpLogger, attachRequestId } from './middleware/request-logger.js';
 import { apiLimiter, authLimiter } from './middleware/rate-limiter.js';
 import { trackSession } from './middleware/session.middleware.js';
 import routes from './routes/index.js';
@@ -56,11 +55,9 @@ export function createApp(): Express {
   // セッション追跡
   app.use(trackSession());
 
-  // リクエストログ
-  if (env.NODE_ENV !== 'test') {
-    app.use(morgan('combined'));
-  }
-  app.use(requestLogger);
+  // リクエストログ（pino-http）
+  app.use(httpLogger);
+  app.use(attachRequestId);
 
   // Passport設定
   const authConfig = {

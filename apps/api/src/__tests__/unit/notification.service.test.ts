@@ -1,6 +1,25 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NotFoundError, AuthorizationError } from '@agentest/shared';
 
+// ロガーのモック
+const { mockLogger } = vi.hoisted(() => {
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    trace: vi.fn(),
+    child: vi.fn(),
+  };
+  mockLogger.child.mockReturnValue(mockLogger);
+  return { mockLogger };
+});
+
+vi.mock('../../utils/logger.js', () => ({
+  logger: mockLogger,
+}));
+
 // モックをホイスティング
 const mockNotificationRepo = vi.hoisted(() => ({
   create: vi.fn(),
@@ -297,7 +316,6 @@ describe('NotificationService', () => {
 
     it('メール送信に失敗してもアプリ内通知は成功する', async () => {
       mockEmailService.send.mockRejectedValue(new Error('SMTP error'));
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       // エラーが投げられないことを確認
       await expect(service.send(baseSendParams)).resolves.not.toThrow();
@@ -306,12 +324,10 @@ describe('NotificationService', () => {
       expect(mockNotificationRepo.create).toHaveBeenCalled();
 
       // エラーがログに記録される
-      expect(consoleSpy).toHaveBeenCalledWith(
-        'メール通知の送信に失敗しました:',
-        expect.any(Error)
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { err: expect.any(Error) },
+        'メール通知の送信に失敗しました'
       );
-
-      consoleSpy.mockRestore();
     });
 
     it('ユーザーが見つからない場合、メールを送信しない', async () => {

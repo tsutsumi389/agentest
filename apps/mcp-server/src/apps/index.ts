@@ -12,6 +12,9 @@ import type { ToolContext } from '../tools/index.js';
 import { requestContext } from '../transport/streamable-http.js';
 import { apiClient } from '../clients/api-client.js';
 import type { SearchTestSuiteResponse } from './types.js';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'apps' });
 
 // ディレクトリパスを取得
 const __filename = fileURLToPath(import.meta.url);
@@ -147,5 +150,5 @@ export function registerApps(server: McpServer): void {
     }
   );
 
-  console.log('MCP Appsを登録しました');
+  logger.info('MCP Appsを登録しました');
 }

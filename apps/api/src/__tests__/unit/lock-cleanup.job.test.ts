@@ -1,5 +1,24 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+// ロガーのモック
+const { mockLogger } = vi.hoisted(() => {
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    trace: vi.fn(),
+    child: vi.fn(),
+  };
+  mockLogger.child.mockReturnValue(mockLogger);
+  return { mockLogger };
+});
+
+vi.mock('../../utils/logger.js', () => ({
+  logger: mockLogger,
+}));
+
 // EditLockServiceモック
 const mockProcessExpiredLocks = vi.hoisted(() => vi.fn());
 
@@ -86,7 +105,6 @@ describe('lock-cleanup.job', () => {
         .mockRejectedValueOnce(new Error('callback error'))
         .mockResolvedValueOnce(undefined);
 
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const intervalId = startLockCleanupJob(30000, onLockExpired);
 
       // 初回実行を処理
@@ -94,24 +112,21 @@ describe('lock-cleanup.job', () => {
 
       // 2回目のコールバックも呼ばれることを確認
       expect(onLockExpired).toHaveBeenCalledTimes(2);
-      expect(consoleSpy).toHaveBeenCalled();
+      expect(mockLogger.error).toHaveBeenCalled();
 
-      consoleSpy.mockRestore();
       stopLockCleanupJob(intervalId);
     });
 
     it('processExpiredLocksのエラーを握りつぶす', async () => {
       mockProcessExpiredLocks.mockRejectedValue(new Error('db error'));
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       const intervalId = startLockCleanupJob(30000);
 
       // 初回実行を処理
       await vi.advanceTimersByTimeAsync(0);
 
-      expect(consoleSpy).toHaveBeenCalled();
+      expect(mockLogger.error).toHaveBeenCalled();
 
-      consoleSpy.mockRestore();
       stopLockCleanupJob(intervalId);
     });
 

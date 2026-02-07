@@ -4,6 +4,7 @@
  * 毎日 1:00 JST に実行
  */
 import { countActiveUsers, upsertMetric } from '../lib/metrics-utils.js';
+import { logger as baseLogger } from '../utils/logger.js';
 import {
   getJSTYesterdayStart,
   getJSTStartOfDay,
@@ -15,13 +16,15 @@ import {
   formatDateStringJST,
 } from '../lib/date-utils.js';
 
+const logger = baseLogger.child({ module: 'metrics-aggregation' });
+
 /**
  * メトリクス集計ジョブのエントリーポイント
  */
 export async function runMetricsAggregation(): Promise<void> {
   const now = new Date();
 
-  console.log(`メトリクス集計開始: ${now.toISOString()}`);
+  logger.info({ timestamp: now.toISOString() }, 'メトリクス集計開始');
 
   // 前日のDAU集計
   await aggregateDAU(now);
@@ -36,7 +39,7 @@ export async function runMetricsAggregation(): Promise<void> {
     await aggregateMAU(now);
   }
 
-  console.log('メトリクス集計完了');
+  logger.info('メトリクス集計完了');
 }
 
 /**
@@ -53,7 +56,7 @@ async function aggregateDAU(now: Date): Promise<void> {
   // upsertで保存（再実行時も安全）
   await upsertMetric('DAY', yesterday, count);
 
-  console.log(`DAU ${formatDateStringJST(yesterday)}: ${count}`);
+  logger.info({ date: formatDateStringJST(yesterday), count }, 'DAU集計完了');
 }
 
 /**
@@ -69,7 +72,7 @@ async function aggregateWAU(now: Date): Promise<void> {
 
   await upsertMetric('WEEK', lastMonday, count);
 
-  console.log(`WAU ${formatDateStringJST(lastMonday)}: ${count}`);
+  logger.info({ date: formatDateStringJST(lastMonday), count }, 'WAU集計完了');
 }
 
 /**
@@ -85,5 +88,5 @@ async function aggregateMAU(now: Date): Promise<void> {
 
   await upsertMetric('MONTH', lastMonthStart, count);
 
-  console.log(`MAU ${formatDateStringJST(lastMonthStart)}: ${count}`);
+  logger.info({ date: formatDateStringJST(lastMonthStart), count }, 'MAU集計完了');
 }

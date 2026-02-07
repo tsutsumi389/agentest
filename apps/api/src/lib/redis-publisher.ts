@@ -2,6 +2,9 @@ import { Redis } from 'ioredis';
 import { v4 as uuidv4 } from 'uuid';
 import { Channels, type DashboardUpdatedEvent } from '@agentest/ws-types';
 import { env } from '../config/env.js';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'redis-publisher' });
 
 // Redis Publisherインスタンス（遅延初期化）
 let publisher: Redis | null = null;
@@ -18,11 +21,11 @@ function getPublisher(): Redis | null {
     publisher = new Redis(env.REDIS_URL);
 
     publisher.on('connect', () => {
-      console.log('✅ Redis Publisher (API) に接続しました');
+      logger.info('Redis Publisher (API) に接続しました');
     });
 
     publisher.on('error', (error: Error) => {
-      console.error('❌ Redis Publisher (API) エラー:', error);
+      logger.error({ err: error }, 'Redis Publisher (API) エラー');
     });
   }
 
@@ -42,7 +45,7 @@ export async function publishEvent(channel: string, event: object): Promise<void
   try {
     await redis.publish(channel, JSON.stringify(event));
   } catch (error) {
-    console.error('❌ Redis publish エラー:', error);
+    logger.error({ err: error }, 'Redis publish エラー');
   }
 }
 

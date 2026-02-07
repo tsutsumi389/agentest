@@ -4,17 +4,34 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // vi.hoisted() でモックオブジェクトを事前定義
-const { mockPrisma } = vi.hoisted(() => ({
-  mockPrisma: {
-    paymentEvent: {
-      deleteMany: vi.fn(),
-      groupBy: vi.fn(),
+const { mockPrisma, mockLogger } = vi.hoisted(() => {
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    trace: vi.fn(),
+    child: vi.fn(),
+  };
+  mockLogger.child.mockReturnValue(mockLogger);
+  return {
+    mockPrisma: {
+      paymentEvent: {
+        deleteMany: vi.fn(),
+        groupBy: vi.fn(),
+      },
     },
-  },
-}));
+    mockLogger,
+  };
+});
 
 vi.mock('../../lib/prisma.js', () => ({
   prisma: mockPrisma,
+}));
+
+vi.mock('../../utils/logger.js', () => ({
+  logger: mockLogger,
 }));
 
 // モック設定後にインポート
@@ -25,8 +42,6 @@ describe('runPaymentEventCleanup', () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2025-05-15T00:00:00.000Z'));
-    // console出力を抑制
-    vi.spyOn(console, 'log').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -85,14 +100,17 @@ describe('runPaymentEventCleanup', () => {
 
     await runPaymentEventCleanup();
 
-    expect(console.log).toHaveBeenCalledWith(
-      expect.stringContaining('処理済みイベント: 100件を削除')
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ count: 100 }),
+      '処理済みイベントを削除'
     );
-    expect(console.log).toHaveBeenCalledWith(
-      expect.stringContaining('失敗イベント（リトライ上限到達）: 20件を削除')
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ count: 20 }),
+      '失敗イベント（リトライ上限到達）を削除'
     );
-    expect(console.log).toHaveBeenCalledWith(
-      expect.stringContaining('合計 120 件のイベントを削除しました')
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ totalDeleted: 120 }),
+      'イベントの削除が完了しました'
     );
   });
 
@@ -108,10 +126,12 @@ describe('runPaymentEventCleanup', () => {
 
     await runPaymentEventCleanup();
 
-    expect(console.log).toHaveBeenCalledWith('残りのイベント数:');
-    expect(console.log).toHaveBeenCalledWith('  PENDING: 10件');
-    expect(console.log).toHaveBeenCalledWith('  PROCESSED: 30件');
-    expect(console.log).toHaveBeenCalledWith('  FAILED: 5件');
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        remaining: { PENDING: 10, PROCESSED: 30, FAILED: 5 },
+      }),
+      '残りのイベント数'
+    );
   });
 
   it('削除対象がない場合でも正常に完了する', async () => {
@@ -122,8 +142,9 @@ describe('runPaymentEventCleanup', () => {
 
     await runPaymentEventCleanup();
 
-    expect(console.log).toHaveBeenCalledWith(
-      expect.stringContaining('合計 0 件のイベントを削除しました')
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ totalDeleted: 0 }),
+      'イベントの削除が完了しました'
     );
   });
 });

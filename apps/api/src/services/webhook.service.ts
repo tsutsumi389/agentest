@@ -72,19 +72,19 @@ export class WebhookService {
    * PaymentEventによる冪等性を保証
    */
   async handleEvent(event: WebhookEvent): Promise<{ duplicate: boolean }> {
-    logger.info('Webhook event received', {
+    logger.info({
       eventId: event.id,
       eventType: event.type,
-    });
+    }, 'Webhook event received');
 
     // 冪等性チェック: 既に処理済みのイベントはスキップ
     const existingEvent = await this.paymentEventRepo.findByExternalId(event.id);
     if (existingEvent) {
-      logger.info('Duplicate webhook event, skipping', {
+      logger.info({
         eventId: event.id,
         eventType: event.type,
         existingStatus: existingEvent.status,
-      });
+      }, 'Duplicate webhook event, skipping');
       return { duplicate: true };
     }
 
@@ -100,10 +100,10 @@ export class WebhookService {
     } catch (error) {
       // 同時リクエストでユニーク制約違反が発生した場合は重複として扱う
       if (this.isUniqueConstraintViolation(error)) {
-        logger.info('Duplicate webhook event (race condition), skipping', {
+        logger.info({
           eventId: event.id,
           eventType: event.type,
-        });
+        }, 'Duplicate webhook event (race condition), skipping');
         return { duplicate: true };
       }
       throw error;
@@ -129,10 +129,10 @@ export class WebhookService {
           break;
         default:
           // 未対応のイベントタイプ（今後対応予定のイベントが多いためdebugレベル）
-          logger.debug('Unhandled webhook event type', {
+          logger.debug({
             eventId: event.id,
             eventType: event.type,
-          });
+          }, 'Unhandled webhook event type');
           break;
       }
 
@@ -143,11 +143,11 @@ export class WebhookService {
       // 処理失敗: PaymentEventをFAILEDに更新
       const errorMessage = error instanceof Error ? error.message : String(error);
       await this.paymentEventRepo.markAsFailed(paymentEvent.id, errorMessage);
-      logger.error('Webhook event processing failed', {
+      logger.error({
+        err: error instanceof Error ? error : undefined,
         eventId: event.id,
         eventType: event.type,
-        error: errorMessage,
-      });
+      }, 'Webhook event processing failed');
       throw error;
     }
   }
@@ -160,16 +160,16 @@ export class WebhookService {
   private async handleInvoicePaid(data: StripeInvoiceData): Promise<void> {
     const subscriptionExternalId = data.subscription;
     if (!subscriptionExternalId) {
-      logger.warn('Invoice paid event has no subscription', { invoiceId: data.id });
+      logger.warn({ invoiceId: data.id }, 'Invoice paid event has no subscription');
       return;
     }
 
     const subscription = await this.subscriptionRepo.findByExternalId(subscriptionExternalId);
     if (!subscription) {
-      logger.warn('Subscription not found for invoice', {
+      logger.warn({
         invoiceId: data.id,
         subscriptionExternalId,
-      });
+      }, 'Subscription not found for invoice');
       return;
     }
 
@@ -191,10 +191,10 @@ export class WebhookService {
     // キャッシュ無効化
     await this.invalidateInvoiceCache(subscription.userId, subscription.organizationId);
 
-    logger.info('Invoice paid processed', {
+    logger.info({
       invoiceNumber,
       subscriptionId: subscription.id,
-    });
+    }, 'Invoice paid processed');
   }
 
   /**
@@ -205,16 +205,16 @@ export class WebhookService {
   private async handleInvoicePaymentFailed(data: StripeInvoiceData): Promise<void> {
     const subscriptionExternalId = data.subscription;
     if (!subscriptionExternalId) {
-      logger.warn('Invoice payment failed event has no subscription', { invoiceId: data.id });
+      logger.warn({ invoiceId: data.id }, 'Invoice payment failed event has no subscription');
       return;
     }
 
     const subscription = await this.subscriptionRepo.findByExternalId(subscriptionExternalId);
     if (!subscription) {
-      logger.warn('Subscription not found for failed invoice', {
+      logger.warn({
         invoiceId: data.id,
         subscriptionExternalId,
-      });
+      }, 'Subscription not found for failed invoice');
       return;
     }
 
@@ -259,10 +259,10 @@ export class WebhookService {
     // キャッシュ無効化
     await this.invalidateInvoiceCache(subscription.userId, subscription.organizationId);
 
-    logger.info('Invoice payment failed processed', {
+    logger.info({
       invoiceNumber,
       subscriptionId: subscription.id,
-    });
+    }, 'Invoice payment failed processed');
   }
 
   /**
@@ -273,10 +273,10 @@ export class WebhookService {
   private async handleSubscriptionCreated(data: StripeSubscriptionData): Promise<void> {
     const existing = await this.subscriptionRepo.findByExternalId(data.id);
     if (existing) {
-      logger.info('Subscription already exists, skipping creation', {
+      logger.info({
         externalId: data.id,
         subscriptionId: existing.id,
-      });
+      }, 'Subscription already exists, skipping creation');
       return;
     }
 
@@ -285,15 +285,15 @@ export class WebhookService {
     const organizationId = data.metadata.organizationId;
 
     if (!userId && !organizationId) {
-      logger.warn('Subscription created event has no userId or organizationId in metadata', {
+      logger.warn({
         externalId: data.id,
-      });
+      }, 'Subscription created event has no userId or organizationId in metadata');
       return;
     }
 
     const period = this.extractPeriod(data);
     if (!period) {
-      logger.warn('Subscription has no period data', { externalId: data.id });
+      logger.warn({ externalId: data.id }, 'Subscription has no period data');
       return;
     }
 
@@ -314,19 +314,19 @@ export class WebhookService {
     if (organizationId) {
       // 組織向けサブスクリプション
       await this.subscriptionRepo.upsertForOrganization(organizationId, subscriptionParams);
-      logger.info('Organization subscription created via webhook', {
+      logger.info({
         externalId: data.id,
         organizationId,
         plan,
-      });
+      }, 'Organization subscription created via webhook');
     } else if (userId) {
       // ユーザー向けサブスクリプション
       await this.subscriptionRepo.upsertForUser(userId, subscriptionParams);
-      logger.info('Subscription created via webhook', {
+      logger.info({
         externalId: data.id,
         userId,
         plan,
-      });
+      }, 'Subscription created via webhook');
     }
   }
 
@@ -337,13 +337,13 @@ export class WebhookService {
   private async handleSubscriptionUpdated(data: StripeSubscriptionData): Promise<void> {
     const subscription = await this.subscriptionRepo.findByExternalId(data.id);
     if (!subscription) {
-      logger.warn('Subscription not found for update', { externalId: data.id });
+      logger.warn({ externalId: data.id }, 'Subscription not found for update');
       return;
     }
 
     const period = this.extractPeriod(data);
     if (!period) {
-      logger.warn('Subscription has no period data', { externalId: data.id });
+      logger.warn({ externalId: data.id }, 'Subscription has no period data');
       return;
     }
 
@@ -356,11 +356,11 @@ export class WebhookService {
       cancelAtPeriodEnd: data.cancel_at_period_end,
     });
 
-    logger.info('Subscription updated via webhook', {
+    logger.info({
       externalId: data.id,
       subscriptionId: subscription.id,
       status: data.status,
-    });
+    }, 'Subscription updated via webhook');
   }
 
   /**
@@ -372,7 +372,7 @@ export class WebhookService {
   private async handleSubscriptionDeleted(data: StripeSubscriptionData): Promise<void> {
     const subscription = await this.subscriptionRepo.findByExternalId(data.id);
     if (!subscription) {
-      logger.warn('Subscription not found for deletion', { externalId: data.id });
+      logger.warn({ externalId: data.id }, 'Subscription not found for deletion');
       return;
     }
 
@@ -384,26 +384,26 @@ export class WebhookService {
     // ユーザー向け: プランをFREEに更新
     if (subscription.userId) {
       await this.userRepo.updatePlan(subscription.userId, 'FREE');
-      logger.info('Subscription deleted via webhook (user)', {
+      logger.info({
         externalId: data.id,
         subscriptionId: subscription.id,
         userId: subscription.userId,
-      });
+      }, 'Subscription deleted via webhook (user)');
     }
     // 組織向け: ステータス更新のみ（CANCELEDステータスで制御）
     else if (subscription.organizationId) {
-      logger.info('Subscription deleted via webhook (organization)', {
+      logger.info({
         externalId: data.id,
         subscriptionId: subscription.id,
         organizationId: subscription.organizationId,
-      });
+      }, 'Subscription deleted via webhook (organization)');
     }
     // userId も organizationId もない場合は警告（通常発生しない）
     else {
-      logger.warn('Subscription deleted but has no userId or organizationId', {
+      logger.warn({
         externalId: data.id,
         subscriptionId: subscription.id,
-      });
+      }, 'Subscription deleted but has no userId or organizationId');
     }
   }
 
@@ -448,9 +448,9 @@ export class WebhookService {
       default:
         // 有料サブスクリプションでmetadata.planが未設定または不明な場合
         // PROにフォールバック（個人向けデフォルトプラン）
-        logger.warn('Unknown plan in metadata, defaulting to PRO', {
+        logger.warn({
           receivedPlan: plan,
-        });
+        }, 'Unknown plan in metadata, defaulting to PRO');
         return 'PRO';
     }
   }
@@ -480,9 +480,9 @@ export class WebhookService {
       case 'trialing':
         return 'TRIALING';
       default:
-        logger.warn('Unknown subscription status, defaulting to ACTIVE', {
+        logger.warn({
           stripeStatus: status,
-        });
+        }, 'Unknown subscription status, defaulting to ACTIVE');
         return 'ACTIVE';
     }
   }
@@ -515,19 +515,19 @@ export class WebhookService {
     try {
       if (userId) {
         await invalidateUserInvoicesCache(userId);
-        logger.debug('User invoice cache invalidated', { userId });
+        logger.debug({ userId }, 'User invoice cache invalidated');
       }
       if (organizationId) {
         await invalidateOrgInvoicesCache(organizationId);
-        logger.debug('Organization invoice cache invalidated', { organizationId });
+        logger.debug({ organizationId }, 'Organization invoice cache invalidated');
       }
     } catch (error) {
       // キャッシュ無効化の失敗はログのみ（処理は継続）
-      logger.warn('Failed to invalidate invoice cache', {
+      logger.warn({
+        err: error instanceof Error ? error : undefined,
         userId,
         organizationId,
-        error: error instanceof Error ? error.message : String(error),
-      });
+      }, 'Failed to invalidate invoice cache');
     }
   }
 }

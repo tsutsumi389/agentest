@@ -51,9 +51,9 @@ export class WebhookController {
 
       res.json({ received: true, duplicate: result.duplicate });
     } catch (error) {
-      logger.error('Webhook processing failed', {
-        error: error instanceof Error ? error.message : String(error),
-      });
+      logger.error({
+        err: error instanceof Error ? error : undefined,
+      }, 'Webhook processing failed');
       next(error);
     }
   };

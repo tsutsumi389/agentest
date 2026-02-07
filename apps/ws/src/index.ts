@@ -2,6 +2,7 @@ import { createWebSocketServer, closeServer } from './server.js';
 import { closeRedis } from './redis.js';
 import { env } from './config.js';
 import { registerProcessHandlers, type ShutdownFn } from '@agentest/shared';
+import { logger } from './utils/logger.js';
 
 // シャットダウン重複実行防止フラグ
 let isShuttingDown = false;
@@ -12,6 +13,7 @@ let shutdownFn: ShutdownFn | null = null;
 // プロセスレベルの例外ハンドラ（起動中のエラーもキャッチするためモジュールレベルで登録）
 registerProcessHandlers({
   getShutdownFn: () => shutdownFn,
+  logger,
 });
 
 /**
@@ -21,30 +23,30 @@ async function main() {
   // WebSocketサーバーを起動
   createWebSocketServer(env.PORT, env.HOST);
 
-  console.log(`📝 環境: ${env.NODE_ENV}`);
+  logger.info({ nodeEnv: env.NODE_ENV }, '環境');
 
   // グレースフルシャットダウン
   const shutdown: ShutdownFn = async (signal, exitCode = 0) => {
     if (isShuttingDown) {
-      console.log(`シャットダウン処理中のため ${signal} を無視します`);
+      logger.info({ signal }, 'シャットダウン処理中のため信号を無視します');
       return;
     }
     isShuttingDown = true;
 
-    console.log(`\n${signal} を受信しました。シャットダウンを開始します...`);
+    logger.info({ signal }, 'シグナルを受信しました。シャットダウンを開始します');
 
     // 強制終了タイムアウト
     setTimeout(() => {
-      console.error('タイムアウト: 強制終了します');
+      logger.error('タイムアウト: 強制終了します');
       process.exit(1);
     }, 10000).unref();
 
     try {
       await closeServer();
       await closeRedis();
-      console.log('シャットダウン完了');
+      logger.info('シャットダウン完了');
     } catch (error) {
-      console.error('シャットダウンエラー:', error);
+      logger.error({ err: error }, 'シャットダウンエラー');
     }
 
     process.exit(exitCode);
@@ -58,6 +60,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error('サーバー起動エラー:', error);
+  logger.error({ err: error }, 'サーバー起動エラー');
   process.exit(1);
 });

@@ -1,87 +1,81 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { logger } from '../../utils/logger.js';
+import { describe, it, expect } from 'vitest';
+import { Writable } from 'stream';
+import { createLogger } from '@agentest/shared/logger';
 
-describe('logger', () => {
-  let infoSpy: ReturnType<typeof vi.spyOn>;
-  let warnSpy: ReturnType<typeof vi.spyOn>;
-  let errorSpy: ReturnType<typeof vi.spyOn>;
-  let debugSpy: ReturnType<typeof vi.spyOn>;
-
-  beforeEach(() => {
-    infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
-    warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    debugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+/**
+ * テスト用のストリームを作成し、書き込まれたログ行を配列に収集する
+ */
+function createTestStream(): { stream: Writable; lines: string[] } {
+  const lines: string[] = [];
+  const stream = new Writable({
+    write(chunk, _encoding, callback) {
+      lines.push(chunk.toString().trim());
+      callback();
+    },
   });
+  return { stream, lines };
+}
 
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+describe('api logger', () => {
+  it('Pinoベースのロガーとして構造化JSONを出力する', () => {
+    const { stream, lines } = createTestStream();
+    const logger = createLogger({ service: 'api', level: 'debug' }, stream);
 
-  it('infoレベルのログをJSON形式で出力する', () => {
-    logger.info('テストメッセージ');
-    expect(infoSpy).toHaveBeenCalledTimes(1);
-    const output = JSON.parse(infoSpy.mock.calls[0][0]);
+    logger.info({ userId: 'user-1', method: 'GET' }, 'リクエスト処理');
+
+    expect(lines.length).toBe(1);
+    const output = JSON.parse(lines[0]);
     expect(output.level).toBe('info');
-    expect(output.message).toBe('テストメッセージ');
-    expect(output.timestamp).toBeDefined();
+    expect(output.msg).toBe('リクエスト処理');
+    expect(output.service).toBe('api');
+    expect(output.userId).toBe('user-1');
+    expect(output.method).toBe('GET');
+    expect(output.time).toBeDefined();
   });
 
   it('warnレベルのログを出力する', () => {
+    const { stream, lines } = createTestStream();
+    const logger = createLogger({ service: 'api', level: 'debug' }, stream);
+
     logger.warn('警告メッセージ');
-    expect(warnSpy).toHaveBeenCalledTimes(1);
-    const output = JSON.parse(warnSpy.mock.calls[0][0]);
+
+    const output = JSON.parse(lines[0]);
     expect(output.level).toBe('warn');
-    expect(output.message).toBe('警告メッセージ');
+    expect(output.msg).toBe('警告メッセージ');
   });
 
   it('errorレベルのログを出力する', () => {
-    logger.error('エラーメッセージ');
-    expect(errorSpy).toHaveBeenCalledTimes(1);
-    const output = JSON.parse(errorSpy.mock.calls[0][0]);
+    const { stream, lines } = createTestStream();
+    const logger = createLogger({ service: 'api', level: 'debug' }, stream);
+
+    logger.error({ err: new Error('テストエラー') }, 'エラー発生');
+
+    const output = JSON.parse(lines[0]);
     expect(output.level).toBe('error');
-    expect(output.message).toBe('エラーメッセージ');
+    expect(output.msg).toBe('エラー発生');
+    expect(output.err).toBeDefined();
   });
 
-  it('コンテキスト情報をログに含める', () => {
-    logger.info('リクエスト', { userId: 'user-1', method: 'GET' });
-    const output = JSON.parse(infoSpy.mock.calls[0][0]);
-    expect(output.userId).toBe('user-1');
-    expect(output.method).toBe('GET');
-  });
+  it('child loggerでモジュールコンテキストを追加できる', () => {
+    const { stream, lines } = createTestStream();
+    const baseLogger = createLogger({ service: 'api', level: 'debug' }, stream);
+    const childLogger = baseLogger.child({ module: 'webhook' });
 
-  it('debugレベルはLOG_LEVEL=debugの場合のみ出力する', () => {
-    const originalLogLevel = process.env.LOG_LEVEL;
-    try {
-      process.env.LOG_LEVEL = 'debug';
-      logger.debug('デバッグメッセージ');
-      expect(debugSpy).toHaveBeenCalledTimes(1);
-    } finally {
-      process.env.LOG_LEVEL = originalLogLevel;
-    }
-  });
+    childLogger.info('Webhook処理');
 
-  it('debugレベルはLOG_LEVELが未設定の場合は出力しない', () => {
-    const originalLogLevel = process.env.LOG_LEVEL;
-    try {
-      delete process.env.LOG_LEVEL;
-      logger.debug('デバッグメッセージ');
-      expect(debugSpy).not.toHaveBeenCalled();
-    } finally {
-      process.env.LOG_LEVEL = originalLogLevel;
-    }
+    const output = JSON.parse(lines[0]);
+    expect(output.service).toBe('api');
+    expect(output.module).toBe('webhook');
+    expect(output.msg).toBe('Webhook処理');
   });
 
   it('タイムスタンプがISO 8601形式である', () => {
-    logger.info('テスト');
-    const output = JSON.parse(infoSpy.mock.calls[0][0]);
-    expect(output.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
-  });
+    const { stream, lines } = createTestStream();
+    const logger = createLogger({ service: 'api', level: 'debug' }, stream);
 
-  it('コンテキストなしでも動作する', () => {
-    logger.info('コンテキストなし');
-    expect(infoSpy).toHaveBeenCalledTimes(1);
-    const output = JSON.parse(infoSpy.mock.calls[0][0]);
-    expect(output.message).toBe('コンテキストなし');
+    logger.info('テスト');
+
+    const output = JSON.parse(lines[0]);
+    expect(output.time).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
   });
 });

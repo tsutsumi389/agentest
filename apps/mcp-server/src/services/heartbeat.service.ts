@@ -1,4 +1,7 @@
 import { agentSessionService, SESSION_CONFIG } from './agent-session.service.js';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'heartbeat' });
 
 /**
  * ハートビートサービス
@@ -14,24 +17,22 @@ class HeartbeatService {
    */
   start(intervalMs: number = SESSION_CONFIG.HEARTBEAT_INTERVAL * 1000): void {
     if (this.isRunning) {
-      console.warn('ハートビートサービスは既に起動しています');
+      logger.warn('ハートビートサービスは既に起動しています');
       return;
     }
 
     this.isRunning = true;
-    console.log(
-      `ハートビートサービスを開始しました（間隔: ${intervalMs / 1000}秒）`
-    );
+    logger.info({ intervalSec: intervalMs / 1000 }, 'ハートビートサービスを開始しました');
 
     // 初回実行
     this.checkTimeouts().catch((error) => {
-      console.error('ハートビートチェックエラー:', error);
+      logger.error({ err: error }, 'ハートビートチェックエラー');
     });
 
     // 定期実行
     this.intervalId = setInterval(() => {
       this.checkTimeouts().catch((error) => {
-        console.error('ハートビートチェックエラー:', error);
+        logger.error({ err: error }, 'ハートビートチェックエラー');
       });
     }, intervalMs);
   }
@@ -45,7 +46,7 @@ class HeartbeatService {
       this.intervalId = null;
     }
     this.isRunning = false;
-    console.log('ハートビートサービスを停止しました');
+    logger.info('ハートビートサービスを停止しました');
   }
 
   /**

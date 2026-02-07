@@ -4,14 +4,31 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // vi.hoisted() でモックオブジェクトを事前定義
-const { mockCountActiveUsers, mockUpsertMetric } = vi.hoisted(() => ({
-  mockCountActiveUsers: vi.fn(),
-  mockUpsertMetric: vi.fn(),
-}));
+const { mockCountActiveUsers, mockUpsertMetric, mockLogger } = vi.hoisted(() => {
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    trace: vi.fn(),
+    child: vi.fn(),
+  };
+  mockLogger.child.mockReturnValue(mockLogger);
+  return {
+    mockCountActiveUsers: vi.fn(),
+    mockUpsertMetric: vi.fn(),
+    mockLogger,
+  };
+});
 
 vi.mock('../../lib/metrics-utils.js', () => ({
   countActiveUsers: mockCountActiveUsers,
   upsertMetric: mockUpsertMetric,
+}));
+
+vi.mock('../../utils/logger.js', () => ({
+  logger: mockLogger,
 }));
 
 // モック設定後にインポート
@@ -23,7 +40,6 @@ describe('runMetricsBackfill', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
-    vi.spyOn(console, 'log').mockImplementation(() => {});
     process.env = { ...originalEnv };
   });
 
@@ -207,10 +223,11 @@ describe('runMetricsBackfill', () => {
 
       await runMetricsBackfill();
 
-      expect(console.log).toHaveBeenCalledWith(
-        'メトリクスバックフィル開始: 過去7日分'
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        expect.objectContaining({ backfillDays: 7 }),
+        'メトリクスバックフィル開始'
       );
-      expect(console.log).toHaveBeenCalledWith('メトリクスバックフィル完了');
+      expect(mockLogger.info).toHaveBeenCalledWith('メトリクスバックフィル完了');
     });
   });
 

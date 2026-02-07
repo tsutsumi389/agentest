@@ -2,6 +2,9 @@ import type { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
 import { isAppError, ValidationError, AuthenticationError, AuthorizationError } from '@agentest/shared';
 import { env } from '../config/env.js';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'error-handler' });
 
 /**
  * JSON-RPCエラーコード
@@ -119,7 +122,7 @@ export function errorHandler(
   }
 
   // 予期しないエラーの場合
-  console.error('予期しないエラー:', error);
+  logger.error({ err: error }, '予期しないエラー');
 
   const statusCode = 500;
   const message = env.NODE_ENV === 'production'

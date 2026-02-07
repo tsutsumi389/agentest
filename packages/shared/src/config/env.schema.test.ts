@@ -1,14 +1,16 @@
 import { describe, it, expect, vi } from 'vitest';
 import { envSchema, parseEnv } from './env.schema.js';
 
+/** テスト用の最小限の有効な環境変数セット */
+const validEnv = {
+  NODE_ENV: 'development',
+  DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
+  REDIS_URL: 'redis://localhost:6379',
+  JWT_ACCESS_SECRET: 'a'.repeat(32),
+  JWT_REFRESH_SECRET: 'b'.repeat(32),
+};
+
 describe('envSchema', () => {
-  const validEnv = {
-    NODE_ENV: 'development',
-    DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
-    REDIS_URL: 'redis://localhost:6379',
-    JWT_ACCESS_SECRET: 'a'.repeat(32),
-    JWT_REFRESH_SECRET: 'b'.repeat(32),
-  };
 
   describe('NODE_ENV', () => {
     it('development, production, testを受け入れる', () => {
@@ -186,10 +188,13 @@ describe('envSchema', () => {
     });
 
     it('全てのログレベルを受け入れる', () => {
-      expect(envSchema.safeParse({ ...validEnv, LOG_LEVEL: 'debug' }).success).toBe(true);
-      expect(envSchema.safeParse({ ...validEnv, LOG_LEVEL: 'info' }).success).toBe(true);
-      expect(envSchema.safeParse({ ...validEnv, LOG_LEVEL: 'warn' }).success).toBe(true);
+      expect(envSchema.safeParse({ ...validEnv, LOG_LEVEL: 'fatal' }).success).toBe(true);
       expect(envSchema.safeParse({ ...validEnv, LOG_LEVEL: 'error' }).success).toBe(true);
+      expect(envSchema.safeParse({ ...validEnv, LOG_LEVEL: 'warn' }).success).toBe(true);
+      expect(envSchema.safeParse({ ...validEnv, LOG_LEVEL: 'info' }).success).toBe(true);
+      expect(envSchema.safeParse({ ...validEnv, LOG_LEVEL: 'debug' }).success).toBe(true);
+      expect(envSchema.safeParse({ ...validEnv, LOG_LEVEL: 'trace' }).success).toBe(true);
+      expect(envSchema.safeParse({ ...validEnv, LOG_LEVEL: 'silent' }).success).toBe(true);
     });
 
     it('無効なログレベルを拒否する', () => {
@@ -199,14 +204,6 @@ describe('envSchema', () => {
 });
 
 describe('parseEnv', () => {
-  const validEnv = {
-    NODE_ENV: 'development',
-    DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
-    REDIS_URL: 'redis://localhost:6379',
-    JWT_ACCESS_SECRET: 'a'.repeat(32),
-    JWT_REFRESH_SECRET: 'b'.repeat(32),
-  };
-
   it('有効な環境変数をパースする', () => {
     const result = parseEnv(validEnv as unknown as NodeJS.ProcessEnv);
     expect(result.NODE_ENV).toBe('development');
@@ -221,19 +218,19 @@ describe('parseEnv', () => {
     consoleSpy.mockRestore();
   });
 
-  it('エラー時にコンソールにログを出力する', () => {
+  it('エラー時に構造化ログを出力する', () => {
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    try {
-      parseEnv({} as NodeJS.ProcessEnv);
-    } catch {
-      // エラーは期待通り
-    }
+    expect(() => parseEnv({} as NodeJS.ProcessEnv)).toThrow('Invalid environment configuration');
 
-    expect(consoleSpy).toHaveBeenCalledWith(
-      'Environment validation failed:',
-      expect.any(Object)
-    );
+    // console.error で構造化JSON形式のエラーが出力されることを確認
+    expect(consoleSpy).toHaveBeenCalledTimes(1);
+    const logOutput = JSON.parse(consoleSpy.mock.calls[0][0] as string);
+    expect(logOutput.level).toBe('fatal');
+    expect(logOutput.service).toBe('shared');
+    expect(logOutput.msg).toBe('Environment validation failed');
+    expect(logOutput.errors).toBeDefined();
+    expect(logOutput.time).toBeDefined();
 
     consoleSpy.mockRestore();
   });

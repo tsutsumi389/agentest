@@ -79,56 +79,70 @@
 
 ### 4.1 ログレベル
 
+Pino のログレベル（小文字ラベル形式で出力）:
+
 | レベル | 用途 | 例 |
 |--------|------|-----|
-| `ERROR` | エラー、例外 | DB接続失敗、認証エラー |
-| `WARN` | 警告 | レート制限到達、廃止API使用 |
-| `INFO` | 重要イベント | ユーザー登録、デプロイ完了 |
-| `DEBUG` | デバッグ情報 | リクエスト詳細（開発のみ） |
+| `fatal` | アプリケーション停止を伴う致命的エラー | uncaughtException |
+| `error` | エラー、例外 | DB接続失敗、認証エラー |
+| `warn` | 警告 | レート制限到達、廃止API使用 |
+| `info` | 重要イベント | ユーザー登録、サーバー起動 |
+| `debug` | デバッグ情報 | リクエスト詳細（開発のみ） |
+| `trace` | 詳細トレース情報 | 処理ステップの追跡 |
+
+環境別デフォルト: production=`info`, development=`debug`, test=`silent`。`LOG_LEVEL` 環境変数で上書き可能。
 
 ### 4.2 構造化ログフォーマット
 
+全バックエンドサービスで Pino による統一的なJSON構造化ログを出力:
+
 ```json
 {
-  "timestamp": "2025-12-26T10:00:00.000Z",
-  "level": "ERROR",
+  "level": "error",
+  "time": "2025-12-26T10:00:00.000Z",
   "service": "api",
-  "traceId": "abc123",
-  "userId": "user_xxx",
-  "message": "Database connection failed",
-  "error": {
-    "name": "ConnectionError",
+  "env": "production",
+  "module": "redis-publisher",
+  "msg": "Database connection failed",
+  "err": {
+    "type": "ConnectionError",
     "message": "ECONNREFUSED",
     "stack": "..."
-  },
-  "context": {
-    "host": "db.agentest.io",
-    "port": 5432
   }
 }
 ```
 
 ### 4.3 プロセスレベル例外のログフォーマット
 
-`uncaughtException` / `unhandledRejection` 発生時に出力されるログ:
+`uncaughtException` / `unhandledRejection` 発生時、Pino ロガーが渡されている場合は構造化JSONで出力されます:
 
 ```json
 {
-  "timestamp": "2025-12-26T10:00:00.000Z",
-  "level": "error",
-  "message": "キャッチされない例外が発生しました",
-  "error": "Cannot read properties of undefined",
-  "stack": "TypeError: Cannot read properties of undefined\n    at ..."
+  "level": "fatal",
+  "time": "2025-12-26T10:00:00.000Z",
+  "service": "api",
+  "env": "production",
+  "msg": "キャッチされない例外が発生しました",
+  "err": {
+    "type": "TypeError",
+    "message": "Cannot read properties of undefined",
+    "stack": "TypeError: Cannot read properties of undefined\n    at ..."
+  }
 }
 ```
 
 ```json
 {
-  "timestamp": "2025-12-26T10:00:00.000Z",
-  "level": "error",
-  "message": "未処理のPromise拒否が発生しました",
-  "reason": "Connection refused",
-  "stack": "Error: Connection refused\n    at ..."
+  "level": "fatal",
+  "time": "2025-12-26T10:00:00.000Z",
+  "service": "api",
+  "env": "production",
+  "msg": "未処理のPromise拒否が発生しました",
+  "err": {
+    "type": "Error",
+    "message": "Connection refused",
+    "stack": "Error: Connection refused\n    at ..."
+  }
 }
 ```
 
@@ -137,7 +151,7 @@
 ```yaml
 # アラートルール例
 name: "Process Crash Detection"
-filter: 'jsonPayload.message=~"キャッチされない例外|未処理のPromise拒否"'
+filter: 'jsonPayload.msg=~"キャッチされない例外|未処理のPromise拒否"'
 severity: Critical
 notification: "@slack-alerts @pagerduty-oncall"
 ```
@@ -387,24 +401,23 @@ export const metricsMiddleware = (req, res, next) => {
 
 ### 9.2 構造化ロガー
 
-```typescript
-import pino from 'pino';
+共有ロガーパッケージ `@agentest/shared/logger` を使用:
 
-export const logger = pino({
-  level: process.env.LOG_LEVEL || 'info',
-  formatters: {
-    level: (label) => ({ level: label }),
-  },
-  mixin: () => ({
-    service: 'api',
-    environment: process.env.NODE_ENV,
-  }),
-});
+```typescript
+// apps/*/src/utils/logger.ts — 各サービスでロガーを生成
+import { createLogger, type Logger } from '@agentest/shared/logger';
+export const logger: Logger = createLogger({ service: 'api' });
+
+// モジュール内では child logger でコンテキストを追加
+import { logger as baseLogger } from '../utils/logger.js';
+const logger = baseLogger.child({ module: 'events' });
 
 // 使用例
-logger.info({ userId, action: 'login' }, 'User logged in');
-logger.error({ err, requestId }, 'Request failed');
+logger.info({ userId, action: 'login' }, 'ユーザーがログインしました');
+logger.error({ err, requestId }, 'リクエスト処理に失敗しました');
 ```
+
+対応サービス: `api`, `ws`, `jobs`, `mcp`
 
 ---
 

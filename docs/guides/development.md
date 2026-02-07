@@ -26,6 +26,8 @@ docker compose logs -f api
 docker compose logs -f web
 ```
 
+> **Note**: バックエンドサービスは Pino による構造化JSONログを出力します。開発時に可読形式で表示するには環境変数 `LOG_PRETTY=true` を設定してください。詳細は[ログ設定](#ログ設定)を参照。
+
 ### 停止
 
 ```bash
@@ -159,6 +161,91 @@ stripe listen --forward-to localhost:3001/webhooks/stripe
 ```
 
 表示される Webhook シークレット（`whsec_xxx`）を `.env` の `STRIPE_WEBHOOK_SECRET` に設定してください。
+
+## ログ設定
+
+バックエンドサービス（API, WS, Jobs, MCP Server）は [Pino](https://getpino.io/) を使用した構造化JSONログを出力します。
+
+### ロガーの仕組み
+
+共有ロガーパッケージ `@agentest/shared/logger` がベースとなり、各アプリがサービス別のロガーを生成します。
+
+```typescript
+// packages/shared/src/logger/index.ts で提供
+import { createLogger, type Logger } from '@agentest/shared/logger';
+
+// 各アプリの apps/*/src/utils/logger.ts で使用
+export const logger: Logger = createLogger({ service: 'api' });
+```
+
+### child logger によるモジュール別コンテキスト
+
+サービス内の各モジュールでは child logger を使用してコンテキストを追加します。
+
+```typescript
+import { logger as baseLogger } from '../utils/logger.js';
+const logger = baseLogger.child({ module: 'events' });
+
+// 出力: {"level":"info","time":"...","service":"api","module":"events","msg":"..."}
+```
+
+### ログレベル
+
+| レベル | 用途 |
+|--------|------|
+| `fatal` | アプリケーション停止を伴う致命的エラー |
+| `error` | エラー、例外 |
+| `warn` | 警告（レート制限到達、廃止API使用など） |
+| `info` | 重要イベント（起動、リクエスト、ユーザー操作） |
+| `debug` | デバッグ情報（開発時のみ） |
+| `trace` | 詳細トレース情報 |
+
+デフォルトログレベルは環境に応じて自動設定されます。
+
+| 環境 | デフォルトレベル |
+|------|----------------|
+| `production` | `info` |
+| `development` | `debug` |
+| `test` | `silent` |
+
+`LOG_LEVEL` 環境変数で明示的に上書きできます。
+
+### ログ記法
+
+Pino の推奨パターンに従い、コンテキストをオブジェクトで、メッセージを文字列で渡します。
+
+```typescript
+// 正しいパターン
+logger.info({ userId, action: 'login' }, 'ユーザーがログインしました');
+logger.error({ err, requestId }, 'リクエスト処理に失敗しました');
+
+// 避けるべきパターン
+logger.info(`ユーザー ${userId} がログインしました`);  // コンテキストが構造化されない
+```
+
+### 環境変数
+
+| 変数名 | 説明 | デフォルト |
+|--------|------|-----------|
+| `LOG_LEVEL` | ログレベルの明示指定 | 環境に応じて自動判定 |
+| `LOG_PRETTY` | `true` で pino-pretty による可読フォーマット | 未設定（JSON出力） |
+| `NODE_ENV` | ログレベル自動判定に使用 | - |
+
+### 新しいバックエンドアプリへのログ追加
+
+1. `apps/<app>/src/utils/logger.ts` を作成:
+
+```typescript
+import { createLogger, type Logger } from '@agentest/shared/logger';
+export const logger: Logger = createLogger({ service: '<app-name>' });
+```
+
+2. モジュール内で child logger を使用:
+
+```typescript
+import { logger as baseLogger } from '../utils/logger.js';
+const logger = baseLogger.child({ module: '<module-name>' });
+```
 
 ## ブランチ戦略
 

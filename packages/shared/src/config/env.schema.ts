@@ -40,17 +40,31 @@ export const envSchema = z.object({
   API_PORT: z.coerce.number().default(3001),
   WS_PORT: z.coerce.number().default(3002),
 
-  // ログ設定
-  LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+  // ログ設定（Pinoのログレベルと一致）
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
 
 export type Env = z.infer<typeof envSchema>;
 
+/**
+ * 環境変数をパース・バリデーションする（バックエンド専用）
+ *
+ * 注意: createLogger をモジュールレベルで呼び出すと、バレルエクスポート経由で
+ * ブラウザにもロードされ、process 未定義エラーを引き起こす。
+ * そのためエラー出力は console.error を使用する。
+ */
 export function parseEnv(env: NodeJS.ProcessEnv = process.env): Env {
   const result = envSchema.safeParse(env);
   if (!result.success) {
     const formatted = result.error.format();
-    console.error('Environment validation failed:', formatted);
+    console.error(JSON.stringify({
+      level: 'fatal',
+      service: 'shared',
+      module: 'env',
+      msg: 'Environment validation failed',
+      errors: formatted,
+      time: new Date().toISOString(),
+    }));
     throw new Error('Invalid environment configuration');
   }
   return result.data;

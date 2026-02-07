@@ -3,6 +3,7 @@ import { ZodError } from 'zod';
 import multer from 'multer';
 import { isAppError, ValidationError } from '@agentest/shared';
 import { env } from '../config/env.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Zodエラーをバリデーションエラーに変換
@@ -26,7 +27,7 @@ function handleZodError(error: ZodError): ValidationError {
  */
 export function errorHandler(
   error: Error,
-  _req: Request,
+  req: Request,
   res: Response,
   _next: NextFunction
 ): void {
@@ -79,7 +80,7 @@ export function errorHandler(
   }
 
   // 予期しないエラーの場合
-  console.error('予期しないエラー:', error);
+  logger.error({ err: error, requestId: req.requestId }, '予期しないエラー');
 
   const statusCode = 500;
   const response = {

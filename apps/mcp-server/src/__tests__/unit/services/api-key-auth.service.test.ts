@@ -1,5 +1,23 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import type { ApiKeyValidationResult } from '../../../services/api-key-auth.service.js';
+
+// loggerのモック
+const { mockLogger } = vi.hoisted(() => {
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    trace: vi.fn(),
+    child: vi.fn(),
+  };
+  mockLogger.child.mockReturnValue(mockLogger);
+  return { mockLogger };
+});
+
+vi.mock('../../../utils/logger.js', () => ({
+  logger: mockLogger,
+}));
 
 // env のモック（インポート前にモックする必要がある）
 vi.mock('../../../config/env.js', () => ({
@@ -13,21 +31,12 @@ vi.mock('../../../config/env.js', () => ({
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
-// サービスのインターフェース定義
-interface ApiKeyAuthServiceInterface {
-  validateToken(rawToken: string): Promise<ApiKeyValidationResult>;
-}
+// モック設定後にインポート
+import { apiKeyAuthService } from '../../../services/api-key-auth.service.js';
 
 describe('ApiKeyAuthService', () => {
-  // 動的インポートで新しいインスタンスを取得
-  let apiKeyAuthService: ApiKeyAuthServiceInterface;
-
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
-    // モジュールキャッシュをクリアして再インポート
-    vi.resetModules();
-    const module = await import('../../../services/api-key-auth.service.js');
-    apiKeyAuthService = module.apiKeyAuthService;
   });
 
   afterEach(() => {
@@ -103,28 +112,26 @@ describe('ApiKeyAuthService', () => {
         status: 500,
         json: () => Promise.resolve({}),
       });
-      // console.errorをモック
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       const result = await apiKeyAuthService.validateToken('agentest_' + 'a'.repeat(43));
 
       expect(result.valid).toBe(false);
-      expect(consoleSpy).toHaveBeenCalledWith('APIキー検証エラー: HTTP 500');
-
-      consoleSpy.mockRestore();
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { statusCode: 500 },
+        'APIキー検証エラー'
+      );
     });
 
     it('ネットワークエラーの場合はvalid: falseを返す', async () => {
       mockFetch.mockRejectedValue(new Error('Network error'));
-      // console.errorをモック
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       const result = await apiKeyAuthService.validateToken('agentest_' + 'a'.repeat(43));
 
       expect(result.valid).toBe(false);
-      expect(consoleSpy).toHaveBeenCalledWith('APIキー検証中にエラーが発生:', expect.any(Error));
-
-      consoleSpy.mockRestore();
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { err: expect.any(Error) },
+        'APIキー検証中にエラーが発生'
+      );
     });
 
     it('組織IDを含む検証結果を正しく返す', async () => {

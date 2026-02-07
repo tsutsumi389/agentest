@@ -1,5 +1,8 @@
 import { NotFoundError, AuthorizationError } from '@agentest/shared';
 import { SessionRepository, type CreateSessionData } from '../repositories/session.repository.js';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'session' });
 
 /**
  * セッション情報（レスポンス用）
@@ -64,10 +67,10 @@ export class SessionService {
       await this.sessionRepo.updateLastActiveAt(sessionId);
     } catch (error) {
       // セッションが存在しない場合は警告ログを出力
-      console.warn('セッション活動時刻の更新に失敗:', {
+      logger.warn({
+        err: error instanceof Error ? error : undefined,
         sessionId,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      }, 'セッション活動時刻の更新に失敗');
     }
   }
 

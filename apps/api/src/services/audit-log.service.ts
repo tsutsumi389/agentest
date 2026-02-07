@@ -1,4 +1,5 @@
 import type { AuditLog } from '@agentest/db';
+import { logger as baseLogger } from '../utils/logger.js';
 import {
   AuditLogRepository,
   AUDIT_LOG_DEFAULT_LIMIT,
@@ -12,6 +13,8 @@ import {
 // 型と定数をre-export（外部から利用しやすくする）
 export type { AuditLogQueryOptions, AuditLogCreateParams, AuditLogExportOptions };
 export { AUDIT_LOG_DEFAULT_LIMIT, AUDIT_LOG_MAX_LIMIT, AUDIT_LOG_EXPORT_MAX_LIMIT };
+
+const logger = baseLogger.child({ module: 'audit-log' });
 
 /**
  * ユーザー情報付き監査ログ（エクスポート用）
@@ -47,7 +50,7 @@ export class AuditLogService {
   async log(params: AuditLogCreateParams): Promise<void> {
     // バリデーション: actionは必須かつ空文字でない
     if (!params.action || params.action.trim() === '') {
-      console.warn('監査ログ: actionが空のため記録をスキップ', params);
+      logger.warn({ data: params }, '監査ログ: actionが空のため記録をスキップ');
       return;
     }
 
@@ -55,7 +58,7 @@ export class AuditLogService {
       await this.auditLogRepo.create(params);
     } catch (error) {
       // ログ記録の失敗は警告としてログ出力し、呼び出し元に伝播させない
-      console.error('監査ログの記録に失敗:', error);
+      logger.error({ err: error }, '監査ログの記録に失敗');
     }
   }
 

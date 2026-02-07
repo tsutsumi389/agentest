@@ -1,4 +1,7 @@
 import { env } from '../config/env.js';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'token-introspection' });
 
 /**
  * トークンイントロスペクション結果
@@ -41,14 +44,14 @@ export class TokenIntrospectionService {
       });
 
       if (!response.ok) {
-        console.error(`Token introspection failed: ${response.status}`);
+        logger.error({ statusCode: response.status }, 'Token introspection failed');
         return { active: false };
       }
 
       const result = await response.json() as IntrospectionResult;
       return result;
     } catch (error) {
-      console.error('Token introspection error:', error);
+      logger.error({ err: error }, 'Token introspection error');
       return { active: false };
     }
   }
@@ -73,7 +76,7 @@ export class TokenIntrospectionService {
       const normalizedExpected = expectedAudience.replace(/\/$/, '');
       const normalizedActual = result.aud.replace(/\/$/, '');
       if (normalizedExpected !== normalizedActual) {
-        console.warn(`Token audience mismatch: expected ${expectedAudience}, got ${result.aud}`);
+        logger.warn({ expected: expectedAudience, actual: result.aud }, 'Token audience mismatch');
         return { valid: false };
       }
     }

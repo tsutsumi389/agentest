@@ -5,6 +5,9 @@
  */
 import { prisma } from '../lib/prisma.js';
 import { MAX_RETRY_COUNT, DEFAULT_BATCH_SIZE } from '../lib/constants.js';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'webhook-retry' });
 
 /**
  * Stripe Invoiceオブジェクトの型
@@ -74,11 +77,11 @@ export async function runWebhookRetry(): Promise<void> {
   });
 
   if (failedEvents.length === 0) {
-    console.log('リトライ対象のイベントはありません');
+    logger.info('リトライ対象のイベントはありません');
     return;
   }
 
-  console.log(`${failedEvents.length}件の失敗イベントを再処理します`);
+  logger.info({ count: failedEvents.length }, '失敗イベントを再処理します');
 
   for (const event of failedEvents) {
     totalRetried++;
@@ -101,8 +104,9 @@ export async function runWebhookRetry(): Promise<void> {
       });
 
       totalSucceeded++;
-      console.log(
-        `イベント ${event.externalId} (${event.eventType}) の再処理に成功`
+      logger.info(
+        { externalId: event.externalId, eventType: event.eventType },
+        'イベントの再処理に成功'
       );
     } catch (error) {
       // 失敗: retryCountをインクリメント
@@ -118,14 +122,16 @@ export async function runWebhookRetry(): Promise<void> {
       });
 
       totalFailed++;
-      console.error(
-        `イベント ${event.externalId} (${event.eventType}) の再処理に失敗: ${errorMessage}`
+      logger.error(
+        { externalId: event.externalId, eventType: event.eventType, errorMessage },
+        'イベントの再処理に失敗'
       );
     }
   }
 
-  console.log(
-    `再処理完了: 成功 ${totalSucceeded}件, 失敗 ${totalFailed}件 (合計 ${totalRetried}件)`
+  logger.info(
+    { totalSucceeded, totalFailed, totalRetried },
+    '再処理完了'
   );
 
   // 最大リトライ回数に達したイベントを警告
@@ -137,8 +143,9 @@ export async function runWebhookRetry(): Promise<void> {
   });
 
   if (maxRetriedEvents > 0) {
-    console.warn(
-      `警告: ${maxRetriedEvents}件のイベントが最大リトライ回数（${MAX_RETRY_COUNT}回）に達しました`
+    logger.warn(
+      { maxRetriedEvents, maxRetryCount: MAX_RETRY_COUNT },
+      'イベントが最大リトライ回数に達しました'
     );
   }
 }
@@ -173,7 +180,7 @@ async function processEvent(webhookEvent: WebhookEvent): Promise<void> {
       break;
     default:
       // 未対応のイベントタイプは成功扱い
-      console.log(`未対応のイベントタイプ: ${webhookEvent.type}`);
+      logger.info({ eventType: webhookEvent.type }, '未対応のイベントタイプ');
       break;
   }
 }

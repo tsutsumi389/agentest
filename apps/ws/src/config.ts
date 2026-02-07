@@ -1,4 +1,7 @@
 import { z } from 'zod';
+import { logger as baseLogger } from './utils/logger.js';
+
+const logger = baseLogger.child({ module: 'config' });
 
 // 環境変数スキーマ
 const envSchema = z.object({
@@ -18,8 +21,7 @@ function validateEnv() {
   const parsed = envSchema.safeParse(process.env);
 
   if (!parsed.success) {
-    console.error('❌ 環境変数のバリデーションエラー:');
-    console.error(parsed.error.flatten().fieldErrors);
+    logger.error({ fieldErrors: parsed.error.flatten().fieldErrors }, '環境変数のバリデーションエラー');
     throw new Error('環境変数が不正です');
   }
 

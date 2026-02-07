@@ -3,6 +3,9 @@ import { prisma } from '@agentest/db';
 import { apiKeyAuthService } from '../services/api-key-auth.service.js';
 import { env } from '../config/env.js';
 import { SUPPORTED_SCOPES } from '../config/scopes.js';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'api-key-auth' });
 
 /**
  * X-API-Key ヘッダー名
@@ -53,7 +56,7 @@ export function mcpApiKeyAuthenticate() {
 
       next();
     } catch (error) {
-      console.error('API key authentication error:', error);
+      logger.error({ err: error }, 'API key authentication error');
       sendUnauthorized(res, 'Authentication failed');
     }
   };

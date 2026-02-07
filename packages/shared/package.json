@@ -27,6 +27,10 @@
     "./process": {
       "import": "./dist/process/index.js",
       "types": "./dist/process/index.d.ts"
+    },
+    "./logger": {
+      "import": "./dist/logger/index.js",
+      "types": "./dist/logger/index.d.ts"
     }
   },
   "scripts": {
@@ -39,11 +43,15 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "pino": "catalog:",
     "zod": "catalog:"
+  },
+  "optionalDependencies": {
+    "pino-pretty": "catalog:"
   },
   "devDependencies": {
     "typescript": "catalog:",
     "vitest": "catalog:",
-    "@vitest/coverage-v8": "^2.1.0"
+    "@vitest/coverage-v8": "catalog:"
   }
 }

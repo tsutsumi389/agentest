@@ -5,6 +5,11 @@
  * 構造化ログ出力後にgraceful shutdownを実行する。
  */
 
+/** ロガーインターフェース（Pino互換の最小型） */
+export interface ProcessLogger {
+  fatal(obj: Record<string, unknown>, msg: string): void;
+}
+
 /** シャットダウン関数の型 */
 export type ShutdownFn = (signal: string, exitCode?: number) => Promise<void>;
 
@@ -20,6 +25,8 @@ export interface ProcessHandlersOptions {
   getShutdownFn: () => ShutdownFn | null;
   /** セーフティネットの強制終了タイムアウト（ミリ秒）。デフォルト: 10000 */
   safetyTimeoutMs?: number;
+  /** 構造化ロガー。渡された場合はPinoベースのログ出力を使用。未指定時はconsole.errorフォールバック */
+  logger?: ProcessLogger;
 }
 
 /**
@@ -30,12 +37,12 @@ export function registerProcessHandlers(options: ProcessHandlersOptions): void {
   const { safetyTimeoutMs = DEFAULT_SAFETY_TIMEOUT_MS } = options;
 
   process.on('uncaughtException', (error: Error) => {
-    logUncaughtException(error);
+    logUncaughtException(error, options.logger);
     triggerShutdown(options.getShutdownFn(), 'uncaughtException', safetyTimeoutMs);
   });
 
   process.on('unhandledRejection', (reason: unknown) => {
-    logUnhandledRejection(reason);
+    logUnhandledRejection(reason, options.logger);
     triggerShutdown(options.getShutdownFn(), 'unhandledRejection', safetyTimeoutMs);
   });
 }
@@ -43,11 +50,15 @@ export function registerProcessHandlers(options: ProcessHandlersOptions): void {
 /**
  * uncaughtException のログ出力（テスト用にエクスポート）
  */
-export function logUncaughtException(error: Error): void {
+export function logUncaughtException(error: Error, logger?: ProcessLogger): void {
+  if (logger) {
+    logger.fatal({ err: error }, 'キャッチされない例外が発生しました');
+    return;
+  }
   console.error(JSON.stringify({
-    timestamp: new Date().toISOString(),
-    level: 'error',
-    message: 'キャッチされない例外が発生しました',
+    time: new Date().toISOString(),
+    level: 'fatal',
+    msg: 'キャッチされない例外が発生しました',
     error: error.message,
     stack: error.stack,
   }));
@@ -56,11 +67,18 @@ export function logUncaughtException(error: Error): void {
 /**
  * unhandledRejection のログ出力（テスト用にエクスポート）
  */
-export function logUnhandledRejection(reason: unknown): void {
+export function logUnhandledRejection(reason: unknown, logger?: ProcessLogger): void {
+  if (logger) {
+    logger.fatal(
+      { err: reason instanceof Error ? reason : undefined, reason: String(reason) },
+      '未処理のPromise拒否が発生しました',
+    );
+    return;
+  }
   console.error(JSON.stringify({
-    timestamp: new Date().toISOString(),
-    level: 'error',
-    message: '未処理のPromise拒否が発生しました',
+    time: new Date().toISOString(),
+    level: 'fatal',
+    msg: '未処理のPromise拒否が発生しました',
     reason: reason instanceof Error ? reason.message : String(reason),
     stack: reason instanceof Error ? reason.stack : undefined,
   }));

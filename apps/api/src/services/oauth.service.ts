@@ -1,5 +1,8 @@
 import type { OAuthClient } from '@agentest/db';
 import { OAuthRepository, type IOAuthRepository } from '../repositories/oauth.repository.js';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'oauth' });
 import {
   generateAuthorizationCode,
   generateAccessToken,
@@ -442,10 +445,10 @@ export class OAuthService {
       if (clientId && accessToken.clientId !== clientId) {
         // RFC 7009: クライアントが一致しない場合は何もしない
         // セキュリティ: 他クライアントのトークン失効試行をログに記録
-        console.warn(
-          `[OAuth] Token revocation attempt by different client: ` +
-          `token_client_id=${accessToken.clientId}, request_client_id=${clientId}`
-        );
+        logger.warn({
+          tokenClientId: accessToken.clientId,
+          requestClientId: clientId,
+        }, 'Token revocation attempt by different client');
         return;
       }
 
@@ -461,10 +464,10 @@ export class OAuthService {
       if (clientId && refreshToken.clientId !== clientId) {
         // RFC 7009: クライアントが一致しない場合は何もしない
         // セキュリティ: 他クライアントのトークン失効試行をログに記録
-        console.warn(
-          `[OAuth] Refresh token revocation attempt by different client: ` +
-          `token_client_id=${refreshToken.clientId}, request_client_id=${clientId}`
-        );
+        logger.warn({
+          tokenClientId: refreshToken.clientId,
+          requestClientId: clientId,
+        }, 'Refresh token revocation attempt by different client');
         return;
       }
 

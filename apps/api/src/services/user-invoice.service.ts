@@ -58,7 +58,7 @@ export class UserInvoiceService {
     // キャッシュチェック
     const cached = await getUserInvoicesCache<InvoiceListResponse>(userId);
     if (cached) {
-      logger.debug('Invoice cache hit', { userId });
+      logger.debug({ userId }, 'Invoice cache hit');
       return cached;
     }
 
@@ -93,10 +93,10 @@ export class UserInvoiceService {
     // キャッシュに保存（5分）
     await setUserInvoicesCache(userId, result);
 
-    logger.debug('Invoice cache miss, fetched from Stripe', {
+    logger.debug({
       userId,
       count: invoices.length,
-    });
+    }, 'Invoice cache miss, fetched from Stripe');
 
     return result;
   }
@@ -133,7 +133,7 @@ export class UserInvoiceService {
    */
   async invalidateCache(userId: string): Promise<void> {
     await invalidateUserInvoicesCache(userId);
-    logger.debug('Invoice cache invalidated', { userId });
+    logger.debug({ userId }, 'Invoice cache invalidated');
   }
 
   /**

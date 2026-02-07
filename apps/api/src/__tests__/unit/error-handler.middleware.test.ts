@@ -13,6 +13,25 @@ vi.mock('../../config/env.js', () => ({
   env: mockEnv,
 }));
 
+// loggerのモック
+const { mockLogger } = vi.hoisted(() => {
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    trace: vi.fn(),
+    child: vi.fn(),
+  };
+  mockLogger.child.mockReturnValue(mockLogger);
+  return { mockLogger };
+});
+
+vi.mock('../../utils/logger.js', () => ({
+  logger: mockLogger,
+}));
+
 // モック設定後にインポート
 import { errorHandler } from '../../middleware/error-handler.js';
 
@@ -38,20 +57,14 @@ describe('errorHandler', () => {
   let mockReq: Partial<Request>;
   let mockRes: Partial<Response> & { _status?: number; _json?: unknown };
   let mockNext: NextFunction;
-  let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
     vi.clearAllMocks();
     mockReq = createMockRequest();
     mockRes = createMockResponse();
     mockNext = vi.fn();
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     // デフォルトはdevelopment環境
     mockEnv.NODE_ENV = 'development';
-  });
-
-  afterEach(() => {
-    consoleErrorSpy.mockRestore();
   });
 
   describe('Multerエラー', () => {
@@ -283,12 +296,15 @@ describe('errorHandler', () => {
       });
     });
 
-    it('console.errorでエラーをログ出力', () => {
+    it('loggerでエラーをログ出力', () => {
       const error = new Error('Unexpected error');
 
       errorHandler(error, mockReq as Request, mockRes as Response, mockNext);
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith('予期しないエラー:', error);
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        expect.objectContaining({ err: error }),
+        '予期しないエラー'
+      );
     });
   });
 

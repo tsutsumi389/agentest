@@ -145,14 +145,14 @@ export class OrganizationSubscriptionService {
       data: { plan },
     });
 
-    logger.info('Organization subscription created', {
+    logger.info({
       orgId,
       subscriptionId: subscription.id,
       externalId: gatewayResult.id,
       plan,
       billingCycle,
       quantity,
-    });
+    }, 'Organization subscription created');
 
     return this.toResponse(subscription, quantity);
   }
@@ -191,12 +191,12 @@ export class OrganizationSubscriptionService {
       currentPeriodEnd: gatewayResult.currentPeriodEnd,
     });
 
-    logger.info('Organization subscription updated', {
+    logger.info({
       orgId,
       subscriptionId: subscription.id,
       externalId: subscription.externalId,
       billingCycle: input.billingCycle,
-    });
+    }, 'Organization subscription updated');
 
     return this.toResponse(updated, quantity);
   }
@@ -227,12 +227,12 @@ export class OrganizationSubscriptionService {
 
     const quantity = await this.getMemberCount(orgId);
 
-    logger.info('Organization subscription cancellation scheduled', {
+    logger.info({
       orgId,
       subscriptionId: subscription.id,
       externalId: subscription.externalId,
       currentPeriodEnd: subscription.currentPeriodEnd,
-    });
+    }, 'Organization subscription cancellation scheduled');
 
     return this.toResponse(updated, quantity);
   }
@@ -262,11 +262,11 @@ export class OrganizationSubscriptionService {
 
     const quantity = await this.getMemberCount(orgId);
 
-    logger.info('Organization subscription reactivated', {
+    logger.info({
       orgId,
       subscriptionId: subscription.id,
       externalId: subscription.externalId,
-    });
+    }, 'Organization subscription reactivated');
 
     return this.toResponse(updated, quantity);
   }
@@ -290,12 +290,12 @@ export class OrganizationSubscriptionService {
       quantity
     );
 
-    logger.info('Organization member count synced', {
+    logger.info({
       orgId,
       subscriptionId: subscription.id,
       externalId: subscription.externalId,
       quantity,
-    });
+    }, 'Organization member count synced');
   }
 
   /**

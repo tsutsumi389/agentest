@@ -4,14 +4,31 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // vi.hoisted() でモックオブジェクトを事前定義
-const { mockCountActiveUsers, mockUpsertMetric } = vi.hoisted(() => ({
-  mockCountActiveUsers: vi.fn(),
-  mockUpsertMetric: vi.fn(),
-}));
+const { mockCountActiveUsers, mockUpsertMetric, mockLogger } = vi.hoisted(() => {
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    trace: vi.fn(),
+    child: vi.fn(),
+  };
+  mockLogger.child.mockReturnValue(mockLogger);
+  return {
+    mockCountActiveUsers: vi.fn(),
+    mockUpsertMetric: vi.fn(),
+    mockLogger,
+  };
+});
 
 vi.mock('../../lib/metrics-utils.js', () => ({
   countActiveUsers: mockCountActiveUsers,
   upsertMetric: mockUpsertMetric,
+}));
+
+vi.mock('../../utils/logger.js', () => ({
+  logger: mockLogger,
 }));
 
 // モック設定後にインポート
@@ -28,7 +45,6 @@ describe('runMetricsAggregation', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useFakeTimers();
-    vi.spyOn(console, 'log').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -82,7 +98,10 @@ describe('runMetricsAggregation', () => {
       await runMetricsAggregation();
 
       // JST基準で前日の日付がログに出力される
-      expect(console.log).toHaveBeenCalledWith('DAU 2026-01-14: 150');
+      expect(mockLogger.info).toHaveBeenCalledWith(
+        expect.objectContaining({ date: '2026-01-14', count: 150 }),
+        'DAU集計完了'
+      );
     });
   });
 

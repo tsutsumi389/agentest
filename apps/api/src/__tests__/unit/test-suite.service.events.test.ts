@@ -1,5 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// loggerのモック
+const { mockLogger } = vi.hoisted(() => {
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    trace: vi.fn(),
+    child: vi.fn(),
+  };
+  mockLogger.child.mockReturnValue(mockLogger);
+  return { mockLogger };
+});
+
+vi.mock('../../utils/logger.js', () => ({
+  logger: mockLogger,
+}));
+
 // イベント発行のモック
 const mockPublishTestSuiteUpdated = vi.hoisted(() => vi.fn());
 
@@ -145,7 +164,6 @@ describe('TestSuiteService - イベント発行', () => {
     });
 
     it('イベント発行エラー時もメイン処理は成功する', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       mockPublishTestSuiteUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
       const result = await service.addPrecondition('test-suite-1', 'user-1', {
@@ -154,9 +172,10 @@ describe('TestSuiteService - イベント発行', () => {
 
       expect(result).toBeDefined();
       expect(result.id).toBe('precondition-1');
-      expect(consoleErrorSpy).toHaveBeenCalledWith('イベント発行エラー:', expect.any(Error));
-
-      consoleErrorSpy.mockRestore();
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { err: expect.any(Error) },
+        'イベント発行エラー'
+      );
     });
 
     it('ユーザー名が取得できない場合はUnknownが使用される', async () => {
@@ -203,7 +222,6 @@ describe('TestSuiteService - イベント発行', () => {
     });
 
     it('イベント発行エラー時もメイン処理は成功する', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       mockPublishTestSuiteUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
       const result = await service.updatePrecondition('test-suite-1', 'precondition-1', 'user-1', {
@@ -212,9 +230,10 @@ describe('TestSuiteService - イベント発行', () => {
 
       expect(result).toBeDefined();
       expect(result.content).toBe('更新された前提条件');
-      expect(consoleErrorSpy).toHaveBeenCalledWith('イベント発行エラー:', expect.any(Error));
-
-      consoleErrorSpy.mockRestore();
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { err: expect.any(Error) },
+        'イベント発行エラー'
+      );
     });
   });
 
@@ -243,7 +262,6 @@ describe('TestSuiteService - イベント発行', () => {
     });
 
     it('イベント発行エラー時もメイン処理は成功する', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       mockPublishTestSuiteUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
       // 例外が投げられないことを確認
@@ -251,8 +269,10 @@ describe('TestSuiteService - イベント発行', () => {
         service.deletePrecondition('test-suite-1', 'precondition-1', 'user-1')
       ).resolves.toBeUndefined();
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith('イベント発行エラー:', expect.any(Error));
-      consoleErrorSpy.mockRestore();
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { err: expect.any(Error) },
+        'イベント発行エラー'
+      );
     });
   });
 
@@ -295,7 +315,6 @@ describe('TestSuiteService - イベント発行', () => {
     });
 
     it('イベント発行エラー時もメイン処理は成功する', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       mockPublishTestSuiteUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
       const result = await service.reorderPreconditions(
@@ -305,8 +324,10 @@ describe('TestSuiteService - イベント発行', () => {
       );
 
       expect(result).toBeDefined();
-      expect(consoleErrorSpy).toHaveBeenCalledWith('イベント発行エラー:', expect.any(Error));
-      consoleErrorSpy.mockRestore();
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { err: expect.any(Error) },
+        'イベント発行エラー'
+      );
     });
   });
 
@@ -349,7 +370,6 @@ describe('TestSuiteService - イベント発行', () => {
     });
 
     it('イベント発行エラー時もメイン処理は成功する', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       mockPublishTestSuiteUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
       const result = await service.reorderTestCases(
@@ -359,8 +379,10 @@ describe('TestSuiteService - イベント発行', () => {
       );
 
       expect(result).toBeDefined();
-      expect(consoleErrorSpy).toHaveBeenCalledWith('イベント発行エラー:', expect.any(Error));
-      consoleErrorSpy.mockRestore();
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { err: expect.any(Error) },
+        'イベント発行エラー'
+      );
     });
   });
 });

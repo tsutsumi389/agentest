@@ -4,6 +4,9 @@ import { AsyncLocalStorage } from 'async_hooks';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import type { McpServer } from '../server.js';
 import type { RequestContext } from '../types/context.js';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'streamable-http' });
 
 /**
  * リクエストコンテキストを保持するAsyncLocalStorage
@@ -64,7 +67,7 @@ export function createMcpHandler(mcpServer: McpServer): RequestHandler {
         });
       }
     } catch (error) {
-      console.error('MCPハンドラーエラー:', error);
+      logger.error({ err: error }, 'MCPハンドラーエラー');
       if (!res.headersSent) {
         res.status(500).json({
           jsonrpc: '2.0',
@@ -124,7 +127,7 @@ async function handlePost(
     transport.onclose = () => {
       transports.delete(newSessionId);
       sessionData.delete(newSessionId);
-      console.log(`MCPセッション終了: ${newSessionId}`);
+      logger.info({ sessionId: newSessionId }, 'MCPセッション終了');
     };
 
     // MCPサーバーに接続
@@ -222,7 +225,7 @@ export function deleteSession(sessionId: string): void {
     try {
       transport.close();
     } catch (error) {
-      console.error(`セッション ${sessionId} のクローズエラー:`, error);
+      logger.error({ err: error, sessionId }, 'セッションのクローズエラー');
     }
   }
   transports.delete(sessionId);
@@ -237,7 +240,7 @@ export function cleanupAllSessions(): void {
     try {
       transport.close();
     } catch (error) {
-      console.error(`セッション ${sessionId} のクリーンアップエラー:`, error);
+      logger.error({ err: error, sessionId }, 'セッションのクリーンアップエラー');
     }
   }
   transports.clear();

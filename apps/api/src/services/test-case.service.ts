@@ -10,6 +10,9 @@ import {
 import { TestCaseRepository } from '../repositories/test-case.repository.js';
 import { publishDashboardUpdated } from '../lib/redis-publisher.js';
 import { publishTestCaseUpdated } from '../lib/events.js';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'test-case' });
 
 // orderKey関連の定数
 const ORDER_KEY_INITIAL = '00001';
@@ -422,7 +425,7 @@ export class TestCaseService {
           { type: 'user', id: userId, name: user?.name || 'Unknown' }
         );
       } catch (error) {
-        console.error('イベント発行エラー:', error);
+        logger.error({ err: error }, 'イベント発行エラー');
       }
 
       return precondition;
@@ -494,7 +497,7 @@ export class TestCaseService {
           { type: 'user', id: userId, name: user?.name || 'Unknown' }
         );
       } catch (error) {
-        console.error('イベント発行エラー:', error);
+        logger.error({ err: error }, 'イベント発行エラー');
       }
 
       return result;
@@ -576,7 +579,7 @@ export class TestCaseService {
         { type: 'user', id: userId, name: user?.name || 'Unknown' }
       );
       } catch (error) {
-        console.error('イベント発行エラー:', error);
+        logger.error({ err: error }, 'イベント発行エラー');
       }
     });
   }
@@ -674,7 +677,7 @@ export class TestCaseService {
         { type: 'user', id: userId, name: user?.name || 'Unknown' }
       );
       } catch (error) {
-        console.error('イベント発行エラー:', error);
+        logger.error({ err: error }, 'イベント発行エラー');
       }
     });
 
@@ -760,7 +763,7 @@ export class TestCaseService {
         { type: 'user', id: userId, name: user?.name || 'Unknown' }
       );
       } catch (error) {
-        console.error('イベント発行エラー:', error);
+        logger.error({ err: error }, 'イベント発行エラー');
       }
 
       return step;
@@ -832,7 +835,7 @@ export class TestCaseService {
         { type: 'user', id: userId, name: user?.name || 'Unknown' }
       );
       } catch (error) {
-        console.error('イベント発行エラー:', error);
+        logger.error({ err: error }, 'イベント発行エラー');
       }
 
       return result;
@@ -914,7 +917,7 @@ export class TestCaseService {
         { type: 'user', id: userId, name: user?.name || 'Unknown' }
       );
       } catch (error) {
-        console.error('イベント発行エラー:', error);
+        logger.error({ err: error }, 'イベント発行エラー');
       }
     });
   }
@@ -1012,7 +1015,7 @@ export class TestCaseService {
         { type: 'user', id: userId, name: user?.name || 'Unknown' }
       );
       } catch (error) {
-        console.error('イベント発行エラー:', error);
+        logger.error({ err: error }, 'イベント発行エラー');
       }
     });
 
@@ -1098,7 +1101,7 @@ export class TestCaseService {
         { type: 'user', id: userId, name: user?.name || 'Unknown' }
       );
       } catch (error) {
-        console.error('イベント発行エラー:', error);
+        logger.error({ err: error }, 'イベント発行エラー');
       }
 
       return expectedResult;
@@ -1170,7 +1173,7 @@ export class TestCaseService {
         { type: 'user', id: userId, name: user?.name || 'Unknown' }
       );
       } catch (error) {
-        console.error('イベント発行エラー:', error);
+        logger.error({ err: error }, 'イベント発行エラー');
       }
 
       return result;
@@ -1252,7 +1255,7 @@ export class TestCaseService {
         { type: 'user', id: userId, name: user?.name || 'Unknown' }
       );
       } catch (error) {
-        console.error('イベント発行エラー:', error);
+        logger.error({ err: error }, 'イベント発行エラー');
       }
     });
   }
@@ -1350,7 +1353,7 @@ export class TestCaseService {
         { type: 'user', id: userId, name: user?.name || 'Unknown' }
       );
       } catch (error) {
-        console.error('イベント発行エラー:', error);
+        logger.error({ err: error }, 'イベント発行エラー');
       }
     });
 
@@ -1522,7 +1525,7 @@ export class TestCaseService {
           { type: 'user', id: userId, name: user?.name || 'Unknown' }
         );
       } catch (error) {
-        console.error('イベント発行エラー:', error);
+        logger.error({ err: error }, 'イベント発行エラー');
       }
 
       // 詳細情報を含めて返却
@@ -1794,7 +1797,7 @@ export class TestCaseService {
           { type: 'user', id: userId, name: user?.name || 'Unknown' }
         );
       } catch (error) {
-        console.error('イベント発行エラー:', error);
+        logger.error({ err: error }, 'イベント発行エラー');
       }
 
       // 更新後のテストケースを子エンティティ含めて返却

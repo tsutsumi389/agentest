@@ -5,6 +5,9 @@
  */
 import { prisma } from '../lib/prisma.js';
 import { DEFAULT_BATCH_SIZE, PROJECT_CLEANUP_DAYS } from '../lib/constants.js';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'project-cleanup' });
 
 export async function runProjectCleanup(): Promise<void> {
   let cursor: string | undefined;
@@ -20,10 +23,10 @@ export async function runProjectCleanup(): Promise<void> {
       deletedAt: { not: null, lt: cutoffDate },
     },
   });
-  console.log(
-    `削除対象: deletedAtが${PROJECT_CLEANUP_DAYS}日以上前のプロジェクト（基準日: ${cutoffDate.toISOString()}）`
+  logger.info(
+    { cleanupDays: PROJECT_CLEANUP_DAYS, cutoffDate: cutoffDate.toISOString(), targetCount },
+    '削除対象のプロジェクトを検索'
   );
-  console.log(`削除対象プロジェクト数: ${targetCount}件`);
 
   do {
     // カーソルベースでソフトデリート済みプロジェクトを取得
@@ -45,8 +48,9 @@ export async function runProjectCleanup(): Promise<void> {
     // 各プロジェクトを物理削除
     for (const project of projects) {
       try {
-        console.log(
-          `プロジェクト削除開始: ${project.id} (${project.name}) - deletedAt: ${project.deletedAt?.toISOString()}`
+        logger.info(
+          { projectId: project.id, projectName: project.name, deletedAt: project.deletedAt?.toISOString() },
+          'プロジェクト削除開始'
         );
 
         // 物理削除（カスケードで関連データも削除される）
@@ -55,17 +59,17 @@ export async function runProjectCleanup(): Promise<void> {
         });
 
         totalDeleted++;
-        console.log(`プロジェクト削除完了: ${project.id}`);
+        logger.info({ projectId: project.id }, 'プロジェクト削除完了');
       } catch (error) {
         // 個別のエラーは記録して続行
-        console.error(`プロジェクト削除失敗: ${project.id}`, error);
+        logger.error({ err: error, projectId: project.id }, 'プロジェクト削除失敗');
       }
     }
 
     cursor = projects[projects.length - 1]?.id;
   } while (cursor);
 
-  console.log(`合計 ${totalDeleted} 件のプロジェクトを物理削除しました`);
+  logger.info({ totalDeleted }, 'プロジェクトの物理削除が完了しました');
 
   // 残りのソフトデリート済みプロジェクト数をレポート
   const remainingCount = await prisma.project.count({
@@ -73,5 +77,5 @@ export async function runProjectCleanup(): Promise<void> {
       deletedAt: { not: null },
     },
   });
-  console.log(`残りのソフトデリート済みプロジェクト: ${remainingCount}件`);
+  logger.info({ remainingCount }, '残りのソフトデリート済みプロジェクト');
 }
