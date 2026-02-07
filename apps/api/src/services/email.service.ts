@@ -1,6 +1,7 @@
 import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 import { env } from '../config/env.js';
+import { escapeHtml, sanitizeUrl } from '../utils/html.js';
 import { logger as baseLogger } from '../utils/logger.js';
 
 const logger = baseLogger.child({ module: 'email' });
@@ -151,6 +152,16 @@ ${invitationUrl}
 Agentest システム管理チーム
 `;
 
+    // URLプロトコル検証（javascript: URI等を防止）
+    const validatedUrl = sanitizeUrl(invitationUrl);
+
+    // XSS防止: HTMLテンプレートに挿入する値をエスケープ
+    const safeName = escapeHtml(name);
+    const safeInviterName = escapeHtml(inviterName);
+    const safeRoleLabel = escapeHtml(roleLabel);
+    const safeExpiresAt = escapeHtml(expiresAtFormatted);
+    const safeInvitationUrl = escapeHtml(validatedUrl);
+
     const html = `
 <!DOCTYPE html>
 <html lang="ja">
@@ -240,25 +251,25 @@ Agentest システム管理チーム
       <div class="logo">Agentest</div>
     </div>
 
-    <h1>${name} 様</h1>
+    <h1>${safeName} 様</h1>
 
-    <p>${inviterName} 様より、Agentest管理者アカウントへの招待が届いています。</p>
+    <p>${safeInviterName} 様より、Agentest管理者アカウントへの招待が届いています。</p>
 
     <div class="info-box">
       <div class="info-row">
         <span class="info-label">ロール:</span>
-        <span class="info-value">${roleLabel}</span>
+        <span class="info-value">${safeRoleLabel}</span>
       </div>
       <div class="info-row">
         <span class="info-label">有効期限:</span>
-        <span class="info-value">${expiresAtFormatted}</span>
+        <span class="info-value">${safeExpiresAt}</span>
       </div>
     </div>
 
     <p>以下のボタンをクリックして、パスワードを設定し、アカウントを有効化してください。</p>
 
     <div style="text-align: center;">
-      <a href="${invitationUrl}" class="button">アカウントを設定する</a>
+      <a href="${safeInvitationUrl}" class="button">アカウントを設定する</a>
     </div>
 
     <p class="note">

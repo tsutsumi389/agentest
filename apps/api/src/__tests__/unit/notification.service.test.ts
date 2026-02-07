@@ -338,5 +338,46 @@ describe('NotificationService', () => {
       expect(mockNotificationRepo.create).toHaveBeenCalled();
       expect(mockEmailService.send).not.toHaveBeenCalled();
     });
+
+    it('HTMLの特殊文字をエスケープしてXSSを防止する', async () => {
+      mockPrismaUser.findUnique.mockResolvedValue({
+        email: 'user@example.com',
+        name: '<script>alert("xss")</script>',
+      });
+
+      await service.send({
+        ...baseSendParams,
+        title: '"><img src=x onerror=alert(1)>',
+        body: '<b onmouseover=alert(1)>悪意あるテキスト</b>',
+      });
+
+      const emailCall = mockEmailService.send.mock.calls[0]?.[0];
+      expect(emailCall).toBeDefined();
+
+      // HTML部分ではタグとして解釈されないようエスケープされている
+      expect(emailCall.html).not.toContain('<script>');
+      expect(emailCall.html).not.toContain('<img ');
+      expect(emailCall.html).not.toContain('<b ');
+      expect(emailCall.html).toContain('&lt;script&gt;');
+      expect(emailCall.html).toContain('&lt;img src=x onerror=alert(1)&gt;');
+
+      // テキスト部分はエスケープ不要（プレーンテキスト）
+      expect(emailCall.text).toContain('<script>alert("xss")</script>');
+    });
+
+    it('subjectの改行文字を除去してSMTPヘッダーインジェクションを防止する', async () => {
+      await service.send({
+        ...baseSendParams,
+        title: "テスト\r\nBcc: attacker@evil.com",
+      });
+
+      const emailCall = mockEmailService.send.mock.calls[0]?.[0];
+      expect(emailCall).toBeDefined();
+
+      // 改行文字が除去されている
+      expect(emailCall.subject).not.toContain('\r');
+      expect(emailCall.subject).not.toContain('\n');
+      expect(emailCall.subject).toBe('[Agentest] テストBcc: attacker@evil.com');
+    });
   });
 });

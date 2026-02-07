@@ -140,5 +140,66 @@ describe('EmailService', () => {
       expect(result.html).toContain('アカウントを設定する');
       expect(result.html).toContain(baseParams.invitationUrl);
     });
+
+    it('HTMLの特殊文字をエスケープしてXSSを防止する', () => {
+      const xssParams = {
+        ...baseParams,
+        name: '<script>alert("xss")</script>',
+        inviterName: '"><img src=x onerror=alert(1)>',
+      };
+
+      const result = emailService.generateAdminInvitationEmail(xssParams);
+
+      // HTML部分ではタグとして解釈されないようエスケープされている
+      expect(result.html).not.toContain('<script>');
+      expect(result.html).not.toContain('<img ');
+      expect(result.html).toContain('&lt;script&gt;alert(&quot;xss&quot;)&lt;/script&gt;');
+      expect(result.html).toContain('&quot;&gt;&lt;img src=x onerror=alert(1)&gt;');
+
+      // テキスト部分はエスケープ不要（プレーンテキスト）
+      expect(result.text).toContain('<script>alert("xss")</script>');
+    });
+
+    it('未知のロールにHTML特殊文字が含まれてもエスケープする', () => {
+      const result = emailService.generateAdminInvitationEmail({
+        ...baseParams,
+        role: '<b>HACKED</b>',
+      });
+
+      expect(result.html).not.toContain('<b>HACKED</b>');
+      expect(result.html).toContain('&lt;b&gt;HACKED&lt;/b&gt;');
+    });
+
+    it('クエリパラメータに&を含むURLがhref属性で正しくエスケープされる', () => {
+      // HTML仕様ではhref属性内の&は&amp;に変換されるのが正しい
+      // ブラウザ/メールクライアントは&amp;を&に戻してリンクを辿る
+      const urlWithAmpersand = 'https://example.com/invite?token=abc&org=123';
+      const result = emailService.generateAdminInvitationEmail({
+        ...baseParams,
+        invitationUrl: urlWithAmpersand,
+      });
+
+      expect(result.html).toContain('href="https://example.com/invite?token=abc&amp;org=123"');
+      // テキスト部分はエスケープ不要
+      expect(result.text).toContain(urlWithAmpersand);
+    });
+
+    it('javascript: URIの招待URLを拒否する', () => {
+      expect(() =>
+        emailService.generateAdminInvitationEmail({
+          ...baseParams,
+          invitationUrl: 'javascript:alert(document.cookie)',
+        })
+      ).toThrow('許可されないURLプロトコル');
+    });
+
+    it('data: URIの招待URLを拒否する', () => {
+      expect(() =>
+        emailService.generateAdminInvitationEmail({
+          ...baseParams,
+          invitationUrl: 'data:text/html,<script>alert(1)</script>',
+        })
+      ).toThrow('許可されないURLプロトコル');
+    });
   });
 });

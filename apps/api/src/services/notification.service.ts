@@ -5,6 +5,7 @@ import { NotificationRepository } from '../repositories/notification.repository.
 import { emailService } from './email.service.js';
 import { publishEvent } from '../lib/redis-publisher.js';
 import { Channels } from '@agentest/ws-types';
+import { escapeHtml } from '../utils/html.js';
 import { logger as baseLogger } from '../utils/logger.js';
 
 const logger = baseLogger.child({ module: 'notification' });
@@ -156,6 +157,7 @@ export class NotificationService {
 
   /**
    * メール本文を生成
+   * 注: URLリンクを追加する場合は、sanitizeUrl（utils/html.ts）でプロトコル検証を行うこと
    */
   private generateEmailContent(
     _type: NotificationType,
@@ -176,6 +178,11 @@ ${body}
 Agentest - テスト管理ツール
 `;
 
+    // XSS防止: HTMLテンプレートに挿入する値をエスケープ
+    const safeGreeting = escapeHtml(greeting);
+    const safeTitle = escapeHtml(title);
+    const safeBody = escapeHtml(body);
+
     const html = `
 <!DOCTYPE html>
 <html>
@@ -195,9 +202,9 @@ Agentest - テスト管理ツール
       <h1 style="font-size: 24px; margin: 0;">Agentest</h1>
     </div>
     <div class="content">
-      <p>${greeting}</p>
-      <h2 style="font-size: 18px;">${title}</h2>
-      <p>${body}</p>
+      <p>${safeGreeting}</p>
+      <h2 style="font-size: 18px;">${safeTitle}</h2>
+      <p>${safeBody}</p>
     </div>
     <div class="footer">
       <p>Agentest - テスト管理ツール</p>
@@ -207,8 +214,11 @@ Agentest - テスト管理ツール
 </html>
 `;
 
+    // SMTPヘッダーインジェクション防止: 改行文字を除去
+    const sanitizedTitle = title.replace(/[\r\n]/g, '');
+
     return {
-      subject: `[Agentest] ${title}`,
+      subject: `[Agentest] ${sanitizedTitle}`,
       text,
       html,
     };
