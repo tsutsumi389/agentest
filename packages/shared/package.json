@@ -52,6 +52,6 @@
   "devDependencies": {
     "typescript": "catalog:",
     "vitest": "catalog:",
-    "@vitest/coverage-v8": "^2.1.0"
+    "@vitest/coverage-v8": "catalog:"
   }
 }

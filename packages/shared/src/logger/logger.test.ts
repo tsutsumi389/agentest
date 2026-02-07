@@ -15,21 +15,22 @@ function createTestStream(): { stream: Writable; lines: string[] } {
   return { stream, lines };
 }
 
+// 全describeブロックで共通の環境変数管理
+const originalEnv = { ...process.env };
+
+beforeEach(() => {
+  delete process.env.LOG_LEVEL;
+  delete process.env.LOG_PRETTY;
+  delete process.env.NODE_ENV;
+  vi.resetModules();
+});
+
+afterEach(() => {
+  process.env = { ...originalEnv };
+  vi.restoreAllMocks();
+});
+
 describe('createLogger', () => {
-  const originalEnv = { ...process.env };
-
-  beforeEach(() => {
-    delete process.env.LOG_LEVEL;
-    delete process.env.LOG_PRETTY;
-    delete process.env.NODE_ENV;
-    vi.resetModules();
-  });
-
-  afterEach(() => {
-    process.env = { ...originalEnv };
-    vi.restoreAllMocks();
-  });
-
   it('サービス名を指定してロガーを作成できる', async () => {
     const { createLogger } = await import('./index.js');
     const logger = createLogger({ service: 'api' });
@@ -97,20 +98,6 @@ describe('createLogger', () => {
 });
 
 describe('createLogger - ログレベル制御', () => {
-  const originalEnv = { ...process.env };
-
-  beforeEach(() => {
-    delete process.env.LOG_LEVEL;
-    delete process.env.LOG_PRETTY;
-    delete process.env.NODE_ENV;
-    vi.resetModules();
-  });
-
-  afterEach(() => {
-    process.env = { ...originalEnv };
-    vi.restoreAllMocks();
-  });
-
   it('LOG_LEVEL環境変数でログレベルを指定できる', async () => {
     process.env.LOG_LEVEL = 'warn';
     const { createLogger } = await import('./index.js');
@@ -140,6 +127,38 @@ describe('createLogger - ログレベル制御', () => {
     expect(logLine.msg).toBe('表示される');
   });
 
+  it('無効なoptions.levelを指定した場合、エラーをスローする', async () => {
+    const { createLogger } = await import('./index.js');
+
+    expect(() =>
+      createLogger({ service: 'test', level: 'verbose' as never }),
+    ).toThrow('Invalid log level: "verbose"');
+  });
+
+  it('無効なLOG_LEVELの場合、警告を出力してNODE_ENVベースのデフォルトにフォールバックする', async () => {
+    process.env.LOG_LEVEL = 'verbose';
+    process.env.NODE_ENV = 'production';
+    const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const { createLogger } = await import('./index.js');
+    const { stream, lines } = createTestStream();
+    const logger = createLogger({ service: 'test' }, stream);
+
+    // productionのデフォルト(info)が適用される
+    logger.debug('抑制される');
+    logger.info('表示される');
+
+    expect(lines.length).toBe(1);
+    expect(JSON.parse(lines[0]).msg).toBe('表示される');
+
+    expect(consoleWarnSpy).toHaveBeenCalledOnce();
+    const warnOutput = JSON.parse(consoleWarnSpy.mock.calls[0][0] as string);
+    expect(warnOutput.msg).toContain('Invalid LOG_LEVEL');
+    expect(warnOutput.validLevels).toBeDefined();
+
+    consoleWarnSpy.mockRestore();
+  });
+
   it('NODE_ENV=production の場合、デフォルトレベルは info', async () => {
     process.env.NODE_ENV = 'production';
     const { createLogger } = await import('./index.js');
@@ -167,21 +186,8 @@ describe('createLogger - ログレベル制御', () => {
 });
 
 describe('createLogger - child logger', () => {
-  const originalEnv = { ...process.env };
-
-  beforeEach(() => {
-    delete process.env.LOG_LEVEL;
-    delete process.env.LOG_PRETTY;
-    process.env.NODE_ENV = 'development';
-    vi.resetModules();
-  });
-
-  afterEach(() => {
-    process.env = { ...originalEnv };
-    vi.restoreAllMocks();
-  });
-
   it('child loggerでモジュールコンテキストを追加できる', async () => {
+    process.env.NODE_ENV = 'development';
     const { createLogger } = await import('./index.js');
     const { stream, lines } = createTestStream();
     const baseLogger = createLogger({ service: 'api' }, stream);
@@ -197,6 +203,7 @@ describe('createLogger - child logger', () => {
   });
 
   it('child loggerでリクエストIDを追加できる', async () => {
+    process.env.NODE_ENV = 'development';
     const { createLogger } = await import('./index.js');
     const { stream, lines } = createTestStream();
     const baseLogger = createLogger({ service: 'api' }, stream);

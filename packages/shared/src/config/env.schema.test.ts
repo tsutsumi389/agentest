@@ -1,14 +1,16 @@
 import { describe, it, expect, vi } from 'vitest';
 import { envSchema, parseEnv } from './env.schema.js';
 
+/** テスト用の最小限の有効な環境変数セット */
+const validEnv = {
+  NODE_ENV: 'development',
+  DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
+  REDIS_URL: 'redis://localhost:6379',
+  JWT_ACCESS_SECRET: 'a'.repeat(32),
+  JWT_REFRESH_SECRET: 'b'.repeat(32),
+};
+
 describe('envSchema', () => {
-  const validEnv = {
-    NODE_ENV: 'development',
-    DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
-    REDIS_URL: 'redis://localhost:6379',
-    JWT_ACCESS_SECRET: 'a'.repeat(32),
-    JWT_REFRESH_SECRET: 'b'.repeat(32),
-  };
 
   describe('NODE_ENV', () => {
     it('development, production, testを受け入れる', () => {
@@ -202,14 +204,6 @@ describe('envSchema', () => {
 });
 
 describe('parseEnv', () => {
-  const validEnv = {
-    NODE_ENV: 'development',
-    DATABASE_URL: 'postgresql://user:pass@localhost:5432/db',
-    REDIS_URL: 'redis://localhost:6379',
-    JWT_ACCESS_SECRET: 'a'.repeat(32),
-    JWT_REFRESH_SECRET: 'b'.repeat(32),
-  };
-
   it('有効な環境変数をパースする', () => {
     const result = parseEnv(validEnv as unknown as NodeJS.ProcessEnv);
     expect(result.NODE_ENV).toBe('development');

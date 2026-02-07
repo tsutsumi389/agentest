@@ -177,7 +177,6 @@ describe('TestCaseService - イベント発行', () => {
       });
 
       it('イベント発行エラー時もメイン処理は成功する', async () => {
-        mockLogger.error.mockClear();
         mockPublishTestCaseUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
         const result = await service.addPrecondition('test-case-1', 'user-1', { content: '新しい前提条件' });
@@ -211,7 +210,6 @@ describe('TestCaseService - イベント発行', () => {
       });
 
       it('イベント発行エラー時もメイン処理は成功する', async () => {
-        mockLogger.error.mockClear();
         mockPublishTestCaseUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
         const result = await service.updatePrecondition('test-case-1', 'precondition-1', 'user-1', { content: '更新された前提条件' });
@@ -243,7 +241,6 @@ describe('TestCaseService - イベント発行', () => {
       });
 
       it('イベント発行エラー時もメイン処理は成功する', async () => {
-        mockLogger.error.mockClear();
         mockPublishTestCaseUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
         await expect(service.deletePrecondition('test-case-1', 'precondition-1', 'user-1')).resolves.toBeUndefined();
@@ -280,7 +277,6 @@ describe('TestCaseService - イベント発行', () => {
       });
 
       it('イベント発行エラー時もメイン処理は成功する', async () => {
-        mockLogger.error.mockClear();
         mockPublishTestCaseUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
         const result = await service.reorderPreconditions('test-case-1', ['precondition-2', 'precondition-1'], 'user-1');
@@ -323,7 +319,6 @@ describe('TestCaseService - イベント発行', () => {
       });
 
       it('イベント発行エラー時もメイン処理は成功する', async () => {
-        mockLogger.error.mockClear();
         mockPublishTestCaseUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
         const result = await service.addStep('test-case-1', 'user-1', { content: '新しいステップ' });
@@ -357,7 +352,6 @@ describe('TestCaseService - イベント発行', () => {
       });
 
       it('イベント発行エラー時もメイン処理は成功する', async () => {
-        mockLogger.error.mockClear();
         mockPublishTestCaseUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
         const result = await service.updateStep('test-case-1', 'step-1', 'user-1', { content: '更新されたステップ' });
@@ -389,7 +383,6 @@ describe('TestCaseService - イベント発行', () => {
       });
 
       it('イベント発行エラー時もメイン処理は成功する', async () => {
-        mockLogger.error.mockClear();
         mockPublishTestCaseUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
         await expect(service.deleteStep('test-case-1', 'step-1', 'user-1')).resolves.toBeUndefined();
@@ -426,7 +419,6 @@ describe('TestCaseService - イベント発行', () => {
       });
 
       it('イベント発行エラー時もメイン処理は成功する', async () => {
-        mockLogger.error.mockClear();
         mockPublishTestCaseUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
         const result = await service.reorderSteps('test-case-1', ['step-2', 'step-1'], 'user-1');
@@ -469,7 +461,6 @@ describe('TestCaseService - イベント発行', () => {
       });
 
       it('イベント発行エラー時もメイン処理は成功する', async () => {
-        mockLogger.error.mockClear();
         mockPublishTestCaseUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
         const result = await service.addExpectedResult('test-case-1', 'user-1', { content: '新しい期待結果' });
@@ -503,7 +494,6 @@ describe('TestCaseService - イベント発行', () => {
       });
 
       it('イベント発行エラー時もメイン処理は成功する', async () => {
-        mockLogger.error.mockClear();
         mockPublishTestCaseUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
         const result = await service.updateExpectedResult('test-case-1', 'expected-1', 'user-1', { content: '更新された期待結果' });
@@ -535,7 +525,6 @@ describe('TestCaseService - イベント発行', () => {
       });
 
       it('イベント発行エラー時もメイン処理は成功する', async () => {
-        mockLogger.error.mockClear();
         mockPublishTestCaseUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
         await expect(service.deleteExpectedResult('test-case-1', 'expected-1', 'user-1')).resolves.toBeUndefined();
@@ -572,7 +561,6 @@ describe('TestCaseService - イベント発行', () => {
       });
 
       it('イベント発行エラー時もメイン処理は成功する', async () => {
-        mockLogger.error.mockClear();
         mockPublishTestCaseUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
         const result = await service.reorderExpectedResults('test-case-1', ['expected-2', 'expected-1'], 'user-1');
@@ -650,7 +638,6 @@ describe('TestCaseService - イベント発行', () => {
     });
 
     it('イベント発行エラー時もメイン処理は成功する', async () => {
-      mockLogger.error.mockClear();
       mockPublishTestCaseUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
       const result = await service.copy('source-case-1', 'user-1', {});
@@ -694,7 +681,6 @@ describe('TestCaseService - イベント発行', () => {
     });
 
     it('イベント発行エラー時もメイン処理は成功する', async () => {
-      mockLogger.error.mockClear();
       mockPublishTestCaseUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
       const result = await service.updateWithChildren('test-case-1', 'user-1', {

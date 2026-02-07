@@ -25,9 +25,11 @@ vi.mock('../../utils/logger.js', () => ({
 }));
 
 // Redis Publisherのモック
-const mockPublish = vi.fn();
-const mockQuit = vi.fn();
-const mockOn = vi.fn();
+const { mockPublish, mockQuit, mockOn } = vi.hoisted(() => ({
+  mockPublish: vi.fn(),
+  mockQuit: vi.fn(),
+  mockOn: vi.fn(),
+}));
 
 vi.mock('ioredis', () => ({
   Redis: vi.fn().mockImplementation(() => ({

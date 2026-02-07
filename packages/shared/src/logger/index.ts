@@ -31,7 +31,14 @@ export interface CreateLoggerOptions {
  * - NODE_ENV に基づいて自動判定（production: info, development: debug, test: silent）
  */
 function resolveLogLevel(explicitLevel?: LogLevel): LogLevel {
-  if (explicitLevel) return explicitLevel;
+  if (explicitLevel) {
+    if (!VALID_LOG_LEVELS.has(explicitLevel)) {
+      throw new Error(
+        `Invalid log level: "${explicitLevel}". Valid levels: ${[...VALID_LOG_LEVELS].join(', ')}`,
+      );
+    }
+    return explicitLevel;
+  }
 
   const envLevel = process.env.LOG_LEVEL;
   if (envLevel) {

@@ -30,7 +30,10 @@ export class AdminAuditLogService {
   async log(input: AdminAuditLogInput): Promise<void> {
     // バリデーション: actionは必須かつ空文字でない
     if (!input.action || input.action.trim() === '') {
-      logger.warn({ data: input }, '管理者監査ログ: actionが空のため記録をスキップ');
+      logger.warn(
+        { adminUserId: input.adminUserId, targetType: input.targetType },
+        '管理者監査ログ: actionが空のため記録をスキップ',
+      );
       return;
     }
 

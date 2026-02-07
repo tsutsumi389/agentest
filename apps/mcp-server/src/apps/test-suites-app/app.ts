@@ -211,13 +211,12 @@ function render(): void {
 
 // アプリ終了時の処理
 app.onteardown = async () => {
-  console.info('App is being torn down');
   return {};
 };
 
 // ツール入力を受け取ったとき
-app.ontoolinput = (params) => {
-  console.info('Received tool input:', params);
+app.ontoolinput = () => {
+  // ツール入力の受信を処理（現状は特別な処理なし）
 };
 
 // ツール結果を受け取るハンドラ
@@ -240,8 +239,8 @@ app.ontoolresult = (result) => {
 };
 
 // ツールキャンセル時の処理
-app.ontoolcancelled = (params) => {
-  console.info('Tool was cancelled:', params);
+app.ontoolcancelled = () => {
+  // ツールキャンセル時の処理（現状は特別な処理なし）
 };
 
 // ホストコンテキスト変更時の処理
