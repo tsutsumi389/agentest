@@ -16,6 +16,7 @@ const { mockPrisma, mockGetStripeClient, mockStripe, mockLogger } = vi.hoisted((
     warn: vi.fn(),
     debug: vi.fn(),
     fatal: vi.fn(),
+      trace: vi.fn(),
     child: vi.fn(),
   };
   mockLogger.child.mockReturnValue(mockLogger);

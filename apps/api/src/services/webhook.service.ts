@@ -144,9 +144,9 @@ export class WebhookService {
       const errorMessage = error instanceof Error ? error.message : String(error);
       await this.paymentEventRepo.markAsFailed(paymentEvent.id, errorMessage);
       logger.error({
+        err: error instanceof Error ? error : undefined,
         eventId: event.id,
         eventType: event.type,
-        error: errorMessage,
       }, 'Webhook event processing failed');
       throw error;
     }
@@ -524,9 +524,9 @@ export class WebhookService {
     } catch (error) {
       // キャッシュ無効化の失敗はログのみ（処理は継続）
       logger.warn({
+        err: error instanceof Error ? error : undefined,
         userId,
         organizationId,
-        error: error instanceof Error ? error.message : String(error),
       }, 'Failed to invalidate invoice cache');
     }
   }

@@ -186,10 +186,13 @@ describe('envSchema', () => {
     });
 
     it('全てのログレベルを受け入れる', () => {
-      expect(envSchema.safeParse({ ...validEnv, LOG_LEVEL: 'debug' }).success).toBe(true);
-      expect(envSchema.safeParse({ ...validEnv, LOG_LEVEL: 'info' }).success).toBe(true);
-      expect(envSchema.safeParse({ ...validEnv, LOG_LEVEL: 'warn' }).success).toBe(true);
+      expect(envSchema.safeParse({ ...validEnv, LOG_LEVEL: 'fatal' }).success).toBe(true);
       expect(envSchema.safeParse({ ...validEnv, LOG_LEVEL: 'error' }).success).toBe(true);
+      expect(envSchema.safeParse({ ...validEnv, LOG_LEVEL: 'warn' }).success).toBe(true);
+      expect(envSchema.safeParse({ ...validEnv, LOG_LEVEL: 'info' }).success).toBe(true);
+      expect(envSchema.safeParse({ ...validEnv, LOG_LEVEL: 'debug' }).success).toBe(true);
+      expect(envSchema.safeParse({ ...validEnv, LOG_LEVEL: 'trace' }).success).toBe(true);
+      expect(envSchema.safeParse({ ...validEnv, LOG_LEVEL: 'silent' }).success).toBe(true);
     });
 
     it('無効なログレベルを拒否する', () => {
@@ -222,7 +225,19 @@ describe('parseEnv', () => {
   });
 
   it('エラー時に構造化ログを出力する', () => {
-    // logger.fatal が呼ばれることを確認（実際のログ出力は stdout に出る）
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
     expect(() => parseEnv({} as NodeJS.ProcessEnv)).toThrow('Invalid environment configuration');
+
+    // console.error で構造化JSON形式のエラーが出力されることを確認
+    expect(consoleSpy).toHaveBeenCalledTimes(1);
+    const logOutput = JSON.parse(consoleSpy.mock.calls[0][0] as string);
+    expect(logOutput.level).toBe('fatal');
+    expect(logOutput.service).toBe('shared');
+    expect(logOutput.msg).toBe('Environment validation failed');
+    expect(logOutput.errors).toBeDefined();
+    expect(logOutput.time).toBeDefined();
+
+    consoleSpy.mockRestore();
   });
 });

@@ -40,8 +40,8 @@ export const envSchema = z.object({
   API_PORT: z.coerce.number().default(3001),
   WS_PORT: z.coerce.number().default(3002),
 
-  // ログ設定
-  LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+  // ログ設定（Pinoのログレベルと一致）
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
 
 export type Env = z.infer<typeof envSchema>;

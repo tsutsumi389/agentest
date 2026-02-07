@@ -283,10 +283,10 @@ export class SubscriptionService {
     } catch (error) {
       // 日割り計算に失敗した場合はログ出力して単純な価格を返す
       logger.warn({
+        err: error instanceof Error ? error : undefined,
         userId,
         plan,
         billingCycle,
-        error: error instanceof Error ? error.message : String(error),
       }, 'Failed to calculate proration');
       return {
         plan,

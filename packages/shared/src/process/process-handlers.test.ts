@@ -26,20 +26,20 @@ describe('logUncaughtException', () => {
     expect(consoleErrorSpy).toHaveBeenCalledOnce();
     const logOutput = JSON.parse(consoleErrorSpy.mock.calls[0][0] as string);
     expect(logOutput).toMatchObject({
-      level: 'error',
+      level: 'fatal',
       message: 'キャッチされない例外が発生しました',
       error: 'テストエラー',
       stack: 'Error: テストエラー\n    at test.ts:1:1',
     });
-    expect(logOutput.timestamp).toBeDefined();
+    expect(logOutput.time).toBeDefined();
   });
 
-  it('timestampがISO 8601形式である', () => {
+  it('timeがISO 8601形式である', () => {
     logUncaughtException(new Error('test'));
 
     const logOutput = JSON.parse(consoleErrorSpy.mock.calls[0][0] as string);
-    expect(() => new Date(logOutput.timestamp)).not.toThrow();
-    expect(new Date(logOutput.timestamp).toISOString()).toBe(logOutput.timestamp);
+    expect(() => new Date(logOutput.time)).not.toThrow();
+    expect(new Date(logOutput.time).toISOString()).toBe(logOutput.time);
   });
 });
 
@@ -62,7 +62,7 @@ describe('logUnhandledRejection', () => {
 
     const logOutput = JSON.parse(consoleErrorSpy.mock.calls[0][0] as string);
     expect(logOutput).toMatchObject({
-      level: 'error',
+      level: 'fatal',
       message: '未処理のPromise拒否が発生しました',
       reason: 'Promise拒否',
       stack: 'Error: Promise拒否\n    at test.ts:2:2',

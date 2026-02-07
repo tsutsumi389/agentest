@@ -3,8 +3,6 @@ import type { z } from 'zod';
 import type { AgentSession } from '@agentest/db';
 import { requestContext } from '../transport/streamable-http.js';
 import { logger as baseLogger } from '../utils/logger.js';
-
-const logger = baseLogger.child({ module: 'tools' });
 import { searchProjectTool } from './search-project.js';
 import { searchTestSuiteTool } from './search-test-suite.js';
 import { searchTestCaseTool } from './search-test-case.js';
@@ -24,6 +22,8 @@ import { updateExecutionExpectedResultTool } from './update-execution-expected-r
 import { deleteTestSuiteTool } from './delete-test-suite.js';
 import { deleteTestCaseTool } from './delete-test-case.js';
 import { uploadExecutionEvidenceTool } from './upload-execution-evidence.js';
+
+const logger = baseLogger.child({ module: 'tools' });
 
 /**
  * ツール実行コンテキスト

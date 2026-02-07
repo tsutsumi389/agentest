@@ -13,6 +13,11 @@ import type { DestinationStream } from 'pino';
 
 export type LogLevel = 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace' | 'silent';
 
+/** ランタイムバリデーション用の有効なログレベル一覧 */
+const VALID_LOG_LEVELS: ReadonlySet<string> = new Set<LogLevel>([
+  'fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent',
+]);
+
 export type Logger = pino.Logger;
 
 export interface CreateLoggerOptions {
@@ -22,12 +27,16 @@ export interface CreateLoggerOptions {
 
 /**
  * 環境に基づくデフォルトログレベルを返す
- * - LOG_LEVEL 環境変数が設定されていればそれを使用
+ * - LOG_LEVEL 環境変数が設定されていればそれを使用（バリデーション付き）
  * - NODE_ENV に基づいて自動判定（production: info, development: debug, test: silent）
  */
 function resolveLogLevel(explicitLevel?: LogLevel): LogLevel {
   if (explicitLevel) return explicitLevel;
-  if (process.env.LOG_LEVEL) return process.env.LOG_LEVEL as LogLevel;
+
+  const envLevel = process.env.LOG_LEVEL;
+  if (envLevel && VALID_LOG_LEVELS.has(envLevel)) {
+    return envLevel as LogLevel;
+  }
 
   switch (process.env.NODE_ENV) {
     case 'production':

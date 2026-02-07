@@ -68,8 +68,8 @@ export class SessionService {
     } catch (error) {
       // セッションが存在しない場合は警告ログを出力
       logger.warn({
+        err: error instanceof Error ? error : undefined,
         sessionId,
-        error: error instanceof Error ? error.message : 'Unknown error',
       }, 'セッション活動時刻の更新に失敗');
     }
   }

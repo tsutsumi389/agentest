@@ -6,9 +6,6 @@ import {
   type McpUiHostContext,
 } from '@modelcontextprotocol/ext-apps';
 import type { TestSuite, SearchTestSuiteResponse } from '../types';
-import { logger as baseLogger } from '../../utils/logger.js';
-
-const logger = baseLogger.child({ module: 'test-suites-app' });
 
 // DOM要素
 const appEl = document.getElementById('app')!;
@@ -117,7 +114,7 @@ create_executionツールを使用してテスト実行を開始し、get_test_s
     // UIを更新
     render();
   } catch (error) {
-    logger.error({ err: error }, 'メッセージ送信に失敗');
+    console.error('メッセージ送信に失敗:', error);
     showError('テスト実行依頼の送信に失敗しました');
   }
 }
@@ -214,13 +211,13 @@ function render(): void {
 
 // アプリ終了時の処理
 app.onteardown = async () => {
-  logger.info('App is being torn down');
+  console.info('App is being torn down');
   return {};
 };
 
 // ツール入力を受け取ったとき
 app.ontoolinput = (params) => {
-  logger.info({ params }, 'Received tool input');
+  console.info('Received tool input:', params);
 };
 
 // ツール結果を受け取るハンドラ
@@ -237,14 +234,14 @@ app.ontoolresult = (result) => {
       }
     }
   } catch (error) {
-    logger.error({ err: error }, 'ツール結果の解析に失敗');
+    console.error('ツール結果の解析に失敗:', error);
     showError('データの読み込みに失敗しました');
   }
 };
 
 // ツールキャンセル時の処理
 app.ontoolcancelled = (params) => {
-  logger.info({ params }, 'Tool was cancelled');
+  console.info('Tool was cancelled:', params);
 };
 
 // ホストコンテキスト変更時の処理

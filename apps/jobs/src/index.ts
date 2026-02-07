@@ -31,6 +31,7 @@ registerProcessHandlers({
     await cleanup().catch(() => {});
     process.exit(exitCode);
   },
+  logger,
 });
 
 // 利用可能なジョブの定義

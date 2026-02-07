@@ -70,6 +70,6 @@ export async function sendEmail(params: SendEmailParams): Promise<void> {
     html,
   });
 
-  logger.info({ to, subject }, 'メール送信');
+  logger.debug({ to, subject }, 'メール送信');
 }
 

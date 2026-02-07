@@ -46,6 +46,9 @@
     "pino": "catalog:",
     "zod": "catalog:"
   },
+  "optionalDependencies": {
+    "pino-pretty": "catalog:"
+  },
   "devDependencies": {
     "typescript": "catalog:",
     "vitest": "catalog:",

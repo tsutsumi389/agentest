@@ -30,9 +30,11 @@ export const httpLogger = pinoHttp({
       method: req.method,
       url: req.url,
       headers: {
-        ...req.headers,
-        ...(req.headers.authorization && { authorization: '[REDACTED]' }),
-        ...(req.headers.cookie && { cookie: '[REDACTED]' }),
+        host: req.headers.host,
+        'user-agent': req.headers['user-agent'],
+        'content-type': req.headers['content-type'],
+        accept: req.headers.accept,
+        'x-request-id': req.headers['x-request-id'],
       },
     }),
     res: (res) => ({
