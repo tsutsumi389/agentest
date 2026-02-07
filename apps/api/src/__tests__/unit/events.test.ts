@@ -5,6 +5,24 @@ import type {
   closeEventsPublisher as CloseEventsPublisherFn,
 } from '../../lib/events.js';
 
+// ロガーのモック
+const { mockLogger } = vi.hoisted(() => {
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn(),
+  };
+  mockLogger.child.mockReturnValue(mockLogger);
+  return { mockLogger };
+});
+
+vi.mock('../../utils/logger.js', () => ({
+  logger: mockLogger,
+}));
+
 // Redis Publisherのモック
 const mockPublish = vi.fn();
 const mockQuit = vi.fn();
@@ -129,7 +147,6 @@ describe('events.ts - イベント発行ヘルパー', () => {
     });
 
     it('Redis publish失敗時はログ出力のみで例外を投げない', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const mockError = new Error('Redis connection failed');
       mockPublish.mockRejectedValue(mockError);
 
@@ -144,12 +161,10 @@ describe('events.ts - イベント発行ヘルパー', () => {
       ).resolves.toBeUndefined();
 
       // エラーログが出力されることを確認
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        '❌ Redis publish エラー:',
-        mockError
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { err: mockError },
+        'Redis publish エラー'
       );
-
-      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -239,7 +254,6 @@ describe('events.ts - イベント発行ヘルパー', () => {
     });
 
     it('Redis publish失敗時はログ出力のみで例外を投げない', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       const mockError = new Error('Redis connection timeout');
       mockPublish.mockRejectedValue(mockError);
 
@@ -254,12 +268,10 @@ describe('events.ts - イベント発行ヘルパー', () => {
         )
       ).resolves.toBeUndefined();
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        '❌ Redis publish エラー:',
-        mockError
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { err: mockError },
+        'Redis publish エラー'
       );
-
-      consoleErrorSpy.mockRestore();
     });
   });
 

@@ -8,6 +8,24 @@ const mockAuditLogRepo = vi.hoisted(() => ({
   findForExport: vi.fn(),
 }));
 
+// loggerのモック
+const { mockLogger } = vi.hoisted(() => {
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn(),
+  };
+  mockLogger.child.mockReturnValue(mockLogger);
+  return { mockLogger };
+});
+
+vi.mock('../../utils/logger.js', () => ({
+  logger: mockLogger,
+}));
+
 vi.mock('../../repositories/audit-log.repository.js', () => ({
   AuditLogRepository: vi.fn().mockImplementation(() => mockAuditLogRepo),
 }));
@@ -19,9 +37,6 @@ describe('AuditLogService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // console出力を抑制
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
-    vi.spyOn(console, 'error').mockImplementation(() => {});
     service = new AuditLogService();
   });
 
@@ -55,9 +70,9 @@ describe('AuditLogService', () => {
       await service.log(params);
 
       expect(mockAuditLogRepo.create).not.toHaveBeenCalled();
-      expect(console.warn).toHaveBeenCalledWith(
-        '監査ログ: actionが空のため記録をスキップ',
-        params
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        { data: params },
+        '監査ログ: actionが空のため記録をスキップ'
       );
     });
 
@@ -97,9 +112,9 @@ describe('AuditLogService', () => {
       // 例外が投げられないことを確認
       await expect(service.log(params)).resolves.toBeUndefined();
 
-      expect(console.error).toHaveBeenCalledWith(
-        '監査ログの記録に失敗:',
-        error
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { err: error },
+        '監査ログの記録に失敗'
       );
     });
 

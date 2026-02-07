@@ -3,6 +3,9 @@ import {
   AdminSessionRepository,
   type CreateAdminSessionData,
 } from '../../repositories/admin-session.repository.js';
+import { logger as baseLogger } from '../../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'admin-session' });
 
 // セッション有効期限（2時間）
 const SESSION_EXPIRY_MS = 2 * 60 * 60 * 1000;
@@ -159,10 +162,10 @@ export class AdminSessionService {
       await this.sessionRepo.updateLastActiveAt(sessionId);
     } catch (error) {
       // セッションが存在しない場合は警告ログを出力
-      console.warn('管理者セッション活動時刻の更新に失敗:', {
+      logger.warn({
         sessionId,
         error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      }, '管理者セッション活動時刻の更新に失敗');
     }
   }
 

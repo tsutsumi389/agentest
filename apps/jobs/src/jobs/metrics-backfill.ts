@@ -7,6 +7,7 @@
  * - BACKFILL_DAYS: 遡る日数（デフォルト: 90日）
  */
 import { countActiveUsers, upsertMetric } from '../lib/metrics-utils.js';
+import { logger as baseLogger } from '../utils/logger.js';
 import {
   getJSTStartOfDay,
   getJSTLastMonday,
@@ -20,6 +21,8 @@ const DEFAULT_BACKFILL_DAYS = 90;
 // 1日のミリ秒
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
+const logger = baseLogger.child({ module: 'metrics-backfill' });
+
 /**
  * メトリクスバックフィルジョブのエントリーポイント
  */
@@ -29,7 +32,7 @@ export async function runMetricsBackfill(): Promise<void> {
     10
   );
 
-  console.log(`メトリクスバックフィル開始: 過去${backfillDays}日分`);
+  logger.info({ backfillDays }, 'メトリクスバックフィル開始');
 
   const now = new Date();
 
@@ -42,14 +45,14 @@ export async function runMetricsBackfill(): Promise<void> {
   // MAUをバックフィル
   await backfillMAU(now, backfillDays);
 
-  console.log('メトリクスバックフィル完了');
+  logger.info('メトリクスバックフィル完了');
 }
 
 /**
  * DAU（日次アクティブユーザー）のバックフィル
  */
 async function backfillDAU(now: Date, days: number): Promise<void> {
-  console.log(`DAUバックフィル開始: ${days}日分`);
+  logger.info({ days }, 'DAUバックフィル開始');
 
   let totalUpserted = 0;
   const todayStart = getJSTStartOfDay(now);
@@ -63,13 +66,14 @@ async function backfillDAU(now: Date, days: number): Promise<void> {
 
     totalUpserted++;
     if (i % 30 === 0) {
-      console.log(
-        `DAU進捗: ${i}/${days}日 (${formatDateStringJST(targetDate)}: ${count} users)`
+      logger.info(
+        { progress: i, total: days, date: formatDateStringJST(targetDate), count },
+        'DAUバックフィル進捗'
       );
     }
   }
 
-  console.log(`DAUバックフィル完了: ${totalUpserted}件`);
+  logger.info({ totalUpserted }, 'DAUバックフィル完了');
 }
 
 /**
@@ -78,7 +82,7 @@ async function backfillDAU(now: Date, days: number): Promise<void> {
 async function backfillWAU(now: Date, days: number): Promise<void> {
   // 週数を計算
   const weeks = Math.ceil(days / 7);
-  console.log(`WAUバックフィル開始: ${weeks}週分`);
+  logger.info({ weeks }, 'WAUバックフィル開始');
 
   let totalUpserted = 0;
 
@@ -95,7 +99,7 @@ async function backfillWAU(now: Date, days: number): Promise<void> {
     totalUpserted++;
   }
 
-  console.log(`WAUバックフィル完了: ${totalUpserted}件`);
+  logger.info({ totalUpserted }, 'WAUバックフィル完了');
 }
 
 /**
@@ -104,7 +108,7 @@ async function backfillWAU(now: Date, days: number): Promise<void> {
 async function backfillMAU(now: Date, days: number): Promise<void> {
   // 月数を計算
   const months = Math.ceil(days / 30);
-  console.log(`MAUバックフィル開始: ${months}ヶ月分`);
+  logger.info({ months }, 'MAUバックフィル開始');
 
   let totalUpserted = 0;
 
@@ -119,5 +123,5 @@ async function backfillMAU(now: Date, days: number): Promise<void> {
     totalUpserted++;
   }
 
-  console.log(`MAUバックフィル完了: ${totalUpserted}件`);
+  logger.info({ totalUpserted }, 'MAUバックフィル完了');
 }

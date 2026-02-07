@@ -3,6 +3,9 @@ import { prisma } from '@agentest/db';
 import { env } from '../config/env.js';
 import { tokenIntrospectionService } from '../services/token-introspection.service.js';
 import { mcpApiKeyAuthenticate, hasApiKeyHeader } from './api-key-auth.middleware.js';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'oauth-auth' });
 
 // 後方互換性のため再エクスポート
 export { SUPPORTED_SCOPES } from '../config/scopes.js';
@@ -54,7 +57,7 @@ export function mcpOAuthAuthenticate() {
 
       next();
     } catch (error) {
-      console.error('OAuth authentication error:', error);
+      logger.error({ err: error }, 'OAuth authentication error');
       sendUnauthorized(res, 'Authentication failed');
     }
   };

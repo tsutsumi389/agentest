@@ -4,28 +4,44 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // vi.hoisted() でモックオブジェクトを事前定義
-const { mockPrisma } = vi.hoisted(() => ({
-  mockPrisma: {
-    user: {
-      findMany: vi.fn(),
+const { mockPrisma, mockLogger } = vi.hoisted(() => {
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn(),
+  };
+  mockLogger.child.mockReturnValue(mockLogger);
+  return {
+    mockPrisma: {
+      user: {
+        findMany: vi.fn(),
+      },
+      projectMember: {
+        findMany: vi.fn(),
+      },
+      testCaseHistory: {
+        deleteMany: vi.fn(),
+      },
+      testSuiteHistory: {
+        deleteMany: vi.fn(),
+      },
+      projectHistory: {
+        deleteMany: vi.fn(),
+      },
     },
-    projectMember: {
-      findMany: vi.fn(),
-    },
-    testCaseHistory: {
-      deleteMany: vi.fn(),
-    },
-    testSuiteHistory: {
-      deleteMany: vi.fn(),
-    },
-    projectHistory: {
-      deleteMany: vi.fn(),
-    },
-  },
-}));
+    mockLogger,
+  };
+});
 
 vi.mock('../../lib/prisma.js', () => ({
   prisma: mockPrisma,
+}));
+
+vi.mock('../../utils/logger.js', () => ({
+  logger: mockLogger,
 }));
 
 // モック設定後にインポート
@@ -39,7 +55,6 @@ describe('runHistoryCleanup', () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2025-05-15T00:00:00.000Z'));
-    vi.spyOn(console, 'log').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -158,8 +173,15 @@ describe('runHistoryCleanup', () => {
 
     await runHistoryCleanup();
 
-    expect(console.log).toHaveBeenCalledWith(
-      expect.stringContaining(`ユーザー ${mockFreeUser.id}: 17件削除`)
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: mockFreeUser.id,
+        userTotal: 17,
+        testCaseHistory: 10,
+        testSuiteHistory: 5,
+        projectHistory: 2,
+      }),
+      'ユーザーの履歴を削除'
     );
   });
 

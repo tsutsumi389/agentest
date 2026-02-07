@@ -1,5 +1,8 @@
 import { Redis } from 'ioredis';
 import { env } from './config.js';
+import { logger as baseLogger } from './utils/logger.js';
+
+const logger = baseLogger.child({ module: 'redis' });
 
 // パブリッシャー用Redisクライアント
 export const publisher = new Redis(env.REDIS_URL);
@@ -9,19 +12,19 @@ export const subscriber = new Redis(env.REDIS_URL);
 
 // 接続イベントハンドラ
 publisher.on('connect', () => {
-  console.log('✅ Redis Publisher に接続しました');
+  logger.info('Redis Publisher に接続しました');
 });
 
 publisher.on('error', (error: Error) => {
-  console.error('❌ Redis Publisher エラー:', error);
+  logger.error({ err: error }, 'Redis Publisher エラー');
 });
 
 subscriber.on('connect', () => {
-  console.log('✅ Redis Subscriber に接続しました');
+  logger.info('Redis Subscriber に接続しました');
 });
 
 subscriber.on('error', (error: Error) => {
-  console.error('❌ Redis Subscriber エラー:', error);
+  logger.error({ err: error }, 'Redis Subscriber エラー');
 });
 
 /**

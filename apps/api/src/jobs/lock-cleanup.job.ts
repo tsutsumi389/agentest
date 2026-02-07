@@ -1,4 +1,7 @@
 import { EditLockService } from '../services/edit-lock.service.js';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'lock-cleanup' });
 
 // WebSocketイベント発火用のコールバック（オプション）
 type OnLockExpiredCallback = (lock: {
@@ -22,7 +25,7 @@ export function startLockCleanupJob(
       const result = await editLockService.processExpiredLocks();
 
       if (result.count > 0) {
-        console.log(`🔓 ${result.count}件の期限切れロックを解除しました`);
+        logger.info({ count: result.count }, '期限切れロックを解除しました');
 
         // WebSocket通知用コールバック
         if (onLockExpired) {
@@ -34,13 +37,13 @@ export function startLockCleanupJob(
                 targetId: lock.targetId,
               });
             } catch (err) {
-              console.error('ロック期限切れ通知エラー:', err);
+              logger.error({ err }, 'ロック期限切れ通知エラー');
             }
           }
         }
       }
     } catch (error) {
-      console.error('❌ ロッククリーンアップエラー:', error);
+      logger.error({ err: error }, 'ロッククリーンアップエラー');
     }
   };
 
@@ -50,7 +53,7 @@ export function startLockCleanupJob(
   // 定期実行
   const intervalId = setInterval(cleanup, intervalMs);
 
-  console.log(`🔄 ロッククリーンアップジョブを開始しました (間隔: ${intervalMs}ms)`);
+  logger.info({ intervalMs }, 'ロッククリーンアップジョブを開始しました');
 
   return intervalId;
 }
@@ -60,5 +63,5 @@ export function startLockCleanupJob(
  */
 export function stopLockCleanupJob(intervalId: NodeJS.Timeout): void {
   clearInterval(intervalId);
-  console.log('🛑 ロッククリーンアップジョブを停止しました');
+  logger.info('ロッククリーンアップジョブを停止しました');
 }

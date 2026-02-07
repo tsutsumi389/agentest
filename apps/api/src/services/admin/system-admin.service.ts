@@ -1,6 +1,9 @@
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { prisma, type Prisma, AdminRoleType } from '@agentest/db';
+import { logger as baseLogger } from '../../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'system-admin' });
 import type {
   SystemAdminSearchParams,
   SystemAdminListResponse,
@@ -448,7 +451,7 @@ export class SystemAdminService {
       invitationSent = true;
     } catch (error) {
       // メール送信失敗してもエラーにはしない（招待自体は作成済み）
-      console.error('招待メール送信失敗:', error);
+      logger.error({ err: error }, '招待メール送信失敗');
     }
 
     return {

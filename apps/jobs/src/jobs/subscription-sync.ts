@@ -7,6 +7,9 @@ import { prisma, type SubscriptionStatus } from '../lib/prisma.js';
 import { getStripeClient } from '../lib/stripe.js';
 import { DEFAULT_BATCH_SIZE } from '../lib/constants.js';
 import type Stripe from 'stripe';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'subscription-sync' });
 
 /**
  * Stripe APIの期間情報を含む型
@@ -38,7 +41,7 @@ export async function runSubscriptionSync(): Promise<void> {
   const stripe = getStripeClient();
 
   if (!stripe) {
-    console.warn('Stripeクライアントが初期化されていません。スキップします。');
+    logger.warn('Stripeクライアントが初期化されていません。スキップします。');
     return;
   }
 
@@ -48,7 +51,7 @@ export async function runSubscriptionSync(): Promise<void> {
   let totalUpdated = 0;
   let totalNotFound = 0;
 
-  console.log('サブスクリプション同期チェックを開始します');
+  logger.info('サブスクリプション同期チェックを開始します');
 
   do {
     // 有料サブスクリプション（externalIdが設定されているもの）を取得
@@ -90,12 +93,15 @@ export async function runSubscriptionSync(): Promise<void> {
         if (subscription.status !== stripeStatus) {
           totalMismatched++;
 
-          console.log(
-            `不一致検出: ${subscription.id}`,
-            `DB: ${subscription.status}, Stripe: ${stripeStatus}`,
-            subscription.userId
-              ? `(User: ${subscription.userId})`
-              : `(Org: ${subscription.organizationId})`
+          logger.info(
+            {
+              subscriptionId: subscription.id,
+              dbStatus: subscription.status,
+              stripeStatus,
+              userId: subscription.userId,
+              organizationId: subscription.organizationId,
+            },
+            '不一致検出'
           );
 
           // DBを更新
@@ -110,7 +116,7 @@ export async function runSubscriptionSync(): Promise<void> {
               where: { id: subscription.userId },
               data: { plan: 'FREE' },
             });
-            console.log(`ユーザー ${subscription.userId} のプランをFREEに更新`);
+            logger.info({ userId: subscription.userId }, 'ユーザーのプランをFREEに更新');
           }
 
           totalUpdated++;
@@ -123,10 +129,13 @@ export async function runSubscriptionSync(): Promise<void> {
           const stripeEnd = stripePeriodEnd.getTime();
           // 1日以上ずれている場合
           if (Math.abs(dbPeriodEnd - stripeEnd) > 86400000) {
-            console.log(
-              `期間終了日の不一致: ${subscription.id}`,
-              `DB: ${subscription.currentPeriodEnd.toISOString()}, ` +
-                `Stripe: ${stripePeriodEnd.toISOString()}`
+            logger.info(
+              {
+                subscriptionId: subscription.id,
+                dbPeriodEnd: subscription.currentPeriodEnd.toISOString(),
+                stripePeriodEnd: stripePeriodEnd.toISOString(),
+              },
+              '期間終了日の不一致'
             );
 
             await prisma.subscription.update({
@@ -139,11 +148,13 @@ export async function runSubscriptionSync(): Promise<void> {
         if (isStripeNotFoundError(error)) {
           // Stripeでサブスクリプションが見つからない場合
           totalNotFound++;
-          console.warn(
-            `Stripeでサブスクリプションが見つかりません: ${subscription.externalId}`,
-            subscription.userId
-              ? `(User: ${subscription.userId})`
-              : `(Org: ${subscription.organizationId})`
+          logger.warn(
+            {
+              externalId: subscription.externalId,
+              userId: subscription.userId,
+              organizationId: subscription.organizationId,
+            },
+            'Stripeでサブスクリプションが見つかりません'
           );
 
           // DBのステータスをCANCELEDに更新
@@ -161,9 +172,9 @@ export async function runSubscriptionSync(): Promise<void> {
 
           totalUpdated++;
         } else {
-          console.error(
-            `サブスクリプション ${subscription.id} のチェックに失敗:`,
-            error
+          logger.error(
+            { err: error, subscriptionId: subscription.id },
+            'サブスクリプションのチェックに失敗'
           );
         }
       }
@@ -172,11 +183,10 @@ export async function runSubscriptionSync(): Promise<void> {
     cursor = subscriptions[subscriptions.length - 1]?.id;
   } while (cursor);
 
-  console.log('サブスクリプション同期チェック完了:');
-  console.log(`  チェック件数: ${totalChecked}`);
-  console.log(`  不一致検出: ${totalMismatched}`);
-  console.log(`  更新件数: ${totalUpdated}`);
-  console.log(`  Stripe未検出: ${totalNotFound}`);
+  logger.info(
+    { totalChecked, totalMismatched, totalUpdated, totalNotFound },
+    'サブスクリプション同期チェック完了'
+  );
 }
 
 /**

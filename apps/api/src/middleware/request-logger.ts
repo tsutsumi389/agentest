@@ -1,39 +1,54 @@
+/**
+ * pino-http ベースのリクエストロガーミドルウェア
+ */
+
+import pinoHttp from 'pino-http';
 import type { Request, Response, NextFunction } from 'express';
+import { logger } from '../utils/logger.js';
 
 /**
- * リクエストにIDを付与し、処理時間をログ出力するミドルウェア
+ * pino-http ミドルウェアを作成する
  */
-export function requestLogger(req: Request, res: Response, next: NextFunction): void {
-  // リクエストIDを生成
-  const requestId = crypto.randomUUID();
-  req.requestId = requestId;
-  res.setHeader('X-Request-ID', requestId);
-
-  // リクエスト開始時刻
-  const startTime = Date.now();
-
-  // レスポンス完了時にログ出力
-  res.on('finish', () => {
-    const duration = Date.now() - startTime;
-    const logData = {
-      requestId,
+export const httpLogger = pinoHttp({
+  logger,
+  // リクエストIDの生成
+  genReqId: (req) => {
+    const existing = req.headers['x-request-id'];
+    if (existing) return Array.isArray(existing) ? existing[0] : existing;
+    return crypto.randomUUID();
+  },
+  // ステータスコードに応じたログレベル
+  customLogLevel: (_req, res, error) => {
+    if (error || (res.statusCode >= 500)) return 'error';
+    if (res.statusCode >= 400) return 'warn';
+    return 'info';
+  },
+  // 機密ヘッダーのマスク
+  serializers: {
+    req: (req) => ({
+      id: req.id,
       method: req.method,
-      url: req.originalUrl,
+      url: req.url,
+      headers: {
+        ...req.headers,
+        ...(req.headers.authorization && { authorization: '[REDACTED]' }),
+        ...(req.headers.cookie && { cookie: '[REDACTED]' }),
+      },
+    }),
+    res: (res) => ({
       statusCode: res.statusCode,
-      duration: `${duration}ms`,
-      userAgent: req.get('user-agent'),
-      ip: req.ip,
-    };
+    }),
+  },
+  // テスト時はリクエストの自動ログを無効化
+  autoLogging: process.env.NODE_ENV !== 'test',
+});
 
-    // ステータスコードに応じてログレベルを変更
-    if (res.statusCode >= 500) {
-      console.error('リクエストエラー:', JSON.stringify(logData));
-    } else if (res.statusCode >= 400) {
-      console.warn('クライアントエラー:', JSON.stringify(logData));
-    } else {
-      console.log('リクエスト完了:', JSON.stringify(logData));
-    }
-  });
-
+/**
+ * リクエストIDをreq.requestIdにコピーする後方互換ミドルウェア
+ */
+export function attachRequestId(req: Request, res: Response, next: NextFunction): void {
+  const id = req.id ?? crypto.randomUUID();
+  req.requestId = id as string;
+  res.setHeader('X-Request-ID', id as string);
   next();
 }

@@ -4,6 +4,9 @@ import {
   agentSessionRepository,
   type CreateAgentSessionData,
 } from '../repositories/agent-session.repository.js';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'agent-session' });
 
 /**
  * セッション管理の設定
@@ -125,7 +128,7 @@ export const agentSessionService = {
     const ids = timedOutSessions.map((s) => s.id);
     const count = await agentSessionRepository.markAsTimedOut(ids);
 
-    console.log(`${count}件のセッションがタイムアウトしました`);
+    logger.info({ count }, 'セッションがタイムアウトしました');
     return count;
   },
 };

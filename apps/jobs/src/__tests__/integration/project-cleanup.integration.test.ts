@@ -14,6 +14,23 @@ import {
   daysAgo,
 } from './test-helpers.js';
 
+const { mockLogger } = vi.hoisted(() => {
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn(),
+  };
+  mockLogger.child.mockReturnValue(mockLogger);
+  return { mockLogger };
+});
+
+vi.mock('../../utils/logger.js', () => ({
+  logger: mockLogger,
+}));
+
 describe('runProjectCleanup（結合テスト）', () => {
   // テストの時刻を固定して境界条件の安定性を確保
   const testDate = new Date('2025-05-15T12:00:00.000Z');
@@ -22,14 +39,12 @@ describe('runProjectCleanup（結合テスト）', () => {
     vi.useFakeTimers();
     vi.setSystemTime(testDate);
     await cleanupTestData();
-    vi.spyOn(console, 'log').mockImplementation(() => {});
-    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.clearAllMocks();
   });
 
   afterEach(async () => {
     await cleanupTestData();
     vi.useRealTimers();
-    vi.restoreAllMocks();
   });
 
   it('31日前に削除されたプロジェクトを物理削除する', async () => {
@@ -178,8 +193,9 @@ describe('runProjectCleanup（結合テスト）', () => {
 
     await expect(runProjectCleanup()).resolves.not.toThrow();
 
-    expect(console.log).toHaveBeenCalledWith(
-      expect.stringContaining('合計 0 件のプロジェクトを物理削除しました')
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ totalDeleted: 0 }),
+      'プロジェクトの物理削除が完了しました'
     );
   });
 });

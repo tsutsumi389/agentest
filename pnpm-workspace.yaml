@@ -22,9 +22,10 @@ catalog:
   helmet: "^8.0.0"
   cookie-parser: "^1.4.7"
   "@types/cookie-parser": "^1.4.7"
-  morgan: "^1.10.0"
-  "@types/morgan": "^1.9.9"
   express-rate-limit: "^7.4.0"
+  pino: "^9.7.0"
+  pino-http: "^10.3.0"
+  pino-pretty: "^13.0.0"
 
   # Database & ORM
   prisma: "^6.0.0"

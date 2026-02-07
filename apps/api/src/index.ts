@@ -5,6 +5,7 @@ import { startLockCleanupJob, stopLockCleanupJob } from './jobs/lock-cleanup.job
 import { closeRedisPublisher } from './lib/redis-publisher.js';
 import { closeEventsPublisher } from './lib/events.js';
 import { registerProcessHandlers, type ShutdownFn } from '@agentest/shared';
+import { logger } from './utils/logger.js';
 
 // シャットダウン重複実行防止フラグ
 let isShuttingDown = false;
@@ -15,6 +16,7 @@ let shutdownFn: ShutdownFn | null = null;
 // プロセスレベルの例外ハンドラ（起動中のエラーもキャッチするためモジュールレベルで登録）
 registerProcessHandlers({
   getShutdownFn: () => shutdownFn,
+  logger,
 });
 
 /**
@@ -24,9 +26,9 @@ async function main() {
   // データベース接続確認
   try {
     await prisma.$connect();
-    console.log('✅ データベースに接続しました');
+    logger.info('データベースに接続しました');
   } catch (error) {
-    console.error('❌ データベース接続エラー:', error);
+    logger.fatal({ err: error }, 'データベース接続エラー');
     process.exit(1);
   }
 
@@ -37,45 +39,45 @@ async function main() {
 
   // サーバー起動
   const server = app.listen(env.PORT, env.HOST, () => {
-    console.log(`🚀 APIサーバーが起動しました: http://${env.HOST}:${env.PORT}`);
-    console.log(`📝 環境: ${env.NODE_ENV}`);
+    logger.info({ host: env.HOST, port: env.PORT }, 'APIサーバーが起動しました');
+    logger.info({ env: env.NODE_ENV }, '環境情報');
   });
 
   // グレースフルシャットダウン
   const shutdown: ShutdownFn = async (signal, exitCode = 0) => {
     if (isShuttingDown) {
-      console.log(`シャットダウン処理中のため ${signal} を無視します`);
+      logger.warn({ signal }, 'シャットダウン処理中のため無視します');
       return;
     }
     isShuttingDown = true;
 
-    console.log(`\n${signal} を受信しました。シャットダウンを開始します...`);
+    logger.info({ signal }, 'シャットダウンを開始します');
 
     // ジョブを停止
     stopLockCleanupJob(lockCleanupJobId);
 
     server.close(async () => {
-      console.log('HTTPサーバーを終了しました');
+      logger.info('HTTPサーバーを終了しました');
 
       try {
         await closeRedisPublisher();
-        console.log('Redis Publisher接続を終了しました');
+        logger.info('Redis Publisher接続を終了しました');
       } catch (error) {
-        console.error('Redis Publisher切断エラー:', error);
+        logger.error({ err: error }, 'Redis Publisher切断エラー');
       }
 
       try {
         await closeEventsPublisher();
-        console.log('Redis Events Publisher接続を終了しました');
+        logger.info('Redis Events Publisher接続を終了しました');
       } catch (error) {
-        console.error('Redis Events Publisher切断エラー:', error);
+        logger.error({ err: error }, 'Redis Events Publisher切断エラー');
       }
 
       try {
         await prisma.$disconnect();
-        console.log('データベース接続を終了しました');
+        logger.info('データベース接続を終了しました');
       } catch (error) {
-        console.error('データベース切断エラー:', error);
+        logger.error({ err: error }, 'データベース切断エラー');
       }
 
       process.exit(exitCode);
@@ -83,7 +85,7 @@ async function main() {
 
     // 強制終了タイムアウト
     setTimeout(() => {
-      console.error('タイムアウト: 強制終了します');
+      logger.fatal({ exitCode: 1 }, 'タイムアウト: 強制終了します');
       process.exit(1);
     }, 10000).unref();
   };
@@ -96,6 +98,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error('サーバー起動エラー:', error);
+  logger.fatal({ err: error }, 'サーバー起動エラー');
   process.exit(1);
 });

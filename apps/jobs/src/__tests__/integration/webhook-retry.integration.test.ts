@@ -11,17 +11,31 @@ import {
   cleanupTestData,
 } from './test-helpers.js';
 
+const { mockLogger } = vi.hoisted(() => {
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn(),
+  };
+  mockLogger.child.mockReturnValue(mockLogger);
+  return { mockLogger };
+});
+
+vi.mock('../../utils/logger.js', () => ({
+  logger: mockLogger,
+}));
+
 describe('runWebhookRetry（結合テスト）', () => {
   beforeEach(async () => {
     await cleanupTestData();
-    vi.spyOn(console, 'log').mockImplementation(() => {});
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    vi.clearAllMocks();
   });
 
   afterEach(async () => {
     await cleanupTestData();
-    vi.restoreAllMocks();
   });
 
   it('FAILEDイベント再処理でInvoiceを作成する', async () => {
@@ -250,7 +264,7 @@ describe('runWebhookRetry（結合テスト）', () => {
 
     await runWebhookRetry();
 
-    expect(console.log).toHaveBeenCalledWith(
+    expect(mockLogger.info).toHaveBeenCalledWith(
       'リトライ対象のイベントはありません'
     );
   });

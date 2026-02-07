@@ -4,6 +4,9 @@ import { TestSuiteRepository } from '../repositories/test-suite.repository.js';
 import { TestCaseRepository, type TestCaseSearchOptions } from '../repositories/test-case.repository.js';
 import { publishDashboardUpdated } from '../lib/redis-publisher.js';
 import { publishTestSuiteUpdated } from '../lib/events.js';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'test-suite' });
 
 /**
  * テストスイートのスナップショット型（基本情報）
@@ -302,7 +305,7 @@ export class TestSuiteService {
         { type: 'user', id: userId, name: user?.name || 'Unknown' }
       );
     } catch (error) {
-      console.error('イベント発行エラー:', error);
+      logger.error({ err: error }, 'イベント発行エラー');
     }
 
     return precondition;
@@ -369,7 +372,7 @@ export class TestSuiteService {
         { type: 'user', id: userId, name: user?.name || 'Unknown' }
       );
     } catch (error) {
-      console.error('イベント発行エラー:', error);
+      logger.error({ err: error }, 'イベント発行エラー');
     }
 
     return result;
@@ -445,7 +448,7 @@ export class TestSuiteService {
         { type: 'user', id: userId, name: user?.name || 'Unknown' }
       );
     } catch (error) {
-      console.error('イベント発行エラー:', error);
+      logger.error({ err: error }, 'イベント発行エラー');
     }
   }
 
@@ -529,7 +532,7 @@ export class TestSuiteService {
         { type: 'user', id: userId, name: user?.name || 'Unknown' }
       );
     } catch (error) {
-      console.error('イベント発行エラー:', error);
+      logger.error({ err: error }, 'イベント発行エラー');
     }
 
     // 更新後の前提条件一覧を返す
@@ -964,7 +967,7 @@ export class TestSuiteService {
         { type: 'user', id: userId, name: user?.name || 'Unknown' }
       );
     } catch (error) {
-      console.error('イベント発行エラー:', error);
+      logger.error({ err: error }, 'イベント発行エラー');
     }
 
     // 更新後のテストケース一覧を返却

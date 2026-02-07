@@ -1,6 +1,9 @@
 import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
 import { env } from '../config/env.js';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'email' });
 
 /**
  * メール送信パラメータ
@@ -73,18 +76,18 @@ class EmailService {
 
       // 開発環境ではログ出力
       if (env.NODE_ENV !== 'production') {
-        console.log('📧 [EMAIL SENT]', {
+        logger.info({
           to,
           subject,
           mailpitUrl: 'http://localhost:8025',
-        });
+        }, 'メール送信完了');
       }
     } catch (error) {
-      console.error('📧 [EMAIL ERROR]', {
+      logger.error({
+        err: error,
         to,
         subject,
-        error: error instanceof Error ? error.message : 'Unknown error',
-      });
+      }, 'メール送信エラー');
       // エラーは握りつぶさず、呼び出し元でハンドリングできるようにする
       // ただし、通知送信失敗でアプリ全体がクラッシュしないよう注意
       throw error;

@@ -1,4 +1,8 @@
 import { z } from 'zod';
+import { createLogger } from '@agentest/shared/logger';
+
+// env.ts は他のモジュールより先に評価されるため、共有loggerではなく直接生成する
+const logger = createLogger({ service: 'api' }).child({ module: 'env' });
 
 // 本番環境かどうかを判定
 const isProduction = process.env.NODE_ENV === 'production';
@@ -79,8 +83,7 @@ function validateEnv() {
   const parsed = envSchema.safeParse(process.env);
 
   if (!parsed.success) {
-    console.error('❌ 環境変数のバリデーションエラー:');
-    console.error(parsed.error.flatten().fieldErrors);
+    logger.fatal({ fieldErrors: parsed.error.flatten().fieldErrors }, '環境変数のバリデーションエラー');
     throw new Error('環境変数が不正です');
   }
 

@@ -27,6 +27,10 @@
     "./process": {
       "import": "./dist/process/index.js",
       "types": "./dist/process/index.d.ts"
+    },
+    "./logger": {
+      "import": "./dist/logger/index.js",
+      "types": "./dist/logger/index.d.ts"
     }
   },
   "scripts": {
@@ -39,6 +43,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "pino": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {

@@ -9,6 +9,23 @@ import {
   cleanupTestData,
 } from './test-helpers.js';
 
+const { mockLogger } = vi.hoisted(() => {
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn(),
+  };
+  mockLogger.child.mockReturnValue(mockLogger);
+  return { mockLogger };
+});
+
+vi.mock('../../utils/logger.js', () => ({
+  logger: mockLogger,
+}));
+
 // Stripeをモック
 const mockStripe = {
   subscriptions: {
@@ -27,14 +44,10 @@ describe('runSubscriptionSync（結合テスト）', () => {
   beforeEach(async () => {
     await cleanupTestData();
     vi.clearAllMocks();
-    vi.spyOn(console, 'log').mockImplementation(() => {});
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
-    vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(async () => {
     await cleanupTestData();
-    vi.restoreAllMocks();
   });
 
   it('DBとStripeのステータス不一致を修正する', async () => {
@@ -197,11 +210,9 @@ describe('runSubscriptionSync（結合テスト）', () => {
     await runSubscriptionSync();
 
     // チェックのみで更新はされていないことを確認
-    expect(console.log).toHaveBeenCalledWith(
-      expect.stringContaining('不一致検出: 0')
-    );
-    expect(console.log).toHaveBeenCalledWith(
-      expect.stringContaining('更新件数: 0')
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ totalMismatched: 0, totalUpdated: 0 }),
+      'サブスクリプション同期チェック完了'
     );
   });
 

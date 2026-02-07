@@ -350,10 +350,10 @@ export class OrganizationService {
     try {
       await this.orgSubscriptionService.syncMemberCount(invitation.organizationId);
     } catch (error) {
-      logger.warn('Failed to sync member count after invitation acceptance', {
+      logger.warn({
         organizationId: invitation.organizationId,
         error: error instanceof Error ? error.message : String(error),
-      });
+      }, 'Failed to sync member count after invitation acceptance');
     }
 
     return member;
@@ -464,10 +464,10 @@ export class OrganizationService {
     try {
       await this.orgSubscriptionService.syncMemberCount(organizationId);
     } catch (error) {
-      logger.warn('Failed to sync member count after member removal', {
+      logger.warn({
         organizationId,
         error: error instanceof Error ? error.message : String(error),
-      });
+      }, 'Failed to sync member count after member removal');
     }
 
     return result;

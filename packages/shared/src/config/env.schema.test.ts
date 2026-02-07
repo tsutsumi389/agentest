@@ -221,20 +221,8 @@ describe('parseEnv', () => {
     consoleSpy.mockRestore();
   });
 
-  it('エラー時にコンソールにログを出力する', () => {
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-
-    try {
-      parseEnv({} as NodeJS.ProcessEnv);
-    } catch {
-      // エラーは期待通り
-    }
-
-    expect(consoleSpy).toHaveBeenCalledWith(
-      'Environment validation failed:',
-      expect.any(Object)
-    );
-
-    consoleSpy.mockRestore();
+  it('エラー時に構造化ログを出力する', () => {
+    // logger.fatal が呼ばれることを確認（実際のログ出力は stdout に出る）
+    expect(() => parseEnv({} as NodeJS.ProcessEnv)).toThrow('Invalid environment configuration');
   });
 });

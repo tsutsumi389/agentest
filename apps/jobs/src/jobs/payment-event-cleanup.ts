@@ -8,14 +8,18 @@ import {
   MAX_RETRY_COUNT,
   PAYMENT_EVENT_RETENTION_DAYS,
 } from '../lib/constants.js';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'payment-event-cleanup' });
 
 export async function runPaymentEventCleanup(): Promise<void> {
   // 削除基準日
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - PAYMENT_EVENT_RETENTION_DAYS);
 
-  console.log(
-    `削除対象: ${PAYMENT_EVENT_RETENTION_DAYS}日以上前の処理済みイベント（基準日: ${cutoffDate.toISOString()}）`
+  logger.info(
+    { retentionDays: PAYMENT_EVENT_RETENTION_DAYS, cutoffDate: cutoffDate.toISOString() },
+    '削除対象の処理済みイベントを検索'
   );
 
   // 処理済み（PROCESSED）イベントを削除
@@ -26,7 +30,7 @@ export async function runPaymentEventCleanup(): Promise<void> {
     },
   });
 
-  console.log(`処理済みイベント: ${processedResult.count}件を削除`);
+  logger.info({ count: processedResult.count }, '処理済みイベントを削除');
 
   // 古い失敗イベント（最大リトライ回数に達したもの）も削除
   const failedResult = await prisma.paymentEvent.deleteMany({
@@ -37,12 +41,10 @@ export async function runPaymentEventCleanup(): Promise<void> {
     },
   });
 
-  console.log(
-    `失敗イベント（リトライ上限到達）: ${failedResult.count}件を削除`
-  );
+  logger.info({ count: failedResult.count }, '失敗イベント（リトライ上限到達）を削除');
 
   const totalDeleted = processedResult.count + failedResult.count;
-  console.log(`合計 ${totalDeleted} 件のイベントを削除しました`);
+  logger.info({ totalDeleted }, 'イベントの削除が完了しました');
 
   // 残りのイベント数をレポート
   const remainingCounts = await prisma.paymentEvent.groupBy({
@@ -50,8 +52,8 @@ export async function runPaymentEventCleanup(): Promise<void> {
     _count: { status: true },
   });
 
-  console.log('残りのイベント数:');
-  for (const { status, _count } of remainingCounts) {
-    console.log(`  ${status}: ${_count.status}件`);
-  }
+  const remaining = Object.fromEntries(
+    remainingCounts.map(({ status, _count }) => [status, _count.status])
+  );
+  logger.info({ remaining }, '残りのイベント数');
 }

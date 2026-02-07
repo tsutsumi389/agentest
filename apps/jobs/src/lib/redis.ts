@@ -2,6 +2,9 @@
  * Redisクライアント初期化
  */
 import { Redis } from 'ioredis';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'redis' });
 
 let redisClient: Redis | null = null;
 
@@ -13,17 +16,17 @@ export function getRedisClient(): Redis | null {
   const redisUrl = process.env.REDIS_URL;
 
   if (!redisUrl) {
-    console.warn('[Jobs] REDIS_URLが設定されていません');
+    logger.warn('REDIS_URLが設定されていません');
     return null;
   }
 
   if (!redisClient) {
     redisClient = new Redis(redisUrl);
     redisClient.on('connect', () => {
-      console.log('[Jobs] Redisに接続しました');
+      logger.info('Redisに接続しました');
     });
     redisClient.on('error', (error: Error) => {
-      console.error('[Jobs] Redisエラー:', error);
+      logger.error({ err: error }, 'Redisエラー');
     });
   }
 
@@ -37,6 +40,6 @@ export async function closeRedis(): Promise<void> {
   if (redisClient) {
     await redisClient.quit();
     redisClient = null;
-    console.log('[Jobs] Redis接続をクローズしました');
+    logger.info('Redis接続をクローズしました');
   }
 }

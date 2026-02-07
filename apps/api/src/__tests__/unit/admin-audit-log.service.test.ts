@@ -1,5 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// ロガーのモック
+const { mockLogger } = vi.hoisted(() => {
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn(),
+  };
+  mockLogger.child.mockReturnValue(mockLogger);
+  return { mockLogger };
+});
+
+vi.mock('../../utils/logger.js', () => ({
+  logger: mockLogger,
+}));
+
 // prismaモック（vi.hoistedを使用）
 const mockPrisma = vi.hoisted(() => ({
   adminAuditLog: {
@@ -80,37 +98,28 @@ describe('AdminAuditLogService', () => {
     });
 
     it('actionが空の場合は記録をスキップ', async () => {
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
       await service.log({
         adminUserId: 'admin-1',
         action: '',
       });
 
       expect(mockPrisma.adminAuditLog.create).not.toHaveBeenCalled();
-      expect(consoleSpy).toHaveBeenCalledWith(
-        '管理者監査ログ: actionが空のため記録をスキップ',
-        expect.any(Object)
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.any(Object) }),
+        '管理者監査ログ: actionが空のため記録をスキップ'
       );
-
-      consoleSpy.mockRestore();
     });
 
     it('actionが空白のみの場合も記録をスキップ', async () => {
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
       await service.log({
         adminUserId: 'admin-1',
         action: '   ',
       });
 
       expect(mockPrisma.adminAuditLog.create).not.toHaveBeenCalled();
-
-      consoleSpy.mockRestore();
     });
 
     it('DB書込みエラー時もメイン処理に影響しない（Promiseはresolveする）', async () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       mockPrisma.adminAuditLog.create.mockRejectedValue(new Error('DB connection error'));
 
       // エラーがスローされず、Promiseがresolveすることを確認
@@ -122,12 +131,10 @@ describe('AdminAuditLogService', () => {
       ).resolves.toBeUndefined();
 
       // エラーログが出力されることを確認
-      expect(consoleSpy).toHaveBeenCalledWith(
-        '管理者監査ログの記録に失敗:',
-        expect.any(Error)
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { err: expect.any(Error) },
+        '管理者監査ログの記録に失敗'
       );
-
-      consoleSpy.mockRestore();
     });
   });
 });

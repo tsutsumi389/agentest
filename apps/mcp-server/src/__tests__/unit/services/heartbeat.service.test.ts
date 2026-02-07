@@ -1,5 +1,23 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+// loggerのモック
+const { mockLogger } = vi.hoisted(() => {
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn(),
+  };
+  mockLogger.child.mockReturnValue(mockLogger);
+  return { mockLogger };
+});
+
+vi.mock('../../../utils/logger.js', () => ({
+  logger: mockLogger,
+}));
+
 // agentSessionServiceのモック
 const mockAgentSessionService = vi.hoisted(() => ({
   processTimedOutSessions: vi.fn(),
@@ -69,20 +87,15 @@ describe('HeartbeatService', () => {
     });
 
     it('すでに起動中の場合は警告して何もしない', () => {
-      const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-
       heartbeatService.start(1000);
       heartbeatService.start(1000);
 
-      expect(consoleSpy).toHaveBeenCalledWith(
+      expect(mockLogger.warn).toHaveBeenCalledWith(
         'ハートビートサービスは既に起動しています'
       );
-
-      consoleSpy.mockRestore();
     });
 
     it('タイムアウトチェックでエラーが発生してもクラッシュしない', async () => {
-      const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       mockAgentSessionService.processTimedOutSessions.mockRejectedValue(
         new Error('Database error')
       );
@@ -92,12 +105,10 @@ describe('HeartbeatService', () => {
       // エラーが発生しても継続
       await vi.runOnlyPendingTimersAsync();
 
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        'ハートビートチェックエラー:',
-        expect.any(Error)
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { err: expect.any(Error) },
+        'ハートビートチェックエラー'
       );
-
-      consoleErrorSpy.mockRestore();
     });
   });
 

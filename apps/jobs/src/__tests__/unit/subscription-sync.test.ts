@@ -4,12 +4,21 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // vi.hoisted() でモックオブジェクトを事前定義
-const { mockPrisma, mockGetStripeClient, mockStripe } = vi.hoisted(() => {
+const { mockPrisma, mockGetStripeClient, mockStripe, mockLogger } = vi.hoisted(() => {
   const mockStripe = {
     subscriptions: {
       retrieve: vi.fn(),
     },
   };
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn(),
+  };
+  mockLogger.child.mockReturnValue(mockLogger);
   return {
     mockPrisma: {
       subscription: {
@@ -22,6 +31,7 @@ const { mockPrisma, mockGetStripeClient, mockStripe } = vi.hoisted(() => {
     },
     mockGetStripeClient: vi.fn(),
     mockStripe,
+    mockLogger,
   };
 });
 
@@ -31,6 +41,10 @@ vi.mock('../../lib/prisma.js', () => ({
 
 vi.mock('../../lib/stripe.js', () => ({
   getStripeClient: mockGetStripeClient,
+}));
+
+vi.mock('../../utils/logger.js', () => ({
+  logger: mockLogger,
 }));
 
 // モック設定後にインポート
@@ -49,9 +63,6 @@ describe('runSubscriptionSync', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(console, 'log').mockImplementation(() => {});
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
-    vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -63,7 +74,7 @@ describe('runSubscriptionSync', () => {
 
     await runSubscriptionSync();
 
-    expect(console.warn).toHaveBeenCalledWith(
+    expect(mockLogger.warn).toHaveBeenCalledWith(
       'Stripeクライアントが初期化されていません。スキップします。'
     );
     expect(mockPrisma.subscription.findMany).not.toHaveBeenCalled();
@@ -176,9 +187,13 @@ describe('runSubscriptionSync', () => {
       where: { id: 'user-1' },
       data: { plan: 'FREE' },
     });
-    expect(console.warn).toHaveBeenCalledWith(
-      expect.stringContaining('Stripeでサブスクリプションが見つかりません: sub_stripe_123'),
-      expect.stringContaining('(User: user-1)')
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        externalId: 'sub_stripe_123',
+        userId: 'user-1',
+        organizationId: null,
+      }),
+      'Stripeでサブスクリプションが見つかりません'
     );
   });
 
@@ -316,11 +331,15 @@ describe('runSubscriptionSync', () => {
 
     await runSubscriptionSync();
 
-    expect(console.log).toHaveBeenCalledWith('サブスクリプション同期チェック完了:');
-    expect(console.log).toHaveBeenCalledWith('  チェック件数: 1');
-    expect(console.log).toHaveBeenCalledWith('  不一致検出: 0');
-    expect(console.log).toHaveBeenCalledWith('  更新件数: 0');
-    expect(console.log).toHaveBeenCalledWith('  Stripe未検出: 0');
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      expect.objectContaining({
+        totalChecked: 1,
+        totalMismatched: 0,
+        totalUpdated: 0,
+        totalNotFound: 0,
+      }),
+      'サブスクリプション同期チェック完了'
+    );
   });
 
   it('カーソルベースバッチ処理が正しく動作する', async () => {

@@ -1,4 +1,7 @@
 import { prisma, type Prisma } from '@agentest/db';
+import { logger as baseLogger } from '../../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'admin-audit-log' });
 
 /**
  * 監査ログ作成用の型
@@ -27,7 +30,7 @@ export class AdminAuditLogService {
   async log(input: AdminAuditLogInput): Promise<void> {
     // バリデーション: actionは必須かつ空文字でない
     if (!input.action || input.action.trim() === '') {
-      console.warn('管理者監査ログ: actionが空のため記録をスキップ', input);
+      logger.warn({ data: input }, '管理者監査ログ: actionが空のため記録をスキップ');
       return;
     }
 
@@ -45,7 +48,7 @@ export class AdminAuditLogService {
       });
     } catch (error) {
       // ログ記録の失敗は警告としてログ出力し、呼び出し元に伝播させない
-      console.error('管理者監査ログの記録に失敗:', error);
+      logger.error({ err: error }, '管理者監査ログの記録に失敗');
     }
   }
 }

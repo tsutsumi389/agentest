@@ -3,6 +3,9 @@
  */
 import nodemailer from 'nodemailer';
 import type { Transporter } from 'nodemailer';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'email' });
 
 /**
  * メール送信パラメータ
@@ -46,7 +49,7 @@ function getTransporter(): Transporter {
       : undefined,
   });
 
-  console.log('[Jobs] SMTPトランスポーターを初期化しました');
+  logger.info('SMTPトランスポーターを初期化しました');
   return transporter;
 }
 
@@ -67,6 +70,6 @@ export async function sendEmail(params: SendEmailParams): Promise<void> {
     html,
   });
 
-  console.log(`[Jobs] メール送信: ${to} - ${subject}`);
+  logger.info({ to, subject }, 'メール送信');
 }
 

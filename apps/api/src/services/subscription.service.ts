@@ -142,13 +142,13 @@ export class SubscriptionService {
       data: { plan },
     });
 
-    logger.info('Subscription created', {
+    logger.info({
       userId,
       subscriptionId: subscription.id,
       externalId: gatewayResult.id,
       plan,
       billingCycle,
-    });
+    }, 'Subscription created');
 
     return this.toResponse(subscription);
   }
@@ -180,12 +180,12 @@ export class SubscriptionService {
       cancelAtPeriodEnd: true,
     });
 
-    logger.info('Subscription cancellation scheduled', {
+    logger.info({
       userId,
       subscriptionId: subscription.id,
       externalId: subscription.externalId,
       currentPeriodEnd: subscription.currentPeriodEnd,
-    });
+    }, 'Subscription cancellation scheduled');
 
     return this.toResponse(updated);
   }
@@ -213,11 +213,11 @@ export class SubscriptionService {
       cancelAtPeriodEnd: false,
     });
 
-    logger.info('Subscription reactivated', {
+    logger.info({
       userId,
       subscriptionId: subscription.id,
       externalId: subscription.externalId,
-    });
+    }, 'Subscription reactivated');
 
     return this.toResponse(updated);
   }
@@ -282,12 +282,12 @@ export class SubscriptionService {
       };
     } catch (error) {
       // 日割り計算に失敗した場合はログ出力して単純な価格を返す
-      logger.warn('Failed to calculate proration', {
+      logger.warn({
         userId,
         plan,
         billingCycle,
         error: error instanceof Error ? error.message : String(error),
-      });
+      }, 'Failed to calculate proration');
       return {
         plan,
         billingCycle,

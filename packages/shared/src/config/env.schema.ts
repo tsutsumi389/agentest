@@ -1,4 +1,7 @@
 import { z } from 'zod';
+import { createLogger } from '../logger/index.js';
+
+const logger = createLogger({ service: 'shared' }).child({ module: 'env' });
 
 export const envSchema = z.object({
   // ノード環境
@@ -50,7 +53,7 @@ export function parseEnv(env: NodeJS.ProcessEnv = process.env): Env {
   const result = envSchema.safeParse(env);
   if (!result.success) {
     const formatted = result.error.format();
-    console.error('Environment validation failed:', formatted);
+    logger.fatal({ errors: formatted }, 'Environment validation failed');
     throw new Error('Invalid environment configuration');
   }
   return result.data;

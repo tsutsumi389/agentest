@@ -13,6 +13,7 @@ import { runPlanDistributionAggregation } from './jobs/plan-distribution-aggrega
 import { closeRedis } from './lib/redis.js';
 import { closePrisma } from './lib/prisma.js';
 import { registerProcessHandlers } from '@agentest/shared';
+import { logger } from './utils/logger.js';
 
 // リソースクリーンアップ
 async function cleanup() {
@@ -48,20 +49,19 @@ async function main() {
   const jobName = process.env.JOB_NAME;
 
   if (!jobName || !jobs[jobName]) {
-    console.error(`不明なジョブ: ${jobName}`);
-    console.error(`利用可能なジョブ: ${Object.keys(jobs).join(', ')}`);
+    logger.error({ jobName, availableJobs: Object.keys(jobs) }, '不明なジョブ');
     process.exit(1);
   }
 
-  console.log(`ジョブ開始: ${jobName}`);
+  logger.info({ jobName }, 'ジョブ開始');
   const startTime = Date.now();
 
   try {
     await jobs[jobName]();
     const duration = Date.now() - startTime;
-    console.log(`ジョブ ${jobName} が正常に完了しました（${duration}ms）`);
+    logger.info({ jobName, duration }, 'ジョブが正常に完了しました');
   } catch (error) {
-    console.error(`ジョブ ${jobName} が失敗しました:`, error);
+    logger.error({ err: error, jobName }, 'ジョブが失敗しました');
     process.exit(1);
   } finally {
     // リソースのクリーンアップ

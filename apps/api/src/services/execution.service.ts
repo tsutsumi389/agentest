@@ -6,6 +6,9 @@ import { ExecutionRepository } from '../repositories/execution.repository.js';
 import { MAX_EVIDENCES_PER_RESULT } from '../config/upload.js';
 import { publishDashboardUpdated } from '../lib/redis-publisher.js';
 import { notificationService } from './notification.service.js';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'execution' });
 
 /**
  * 実施者情報のコンテキスト
@@ -198,7 +201,7 @@ export class ExecutionService {
         executor?.userId
       );
     } catch (error) {
-      console.error('テスト完了通知の送信に失敗しました:', error);
+      logger.error({ err: error }, 'テスト完了通知の送信に失敗しました');
     }
 
     return updated;

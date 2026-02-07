@@ -1,5 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// ロガーのモック
+const { mockLogger } = vi.hoisted(() => {
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn(),
+  };
+  mockLogger.child.mockReturnValue(mockLogger);
+  return { mockLogger };
+});
+
+vi.mock('../../utils/logger.js', () => ({
+  logger: mockLogger,
+}));
+
 // Redisモック
 const mockRedisInstance = vi.hoisted(() => ({
   publish: vi.fn().mockResolvedValue(1),
@@ -56,12 +74,10 @@ describe('redis-publisher', () => {
 
     it('publishエラー時はエラーログを出力して処理継続する', async () => {
       mockRedisInstance.publish.mockRejectedValueOnce(new Error('publish error'));
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
       // エラーがスローされないことを確認
       await expect(publishEvent('channel', { test: true })).resolves.toBeUndefined();
-      expect(consoleSpy).toHaveBeenCalled();
-      consoleSpy.mockRestore();
+      expect(mockLogger.error).toHaveBeenCalled();
     });
   });
 

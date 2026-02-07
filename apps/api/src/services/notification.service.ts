@@ -5,6 +5,9 @@ import { NotificationRepository } from '../repositories/notification.repository.
 import { emailService } from './email.service.js';
 import { publishEvent } from '../lib/redis-publisher.js';
 import { Channels } from '@agentest/ws-types';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'notification' });
 
 /**
  * 通知送信パラメータ
@@ -82,7 +85,7 @@ export class NotificationService {
         await this.sendEmailNotification(userId, type, title, body, data);
       } catch (error) {
         // メール送信失敗はログに記録するが、アプリ内通知は既に完了しているため例外を投げない
-        console.error('メール通知の送信に失敗しました:', error);
+        logger.error({ err: error }, 'メール通知の送信に失敗しました');
       }
     }
   }

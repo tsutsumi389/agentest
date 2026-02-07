@@ -2,6 +2,9 @@ import type { Request, Response, NextFunction } from 'express';
 import type { AgentSession } from '@agentest/db';
 import { BadRequestError, AuthorizationError } from '@agentest/shared';
 import { agentSessionService } from '../services/agent-session.service.js';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'agent-session' });
 
 /**
  * MCPクライアント情報
@@ -89,8 +92,9 @@ export function agentSession(options: AgentSessionOptions) {
       });
 
       if (isNew) {
-        console.log(
-          `新しいAgentセッションを作成: ${session.id} (client: ${clientInfo.clientId})`
+        logger.info(
+          { sessionId: session.id, clientId: clientInfo.clientId },
+          '新しいAgentセッションを作成'
         );
       }
 
@@ -121,7 +125,7 @@ export function recordHeartbeat() {
       next();
     } catch (error) {
       // ハートビート更新失敗は致命的ではないのでログのみ
-      console.error('ハートビート更新エラー:', error);
+      logger.error({ err: error }, 'ハートビート更新エラー');
       next();
     }
   };

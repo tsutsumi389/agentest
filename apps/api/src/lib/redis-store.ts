@@ -1,5 +1,8 @@
 import { Redis } from 'ioredis';
 import { env } from '../config/env.js';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'redis-store' });
 
 // Redis接続インスタンス（遅延初期化）
 let redisClient: Redis | null = null;
@@ -36,7 +39,7 @@ let redisWarningShown = false;
  */
 function warnRedisNotConfigured(): void {
   if (!redisWarningShown && !isProduction) {
-    console.warn(REDIS_NOT_CONFIGURED_WARNING);
+    logger.warn(REDIS_NOT_CONFIGURED_WARNING);
     redisWarningShown = true;
   }
 }
@@ -64,11 +67,11 @@ export function getRedisClient(): Redis | null {
     redisClient = new Redis(env.REDIS_URL);
 
     redisClient.on('connect', () => {
-      console.log('[Redis Store] 接続しました');
+      logger.info('Redis Store 接続しました');
     });
 
     redisClient.on('error', (error: Error) => {
-      console.error('[Redis Store] エラー:', error);
+      logger.error({ err: error }, 'Redis Store エラー');
     });
   }
 
@@ -101,7 +104,7 @@ export async function setTotpSetupSecret(
     await redis.setex(key, ttlSeconds, secret);
     return true;
   } catch (error) {
-    console.error('TOTP秘密鍵の保存に失敗:', error);
+    logger.error({ err: error }, 'TOTP秘密鍵の保存に失敗');
     return false;
   }
 }
@@ -122,7 +125,7 @@ export async function getTotpSetupSecret(
     const key = `${KEY_PREFIX.TOTP_SETUP}${adminUserId}`;
     return await redis.get(key);
   } catch (error) {
-    console.error('TOTP秘密鍵の取得に失敗:', error);
+    logger.error({ err: error }, 'TOTP秘密鍵の取得に失敗');
     return null;
   }
 }
@@ -144,7 +147,7 @@ export async function deleteTotpSetupSecret(
     await redis.del(key);
     return true;
   } catch (error) {
-    console.error('TOTP秘密鍵の削除に失敗:', error);
+    logger.error({ err: error }, 'TOTP秘密鍵の削除に失敗');
     return false;
   }
 }
@@ -177,7 +180,7 @@ export async function markTotpCodeUsed(
     // 設定に成功した場合は 'OK'、キーが既に存在する場合はnull
     return result === 'OK';
   } catch (error) {
-    console.error('TOTPコードの使用済みマークに失敗:', error);
+    logger.error({ err: error }, 'TOTPコードの使用済みマークに失敗');
     return false;
   }
 }
@@ -205,7 +208,7 @@ export async function isTotpCodeUsed(
     const result = await redis.exists(key);
     return result === 1;
   } catch (error) {
-    console.error('TOTPコードの使用済み確認に失敗:', error);
+    logger.error({ err: error }, 'TOTPコードの使用済み確認に失敗');
     return false;
   }
 }
@@ -243,7 +246,7 @@ export async function setAdminDashboardCache<T>(
     await redis.setex(key, ttlSeconds, JSON.stringify(stats));
     return true;
   } catch (error) {
-    console.error('管理者ダッシュボードキャッシュの保存に失敗:', error);
+    logger.error({ err: error }, '管理者ダッシュボードキャッシュの保存に失敗');
     return false;
   }
 }
@@ -265,7 +268,7 @@ export async function getAdminDashboardCache<T>(): Promise<T | null> {
     }
     return JSON.parse(data) as T;
   } catch (error) {
-    console.error('管理者ダッシュボードキャッシュの取得に失敗:', error);
+    logger.error({ err: error }, '管理者ダッシュボードキャッシュの取得に失敗');
     return null;
   }
 }
@@ -284,7 +287,7 @@ export async function invalidateAdminDashboardCache(): Promise<boolean> {
     await redis.del(key);
     return true;
   } catch (error) {
-    console.error('管理者ダッシュボードキャッシュの無効化に失敗:', error);
+    logger.error({ err: error }, '管理者ダッシュボードキャッシュの無効化に失敗');
     return false;
   }
 }
@@ -327,7 +330,7 @@ export async function setAdminUsersCache<T>(
     await redis.setex(key, ttlSeconds, JSON.stringify(data));
     return true;
   } catch (error) {
-    console.error('管理者ユーザー一覧キャッシュの保存に失敗:', error);
+    logger.error({ err: error }, '管理者ユーザー一覧キャッシュの保存に失敗');
     return false;
   }
 }
@@ -352,7 +355,7 @@ export async function getAdminUsersCache<T>(
     }
     return JSON.parse(data) as T;
   } catch (error) {
-    console.error('管理者ユーザー一覧キャッシュの取得に失敗:', error);
+    logger.error({ err: error }, '管理者ユーザー一覧キャッシュの取得に失敗');
     return null;
   }
 }
@@ -381,7 +384,7 @@ export async function getAdminUserDetailCache<T>(
     }
     return JSON.parse(data) as T;
   } catch (error) {
-    console.error('管理者ユーザー詳細キャッシュの取得に失敗:', error);
+    logger.error({ err: error }, '管理者ユーザー詳細キャッシュの取得に失敗');
     return null;
   }
 }
@@ -407,7 +410,7 @@ export async function setAdminUserDetailCache<T>(
     await redis.setex(key, ttlSeconds, JSON.stringify(data));
     return true;
   } catch (error) {
-    console.error('管理者ユーザー詳細キャッシュの保存に失敗:', error);
+    logger.error({ err: error }, '管理者ユーザー詳細キャッシュの保存に失敗');
     return false;
   }
 }
@@ -429,7 +432,7 @@ export async function invalidateAdminUserDetailCache(
     await redis.del(key);
     return true;
   } catch (error) {
-    console.error('管理者ユーザー詳細キャッシュの無効化に失敗:', error);
+    logger.error({ err: error }, '管理者ユーザー詳細キャッシュの無効化に失敗');
     return false;
   }
 }
@@ -472,7 +475,7 @@ export async function setAdminOrganizationsCache<T>(
     await redis.setex(key, ttlSeconds, JSON.stringify(data));
     return true;
   } catch (error) {
-    console.error('管理者組織一覧キャッシュの保存に失敗:', error);
+    logger.error({ err: error }, '管理者組織一覧キャッシュの保存に失敗');
     return false;
   }
 }
@@ -497,7 +500,7 @@ export async function getAdminOrganizationsCache<T>(
     }
     return JSON.parse(data) as T;
   } catch (error) {
-    console.error('管理者組織一覧キャッシュの取得に失敗:', error);
+    logger.error({ err: error }, '管理者組織一覧キャッシュの取得に失敗');
     return null;
   }
 }
@@ -521,7 +524,7 @@ export async function invalidateAdminOrganizationsCache(): Promise<boolean> {
     }
     return true;
   } catch (error) {
-    console.error('管理者組織一覧キャッシュの無効化に失敗:', error);
+    logger.error({ err: error }, '管理者組織一覧キャッシュの無効化に失敗');
     return false;
   }
 }
@@ -550,7 +553,7 @@ export async function getAdminOrganizationDetailCache<T>(
     }
     return JSON.parse(data) as T;
   } catch (error) {
-    console.error('管理者組織詳細キャッシュの取得に失敗:', error);
+    logger.error({ err: error }, '管理者組織詳細キャッシュの取得に失敗');
     return null;
   }
 }
@@ -576,7 +579,7 @@ export async function setAdminOrganizationDetailCache<T>(
     await redis.setex(key, ttlSeconds, JSON.stringify(data));
     return true;
   } catch (error) {
-    console.error('管理者組織詳細キャッシュの保存に失敗:', error);
+    logger.error({ err: error }, '管理者組織詳細キャッシュの保存に失敗');
     return false;
   }
 }
@@ -598,7 +601,7 @@ export async function invalidateAdminOrganizationDetailCache(
     await redis.del(key);
     return true;
   } catch (error) {
-    console.error('管理者組織詳細キャッシュの無効化に失敗:', error);
+    logger.error({ err: error }, '管理者組織詳細キャッシュの無効化に失敗');
     return false;
   }
 }
@@ -629,7 +632,7 @@ async function setCache<T>(
     await redis.setex(key, ttlSeconds, JSON.stringify(data));
     return true;
   } catch (error) {
-    console.error(errorMessage, error);
+    logger.error({ err: error }, errorMessage);
     return false;
   }
 }
@@ -655,7 +658,7 @@ async function getCache<T>(
     }
     return JSON.parse(data) as T;
   } catch (error) {
-    console.error(errorMessage, error);
+    logger.error({ err: error }, errorMessage);
     return null;
   }
 }
@@ -678,7 +681,7 @@ async function invalidateCache(
     await redis.del(key);
     return true;
   } catch (error) {
-    console.error(errorMessage, error);
+    logger.error({ err: error }, errorMessage);
     return false;
   }
 }
@@ -815,7 +818,7 @@ export async function setAdminAuditLogsCache<T>(
     await redis.setex(key, ttlSeconds, JSON.stringify(data));
     return true;
   } catch (error) {
-    console.error('管理者監査ログキャッシュの保存に失敗:', error);
+    logger.error({ err: error }, '管理者監査ログキャッシュの保存に失敗');
     return false;
   }
 }
@@ -840,7 +843,7 @@ export async function getAdminAuditLogsCache<T>(
     }
     return JSON.parse(data) as T;
   } catch (error) {
-    console.error('管理者監査ログキャッシュの取得に失敗:', error);
+    logger.error({ err: error }, '管理者監査ログキャッシュの取得に失敗');
     return null;
   }
 }
@@ -882,7 +885,7 @@ export async function setAdminMetricsCache<T>(
     await redis.setex(key, ttlSeconds, JSON.stringify(data));
     return true;
   } catch (error) {
-    console.error('アクティブユーザーメトリクスキャッシュの保存に失敗:', error);
+    logger.error({ err: error }, 'アクティブユーザーメトリクスキャッシュの保存に失敗');
     return false;
   }
 }
@@ -907,7 +910,7 @@ export async function getAdminMetricsCache<T>(
     }
     return JSON.parse(data) as T;
   } catch (error) {
-    console.error('アクティブユーザーメトリクスキャッシュの取得に失敗:', error);
+    logger.error({ err: error }, 'アクティブユーザーメトリクスキャッシュの取得に失敗');
     return null;
   }
 }
@@ -929,7 +932,7 @@ export async function invalidateAdminMetricsCache(): Promise<boolean> {
     }
     return true;
   } catch (error) {
-    console.error('アクティブユーザーメトリクスキャッシュの無効化に失敗:', error);
+    logger.error({ err: error }, 'アクティブユーザーメトリクスキャッシュの無効化に失敗');
     return false;
   }
 }
@@ -971,7 +974,7 @@ export async function setSystemAdminsCache<T>(
     await redis.setex(key, ttlSeconds, JSON.stringify(data));
     return true;
   } catch (error) {
-    console.error('システム管理者一覧キャッシュの保存に失敗:', error);
+    logger.error({ err: error }, 'システム管理者一覧キャッシュの保存に失敗');
     return false;
   }
 }
@@ -996,7 +999,7 @@ export async function getSystemAdminsCache<T>(
     }
     return JSON.parse(data) as T;
   } catch (error) {
-    console.error('システム管理者一覧キャッシュの取得に失敗:', error);
+    logger.error({ err: error }, 'システム管理者一覧キャッシュの取得に失敗');
     return null;
   }
 }
@@ -1018,7 +1021,7 @@ export async function invalidateSystemAdminsCache(): Promise<boolean> {
     }
     return true;
   } catch (error) {
-    console.error('システム管理者一覧キャッシュの無効化に失敗:', error);
+    logger.error({ err: error }, 'システム管理者一覧キャッシュの無効化に失敗');
     return false;
   }
 }
@@ -1047,7 +1050,7 @@ export async function getSystemAdminDetailCache<T>(
     }
     return JSON.parse(data) as T;
   } catch (error) {
-    console.error('システム管理者詳細キャッシュの取得に失敗:', error);
+    logger.error({ err: error }, 'システム管理者詳細キャッシュの取得に失敗');
     return null;
   }
 }
@@ -1073,7 +1076,7 @@ export async function setSystemAdminDetailCache<T>(
     await redis.setex(key, ttlSeconds, JSON.stringify(data));
     return true;
   } catch (error) {
-    console.error('システム管理者詳細キャッシュの保存に失敗:', error);
+    logger.error({ err: error }, 'システム管理者詳細キャッシュの保存に失敗');
     return false;
   }
 }
@@ -1095,7 +1098,7 @@ export async function invalidateSystemAdminDetailCache(
     await redis.del(key);
     return true;
   } catch (error) {
-    console.error('システム管理者詳細キャッシュの無効化に失敗:', error);
+    logger.error({ err: error }, 'システム管理者詳細キャッシュの無効化に失敗');
     return false;
   }
 }

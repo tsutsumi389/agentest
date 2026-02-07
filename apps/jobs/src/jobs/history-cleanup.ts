@@ -6,6 +6,9 @@
 import { prisma } from '../lib/prisma.js';
 import { DEFAULT_BATCH_SIZE } from '../lib/constants.js';
 import { PLAN_LIMITS } from '@agentest/shared';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'history-cleanup' });
 
 export async function runHistoryCleanup(): Promise<void> {
   let cursor: string | undefined;
@@ -15,8 +18,9 @@ export async function runHistoryCleanup(): Promise<void> {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - PLAN_LIMITS.FREE.changeHistoryDays);
 
-  console.log(
-    `削除対象: ${PLAN_LIMITS.FREE.changeHistoryDays}日以上前の履歴（基準日: ${cutoffDate.toISOString()}）`
+  logger.info(
+    { changeHistoryDays: PLAN_LIMITS.FREE.changeHistoryDays, cutoffDate: cutoffDate.toISOString() },
+    '削除対象の履歴を検索'
   );
 
   do {
@@ -88,9 +92,15 @@ export async function runHistoryCleanup(): Promise<void> {
       totalDeleted += userTotal;
 
       if (userTotal > 0) {
-        console.log(
-          `ユーザー ${user.id}: ${userTotal}件削除 ` +
-            `(TestCase: ${testCaseHistoryResult.count}, TestSuite: ${testSuiteHistoryResult.count}, Project: ${projectHistoryResult.count})`
+        logger.info(
+          {
+            userId: user.id,
+            userTotal,
+            testCaseHistory: testCaseHistoryResult.count,
+            testSuiteHistory: testSuiteHistoryResult.count,
+            projectHistory: projectHistoryResult.count,
+          },
+          'ユーザーの履歴を削除'
         );
       }
     }
@@ -98,5 +108,5 @@ export async function runHistoryCleanup(): Promise<void> {
     cursor = users[users.length - 1]?.id;
   } while (cursor);
 
-  console.log(`合計 ${totalDeleted} 件の古い履歴レコードを削除しました`);
+  logger.info({ totalDeleted }, '古い履歴レコードの削除が完了しました');
 }

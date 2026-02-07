@@ -1,5 +1,8 @@
 import type { Request, Response, NextFunction } from 'express';
 import { env } from '../config/env.js';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'csrf' });
 
 /**
  * CSRF保護ミドルウェア
@@ -30,7 +33,7 @@ export function csrfProtection() {
         return next();
       }
 
-      console.warn(`[CSRF] Request blocked: origin=${origin}, allowed=${allowedOrigins.join(',')}`);
+      logger.warn({ origin, allowedOrigins }, 'リクエストをブロックしました: 不正なorigin');
       res.status(403).json({
         error: 'forbidden',
         error_description: 'Invalid request origin',
@@ -50,7 +53,7 @@ export function csrfProtection() {
         // URLパースエラーは無視して拒否
       }
 
-      console.warn(`[CSRF] Request blocked: referer=${referer}, allowed=${allowedOrigins.join(',')}`);
+      logger.warn({ referer, allowedOrigins }, 'リクエストをブロックしました: 不正なreferer');
       res.status(403).json({
         error: 'forbidden',
         error_description: 'Invalid request referer',
@@ -59,7 +62,7 @@ export function csrfProtection() {
     }
 
     // Origin/Refererがない場合は拒否（ブラウザからの正当なリクエストには必ず含まれる）
-    console.warn('[CSRF] Request blocked: missing origin and referer headers');
+    logger.warn('リクエストをブロックしました: originとrefererヘッダーが欠落');
     res.status(403).json({
       error: 'forbidden',
       error_description: 'Missing origin or referer header',

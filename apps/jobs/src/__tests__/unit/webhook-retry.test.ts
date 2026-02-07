@@ -4,30 +4,46 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // vi.hoisted() でモックオブジェクトを事前定義
-const { mockPrisma } = vi.hoisted(() => ({
-  mockPrisma: {
-    paymentEvent: {
-      findMany: vi.fn(),
-      update: vi.fn(),
-      count: vi.fn(),
+const { mockPrisma, mockLogger } = vi.hoisted(() => {
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn(),
+  };
+  mockLogger.child.mockReturnValue(mockLogger);
+  return {
+    mockPrisma: {
+      paymentEvent: {
+        findMany: vi.fn(),
+        update: vi.fn(),
+        count: vi.fn(),
+      },
+      subscription: {
+        findUnique: vi.fn(),
+        update: vi.fn(),
+        upsert: vi.fn(),
+      },
+      invoice: {
+        upsert: vi.fn(),
+      },
+      user: {
+        update: vi.fn(),
+      },
+      $transaction: vi.fn(),
     },
-    subscription: {
-      findUnique: vi.fn(),
-      update: vi.fn(),
-      upsert: vi.fn(),
-    },
-    invoice: {
-      upsert: vi.fn(),
-    },
-    user: {
-      update: vi.fn(),
-    },
-    $transaction: vi.fn(),
-  },
-}));
+    mockLogger,
+  };
+});
 
 vi.mock('../../lib/prisma.js', () => ({
   prisma: mockPrisma,
+}));
+
+vi.mock('../../utils/logger.js', () => ({
+  logger: mockLogger,
 }));
 
 // モック設定後にインポート
@@ -36,9 +52,6 @@ import { runWebhookRetry } from '../../jobs/webhook-retry.js';
 describe('runWebhookRetry', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(console, 'log').mockImplementation(() => {});
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -66,7 +79,7 @@ describe('runWebhookRetry', () => {
 
     await runWebhookRetry();
 
-    expect(console.log).toHaveBeenCalledWith(
+    expect(mockLogger.info).toHaveBeenCalledWith(
       'リトライ対象のイベントはありません'
     );
     expect(mockPrisma.paymentEvent.update).not.toHaveBeenCalled();
@@ -358,8 +371,9 @@ describe('runWebhookRetry', () => {
 
     await runWebhookRetry();
 
-    expect(console.warn).toHaveBeenCalledWith(
-      expect.stringContaining('警告: 5件のイベントが最大リトライ回数（5回）に達しました')
+    expect(mockLogger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ maxRetriedEvents: 5, maxRetryCount: 5 }),
+      'イベントが最大リトライ回数に達しました'
     );
   });
 
@@ -402,8 +416,9 @@ describe('runWebhookRetry', () => {
 
     await runWebhookRetry();
 
-    expect(console.log).toHaveBeenCalledWith(
-      expect.stringContaining('再処理完了: 成功 1件, 失敗 0件 (合計 1件)')
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ totalSucceeded: 1, totalFailed: 0, totalRetried: 1 }),
+      '再処理完了'
     );
   });
 });

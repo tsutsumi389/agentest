@@ -1,4 +1,7 @@
 import { env } from '../config/env.js';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'api-key-auth' });
 
 /**
  * APIキーのプレフィックス
@@ -51,14 +54,14 @@ class ApiKeyAuthService {
       });
 
       if (!response.ok) {
-        console.error(`APIキー検証エラー: HTTP ${response.status}`);
+        logger.error({ statusCode: response.status }, 'APIキー検証エラー');
         return { valid: false };
       }
 
       const result = await response.json() as ApiKeyValidationResult;
       return result;
     } catch (error) {
-      console.error('APIキー検証中にエラーが発生:', error);
+      logger.error({ err: error }, 'APIキー検証中にエラーが発生');
       return { valid: false };
     }
   }

@@ -5,6 +5,7 @@
  */
 import { prisma } from '../lib/prisma.js';
 import type { MetricGranularity } from '@agentest/db';
+import { logger as baseLogger } from '../utils/logger.js';
 import {
   getJSTYesterdayStart,
   getJSTDayOfWeek,
@@ -13,6 +14,8 @@ import {
   getJSTLastMonthStart,
   formatDateStringJST,
 } from '../lib/date-utils.js';
+
+const logger = baseLogger.child({ module: 'plan-distribution-aggregation' });
 
 /** 集計結果の型 */
 interface AggregationResult {
@@ -131,9 +134,18 @@ async function aggregateAndSave(
 async function aggregateDAY(now: Date): Promise<void> {
   const yesterday = getJSTYesterdayStart(now);
   const result = await aggregateAndSave(yesterday, 'DAY');
-  console.log(
-    `DAY ${formatDateStringJST(yesterday)}: FREE=${result.freeUsers}, PRO=${result.proUsers}, ` +
-    `TEAM=${result.teamOrgs}(${result.teamMembers}), ENT=${result.enterpriseOrgs}(${result.enterpriseMembers})`
+  logger.info(
+    {
+      granularity: 'DAY',
+      date: formatDateStringJST(yesterday),
+      freeUsers: result.freeUsers,
+      proUsers: result.proUsers,
+      teamOrgs: result.teamOrgs,
+      teamMembers: result.teamMembers,
+      enterpriseOrgs: result.enterpriseOrgs,
+      enterpriseMembers: result.enterpriseMembers,
+    },
+    'DAY集計完了'
   );
 }
 
@@ -146,9 +158,18 @@ async function aggregateWEEK(now: Date): Promise<void> {
   const thisMonday = getJSTLastMonday(now);
   const lastMonday = new Date(thisMonday.getTime() - 7 * 24 * 60 * 60 * 1000);
   const result = await aggregateAndSave(lastMonday, 'WEEK');
-  console.log(
-    `WEEK ${formatDateStringJST(lastMonday)}: FREE=${result.freeUsers}, PRO=${result.proUsers}, ` +
-    `TEAM=${result.teamOrgs}(${result.teamMembers}), ENT=${result.enterpriseOrgs}(${result.enterpriseMembers})`
+  logger.info(
+    {
+      granularity: 'WEEK',
+      date: formatDateStringJST(lastMonday),
+      freeUsers: result.freeUsers,
+      proUsers: result.proUsers,
+      teamOrgs: result.teamOrgs,
+      teamMembers: result.teamMembers,
+      enterpriseOrgs: result.enterpriseOrgs,
+      enterpriseMembers: result.enterpriseMembers,
+    },
+    'WEEK集計完了'
   );
 }
 
@@ -159,9 +180,18 @@ async function aggregateWEEK(now: Date): Promise<void> {
 async function aggregateMONTH(now: Date): Promise<void> {
   const lastMonthStart = getJSTLastMonthStart(now);
   const result = await aggregateAndSave(lastMonthStart, 'MONTH');
-  console.log(
-    `MONTH ${formatDateStringJST(lastMonthStart)}: FREE=${result.freeUsers}, PRO=${result.proUsers}, ` +
-    `TEAM=${result.teamOrgs}(${result.teamMembers}), ENT=${result.enterpriseOrgs}(${result.enterpriseMembers})`
+  logger.info(
+    {
+      granularity: 'MONTH',
+      date: formatDateStringJST(lastMonthStart),
+      freeUsers: result.freeUsers,
+      proUsers: result.proUsers,
+      teamOrgs: result.teamOrgs,
+      teamMembers: result.teamMembers,
+      enterpriseOrgs: result.enterpriseOrgs,
+      enterpriseMembers: result.enterpriseMembers,
+    },
+    'MONTH集計完了'
   );
 }
 
@@ -171,7 +201,7 @@ async function aggregateMONTH(now: Date): Promise<void> {
 export async function runPlanDistributionAggregation(): Promise<void> {
   const now = new Date();
 
-  console.log(`プラン分布集計開始: ${now.toISOString()}`);
+  logger.info({ timestamp: now.toISOString() }, 'プラン分布集計開始');
 
   // 前日のDAY集計
   await aggregateDAY(now);
@@ -186,5 +216,5 @@ export async function runPlanDistributionAggregation(): Promise<void> {
     await aggregateMONTH(now);
   }
 
-  console.log('プラン分布集計完了');
+  logger.info('プラン分布集計完了');
 }

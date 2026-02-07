@@ -2,6 +2,9 @@ import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { z } from 'zod';
 import type { AgentSession } from '@agentest/db';
 import { requestContext } from '../transport/streamable-http.js';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'tools' });
 import { searchProjectTool } from './search-project.js';
 import { searchTestSuiteTool } from './search-test-suite.js';
 import { searchTestCaseTool } from './search-test-case.js';
@@ -80,7 +83,7 @@ class ToolRegistry {
     definition: ToolDefinition<TInput>
   ): void {
     if (this.tools.has(definition.name)) {
-      console.warn(`ツール "${definition.name}" は既に登録されています。上書きします。`);
+      logger.warn({ toolName: definition.name }, 'ツールは既に登録されています。上書きします。');
     }
     this.tools.set(definition.name, definition as ToolDefinition);
   }
@@ -189,5 +192,5 @@ export function registerTools(server: McpServer): void {
     );
   }
 
-  console.log(`${tools.length}個のツールをMCPサーバーに登録しました`);
+  logger.info({ count: tools.length }, 'ツールをMCPサーバーに登録しました');
 }

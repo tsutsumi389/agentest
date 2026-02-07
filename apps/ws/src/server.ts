@@ -8,6 +8,9 @@ import type {
 import { authenticateToken, extractTokenFromUrl, type AuthenticatedUser } from './auth.js';
 import { subscriber, subscribeToChannel, unsubscribeFromChannel } from './redis.js';
 import { handlePresenceJoin, handlePresenceLeave } from './handlers/presence.js';
+import { logger as baseLogger } from './utils/logger.js';
+
+const logger = baseLogger.child({ module: 'server' });
 
 // クライアント情報を拡張
 interface ExtendedWebSocket extends WebSocket {
@@ -32,7 +35,7 @@ const channelSubscribers = new Map<string, Set<ExtendedWebSocket>>();
 export function createWebSocketServer(port: number, host: string): WebSocketServer {
   wss = new WebSocketServer({ port, host });
 
-  console.log(`🔌 WebSocketサーバーが起動しました: ws://${host}:${port}`);
+  logger.info({ host, port }, 'WebSocketサーバーが起動しました');
 
   // 接続ハンドラ
   wss.on('connection', handleConnection);
@@ -93,7 +96,7 @@ async function handleConnection(ws: WebSocket, request: IncomingMessage): Promis
 
   // エラーハンドラ
   extWs.on('error', (error) => {
-    console.error('WebSocketエラー:', error);
+    logger.error({ err: error }, 'WebSocketエラー');
     cleanupConnection(extWs);
   });
 }
@@ -131,7 +134,7 @@ async function handleMessage(ws: ExtendedWebSocket, data: string): Promise<void>
         sendError(ws, 'UNKNOWN_MESSAGE_TYPE', '不明なメッセージタイプです');
     }
   } catch (error) {
-    console.error('メッセージ処理エラー:', error);
+    logger.error({ err: error }, 'メッセージ処理エラー');
     sendError(ws, 'INVALID_MESSAGE', 'メッセージの形式が不正です');
   }
 }
@@ -239,7 +242,7 @@ function handleRedisMessage(channel: string, message: string): void {
       }
     }
   } catch (error) {
-    console.error('Redisメッセージ処理エラー:', error);
+    logger.error({ err: error }, 'Redisメッセージ処理エラー');
   }
 }
 
@@ -348,7 +351,7 @@ export function broadcastToChannel(channel: string, event: ServerEvent): void {
 export function closeServer(): Promise<void> {
   return new Promise((resolve) => {
     wss.close(() => {
-      console.log('WebSocketサーバーを終了しました');
+      logger.info('WebSocketサーバーを終了しました');
       resolve();
     });
   });

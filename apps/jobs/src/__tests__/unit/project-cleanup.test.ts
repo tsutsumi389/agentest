@@ -4,18 +4,34 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // vi.hoisted() でモックオブジェクトを事前定義
-const { mockPrisma } = vi.hoisted(() => ({
-  mockPrisma: {
-    project: {
-      findMany: vi.fn(),
-      delete: vi.fn(),
-      count: vi.fn(),
+const { mockPrisma, mockLogger } = vi.hoisted(() => {
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn(),
+  };
+  mockLogger.child.mockReturnValue(mockLogger);
+  return {
+    mockPrisma: {
+      project: {
+        findMany: vi.fn(),
+        delete: vi.fn(),
+        count: vi.fn(),
+      },
     },
-  },
-}));
+    mockLogger,
+  };
+});
 
 vi.mock('../../lib/prisma.js', () => ({
   prisma: mockPrisma,
+}));
+
+vi.mock('../../utils/logger.js', () => ({
+  logger: mockLogger,
 }));
 
 // モック設定後にインポート
@@ -32,8 +48,6 @@ describe('runProjectCleanup', () => {
     vi.clearAllMocks();
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2025-05-15T00:00:00.000Z'));
-    vi.spyOn(console, 'log').mockImplementation(() => {});
-    vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -117,8 +131,9 @@ describe('runProjectCleanup', () => {
     expect(mockPrisma.project.delete).not.toHaveBeenCalled();
 
     // 完了ログが出力される
-    expect(console.log).toHaveBeenCalledWith(
-      expect.stringContaining('合計 0 件のプロジェクトを物理削除しました')
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ totalDeleted: 0 }),
+      'プロジェクトの物理削除が完了しました'
     );
   });
 
@@ -146,14 +161,15 @@ describe('runProjectCleanup', () => {
     expect(mockPrisma.project.delete).toHaveBeenCalledTimes(3);
 
     // エラーログが出力される
-    expect(console.error).toHaveBeenCalledWith(
-      expect.stringContaining('プロジェクト削除失敗: proj-2'),
-      expect.any(Error)
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ err: expect.any(Error), projectId: 'proj-2' }),
+      'プロジェクト削除失敗'
     );
 
     // 成功分のみカウント（2件）
-    expect(console.log).toHaveBeenCalledWith(
-      expect.stringContaining('合計 2 件のプロジェクトを物理削除しました')
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ totalDeleted: 2 }),
+      'プロジェクトの物理削除が完了しました'
     );
   });
 
@@ -188,8 +204,9 @@ describe('runProjectCleanup', () => {
       },
     });
 
-    expect(console.log).toHaveBeenCalledWith(
-      expect.stringContaining('削除対象プロジェクト数: 3件')
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ targetCount: 3 }),
+      '削除対象のプロジェクトを検索'
     );
   });
 
@@ -208,8 +225,9 @@ describe('runProjectCleanup', () => {
       },
     });
 
-    expect(console.log).toHaveBeenCalledWith(
-      expect.stringContaining('残りのソフトデリート済みプロジェクト: 5件')
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ remainingCount: 5 }),
+      '残りのソフトデリート済みプロジェクト'
     );
   });
 
@@ -224,11 +242,13 @@ describe('runProjectCleanup', () => {
 
     await runProjectCleanup();
 
-    expect(console.log).toHaveBeenCalledWith(
-      expect.stringContaining(`プロジェクト削除開始: ${mockDeletedProject.id}`)
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ projectId: mockDeletedProject.id, projectName: mockDeletedProject.name }),
+      'プロジェクト削除開始'
     );
-    expect(console.log).toHaveBeenCalledWith(
-      expect.stringContaining(`プロジェクト削除完了: ${mockDeletedProject.id}`)
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      expect.objectContaining({ projectId: mockDeletedProject.id }),
+      'プロジェクト削除完了'
     );
   });
 });
