@@ -8,7 +8,8 @@ const { mockLogger } = vi.hoisted(() => {
 });
 vi.mock('../../../utils/logger.js', () => ({ logger: mockLogger }));
 
-import { createEnvSchema, nodeEnvSchema } from '../../../config/env.js';
+import { nodeEnvSchema } from '@agentest/shared/config';
+import { createEnvSchema } from '../../../config/env.js';
 
 type EnvSchema = ReturnType<typeof createEnvSchema>;
 type EnvType = z.infer<EnvSchema>;

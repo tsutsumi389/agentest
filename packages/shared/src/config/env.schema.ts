@@ -1,8 +1,12 @@
 import { z } from 'zod';
 
+// NODE_ENVスキーマ（各アプリのisProduction判定とenvSchemaで共有）
+export const nodeEnvSchema = z.enum(['development', 'production', 'test']).default('development');
+export type NodeEnv = z.infer<typeof nodeEnvSchema>;
+
 export const envSchema = z.object({
   // ノード環境
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  NODE_ENV: nodeEnvSchema,
 
   // データベース
   DATABASE_URL: z.string().url(),

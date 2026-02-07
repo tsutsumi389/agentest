@@ -1,10 +1,8 @@
 import { z } from 'zod';
+import { nodeEnvSchema } from '@agentest/shared/config';
 import { logger as baseLogger } from './utils/logger.js';
 
 const logger = baseLogger.child({ module: 'config' });
-
-// NODE_ENVスキーマ（isProduction判定とenvSchemaで共有）
-export const nodeEnvSchema = z.enum(['development', 'production', 'test']).default('development');
 
 // 環境変数スキーマを生成する（本番環境ではJWTシークレットの明示的な設定を必須にする）
 export function createEnvSchema(isProduction: boolean) {

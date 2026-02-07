@@ -9,7 +9,7 @@ vi.mock('@agentest/shared/logger', () => ({
   createLogger: () => mockLogger,
 }));
 
-import { nodeEnvSchema } from '../../config/env.js';
+import { nodeEnvSchema } from '@agentest/shared/config';
 
 describe('config/env', () => {
   describe('nodeEnvSchema', () => {

@@ -1,11 +1,9 @@
 import { z } from 'zod';
+import { nodeEnvSchema } from '@agentest/shared/config';
 import { createLogger } from '@agentest/shared/logger';
 
 // env.ts は他のモジュールより先に評価されるため、共有loggerではなく直接生成する
 const logger = createLogger({ service: 'api' }).child({ module: 'env' });
-
-// NODE_ENVスキーマ（isProduction判定とenvSchemaで共有）
-export const nodeEnvSchema = z.enum(['development', 'production', 'test']).default('development');
 
 // NODE_ENVをZodスキーマでパースしてから本番環境かどうかを判定
 // （process.env.NODE_ENVの直接参照ではZodスキーマのデフォルト値と乖離する可能性があるため）
