@@ -3,40 +3,43 @@ import { logger as baseLogger } from '../utils/logger.js';
 
 const logger = baseLogger.child({ module: 'env' });
 
-// 本番環境かどうかを判定
-const isProduction = process.env.NODE_ENV === 'production';
+// 環境変数スキーマを生成する（本番環境ではシークレットの明示的な設定を必須にする）
+export function createEnvSchema(isProduction: boolean) {
+  return z.object({
+    // サーバー設定
+    NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+    PORT: z.coerce.number().default(3002),
+    HOST: z.string().default('0.0.0.0'),
 
-// 環境変数スキーマ
-const envSchema = z.object({
-  // サーバー設定
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  PORT: z.coerce.number().default(3002),
-  HOST: z.string().default('0.0.0.0'),
+    // データベース
+    DATABASE_URL: z.string().url(),
 
-  // データベース
-  DATABASE_URL: z.string().url(),
+    // JWT（認証用）
+    // 本番環境ではデフォルト値なし（必須）、開発環境ではデフォルト値あり
+    JWT_ACCESS_SECRET: isProduction
+      ? z.string().min(32)
+      : z.string().min(32).default('development-access-secret-key-32ch'),
+    JWT_REFRESH_SECRET: isProduction
+      ? z.string().min(32)
+      : z.string().min(32).default('development-refresh-secret-key-32ch'),
 
-  // JWT（認証用）
-  // 本番環境ではデフォルト値なし（必須）、開発環境ではデフォルト値あり
-  JWT_ACCESS_SECRET: isProduction
-    ? z.string().min(32)
-    : z.string().min(32).default('development-access-secret-key-32ch'),
-  JWT_REFRESH_SECRET: isProduction
-    ? z.string().min(32)
-    : z.string().min(32).default('development-refresh-secret-key-32ch'),
+    // CORS
+    CORS_ORIGIN: z.string().default('http://localhost:5173'),
 
-  // CORS
-  CORS_ORIGIN: z.string().default('http://localhost:5173'),
+    // 内部API（API サーバーとの通信）
+    API_INTERNAL_URL: z.string().url().default('http://api:3001'),
+    INTERNAL_API_SECRET: isProduction
+      ? z.string().min(32)
+      : z.string().min(32).default('development-internal-api-secret-32ch'),
 
-  // 内部API（API サーバーとの通信）
-  API_INTERNAL_URL: z.string().url().default('http://api:3001'),
-  INTERNAL_API_SECRET: z.string().min(32).default('development-internal-api-secret-32ch'),
+    // OAuth 2.1 Resource Server (RFC 9728)
+    MCP_SERVER_URL: z.string().url().default('http://localhost:3002'),
+    // AUTH_SERVER_URLはAPI_URLと同じ値のため、API_URLを使用
+    API_URL: z.string().url().default('http://localhost:3001'),
+  });
+}
 
-  // OAuth 2.1 Resource Server (RFC 9728)
-  MCP_SERVER_URL: z.string().url().default('http://localhost:3002'),
-  // AUTH_SERVER_URLはAPI_URLと同じ値のため、API_URLを使用
-  API_URL: z.string().url().default('http://localhost:3001'),
-});
+const envSchema = createEnvSchema(process.env.NODE_ENV === 'production');
 
 // 環境変数を検証
 function validateEnv() {
@@ -52,4 +55,4 @@ function validateEnv() {
 
 export const env = validateEnv();
 
-export type Env = z.infer<typeof envSchema>;
+export type Env = z.infer<ReturnType<typeof createEnvSchema>>;
