@@ -170,6 +170,20 @@ describe('EmailService', () => {
       expect(result.html).toContain('&lt;b&gt;HACKED&lt;/b&gt;');
     });
 
+    it('クエリパラメータに&を含むURLがhref属性で正しくエスケープされる', () => {
+      // HTML仕様ではhref属性内の&は&amp;に変換されるのが正しい
+      // ブラウザ/メールクライアントは&amp;を&に戻してリンクを辿る
+      const urlWithAmpersand = 'https://example.com/invite?token=abc&org=123';
+      const result = emailService.generateAdminInvitationEmail({
+        ...baseParams,
+        invitationUrl: urlWithAmpersand,
+      });
+
+      expect(result.html).toContain('href="https://example.com/invite?token=abc&amp;org=123"');
+      // テキスト部分はエスケープ不要
+      expect(result.text).toContain(urlWithAmpersand);
+    });
+
     it('javascript: URIの招待URLを拒否する', () => {
       expect(() =>
         emailService.generateAdminInvitationEmail({

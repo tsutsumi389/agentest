@@ -157,6 +157,7 @@ export class NotificationService {
 
   /**
    * メール本文を生成
+   * 注: URLリンクを追加する場合は、sanitizeUrl（utils/html.ts）でプロトコル検証を行うこと
    */
   private generateEmailContent(
     _type: NotificationType,

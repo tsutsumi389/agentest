@@ -70,11 +70,28 @@ describe('sanitizeUrl', () => {
     expect(() => sanitizeUrl('data:text/html,<script>alert(1)</script>')).toThrow('許可されないURLプロトコル');
   });
 
+  it('ftp: URIを拒否する', () => {
+    expect(() => sanitizeUrl('ftp://evil.com/malware')).toThrow('許可されないURLプロトコル');
+  });
+
+  it('file: URIを拒否する', () => {
+    expect(() => sanitizeUrl('file:///etc/passwd')).toThrow('許可されないURLプロトコル');
+  });
+
+  it('blob: URIを拒否する', () => {
+    expect(() => sanitizeUrl('blob:http://example.com/uuid')).toThrow('許可されないURLプロトコル');
+  });
+
   it('不正なURLを拒否する', () => {
     expect(() => sanitizeUrl('not-a-url')).toThrow('不正なURL');
   });
 
   it('空文字列を拒否する', () => {
     expect(() => sanitizeUrl('')).toThrow('不正なURL');
+  });
+
+  it('長いURLのエラーメッセージを切り詰める', () => {
+    const longUrl = 'not-a-url-' + 'x'.repeat(200);
+    expect(() => sanitizeUrl(longUrl)).toThrow(/不正なURL: .{1,104}/);
   });
 });
