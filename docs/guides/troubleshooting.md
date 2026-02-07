@@ -450,6 +450,10 @@ docker compose logs api 2>&1 | grep -E "キャッチされない例外|未処理
 
 ## 11. ログの確認方法
 
+バックエンドサービスは Pino による構造化JSONログを出力します。
+
+### 基本コマンド
+
 ```bash
 # 全サービスのログ
 docker compose logs -f
@@ -457,11 +461,50 @@ docker compose logs -f
 # 特定サービス、直近100行
 docker compose logs -f --tail=100 api
 
-# エラーのみ
-docker compose logs api 2>&1 | grep -i error
-
 # 時間指定
 docker compose logs --since="2025-12-26T10:00:00" api
+```
+
+### 構造化ログのフィルタリング
+
+ログはJSON形式で出力されるため、`jq` を使ってフィルタリング・整形できます。
+
+```bash
+# エラーレベルのみ抽出
+docker compose logs api 2>&1 | grep '"level":"error"'
+
+# jq で整形表示
+docker compose logs api --no-log-prefix 2>&1 | jq -r 'select(.level == "error")'
+
+# 特定モジュールのログを抽出
+docker compose logs api --no-log-prefix 2>&1 | jq -r 'select(.module == "events")'
+
+# エラーのスタックトレースを表示
+docker compose logs api --no-log-prefix 2>&1 | jq -r 'select(.err) | "\(.time) [\(.level)] \(.msg)\n\(.err.stack)"'
+```
+
+### ログ出力フォーマット
+
+```json
+{
+  "level": "info",
+  "time": "2025-12-26T10:00:00.000Z",
+  "service": "api",
+  "env": "development",
+  "module": "events",
+  "msg": "イベントを処理しました"
+}
+```
+
+### 開発時の可読表示
+
+`LOG_PRETTY=true` 環境変数を設定すると、pino-pretty による色付き可読フォーマットで出力されます。
+
+```bash
+# docker-compose.override.yml で設定
+api:
+  environment:
+    LOG_PRETTY: "true"
 ```
 
 ---
