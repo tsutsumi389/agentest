@@ -5,6 +5,43 @@ import { startLockCleanupJob, stopLockCleanupJob } from './jobs/lock-cleanup.job
 import { closeRedisPublisher } from './lib/redis-publisher.js';
 import { closeEventsPublisher } from './lib/events.js';
 
+// シャットダウン重複実行防止フラグ
+let isShuttingDown = false;
+
+// main内で定義されるシャットダウン関数への参照
+let shutdownFn: ((signal: string, exitCode?: number) => Promise<void>) | null = null;
+
+// プロセスレベルの例外ハンドラ（起動中のエラーもキャッチするためモジュールレベルで登録）
+process.on('uncaughtException', (error) => {
+  console.error(JSON.stringify({
+    timestamp: new Date().toISOString(),
+    level: 'error',
+    message: 'キャッチされない例外が発生しました',
+    error: error.message,
+    stack: error.stack,
+  }));
+  if (shutdownFn) {
+    shutdownFn('uncaughtException', 1).catch(() => {});
+  } else {
+    process.exit(1);
+  }
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error(JSON.stringify({
+    timestamp: new Date().toISOString(),
+    level: 'error',
+    message: '未処理のPromise拒否が発生しました',
+    reason: reason instanceof Error ? reason.message : String(reason),
+    stack: reason instanceof Error ? reason.stack : undefined,
+  }));
+  if (shutdownFn) {
+    shutdownFn('unhandledRejection', 1).catch(() => {});
+  } else {
+    process.exit(1);
+  }
+});
+
 /**
  * サーバー起動
  */
@@ -30,7 +67,13 @@ async function main() {
   });
 
   // グレースフルシャットダウン
-  const shutdown = async (signal: string) => {
+  const shutdown = async (signal: string, exitCode: number = 0) => {
+    if (isShuttingDown) {
+      console.log(`シャットダウン処理中のため ${signal} を無視します`);
+      return;
+    }
+    isShuttingDown = true;
+
     console.log(`\n${signal} を受信しました。シャットダウンを開始します...`);
 
     // ジョブを停止
@@ -60,15 +103,18 @@ async function main() {
         console.error('データベース切断エラー:', error);
       }
 
-      process.exit(0);
+      process.exit(exitCode);
     });
 
     // 強制終了タイムアウト
     setTimeout(() => {
       console.error('タイムアウト: 強制終了します');
       process.exit(1);
-    }, 10000);
+    }, 10000).unref();
   };
+
+  // シャットダウン関数を外部からアクセス可能にする
+  shutdownFn = shutdown;
 
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));
