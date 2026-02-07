@@ -73,7 +73,7 @@ describe('auth store', () => {
         isAuthenticated: true,
         isLoading: false,
       });
-      mockAuthApi.logout.mockResolvedValue(undefined);
+      mockAuthApi.logout.mockResolvedValue({ message: 'OK' });
 
       await useAuthStore.getState().logout();
 

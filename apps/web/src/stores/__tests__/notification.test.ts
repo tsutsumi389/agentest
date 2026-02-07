@@ -207,7 +207,7 @@ describe('notification store', () => {
         ],
         unreadCount: 2,
       });
-      mockApi.markAsRead.mockResolvedValue({});
+      mockApi.markAsRead.mockResolvedValue({ notification: createMockNotification({ id: 'n-1' }) });
 
       await useNotificationStore.getState().markAsRead('n-1');
 
@@ -240,7 +240,7 @@ describe('notification store', () => {
         notifications: [createMockNotification({ id: 'n-1' })],
         unreadCount: 0,
       });
-      mockApi.markAsRead.mockResolvedValue({});
+      mockApi.markAsRead.mockResolvedValue({ notification: createMockNotification({ id: 'n-1' }) });
 
       await useNotificationStore.getState().markAsRead('n-1');
 
@@ -257,7 +257,7 @@ describe('notification store', () => {
         ],
         unreadCount: 2,
       });
-      mockApi.markAllAsRead.mockResolvedValue({});
+      mockApi.markAllAsRead.mockResolvedValue({ updatedCount: 2 });
 
       await useNotificationStore.getState().markAllAsRead();
 
@@ -294,7 +294,7 @@ describe('notification store', () => {
         ],
         unreadCount: 1,
       });
-      mockApi.delete.mockResolvedValue({});
+      mockApi.delete.mockResolvedValue(undefined as never);
 
       await useNotificationStore.getState().deleteNotification('n-1');
 
@@ -326,7 +326,7 @@ describe('notification store', () => {
         notifications: [createMockNotification({ id: 'n-1', readAt: '2024-01-01T00:00:00Z' })],
         unreadCount: 0,
       });
-      mockApi.delete.mockResolvedValue({});
+      mockApi.delete.mockResolvedValue(undefined as never);
 
       await useNotificationStore.getState().deleteNotification('n-1');
 

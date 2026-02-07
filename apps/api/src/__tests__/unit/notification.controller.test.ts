@@ -79,7 +79,7 @@ describe('NotificationController', () => {
     });
 
     it('クエリパラメータが正しくパースされる', async () => {
-      const mockNotifications = [];
+      const mockNotifications: unknown[] = [];
       mockNotificationService.getNotifications.mockResolvedValue(mockNotifications);
 
       const req = mockRequest({

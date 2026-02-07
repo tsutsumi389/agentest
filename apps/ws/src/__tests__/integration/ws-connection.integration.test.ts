@@ -65,7 +65,6 @@ import {
   testUser,
   testUser2,
   waitForMessage,
-  waitForAnyMessage,
   expectNoMessage,
   sendMessage,
   closeClient,

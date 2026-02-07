@@ -2,14 +2,15 @@
  * pino-http ベースのリクエストロガーミドルウェア
  */
 
-import pinoHttp from 'pino-http';
+import { pinoHttp, type Options } from 'pino-http';
 import type { Request, Response, NextFunction } from 'express';
+import type { IncomingMessage, ServerResponse } from 'http';
 import { logger } from '../utils/logger.js';
 
 /**
  * pino-http ミドルウェアを作成する
  */
-export const httpLogger = pinoHttp({
+const options: Options<IncomingMessage, ServerResponse> = {
   logger,
   // リクエストIDの生成
   genReqId: (req) => {
@@ -43,7 +44,9 @@ export const httpLogger = pinoHttp({
   },
   // テスト時はリクエストの自動ログを無効化
   autoLogging: process.env.NODE_ENV !== 'test',
-});
+};
+
+export const httpLogger = pinoHttp(options);
 
 /**
  * リクエストIDをreq.requestIdにコピーする後方互換ミドルウェア

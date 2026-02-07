@@ -66,7 +66,6 @@ import { createWebSocketServer, broadcastToChannel, sendToUser } from '../../ser
 import {
   TEST_USER_ID,
   TEST_USER_ID_2,
-  TEST_USER_ID_3,
   TEST_PROJECT_ID,
   TEST_SUITE_ID,
   TEST_EXECUTION_ID,
@@ -78,7 +77,6 @@ import {
   waitForMessage,
   waitForAnyMessage,
   expectNoMessage,
-  collectMessages,
   sendMessage,
   closeClient,
   closeAllClients,

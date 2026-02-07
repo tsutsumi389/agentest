@@ -84,12 +84,12 @@ describe('TestCaseRepository（コアCRUD）', () => {
         title: '新タイトル',
         description: '新説明',
         priority: 'HIGH',
-        status: 'READY',
+        status: 'ACTIVE',
       });
 
       expect(mockPrismaTestCase.update).toHaveBeenCalledWith({
         where: { id: TEST_CASE_ID },
-        data: { title: '新タイトル', description: '新説明', priority: 'HIGH', status: 'READY' },
+        data: { title: '新タイトル', description: '新説明', priority: 'HIGH', status: 'ACTIVE' },
       });
     });
   });

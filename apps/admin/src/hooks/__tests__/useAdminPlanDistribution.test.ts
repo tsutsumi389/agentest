@@ -31,7 +31,7 @@ describe('useAdminPlanDistribution', () => {
   });
 
   it('パラメータ付きで取得する', async () => {
-    const params = { view: 'percentage' as const, includeMembers: true };
+    const params = { view: 'combined' as const, includeMembers: true };
     mockApi.getPlanDistribution.mockResolvedValue({ distribution: [] } as never);
 
     const { wrapper } = createQueryWrapper();

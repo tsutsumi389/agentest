@@ -17,6 +17,7 @@ export default tseslint.config(
       '**/vite.config.ts',
       '**/vite.config.js',
       '**/vite.config.d.ts',
+      '**/vitest.config.ts',
       '**/tailwind.config.ts',
       '**/postcss.config.js',
       // MCP AppsのUIファイルはViteでビルドされるため除外

@@ -4,7 +4,7 @@ import { createMockAdminUser } from '../../__tests__/factories';
 
 // APIをモック（ApiErrorは実際のクラスを使用し、APIメソッドのみモック）
 vi.mock('../../lib/api', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../lib/api')>();
+  const actual = await importOriginal() as Record<string, unknown>;
   return {
     ...actual,
     adminAuthApi: {

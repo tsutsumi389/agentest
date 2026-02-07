@@ -13,7 +13,6 @@ describe('System Admin API Integration Tests', () => {
   let superAdminId: string;
   let adminId: string;
   let testAdminId: string;
-  let testInvitationToken: string;
 
   beforeAll(async () => {
     // Expressアプリを作成
@@ -87,8 +86,6 @@ describe('System Admin API Integration Tests', () => {
       await prisma.adminUser.deleteMany({ where: { id: testAdminId } });
       testAdminId = '';
     }
-    // テスト用の招待トークンをクリア
-    testInvitationToken = '';
   });
 
   describe('GET /admin/admin-users', () => {
@@ -191,7 +188,6 @@ describe('System Admin API Integration Tests', () => {
         where: { email: 'new-admin@example.com' },
       });
       expect(invitation).not.toBeNull();
-      testInvitationToken = invitation!.token;
     });
 
     it('既存のメールアドレスではエラーを返す', async () => {
@@ -248,7 +244,7 @@ describe('System Admin API Integration Tests', () => {
   describe('GET /admin/admin-users/invitations/:token', () => {
     it('有効な招待情報を取得できる（認証不要）', async () => {
       // 招待を作成
-      const inviteResponse = await request(app)
+      await request(app)
         .post('/admin/admin-users')
         .set('Cookie', superAdminCookie)
         .send({
