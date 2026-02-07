@@ -58,7 +58,7 @@ export function logUncaughtException(error: Error, logger?: ProcessLogger): void
   console.error(JSON.stringify({
     time: new Date().toISOString(),
     level: 'fatal',
-    message: 'キャッチされない例外が発生しました',
+    msg: 'キャッチされない例外が発生しました',
     error: error.message,
     stack: error.stack,
   }));
@@ -78,7 +78,7 @@ export function logUnhandledRejection(reason: unknown, logger?: ProcessLogger): 
   console.error(JSON.stringify({
     time: new Date().toISOString(),
     level: 'fatal',
-    message: '未処理のPromise拒否が発生しました',
+    msg: '未処理のPromise拒否が発生しました',
     reason: reason instanceof Error ? reason.message : String(reason),
     stack: reason instanceof Error ? reason.stack : undefined,
   }));

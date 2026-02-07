@@ -34,8 +34,17 @@ function resolveLogLevel(explicitLevel?: LogLevel): LogLevel {
   if (explicitLevel) return explicitLevel;
 
   const envLevel = process.env.LOG_LEVEL;
-  if (envLevel && VALID_LOG_LEVELS.has(envLevel)) {
-    return envLevel as LogLevel;
+  if (envLevel) {
+    if (VALID_LOG_LEVELS.has(envLevel)) {
+      return envLevel as LogLevel;
+    }
+    // createLoggerがまだ呼ばれていないためconsole.warnを使用
+    console.warn(JSON.stringify({
+      time: new Date().toISOString(),
+      level: 'warn',
+      msg: `Invalid LOG_LEVEL "${envLevel}", falling back to NODE_ENV-based default`,
+      validLevels: [...VALID_LOG_LEVELS],
+    }));
   }
 
   switch (process.env.NODE_ENV) {

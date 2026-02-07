@@ -27,7 +27,7 @@ describe('logUncaughtException', () => {
     const logOutput = JSON.parse(consoleErrorSpy.mock.calls[0][0] as string);
     expect(logOutput).toMatchObject({
       level: 'fatal',
-      message: 'キャッチされない例外が発生しました',
+      msg: 'キャッチされない例外が発生しました',
       error: 'テストエラー',
       stack: 'Error: テストエラー\n    at test.ts:1:1',
     });
@@ -63,7 +63,7 @@ describe('logUnhandledRejection', () => {
     const logOutput = JSON.parse(consoleErrorSpy.mock.calls[0][0] as string);
     expect(logOutput).toMatchObject({
       level: 'fatal',
-      message: '未処理のPromise拒否が発生しました',
+      msg: '未処理のPromise拒否が発生しました',
       reason: 'Promise拒否',
       stack: 'Error: Promise拒否\n    at test.ts:2:2',
     });
