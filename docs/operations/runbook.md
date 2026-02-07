@@ -358,7 +358,34 @@ gcloud run services update agentest-api --max-instances=10
 # 4. 必要に応じてロールバック
 ```
 
-### 10.2 データベース接続障害
+### 10.2 プロセスクラッシュ時（未処理例外）
+
+全サーバーには `uncaughtException` / `unhandledRejection` ハンドラが実装されており、
+クラッシュ時は構造化ログ出力後にgraceful shutdownを実行します。
+
+**ログ確認**:
+```bash
+# uncaughtException / unhandledRejection のログを検索
+gcloud logging read 'resource.type=cloud_run_revision
+  AND jsonPayload.message=~"キャッチされない例外|未処理のPromise拒否"' \
+  --limit=20 --format=json
+
+# ローカル環境
+docker compose logs api 2>&1 | grep -E "キャッチされない例外|未処理のPromise拒否"
+```
+
+**プロセスの動作**:
+1. 構造化JSONでエラーログ出力（timestamp, error, stack）
+2. graceful shutdown開始（HTTPサーバー停止 → Redis切断 → DB切断）
+3. exit code 1 で終了（Cloud Runが自動で新インスタンスを起動）
+4. 10秒以内にクリーンアップが完了しない場合は強制終了
+
+**対応手順**:
+1. ログからスタックトレースを確認し、根本原因を特定
+2. 繰り返し発生している場合はロールバックを検討
+3. 修正をデプロイ
+
+### 10.3 データベース接続障害
 
 ```bash
 # 1. Cloud SQL状態確認
@@ -371,7 +398,7 @@ pg_isready -h CLOUD_SQL_IP -p 5432
 gcloud sql instances failover agentest-db
 ```
 
-### 10.3 高負荷時
+### 10.4 高負荷時
 
 ```bash
 # 1. 現在のインスタンス数確認

@@ -12,6 +12,25 @@ import { runMetricsBackfill } from './jobs/metrics-backfill.js';
 import { runPlanDistributionAggregation } from './jobs/plan-distribution-aggregation.js';
 import { closeRedis } from './lib/redis.js';
 import { closePrisma } from './lib/prisma.js';
+import { registerProcessHandlers } from '@agentest/shared';
+
+// リソースクリーンアップ
+async function cleanup() {
+  try {
+    await closeRedis();
+    await closePrisma();
+  } catch {
+    // クリーンアップ中のエラーは無視（既にプロセス終了処理中）
+  }
+}
+
+// プロセスレベルの例外ハンドラ（main実行前に登録）
+registerProcessHandlers({
+  getShutdownFn: () => async (_signal, exitCode = 1) => {
+    await cleanup().catch(() => {});
+    process.exit(exitCode);
+  },
+});
 
 // 利用可能なジョブの定義
 const jobs: Record<string, () => Promise<void>> = {
@@ -46,8 +65,7 @@ async function main() {
     process.exit(1);
   } finally {
     // リソースのクリーンアップ
-    await closeRedis();
-    await closePrisma();
+    await cleanup();
   }
 
   process.exit(0);

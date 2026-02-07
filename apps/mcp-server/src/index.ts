@@ -3,6 +3,18 @@ import { env } from './config/env.js';
 import { prisma } from '@agentest/db';
 import { cleanupAllSessions } from './transport/streamable-http.js';
 import { heartbeatService } from './services/heartbeat.service.js';
+import { registerProcessHandlers, type ShutdownFn } from '@agentest/shared';
+
+// シャットダウン重複実行防止フラグ
+let isShuttingDown = false;
+
+// main内で定義されるシャットダウン関数への参照
+let shutdownFn: ShutdownFn | null = null;
+
+// プロセスレベルの例外ハンドラ（起動中のエラーもキャッチするためモジュールレベルで登録）
+registerProcessHandlers({
+  getShutdownFn: () => shutdownFn,
+});
 
 /**
  * MCPサーバー起動
@@ -30,7 +42,13 @@ async function main() {
   });
 
   // グレースフルシャットダウン
-  const shutdown = async (signal: string) => {
+  const shutdown: ShutdownFn = async (signal, exitCode = 0) => {
+    if (isShuttingDown) {
+      console.log(`シャットダウン処理中のため ${signal} を無視します`);
+      return;
+    }
+    isShuttingDown = true;
+
     console.log(`\n${signal} を受信しました。シャットダウンを開始します...`);
 
     // ハートビートサービス停止
@@ -50,15 +68,18 @@ async function main() {
         console.error('データベース切断エラー:', error);
       }
 
-      process.exit(0);
+      process.exit(exitCode);
     });
 
     // 強制終了タイムアウト
     setTimeout(() => {
       console.error('タイムアウト: 強制終了します');
       process.exit(1);
-    }, 10000);
+    }, 10000).unref();
   };
+
+  // シャットダウン関数を外部からアクセス可能にする
+  shutdownFn = shutdown;
 
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT', () => shutdown('SIGINT'));

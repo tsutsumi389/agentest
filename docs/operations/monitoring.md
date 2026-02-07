@@ -108,7 +108,41 @@
 }
 ```
 
-### 4.3 ログ保持ポリシー
+### 4.3 プロセスレベル例外のログフォーマット
+
+`uncaughtException` / `unhandledRejection` 発生時に出力されるログ:
+
+```json
+{
+  "timestamp": "2025-12-26T10:00:00.000Z",
+  "level": "error",
+  "message": "キャッチされない例外が発生しました",
+  "error": "Cannot read properties of undefined",
+  "stack": "TypeError: Cannot read properties of undefined\n    at ..."
+}
+```
+
+```json
+{
+  "timestamp": "2025-12-26T10:00:00.000Z",
+  "level": "error",
+  "message": "未処理のPromise拒否が発生しました",
+  "reason": "Connection refused",
+  "stack": "Error: Connection refused\n    at ..."
+}
+```
+
+**監視での活用**: Cloud Logging でこれらのメッセージをフィルタし、アラートを設定することを推奨します。
+
+```yaml
+# アラートルール例
+name: "Process Crash Detection"
+filter: 'jsonPayload.message=~"キャッチされない例外|未処理のPromise拒否"'
+severity: Critical
+notification: "@slack-alerts @pagerduty-oncall"
+```
+
+### 4.4 ログ保持ポリシー
 
 | ログ種別 | 保持期間 | 保存先 |
 |---------|---------|--------|
