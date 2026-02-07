@@ -1,18 +1,14 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { z } from 'zod';
 
-// config.tsと同じロジックでスキーマを生成する関数
-function createEnvSchema(isProduction: boolean) {
-  return z.object({
-    NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-    PORT: z.coerce.number().default(3002),
-    HOST: z.string().default('0.0.0.0'),
-    REDIS_URL: z.string().url(),
-    JWT_ACCESS_SECRET: isProduction
-      ? z.string().min(32)
-      : z.string().min(32).default('development-access-secret-key-32ch'),
-  });
-}
+const { mockLogger } = vi.hoisted(() => {
+  const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn(), fatal: vi.fn(), child: vi.fn() };
+  mockLogger.child.mockReturnValue(mockLogger);
+  return { mockLogger };
+});
+vi.mock('../utils/logger.js', () => ({ logger: mockLogger }));
+
+import { createEnvSchema } from '../config.js';
 
 type EnvSchema = ReturnType<typeof createEnvSchema>;
 type EnvType = z.infer<EnvSchema>;
@@ -30,16 +26,6 @@ function validateEnv(envVars: Record<string, string | undefined>, isProduction =
 }
 
 describe('config', () => {
-  const originalEnv = process.env;
-
-  beforeEach(() => {
-    process.env = { ...originalEnv };
-  });
-
-  afterEach(() => {
-    process.env = originalEnv;
-  });
-
   describe('envSchema', () => {
     it('有効な環境変数でバリデーション成功', () => {
       const result = validateEnv({
@@ -48,7 +34,7 @@ describe('config', () => {
         HOST: 'localhost',
         REDIS_URL: 'redis://localhost:6379',
         JWT_ACCESS_SECRET: 'this-is-a-super-secret-key-32chars!',
-      });
+      }, true);
 
       expect(result.success).toBe(true);
       if (result.success) {
@@ -122,7 +108,7 @@ describe('config', () => {
     it('JWT_ACCESS_SECRETが32文字未満でエラー', () => {
       const result = validateEnv({
         REDIS_URL: 'redis://localhost:6379',
-        JWT_ACCESS_SECRET: 'short-secret', // 32文字未満
+        JWT_ACCESS_SECRET: 'short-secret',
       });
 
       expect(result.success).toBe(false);
