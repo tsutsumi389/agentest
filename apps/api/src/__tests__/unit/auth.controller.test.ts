@@ -144,7 +144,7 @@ describe('AuthController', () => {
       mockVerifyRefreshToken.mockReturnValue({ sub: TEST_USER_ID });
       mockPrismaRefreshToken.findUnique.mockResolvedValue({
         id: 'token-id',
-        token: TEST_REFRESH_TOKEN,
+        tokenHash: 'hashed-refresh-token',
         expiresAt: new Date(Date.now() + 86400000),
         revokedAt: null,
       });
@@ -169,6 +169,10 @@ describe('AuthController', () => {
 
       await controller.refresh(req, res, mockNext);
 
+      // tokenHashで検索されること
+      expect(mockPrismaRefreshToken.findUnique).toHaveBeenCalledWith({
+        where: { tokenHash: expect.any(String) },
+      });
       expect(res.cookie).toHaveBeenCalledWith('access_token', NEW_ACCESS_TOKEN, expect.any(Object));
       expect(res.cookie).toHaveBeenCalledWith('refresh_token', NEW_REFRESH_TOKEN, expect.any(Object));
       expect(res.json).toHaveBeenCalledWith({
@@ -181,7 +185,7 @@ describe('AuthController', () => {
       mockVerifyRefreshToken.mockReturnValue({ sub: TEST_USER_ID });
       mockPrismaRefreshToken.findUnique.mockResolvedValue({
         id: 'token-id',
-        token: TEST_REFRESH_TOKEN,
+        tokenHash: 'hashed-refresh-token',
         expiresAt: new Date(Date.now() + 86400000),
         revokedAt: null,
       });
@@ -228,7 +232,7 @@ describe('AuthController', () => {
       mockVerifyRefreshToken.mockReturnValue({ sub: TEST_USER_ID });
       mockPrismaRefreshToken.findUnique.mockResolvedValue({
         id: 'token-id',
-        token: TEST_REFRESH_TOKEN,
+        tokenHash: 'hashed-refresh-token',
         expiresAt: new Date(Date.now() + 86400000),
         revokedAt: new Date(), // 失効済み
       });
@@ -247,7 +251,7 @@ describe('AuthController', () => {
       mockVerifyRefreshToken.mockReturnValue({ sub: TEST_USER_ID });
       mockPrismaRefreshToken.findUnique.mockResolvedValue({
         id: 'token-id',
-        token: TEST_REFRESH_TOKEN,
+        tokenHash: 'hashed-refresh-token',
         expiresAt: new Date(Date.now() - 86400000), // 期限切れ
         revokedAt: null,
       });
@@ -266,7 +270,7 @@ describe('AuthController', () => {
       mockVerifyRefreshToken.mockReturnValue({ sub: TEST_USER_ID });
       mockPrismaRefreshToken.findUnique.mockResolvedValue({
         id: 'token-id',
-        token: TEST_REFRESH_TOKEN,
+        tokenHash: 'hashed-refresh-token',
         expiresAt: new Date(Date.now() + 86400000),
         revokedAt: null,
       });
@@ -299,11 +303,11 @@ describe('AuthController', () => {
       await controller.logout(req, res, mockNext);
 
       expect(mockPrismaRefreshToken.updateMany).toHaveBeenCalledWith({
-        where: { token: TEST_REFRESH_TOKEN },
+        where: { tokenHash: expect.any(String) },
         data: { revokedAt: expect.any(Date) },
       });
       expect(mockPrismaSession.updateMany).toHaveBeenCalledWith({
-        where: { token: TEST_REFRESH_TOKEN },
+        where: { tokenHash: expect.any(String) },
         data: { revokedAt: expect.any(Date) },
       });
       expect(res.clearCookie).toHaveBeenCalledWith('access_token', { path: '/' });

@@ -12,11 +12,12 @@ import {
   cleanupTestData,
 } from './test-helpers.js';
 import { createApp } from '../../app.js';
+import { hashToken } from '../../utils/pkce.js';
 
 describe('Admin Metrics API Integration Tests', () => {
   let app: Express;
   let testAdminUser: Awaited<ReturnType<typeof createTestAdminUser>>;
-  let testAdminSession: Awaited<ReturnType<typeof createTestAdminSession>>;
+  let rawSessionToken: string;
   const testPassword = 'TestPassword123!';
   // bcryptは意図的に遅いため、beforeAllで一度だけ計算してキャッシュ
   let cachedPasswordHash: string;
@@ -41,8 +42,10 @@ describe('Admin Metrics API Integration Tests', () => {
       passwordHash: cachedPasswordHash,
     });
 
-    testAdminSession = await createTestAdminSession(testAdminUser.id, {
-      token: 'test-admin-session-token',
+    // 生トークンを生成し、ハッシュ化してDBに保存
+    rawSessionToken = 'test-admin-session-token';
+    await createTestAdminSession(testAdminUser.id, {
+      tokenHash: hashToken(rawSessionToken),
     });
   });
 
@@ -50,7 +53,7 @@ describe('Admin Metrics API Integration Tests', () => {
     it('認証済み管理者はアクセスできる', async () => {
       const response = await request(app)
         .get('/admin/metrics/active-users')
-        .set('Cookie', `admin_session=${testAdminSession.token}`);
+        .set('Cookie', `admin_session=${rawSessionToken}`);
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('granularity');
@@ -72,7 +75,7 @@ describe('Admin Metrics API Integration Tests', () => {
     it('デフォルトで日次粒度のデータを取得する', async () => {
       const response = await request(app)
         .get('/admin/metrics/active-users')
-        .set('Cookie', `admin_session=${testAdminSession.token}`);
+        .set('Cookie', `admin_session=${rawSessionToken}`);
 
       expect(response.status).toBe(200);
       expect(response.body.granularity).toBe('day');
@@ -82,7 +85,7 @@ describe('Admin Metrics API Integration Tests', () => {
     it('週次粒度でデータを取得できる', async () => {
       const response = await request(app)
         .get('/admin/metrics/active-users?granularity=week')
-        .set('Cookie', `admin_session=${testAdminSession.token}`);
+        .set('Cookie', `admin_session=${rawSessionToken}`);
 
       expect(response.status).toBe(200);
       expect(response.body.granularity).toBe('week');
@@ -91,7 +94,7 @@ describe('Admin Metrics API Integration Tests', () => {
     it('月次粒度でデータを取得できる', async () => {
       const response = await request(app)
         .get('/admin/metrics/active-users?granularity=month')
-        .set('Cookie', `admin_session=${testAdminSession.token}`);
+        .set('Cookie', `admin_session=${rawSessionToken}`);
 
       expect(response.status).toBe(200);
       expect(response.body.granularity).toBe('month');
@@ -100,7 +103,7 @@ describe('Admin Metrics API Integration Tests', () => {
     it('パラメータバリデーションが正しく動作する（無効な粒度）', async () => {
       const response = await request(app)
         .get('/admin/metrics/active-users?granularity=invalid')
-        .set('Cookie', `admin_session=${testAdminSession.token}`);
+        .set('Cookie', `admin_session=${rawSessionToken}`);
 
       expect(response.status).toBe(400);
     });
@@ -111,7 +114,7 @@ describe('Admin Metrics API Integration Tests', () => {
 
       const response = await request(app)
         .get(`/admin/metrics/active-users?startDate=${startDate}&endDate=${endDate}`)
-        .set('Cookie', `admin_session=${testAdminSession.token}`);
+        .set('Cookie', `admin_session=${rawSessionToken}`);
 
       expect(response.status).toBe(400);
     });
@@ -122,7 +125,7 @@ describe('Admin Metrics API Integration Tests', () => {
 
       const response = await request(app)
         .get(`/admin/metrics/active-users?startDate=${startDate}&endDate=${endDate}`)
-        .set('Cookie', `admin_session=${testAdminSession.token}`);
+        .set('Cookie', `admin_session=${rawSessionToken}`);
 
       expect(response.status).toBe(400);
     });
@@ -130,7 +133,7 @@ describe('Admin Metrics API Integration Tests', () => {
     it('無効なタイムゾーン形式の場合は400を返す', async () => {
       const response = await request(app)
         .get('/admin/metrics/active-users?timezone=InvalidTimezone')
-        .set('Cookie', `admin_session=${testAdminSession.token}`);
+        .set('Cookie', `admin_session=${rawSessionToken}`);
 
       expect(response.status).toBe(400);
     });
@@ -157,7 +160,7 @@ describe('Admin Metrics API Integration Tests', () => {
 
       const response = await request(app)
         .get('/admin/metrics/active-users')
-        .set('Cookie', `admin_session=${testAdminSession.token}`);
+        .set('Cookie', `admin_session=${rawSessionToken}`);
 
       expect(response.status).toBe(200);
       expect(Array.isArray(response.body.data)).toBe(true);
@@ -188,7 +191,7 @@ describe('Admin Metrics API Integration Tests', () => {
 
       const response = await request(app)
         .get(`/admin/metrics/active-users?startDate=${startDate}&endDate=${endDate}`)
-        .set('Cookie', `admin_session=${testAdminSession.token}`);
+        .set('Cookie', `admin_session=${rawSessionToken}`);
 
       expect(response.status).toBe(200);
       expect(response.body.summary.average).toBe(30);
@@ -205,13 +208,14 @@ describe('Admin Metrics API Integration Tests', () => {
         passwordHash: cachedPasswordHash,
         role: 'VIEWER',
       });
-      const viewerSession = await createTestAdminSession(viewerAdmin.id, {
-        token: 'viewer-session-token',
+      const rawViewerToken = 'viewer-session-token';
+      await createTestAdminSession(viewerAdmin.id, {
+        tokenHash: hashToken(rawViewerToken),
       });
 
       const response = await request(app)
         .get('/admin/metrics/active-users')
-        .set('Cookie', `admin_session=${viewerSession.token}`);
+        .set('Cookie', `admin_session=${rawViewerToken}`);
 
       expect(response.status).toBe(200);
     });
@@ -220,13 +224,14 @@ describe('Admin Metrics API Integration Tests', () => {
       // アクティブなユーザーとセッションを作成
       const user = await createTestUser();
       await createTestSession(user.id, {
+        tokenHash: hashToken('test-session-token'),
         lastActiveAt: new Date(),
         revokedAt: null,
       });
 
       const response = await request(app)
         .get('/admin/metrics/active-users')
-        .set('Cookie', `admin_session=${testAdminSession.token}`);
+        .set('Cookie', `admin_session=${rawSessionToken}`);
 
       expect(response.status).toBe(200);
       // 当日データは data 配列に含まれるはず
@@ -236,7 +241,7 @@ describe('Admin Metrics API Integration Tests', () => {
     it('fetchedAtがISO 8601形式で返される', async () => {
       const response = await request(app)
         .get('/admin/metrics/active-users')
-        .set('Cookie', `admin_session=${testAdminSession.token}`);
+        .set('Cookie', `admin_session=${rawSessionToken}`);
 
       expect(response.status).toBe(200);
       // ISO 8601形式のチェック
@@ -251,7 +256,7 @@ describe('Admin Metrics API Integration Tests', () => {
 
       const response = await request(app)
         .get(`/admin/metrics/active-users?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`)
-        .set('Cookie', `admin_session=${testAdminSession.token}`);
+        .set('Cookie', `admin_session=${rawSessionToken}`);
 
       expect(response.status).toBe(200);
       // 日次粒度の場合、startDateは00:00:00に調整されてそのまま返される

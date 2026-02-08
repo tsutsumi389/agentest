@@ -5,6 +5,7 @@ import bcryptjs from 'bcryptjs';
 import { prisma } from '@agentest/db';
 import { createTestAdminUser, cleanupTestData } from './test-helpers.js';
 import { createApp } from '../../app.js';
+import { hashToken } from '../../utils/pkce.js';
 
 describe('Admin Auth API Integration Tests', () => {
   let app: Express;
@@ -236,7 +237,7 @@ describe('Admin Auth API Integration Tests', () => {
         .set('Cookie', sessionCookie);
 
       const session = await prisma.adminSession.findFirst({
-        where: { token: sessionToken },
+        where: { tokenHash: hashToken(sessionToken) },
       });
 
       expect(session?.revokedAt).not.toBeNull();

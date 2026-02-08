@@ -31,7 +31,7 @@ export async function createTestSession(
   userId: string,
   overrides: Partial<{
     id: string;
-    token: string;
+    tokenHash: string;
     userAgent: string;
     ipAddress: string;
     expiresAt: Date;
@@ -44,7 +44,7 @@ export async function createTestSession(
     data: {
       id,
       userId,
-      token: overrides.token ?? `token-${id}`,
+      tokenHash: overrides.tokenHash ?? `tokenhash-${id}`,
       userAgent: overrides.userAgent ?? 'Mozilla/5.0 Test Browser',
       ipAddress: overrides.ipAddress ?? '127.0.0.1',
       expiresAt: overrides.expiresAt ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -730,7 +730,7 @@ export async function createTestRefreshToken(
   userId: string,
   overrides: Partial<{
     id: string;
-    token: string;
+    tokenHash: string;
     expiresAt: Date;
     revokedAt: Date | null;
   }> = {}
@@ -740,7 +740,7 @@ export async function createTestRefreshToken(
     data: {
       id,
       userId,
-      token: overrides.token ?? `refresh-${id}`,
+      tokenHash: overrides.tokenHash ?? `refresh-hash-${id}`,
       expiresAt: overrides.expiresAt ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       revokedAt: overrides.revokedAt ?? null,
     },
@@ -1254,7 +1254,7 @@ export async function createTestAdminSession(
   adminUserId: string,
   overrides: Partial<{
     id: string;
-    token: string;
+    tokenHash: string;
     userAgent: string;
     ipAddress: string;
     expiresAt: Date;
@@ -1266,7 +1266,7 @@ export async function createTestAdminSession(
     data: {
       id,
       adminUserId,
-      token: overrides.token ?? `admin-token-${id}`,
+      tokenHash: overrides.tokenHash ?? `admin-hash-${id}`,
       userAgent: overrides.userAgent ?? 'Mozilla/5.0 Test Browser',
       ipAddress: overrides.ipAddress ?? '127.0.0.1',
       expiresAt: overrides.expiresAt ?? new Date(Date.now() + 2 * 60 * 60 * 1000), // 2時間後

@@ -5,7 +5,7 @@ import { prisma } from '@agentest/db';
  */
 export interface CreateSessionData {
   userId: string;
-  token: string;
+  tokenHash: string;
   userAgent?: string;
   ipAddress?: string;
   expiresAt: Date;
@@ -22,7 +22,7 @@ export class SessionRepository {
     return prisma.session.create({
       data: {
         userId: data.userId,
-        token: data.token,
+        tokenHash: data.tokenHash,
         userAgent: data.userAgent,
         ipAddress: data.ipAddress,
         expiresAt: data.expiresAt,
@@ -31,11 +31,11 @@ export class SessionRepository {
   }
 
   /**
-   * トークンでセッションを取得
+   * トークンハッシュでセッションを取得
    */
-  async findByToken(token: string) {
+  async findByTokenHash(tokenHash: string) {
     return prisma.session.findUnique({
-      where: { token },
+      where: { tokenHash },
     });
   }
 
@@ -91,11 +91,11 @@ export class SessionRepository {
   }
 
   /**
-   * トークンでセッションを失効
+   * トークンハッシュでセッションを失効
    */
-  async revokeByToken(token: string) {
+  async revokeByTokenHash(tokenHash: string) {
     return prisma.session.updateMany({
-      where: { token },
+      where: { tokenHash },
       data: { revokedAt: new Date() },
     });
   }

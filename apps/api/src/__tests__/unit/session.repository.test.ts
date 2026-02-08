@@ -27,10 +27,10 @@ describe('SessionRepository', () => {
   });
 
   describe('create', () => {
-    it('セッションを作成できる', async () => {
+    it('セッションを作成できる（tokenHashを使用）', async () => {
       const sessionData = {
         userId: 'user-1',
-        token: 'refresh-token-123',
+        tokenHash: 'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890',
         userAgent: 'Mozilla/5.0',
         ipAddress: '192.168.1.1',
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -43,7 +43,7 @@ describe('SessionRepository', () => {
       expect(mockPrismaSession.create).toHaveBeenCalledWith({
         data: {
           userId: sessionData.userId,
-          token: sessionData.token,
+          tokenHash: sessionData.tokenHash,
           userAgent: sessionData.userAgent,
           ipAddress: sessionData.ipAddress,
           expiresAt: sessionData.expiresAt,
@@ -53,23 +53,23 @@ describe('SessionRepository', () => {
     });
   });
 
-  describe('findByToken', () => {
-    it('トークンでセッションを取得できる', async () => {
-      const mockSession = { id: 'session-1', token: 'token-123' };
+  describe('findByTokenHash', () => {
+    it('トークンハッシュでセッションを取得できる', async () => {
+      const mockSession = { id: 'session-1', tokenHash: 'hash-123' };
       mockPrismaSession.findUnique.mockResolvedValue(mockSession);
 
-      const result = await repository.findByToken('token-123');
+      const result = await repository.findByTokenHash('hash-123');
 
       expect(mockPrismaSession.findUnique).toHaveBeenCalledWith({
-        where: { token: 'token-123' },
+        where: { tokenHash: 'hash-123' },
       });
       expect(result).toEqual(mockSession);
     });
 
-    it('存在しないトークンはnullを返す', async () => {
+    it('存在しないトークンハッシュはnullを返す', async () => {
       mockPrismaSession.findUnique.mockResolvedValue(null);
 
-      const result = await repository.findByToken('invalid-token');
+      const result = await repository.findByTokenHash('invalid-hash');
 
       expect(result).toBeNull();
     });
@@ -155,14 +155,14 @@ describe('SessionRepository', () => {
     });
   });
 
-  describe('revokeByToken', () => {
-    it('トークンでセッションを失効できる', async () => {
+  describe('revokeByTokenHash', () => {
+    it('トークンハッシュでセッションを失効できる', async () => {
       mockPrismaSession.updateMany.mockResolvedValue({ count: 1 });
 
-      const result = await repository.revokeByToken('token-123');
+      const result = await repository.revokeByTokenHash('hash-123');
 
       expect(mockPrismaSession.updateMany).toHaveBeenCalledWith({
-        where: { token: 'token-123' },
+        where: { tokenHash: 'hash-123' },
         data: { revokedAt: expect.any(Date) },
       });
       expect(result).toEqual({ count: 1 });

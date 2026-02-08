@@ -34,7 +34,7 @@ describe('AdminSessionRepository', () => {
 
       const session = await repo.create({
         adminUserId: testAdminUser.id,
-        token: 'test-token-123',
+        tokenHash: 'a'.repeat(64),
         userAgent: 'Mozilla/5.0 Test',
         ipAddress: '192.168.1.1',
         expiresAt,
@@ -42,7 +42,7 @@ describe('AdminSessionRepository', () => {
 
       expect(session.id).toBeDefined();
       expect(session.adminUserId).toBe(testAdminUser.id);
-      expect(session.token).toBe('test-token-123');
+      expect(session.tokenHash).toBe('a'.repeat(64));
       expect(session.userAgent).toBe('Mozilla/5.0 Test');
       expect(session.ipAddress).toBe('192.168.1.1');
       expect(session.expiresAt.getTime()).toBe(expiresAt.getTime());
@@ -50,17 +50,17 @@ describe('AdminSessionRepository', () => {
     });
   });
 
-  describe('findByToken', () => {
-    it('トークンでセッションを取得できる（adminUser含む）', async () => {
+  describe('findByTokenHash', () => {
+    it('トークンハッシュでセッションを取得できる（adminUser含む）', async () => {
       const session = await createTestAdminSession(testAdminUser.id, {
-        token: 'find-by-token-test',
+        tokenHash: 'b'.repeat(64),
       });
 
-      const result = await repo.findByToken('find-by-token-test');
+      const result = await repo.findByTokenHash('b'.repeat(64));
 
       expect(result).not.toBeNull();
       expect(result?.id).toBe(session.id);
-      expect(result?.token).toBe('find-by-token-test');
+      expect(result?.tokenHash).toBe('b'.repeat(64));
       // adminUserが含まれていることを確認
       expect(result?.adminUser).toBeDefined();
       expect(result?.adminUser.id).toBe(testAdminUser.id);
@@ -68,8 +68,8 @@ describe('AdminSessionRepository', () => {
       expect(result?.adminUser.name).toBe(testAdminUser.name);
     });
 
-    it('存在しないトークンはnullを返す', async () => {
-      const result = await repo.findByToken('nonexistent-token');
+    it('存在しないトークンハッシュはnullを返す', async () => {
+      const result = await repo.findByTokenHash('nonexistent-hash');
 
       expect(result).toBeNull();
     });
@@ -138,13 +138,13 @@ describe('AdminSessionRepository', () => {
     });
   });
 
-  describe('revokeByToken', () => {
-    it('トークンでセッションを失効できる', async () => {
+  describe('revokeByTokenHash', () => {
+    it('トークンハッシュでセッションを失効できる', async () => {
       const session = await createTestAdminSession(testAdminUser.id, {
-        token: 'revoke-by-token-test',
+        tokenHash: 'c'.repeat(64),
       });
 
-      await repo.revokeByToken('revoke-by-token-test');
+      await repo.revokeByTokenHash('c'.repeat(64));
 
       const revoked = await prisma.adminSession.findUnique({
         where: { id: session.id },
@@ -157,15 +157,15 @@ describe('AdminSessionRepository', () => {
   describe('revokeAllByUserId', () => {
     it('管理者の全セッションを失効できる', async () => {
       // 複数のセッションを作成
-      await createTestAdminSession(testAdminUser.id, { token: 'session-1' });
-      await createTestAdminSession(testAdminUser.id, { token: 'session-2' });
-      await createTestAdminSession(testAdminUser.id, { token: 'session-3' });
+      await createTestAdminSession(testAdminUser.id, { tokenHash: 'd'.repeat(64) });
+      await createTestAdminSession(testAdminUser.id, { tokenHash: 'e'.repeat(64) });
+      await createTestAdminSession(testAdminUser.id, { tokenHash: 'f'.repeat(64) });
 
       // 別の管理者のセッション（影響を受けないことを確認用）
       const otherAdmin = await createTestAdminUser({
         email: 'other@example.com',
       });
-      await createTestAdminSession(otherAdmin.id, { token: 'other-session' });
+      await createTestAdminSession(otherAdmin.id, { tokenHash: '1'.repeat(64) });
 
       await repo.revokeAllByUserId(testAdminUser.id);
 
@@ -189,15 +189,11 @@ describe('AdminSessionRepository', () => {
       const thirtyOneDaysAgo = new Date(now.getTime() - 31 * 24 * 60 * 60 * 1000);
       const twentyNineDaysAgo = new Date(now.getTime() - 29 * 24 * 60 * 60 * 1000);
 
-      // 注: 以下ではcreateTestAdminSessionではなくprisma.adminSession.createを直接使用
-      // 理由: createdAtのデフォルト値（now）を使用し、expiresAtのみを過去に設定することで
-      // 「期限切れだが保持期間内」と「期限切れかつ保持期間超過」のセッションを作成するため
-
       // 31日前に期限切れのセッション（削除対象）
       await prisma.adminSession.create({
         data: {
           adminUserId: testAdminUser.id,
-          token: 'expired-old-session',
+          tokenHash: '2'.repeat(64),
           expiresAt: thirtyOneDaysAgo,
         },
       });
@@ -206,7 +202,7 @@ describe('AdminSessionRepository', () => {
       await prisma.adminSession.create({
         data: {
           adminUserId: testAdminUser.id,
-          token: 'revoked-old-session',
+          tokenHash: '3'.repeat(64),
           expiresAt: now,
           revokedAt: thirtyOneDaysAgo,
         },
@@ -216,13 +212,13 @@ describe('AdminSessionRepository', () => {
       await prisma.adminSession.create({
         data: {
           adminUserId: testAdminUser.id,
-          token: 'expired-recent-session',
+          tokenHash: '4'.repeat(64),
           expiresAt: twentyNineDaysAgo,
         },
       });
 
       // 有効なセッション（保持対象）
-      await createTestAdminSession(testAdminUser.id, { token: 'valid-session' });
+      await createTestAdminSession(testAdminUser.id, { tokenHash: '5'.repeat(64) });
 
       const result = await repo.deleteExpired();
 
@@ -233,9 +229,9 @@ describe('AdminSessionRepository', () => {
         where: { adminUserId: testAdminUser.id },
       });
       expect(remainingSessions.length).toBe(2);
-      expect(remainingSessions.map((s) => s.token).sort()).toEqual([
-        'expired-recent-session',
-        'valid-session',
+      expect(remainingSessions.map((s) => s.tokenHash).sort()).toEqual([
+        '4'.repeat(64),
+        '5'.repeat(64),
       ]);
     });
   });

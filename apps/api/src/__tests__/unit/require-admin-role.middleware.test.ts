@@ -56,7 +56,6 @@ describe('requireAdminAuth ミドルウェア', () => {
   it('クッキーからトークンを取得して認証できる', async () => {
     const mockSession = {
       id: 'session-1',
-      token: 'valid-token',
       createdAt: new Date(),
       expiresAt: new Date(Date.now() + 60 * 60 * 1000),
       adminUser: {
@@ -83,10 +82,9 @@ describe('requireAdminAuth ミドルウェア', () => {
     expect(next).toHaveBeenCalledWith();
   });
 
-  it('req.adminUser, req.adminSessionを設定する', async () => {
+  it('req.adminUser, req.adminSessionを設定する（tokenはクッキー値）', async () => {
     const mockSession = {
       id: 'session-1',
-      token: 'valid-token',
       createdAt: new Date(),
       expiresAt: new Date(Date.now() + 60 * 60 * 1000),
       adminUser: {
@@ -112,7 +110,7 @@ describe('requireAdminAuth ミドルウェア', () => {
     expect(req.adminUser).toEqual(mockSession.adminUser);
     expect(req.adminSession).toEqual({
       id: mockSession.id,
-      token: mockSession.token,
+      token: 'valid-token', // クッキーから取得した生トークン
       createdAt: mockSession.createdAt,
       expiresAt: mockSession.expiresAt,
     });

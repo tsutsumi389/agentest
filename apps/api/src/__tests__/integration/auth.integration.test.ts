@@ -11,6 +11,7 @@ import {
 
 import { AuthenticationError } from '@agentest/shared';
 import { createApp } from '../../app.js';
+import { hashToken } from '../../utils/pkce.js';
 
 // グローバルな認証状態（モック用）
 let mockAuthUser: {
@@ -153,11 +154,13 @@ describe('Auth API Integration Tests', () => {
 
   describe('POST /api/auth/refresh', () => {
     let refreshToken: Awaited<ReturnType<typeof createTestRefreshToken>>;
+    let rawRefreshToken: string;
 
     beforeEach(async () => {
-      // リフレッシュトークンを作成
+      // リフレッシュトークンを作成（ハッシュ化してDBに保存）
+      rawRefreshToken = 'valid-refresh-token';
       refreshToken = await createTestRefreshToken(testUser.id, {
-        token: 'valid-refresh-token',
+        tokenHash: hashToken(rawRefreshToken),
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       });
 
@@ -168,7 +171,7 @@ describe('Auth API Integration Tests', () => {
     it('有効なリフレッシュトークンで新しいトークンを取得できる', async () => {
       const response = await request(app)
         .post('/api/auth/refresh')
-        .send({ refreshToken: 'valid-refresh-token' });
+        .send({ refreshToken: rawRefreshToken });
 
       expect(response.status).toBe(200);
       expect(response.body.accessToken).toBeDefined();
@@ -178,7 +181,7 @@ describe('Auth API Integration Tests', () => {
     it('クッキーからリフレッシュトークンを読み取れる', async () => {
       const response = await request(app)
         .post('/api/auth/refresh')
-        .set('Cookie', 'refresh_token=valid-refresh-token');
+        .set('Cookie', `refresh_token=${rawRefreshToken}`);
 
       expect(response.status).toBe(200);
       expect(response.body.accessToken).toBeDefined();
@@ -187,7 +190,7 @@ describe('Auth API Integration Tests', () => {
     it('新しいセッションがDBに作成される', async () => {
       await request(app)
         .post('/api/auth/refresh')
-        .send({ refreshToken: 'valid-refresh-token' });
+        .send({ refreshToken: rawRefreshToken });
 
       // 新しいセッションが作成されていることを確認
       const sessions = await prisma.session.findMany({
@@ -200,7 +203,7 @@ describe('Auth API Integration Tests', () => {
     it('古いリフレッシュトークンが無効化される', async () => {
       await request(app)
         .post('/api/auth/refresh')
-        .send({ refreshToken: 'valid-refresh-token' });
+        .send({ refreshToken: rawRefreshToken });
 
       const oldToken = await prisma.refreshToken.findUnique({
         where: { id: refreshToken.id },
@@ -240,7 +243,7 @@ describe('Auth API Integration Tests', () => {
 
       const response = await request(app)
         .post('/api/auth/refresh')
-        .send({ refreshToken: 'valid-refresh-token' });
+        .send({ refreshToken: rawRefreshToken });
 
       expect(response.status).toBe(401);
       expect(response.body.error.message).toContain('無効なリフレッシュトークン');
@@ -255,7 +258,7 @@ describe('Auth API Integration Tests', () => {
 
       const response = await request(app)
         .post('/api/auth/refresh')
-        .send({ refreshToken: 'valid-refresh-token' });
+        .send({ refreshToken: rawRefreshToken });
 
       expect(response.status).toBe(401);
       expect(response.body.error.message).toContain('無効なリフレッシュトークン');
@@ -270,7 +273,7 @@ describe('Auth API Integration Tests', () => {
 
       const response = await request(app)
         .post('/api/auth/refresh')
-        .send({ refreshToken: 'valid-refresh-token' });
+        .send({ refreshToken: rawRefreshToken });
 
       expect(response.status).toBe(401);
       expect(response.body.error.message).toContain('ユーザーが見つかりません');
@@ -280,14 +283,16 @@ describe('Auth API Integration Tests', () => {
   describe('POST /api/auth/logout', () => {
     let session: Awaited<ReturnType<typeof createTestSession>>;
     let refreshToken: Awaited<ReturnType<typeof createTestRefreshToken>>;
+    let rawLogoutToken: string;
 
     beforeEach(async () => {
-      // セッションとリフレッシュトークンを作成
+      // セッションとリフレッシュトークンを作成（ハッシュ化してDBに保存）
+      rawLogoutToken = 'logout-test-token';
       session = await createTestSession(testUser.id, {
-        token: 'logout-test-token',
+        tokenHash: hashToken(rawLogoutToken),
       });
       refreshToken = await createTestRefreshToken(testUser.id, {
-        token: 'logout-test-token',
+        tokenHash: hashToken(rawLogoutToken),
       });
 
       setTestAuth({
@@ -303,7 +308,7 @@ describe('Auth API Integration Tests', () => {
     it('ログアウトに成功する', async () => {
       const response = await request(app)
         .post('/api/auth/logout')
-        .set('Cookie', 'refresh_token=logout-test-token');
+        .set('Cookie', `refresh_token=${rawLogoutToken}`);
 
       expect(response.status).toBe(200);
       expect(response.body.message).toBe('ログアウトしました');
@@ -312,7 +317,7 @@ describe('Auth API Integration Tests', () => {
     it('リフレッシュトークンが無効化される', async () => {
       await request(app)
         .post('/api/auth/logout')
-        .set('Cookie', 'refresh_token=logout-test-token');
+        .set('Cookie', `refresh_token=${rawLogoutToken}`);
 
       const token = await prisma.refreshToken.findUnique({
         where: { id: refreshToken.id },
@@ -324,7 +329,7 @@ describe('Auth API Integration Tests', () => {
     it('セッションが無効化される', async () => {
       await request(app)
         .post('/api/auth/logout')
-        .set('Cookie', 'refresh_token=logout-test-token');
+        .set('Cookie', `refresh_token=${rawLogoutToken}`);
 
       const sess = await prisma.session.findUnique({
         where: { id: session.id },
@@ -336,7 +341,7 @@ describe('Auth API Integration Tests', () => {
     it('クッキーがクリアされる', async () => {
       const response = await request(app)
         .post('/api/auth/logout')
-        .set('Cookie', 'refresh_token=logout-test-token');
+        .set('Cookie', `refresh_token=${rawLogoutToken}`);
 
       expect(response.status).toBe(200);
       // Set-Cookieヘッダーでクリアされていることを確認

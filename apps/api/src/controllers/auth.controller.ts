@@ -6,6 +6,7 @@ import { env } from '../config/env.js';
 import { SessionService } from '../services/session.service.js';
 import { extractClientInfo } from '../middleware/session.middleware.js';
 import { encryptToken } from '../utils/crypto.js';
+import { hashToken } from '../utils/pkce.js';
 
 const authConfig = {
   jwt: {
@@ -88,9 +89,10 @@ export class AuthController {
       // トークンを検証
       const payload = verifyRefreshToken(refreshToken, authConfig);
 
-      // データベースでトークンを確認
+      // データベースでトークンを確認（ハッシュで検索）
+      const refreshTokenHash = hashToken(refreshToken);
       const storedToken = await prisma.refreshToken.findUnique({
-        where: { token: refreshToken },
+        where: { tokenHash: refreshTokenHash },
       });
 
       if (!storedToken || storedToken.revokedAt || storedToken.expiresAt < new Date()) {
@@ -106,14 +108,14 @@ export class AuthController {
         throw new AuthenticationError('ユーザーが見つかりません');
       }
 
-      // 古いトークン・セッションを無効化
+      // 古いトークン・セッションを無効化（ハッシュで検索）
       await Promise.all([
         prisma.refreshToken.update({
           where: { id: storedToken.id },
           data: { revokedAt: new Date() },
         }),
         prisma.session.updateMany({
-          where: { token: refreshToken },
+          where: { tokenHash: refreshTokenHash },
           data: { revokedAt: new Date() },
         }),
       ]);
@@ -124,25 +126,26 @@ export class AuthController {
       // クライアント情報を抽出
       const clientInfo = extractClientInfo(req);
 
-      // 新しいリフレッシュトークンとセッションを保存
+      // 新しいリフレッシュトークンとセッションを保存（ハッシュ化して保存）
+      const newTokenHash = hashToken(tokens.refreshToken);
       await Promise.all([
         prisma.refreshToken.create({
           data: {
             userId: user.id,
-            token: tokens.refreshToken,
+            tokenHash: newTokenHash,
             expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
           },
         }),
         this.sessionService.createSession({
           userId: user.id,
-          token: tokens.refreshToken,
+          tokenHash: newTokenHash,
           userAgent: clientInfo.userAgent,
           ipAddress: clientInfo.ipAddress,
           expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
         }),
       ]);
 
-      // クッキーに設定
+      // クッキーに設定（生トークン）
       res.cookie('access_token', tokens.accessToken, {
         ...cookieOptions,
         maxAge: 15 * 60 * 1000, // 15分
@@ -169,14 +172,15 @@ export class AuthController {
       const refreshToken = req.cookies?.refresh_token;
 
       if (refreshToken) {
-        // リフレッシュトークンとセッションを無効化
+        // リフレッシュトークンとセッションを無効化（ハッシュで検索）
+        const tokenHash = hashToken(refreshToken);
         await Promise.all([
           prisma.refreshToken.updateMany({
-            where: { token: refreshToken },
+            where: { tokenHash },
             data: { revokedAt: new Date() },
           }),
           prisma.session.updateMany({
-            where: { token: refreshToken },
+            where: { tokenHash },
             data: { revokedAt: new Date() },
           }),
         ]);
@@ -246,25 +250,26 @@ export class AuthController {
       // クライアント情報を抽出
       const clientInfo = extractClientInfo(req);
 
-      // リフレッシュトークンとセッションを保存
+      // リフレッシュトークンとセッションを保存（ハッシュ化して保存）
+      const tokenHash = hashToken(tokens.refreshToken);
       await Promise.all([
         prisma.refreshToken.create({
           data: {
             userId: oauthUser.userId,
-            token: tokens.refreshToken,
+            tokenHash,
             expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
           },
         }),
         this.sessionService.createSession({
           userId: oauthUser.userId,
-          token: tokens.refreshToken,
+          tokenHash,
           userAgent: clientInfo.userAgent,
           ipAddress: clientInfo.ipAddress,
           expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
         }),
       ]);
 
-      // クッキーに設定
+      // クッキーに設定（生トークン）
       res.cookie('access_token', tokens.accessToken, {
         ...cookieOptions,
         maxAge: 15 * 60 * 1000,
