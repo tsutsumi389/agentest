@@ -287,8 +287,12 @@ async function handleSubscribe(ws: ExtendedWebSocket, channels: string[]): Promi
 
     // チャンネルにサブスクライブ
     if (!channelSubscribers.has(channel)) {
+      const subscribed = await subscribeToChannel(channel);
+      if (!subscribed) {
+        logger.warn({ channel, userId: ws.userId }, 'Redisサブスクライブ失敗のためチャンネルをスキップ');
+        continue;
+      }
       channelSubscribers.set(channel, new Set());
-      await subscribeToChannel(channel);
     }
 
     channelSubscribers.get(channel)!.add(ws);

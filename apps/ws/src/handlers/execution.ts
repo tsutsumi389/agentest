@@ -29,7 +29,8 @@ export async function publishExecutionStarted(
   };
 
   // プロジェクトチャンネルと実行チャンネルにパブリッシュ
-  await Promise.all([
+  // 一部のパブリッシュが失敗しても他のチャンネルへの配信を継続
+  await Promise.allSettled([
     publishEvent(Channels.project(projectId), event),
     publishEvent(Channels.testSuite(testSuiteId), event),
     publishEvent(Channels.execution(executionId), event),

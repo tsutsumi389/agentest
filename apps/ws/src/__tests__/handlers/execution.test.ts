@@ -330,6 +330,32 @@ describe('handlers/execution', () => {
     });
   });
 
+  describe('パブリッシュ失敗時の動作', () => {
+    it('一部のパブリッシュが失敗してもPromise.allSettledで処理される', async () => {
+      // 1回目は成功、2回目は失敗、3回目は成功
+      vi.mocked(publishEvent)
+        .mockResolvedValueOnce(undefined)
+        .mockRejectedValueOnce(new Error('Redis error'))
+        .mockResolvedValueOnce(undefined);
+
+      const executedBy = { type: 'user' as const, id: TEST_USER_ID, name: 'Test User' };
+
+      // Promise.allSettledを使用しているのでエラーにならない
+      await expect(
+        publishExecutionStarted(
+          TEST_EXECUTION_ID,
+          TEST_SUITE_ID,
+          TEST_PROJECT_ID,
+          null,
+          executedBy
+        )
+      ).resolves.not.toThrow();
+
+      // 3つのチャンネルにパブリッシュが試行されたことを確認
+      expect(publishEvent).toHaveBeenCalledTimes(3);
+    });
+  });
+
   describe('publishEvidenceAdded', () => {
     it('エビデンス追加イベントを実行チャンネルにパブリッシュ', async () => {
       const expectedResultId = 'expected-result-123';
