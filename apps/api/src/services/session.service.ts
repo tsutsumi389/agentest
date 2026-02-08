@@ -1,5 +1,6 @@
 import { NotFoundError, AuthorizationError } from '@agentest/shared';
 import { SessionRepository, type CreateSessionData } from '../repositories/session.repository.js';
+import { hashToken } from '../utils/pkce.js';
 import { logger as baseLogger } from '../utils/logger.js';
 
 const logger = baseLogger.child({ module: 'session' });
@@ -32,9 +33,11 @@ export class SessionService {
 
   /**
    * トークンでセッションを取得
+   * 生トークンを受け取り、ハッシュ化してからDB検索する
    */
   async getSessionByToken(token: string) {
-    const session = await this.sessionRepo.findByToken(token);
+    const tokenHash = hashToken(token);
+    const session = await this.sessionRepo.findByTokenHash(tokenHash);
     if (!session) {
       return null;
     }

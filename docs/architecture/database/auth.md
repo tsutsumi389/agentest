@@ -132,30 +132,36 @@ JWT リフレッシュトークンを管理するテーブル。
 |--------|------|------|------------|------|
 | `id` | UUID | NO | gen_random_uuid() | 主キー |
 | `userId` | UUID | NO | - | ユーザー ID（外部キー） |
-| `token` | VARCHAR(500) | NO | - | トークン値（ハッシュ化） |
+| `tokenHash` | VARCHAR(64) | NO | - | トークンの SHA-256 ハッシュ値（hex、64文字） |
 | `expiresAt` | TIMESTAMP | NO | - | 有効期限 |
 | `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
 | `revokedAt` | TIMESTAMP | YES | NULL | 失効日時 |
 
 ### 制約
 
-- `token` は一意
+- `tokenHash` は一意
+
+### トークン保存方式
+
+- 生トークンは Cookie にのみ保持し、DB には SHA-256 ハッシュのみ保存
+- 検証フロー: Cookie から生トークン取得 → `hashToken()` で SHA-256 ハッシュ化 → DB でハッシュ検索
 
 ### Prisma スキーマ
 
 ```prisma
 model RefreshToken {
-  id        String    @id @default(uuid()) @db.Uuid
-  userId    String    @db.Uuid
-  token     String    @unique @db.VarChar(500)
-  expiresAt DateTime
-  createdAt DateTime  @default(now())
-  revokedAt DateTime?
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  tokenHash String    @unique @map("token_hash") @db.VarChar(64)
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([token])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
 }
 ```
 
@@ -171,7 +177,7 @@ model RefreshToken {
 |--------|------|------|------------|------|
 | `id` | UUID | NO | gen_random_uuid() | 主キー |
 | `userId` | UUID | NO | - | ユーザー ID（外部キー） |
-| `token` | VARCHAR(500) | NO | - | セッショントークン（ハッシュ化） |
+| `tokenHash` | VARCHAR(64) | NO | - | セッショントークンの SHA-256 ハッシュ値（hex、64文字） |
 | `userAgent` | TEXT | YES | NULL | ブラウザ / クライアント情報 |
 | `ipAddress` | VARCHAR(45) | YES | NULL | IP アドレス（IPv6 対応） |
 | `lastActiveAt` | TIMESTAMP | NO | now() | 最終アクティブ日時 |
@@ -188,27 +194,32 @@ model RefreshToken {
 
 ### 制約
 
-- `token` は一意
+- `tokenHash` は一意
+
+### トークン保存方式
+
+- 生トークンは Cookie にのみ保持し、DB には SHA-256 ハッシュのみ保存
+- 検証フロー: Cookie から生トークン取得 → `hashToken()` で SHA-256 ハッシュ化 → DB でハッシュ検索
 
 ### Prisma スキーマ
 
 ```prisma
 model Session {
-  id           String    @id @default(uuid()) @db.Uuid
-  userId       String    @db.Uuid
-  token        String    @unique @db.VarChar(500)
-  userAgent    String?
-  ipAddress    String?   @db.VarChar(45)
-  lastActiveAt DateTime  @default(now())
-  expiresAt    DateTime
-  createdAt    DateTime  @default(now())
-  revokedAt    DateTime?
+  id           String    @id @default(uuid())
+  userId       String    @map("user_id")
+  tokenHash    String    @unique @map("token_hash") @db.VarChar(64)
+  userAgent    String?   @map("user_agent")
+  ipAddress    String?   @map("ip_address") @db.VarChar(45)
+  lastActiveAt DateTime  @default(now()) @map("last_active_at")
+  expiresAt    DateTime  @map("expires_at")
+  revokedAt    DateTime? @map("revoked_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([token])
   @@index([expiresAt])
+  @@map("sessions")
 }
 ```
 

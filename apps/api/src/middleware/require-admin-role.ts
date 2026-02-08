@@ -36,7 +36,7 @@ export function requireAdminRole(roles: AdminRoleType[] = []) {
       req.adminUser = session.adminUser;
       req.adminSession = {
         id: session.id,
-        token: session.token,
+        token, // クッキーから取得した生トークン（DBにはハッシュのみ保存されている）
         createdAt: session.createdAt,
         expiresAt: session.expiresAt,
       };

@@ -264,7 +264,7 @@ model Account {
 model RefreshToken {
   id        String    @id @default(uuid())
   userId    String    @map("user_id")
-  token     String    @unique @db.VarChar(500)
+  tokenHash String    @unique @map("token_hash") @db.VarChar(64)
   expiresAt DateTime  @map("expires_at")
   revokedAt DateTime? @map("revoked_at")
   createdAt DateTime  @default(now()) @map("created_at")
@@ -272,7 +272,6 @@ model RefreshToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([token])
   @@index([expiresAt])
   @@map("refresh_tokens")
 }
@@ -280,7 +279,7 @@ model RefreshToken {
 model Session {
   id           String    @id @default(uuid())
   userId       String    @map("user_id")
-  token        String    @unique @db.VarChar(500)
+  tokenHash    String    @unique @map("token_hash") @db.VarChar(64)
   userAgent    String?   @map("user_agent")
   ipAddress    String?   @map("ip_address") @db.VarChar(45)
   lastActiveAt DateTime  @default(now()) @map("last_active_at")
@@ -291,7 +290,6 @@ model Session {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([token])
   @@index([expiresAt])
   @@map("sessions")
 }
@@ -1370,7 +1368,7 @@ model AdminInvitation {
 model AdminSession {
   id          String @id @default(uuid())
   adminUserId String @map("admin_user_id")
-  token       String @unique @db.VarChar(500)
+  tokenHash   String @unique @map("token_hash") @db.VarChar(64)
 
   userAgent String? @map("user_agent")
   ipAddress String? @map("ip_address") @db.VarChar(45)
@@ -1384,7 +1382,6 @@ model AdminSession {
   adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
 
   @@index([adminUserId])
-  @@index([token])
   @@index([expiresAt])
   @@map("admin_sessions")
 }

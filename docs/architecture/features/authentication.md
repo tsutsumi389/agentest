@@ -171,7 +171,7 @@ erDiagram
     Session {
         uuid id PK
         uuid userId FK
-        string token UK
+        string tokenHash UK "SHA-256ハッシュ"
         string userAgent
         string ipAddress
         timestamp lastActiveAt
@@ -183,7 +183,7 @@ erDiagram
     RefreshToken {
         uuid id PK
         uuid userId FK
-        string token UK
+        string tokenHash UK "SHA-256ハッシュ"
         timestamp expiresAt
         timestamp revokedAt
         timestamp createdAt
@@ -240,6 +240,7 @@ erDiagram
 - **トークン保存**
   - アクセストークン: HttpOnly Cookie
   - リフレッシュトークン: HttpOnly Cookie
+  - セッション・リフレッシュトークン: DB には SHA-256 ハッシュのみ保存（生トークンは Cookie にのみ保持）
   - クライアント側のJavaScriptからはアクセス不可
 - **OAuthトークンの暗号化保存**
   - OAuthプロバイダー（GitHub/Google）から取得した accessToken / refreshToken は AES-256-GCM で暗号化してDB保存
@@ -545,7 +546,7 @@ erDiagram
     AdminSession {
         uuid id PK
         uuid admin_user_id FK
-        string token UK
+        string token_hash UK "SHA-256ハッシュ"
         string user_agent
         string ip_address
         timestamp last_active_at
@@ -586,6 +587,7 @@ erDiagram
 - 有効期限: 8時間
 - 非アクティブタイムアウト: 30分
 - セッショントークン: 32バイトの暗号的に安全なランダム値
+- DB には SHA-256 ハッシュのみ保存（生トークンは Cookie にのみ保持）
 
 #### 2FA（TOTP）
 

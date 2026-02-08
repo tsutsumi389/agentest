@@ -24,11 +24,12 @@ import {
 } from './test-helpers.js';
 import { createApp } from '../../app.js';
 import { invalidateAdminDashboardCache } from '../../lib/redis-store.js';
+import { hashToken } from '../../utils/pkce.js';
 
 describe('Admin Dashboard API Integration Tests', () => {
   let app: Express;
   let testAdminUser: Awaited<ReturnType<typeof createTestAdminUser>>;
-  let testAdminSession: Awaited<ReturnType<typeof createTestAdminSession>>;
+  let rawSessionToken: string;
   const testPassword = 'TestPassword123!';
 
   beforeAll(async () => {
@@ -53,8 +54,10 @@ describe('Admin Dashboard API Integration Tests', () => {
       passwordHash,
     });
 
-    testAdminSession = await createTestAdminSession(testAdminUser.id, {
-      token: 'test-admin-session-token',
+    // 生トークンを生成し、ハッシュ化してDBに保存
+    rawSessionToken = 'test-admin-session-token';
+    await createTestAdminSession(testAdminUser.id, {
+      tokenHash: hashToken(rawSessionToken),
     });
   });
 
@@ -62,7 +65,7 @@ describe('Admin Dashboard API Integration Tests', () => {
     it('認証済みの管理者がダッシュボード統計を取得できる', async () => {
       const response = await request(app)
         .get('/admin/dashboard')
-        .set('Cookie', `admin_session=${testAdminSession.token}`);
+        .set('Cookie', `admin_session=${rawSessionToken}`);
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('users');
@@ -90,7 +93,7 @@ describe('Admin Dashboard API Integration Tests', () => {
       await prisma.session.create({
         data: {
           userId: user1.id,
-          token: 'test-token-1',
+          tokenHash: hashToken('test-token-1'),
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
           lastActiveAt: new Date(), // 今日
         },
@@ -98,7 +101,7 @@ describe('Admin Dashboard API Integration Tests', () => {
 
       const response = await request(app)
         .get('/admin/dashboard')
-        .set('Cookie', `admin_session=${testAdminSession.token}`);
+        .set('Cookie', `admin_session=${rawSessionToken}`);
 
       expect(response.status).toBe(200);
       expect(response.body.users.total).toBe(3);
@@ -117,7 +120,7 @@ describe('Admin Dashboard API Integration Tests', () => {
 
       const response = await request(app)
         .get('/admin/dashboard')
-        .set('Cookie', `admin_session=${testAdminSession.token}`);
+        .set('Cookie', `admin_session=${rawSessionToken}`);
 
       expect(response.status).toBe(200);
       expect(response.body.organizations.total).toBe(2);
@@ -177,7 +180,7 @@ describe('Admin Dashboard API Integration Tests', () => {
 
       const response = await request(app)
         .get('/admin/dashboard')
-        .set('Cookie', `admin_session=${testAdminSession.token}`);
+        .set('Cookie', `admin_session=${rawSessionToken}`);
 
       expect(response.status).toBe(200);
       expect(response.body.executions.totalThisMonth).toBe(2);
@@ -212,7 +215,7 @@ describe('Admin Dashboard API Integration Tests', () => {
 
       const response = await request(app)
         .get('/admin/dashboard')
-        .set('Cookie', `admin_session=${testAdminSession.token}`);
+        .set('Cookie', `admin_session=${rawSessionToken}`);
 
       expect(response.status).toBe(200);
       // MRRの計算: PRO月払い(980) + TEAM月払い(4980) = 5960
@@ -225,7 +228,7 @@ describe('Admin Dashboard API Integration Tests', () => {
     it('システムヘルスにAPIとデータベースが含まれる', async () => {
       const response = await request(app)
         .get('/admin/dashboard')
-        .set('Cookie', `admin_session=${testAdminSession.token}`);
+        .set('Cookie', `admin_session=${rawSessionToken}`);
 
       expect(response.status).toBe(200);
       expect(response.body.systemHealth.api.status).toBe('healthy');
@@ -242,7 +245,7 @@ describe('Admin Dashboard API Integration Tests', () => {
     it('fetchedAtがISO 8601形式で返される', async () => {
       const response = await request(app)
         .get('/admin/dashboard')
-        .set('Cookie', `admin_session=${testAdminSession.token}`);
+        .set('Cookie', `admin_session=${rawSessionToken}`);
 
       expect(response.status).toBe(200);
       // ISO 8601形式のチェック
@@ -259,13 +262,14 @@ describe('Admin Dashboard API Integration Tests', () => {
         passwordHash,
         role: 'VIEWER',
       });
-      const viewerSession = await createTestAdminSession(viewerAdmin.id, {
-        token: 'viewer-session-token',
+      const rawViewerToken = 'viewer-session-token';
+      await createTestAdminSession(viewerAdmin.id, {
+        tokenHash: hashToken(rawViewerToken),
       });
 
       const response = await request(app)
         .get('/admin/dashboard')
-        .set('Cookie', `admin_session=${viewerSession.token}`);
+        .set('Cookie', `admin_session=${rawViewerToken}`);
 
       expect(response.status).toBe(200);
     });

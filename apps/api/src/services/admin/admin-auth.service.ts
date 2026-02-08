@@ -180,7 +180,6 @@ export class AdminAuthService {
    * セッション延長処理
    */
   async refreshSession(
-    _token: string,
     adminUserId: string,
     sessionId: string,
     createdAt: Date,

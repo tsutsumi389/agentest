@@ -6,6 +6,7 @@ import { authConfig } from '../config/auth.js';
 import { env } from '../config/env.js';
 import { SessionService } from '../services/session.service.js';
 import { extractClientInfo } from '../middleware/session.middleware.js';
+import { hashToken } from '../utils/pkce.js';
 
 const router: Router = Router();
 const authController = new AuthController();
@@ -136,18 +137,19 @@ if (env.NODE_ENV !== 'production') {
       // クライアント情報を抽出
       const clientInfo = extractClientInfo(req);
 
-      // リフレッシュトークンとセッションを保存
+      // リフレッシュトークンとセッションを保存（ハッシュ化して保存）
+      const tokenHash = hashToken(tokens.refreshToken);
       await Promise.all([
         prisma.refreshToken.create({
           data: {
             userId: user.id,
-            token: tokens.refreshToken,
+            tokenHash,
             expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
           },
         }),
         sessionService.createSession({
           userId: user.id,
-          token: tokens.refreshToken,
+          tokenHash,
           userAgent: clientInfo.userAgent,
           ipAddress: clientInfo.ipAddress,
           expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),

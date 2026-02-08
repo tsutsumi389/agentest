@@ -123,7 +123,6 @@ export class AdminAuthController {
 
       // セッションを延長
       const newExpiresAt = await this.authService.refreshSession(
-        req.adminSession.token,
         req.adminUser.id,
         req.adminSession.id,
         req.adminSession.createdAt,

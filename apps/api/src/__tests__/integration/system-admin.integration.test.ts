@@ -4,6 +4,7 @@ import { prisma } from '@agentest/db';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { createApp } from '../../app.js';
+import { hashToken } from '../../utils/pkce.js';
 import type { Express } from 'express';
 
 describe('System Admin API Integration Tests', () => {
@@ -41,25 +42,27 @@ describe('System Admin API Integration Tests', () => {
     });
     adminId = admin.id;
 
-    // SUPER_ADMINセッションを作成
-    const superAdminSession = await prisma.adminSession.create({
+    // SUPER_ADMINセッションを作成（生トークンをクッキーに、ハッシュをDBに保存）
+    const superAdminRawToken = crypto.randomBytes(32).toString('hex');
+    await prisma.adminSession.create({
       data: {
         adminUserId: superAdminId,
-        token: crypto.randomBytes(32).toString('hex'),
+        tokenHash: hashToken(superAdminRawToken),
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       },
     });
-    superAdminCookie = `admin_session=${superAdminSession.token}`;
+    superAdminCookie = `admin_session=${superAdminRawToken}`;
 
     // ADMINセッションを作成
-    const adminSession = await prisma.adminSession.create({
+    const adminRawToken = crypto.randomBytes(32).toString('hex');
+    await prisma.adminSession.create({
       data: {
         adminUserId: adminId,
-        token: crypto.randomBytes(32).toString('hex'),
+        tokenHash: hashToken(adminRawToken),
         expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
       },
     });
-    adminCookie = `admin_session=${adminSession.token}`;
+    adminCookie = `admin_session=${adminRawToken}`;
   });
 
   afterAll(async () => {

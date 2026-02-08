@@ -379,7 +379,6 @@ describe('AdminAuthService', () => {
       mockAuditLogService.log.mockResolvedValue(undefined);
 
       const result = await service.refreshSession(
-        'session-token',
         'admin-1',
         'session-1',
         new Date(),
@@ -400,7 +399,6 @@ describe('AdminAuthService', () => {
       mockAuditLogService.log.mockResolvedValue(undefined);
 
       await service.refreshSession(
-        'session-token',
         'admin-1',
         'session-1',
         new Date(),
@@ -423,7 +421,6 @@ describe('AdminAuthService', () => {
       mockSessionService.refreshSession.mockResolvedValue(null);
 
       const result = await service.refreshSession(
-        'session-token',
         'admin-1',
         'session-1',
         new Date(Date.now() - 9 * 60 * 60 * 1000), // 9時間前（最大延長期限超過）

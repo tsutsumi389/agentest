@@ -23,6 +23,7 @@ vi.mock('../../services/session.service.js', () => ({
 
 // モック設定後にインポート
 import { trackSession, extractClientInfo } from '../../middleware/session.middleware.js';
+import { hashToken } from '../../utils/pkce.js';
 
 // テスト用の固定値
 const TEST_SESSION_ID = '11111111-1111-1111-1111-111111111111';
@@ -55,11 +56,11 @@ describe('trackSession', () => {
   });
 
   describe('セッション特定', () => {
-    it('クッキーのrefresh_tokenでセッションを検索', async () => {
+    it('クッキーのrefresh_tokenをハッシュ化してセッションを検索', async () => {
       const futureDate = new Date(Date.now() + 1000 * 60 * 60);
       mockPrismaSession.findUnique.mockResolvedValue({
         id: TEST_SESSION_ID,
-        token: TEST_REFRESH_TOKEN,
+        tokenHash: 'hashed-token',
         revokedAt: null,
         expiresAt: futureDate,
       });
@@ -72,7 +73,7 @@ describe('trackSession', () => {
       await middleware(req as Request, res as Response, mockNext);
 
       expect(mockPrismaSession.findUnique).toHaveBeenCalledWith({
-        where: { token: TEST_REFRESH_TOKEN },
+        where: { tokenHash: hashToken(TEST_REFRESH_TOKEN) },
       });
     });
 
@@ -80,7 +81,7 @@ describe('trackSession', () => {
       const futureDate = new Date(Date.now() + 1000 * 60 * 60);
       mockPrismaSession.findUnique.mockResolvedValue({
         id: TEST_SESSION_ID,
-        token: TEST_REFRESH_TOKEN,
+        tokenHash: 'hashed-token',
         revokedAt: null,
         expiresAt: futureDate,
       });
@@ -99,7 +100,7 @@ describe('trackSession', () => {
     it('失効済みセッションはスキップ', async () => {
       mockPrismaSession.findUnique.mockResolvedValue({
         id: TEST_SESSION_ID,
-        token: TEST_REFRESH_TOKEN,
+        tokenHash: 'hashed-token',
         revokedAt: new Date(),
         expiresAt: new Date(Date.now() + 1000 * 60 * 60),
       });
@@ -118,7 +119,7 @@ describe('trackSession', () => {
     it('期限切れセッションはスキップ', async () => {
       mockPrismaSession.findUnique.mockResolvedValue({
         id: TEST_SESSION_ID,
-        token: TEST_REFRESH_TOKEN,
+        tokenHash: 'hashed-token',
         revokedAt: null,
         expiresAt: new Date(Date.now() - 1000), // 過去の日時
       });
@@ -167,7 +168,7 @@ describe('trackSession', () => {
       const futureDate = new Date(Date.now() + 1000 * 60 * 60);
       mockPrismaSession.findUnique.mockResolvedValue({
         id: TEST_SESSION_ID,
-        token: TEST_REFRESH_TOKEN,
+        tokenHash: 'hashed-token',
         revokedAt: null,
         expiresAt: futureDate,
       });
@@ -188,7 +189,7 @@ describe('trackSession', () => {
       const futureDate = new Date(Date.now() + 1000 * 60 * 60);
       mockPrismaSession.findUnique.mockResolvedValue({
         id: TEST_SESSION_ID,
-        token: TEST_REFRESH_TOKEN,
+        tokenHash: 'hashed-token',
         revokedAt: null,
         expiresAt: futureDate,
       });
@@ -208,7 +209,7 @@ describe('trackSession', () => {
       const futureDate = new Date(Date.now() + 1000 * 60 * 60);
       mockPrismaSession.findUnique.mockResolvedValue({
         id: TEST_SESSION_ID,
-        token: TEST_REFRESH_TOKEN,
+        tokenHash: 'hashed-token',
         revokedAt: null,
         expiresAt: futureDate,
       });

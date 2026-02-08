@@ -3,12 +3,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // AdminSessionRepository のモック（vi.hoistedを使用）
 const mockSessionRepo = vi.hoisted(() => ({
   create: vi.fn(),
-  findByToken: vi.fn(),
+  findByTokenHash: vi.fn(),
   findById: vi.fn(),
   updateLastActiveAt: vi.fn(),
   extendExpiry: vi.fn(),
   revoke: vi.fn(),
-  revokeByToken: vi.fn(),
+  revokeByTokenHash: vi.fn(),
   revokeAllByUserId: vi.fn(),
   deleteExpired: vi.fn(),
 }));
@@ -19,6 +19,7 @@ vi.mock('../../repositories/admin-session.repository.js', () => ({
 
 // サービスのインポートはモック設定後
 import { AdminSessionService } from '../../services/admin/admin-session.service.js';
+import { hashToken } from '../../utils/pkce.js';
 
 describe('AdminSessionService', () => {
   let service: AdminSessionService;
@@ -46,12 +47,12 @@ describe('AdminSessionService', () => {
   });
 
   describe('createSession', () => {
-    it('セッションを作成できる（2時間有効）', async () => {
+    it('セッションを作成できる（tokenHashをDBに保存、生トークンを返却）', async () => {
       const now = Date.now();
       const mockSession = {
         id: 'session-1',
         adminUserId: 'admin-1',
-        token: 'generated-token',
+        tokenHash: 'hashed-token',
         expiresAt: new Date(now + 2 * 60 * 60 * 1000),
         createdAt: new Date(now),
       };
@@ -68,18 +69,24 @@ describe('AdminSessionService', () => {
           adminUserId: 'admin-1',
           userAgent: 'Test Browser',
           ipAddress: '127.0.0.1',
-          token: expect.any(String),
+          tokenHash: expect.any(String),
           expiresAt: expect.any(Date),
         })
       );
 
-      // 有効期限が約2時間後であることを確認
+      // tokenHashは64文字のhex文字列（SHA-256）
       const createCall = mockSessionRepo.create.mock.calls[0][0];
+      expect(createCall.tokenHash).toHaveLength(64);
+      expect(createCall.tokenHash).toMatch(/^[a-f0-9]+$/);
+
+      // 有効期限が約2時間後であることを確認
       const expiresAt = createCall.expiresAt.getTime();
       const expectedExpiry = now + 2 * 60 * 60 * 1000;
       expect(Math.abs(expiresAt - expectedExpiry)).toBeLessThan(5000);
 
+      // 生トークンが返却される（128文字のhex）
       expect(result.token).toBeDefined();
+      expect(result.token).toHaveLength(128);
     });
   });
 
@@ -93,27 +100,30 @@ describe('AdminSessionService', () => {
       deletedAt: null,
     };
 
-    it('有効なセッションを検証できる', async () => {
+    it('有効なセッションを検証できる（トークンをハッシュ化して検索）', async () => {
       const mockSession = {
         id: 'session-1',
-        token: 'valid-token',
+        tokenHash: 'hashed-value',
         createdAt: new Date(),
         expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1時間後
         revokedAt: null,
         adminUser: validAdminUser,
       };
-      mockSessionRepo.findByToken.mockResolvedValue(mockSession);
+      mockSessionRepo.findByTokenHash.mockResolvedValue(mockSession);
 
       const result = await service.validateSession('valid-token');
 
+      expect(mockSessionRepo.findByTokenHash).toHaveBeenCalledWith(hashToken('valid-token'));
       expect(result).not.toBeNull();
       expect(result?.id).toBe('session-1');
       expect(result?.adminUser.id).toBe('admin-1');
       expect(result?.adminUser.email).toBe('admin@example.com');
+      // ValidatedAdminSession にはtokenフィールドがない
+      expect(result).not.toHaveProperty('token');
     });
 
     it('存在しないセッションはnullを返す', async () => {
-      mockSessionRepo.findByToken.mockResolvedValue(null);
+      mockSessionRepo.findByTokenHash.mockResolvedValue(null);
 
       const result = await service.validateSession('nonexistent-token');
 
@@ -123,13 +133,13 @@ describe('AdminSessionService', () => {
     it('失効済みセッションはnullを返す', async () => {
       const mockSession = {
         id: 'session-1',
-        token: 'revoked-token',
+        tokenHash: 'hashed-value',
         createdAt: new Date(),
         expiresAt: new Date(Date.now() + 60 * 60 * 1000),
         revokedAt: new Date(), // 失効済み
         adminUser: validAdminUser,
       };
-      mockSessionRepo.findByToken.mockResolvedValue(mockSession);
+      mockSessionRepo.findByTokenHash.mockResolvedValue(mockSession);
 
       const result = await service.validateSession('revoked-token');
 
@@ -139,13 +149,13 @@ describe('AdminSessionService', () => {
     it('期限切れセッションはnullを返す', async () => {
       const mockSession = {
         id: 'session-1',
-        token: 'expired-token',
+        tokenHash: 'hashed-value',
         createdAt: new Date(Date.now() - 3 * 60 * 60 * 1000), // 3時間前
         expiresAt: new Date(Date.now() - 60 * 60 * 1000), // 1時間前（期限切れ）
         revokedAt: null,
         adminUser: validAdminUser,
       };
-      mockSessionRepo.findByToken.mockResolvedValue(mockSession);
+      mockSessionRepo.findByTokenHash.mockResolvedValue(mockSession);
 
       const result = await service.validateSession('expired-token');
 
@@ -155,7 +165,7 @@ describe('AdminSessionService', () => {
     it('削除済み管理者のセッションはnullを返す', async () => {
       const mockSession = {
         id: 'session-1',
-        token: 'deleted-user-token',
+        tokenHash: 'hashed-value',
         createdAt: new Date(),
         expiresAt: new Date(Date.now() + 60 * 60 * 1000),
         revokedAt: null,
@@ -164,7 +174,7 @@ describe('AdminSessionService', () => {
           deletedAt: new Date(), // 削除済み
         },
       };
-      mockSessionRepo.findByToken.mockResolvedValue(mockSession);
+      mockSessionRepo.findByTokenHash.mockResolvedValue(mockSession);
 
       const result = await service.validateSession('deleted-user-token');
 
@@ -219,12 +229,12 @@ describe('AdminSessionService', () => {
   });
 
   describe('revokeSession', () => {
-    it('トークンでセッションを失効できる', async () => {
-      mockSessionRepo.revokeByToken.mockResolvedValue({ count: 1 });
+    it('トークンをハッシュ化してセッションを失効できる', async () => {
+      mockSessionRepo.revokeByTokenHash.mockResolvedValue({ count: 1 });
 
       await service.revokeSession('session-token');
 
-      expect(mockSessionRepo.revokeByToken).toHaveBeenCalledWith('session-token');
+      expect(mockSessionRepo.revokeByTokenHash).toHaveBeenCalledWith(hashToken('session-token'));
     });
   });
 

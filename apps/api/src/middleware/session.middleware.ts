@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { prisma } from '@agentest/db';
 import { SessionService } from '../services/session.service.js';
+import { hashToken } from '../utils/pkce.js';
 
 const sessionService = new SessionService();
 
@@ -16,9 +17,10 @@ export function trackSession() {
       const refreshToken = req.cookies?.refresh_token;
 
       if (refreshToken) {
-        // リフレッシュトークンでセッションを検索
+        // リフレッシュトークンをハッシュ化してセッションを検索
+        const tokenHash = hashToken(refreshToken);
         const session = await prisma.session.findUnique({
-          where: { token: refreshToken },
+          where: { tokenHash },
         });
 
         if (session && !session.revokedAt && session.expiresAt > new Date()) {

@@ -5,12 +5,12 @@ import { NotFoundError, AuthorizationError } from '@agentest/shared';
 // SessionRepository のモック
 const mockSessionRepo = {
   create: vi.fn(),
-  findByToken: vi.fn(),
+  findByTokenHash: vi.fn(),
   findById: vi.fn(),
   findActiveByUserId: vi.fn(),
   updateLastActiveAt: vi.fn(),
   revoke: vi.fn(),
-  revokeByToken: vi.fn(),
+  revokeByTokenHash: vi.fn(),
   revokeAllExcept: vi.fn(),
   revokeAllByUserId: vi.fn(),
   countActiveByUserId: vi.fn(),
@@ -21,6 +21,8 @@ vi.mock('../../repositories/session.repository.js', () => ({
   SessionRepository: vi.fn().mockImplementation(() => mockSessionRepo),
 }));
 
+import { hashToken } from '../../utils/pkce.js';
+
 describe('SessionService', () => {
   let service: SessionService;
 
@@ -30,10 +32,10 @@ describe('SessionService', () => {
   });
 
   describe('createSession', () => {
-    it('新しいセッションを作成できる', async () => {
+    it('新しいセッションを作成できる（tokenHashを使用）', async () => {
       const sessionData = {
         userId: 'user-1',
-        token: 'refresh-token-123',
+        tokenHash: 'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890',
         userAgent: 'Mozilla/5.0',
         ipAddress: '192.168.1.1',
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -49,23 +51,23 @@ describe('SessionService', () => {
   });
 
   describe('getSessionByToken', () => {
-    it('有効なセッションを取得できる', async () => {
+    it('有効なセッションを取得できる（トークンをハッシュ化して検索）', async () => {
       const mockSession = {
         id: 'session-1',
-        token: 'token-123',
+        tokenHash: 'hashed-value',
         revokedAt: null,
         expiresAt: new Date(Date.now() + 1000 * 60 * 60), // 1時間後
       };
-      mockSessionRepo.findByToken.mockResolvedValue(mockSession);
+      mockSessionRepo.findByTokenHash.mockResolvedValue(mockSession);
 
-      const result = await service.getSessionByToken('token-123');
+      const result = await service.getSessionByToken('raw-token-123');
 
-      expect(mockSessionRepo.findByToken).toHaveBeenCalledWith('token-123');
+      expect(mockSessionRepo.findByTokenHash).toHaveBeenCalledWith(hashToken('raw-token-123'));
       expect(result).toEqual(mockSession);
     });
 
     it('セッションが存在しない場合はnullを返す', async () => {
-      mockSessionRepo.findByToken.mockResolvedValue(null);
+      mockSessionRepo.findByTokenHash.mockResolvedValue(null);
 
       const result = await service.getSessionByToken('invalid-token');
 
@@ -75,11 +77,11 @@ describe('SessionService', () => {
     it('失効済みセッションはnullを返す', async () => {
       const mockSession = {
         id: 'session-1',
-        token: 'token-123',
+        tokenHash: 'hashed-value',
         revokedAt: new Date(), // 失効済み
         expiresAt: new Date(Date.now() + 1000 * 60 * 60),
       };
-      mockSessionRepo.findByToken.mockResolvedValue(mockSession);
+      mockSessionRepo.findByTokenHash.mockResolvedValue(mockSession);
 
       const result = await service.getSessionByToken('token-123');
 
@@ -89,11 +91,11 @@ describe('SessionService', () => {
     it('期限切れセッションはnullを返す', async () => {
       const mockSession = {
         id: 'session-1',
-        token: 'token-123',
+        tokenHash: 'hashed-value',
         revokedAt: null,
         expiresAt: new Date(Date.now() - 1000), // 過去の日時
       };
-      mockSessionRepo.findByToken.mockResolvedValue(mockSession);
+      mockSessionRepo.findByTokenHash.mockResolvedValue(mockSession);
 
       const result = await service.getSessionByToken('token-123');
 

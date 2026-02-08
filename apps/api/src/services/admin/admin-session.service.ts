@@ -3,6 +3,7 @@ import {
   AdminSessionRepository,
   type CreateAdminSessionData,
 } from '../../repositories/admin-session.repository.js';
+import { hashToken } from '../../utils/pkce.js';
 import { logger as baseLogger } from '../../utils/logger.js';
 
 const logger = baseLogger.child({ module: 'admin-session' });
@@ -23,10 +24,10 @@ export interface CreateAdminSessionInput {
 
 /**
  * セッション検証結果
+ * DBにはハッシュしかないため、tokenフィールドは含まない
  */
 export interface ValidatedAdminSession {
   id: string;
-  token: string;
   createdAt: Date;
   expiresAt: Date;
   adminUser: {
@@ -55,14 +56,16 @@ export class AdminSessionService {
 
   /**
    * 新しいセッションを作成
+   * 生トークンをハッシュ化してDBに保存し、生トークンはレスポンスで返却
    */
   async createSession(input: CreateAdminSessionInput) {
     const token = this.generateToken();
+    const tokenHash = hashToken(token);
     const expiresAt = new Date(Date.now() + SESSION_EXPIRY_MS);
 
     const data: CreateAdminSessionData = {
       adminUserId: input.adminUserId,
-      token,
+      tokenHash,
       userAgent: input.userAgent,
       ipAddress: input.ipAddress,
       expiresAt,
@@ -70,19 +73,25 @@ export class AdminSessionService {
 
     const session = await this.sessionRepo.create(data);
 
+    // 明示的にフィールドを選択（tokenHashの漏洩を防ぐ）
     return {
-      ...session,
-      token,
+      id: session.id,
+      adminUserId: session.adminUserId,
+      expiresAt: session.expiresAt,
+      createdAt: session.createdAt,
+      token, // 生トークンをレスポンスに含める（クッキーにセットするため）
     };
   }
 
   /**
    * トークンでセッションを検証
+   * 生トークンをハッシュ化してからDB検索する
    *
    * @returns 有効なセッション情報、または無効な場合はnull
    */
   async validateSession(token: string): Promise<ValidatedAdminSession | null> {
-    const session = await this.sessionRepo.findByToken(token);
+    const tokenHash = hashToken(token);
+    const session = await this.sessionRepo.findByTokenHash(tokenHash);
 
     if (!session) {
       return null;
@@ -105,7 +114,6 @@ export class AdminSessionService {
 
     return {
       id: session.id,
-      token: session.token,
       createdAt: session.createdAt,
       expiresAt: session.expiresAt,
       adminUser: {
@@ -149,9 +157,11 @@ export class AdminSessionService {
 
   /**
    * セッションを失効（ログアウト）
+   * 生トークンをハッシュ化してからDB検索する
    */
   async revokeSession(token: string): Promise<void> {
-    await this.sessionRepo.revokeByToken(token);
+    const tokenHash = hashToken(token);
+    await this.sessionRepo.revokeByTokenHash(tokenHash);
   }
 
   /**

@@ -5,7 +5,7 @@ import { prisma } from '@agentest/db';
  */
 export interface CreateAdminSessionData {
   adminUserId: string;
-  token: string;
+  tokenHash: string;
   userAgent?: string;
   ipAddress?: string;
   expiresAt: Date;
@@ -22,7 +22,7 @@ export class AdminSessionRepository {
     return prisma.adminSession.create({
       data: {
         adminUserId: data.adminUserId,
-        token: data.token,
+        tokenHash: data.tokenHash,
         userAgent: data.userAgent,
         ipAddress: data.ipAddress,
         expiresAt: data.expiresAt,
@@ -31,11 +31,11 @@ export class AdminSessionRepository {
   }
 
   /**
-   * トークンでセッションを取得（管理者ユーザーを含む）
+   * トークンハッシュでセッションを取得（管理者ユーザーを含む）
    */
-  async findByToken(token: string) {
+  async findByTokenHash(tokenHash: string) {
     return prisma.adminSession.findUnique({
-      where: { token },
+      where: { tokenHash },
       include: {
         adminUser: {
           select: {
@@ -91,11 +91,11 @@ export class AdminSessionRepository {
   }
 
   /**
-   * トークンでセッションを失効
+   * トークンハッシュでセッションを失効
    */
-  async revokeByToken(token: string) {
+  async revokeByTokenHash(tokenHash: string) {
     return prisma.adminSession.updateMany({
-      where: { token },
+      where: { tokenHash },
       data: { revokedAt: new Date() },
     });
   }
