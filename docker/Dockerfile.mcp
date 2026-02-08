@@ -1,6 +1,6 @@
 # Agentest MCP サーバー 本番用 Dockerfile
 # マルチステージビルドで最適化
-# UIビルド（test-suites-app）+ TypeScriptビルドの2段階
+# buildステップ内でUIビルド（test-suites-app）とTypeScriptコンパイルを実行
 
 # ===========================================
 # ステージ1: 依存関係のインストール
@@ -63,7 +63,16 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 agentest
 
-# 必要なファイルをコピー
+# pnpmのシンボリックリンク構造を含むnode_modulesをコピー
+# ルートnode_modules: .pnpm/内の実体パッケージ
+COPY --from=builder --chown=agentest:nodejs /app/node_modules ./node_modules
+# ワークスペース固有のnode_modules: pnpmストアへのシンボリックリンク
+COPY --from=builder --chown=agentest:nodejs /app/apps/mcp-server/node_modules ./apps/mcp-server/node_modules
+COPY --from=builder --chown=agentest:nodejs /app/packages/shared/node_modules ./packages/shared/node_modules
+COPY --from=builder --chown=agentest:nodejs /app/packages/db/node_modules ./packages/db/node_modules
+COPY --from=builder --chown=agentest:nodejs /app/packages/auth/node_modules ./packages/auth/node_modules
+
+# ビルド成果物とpackage.jsonをコピー
 COPY --from=builder --chown=agentest:nodejs /app/apps/mcp-server/dist ./apps/mcp-server/dist
 COPY --from=builder --chown=agentest:nodejs /app/apps/mcp-server/package.json ./apps/mcp-server/
 COPY --from=builder --chown=agentest:nodejs /app/packages/shared/dist ./packages/shared/dist
@@ -72,7 +81,6 @@ COPY --from=builder --chown=agentest:nodejs /app/packages/db/dist ./packages/db/
 COPY --from=builder --chown=agentest:nodejs /app/packages/db/package.json ./packages/db/
 COPY --from=builder --chown=agentest:nodejs /app/packages/auth/dist ./packages/auth/dist
 COPY --from=builder --chown=agentest:nodejs /app/packages/auth/package.json ./packages/auth/
-COPY --from=builder --chown=agentest:nodejs /app/node_modules ./node_modules
 
 # ユーザーを切り替え
 USER agentest
