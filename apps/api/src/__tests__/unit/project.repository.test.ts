@@ -4,7 +4,6 @@ import { ProjectRepository } from '../../repositories/project.repository.js';
 // Prisma のモック（vi.hoistedでホイスティング問題を回避）
 const mockPrismaProject = vi.hoisted(() => ({
   findFirst: vi.fn(),
-  update: vi.fn(),
 }));
 
 const mockPrismaProjectHistory = vi.hoisted(() => ({
@@ -127,127 +126,6 @@ describe('ProjectRepository', () => {
       const result = await repository.findDeletedById('active-project');
 
       expect(result).toBeNull();
-    });
-  });
-
-  describe('update', () => {
-    it('nameを更新できる', async () => {
-      const mockProject = {
-        id: 'project-1',
-        name: 'Updated Name',
-      };
-      mockPrismaProject.update.mockResolvedValue(mockProject);
-
-      const result = await repository.update('project-1', { name: 'Updated Name' });
-
-      expect(mockPrismaProject.update).toHaveBeenCalledWith({
-        where: { id: 'project-1' },
-        data: { name: 'Updated Name' },
-      });
-      expect(result).toEqual(mockProject);
-    });
-
-    it('descriptionを更新できる', async () => {
-      const mockProject = {
-        id: 'project-1',
-        description: 'New description',
-      };
-      mockPrismaProject.update.mockResolvedValue(mockProject);
-
-      const result = await repository.update('project-1', { description: 'New description' });
-
-      expect(mockPrismaProject.update).toHaveBeenCalledWith({
-        where: { id: 'project-1' },
-        data: { description: 'New description' },
-      });
-      expect(result).toEqual(mockProject);
-    });
-
-    it('descriptionをnullに設定できる', async () => {
-      const mockProject = {
-        id: 'project-1',
-        description: null,
-      };
-      mockPrismaProject.update.mockResolvedValue(mockProject);
-
-      const result = await repository.update('project-1', { description: null });
-
-      expect(mockPrismaProject.update).toHaveBeenCalledWith({
-        where: { id: 'project-1' },
-        data: { description: null },
-      });
-      expect(result).toEqual(mockProject);
-    });
-
-    it('nameとdescriptionを同時に更新できる', async () => {
-      const mockProject = {
-        id: 'project-1',
-        name: 'New Name',
-        description: 'New description',
-      };
-      mockPrismaProject.update.mockResolvedValue(mockProject);
-
-      const result = await repository.update('project-1', {
-        name: 'New Name',
-        description: 'New description',
-      });
-
-      expect(mockPrismaProject.update).toHaveBeenCalledWith({
-        where: { id: 'project-1' },
-        data: {
-          name: 'New Name',
-          description: 'New description',
-        },
-      });
-      expect(result).toEqual(mockProject);
-    });
-  });
-
-  describe('softDelete', () => {
-    it('プロジェクトを論理削除できる', async () => {
-      const mockProject = {
-        id: 'project-1',
-        deletedAt: new Date(),
-      };
-      mockPrismaProject.update.mockResolvedValue(mockProject);
-
-      const result = await repository.softDelete('project-1');
-
-      expect(mockPrismaProject.update).toHaveBeenCalledWith({
-        where: { id: 'project-1' },
-        data: { deletedAt: expect.any(Date) },
-      });
-      expect(result).toEqual(mockProject);
-      expect(result.deletedAt).not.toBeNull();
-    });
-  });
-
-  describe('restore', () => {
-    it('削除済みプロジェクトを復元できる', async () => {
-      const mockProject = {
-        id: 'project-1',
-        name: 'Restored Project',
-        deletedAt: null,
-        organization: {
-          id: 'org-1',
-          name: 'Test Organization',
-        },
-      };
-      mockPrismaProject.update.mockResolvedValue(mockProject);
-
-      const result = await repository.restore('project-1');
-
-      expect(mockPrismaProject.update).toHaveBeenCalledWith({
-        where: { id: 'project-1' },
-        data: { deletedAt: null },
-        include: {
-          organization: {
-            select: { id: true, name: true },
-          },
-        },
-      });
-      expect(result).toEqual(mockProject);
-      expect(result.deletedAt).toBeNull();
     });
   });
 

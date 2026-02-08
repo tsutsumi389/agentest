@@ -39,41 +39,6 @@ export class ProjectRepository {
   }
 
   /**
-   * プロジェクトを更新
-   */
-  async update(id: string, data: { name?: string; description?: string | null }) {
-    return prisma.project.update({
-      where: { id },
-      data,
-    });
-  }
-
-  /**
-   * プロジェクトを論理削除
-   */
-  async softDelete(id: string) {
-    return prisma.project.update({
-      where: { id },
-      data: { deletedAt: new Date() },
-    });
-  }
-
-  /**
-   * プロジェクトを復元
-   */
-  async restore(id: string) {
-    return prisma.project.update({
-      where: { id },
-      data: { deletedAt: null },
-      include: {
-        organization: {
-          select: { id: true, name: true },
-        },
-      },
-    });
-  }
-
-  /**
    * 履歴を作成
    */
   async createHistory(data: {

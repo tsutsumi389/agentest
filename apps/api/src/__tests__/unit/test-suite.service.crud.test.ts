@@ -4,9 +4,15 @@ import { NotFoundError } from '@agentest/shared';
 // Prismaモック
 const mockPrisma = vi.hoisted(() => ({
   project: { findUnique: vi.fn() },
-  testSuite: { create: vi.fn() },
+  testSuite: { create: vi.fn(), update: vi.fn() },
   testSuiteHistory: { create: vi.fn() },
   testCase: { findMany: vi.fn() },
+  $transaction: vi.fn((operations: unknown) => {
+    if (Array.isArray(operations)) {
+      return Promise.all(operations);
+    }
+    return (operations as (tx: typeof mockPrisma) => unknown)(mockPrisma);
+  }),
 }));
 
 vi.mock('@agentest/db', () => ({
@@ -16,8 +22,6 @@ vi.mock('@agentest/db', () => ({
 // TestSuiteRepositoryモック
 const mockTestSuiteRepo = vi.hoisted(() => ({
   findById: vi.fn(),
-  update: vi.fn(),
-  softDelete: vi.fn(),
   suggest: vi.fn(),
   search: vi.fn(),
 }));
@@ -162,11 +166,12 @@ describe('TestSuiteService（コアCRUD）', () => {
 
     it('テストスイートを更新できる', async () => {
       const updated = createMockTestSuite({ name: '更新名' });
-      mockTestSuiteRepo.update.mockResolvedValue(updated);
+      mockPrisma.testSuite.update.mockResolvedValue(updated);
 
       const result = await service.update(TEST_SUITE_ID, TEST_USER_ID, { name: '更新名' });
 
       expect(result).toEqual(updated);
+      expect(mockPrisma.$transaction).toHaveBeenCalled();
       expect(mockPrisma.testSuiteHistory.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           testSuiteId: TEST_SUITE_ID,
@@ -178,7 +183,7 @@ describe('TestSuiteService（コアCRUD）', () => {
     });
 
     it('変更差分を履歴に記録する', async () => {
-      mockTestSuiteRepo.update.mockResolvedValue(createMockTestSuite());
+      mockPrisma.testSuite.update.mockResolvedValue(createMockTestSuite());
 
       await service.update(TEST_SUITE_ID, TEST_USER_ID, { name: '新名前' });
 
@@ -197,7 +202,7 @@ describe('TestSuiteService（コアCRUD）', () => {
     });
 
     it('groupIdを指定できる', async () => {
-      mockTestSuiteRepo.update.mockResolvedValue(createMockTestSuite());
+      mockPrisma.testSuite.update.mockResolvedValue(createMockTestSuite());
 
       await service.update(TEST_SUITE_ID, TEST_USER_ID, { name: '更新' }, { groupId: 'group-1' });
 
@@ -221,10 +226,11 @@ describe('TestSuiteService（コアCRUD）', () => {
     });
 
     it('テストスイートを論理削除できる', async () => {
-      mockTestSuiteRepo.softDelete.mockResolvedValue({ id: TEST_SUITE_ID });
+      mockPrisma.testSuite.update.mockResolvedValue({ id: TEST_SUITE_ID });
 
       await service.softDelete(TEST_SUITE_ID, TEST_USER_ID);
 
+      expect(mockPrisma.$transaction).toHaveBeenCalled();
       expect(mockPrisma.testSuiteHistory.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           testSuiteId: TEST_SUITE_ID,
@@ -232,13 +238,46 @@ describe('TestSuiteService（コアCRUD）', () => {
           changeType: 'DELETE',
         }),
       });
-      expect(mockTestSuiteRepo.softDelete).toHaveBeenCalledWith(TEST_SUITE_ID);
+      expect(mockPrisma.testSuite.update).toHaveBeenCalledWith({
+        where: { id: TEST_SUITE_ID },
+        data: { deletedAt: expect.any(Date) },
+      });
     });
 
     it('テストスイートが存在しない場合はNotFoundErrorを投げる', async () => {
       mockTestSuiteRepo.findById.mockResolvedValue(null);
 
       await expect(service.softDelete(TEST_SUITE_ID, TEST_USER_ID)).rejects.toThrow(NotFoundError);
+    });
+  });
+
+  describe('トランザクションロールバック', () => {
+    beforeEach(() => {
+      mockTestSuiteRepo.findById.mockResolvedValue(createMockTestSuite());
+    });
+
+    it('update中に履歴作成が失敗した場合、エラーが伝播する', async () => {
+      mockPrisma.testSuite.update.mockResolvedValue(createMockTestSuite({ name: '更新名' }));
+      mockPrisma.testSuiteHistory.create.mockRejectedValue(new Error('DB error'));
+      mockPrisma.$transaction.mockImplementation(async (fn: unknown) => {
+        return (fn as (tx: typeof mockPrisma) => unknown)(mockPrisma);
+      });
+
+      await expect(
+        service.update(TEST_SUITE_ID, TEST_USER_ID, { name: '更新名' })
+      ).rejects.toThrow('DB error');
+    });
+
+    it('softDelete中に履歴作成が失敗した場合、エラーが伝播する', async () => {
+      mockPrisma.testSuite.update.mockResolvedValue({ id: TEST_SUITE_ID });
+      mockPrisma.testSuiteHistory.create.mockRejectedValue(new Error('DB error'));
+      mockPrisma.$transaction.mockImplementation(async (fn: unknown) => {
+        return (fn as (tx: typeof mockPrisma) => unknown)(mockPrisma);
+      });
+
+      await expect(
+        service.softDelete(TEST_SUITE_ID, TEST_USER_ID)
+      ).rejects.toThrow('DB error');
     });
   });
 

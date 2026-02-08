@@ -61,49 +61,6 @@ describe('TestSuiteRepository（コアCRUD）', () => {
     });
   });
 
-  describe('update', () => {
-    it('テストスイートを更新できる', async () => {
-      const updated = { id: TEST_SUITE_ID, name: '更新名' };
-      mockPrismaTestSuite.update.mockResolvedValue(updated);
-
-      const result = await repository.update(TEST_SUITE_ID, { name: '更新名' });
-
-      expect(result).toEqual(updated);
-      expect(mockPrismaTestSuite.update).toHaveBeenCalledWith({
-        where: { id: TEST_SUITE_ID },
-        data: { name: '更新名' },
-      });
-    });
-
-    it('複数フィールドを同時に更新できる', async () => {
-      mockPrismaTestSuite.update.mockResolvedValue({ id: TEST_SUITE_ID });
-
-      await repository.update(TEST_SUITE_ID, {
-        name: '新名前',
-        description: '新説明',
-        status: 'ACTIVE',
-      });
-
-      expect(mockPrismaTestSuite.update).toHaveBeenCalledWith({
-        where: { id: TEST_SUITE_ID },
-        data: { name: '新名前', description: '新説明', status: 'ACTIVE' },
-      });
-    });
-  });
-
-  describe('softDelete', () => {
-    it('deletedAtを設定して論理削除する', async () => {
-      mockPrismaTestSuite.update.mockResolvedValue({ id: TEST_SUITE_ID });
-
-      await repository.softDelete(TEST_SUITE_ID);
-
-      expect(mockPrismaTestSuite.update).toHaveBeenCalledWith({
-        where: { id: TEST_SUITE_ID },
-        data: { deletedAt: expect.any(Date) },
-      });
-    });
-  });
-
   describe('suggest', () => {
     it('キーワードなしで候補を取得できる', async () => {
       const mockResults = [{ id: TEST_SUITE_ID, name: 'Suite' }];
@@ -149,19 +106,6 @@ describe('TestSuiteRepository（コアCRUD）', () => {
       expect(mockPrismaTestSuite.findFirst).toHaveBeenCalledWith({
         where: { id: TEST_SUITE_ID, deletedAt: { not: null } },
         include: expect.any(Object),
-      });
-    });
-  });
-
-  describe('restore', () => {
-    it('deletedAtをnullに設定して復元する', async () => {
-      mockPrismaTestSuite.update.mockResolvedValue({ id: TEST_SUITE_ID, deletedAt: null });
-
-      await repository.restore(TEST_SUITE_ID);
-
-      expect(mockPrismaTestSuite.update).toHaveBeenCalledWith({
-        where: { id: TEST_SUITE_ID },
-        data: { deletedAt: null },
       });
     });
   });

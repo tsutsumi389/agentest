@@ -150,26 +150,6 @@ export class TestSuiteRepository {
   }
 
   /**
-   * テストスイートを更新
-   */
-  async update(id: string, data: { name?: string; description?: string | null; status?: EntityStatus }) {
-    return prisma.testSuite.update({
-      where: { id },
-      data,
-    });
-  }
-
-  /**
-   * テストスイートを論理削除
-   */
-  async softDelete(id: string) {
-    return prisma.testSuite.update({
-      where: { id },
-      data: { deletedAt: new Date() },
-    });
-  }
-
-  /**
    * 削除済みテストスイートをIDで検索
    */
   async findDeletedById(id: string) {
@@ -189,16 +169,6 @@ export class TestSuiteRepository {
           select: { testCases: true, preconditions: true },
         },
       },
-    });
-  }
-
-  /**
-   * テストスイートを復元（deletedAtをnullに設定）
-   */
-  async restore(id: string) {
-    return prisma.testSuite.update({
-      where: { id },
-      data: { deletedAt: null },
     });
   }
 

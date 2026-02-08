@@ -60,14 +60,21 @@ export class ProjectService {
         },
       });
 
-      return newProject;
-    });
+      // 履歴を作成
+      await tx.projectHistory.create({
+        data: {
+          projectId: newProject.id,
+          changedByUserId: userId,
+          changeType: 'CREATE',
+          snapshot: {
+            name: newProject.name,
+            description: newProject.description,
+            organizationId: newProject.organizationId,
+          },
+        },
+      });
 
-    // 履歴を作成
-    await this.createHistory(project.id, userId, 'CREATE', {
-      name: project.name,
-      description: project.description,
-      organizationId: project.organizationId,
+      return newProject;
     });
 
     return project;
@@ -89,18 +96,33 @@ export class ProjectService {
    */
   async update(projectId: string, data: { name?: string; description?: string | null }, userId?: string) {
     const project = await this.findById(projectId);
-    const updatedProject = await this.projectRepo.update(projectId, data);
 
-    // 履歴を作成
-    await this.createHistory(projectId, userId, 'UPDATE', {
-      before: {
-        name: project.name,
-        description: project.description,
-      },
-      after: {
-        name: updatedProject.name,
-        description: updatedProject.description,
-      },
+    // トランザクションで更新と履歴作成を実行
+    const updatedProject = await prisma.$transaction(async (tx) => {
+      const updated = await tx.project.update({
+        where: { id: projectId },
+        data,
+      });
+
+      await tx.projectHistory.create({
+        data: {
+          projectId,
+          changedByUserId: userId,
+          changeType: 'UPDATE',
+          snapshot: {
+            before: {
+              name: project.name,
+              description: project.description,
+            },
+            after: {
+              name: updated.name,
+              description: updated.description,
+            },
+          },
+        },
+      });
+
+      return updated;
     });
 
     return updatedProject;
@@ -111,13 +133,28 @@ export class ProjectService {
    */
   async softDelete(projectId: string, userId?: string) {
     const project = await this.findById(projectId);
-    const result = await this.projectRepo.softDelete(projectId);
 
-    // 履歴を作成
-    await this.createHistory(projectId, userId, 'DELETE', {
-      name: project.name,
-      description: project.description,
-      organizationId: project.organizationId,
+    // トランザクションで論理削除と履歴作成を実行
+    const result = await prisma.$transaction(async (tx) => {
+      const deleted = await tx.project.update({
+        where: { id: projectId },
+        data: { deletedAt: new Date() },
+      });
+
+      await tx.projectHistory.create({
+        data: {
+          projectId,
+          changedByUserId: userId,
+          changeType: 'DELETE',
+          snapshot: {
+            name: project.name,
+            description: project.description,
+            organizationId: project.organizationId,
+          },
+        },
+      });
+
+      return deleted;
     });
 
     return result;
@@ -463,7 +500,9 @@ export class ProjectService {
   }
 
   /**
-   * 履歴を作成
+   * 単独で履歴を作成（トランザクション外で使用）
+   * 注意: CRUD操作の履歴はそれぞれのメソッド内でトランザクションにより保証されている。
+   * このメソッドは外部から個別に履歴を追加する場合にのみ使用する。
    */
   async createHistory(
     projectId: string,
@@ -520,13 +559,32 @@ export class ProjectService {
       throw new ValidationError(`削除から${RESTORE_LIMIT_DAYS}日以上経過しているため復元できません`);
     }
 
-    const restoredProject = await this.projectRepo.restore(projectId);
+    // トランザクションで復元と履歴作成を実行
+    const restoredProject = await prisma.$transaction(async (tx) => {
+      const restored = await tx.project.update({
+        where: { id: projectId },
+        data: { deletedAt: null },
+        include: {
+          organization: {
+            select: { id: true, name: true },
+          },
+        },
+      });
 
-    // 復元履歴を作成
-    await this.createHistory(projectId, userId, 'RESTORE', {
-      name: restoredProject.name,
-      description: restoredProject.description,
-      organizationId: restoredProject.organizationId,
+      await tx.projectHistory.create({
+        data: {
+          projectId,
+          changedByUserId: userId,
+          changeType: 'RESTORE',
+          snapshot: {
+            name: restored.name,
+            description: restored.description,
+            organizationId: restored.organizationId,
+          },
+        },
+      });
+
+      return restored;
     });
 
     return restoredProject;
