@@ -8,7 +8,7 @@ import { usersApi, type ProjectWithRole } from '../lib/api';
 import { CreateProjectModal } from '../components/project/CreateProjectModal';
 
 /** 組織フィルターの選択肢 */
-type OrganizationFilter = 'all' | 'personal' | string;
+type OrganizationFilter = 'personal' | string;
 
 /**
  * プロジェクト一覧ページ
@@ -17,13 +17,12 @@ export function ProjectsPage() {
   const { user } = useAuthStore();
   const { organizations } = useOrganizationStore();
   const [searchQuery, setSearchQuery] = useState('');
-  const [organizationFilter, setOrganizationFilter] = useState<OrganizationFilter>('all');
+  const [organizationFilter, setOrganizationFilter] = useState<OrganizationFilter>('personal');
   const [includeDeleted, setIncludeDeleted] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   // APIに渡すorganizationIdを計算
   const apiOrganizationId = useMemo(() => {
-    if (organizationFilter === 'all') return undefined;
     if (organizationFilter === 'personal') return null;
     return organizationFilter;
   }, [organizationFilter]);
@@ -90,7 +89,6 @@ export function ProjectsPage() {
             onChange={(e) => setOrganizationFilter(e.target.value)}
             className="input pl-10 pr-8 min-w-[160px] appearance-none"
           >
-            <option value="all">すべて</option>
             <option value="personal">個人プロジェクト</option>
             {organizations.map(({ organization }) => (
               <option key={organization.id} value={organization.id}>
@@ -146,6 +144,7 @@ export function ProjectsPage() {
       <CreateProjectModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
+        organizationId={organizationFilter === 'personal' ? undefined : organizationFilter}
       />
     </div>
   );
