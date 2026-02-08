@@ -229,6 +229,16 @@ describe('AuthController', () => {
 
     it('無効なトークン（既に無効化済みまたは期限切れ）の場合AuthenticationError', async () => {
       mockVerifyRefreshToken.mockReturnValue({ sub: TEST_USER_ID });
+      // ユーザー取得はトランザクションの前に実行される
+      mockPrismaUser.findUnique.mockResolvedValue({
+        id: TEST_USER_ID,
+        email: 'test@example.com',
+        deletedAt: null,
+      });
+      mockGenerateTokens.mockReturnValue({
+        accessToken: NEW_ACCESS_TOKEN,
+        refreshToken: NEW_REFRESH_TOKEN,
+      });
       // 楽観的ロック: 更新件数0 = 既に無効化済み or 期限切れ or 存在しない
       mockPrismaRefreshToken.updateMany.mockResolvedValue({ count: 0 });
 
@@ -239,13 +249,13 @@ describe('AuthController', () => {
 
       await controller.refresh(req, res, mockNext);
 
+      expect(mockPrismaTransaction).toHaveBeenCalled();
       expect(mockNext).toHaveBeenCalledWith(expect.any(AuthenticationError));
     });
 
     it('削除済みユーザーの場合AuthenticationError', async () => {
       mockVerifyRefreshToken.mockReturnValue({ sub: TEST_USER_ID });
-      mockPrismaRefreshToken.updateMany.mockResolvedValue({ count: 1 });
-      mockPrismaSession.updateMany.mockResolvedValue({ count: 1 });
+      // ユーザー取得はトランザクションの前に実行されるため、ここでエラーになる
       mockPrismaUser.findUnique.mockResolvedValue({
         id: TEST_USER_ID,
         deletedAt: new Date(),
@@ -258,6 +268,8 @@ describe('AuthController', () => {
 
       await controller.refresh(req, res, mockNext);
 
+      // トランザクションに到達する前にエラーがスローされる
+      expect(mockPrismaTransaction).not.toHaveBeenCalled();
       expect(mockNext).toHaveBeenCalledWith(expect.any(AuthenticationError));
     });
   });
