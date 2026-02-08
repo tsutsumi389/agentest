@@ -69,6 +69,7 @@ vi.mock('../../middleware/session.middleware.js', () => ({
 
 // コントローラのインポートはモック後に行う
 import { AuthController } from '../../controllers/auth.controller.js';
+import { hashToken } from '../../utils/pkce.js';
 
 // テスト用の固定値
 const TEST_USER_ID = '11111111-1111-1111-1111-111111111111';
@@ -142,12 +143,9 @@ describe('AuthController', () => {
   describe('refresh', () => {
     it('クッキーのリフレッシュトークンでトークンを更新できる', async () => {
       mockVerifyRefreshToken.mockReturnValue({ sub: TEST_USER_ID });
-      mockPrismaRefreshToken.findUnique.mockResolvedValue({
-        id: 'token-id',
-        tokenHash: 'hashed-refresh-token',
-        expiresAt: new Date(Date.now() + 86400000),
-        revokedAt: null,
-      });
+      // 楽観的ロックでアトミックに無効化
+      mockPrismaRefreshToken.updateMany.mockResolvedValue({ count: 1 });
+      mockPrismaSession.updateMany.mockResolvedValue({ count: 1 });
       mockPrismaUser.findUnique.mockResolvedValue({
         id: TEST_USER_ID,
         email: 'test@example.com',
@@ -157,8 +155,6 @@ describe('AuthController', () => {
         accessToken: NEW_ACCESS_TOKEN,
         refreshToken: NEW_REFRESH_TOKEN,
       });
-      mockPrismaRefreshToken.update.mockResolvedValue({});
-      mockPrismaSession.updateMany.mockResolvedValue({ count: 1 });
       mockPrismaRefreshToken.create.mockResolvedValue({});
       mockSessionService.createSession.mockResolvedValue({});
 
@@ -169,9 +165,14 @@ describe('AuthController', () => {
 
       await controller.refresh(req, res, mockNext);
 
-      // tokenHashで検索されること
-      expect(mockPrismaRefreshToken.findUnique).toHaveBeenCalledWith({
-        where: { tokenHash: expect.any(String) },
+      // 楽観的ロックでトークンをアトミックに無効化
+      expect(mockPrismaRefreshToken.updateMany).toHaveBeenCalledWith({
+        where: {
+          tokenHash: hashToken(TEST_REFRESH_TOKEN),
+          revokedAt: null,
+          expiresAt: { gt: expect.any(Date) },
+        },
+        data: { revokedAt: expect.any(Date) },
       });
       expect(res.cookie).toHaveBeenCalledWith('access_token', NEW_ACCESS_TOKEN, expect.any(Object));
       expect(res.cookie).toHaveBeenCalledWith('refresh_token', NEW_REFRESH_TOKEN, expect.any(Object));
@@ -183,12 +184,8 @@ describe('AuthController', () => {
 
     it('ボディのリフレッシュトークンでも更新できる', async () => {
       mockVerifyRefreshToken.mockReturnValue({ sub: TEST_USER_ID });
-      mockPrismaRefreshToken.findUnique.mockResolvedValue({
-        id: 'token-id',
-        tokenHash: 'hashed-refresh-token',
-        expiresAt: new Date(Date.now() + 86400000),
-        revokedAt: null,
-      });
+      mockPrismaRefreshToken.updateMany.mockResolvedValue({ count: 1 });
+      mockPrismaSession.updateMany.mockResolvedValue({ count: 1 });
       mockPrismaUser.findUnique.mockResolvedValue({
         id: TEST_USER_ID,
         email: 'test@example.com',
@@ -198,8 +195,6 @@ describe('AuthController', () => {
         accessToken: NEW_ACCESS_TOKEN,
         refreshToken: NEW_REFRESH_TOKEN,
       });
-      mockPrismaRefreshToken.update.mockResolvedValue({});
-      mockPrismaSession.updateMany.mockResolvedValue({ count: 1 });
       mockPrismaRefreshToken.create.mockResolvedValue({});
       mockSessionService.createSession.mockResolvedValue({});
 
@@ -228,33 +223,10 @@ describe('AuthController', () => {
       expect(mockNext).toHaveBeenCalledWith(expect.any(AuthenticationError));
     });
 
-    it('無効なトークンの場合AuthenticationError', async () => {
+    it('無効なトークン（既に無効化済みまたは期限切れ）の場合AuthenticationError', async () => {
       mockVerifyRefreshToken.mockReturnValue({ sub: TEST_USER_ID });
-      mockPrismaRefreshToken.findUnique.mockResolvedValue({
-        id: 'token-id',
-        tokenHash: 'hashed-refresh-token',
-        expiresAt: new Date(Date.now() + 86400000),
-        revokedAt: new Date(), // 失効済み
-      });
-
-      const req = mockRequest({
-        cookies: { refresh_token: TEST_REFRESH_TOKEN },
-      }) as Request;
-      const res = mockResponse() as Response;
-
-      await controller.refresh(req, res, mockNext);
-
-      expect(mockNext).toHaveBeenCalledWith(expect.any(AuthenticationError));
-    });
-
-    it('期限切れトークンの場合AuthenticationError', async () => {
-      mockVerifyRefreshToken.mockReturnValue({ sub: TEST_USER_ID });
-      mockPrismaRefreshToken.findUnique.mockResolvedValue({
-        id: 'token-id',
-        tokenHash: 'hashed-refresh-token',
-        expiresAt: new Date(Date.now() - 86400000), // 期限切れ
-        revokedAt: null,
-      });
+      // 楽観的ロック: 更新件数0 = 既に無効化済み or 期限切れ or 存在しない
+      mockPrismaRefreshToken.updateMany.mockResolvedValue({ count: 0 });
 
       const req = mockRequest({
         cookies: { refresh_token: TEST_REFRESH_TOKEN },
@@ -268,12 +240,8 @@ describe('AuthController', () => {
 
     it('削除済みユーザーの場合AuthenticationError', async () => {
       mockVerifyRefreshToken.mockReturnValue({ sub: TEST_USER_ID });
-      mockPrismaRefreshToken.findUnique.mockResolvedValue({
-        id: 'token-id',
-        tokenHash: 'hashed-refresh-token',
-        expiresAt: new Date(Date.now() + 86400000),
-        revokedAt: null,
-      });
+      mockPrismaRefreshToken.updateMany.mockResolvedValue({ count: 1 });
+      mockPrismaSession.updateMany.mockResolvedValue({ count: 1 });
       mockPrismaUser.findUnique.mockResolvedValue({
         id: TEST_USER_ID,
         deletedAt: new Date(),
@@ -303,11 +271,11 @@ describe('AuthController', () => {
       await controller.logout(req, res, mockNext);
 
       expect(mockPrismaRefreshToken.updateMany).toHaveBeenCalledWith({
-        where: { tokenHash: expect.any(String) },
+        where: { tokenHash: hashToken(TEST_REFRESH_TOKEN) },
         data: { revokedAt: expect.any(Date) },
       });
       expect(mockPrismaSession.updateMany).toHaveBeenCalledWith({
-        where: { tokenHash: expect.any(String) },
+        where: { tokenHash: hashToken(TEST_REFRESH_TOKEN) },
         data: { revokedAt: expect.any(Date) },
       });
       expect(res.clearCookie).toHaveBeenCalledWith('access_token', { path: '/' });

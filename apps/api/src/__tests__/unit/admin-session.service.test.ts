@@ -19,6 +19,7 @@ vi.mock('../../repositories/admin-session.repository.js', () => ({
 
 // サービスのインポートはモック設定後
 import { AdminSessionService } from '../../services/admin/admin-session.service.js';
+import { hashToken } from '../../utils/pkce.js';
 
 describe('AdminSessionService', () => {
   let service: AdminSessionService;
@@ -112,7 +113,7 @@ describe('AdminSessionService', () => {
 
       const result = await service.validateSession('valid-token');
 
-      expect(mockSessionRepo.findByTokenHash).toHaveBeenCalledWith(expect.any(String));
+      expect(mockSessionRepo.findByTokenHash).toHaveBeenCalledWith(hashToken('valid-token'));
       expect(result).not.toBeNull();
       expect(result?.id).toBe('session-1');
       expect(result?.adminUser.id).toBe('admin-1');
@@ -233,8 +234,7 @@ describe('AdminSessionService', () => {
 
       await service.revokeSession('session-token');
 
-      // hashToken('session-token') の結果でrevokeByTokenHashが呼ばれる
-      expect(mockSessionRepo.revokeByTokenHash).toHaveBeenCalledWith(expect.any(String));
+      expect(mockSessionRepo.revokeByTokenHash).toHaveBeenCalledWith(hashToken('session-token'));
     });
   });
 

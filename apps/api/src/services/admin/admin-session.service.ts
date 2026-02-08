@@ -73,8 +73,12 @@ export class AdminSessionService {
 
     const session = await this.sessionRepo.create(data);
 
+    // 明示的にフィールドを選択（tokenHashの漏洩を防ぐ）
     return {
-      ...session,
+      id: session.id,
+      adminUserId: session.adminUserId,
+      expiresAt: session.expiresAt,
+      createdAt: session.createdAt,
       token, // 生トークンをレスポンスに含める（クッキーにセットするため）
     };
   }

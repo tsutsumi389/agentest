@@ -1,6 +1,13 @@
 import { prisma } from '@agentest/db';
 import type { Prisma } from '@agentest/db';
-import { randomUUID } from 'crypto';
+import { randomUUID, createHash } from 'crypto';
+
+/**
+ * テスト用トークンハッシュ生成（SHA-256 hex、64文字）
+ */
+function testHashToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
+}
 
 /**
  * テスト用ユーザーを作成
@@ -44,7 +51,7 @@ export async function createTestSession(
     data: {
       id,
       userId,
-      tokenHash: overrides.tokenHash ?? `tokenhash-${id}`,
+      tokenHash: overrides.tokenHash ?? testHashToken(`session-token-${id}`),
       userAgent: overrides.userAgent ?? 'Mozilla/5.0 Test Browser',
       ipAddress: overrides.ipAddress ?? '127.0.0.1',
       expiresAt: overrides.expiresAt ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
@@ -740,7 +747,7 @@ export async function createTestRefreshToken(
     data: {
       id,
       userId,
-      tokenHash: overrides.tokenHash ?? `refresh-hash-${id}`,
+      tokenHash: overrides.tokenHash ?? testHashToken(`refresh-token-${id}`),
       expiresAt: overrides.expiresAt ?? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       revokedAt: overrides.revokedAt ?? null,
     },
@@ -1101,7 +1108,7 @@ export async function createTestOAuthRefreshToken(
   return prisma.oAuthRefreshToken.create({
     data: {
       id,
-      tokenHash: overrides.tokenHash ?? `refresh-hash-${id}`,
+      tokenHash: overrides.tokenHash ?? testHashToken(`refresh-token-${id}`),
       clientId,
       userId,
       scopes: overrides.scopes ?? ['mcp:read'],
@@ -1266,7 +1273,7 @@ export async function createTestAdminSession(
     data: {
       id,
       adminUserId,
-      tokenHash: overrides.tokenHash ?? `admin-hash-${id}`,
+      tokenHash: overrides.tokenHash ?? testHashToken(`admin-session-token-${id}`),
       userAgent: overrides.userAgent ?? 'Mozilla/5.0 Test Browser',
       ipAddress: overrides.ipAddress ?? '127.0.0.1',
       expiresAt: overrides.expiresAt ?? new Date(Date.now() + 2 * 60 * 60 * 1000), // 2時間後

@@ -89,15 +89,27 @@ export class AuthController {
       // トークンを検証
       const payload = verifyRefreshToken(refreshToken, authConfig);
 
-      // データベースでトークンを確認（ハッシュで検索）
+      // アトミックにトークンを無効化（楽観的ロック: revokedAt が null のもののみ更新）
       const refreshTokenHash = hashToken(refreshToken);
-      const storedToken = await prisma.refreshToken.findUnique({
-        where: { tokenHash: refreshTokenHash },
+      const revokeResult = await prisma.refreshToken.updateMany({
+        where: {
+          tokenHash: refreshTokenHash,
+          revokedAt: null,
+          expiresAt: { gt: new Date() },
+        },
+        data: { revokedAt: new Date() },
       });
 
-      if (!storedToken || storedToken.revokedAt || storedToken.expiresAt < new Date()) {
+      // 更新件数が0 = 既に無効化済み or 期限切れ or 存在しない
+      if (revokeResult.count === 0) {
         throw new AuthenticationError('無効なリフレッシュトークンです');
       }
+
+      // 旧セッションを無効化
+      await prisma.session.updateMany({
+        where: { tokenHash: refreshTokenHash },
+        data: { revokedAt: new Date() },
+      });
 
       // ユーザーを取得
       const user = await prisma.user.findUnique({
@@ -107,18 +119,6 @@ export class AuthController {
       if (!user || user.deletedAt) {
         throw new AuthenticationError('ユーザーが見つかりません');
       }
-
-      // 古いトークン・セッションを無効化（ハッシュで検索）
-      await Promise.all([
-        prisma.refreshToken.update({
-          where: { id: storedToken.id },
-          data: { revokedAt: new Date() },
-        }),
-        prisma.session.updateMany({
-          where: { tokenHash: refreshTokenHash },
-          data: { revokedAt: new Date() },
-        }),
-      ]);
 
       // 新しいトークンを生成
       const tokens = generateTokens(user.id, user.email, authConfig);

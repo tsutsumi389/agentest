@@ -21,6 +21,8 @@ vi.mock('../../repositories/session.repository.js', () => ({
   SessionRepository: vi.fn().mockImplementation(() => mockSessionRepo),
 }));
 
+import { hashToken } from '../../utils/pkce.js';
+
 describe('SessionService', () => {
   let service: SessionService;
 
@@ -60,8 +62,7 @@ describe('SessionService', () => {
 
       const result = await service.getSessionByToken('raw-token-123');
 
-      // hashToken('raw-token-123') の結果でfindByTokenHashが呼ばれる
-      expect(mockSessionRepo.findByTokenHash).toHaveBeenCalledWith(expect.any(String));
+      expect(mockSessionRepo.findByTokenHash).toHaveBeenCalledWith(hashToken('raw-token-123'));
       expect(result).toEqual(mockSession);
     });
 

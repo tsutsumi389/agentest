@@ -20,9 +20,8 @@ ALTER TABLE "refresh_tokens" ALTER COLUMN "token_hash" SET NOT NULL;
 DROP INDEX IF EXISTS "refresh_tokens_token_key";
 DROP INDEX IF EXISTS "refresh_tokens_token_idx";
 
--- 新しいユニーク制約・インデックスを追加
+-- 新しいユニーク制約を追加（UNIQUEが暗黙的にインデックスを作成するため別途CREATE INDEXは不要）
 ALTER TABLE "refresh_tokens" ADD CONSTRAINT "refresh_tokens_token_hash_key" UNIQUE ("token_hash");
-CREATE INDEX "refresh_tokens_token_hash_idx" ON "refresh_tokens"("token_hash");
 
 -- 旧カラムを削除
 ALTER TABLE "refresh_tokens" DROP COLUMN "token";
@@ -41,7 +40,6 @@ DROP INDEX IF EXISTS "sessions_token_key";
 DROP INDEX IF EXISTS "sessions_token_idx";
 
 ALTER TABLE "sessions" ADD CONSTRAINT "sessions_token_hash_key" UNIQUE ("token_hash");
-CREATE INDEX "sessions_token_hash_idx" ON "sessions"("token_hash");
 
 ALTER TABLE "sessions" DROP COLUMN "token";
 
@@ -59,6 +57,5 @@ DROP INDEX IF EXISTS "admin_sessions_token_key";
 DROP INDEX IF EXISTS "admin_sessions_token_idx";
 
 ALTER TABLE "admin_sessions" ADD CONSTRAINT "admin_sessions_token_hash_key" UNIQUE ("token_hash");
-CREATE INDEX "admin_sessions_token_hash_idx" ON "admin_sessions"("token_hash");
 
 ALTER TABLE "admin_sessions" DROP COLUMN "token";

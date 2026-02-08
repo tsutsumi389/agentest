@@ -158,7 +158,6 @@ describe('requireAdminRole ミドルウェア', () => {
     it('指定されたロールを持つ管理者は許可される', async () => {
       const mockSession = {
         id: 'session-1',
-        token: 'valid-token',
         createdAt: new Date(),
         expiresAt: new Date(Date.now() + 60 * 60 * 1000),
         adminUser: {
@@ -187,7 +186,6 @@ describe('requireAdminRole ミドルウェア', () => {
     it('SUPER_ADMINは全てのロールで許可される', async () => {
       const mockSession = {
         id: 'session-1',
-        token: 'valid-token',
         createdAt: new Date(),
         expiresAt: new Date(Date.now() + 60 * 60 * 1000),
         adminUser: {
@@ -217,7 +215,6 @@ describe('requireAdminRole ミドルウェア', () => {
     it('ロール不足の場合はAuthorizationError', async () => {
       const mockSession = {
         id: 'session-1',
-        token: 'valid-token',
         createdAt: new Date(),
         expiresAt: new Date(Date.now() + 60 * 60 * 1000),
         adminUser: {
@@ -249,7 +246,6 @@ describe('requireAdminRole ミドルウェア', () => {
     it('空のロール配列の場合は認証のみチェック', async () => {
       const mockSession = {
         id: 'session-1',
-        token: 'valid-token',
         createdAt: new Date(),
         expiresAt: new Date(Date.now() + 60 * 60 * 1000),
         adminUser: {
@@ -279,7 +275,6 @@ describe('requireAdminRole ミドルウェア', () => {
     it('複数ロール指定時、いずれかを持っていれば許可', async () => {
       const mockSession = {
         id: 'session-1',
-        token: 'valid-token',
         createdAt: new Date(),
         expiresAt: new Date(Date.now() + 60 * 60 * 1000),
         adminUser: {
@@ -341,7 +336,6 @@ describe('requireAdminRole ミドルウェア', () => {
     it('セッションの最終活動時刻を非同期で更新する', async () => {
       const mockSession = {
         id: 'session-1',
-        token: 'valid-token',
         createdAt: new Date(),
         expiresAt: new Date(Date.now() + 60 * 60 * 1000),
         adminUser: {
@@ -370,7 +364,6 @@ describe('requireAdminRole ミドルウェア', () => {
     it('updateActivityが失敗してもリクエストは継続する', async () => {
       const mockSession = {
         id: 'session-1',
-        token: 'valid-token',
         createdAt: new Date(),
         expiresAt: new Date(Date.now() + 60 * 60 * 1000),
         adminUser: {

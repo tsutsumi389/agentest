@@ -272,7 +272,6 @@ model RefreshToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([tokenHash])
   @@index([expiresAt])
   @@map("refresh_tokens")
 }
@@ -291,7 +290,6 @@ model Session {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
-  @@index([tokenHash])
   @@index([expiresAt])
   @@map("sessions")
 }
@@ -1384,7 +1382,6 @@ model AdminSession {
   adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
 
   @@index([adminUserId])
-  @@index([tokenHash])
   @@index([expiresAt])
   @@map("admin_sessions")
 }

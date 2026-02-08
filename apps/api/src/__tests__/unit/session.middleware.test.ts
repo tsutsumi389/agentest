@@ -23,6 +23,7 @@ vi.mock('../../services/session.service.js', () => ({
 
 // モック設定後にインポート
 import { trackSession, extractClientInfo } from '../../middleware/session.middleware.js';
+import { hashToken } from '../../utils/pkce.js';
 
 // テスト用の固定値
 const TEST_SESSION_ID = '11111111-1111-1111-1111-111111111111';
@@ -72,7 +73,7 @@ describe('trackSession', () => {
       await middleware(req as Request, res as Response, mockNext);
 
       expect(mockPrismaSession.findUnique).toHaveBeenCalledWith({
-        where: { tokenHash: expect.any(String) },
+        where: { tokenHash: hashToken(TEST_REFRESH_TOKEN) },
       });
     });
 
