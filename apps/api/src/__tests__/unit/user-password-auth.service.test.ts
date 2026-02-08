@@ -43,6 +43,7 @@ const mockPrisma = vi.hoisted(() => ({
     create: vi.fn(),
     findFirst: vi.fn(),
     update: vi.fn(),
+    updateMany: vi.fn(),
   },
   refreshToken: {
     create: vi.fn(),
@@ -464,6 +465,32 @@ describe('UserPasswordAuthService', () => {
       expect(result.tokens).toEqual(mockTokens);
     });
 
+    it('ロック期間終了時にfailedAttemptsとlockedUntilがリセットされる', async () => {
+      const expiredLockUser = {
+        ...mockUser,
+        failedAttempts: 5,
+        lockedUntil: new Date(Date.now() - 1000), // 1秒前（ロック期間終了済み）
+      };
+      mockPrisma.user.findFirst.mockResolvedValue(expiredLockUser);
+      mockBcrypt.compare.mockResolvedValue(true);
+      mockPrisma.user.update.mockResolvedValue({ ...expiredLockUser, failedAttempts: 0, lockedUntil: null });
+      mockPrisma.refreshToken.create.mockResolvedValue({});
+      mockPrisma.session.create.mockResolvedValue({});
+
+      await service.login({
+        email: 'test@example.com',
+        password: 'Password123!',
+      });
+
+      // ロック解除のupdateが呼ばれる（パスワード検証前にリセット）
+      expect(mockPrisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: mockUser.id },
+          data: { failedAttempts: 0, lockedUntil: null },
+        })
+      );
+    });
+
     it('ログイン成功でfailedAttemptsがリセットされる', async () => {
       const userWithFailures = { ...mockUser, failedAttempts: 3 };
       mockPrisma.user.findFirst.mockResolvedValue(userWithFailures);
@@ -575,6 +602,24 @@ describe('UserPasswordAuthService', () => {
       // ハッシュ化されていない生のトークンが返される
       expect(result).toBeTruthy();
       expect(result).not.toBe('hashed-token-value'); // hashTokenの戻り値ではない
+    });
+
+    it('既存の未使用トークンが無効化される', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+      mockPrisma.passwordResetToken.updateMany.mockResolvedValue({ count: 1 });
+      mockPrisma.passwordResetToken.create.mockResolvedValue({});
+
+      await service.requestPasswordReset('test@example.com');
+
+      // 同一ユーザーの既存未使用トークンがusedAt設定で無効化される
+      expect(mockPrisma.passwordResetToken.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId: mockUser.id, usedAt: null },
+          data: expect.objectContaining({
+            usedAt: expect.any(Date),
+          }),
+        })
+      );
     });
   });
 

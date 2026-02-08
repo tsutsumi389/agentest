@@ -292,25 +292,33 @@ export class AuthController {
         throw createValidationError(parsed.error);
       }
 
-      const resetToken = await this.passwordAuthService.requestPasswordReset(parsed.data.email);
+      // バックグラウンドで処理し、即座にレスポンスを返す（タイミングサイドチャネル対策）
+      const resetPromise = (async () => {
+        const resetToken = await this.passwordAuthService.requestPasswordReset(parsed.data.email);
 
-      // トークンがある場合はリセットメールを送信
-      if (resetToken) {
-        const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${resetToken}`;
-        const resetEmail = emailService.generatePasswordResetEmail({
-          name: parsed.data.email,
-          resetUrl,
-          expiresInMinutes: 60,
-        });
-        await emailService.send({
-          to: parsed.data.email,
-          subject: resetEmail.subject,
-          text: resetEmail.text,
-          html: resetEmail.html,
-        });
-      }
+        // トークンがある場合はリセットメールを送信
+        if (resetToken) {
+          const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+          const resetEmail = emailService.generatePasswordResetEmail({
+            name: parsed.data.email,
+            resetUrl,
+            expiresInMinutes: 60,
+          });
+          await emailService.send({
+            to: parsed.data.email,
+            subject: resetEmail.subject,
+            text: resetEmail.text,
+            html: resetEmail.html,
+          });
+        }
+      })();
 
-      // 常に同じメッセージを返す（メール存在確認防止）
+      // エラーをログに記録（レスポンスには影響させない）
+      resetPromise.catch((error) => {
+        logger.error({ email: parsed.data.email, error }, 'パスワードリセット処理エラー');
+      });
+
+      // 常に即座に同じメッセージを返す（メール存在確認防止 + タイミング差排除）
       res.json({
         message: 'パスワードリセット用のメールを送信しました。メールをご確認ください。',
       });

@@ -160,6 +160,16 @@ export class UserPasswordAuthService {
       throw new AuthenticationError('アカウントがロックされています。しばらく経ってから再度お試しください');
     }
 
+    // ロック期間が終了している場合、失敗回数をリセット
+    if (user.lockedUntil && user.lockedUntil <= new Date()) {
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { failedAttempts: 0, lockedUntil: null },
+      });
+      user.failedAttempts = 0;
+      user.lockedUntil = null;
+    }
+
     // passwordHashがnull（OAuthのみユーザー）の場合
     if (!user.passwordHash) {
       // タイミング攻撃対策: ダミーハッシュと比較
@@ -262,13 +272,22 @@ export class UserPasswordAuthService {
     const rawToken = crypto.randomBytes(32).toString('hex');
     const tokenHash = hashToken(rawToken);
 
-    // トークンをDBに保存
-    await prisma.passwordResetToken.create({
-      data: {
-        userId: user.id,
-        tokenHash,
-        expiresAt: new Date(Date.now() + RESET_TOKEN_EXPIRY_MS),
-      },
+    // トランザクションで既存トークン無効化と新規トークン作成をアトミックに実行
+    await prisma.$transaction(async (tx) => {
+      // 同一ユーザーの既存未使用トークンを無効化
+      await tx.passwordResetToken.updateMany({
+        where: { userId: user.id, usedAt: null },
+        data: { usedAt: new Date() },
+      });
+
+      // 新しいトークンをDBに保存
+      await tx.passwordResetToken.create({
+        data: {
+          userId: user.id,
+          tokenHash,
+          expiresAt: new Date(Date.now() + RESET_TOKEN_EXPIRY_MS),
+        },
+      });
     });
 
     logger.info({ userId: user.id, email }, 'パスワードリセットトークン生成');

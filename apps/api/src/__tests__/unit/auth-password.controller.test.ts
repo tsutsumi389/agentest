@@ -452,9 +452,14 @@ describe('AuthController - パスワード認証', () => {
 
       await controller.forgotPassword(req, res, next);
 
+      // レスポンスは即座に返される（fire-and-forget）
       expect(res.json).toHaveBeenCalledWith({
         message: 'パスワードリセット用のメールを送信しました。メールをご確認ください。',
       });
+
+      // 非同期処理の完了を待つ（fire-and-forget）
+      await new Promise(resolve => setTimeout(resolve, 0));
+
       // メール送信が呼ばれたことを確認
       expect(mockEmailService.send).toHaveBeenCalled();
     });
@@ -504,6 +509,9 @@ describe('AuthController - パスワード認証', () => {
       const res1 = createMockRes();
       const next1 = createMockNext();
       await controller.forgotPassword(req1, res1, next1);
+
+      // 非同期処理の完了を待つ（fire-and-forget）
+      await new Promise(resolve => setTimeout(resolve, 0));
 
       // ユーザーが存在しない場合
       mockPasswordAuthService.requestPasswordReset.mockResolvedValue(null);

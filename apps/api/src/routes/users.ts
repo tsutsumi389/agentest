@@ -22,49 +22,49 @@ const authWithOwnership = [requireAuth(authConfig), requireOwnership()];
  * ユーザープロフィール取得
  * GET /api/users/:userId
  */
-router.get('/:userId', requireAuth(authConfig), userController.getUser);
+router.get('/:userId', authWithOwnership, userController.getUser);
 
 /**
  * ユーザープロフィール更新
  * PATCH /api/users/:userId
  */
-router.patch('/:userId', requireAuth(authConfig), userController.updateUser);
+router.patch('/:userId', authWithOwnership, userController.updateUser);
 
 /**
  * ユーザー削除（論理削除）
  * DELETE /api/users/:userId
  */
-router.delete('/:userId', requireAuth(authConfig), userController.deleteUser);
+router.delete('/:userId', authWithOwnership, userController.deleteUser);
 
 /**
  * ユーザーの組織一覧取得
  * GET /api/users/:userId/organizations
  */
-router.get('/:userId/organizations', requireAuth(authConfig), userController.getUserOrganizations);
+router.get('/:userId/organizations', authWithOwnership, userController.getUserOrganizations);
 
 /**
  * ユーザーのプロジェクト一覧取得
  * GET /api/users/:userId/projects
  */
-router.get('/:userId/projects', requireAuth(authConfig), userController.getUserProjects);
+router.get('/:userId/projects', authWithOwnership, userController.getUserProjects);
 
 /**
  * 最近のテスト実行結果取得
  * GET /api/users/:userId/recent-executions
  */
-router.get('/:userId/recent-executions', requireAuth(authConfig), userController.getRecentExecutions);
+router.get('/:userId/recent-executions', authWithOwnership, userController.getRecentExecutions);
 
 /**
  * OAuth連携一覧取得
  * GET /api/users/:userId/accounts
  */
-router.get('/:userId/accounts', requireAuth(authConfig), userController.getAccounts);
+router.get('/:userId/accounts', authWithOwnership, userController.getAccounts);
 
 /**
  * OAuth連携解除
  * DELETE /api/users/:userId/accounts/:provider
  */
-router.delete('/:userId/accounts/:provider', requireAuth(authConfig), userController.unlinkAccount);
+router.delete('/:userId/accounts/:provider', authWithOwnership, userController.unlinkAccount);
 
 // ============================================
 // パスワード管理関連（認証 + オーナーシップ）
