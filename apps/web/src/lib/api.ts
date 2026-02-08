@@ -111,8 +111,8 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
 
   // 401エラー時の自動リフレッシュ処理
   if (response.status === 401) {
-    // リフレッシュエンドポイント自体の401は除外（無限ループ防止）
-    if (endpoint.includes('/auth/refresh')) {
+    // リフレッシュ・認証確認エンドポイントの401は除外（無限ループ防止）
+    if (endpoint.includes('/auth/refresh') || endpoint.includes('/auth/me')) {
       throw new ApiError(
         401,
         'AUTHENTICATION_ERROR',
