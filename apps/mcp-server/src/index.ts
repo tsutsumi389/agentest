@@ -3,6 +3,7 @@ import { env } from './config/env.js';
 import { prisma } from '@agentest/db';
 import { cleanupAllSessions } from './transport/streamable-http.js';
 import { heartbeatService } from './services/heartbeat.service.js';
+import { closeRedis } from './lib/redis.js';
 import { registerProcessHandlers, type ShutdownFn } from '@agentest/shared';
 import { logger } from './utils/logger.js';
 
@@ -64,10 +65,11 @@ async function main() {
       logger.info('HTTPサーバーを終了しました');
 
       try {
+        await closeRedis();
         await prisma.$disconnect();
         logger.info('データベース接続を終了しました');
       } catch (error) {
-        logger.error({ err: error }, 'データベース切断エラー');
+        logger.error({ err: error }, 'リソース切断エラー');
       }
 
       process.exit(exitCode);

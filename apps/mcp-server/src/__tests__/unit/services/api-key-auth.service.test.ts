@@ -27,6 +27,17 @@ vi.mock('../../../config/env.js', () => ({
   },
 }));
 
+// トークンキャッシュのモック
+const { mockGetCachedTokenValidation, mockCacheTokenValidation } = vi.hoisted(() => ({
+  mockGetCachedTokenValidation: vi.fn(),
+  mockCacheTokenValidation: vi.fn(),
+}));
+
+vi.mock('../../../lib/token-cache.js', () => ({
+  getCachedTokenValidation: mockGetCachedTokenValidation,
+  cacheTokenValidation: mockCacheTokenValidation,
+}));
+
 // fetch のグローバルモック
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
@@ -151,6 +162,101 @@ describe('ApiKeyAuthService', () => {
 
       expect(result).toEqual(mockResponse);
       expect(result.organizationId).toBe('org-1');
+    });
+  });
+
+  describe('validateToken - キャッシュ統合', () => {
+    const validToken = 'agentest_' + 'a'.repeat(43);
+
+    it('キャッシュヒット時はAPIコールをスキップする', async () => {
+      const cachedResult = {
+        userId: 'user-1',
+        organizationId: undefined,
+        scopes: ['mcp:read'],
+        tokenId: 'token-1',
+      };
+      mockGetCachedTokenValidation.mockResolvedValue(cachedResult);
+
+      const result = await apiKeyAuthService.validateToken(validToken);
+
+      expect(result).toEqual({ valid: true, ...cachedResult });
+      expect(mockFetch).not.toHaveBeenCalled();
+      expect(mockGetCachedTokenValidation).toHaveBeenCalledWith('apikey', validToken);
+    });
+
+    it('キャッシュミス時はAPIコールを実行してキャッシュに保存する', async () => {
+      mockGetCachedTokenValidation.mockResolvedValue(null);
+
+      const mockResponse = {
+        valid: true,
+        userId: 'user-2',
+        scopes: ['mcp:write'],
+        tokenId: 'token-2',
+      };
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockResponse),
+      });
+
+      const result = await apiKeyAuthService.validateToken(validToken);
+
+      expect(result).toEqual(mockResponse);
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      // キャッシュに保存されることを確認（TTL: 300秒固定）
+      expect(mockCacheTokenValidation).toHaveBeenCalledWith(
+        'apikey',
+        validToken,
+        { userId: 'user-2', scopes: ['mcp:write'], tokenId: 'token-2' },
+        300
+      );
+    });
+
+    it('API検証で無効なトークンはキャッシュに保存しない', async () => {
+      mockGetCachedTokenValidation.mockResolvedValue(null);
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve({ valid: false }),
+      });
+
+      const result = await apiKeyAuthService.validateToken(validToken);
+
+      expect(result.valid).toBe(false);
+      expect(mockCacheTokenValidation).not.toHaveBeenCalled();
+    });
+
+    it('フォーマット不正のトークンはキャッシュを確認しない', async () => {
+      const result = await apiKeyAuthService.validateToken('invalid_token');
+
+      expect(result.valid).toBe(false);
+      expect(mockGetCachedTokenValidation).not.toHaveBeenCalled();
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
+
+    it('組織IDを含む結果もキャッシュに保存する', async () => {
+      mockGetCachedTokenValidation.mockResolvedValue(null);
+
+      const mockResponse = {
+        valid: true,
+        userId: null,
+        organizationId: 'org-1',
+        scopes: ['mcp:read'],
+        tokenId: 'token-3',
+      };
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: () => Promise.resolve(mockResponse),
+      });
+
+      const result = await apiKeyAuthService.validateToken(validToken);
+
+      expect(result).toEqual(mockResponse);
+      expect(mockCacheTokenValidation).toHaveBeenCalledWith(
+        'apikey',
+        validToken,
+        { userId: null, organizationId: 'org-1', scopes: ['mcp:read'], tokenId: 'token-3' },
+        300
+      );
     });
   });
 });

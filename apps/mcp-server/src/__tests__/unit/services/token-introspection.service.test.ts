@@ -1,5 +1,24 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
+// loggerのモック
+const { mockLogger } = vi.hoisted(() => {
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    trace: vi.fn(),
+    child: vi.fn(),
+  };
+  mockLogger.child.mockReturnValue(mockLogger);
+  return { mockLogger };
+});
+
+vi.mock('../../../utils/logger.js', () => ({
+  logger: mockLogger,
+}));
+
 // 環境変数のモック
 vi.mock('../../../config/env.js', () => ({
   env: {
@@ -9,6 +28,17 @@ vi.mock('../../../config/env.js', () => ({
     INTERNAL_API_SECRET: 'test-internal-secret',
     NODE_ENV: 'test',
   },
+}));
+
+// トークンキャッシュのモック
+const { mockGetCachedTokenValidation, mockCacheTokenValidation } = vi.hoisted(() => ({
+  mockGetCachedTokenValidation: vi.fn(),
+  mockCacheTokenValidation: vi.fn(),
+}));
+
+vi.mock('../../../lib/token-cache.js', () => ({
+  getCachedTokenValidation: mockGetCachedTokenValidation,
+  cacheTokenValidation: mockCacheTokenValidation,
 }));
 
 // fetchのモック
@@ -204,6 +234,97 @@ describe('TokenIntrospectionService', () => {
         userId: 'user-123',
         scopes: [],
       });
+    });
+  });
+
+  describe('validateToken - キャッシュ統合', () => {
+    it('キャッシュヒット時はAPIコールをスキップする', async () => {
+      const cachedResult = { userId: 'user-123', scopes: ['mcp:read', 'mcp:write'] };
+      mockGetCachedTokenValidation.mockResolvedValue(cachedResult);
+
+      const result = await service.validateToken('cached-token');
+
+      expect(result).toEqual({ valid: true, ...cachedResult });
+      expect(mockFetch).not.toHaveBeenCalled();
+      expect(mockGetCachedTokenValidation).toHaveBeenCalledWith('oauth', 'cached-token');
+    });
+
+    it('キャッシュミス時はAPIコールを実行してキャッシュに保存する', async () => {
+      mockGetCachedTokenValidation.mockResolvedValue(null);
+
+      const expTime = Math.floor(Date.now() / 1000) + 200;
+      const mockResponse = {
+        active: true,
+        sub: 'user-456',
+        scope: 'mcp:read',
+        aud: 'http://localhost:3002',
+        exp: expTime,
+      };
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => mockResponse,
+      });
+
+      const result = await service.validateToken('uncached-token', 'http://localhost:3002');
+
+      expect(result).toEqual({
+        valid: true,
+        userId: 'user-456',
+        scopes: ['mcp:read'],
+      });
+      expect(mockFetch).toHaveBeenCalledTimes(1);
+      // キャッシュに保存されることを確認（TTLは min(残存期間, 300) ）
+      expect(mockCacheTokenValidation).toHaveBeenCalledWith(
+        'oauth',
+        'uncached-token',
+        { userId: 'user-456', scopes: ['mcp:read'] },
+        expect.any(Number)
+      );
+      // TTLは200秒以下（残存期間）であること
+      const actualTtl = mockCacheTokenValidation.mock.calls[0][3];
+      expect(actualTtl).toBeLessThanOrEqual(200);
+      expect(actualTtl).toBeGreaterThan(0);
+    });
+
+    it('無効なトークンはキャッシュに保存しない', async () => {
+      mockGetCachedTokenValidation.mockResolvedValue(null);
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => ({ active: false }),
+      });
+
+      const result = await service.validateToken('invalid-token');
+
+      expect(result).toEqual({ valid: false });
+      expect(mockCacheTokenValidation).not.toHaveBeenCalled();
+    });
+
+    it('expがないOAuthトークンはデフォルトTTL(300秒)でキャッシュする', async () => {
+      mockGetCachedTokenValidation.mockResolvedValue(null);
+
+      const mockResponse = {
+        active: true,
+        sub: 'user-789',
+        scope: 'mcp:read',
+        // exp なし
+      };
+
+      mockFetch.mockResolvedValue({
+        ok: true,
+        json: async () => mockResponse,
+      });
+
+      const result = await service.validateToken('no-exp-token');
+
+      expect(result.valid).toBe(true);
+      expect(mockCacheTokenValidation).toHaveBeenCalledWith(
+        'oauth',
+        'no-exp-token',
+        { userId: 'user-789', scopes: ['mcp:read'] },
+        300
+      );
     });
   });
 });

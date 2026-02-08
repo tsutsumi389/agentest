@@ -23,6 +23,7 @@
     "cors": "catalog:",
     "express": "catalog:",
     "helmet": "catalog:",
+    "ioredis": "catalog:",
     "zod": "catalog:",
     "zod-to-json-schema": "^3.25.1"
   },
