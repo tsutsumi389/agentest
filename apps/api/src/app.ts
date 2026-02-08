@@ -8,7 +8,6 @@ import { env } from './config/env.js';
 import { encryptToken } from './utils/crypto.js';
 import { errorHandler } from './middleware/error-handler.js';
 import { httpLogger, attachRequestId } from './middleware/request-logger.js';
-import { apiLimiter, authLimiter } from './middleware/rate-limiter.js';
 import { trackSession } from './middleware/session.middleware.js';
 import routes from './routes/index.js';
 
@@ -166,10 +165,6 @@ export function createApp(): Express {
       };
     }
   );
-
-  // レート制限
-  app.use('/api', apiLimiter);
-  app.use('/api/auth', authLimiter);
 
   // ルート
   app.use(routes);

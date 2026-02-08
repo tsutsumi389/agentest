@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { AdminAuthController } from '../../controllers/admin/auth.controller.js';
 import { AdminTotpController } from '../../controllers/admin/totp.controller.js';
-import { adminAuthLimiter } from '../../middleware/rate-limiter.js';
 import { requireAdminAuth } from '../../middleware/require-admin-role.js';
 
 const router: Router = Router();
@@ -12,7 +11,7 @@ const totpController = new AdminTotpController();
  * ログイン
  * POST /admin/auth/login
  */
-router.post('/login', adminAuthLimiter, controller.login);
+router.post('/login', controller.login);
 
 /**
  * ログアウト
@@ -40,7 +39,7 @@ router.post('/refresh', requireAdminAuth(), controller.refresh);
  *
  * QRコードと秘密鍵を返却
  */
-router.post('/2fa/setup', adminAuthLimiter, requireAdminAuth(), totpController.setup);
+router.post('/2fa/setup', requireAdminAuth(), totpController.setup);
 
 /**
  * 2FA有効化
@@ -48,7 +47,7 @@ router.post('/2fa/setup', adminAuthLimiter, requireAdminAuth(), totpController.s
  *
  * ユーザーが入力したTOTPコードを検証し、有効化
  */
-router.post('/2fa/enable', adminAuthLimiter, requireAdminAuth(), totpController.enable);
+router.post('/2fa/enable', requireAdminAuth(), totpController.enable);
 
 /**
  * 2FA検証（ログイン時）
@@ -56,7 +55,7 @@ router.post('/2fa/enable', adminAuthLimiter, requireAdminAuth(), totpController.
  *
  * ログイン後の2要素認証検証
  */
-router.post('/2fa/verify', adminAuthLimiter, requireAdminAuth(), totpController.verify);
+router.post('/2fa/verify', requireAdminAuth(), totpController.verify);
 
 /**
  * 2FA無効化
@@ -64,6 +63,6 @@ router.post('/2fa/verify', adminAuthLimiter, requireAdminAuth(), totpController.
  *
  * パスワード確認後、2要素認証を無効化
  */
-router.post('/2fa/disable', adminAuthLimiter, requireAdminAuth(), totpController.disable);
+router.post('/2fa/disable', requireAdminAuth(), totpController.disable);
 
 export default router;

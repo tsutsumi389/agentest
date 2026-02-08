@@ -22,7 +22,6 @@
     "cookie-parser": "catalog:",
     "cors": "catalog:",
     "express": "catalog:",
-    "express-rate-limit": "catalog:",
     "helmet": "catalog:",
     "ioredis": "catalog:",
     "pino-http": "catalog:",

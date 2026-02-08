@@ -6,7 +6,6 @@ import { PaymentMethodController } from '../controllers/payment-method.controlle
 import { UserInvoiceController } from '../controllers/user-invoice.controller.js';
 import { authConfig } from '../config/auth.js';
 import { requireOwnership } from '../middleware/require-ownership.js';
-import { billingLimiter } from '../middleware/rate-limiter.js';
 
 const router: Router = Router();
 const userController = new UserController();
@@ -16,9 +15,6 @@ const userInvoiceController = new UserInvoiceController();
 
 // 認証 + オーナーシップチェックのミドルウェアチェーン
 const authWithOwnership = [requireAuth(authConfig), requireOwnership()];
-
-// 課金API用ミドルウェアチェーン（認証 + オーナーシップ + レート制限）
-const billingMiddleware = [requireAuth(authConfig), requireOwnership(), billingLimiter];
 
 /**
  * ユーザープロフィール取得
@@ -69,7 +65,7 @@ router.get('/:userId/accounts', requireAuth(authConfig), userController.getAccou
 router.delete('/:userId/accounts/:provider', requireAuth(authConfig), userController.unlinkAccount);
 
 // ============================================
-// サブスクリプション関連（認証 + オーナーシップ + レート制限）
+// サブスクリプション関連（認証 + オーナーシップ）
 // ============================================
 
 /**
@@ -79,32 +75,32 @@ router.delete('/:userId/accounts/:provider', requireAuth(authConfig), userContro
 router.get('/:userId/subscription', authWithOwnership, subscriptionController.getSubscription);
 
 /**
- * サブスクリプション作成（アップグレード）- レート制限あり
+ * サブスクリプション作成（アップグレード）
  * POST /api/users/:userId/subscription
  */
-router.post('/:userId/subscription', billingMiddleware, subscriptionController.createSubscription);
+router.post('/:userId/subscription', authWithOwnership, subscriptionController.createSubscription);
 
 /**
- * サブスクリプションキャンセル（ダウングレード予約）- レート制限あり
+ * サブスクリプションキャンセル（ダウングレード予約）
  * DELETE /api/users/:userId/subscription
  */
-router.delete('/:userId/subscription', billingMiddleware, subscriptionController.cancelSubscription);
+router.delete('/:userId/subscription', authWithOwnership, subscriptionController.cancelSubscription);
 
 /**
- * ダウングレードキャンセル（サブスクリプション継続）- レート制限あり
+ * ダウングレードキャンセル（サブスクリプション継続）
  * POST /api/users/:userId/subscription/reactivate
  */
-router.post('/:userId/subscription/reactivate', billingMiddleware, subscriptionController.reactivateSubscription);
+router.post('/:userId/subscription/reactivate', authWithOwnership, subscriptionController.reactivateSubscription);
 
 // ============================================
-// 支払い方法関連（認証 + オーナーシップ + レート制限）
+// 支払い方法関連（認証 + オーナーシップ）
 // ============================================
 
 /**
  * SetupIntent作成（Stripe Elements用）
  * POST /api/users/:userId/payment-methods/setup-intent
  */
-router.post('/:userId/payment-methods/setup-intent', billingMiddleware, paymentMethodController.createSetupIntent);
+router.post('/:userId/payment-methods/setup-intent', authWithOwnership, paymentMethodController.createSetupIntent);
 
 /**
  * 支払い方法一覧取得
@@ -113,22 +109,22 @@ router.post('/:userId/payment-methods/setup-intent', billingMiddleware, paymentM
 router.get('/:userId/payment-methods', authWithOwnership, paymentMethodController.getPaymentMethods);
 
 /**
- * 支払い方法追加 - レート制限あり
+ * 支払い方法追加
  * POST /api/users/:userId/payment-methods
  */
-router.post('/:userId/payment-methods', billingMiddleware, paymentMethodController.addPaymentMethod);
+router.post('/:userId/payment-methods', authWithOwnership, paymentMethodController.addPaymentMethod);
 
 /**
- * 支払い方法削除 - レート制限あり
+ * 支払い方法削除
  * DELETE /api/users/:userId/payment-methods/:paymentMethodId
  */
-router.delete('/:userId/payment-methods/:paymentMethodId', billingMiddleware, paymentMethodController.deletePaymentMethod);
+router.delete('/:userId/payment-methods/:paymentMethodId', authWithOwnership, paymentMethodController.deletePaymentMethod);
 
 /**
- * デフォルト支払い方法設定 - レート制限あり
+ * デフォルト支払い方法設定
  * PUT /api/users/:userId/payment-methods/:paymentMethodId/default
  */
-router.put('/:userId/payment-methods/:paymentMethodId/default', billingMiddleware, paymentMethodController.setDefaultPaymentMethod);
+router.put('/:userId/payment-methods/:paymentMethodId/default', authWithOwnership, paymentMethodController.setDefaultPaymentMethod);
 
 // ============================================
 // 請求履歴関連（認証 + オーナーシップ）
