@@ -38,6 +38,15 @@ vi.mock('@agentest/storage', () => ({
   }),
 }));
 
+// マジックバイト検証をモック（統合テストではストレージ層のテストに集中するため）
+vi.mock('../../config/upload.js', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../../config/upload.js')>();
+  return {
+    ...original,
+    validateMagicBytes: vi.fn().mockResolvedValue(undefined),
+  };
+});
+
 // 認証ミドルウェアをモック
 vi.mock('@agentest/auth', () => ({
   requireAuth: () => (req: any, _res: any, next: any) => {

@@ -34,6 +34,15 @@ vi.mock('@agentest/storage', () => ({
   }),
 }));
 
+// マジックバイト検証をモック（統合テストではAPI層のテストに集中するため）
+vi.mock('../../config/upload.js', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../../config/upload.js')>();
+  return {
+    ...original,
+    validateMagicBytes: vi.fn().mockResolvedValue(undefined),
+  };
+});
+
 // テスト用Base64データ（1x1ピクセルのPNG画像）
 const TEST_BASE64_PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
 
