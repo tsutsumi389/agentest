@@ -1,5 +1,6 @@
 import { env } from '../config/env.js';
 import { logger as baseLogger } from '../utils/logger.js';
+import { getCachedTokenValidation, cacheTokenValidation } from '../lib/token-cache.js';
 
 const logger = baseLogger.child({ module: 'token-introspection' });
 
@@ -58,20 +59,29 @@ export class TokenIntrospectionService {
 
   /**
    * トークンを検証し、Audience（resource）が期待値と一致するか確認
+   * キャッシュが有効な場合、同一トークンの再検証時はAPIコールをスキップ
    */
   async validateToken(token: string, expectedAudience?: string): Promise<{
     valid: boolean;
     userId?: string;
     scopes?: string[];
   }> {
+    // キャッシュ確認
+    const cached = await getCachedTokenValidation<{ userId: string; scopes: string[] }>('oauth', token);
+    if (cached) {
+      return { valid: true, ...cached };
+    }
+
     const result = await this.introspect(token);
 
     if (!result.active) {
+      // 無効トークンはキャッシュしない（ブルートフォース対策）
       return { valid: false };
     }
 
     // Audience検証 (RFC 8707)
     // 末尾スラッシュを正規化して比較
+    // NOTE: ASがaudを返さない場合は検証をスキップ（ASの実装に依存）
     if (expectedAudience && result.aud) {
       const normalizedExpected = expectedAudience.replace(/\/$/, '');
       const normalizedActual = result.aud.replace(/\/$/, '');
@@ -81,10 +91,25 @@ export class TokenIntrospectionService {
       }
     }
 
-    return {
-      valid: true,
+    const validationResult = {
       userId: result.sub,
       scopes: result.scope ? result.scope.split(' ') : [],
+    };
+
+    // TTL計算: min(トークン残存期間, 300秒)
+    const maxTtl = 300;
+    let ttl = maxTtl;
+    if (result.exp) {
+      const remaining = result.exp - Math.floor(Date.now() / 1000);
+      ttl = Math.min(Math.max(remaining, 1), maxTtl);
+    }
+
+    // 有効な結果をキャッシュに保存
+    await cacheTokenValidation('oauth', token, validationResult, ttl);
+
+    return {
+      valid: true,
+      ...validationResult,
     };
   }
 }

@@ -425,6 +425,9 @@ importers:
       helmet:
         specifier: 'catalog:'
         version: 8.1.0
+      ioredis:
+        specifier: 'catalog:'
+        version: 5.8.2
       zod:
         specifier: 'catalog:'
         version: 3.25.76

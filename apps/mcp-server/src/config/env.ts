@@ -33,6 +33,9 @@ export function createEnvSchema(isProduction: boolean) {
       ? z.string().min(32)
       : z.string().min(32).default('development-internal-api-secret-32ch'),
 
+    // Redis（トークンキャッシュ用、未設定時はキャッシュ無効で動作）
+    REDIS_URL: z.string().url().optional(),
+
     // OAuth 2.1 Resource Server (RFC 9728)
     MCP_SERVER_URL: z.string().url().default('http://localhost:3002'),
     // AUTH_SERVER_URLはAPI_URLと同じ値のため、API_URLを使用
