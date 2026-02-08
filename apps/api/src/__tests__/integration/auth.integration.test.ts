@@ -174,8 +174,10 @@ describe('Auth API Integration Tests', () => {
         .send({ refreshToken: rawRefreshToken });
 
       expect(response.status).toBe(200);
-      expect(response.body.accessToken).toBeDefined();
-      expect(response.body.refreshToken).toBeDefined();
+      expect(response.body.message).toBe('トークンが更新されました');
+      // トークンはクッキーでのみ返却され、レスポンスボディには含まれない
+      expect(response.body.accessToken).toBeUndefined();
+      expect(response.body.refreshToken).toBeUndefined();
     });
 
     it('クッキーからリフレッシュトークンを読み取れる', async () => {
@@ -184,7 +186,7 @@ describe('Auth API Integration Tests', () => {
         .set('Cookie', `refresh_token=${rawRefreshToken}`);
 
       expect(response.status).toBe(200);
-      expect(response.body.accessToken).toBeDefined();
+      expect(response.body.message).toBe('トークンが更新されました');
     });
 
     it('新しいセッションがDBに作成される', async () => {

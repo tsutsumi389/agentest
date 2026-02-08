@@ -88,28 +88,7 @@ export class AuthController {
 
       // トークンを検証
       const payload = verifyRefreshToken(refreshToken, authConfig);
-
-      // アトミックにトークンを無効化（楽観的ロック: revokedAt が null のもののみ更新）
       const refreshTokenHash = hashToken(refreshToken);
-      const revokeResult = await prisma.refreshToken.updateMany({
-        where: {
-          tokenHash: refreshTokenHash,
-          revokedAt: null,
-          expiresAt: { gt: new Date() },
-        },
-        data: { revokedAt: new Date() },
-      });
-
-      // 更新件数が0 = 既に無効化済み or 期限切れ or 存在しない
-      if (revokeResult.count === 0) {
-        throw new AuthenticationError('無効なリフレッシュトークンです');
-      }
-
-      // 旧セッションを無効化
-      await prisma.session.updateMany({
-        where: { tokenHash: refreshTokenHash },
-        data: { revokedAt: new Date() },
-      });
 
       // ユーザーを取得
       const user = await prisma.user.findUnique({
@@ -122,28 +101,52 @@ export class AuthController {
 
       // 新しいトークンを生成
       const tokens = generateTokens(user.id, user.email, authConfig);
-
-      // クライアント情報を抽出
+      const newTokenHash = hashToken(tokens.refreshToken);
       const clientInfo = extractClientInfo(req);
 
-      // 新しいリフレッシュトークンとセッションを保存（ハッシュ化して保存）
-      const newTokenHash = hashToken(tokens.refreshToken);
-      await Promise.all([
-        prisma.refreshToken.create({
-          data: {
-            userId: user.id,
-            tokenHash: newTokenHash,
-            expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
+      // トランザクションで旧トークン失効と新トークン作成をアトミックに実行
+      await prisma.$transaction(async (tx) => {
+        // 旧リフレッシュトークンを失効（楽観的ロック: revokedAt が null のもののみ更新）
+        const revokeResult = await tx.refreshToken.updateMany({
+          where: {
+            tokenHash: refreshTokenHash,
+            revokedAt: null,
+            expiresAt: { gt: new Date() },
           },
-        }),
-        this.sessionService.createSession({
-          userId: user.id,
-          tokenHash: newTokenHash,
-          userAgent: clientInfo.userAgent,
-          ipAddress: clientInfo.ipAddress,
-          expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
-        }),
-      ]);
+          data: { revokedAt: new Date() },
+        });
+
+        // 更新件数が0 = 既に無効化済み or 期限切れ or 存在しない
+        if (revokeResult.count === 0) {
+          throw new AuthenticationError('無効なリフレッシュトークンです');
+        }
+
+        // 旧セッションを失効
+        await tx.session.updateMany({
+          where: { tokenHash: refreshTokenHash },
+          data: { revokedAt: new Date() },
+        });
+
+        // 新しいリフレッシュトークンとセッションを保存（ハッシュ化して保存）
+        await Promise.all([
+          tx.refreshToken.create({
+            data: {
+              userId: user.id,
+              tokenHash: newTokenHash,
+              expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
+            },
+          }),
+          tx.session.create({
+            data: {
+              userId: user.id,
+              tokenHash: newTokenHash,
+              userAgent: clientInfo.userAgent,
+              ipAddress: clientInfo.ipAddress,
+              expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
+            },
+          }),
+        ]);
+      });
 
       // クッキーに設定（生トークン）
       res.cookie('access_token', tokens.accessToken, {
@@ -155,10 +158,7 @@ export class AuthController {
         maxAge: SESSION_EXPIRY_MS,
       });
 
-      res.json({
-        accessToken: tokens.accessToken,
-        refreshToken: tokens.refreshToken,
-      });
+      res.json({ message: 'トークンが更新されました' });
     } catch (error) {
       next(error);
     }

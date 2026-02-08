@@ -1,5 +1,10 @@
 -- セッション・リフレッシュトークンのハッシュ化マイグレーション
 -- 既存の平文tokenをSHA-256ハッシュに変換し、tokenHash カラムに移行
+--
+-- デプロイメント注意事項:
+-- 1. pgcrypto拡張が必要。本番環境でCREATE EXTENSIONにはsuperuser権限が必要な場合があるため事前に確認すること
+-- 2. UPDATE文がテーブル全体をロックする。レコード数が多い場合はメンテナンスウィンドウで実行すること
+-- 3. DROP COLUMNで旧tokenカラムを削除するため、ロールバックには平文トークンの再発行が必要
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 

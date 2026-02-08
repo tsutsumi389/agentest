@@ -39,14 +39,20 @@ vi.mock('@agentest/auth', () => ({
   verifyRefreshToken: (...args: unknown[]) => mockVerifyRefreshToken(...args),
 }));
 
-vi.mock('@agentest/db', () => ({
-  prisma: {
+const mockPrismaTransaction = vi.hoisted(() => vi.fn());
+
+vi.mock('@agentest/db', () => {
+  const prismaInstance = {
     refreshToken: mockPrismaRefreshToken,
-    session: mockPrismaSession,
+    session: { ...mockPrismaSession, create: vi.fn() },
     user: mockPrismaUser,
     account: mockPrismaAccount,
-  },
-}));
+    $transaction: mockPrismaTransaction,
+  };
+  // $transaction はコールバックに prisma 自身を渡す
+  mockPrismaTransaction.mockImplementation(async (fn: (tx: typeof prismaInstance) => Promise<unknown>) => fn(prismaInstance));
+  return { prisma: prismaInstance };
+});
 
 vi.mock('../../config/env.js', () => ({
   env: {
@@ -174,11 +180,11 @@ describe('AuthController', () => {
         },
         data: { revokedAt: expect.any(Date) },
       });
+      expect(mockPrismaTransaction).toHaveBeenCalled();
       expect(res.cookie).toHaveBeenCalledWith('access_token', NEW_ACCESS_TOKEN, expect.any(Object));
       expect(res.cookie).toHaveBeenCalledWith('refresh_token', NEW_REFRESH_TOKEN, expect.any(Object));
       expect(res.json).toHaveBeenCalledWith({
-        accessToken: NEW_ACCESS_TOKEN,
-        refreshToken: NEW_REFRESH_TOKEN,
+        message: 'トークンが更新されました',
       });
     });
 
@@ -196,7 +202,6 @@ describe('AuthController', () => {
         refreshToken: NEW_REFRESH_TOKEN,
       });
       mockPrismaRefreshToken.create.mockResolvedValue({});
-      mockSessionService.createSession.mockResolvedValue({});
 
       const req = mockRequest({
         body: { refreshToken: TEST_REFRESH_TOKEN },
@@ -206,8 +211,7 @@ describe('AuthController', () => {
       await controller.refresh(req, res, mockNext);
 
       expect(res.json).toHaveBeenCalledWith({
-        accessToken: NEW_ACCESS_TOKEN,
-        refreshToken: NEW_REFRESH_TOKEN,
+        message: 'トークンが更新されました',
       });
     });
 
