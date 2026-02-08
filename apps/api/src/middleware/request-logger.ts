@@ -6,6 +6,7 @@ import { pinoHttp, type Options } from 'pino-http';
 import type { Request, Response, NextFunction } from 'express';
 import type { IncomingMessage, ServerResponse } from 'http';
 import { logger } from '../utils/logger.js';
+import { requestContext } from '../lib/request-context.js';
 
 /**
  * pino-http ミドルウェアを作成する
@@ -56,4 +57,15 @@ export function attachRequestId(req: Request, res: Response, next: NextFunction)
   req.requestId = id as string;
   res.setHeader('X-Request-ID', id as string);
   next();
+}
+
+/**
+ * AsyncLocalStorageでリクエストコンテキストを開始するミドルウェア
+ * attachRequestId の後に配置し、requestIdを非同期処理全体に伝搬する
+ *
+ * 通常はattachRequestIdで設定済みだが、単体使用時に備えてフォールバックあり
+ */
+export function runWithRequestContext(req: Request, _res: Response, next: NextFunction): void {
+  const requestId = req.requestId ?? crypto.randomUUID();
+  requestContext.run({ requestId }, () => next());
 }

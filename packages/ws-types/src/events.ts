@@ -21,6 +21,7 @@ export interface BaseMessage {
 
 export interface BaseEvent extends BaseMessage {
   eventId: string;
+  requestId?: string;
 }
 
 // ============================================

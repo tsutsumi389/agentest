@@ -51,6 +51,15 @@ vi.mock('../../config/env.js', () => ({
   env: mockEnv,
 }));
 
+// request-contextモック
+const { mockGetRequestId } = vi.hoisted(() => ({
+  mockGetRequestId: vi.fn<() => string | undefined>().mockReturnValue(undefined),
+}));
+
+vi.mock('../../lib/request-context.js', () => ({
+  getRequestId: mockGetRequestId,
+}));
+
 import { publishEvent, publishDashboardUpdated, closeRedisPublisher } from '../../lib/redis-publisher.js';
 
 describe('redis-publisher', () => {
@@ -79,6 +88,31 @@ describe('redis-publisher', () => {
       // エラーがスローされないことを確認
       await expect(publishEvent('channel', { test: true })).resolves.toBeUndefined();
       expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('リクエストコンテキスト内ではイベントにrequestIdを自動注入する', async () => {
+      mockGetRequestId.mockReturnValue('ctx-req-123');
+      const event = { type: 'test', data: 'value' };
+
+      await publishEvent('test-channel', event);
+
+      const publishCall = mockRedisInstance.publish.mock.calls[0];
+      const publishedEvent = JSON.parse(publishCall[1]);
+      expect(publishedEvent.requestId).toBe('ctx-req-123');
+      expect(publishedEvent.type).toBe('test');
+      expect(publishedEvent.data).toBe('value');
+    });
+
+    it('リクエストコンテキスト外ではrequestIdを注入しない', async () => {
+      mockGetRequestId.mockReturnValue(undefined);
+      const event = { type: 'test', data: 'value' };
+
+      await publishEvent('test-channel', event);
+
+      const publishCall = mockRedisInstance.publish.mock.calls[0];
+      const publishedEvent = JSON.parse(publishCall[1]);
+      expect(publishedEvent.requestId).toBeUndefined();
+      expect(publishedEvent.type).toBe('test');
     });
   });
 
