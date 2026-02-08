@@ -19,6 +19,7 @@ vi.mock('../../repositories/test-suite.repository.js', () => ({
 const mockPrisma = vi.hoisted(() => ({
   testSuite: {
     findUnique: vi.fn(),
+    update: vi.fn(),
   },
   testSuiteHistory: {
     create: vi.fn(),
@@ -184,7 +185,7 @@ describe('TestSuiteService - History & Restore', () => {
     it('削除済みテストスイートを復元できる', async () => {
       mockTestSuiteRepo.findDeletedById.mockResolvedValue(mockDeletedTestSuite);
       mockPrisma.testSuiteHistory.create.mockResolvedValue(mockHistory);
-      mockTestSuiteRepo.restore.mockResolvedValue(restoredTestSuite);
+      mockPrisma.testSuite.update.mockResolvedValue(restoredTestSuite);
 
       const result = await service.restore('test-suite-1', 'user-1');
 
@@ -195,7 +196,7 @@ describe('TestSuiteService - History & Restore', () => {
     it('復元時に履歴が作成される', async () => {
       mockTestSuiteRepo.findDeletedById.mockResolvedValue(mockDeletedTestSuite);
       mockPrisma.testSuiteHistory.create.mockResolvedValue(mockHistory);
-      mockTestSuiteRepo.restore.mockResolvedValue(restoredTestSuite);
+      mockPrisma.testSuite.update.mockResolvedValue(restoredTestSuite);
 
       await service.restore('test-suite-1', 'user-1');
 
@@ -219,7 +220,7 @@ describe('TestSuiteService - History & Restore', () => {
     it('復元時にgroupIdを指定できる', async () => {
       mockTestSuiteRepo.findDeletedById.mockResolvedValue(mockDeletedTestSuite);
       mockPrisma.testSuiteHistory.create.mockResolvedValue(mockHistory);
-      mockTestSuiteRepo.restore.mockResolvedValue(restoredTestSuite);
+      mockPrisma.testSuite.update.mockResolvedValue(restoredTestSuite);
 
       await service.restore('test-suite-1', 'user-1', { groupId: 'group-123' });
 
@@ -233,7 +234,7 @@ describe('TestSuiteService - History & Restore', () => {
     it('復元がトランザクション内で実行される', async () => {
       mockTestSuiteRepo.findDeletedById.mockResolvedValue(mockDeletedTestSuite);
       mockPrisma.testSuiteHistory.create.mockResolvedValue(mockHistory);
-      mockTestSuiteRepo.restore.mockResolvedValue(restoredTestSuite);
+      mockPrisma.testSuite.update.mockResolvedValue(restoredTestSuite);
 
       await service.restore('test-suite-1', 'user-1');
 
@@ -263,7 +264,7 @@ describe('TestSuiteService - History & Restore', () => {
       };
       mockTestSuiteRepo.findDeletedById.mockResolvedValue(deletedTestSuiteWithDate);
       mockPrisma.testSuiteHistory.create.mockResolvedValue(mockHistory);
-      mockTestSuiteRepo.restore.mockResolvedValue(restoredTestSuite);
+      mockPrisma.testSuite.update.mockResolvedValue(restoredTestSuite);
 
       await service.restore('test-suite-1', 'user-1');
 
@@ -283,7 +284,7 @@ describe('TestSuiteService - History & Restore', () => {
       };
       mockTestSuiteRepo.findDeletedById.mockResolvedValue(deletedWithNullDescription);
       mockPrisma.testSuiteHistory.create.mockResolvedValue(mockHistory);
-      mockTestSuiteRepo.restore.mockResolvedValue({ ...restoredTestSuite, description: null });
+      mockPrisma.testSuite.update.mockResolvedValue({ ...restoredTestSuite, description: null });
 
       const result = await service.restore('test-suite-1', 'user-1');
 

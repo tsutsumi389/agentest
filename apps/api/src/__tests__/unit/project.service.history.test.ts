@@ -29,11 +29,14 @@ const mockPrisma = vi.hoisted(() => ({
   projectMember: {
     create: vi.fn(),
   },
-  $transaction: vi.fn((operations) => {
+  projectHistory: {
+    create: vi.fn(),
+  },
+  $transaction: vi.fn((operations: unknown) => {
     if (Array.isArray(operations)) {
       return Promise.all(operations);
     }
-    return operations(mockPrisma);
+    return (operations as (tx: typeof mockPrisma) => unknown)(mockPrisma);
   }),
 }));
 
@@ -213,12 +216,20 @@ describe('ProjectService - History & Restore', () => {
         deletedAt: new Date(), // 今日削除された
       };
       mockProjectRepo.findDeletedById.mockResolvedValue(deletedRecently);
-      mockProjectRepo.restore.mockResolvedValue(restoredProject);
-      mockProjectRepo.createHistory.mockResolvedValue(mockHistory);
+      mockPrisma.project.update.mockResolvedValue(restoredProject);
 
       const result = await service.restore('project-1', 'user-1');
 
-      expect(mockProjectRepo.restore).toHaveBeenCalledWith('project-1');
+      expect(mockPrisma.$transaction).toHaveBeenCalled();
+      expect(mockPrisma.project.update).toHaveBeenCalledWith({
+        where: { id: 'project-1' },
+        data: { deletedAt: null },
+        include: {
+          organization: {
+            select: { id: true, name: true },
+          },
+        },
+      });
       expect(result.deletedAt).toBeNull();
     });
 
@@ -228,21 +239,21 @@ describe('ProjectService - History & Restore', () => {
         deletedAt: new Date(),
       };
       mockProjectRepo.findDeletedById.mockResolvedValue(deletedRecently);
-      mockProjectRepo.restore.mockResolvedValue(restoredProject);
-      mockProjectRepo.createHistory.mockResolvedValue(mockHistory);
+      mockPrisma.project.update.mockResolvedValue(restoredProject);
 
       await service.restore('project-1', 'user-1');
 
-      expect(mockProjectRepo.createHistory).toHaveBeenCalledWith({
-        projectId: 'project-1',
-        changedByUserId: 'user-1',
-        changeType: 'RESTORE',
-        snapshot: {
-          name: restoredProject.name,
-          description: restoredProject.description,
-          organizationId: restoredProject.organizationId,
+      expect(mockPrisma.projectHistory.create).toHaveBeenCalledWith({
+        data: {
+          projectId: 'project-1',
+          changedByUserId: 'user-1',
+          changeType: 'RESTORE',
+          snapshot: {
+            name: restoredProject.name,
+            description: restoredProject.description,
+            organizationId: restoredProject.organizationId,
+          },
         },
-        changeReason: undefined,
       });
     });
 
@@ -252,8 +263,7 @@ describe('ProjectService - History & Restore', () => {
       const deletedProject = { ...mockDeletedProject, deletedAt };
 
       mockProjectRepo.findDeletedById.mockResolvedValue(deletedProject);
-      mockProjectRepo.restore.mockResolvedValue(restoredProject);
-      mockProjectRepo.createHistory.mockResolvedValue(mockHistory);
+      mockPrisma.project.update.mockResolvedValue(restoredProject);
 
       const result = await service.restore('project-1', 'user-1');
 
@@ -266,8 +276,7 @@ describe('ProjectService - History & Restore', () => {
       const deletedProject = { ...mockDeletedProject, deletedAt };
 
       mockProjectRepo.findDeletedById.mockResolvedValue(deletedProject);
-      mockProjectRepo.restore.mockResolvedValue(restoredProject);
-      mockProjectRepo.createHistory.mockResolvedValue(mockHistory);
+      mockPrisma.project.update.mockResolvedValue(restoredProject);
 
       const result = await service.restore('project-1', 'user-1');
 
@@ -309,23 +318,24 @@ describe('ProjectService - History & Restore', () => {
     it('プロジェクト作成時に履歴が作成される', async () => {
       const newProject = { ...mockProject };
       mockPrisma.project.create.mockResolvedValue(newProject);
-      mockProjectRepo.createHistory.mockResolvedValue(mockHistory);
 
       await service.create('user-1', {
         name: 'Test Project',
         description: 'Test Description',
       });
 
-      expect(mockProjectRepo.createHistory).toHaveBeenCalledWith({
-        projectId: newProject.id,
-        changedByUserId: 'user-1',
-        changeType: 'CREATE',
-        snapshot: {
-          name: newProject.name,
-          description: newProject.description,
-          organizationId: newProject.organizationId,
+      expect(mockPrisma.$transaction).toHaveBeenCalled();
+      expect(mockPrisma.projectHistory.create).toHaveBeenCalledWith({
+        data: {
+          projectId: newProject.id,
+          changedByUserId: 'user-1',
+          changeType: 'CREATE',
+          snapshot: {
+            name: newProject.name,
+            description: newProject.description,
+            organizationId: newProject.organizationId,
+          },
         },
-        changeReason: undefined,
       });
     });
   });
@@ -337,26 +347,27 @@ describe('ProjectService - History & Restore', () => {
     it('プロジェクト更新時に履歴が作成される', async () => {
       const updatedProject = { ...mockProject, name: 'Updated Project' };
       mockProjectRepo.findById.mockResolvedValue(mockProject);
-      mockProjectRepo.update.mockResolvedValue(updatedProject);
-      mockProjectRepo.createHistory.mockResolvedValue(mockHistory);
+      mockPrisma.project.update.mockResolvedValue(updatedProject);
 
       await service.update('project-1', { name: 'Updated Project' }, 'user-1');
 
-      expect(mockProjectRepo.createHistory).toHaveBeenCalledWith({
-        projectId: 'project-1',
-        changedByUserId: 'user-1',
-        changeType: 'UPDATE',
-        snapshot: {
-          before: {
-            name: mockProject.name,
-            description: mockProject.description,
-          },
-          after: {
-            name: updatedProject.name,
-            description: updatedProject.description,
+      expect(mockPrisma.$transaction).toHaveBeenCalled();
+      expect(mockPrisma.projectHistory.create).toHaveBeenCalledWith({
+        data: {
+          projectId: 'project-1',
+          changedByUserId: 'user-1',
+          changeType: 'UPDATE',
+          snapshot: {
+            before: {
+              name: mockProject.name,
+              description: mockProject.description,
+            },
+            after: {
+              name: updatedProject.name,
+              description: updatedProject.description,
+            },
           },
         },
-        changeReason: undefined,
       });
     });
   });
@@ -367,21 +378,22 @@ describe('ProjectService - History & Restore', () => {
   describe('softDelete - with history', () => {
     it('プロジェクト削除時に履歴が作成される', async () => {
       mockProjectRepo.findById.mockResolvedValue(mockProject);
-      mockProjectRepo.softDelete.mockResolvedValue({ ...mockProject, deletedAt: new Date() });
-      mockProjectRepo.createHistory.mockResolvedValue(mockHistory);
+      mockPrisma.project.update.mockResolvedValue({ ...mockProject, deletedAt: new Date() });
 
       await service.softDelete('project-1', 'user-1');
 
-      expect(mockProjectRepo.createHistory).toHaveBeenCalledWith({
-        projectId: 'project-1',
-        changedByUserId: 'user-1',
-        changeType: 'DELETE',
-        snapshot: {
-          name: mockProject.name,
-          description: mockProject.description,
-          organizationId: mockProject.organizationId,
+      expect(mockPrisma.$transaction).toHaveBeenCalled();
+      expect(mockPrisma.projectHistory.create).toHaveBeenCalledWith({
+        data: {
+          projectId: 'project-1',
+          changedByUserId: 'user-1',
+          changeType: 'DELETE',
+          snapshot: {
+            name: mockProject.name,
+            description: mockProject.description,
+            organizationId: mockProject.organizationId,
+          },
         },
-        changeReason: undefined,
       });
     });
   });
