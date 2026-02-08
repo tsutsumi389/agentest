@@ -8,8 +8,10 @@ setup('Webアプリの認証状態を作成', async ({ page }) => {
   // ViteのHMR WebSocketにより`load`イベントが発火しないためdomcontentloadedで待機
   await page.goto(`${WEB_URL}/login`, { waitUntil: 'domcontentloaded' });
 
-  // Reactアプリのレンダリング完了を待機
-  await page.waitForLoadState('networkidle');
+  // Reactアプリのレンダリング完了を確認後、Vite HMRの安定化を待機
+  // networkidleはHMR WebSocket接続が常にアクティブなため使用不可
+  await page.getByRole('heading', { name: 'ログイン' }).waitFor({ state: 'visible', timeout: 10000 });
+  await page.waitForTimeout(2000);
 
   // Viteプロキシ経由でテストログインAPIを呼び出し、クッキーをブラウザに保存させる
   const result = await page.evaluate(async () => {
