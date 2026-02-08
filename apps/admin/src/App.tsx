@@ -12,6 +12,7 @@ import { SystemAdminDetail } from './pages/SystemAdminDetail';
 import { LoginPage } from './pages/auth/Login';
 import { TwoFactorAuthPage } from './pages/auth/TwoFactorAuth';
 import { AcceptInvitationPage } from './pages/auth/AcceptInvitation';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { AuthGuard, AdminLayout } from './components/layout';
 import { useAdminAuthStore } from './stores/admin-auth.store';
 
@@ -32,35 +33,37 @@ export function App() {
   }, [initialize]);
 
   return (
-    <BrowserRouter>
-      <Routes>
-        {/* 認証不要 */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/2fa" element={<TwoFactorAuthPage />} />
-        <Route path="/invitation/:token" element={<AcceptInvitationPage />} />
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Routes>
+          {/* 認証不要 */}
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/2fa" element={<TwoFactorAuthPage />} />
+          <Route path="/invitation/:token" element={<AcceptInvitationPage />} />
 
-        {/* 認証必須（AdminLayout内にネスト） */}
-        <Route
-          element={
-            <AuthGuard>
-              <AdminLayout />
-            </AuthGuard>
-          }
-        >
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/metrics" element={<MetricsPage />} />
-          <Route path="/users" element={<Users />} />
-          <Route path="/users/:id" element={<UserDetail />} />
-          <Route path="/organizations" element={<Organizations />} />
-          <Route path="/organizations/:id" element={<OrganizationDetail />} />
-          <Route path="/audit-logs" element={<AuditLogs />} />
-          <Route path="/system-admins" element={<SystemAdmins />} />
-          <Route path="/system-admins/:id" element={<SystemAdminDetail />} />
-        </Route>
+          {/* 認証必須（AdminLayout内にネスト） */}
+          <Route
+            element={
+              <AuthGuard>
+                <AdminLayout />
+              </AuthGuard>
+            }
+          >
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/metrics" element={<MetricsPage />} />
+            <Route path="/users" element={<Users />} />
+            <Route path="/users/:id" element={<UserDetail />} />
+            <Route path="/organizations" element={<Organizations />} />
+            <Route path="/organizations/:id" element={<OrganizationDetail />} />
+            <Route path="/audit-logs" element={<AuditLogs />} />
+            <Route path="/system-admins" element={<SystemAdmins />} />
+            <Route path="/system-admins/:id" element={<SystemAdminDetail />} />
+          </Route>
 
-        {/* その他のルートはダッシュボードにリダイレクト */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </BrowserRouter>
+          {/* その他のルートはダッシュボードにリダイレクト */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 }
