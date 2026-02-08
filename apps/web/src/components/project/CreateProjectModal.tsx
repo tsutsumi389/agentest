@@ -1,35 +1,31 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { X, User, Building2, Loader2 } from 'lucide-react';
+import { X, Loader2 } from 'lucide-react';
 import { useOrganizationStore } from '../../stores/organization';
 import { projectsApi, ApiError } from '../../lib/api';
-
-/** プロジェクトの所有者タイプ */
-type OwnerType = 'personal' | 'organization';
 
 interface CreateProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
+  /** 組織ID。未指定の場合は個人プロジェクトとして作成 */
+  organizationId?: string;
 }
 
 /**
  * プロジェクト作成モーダル
  */
-export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps) {
+export function CreateProjectModal({ isOpen, onClose, organizationId }: CreateProjectModalProps) {
   const queryClient = useQueryClient();
   const { organizations } = useOrganizationStore();
   const nameInputRef = useRef<HTMLInputElement>(null);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [ownerType, setOwnerType] = useState<OwnerType>('personal');
-  const [selectedOrganizationId, setSelectedOrganizationId] = useState<string>('');
 
-  // 削除済み組織を除外したアクティブな組織のみを表示
-  const activeOrganizations = organizations.filter(
-    ({ organization }) => !organization.deletedAt
-  );
-  const hasOrganizations = activeOrganizations.length > 0;
+  // 組織名を取得（モーダルタイトル用）
+  const organizationName = organizationId
+    ? organizations.find(({ organization }) => organization.id === organizationId)?.organization.name
+    : undefined;
 
   const createMutation = useMutation({
     mutationFn: (data: { name: string; description?: string; organizationId?: string }) =>
@@ -44,8 +40,6 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
   const handleClose = useCallback(() => {
     setName('');
     setDescription('');
-    setOwnerType('personal');
-    setSelectedOrganizationId('');
     createMutation.reset();
     onClose();
   }, [onClose, createMutation]);
@@ -84,7 +78,6 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const organizationId = ownerType === 'organization' ? selectedOrganizationId : undefined;
     createMutation.mutate({
       name,
       description: description || undefined,
@@ -114,7 +107,7 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
       <div className="card w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
           <h2 id="create-project-modal-title" className="text-lg font-semibold text-foreground">
-            新規プロジェクト
+            新規プロジェクト（{organizationName ?? '個人'}）
           </h2>
           <button
             onClick={handleClose}
@@ -134,80 +127,6 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* 所有者選択 */}
-          <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              所有者 <span className="text-danger">*</span>
-            </label>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setOwnerType('personal')}
-                className={`flex-1 p-3 rounded border flex items-center justify-center gap-2 transition-colors ${
-                  ownerType === 'personal'
-                    ? 'border-accent bg-accent-subtle text-accent'
-                    : 'border-border-default text-foreground-muted hover:border-foreground-subtle'
-                }`}
-                disabled={createMutation.isPending}
-              >
-                <User className="w-4 h-4" />
-                <span>個人</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setOwnerType('organization');
-                  // 組織が選択されていなければ最初の組織を選択
-                  if (!selectedOrganizationId && hasOrganizations) {
-                    setSelectedOrganizationId(activeOrganizations[0].organization.id);
-                  }
-                }}
-                disabled={!hasOrganizations || createMutation.isPending}
-                className={`flex-1 p-3 rounded border flex items-center justify-center gap-2 transition-colors ${
-                  ownerType === 'organization'
-                    ? 'border-accent bg-accent-subtle text-accent'
-                    : 'border-border-default text-foreground-muted hover:border-foreground-subtle'
-                } ${!hasOrganizations ? 'opacity-50 cursor-not-allowed' : ''}`}
-              >
-                <Building2 className="w-4 h-4" />
-                <span>組織</span>
-              </button>
-            </div>
-            {!hasOrganizations && (
-              <p className="text-xs text-foreground-subtle mt-1">
-                組織に所属していません
-              </p>
-            )}
-          </div>
-
-          {/* 組織選択ドロップダウン */}
-          {ownerType === 'organization' && hasOrganizations && (
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
-                組織を選択 <span className="text-danger">*</span>
-              </label>
-              <div className="relative">
-                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-subtle" />
-                <select
-                  value={selectedOrganizationId}
-                  onChange={(e) => setSelectedOrganizationId(e.target.value)}
-                  className="input pl-10 pr-8 appearance-none"
-                  required
-                  disabled={createMutation.isPending}
-                >
-                  <option value="" disabled>
-                    組織を選択してください
-                  </option>
-                  {activeOrganizations.map(({ organization, role }) => (
-                    <option key={organization.id} value={organization.id}>
-                      {organization.name} ({role === 'OWNER' ? 'オーナー' : role === 'ADMIN' ? '管理者' : 'メンバー'})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
-
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">
               プロジェクト名 <span className="text-danger">*</span>
@@ -251,7 +170,6 @@ export function CreateProjectModal({ isOpen, onClose }: CreateProjectModalProps)
               className="btn btn-primary"
               disabled={
                 !name ||
-                (ownerType === 'organization' && !selectedOrganizationId) ||
                 createMutation.isPending
               }
             >
