@@ -810,6 +810,10 @@ export const authApi = {
     api.post<{ user: User }>('/api/auth/login', data),
   register: (data: { email: string; password: string; name: string }) =>
     api.post<{ user: User }>('/api/auth/register', data),
+  forgotPassword: (data: { email: string }) =>
+    api.post<{ message: string }>('/api/auth/forgot-password', data),
+  resetPassword: (data: { token: string; password: string }) =>
+    api.post<{ message: string }>('/api/auth/reset-password', data),
 };
 
 // ============================================
