@@ -151,11 +151,12 @@ test.describe('APIトークン管理', () => {
     const tokenName = `E2E Revoke Token ${Date.now()}`;
     await apiClient.createApiToken({ name: tokenName });
 
-    // ページをリロード
+    // ページをリロードしてトークン一覧の読み込みを待つ
     await page.reload();
+    await page.waitForLoadState('networkidle');
 
     // 作成したトークンが表示される
-    await expect(page.getByText(tokenName)).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(tokenName)).toBeVisible({ timeout: 15000 });
 
     // トークン行の構造: div > [div(info with tokenName), button(delete)]
     // トークン名を含む要素を見つけ、その隣にあるボタンを探す

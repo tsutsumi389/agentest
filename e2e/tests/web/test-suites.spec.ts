@@ -58,13 +58,13 @@ test.describe('テストスイートCRUD', () => {
     // 「作成」ボタンをクリック
     await page.getByRole('button', { name: '作成', exact: true }).click();
 
-    // テストスイート詳細ページへ遷移し、作成が確認できる
+    // テストスイート詳細ページに遷移するのを待つ（API応答に時間がかかる場合あり）
+    await expect(page).toHaveURL(/\/test-suites\/[^/]+$/, { timeout: 30000 });
+
+    // テストスイート名またはトーストメッセージが表示される
     await expect(
       page.getByText('テストスイートを作成しました').or(page.getByText(suiteName))
     ).toBeVisible({ timeout: 10000 });
-
-    // テストスイート詳細ページに遷移していることを確認
-    await expect(page).toHaveURL(/\/test-suites\/[^/]+$/);
   });
 });
 

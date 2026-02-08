@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from '../../fixtures';
 
 // ログインページは認証不要 → storageState を上書き
 test.use({ storageState: { cookies: [], origins: [] } });

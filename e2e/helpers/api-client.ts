@@ -320,6 +320,19 @@ export class TestApiClient {
   // 組織管理
   // =====================
 
+  /**
+   * ログインユーザーの所属組織一覧を取得
+   */
+  async getUserOrganizations() {
+    const meResponse = await this.request.get(`${this.baseUrl}/api/auth/me`);
+    const me = await meResponse.json();
+    const userId = me.user.id;
+    const response = await this.request.get(`${this.baseUrl}/api/users/${userId}/organizations`);
+    return response.json() as Promise<{
+      organizations: Array<{ organization: { id: string; name: string }; role: string }>;
+    }>;
+  }
+
   async createOrganization(data: { name: string; description?: string }) {
     const response = await this.request.post(`${this.baseUrl}/api/organizations`, {
       data,
@@ -424,7 +437,7 @@ export class TestApiClient {
   // =====================
 
   async getUserProfile() {
-    const response = await this.request.get(`${this.baseUrl}/api/users/me`);
+    const response = await this.request.get(`${this.baseUrl}/api/auth/me`);
     return response.json();
   }
 

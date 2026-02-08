@@ -9,9 +9,16 @@ type Fixtures = {
 };
 
 export const test = base.extend<Fixtures>({
-  // WebアプリがVITE_API_URLで直接APIにアクセスするため、
-  // APIリクエストをViteプロキシ経由に書き換えてクッキーが正しく送信されるようにする
   page: async ({ page }, use) => {
+    // Vite HMRのWebSocket接続が常にアクティブなためloadイベントが発火しない場合がある。
+    // デフォルトのwaitUntilをdomcontentloadedに変更してタイムアウトを防止する。
+    const originalGoto = page.goto.bind(page);
+    page.goto = ((url: string, options?: { waitUntil?: 'load' | 'domcontentloaded' | 'networkidle' | 'commit'; timeout?: number; referer?: string }) => {
+      return originalGoto(url, { waitUntil: 'domcontentloaded', ...options });
+    }) as typeof page.goto;
+
+    // WebアプリがVITE_API_URLで直接APIにアクセスするため、
+    // APIリクエストをViteプロキシ経由に書き換えてクッキーが正しく送信されるようにする
     await page.route(`${API_URL}/**`, (route) => {
       const url = route.request().url().replace(API_URL, WEB_URL);
       route.continue({ url });

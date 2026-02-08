@@ -1,5 +1,16 @@
 import { test, expect } from '../../fixtures';
 
+// シードデータのDemo Projectは「Demo Organization」に属している
+const DEMO_ORG_NAME = 'Demo Organization';
+
+/**
+ * 組織フィルターを選択するヘルパー
+ */
+async function selectOrganizationFilter(page: import('@playwright/test').Page, orgName: string) {
+  const filterSelect = page.locator('select').filter({ hasText: '個人プロジェクト' });
+  await filterSelect.selectOption({ label: orgName });
+}
+
 test.describe('プロジェクト一覧', () => {
   test('プロジェクト一覧ページが表示される', async ({ page }) => {
     await page.goto('/projects');
@@ -14,12 +25,21 @@ test.describe('プロジェクト一覧', () => {
   test('Demoプロジェクトが一覧に表示される', async ({ page }) => {
     await page.goto('/projects');
 
+    // Demo ProjectはDemo Organizationに属しているため、組織フィルターを変更
+    await selectOrganizationFilter(page, DEMO_ORG_NAME);
+
     // シードデータの Demo Project が表示される（h3要素を指定）
-    await expect(page.getByRole('heading', { name: 'Demo Project' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Demo Project' })).toBeVisible({ timeout: 10000 });
   });
 
   test('プロジェクトを検索できる', async ({ page }) => {
     await page.goto('/projects');
+
+    // Demo Organizationのプロジェクトを表示
+    await selectOrganizationFilter(page, DEMO_ORG_NAME);
+
+    // Demo Projectが表示されるのを待つ
+    await expect(page.getByRole('heading', { name: 'Demo Project' })).toBeVisible({ timeout: 10000 });
 
     // 検索フィールドに入力
     await page.getByPlaceholder('プロジェクトを検索...').fill('Demo');
@@ -30,6 +50,12 @@ test.describe('プロジェクト一覧', () => {
 
   test('プロジェクト詳細画面に遷移できる', async ({ page }) => {
     await page.goto('/projects');
+
+    // Demo Organizationのプロジェクトを表示
+    await selectOrganizationFilter(page, DEMO_ORG_NAME);
+
+    // Demo Projectが表示されるのを待つ
+    await expect(page.getByRole('heading', { name: 'Demo Project' })).toBeVisible({ timeout: 10000 });
 
     // Demo Project をクリック（h3要素）
     await page.getByRole('heading', { name: 'Demo Project' }).click();

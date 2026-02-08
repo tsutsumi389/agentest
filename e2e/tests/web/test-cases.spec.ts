@@ -394,15 +394,15 @@ test.describe('テストケースCRUD', () => {
       if (match && match[1] !== testCase.testCase.id) {
         copiedTestCaseId = match[1];
       }
-
-      // コピーが成功したことを確認（モーダルが閉じた = エラーなく完了）
-      // 注：コピー後のナビゲーション動作はアプリケーションの実装に依存するため、
-      //     ここではモーダルが正常に閉じることをもってコピー成功とみなす
     } finally {
-      // クリーンアップ
-      await apiClient.deleteTestCase(DEMO_PROJECT_ID, DEMO_TEST_SUITE_ID, testCase.testCase.id);
+      // クリーンアップ（タイムアウト後はブラウザが閉じている可能性があるためエラーを無視）
+      try {
+        await apiClient.deleteTestCase(DEMO_PROJECT_ID, DEMO_TEST_SUITE_ID, testCase.testCase.id);
+      } catch { /* 削除済みまたはコンテキスト閉鎖 */ }
       if (copiedTestCaseId) {
-        await apiClient.deleteTestCase(DEMO_PROJECT_ID, DEMO_TEST_SUITE_ID, copiedTestCaseId);
+        try {
+          await apiClient.deleteTestCase(DEMO_PROJECT_ID, DEMO_TEST_SUITE_ID, copiedTestCaseId);
+        } catch { /* 削除済みまたはコンテキスト閉鎖 */ }
       }
     }
   });

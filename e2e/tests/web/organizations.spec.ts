@@ -14,28 +14,45 @@ test.describe('組織一覧', () => {
 
   test('新規組織を作成できる', async ({ page, apiClient }) => {
     const orgName = `E2E Org ${Date.now()}`;
+    let createdOrgId: string | null = null;
 
-    // 組織一覧ページに遷移
-    await page.goto('/organizations');
+    try {
+      // 組織一覧ページに遷移
+      await page.goto('/organizations');
 
-    // 「組織を作成」ボタンをクリック
-    await page.getByRole('button', { name: '組織を作成' }).click();
+      // 「組織を作成」ボタンをクリック
+      await page.getByRole('button', { name: '組織を作成' }).click();
 
-    // モーダルが表示される
-    await expect(page.getByRole('heading', { name: '組織を作成' })).toBeVisible();
+      // モーダルが表示される
+      await expect(page.getByRole('heading', { name: '組織を作成' })).toBeVisible();
 
-    // 組織名を入力（プレースホルダー「My Organization」で特定）
-    const nameInput = page.getByPlaceholder('My Organization');
-    await nameInput.fill(orgName);
+      // 組織名を入力（プレースホルダー「My Organization」で特定）
+      const nameInput = page.getByPlaceholder('My Organization');
+      await nameInput.fill(orgName);
 
-    // 作成ボタンをクリック
-    await page.getByRole('button', { name: '作成', exact: true }).click();
+      // 作成ボタンをクリック
+      await page.getByRole('button', { name: '作成', exact: true }).click();
 
-    // 組織作成後はダッシュボードにリダイレクトされる
-    // 成功メッセージまたはダッシュボードの見出しが表示される
-    await expect(
-      page.getByText(/作成しました/).or(page.getByRole('heading', { name: '最近のプロジェクト' }))
-    ).toBeVisible({ timeout: 15000 });
+      // 組織作成後はダッシュボードにリダイレクトされる
+      // 成功メッセージまたはダッシュボードの見出しが表示される
+      await expect(
+        page.getByText(/作成しました/).or(page.getByRole('heading', { name: '最近のプロジェクト' }))
+      ).toBeVisible({ timeout: 15000 });
+
+      // 作成した組織のIDをAPIから取得（クリーンアップ用）
+      const orgs = await apiClient.getUserOrganizations();
+      const createdOrg = orgs.organizations.find(
+        (o) => o.organization.name === orgName,
+      );
+      if (createdOrg) {
+        createdOrgId = createdOrg.organization.id;
+      }
+    } finally {
+      // クリーンアップ: 作成した組織を削除
+      if (createdOrgId) {
+        await apiClient.deleteOrganization(createdOrgId);
+      }
+    }
   });
 
   test('組織を検索できる', async ({ page }) => {
