@@ -63,6 +63,7 @@ export class TestSuiteService {
 
   /**
    * テストスイートを作成
+   * 注意: CREATE履歴は作成しない（TestCaseServiceと同様の方針）
    */
   async create(userId: string, data: { projectId: string; name: string; description?: string; status?: EntityStatus }) {
     // プロジェクトの存在確認
@@ -135,8 +136,13 @@ export class TestSuiteService {
       },
     };
 
-    // トランザクションで履歴保存と本体更新を実行
+    // トランザクションで本体更新と履歴保存を実行
     const result = await prisma.$transaction(async (tx) => {
+      const updated = await tx.testSuite.update({
+        where: { id: testSuiteId },
+        data,
+      });
+
       await tx.testSuiteHistory.create({
         data: {
           testSuiteId,
@@ -147,10 +153,7 @@ export class TestSuiteService {
         },
       });
 
-      return tx.testSuite.update({
-        where: { id: testSuiteId },
-        data,
-      });
+      return updated;
     });
 
     // ダッシュボード更新イベント発行
@@ -173,8 +176,13 @@ export class TestSuiteService {
       status: testSuite.status,
     };
 
-    // トランザクションで履歴保存と論理削除を実行
+    // トランザクションで論理削除と履歴保存を実行
     const result = await prisma.$transaction(async (tx) => {
+      const deleted = await tx.testSuite.update({
+        where: { id: testSuiteId },
+        data: { deletedAt: new Date() },
+      });
+
       await tx.testSuiteHistory.create({
         data: {
           testSuiteId,
@@ -185,10 +193,7 @@ export class TestSuiteService {
         },
       });
 
-      return tx.testSuite.update({
-        where: { id: testSuiteId },
-        data: { deletedAt: new Date() },
-      });
+      return deleted;
     });
 
     // ダッシュボード更新イベント発行
@@ -360,8 +365,13 @@ export class TestSuiteService {
       },
     };
 
-    // トランザクションで履歴保存と前提条件更新を実行
+    // トランザクションで前提条件更新と履歴保存を実行
     const result = await prisma.$transaction(async (tx) => {
+      const updated = await tx.testSuitePrecondition.update({
+        where: { id: preconditionId },
+        data: { content: data.content },
+      });
+
       await tx.testSuiteHistory.create({
         data: {
           testSuiteId,
@@ -372,10 +382,7 @@ export class TestSuiteService {
         },
       });
 
-      return tx.testSuitePrecondition.update({
-        where: { id: preconditionId },
-        data: { content: data.content },
-      });
+      return updated;
     });
 
     // テストスイート更新イベント発行（エラー時も処理継続）
@@ -424,17 +431,6 @@ export class TestSuiteService {
 
     // トランザクションで削除と再整列を実行
     await prisma.$transaction(async (tx) => {
-      // 履歴を保存
-      await tx.testSuiteHistory.create({
-        data: {
-          testSuiteId,
-          changedByUserId: userId,
-          changeType: 'UPDATE',
-          snapshot: toJsonSnapshot(snapshot),
-          groupId: options?.groupId,
-        },
-      });
-
       // 前提条件を削除
       await tx.testSuitePrecondition.delete({
         where: { id: preconditionId },
@@ -452,6 +448,17 @@ export class TestSuiteService {
           data: { orderKey: `${i + 1}`.padStart(5, '0') },
         });
       }
+
+      // 履歴を保存
+      await tx.testSuiteHistory.create({
+        data: {
+          testSuiteId,
+          changedByUserId: userId,
+          changeType: 'UPDATE',
+          snapshot: toJsonSnapshot(snapshot),
+          groupId: options?.groupId,
+        },
+      });
     });
 
     // テストスイート更新イベント発行（エラー時も処理継続）
@@ -517,8 +524,18 @@ export class TestSuiteService {
       },
     };
 
-    // トランザクションで履歴保存とorderKey更新を実行
+    // トランザクションでorderKey更新と履歴保存を実行
     await prisma.$transaction(async (tx) => {
+      // 各前提条件のorderKeyを更新
+      await Promise.all(
+        preconditionIds.map((id, index) =>
+          tx.testSuitePrecondition.update({
+            where: { id },
+            data: { orderKey: `${index + 1}`.padStart(5, '0') },
+          })
+        )
+      );
+
       // 履歴を保存（並び替え前の状態）
       await tx.testSuiteHistory.create({
         data: {
@@ -529,16 +546,6 @@ export class TestSuiteService {
           groupId: options?.groupId,
         },
       });
-
-      // 各前提条件のorderKeyを更新
-      await Promise.all(
-        preconditionIds.map((id, index) =>
-          tx.testSuitePrecondition.update({
-            where: { id },
-            data: { orderKey: `${index + 1}`.padStart(5, '0') },
-          })
-        )
-      );
     });
 
     // テストスイート更新イベント発行（エラー時も処理継続）
@@ -867,6 +874,12 @@ export class TestSuiteService {
 
     // 復元と履歴保存をトランザクションで実行
     const result = await prisma.$transaction(async (tx) => {
+      // 復元（deletedAtをnullに設定）
+      const restored = await tx.testSuite.update({
+        where: { id: testSuiteId },
+        data: { deletedAt: null },
+      });
+
       // 履歴を保存
       await tx.testSuiteHistory.create({
         data: {
@@ -878,11 +891,7 @@ export class TestSuiteService {
         },
       });
 
-      // 復元（deletedAtをnullに設定）
-      return tx.testSuite.update({
-        where: { id: testSuiteId },
-        data: { deletedAt: null },
-      });
+      return restored;
     });
 
     // ダッシュボード更新イベント発行
@@ -957,6 +966,16 @@ export class TestSuiteService {
 
     // トランザクション実行
     await prisma.$transaction(async (tx) => {
+      // orderKey更新（並列実行）
+      await Promise.all(
+        testCaseIds.map((id, index) =>
+          tx.testCase.update({
+            where: { id },
+            data: { orderKey: `${index + 1}`.padStart(5, '0') },
+          })
+        )
+      );
+
       // 履歴保存
       await tx.testSuiteHistory.create({
         data: {
@@ -967,16 +986,6 @@ export class TestSuiteService {
           groupId: options?.groupId,
         },
       });
-
-      // orderKey更新（並列実行）
-      await Promise.all(
-        testCaseIds.map((id, index) =>
-          tx.testCase.update({
-            where: { id },
-            data: { orderKey: `${index + 1}`.padStart(5, '0') },
-          })
-        )
-      );
     });
 
     // テストスイート更新イベント発行（エラー時も処理継続）

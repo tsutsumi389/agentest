@@ -8,7 +8,6 @@ const mockTestSuiteRepo = vi.hoisted(() => ({
   getHistories: vi.fn(),
   getHistoriesGrouped: vi.fn(),
   countHistories: vi.fn(),
-  restore: vi.fn(),
 }));
 
 vi.mock('../../repositories/test-suite.repository.js', () => ({
@@ -24,13 +23,11 @@ const mockPrisma = vi.hoisted(() => ({
   testSuiteHistory: {
     create: vi.fn(),
   },
-  $transaction: vi.fn((operations) => {
-    // 配列の場合は順番に実行
+  $transaction: vi.fn((operations: unknown) => {
     if (Array.isArray(operations)) {
       return Promise.all(operations);
     }
-    // 関数の場合はコールバックとして実行
-    return operations(mockPrisma);
+    return (operations as (tx: typeof mockPrisma) => unknown)(mockPrisma);
   }),
 }));
 

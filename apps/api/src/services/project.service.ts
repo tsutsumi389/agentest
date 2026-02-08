@@ -500,7 +500,9 @@ export class ProjectService {
   }
 
   /**
-   * 履歴を作成
+   * 単独で履歴を作成（トランザクション外で使用）
+   * 注意: CRUD操作の履歴はそれぞれのメソッド内でトランザクションにより保証されている。
+   * このメソッドは外部から個別に履歴を追加する場合にのみ使用する。
    */
   async createHistory(
     projectId: string,

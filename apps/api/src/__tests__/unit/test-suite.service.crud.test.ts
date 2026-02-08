@@ -22,8 +22,6 @@ vi.mock('@agentest/db', () => ({
 // TestSuiteRepositoryモック
 const mockTestSuiteRepo = vi.hoisted(() => ({
   findById: vi.fn(),
-  update: vi.fn(),
-  softDelete: vi.fn(),
   suggest: vi.fn(),
   search: vi.fn(),
 }));
@@ -250,6 +248,36 @@ describe('TestSuiteService（コアCRUD）', () => {
       mockTestSuiteRepo.findById.mockResolvedValue(null);
 
       await expect(service.softDelete(TEST_SUITE_ID, TEST_USER_ID)).rejects.toThrow(NotFoundError);
+    });
+  });
+
+  describe('トランザクションロールバック', () => {
+    beforeEach(() => {
+      mockTestSuiteRepo.findById.mockResolvedValue(createMockTestSuite());
+    });
+
+    it('update中に履歴作成が失敗した場合、エラーが伝播する', async () => {
+      mockPrisma.testSuite.update.mockResolvedValue(createMockTestSuite({ name: '更新名' }));
+      mockPrisma.testSuiteHistory.create.mockRejectedValue(new Error('DB error'));
+      mockPrisma.$transaction.mockImplementation(async (fn: unknown) => {
+        return (fn as (tx: typeof mockPrisma) => unknown)(mockPrisma);
+      });
+
+      await expect(
+        service.update(TEST_SUITE_ID, TEST_USER_ID, { name: '更新名' })
+      ).rejects.toThrow('DB error');
+    });
+
+    it('softDelete中に履歴作成が失敗した場合、エラーが伝播する', async () => {
+      mockPrisma.testSuite.update.mockResolvedValue({ id: TEST_SUITE_ID });
+      mockPrisma.testSuiteHistory.create.mockRejectedValue(new Error('DB error'));
+      mockPrisma.$transaction.mockImplementation(async (fn: unknown) => {
+        return (fn as (tx: typeof mockPrisma) => unknown)(mockPrisma);
+      });
+
+      await expect(
+        service.softDelete(TEST_SUITE_ID, TEST_USER_ID)
+      ).rejects.toThrow('DB error');
     });
   });
 

@@ -11,9 +11,6 @@ const mockProjectRepo = vi.hoisted(() => ({
   createHistory: vi.fn(),
   getHistories: vi.fn(),
   countHistories: vi.fn(),
-  restore: vi.fn(),
-  update: vi.fn(),
-  softDelete: vi.fn(),
 }));
 
 vi.mock('../../repositories/project.repository.js', () => ({
@@ -395,6 +392,48 @@ describe('ProjectService - History & Restore', () => {
           },
         },
       });
+    });
+  });
+
+  // ============================================================
+  // トランザクションロールバック
+  // ============================================================
+  describe('トランザクションロールバック', () => {
+    it('update中に履歴作成が失敗した場合、更新もロールバックされる', async () => {
+      mockProjectRepo.findById.mockResolvedValue(mockProject);
+      mockPrisma.project.update.mockResolvedValue({ ...mockProject, name: 'Updated' });
+      mockPrisma.projectHistory.create.mockRejectedValue(new Error('DB error'));
+      mockPrisma.$transaction.mockImplementation(async (fn: unknown) => {
+        return (fn as (tx: typeof mockPrisma) => unknown)(mockPrisma);
+      });
+
+      await expect(service.update('project-1', { name: 'Updated' }, 'user-1'))
+        .rejects.toThrow('DB error');
+    });
+
+    it('softDelete中に履歴作成が失敗した場合、削除もロールバックされる', async () => {
+      mockProjectRepo.findById.mockResolvedValue(mockProject);
+      mockPrisma.project.update.mockResolvedValue({ ...mockProject, deletedAt: new Date() });
+      mockPrisma.projectHistory.create.mockRejectedValue(new Error('DB error'));
+      mockPrisma.$transaction.mockImplementation(async (fn: unknown) => {
+        return (fn as (tx: typeof mockPrisma) => unknown)(mockPrisma);
+      });
+
+      await expect(service.softDelete('project-1', 'user-1'))
+        .rejects.toThrow('DB error');
+    });
+
+    it('restore中に履歴作成が失敗した場合、復元もロールバックされる', async () => {
+      const deletedRecently = { ...mockDeletedProject, deletedAt: new Date() };
+      mockProjectRepo.findDeletedById.mockResolvedValue(deletedRecently);
+      mockPrisma.project.update.mockResolvedValue({ ...mockProject, deletedAt: null });
+      mockPrisma.projectHistory.create.mockRejectedValue(new Error('DB error'));
+      mockPrisma.$transaction.mockImplementation(async (fn: unknown) => {
+        return (fn as (tx: typeof mockPrisma) => unknown)(mockPrisma);
+      });
+
+      await expect(service.restore('project-1', 'user-1'))
+        .rejects.toThrow('DB error');
     });
   });
 });
