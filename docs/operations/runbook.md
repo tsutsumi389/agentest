@@ -409,8 +409,11 @@ gcloud run services update agentest-api \
   --min-instances=5 \
   --max-instances=50
 
-# 3. レート制限強化
-redis-cli -a $REDIS_PASSWORD SET rate_limit:global 50
+# 3. Cloud Armorのレート制限ルールを調整
+gcloud compute security-policies rules update 1000 \
+  --security-policy=agentest-policy \
+  --rate-limit-threshold-count=100 \
+  --rate-limit-threshold-interval-sec=60
 ```
 
 ## 11. バッチジョブ管理
