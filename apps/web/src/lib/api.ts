@@ -1269,6 +1269,26 @@ export const accountsApi = {
 };
 
 // ============================================
+// パスワード管理API
+// ============================================
+
+export const passwordApi = {
+  // パスワード設定状況を取得
+  getStatus: (userId: string) =>
+    api.get<{ hasPassword: boolean }>(`/api/users/${userId}/password/status`),
+
+  // パスワードを初回設定
+  setPassword: (userId: string, data: { password: string }) =>
+    api.post<{ message: string }>(`/api/users/${userId}/password`, data),
+
+  // パスワードを変更
+  changePassword: (
+    userId: string,
+    data: { currentPassword: string; newPassword: string },
+  ) => api.put<{ message: string }>(`/api/users/${userId}/password`, data),
+};
+
+// ============================================
 // 組織API
 // ============================================
 
