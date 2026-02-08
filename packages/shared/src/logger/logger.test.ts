@@ -215,3 +215,59 @@ describe('createLogger - child logger', () => {
     expect(logLine.requestId).toBe('req-123');
   });
 });
+
+describe('createLogger - mixin', () => {
+  it('mixinオプションで動的にフィールドを追加できる', async () => {
+    process.env.NODE_ENV = 'development';
+    const { createLogger } = await import('./index.js');
+    const { stream, lines } = createTestStream();
+    const logger = createLogger({
+      service: 'api',
+      mixin: () => ({ requestId: 'mixin-req-001', traceId: 'trace-xyz' }),
+    }, stream);
+
+    logger.info('mixinテスト');
+
+    const logLine = JSON.parse(lines[0]);
+    expect(logLine.requestId).toBe('mixin-req-001');
+    expect(logLine.traceId).toBe('trace-xyz');
+    expect(logLine.msg).toBe('mixinテスト');
+  });
+
+  it('mixinが空オブジェクトを返す場合は追加フィールドなし', async () => {
+    process.env.NODE_ENV = 'development';
+    const { createLogger } = await import('./index.js');
+    const { stream, lines } = createTestStream();
+    const logger = createLogger({
+      service: 'api',
+      mixin: () => ({}),
+    }, stream);
+
+    logger.info('空mixinテスト');
+
+    const logLine = JSON.parse(lines[0]);
+    expect(logLine.msg).toBe('空mixinテスト');
+    expect(logLine.service).toBe('api');
+    // requestIdが含まれないこと
+    expect(logLine.requestId).toBeUndefined();
+  });
+
+  it('mixinが毎回呼ばれて動的に値を返す', async () => {
+    process.env.NODE_ENV = 'development';
+    const { createLogger } = await import('./index.js');
+    const { stream, lines } = createTestStream();
+    let counter = 0;
+    const logger = createLogger({
+      service: 'api',
+      mixin: () => ({ callCount: ++counter }),
+    }, stream);
+
+    logger.info('1回目');
+    logger.info('2回目');
+
+    const line1 = JSON.parse(lines[0]);
+    const line2 = JSON.parse(lines[1]);
+    expect(line1.callCount).toBe(1);
+    expect(line2.callCount).toBe(2);
+  });
+});

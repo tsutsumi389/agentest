@@ -35,7 +35,8 @@ const mockUUID = '12345678-1234-1234-1234-123456789abc';
 vi.spyOn(crypto, 'randomUUID').mockReturnValue(mockUUID);
 
 // モック設定後にインポート
-import { httpLogger, attachRequestId } from '../../middleware/request-logger.js';
+import { httpLogger, attachRequestId, runWithRequestContext } from '../../middleware/request-logger.js';
+import { getRequestId } from '../../lib/request-context.js';
 
 describe('request-logger middleware', () => {
   let mockReq: Partial<Request>;
@@ -104,6 +105,45 @@ describe('request-logger middleware', () => {
 
       expect(mockReq.requestId).toBe(mockUUID);
       expect(mockRes.setHeader).toHaveBeenCalledWith('X-Request-ID', mockUUID);
+    });
+  });
+
+  describe('runWithRequestContext', () => {
+    it('next()をAsyncLocalStorageコンテキスト内で実行する', () => {
+      mockReq.requestId = 'req-context-test';
+      let capturedId: string | undefined;
+
+      const next = vi.fn(() => {
+        capturedId = getRequestId();
+      });
+
+      runWithRequestContext(mockReq as Request, mockRes as Response, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(capturedId).toBe('req-context-test');
+    });
+
+    it('requestIdが未設定の場合はcrypto.randomUUIDを使用する', () => {
+      let capturedId: string | undefined;
+
+      const next = vi.fn(() => {
+        capturedId = getRequestId();
+      });
+
+      runWithRequestContext(mockReq as Request, mockRes as Response, next);
+
+      expect(next).toHaveBeenCalled();
+      expect(capturedId).toBe(mockUUID);
+    });
+
+    it('コンテキスト外ではrequestIdが取得できない', () => {
+      mockReq.requestId = 'scoped-id';
+      const next = vi.fn();
+
+      runWithRequestContext(mockReq as Request, mockRes as Response, next);
+
+      // コンテキスト外
+      expect(getRequestId()).toBeUndefined();
     });
   });
 });

@@ -23,6 +23,7 @@ export type Logger = pino.Logger;
 export interface CreateLoggerOptions {
   service: string;
   level?: LogLevel;
+  mixin?: () => object;
 }
 
 /**
@@ -84,6 +85,10 @@ export function createLogger(options: CreateLoggerOptions, destination?: Destina
       level: (label) => ({ level: label }),
     },
   };
+
+  if (options.mixin) {
+    loggerOptions.mixin = options.mixin;
+  }
 
   // 開発時の可読フォーマット（destination指定時はtransportを使わない）
   if (process.env.LOG_PRETTY === 'true' && !destination) {

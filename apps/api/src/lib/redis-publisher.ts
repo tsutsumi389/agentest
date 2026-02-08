@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { Channels, type DashboardUpdatedEvent } from '@agentest/ws-types';
 import { env } from '../config/env.js';
 import { logger as baseLogger } from '../utils/logger.js';
+import { getRequestId } from './request-context.js';
 
 const logger = baseLogger.child({ module: 'redis-publisher' });
 
@@ -43,7 +44,9 @@ export async function publishEvent(channel: string, event: object): Promise<void
   }
 
   try {
-    await redis.publish(channel, JSON.stringify(event));
+    const requestId = getRequestId();
+    const enrichedEvent = requestId ? { ...event, requestId } : event;
+    await redis.publish(channel, JSON.stringify(enrichedEvent));
   } catch (error) {
     logger.error({ err: error }, 'Redis publish エラー');
   }

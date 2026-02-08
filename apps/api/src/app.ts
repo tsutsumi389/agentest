@@ -7,7 +7,7 @@ import { prisma } from '@agentest/db';
 import { env } from './config/env.js';
 import { encryptToken } from './utils/crypto.js';
 import { errorHandler } from './middleware/error-handler.js';
-import { httpLogger, attachRequestId } from './middleware/request-logger.js';
+import { httpLogger, attachRequestId, runWithRequestContext } from './middleware/request-logger.js';
 import { trackSession } from './middleware/session.middleware.js';
 import routes from './routes/index.js';
 
@@ -58,6 +58,8 @@ export function createApp(): Express {
   // リクエストログ（pino-http）
   app.use(httpLogger);
   app.use(attachRequestId);
+  // attachRequestIdで設定されたreq.requestIdをAsyncLocalStorageで非同期処理全体に伝搬
+  app.use(runWithRequestContext);
 
   // Passport設定
   const authConfig = {
