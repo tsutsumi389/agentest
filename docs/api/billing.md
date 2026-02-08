@@ -651,7 +651,7 @@ POST /webhooks/stripe
 | `FORBIDDEN` | アクセス権限がない（オーナーシップ不一致） |
 | `CONFLICT` | 競合（既存リソースとの重複等） |
 | `PAYMENT_FAILED` | 決済処理に失敗 |
-| `RATE_LIMIT_EXCEEDED` | レート制限超過 |
+| `RATE_LIMIT_EXCEEDED` | レート制限超過（Cloud Armorによるインフラ層制御） |
 
 ---
 
@@ -1176,7 +1176,7 @@ GET /api/organizations/:organizationId/invoices
 | `FORBIDDEN` | アクセス権限がない（ロール不足） |
 | `CONFLICT` | 競合（既存サブスクリプションとの重複等） |
 | `PAYMENT_FAILED` | 決済処理に失敗 |
-| `RATE_LIMIT_EXCEEDED` | レート制限超過 |
+| `RATE_LIMIT_EXCEEDED` | レート制限超過（Cloud Armorによるインフラ層制御） |
 
 ---
 

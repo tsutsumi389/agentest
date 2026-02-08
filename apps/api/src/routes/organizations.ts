@@ -3,7 +3,6 @@ import { requireAuth, requireOrgRole } from '@agentest/auth';
 import { OrganizationController } from '../controllers/organization.controller.js';
 import { organizationBillingController } from '../controllers/organization-billing.controller.js';
 import { authConfig } from '../config/auth.js';
-import { billingLimiter } from '../middleware/rate-limiter.js';
 
 const router: Router = Router();
 const orgController = new OrganizationController();
@@ -151,7 +150,6 @@ router.post(
   '/:organizationId/subscription',
   requireAuth(authConfig),
   requireOrgRole(['OWNER', 'ADMIN']),
-  billingLimiter,
   organizationBillingController.createSubscription
 );
 
@@ -163,7 +161,6 @@ router.put(
   '/:organizationId/subscription',
   requireAuth(authConfig),
   requireOrgRole(['OWNER', 'ADMIN']),
-  billingLimiter,
   organizationBillingController.updateSubscription
 );
 
@@ -175,7 +172,6 @@ router.delete(
   '/:organizationId/subscription',
   requireAuth(authConfig),
   requireOrgRole(['OWNER', 'ADMIN']),
-  billingLimiter,
   organizationBillingController.cancelSubscription
 );
 
@@ -187,7 +183,6 @@ router.post(
   '/:organizationId/subscription/reactivate',
   requireAuth(authConfig),
   requireOrgRole(['OWNER', 'ADMIN']),
-  billingLimiter,
   organizationBillingController.reactivateSubscription
 );
 
@@ -199,7 +194,6 @@ router.get(
   '/:organizationId/subscription/calculate',
   requireAuth(authConfig),
   requireOrgRole(['OWNER', 'ADMIN']),
-  billingLimiter,
   organizationBillingController.calculatePlanChange
 );
 
@@ -224,7 +218,6 @@ router.post(
   '/:organizationId/payment-methods',
   requireAuth(authConfig),
   requireOrgRole(['OWNER', 'ADMIN']),
-  billingLimiter,
   organizationBillingController.addPaymentMethod
 );
 
@@ -236,7 +229,6 @@ router.delete(
   '/:organizationId/payment-methods/:paymentMethodId',
   requireAuth(authConfig),
   requireOrgRole(['OWNER', 'ADMIN']),
-  billingLimiter,
   organizationBillingController.deletePaymentMethod
 );
 
@@ -248,7 +240,6 @@ router.put(
   '/:organizationId/payment-methods/:paymentMethodId/default',
   requireAuth(authConfig),
   requireOrgRole(['OWNER', 'ADMIN']),
-  billingLimiter,
   organizationBillingController.setDefaultPaymentMethod
 );
 
@@ -260,7 +251,6 @@ router.post(
   '/:organizationId/payment-methods/setup-intent',
   requireAuth(authConfig),
   requireOrgRole(['OWNER', 'ADMIN']),
-  billingLimiter,
   organizationBillingController.createSetupIntent
 );
 

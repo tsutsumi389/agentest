@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { oauthController } from '../controllers/oauth.controller.js';
 import { authenticate } from '@agentest/auth';
-import { authLimiter } from '../middleware/rate-limiter.js';
 import { requireInternalApiAuth } from '../middleware/internal-api.middleware.js';
 import { csrfProtection } from '../middleware/csrf.middleware.js';
 
@@ -18,7 +17,7 @@ const router: Router = Router();
 // 動的クライアント登録 (RFC 7591)
 // POST /oauth/register
 // ============================================
-router.post('/register', authLimiter, oauthController.register);
+router.post('/register', oauthController.register);
 
 // ============================================
 // 認可エンドポイント
@@ -38,7 +37,7 @@ router.post('/authorize/consent', csrfProtection(), authenticate(), oauthControl
 // トークンエンドポイント
 // POST /oauth/token
 // ============================================
-router.post('/token', authLimiter, oauthController.token);
+router.post('/token', oauthController.token);
 
 // ============================================
 // トークンイントロスペクション (RFC 7662)

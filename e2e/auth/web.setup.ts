@@ -4,26 +4,21 @@ const WEB_URL = process.env.E2E_WEB_URL || 'http://localhost:3000';
 const authFile = '.auth/web-user.json';
 
 setup('Webアプリの認証状態を作成', async ({ page }) => {
-  // E2Eテストヘッダーを追加するルーティング
-  await page.route(`${WEB_URL}/api/**`, (route) => {
-    const headers = {
-      ...route.request().headers(),
-      'X-E2E-Test': 'true',
-    };
-    route.continue({ headers });
-  });
-
   // ブラウザでページを開く
-  await page.goto(`${WEB_URL}/login`);
+  // ViteのHMR WebSocketにより`load`イベントが発火しないためdomcontentloadedで待機
+  await page.goto(`${WEB_URL}/login`, { waitUntil: 'domcontentloaded' });
+
+  // Reactアプリのレンダリング完了を確認後、Vite HMRの安定化を待機
+  // networkidleはHMR WebSocket接続が常にアクティブなため使用不可
+  await page.getByRole('heading', { name: 'ログイン' }).waitFor({ state: 'visible', timeout: 10000 });
+  await page.waitForTimeout(2000);
 
   // Viteプロキシ経由でテストログインAPIを呼び出し、クッキーをブラウザに保存させる
-  // E2Eヘッダーを追加してレートリミットをバイパス
   const result = await page.evaluate(async () => {
     const res = await fetch('/api/auth/test-login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-E2E-Test': 'true',
       },
       body: JSON.stringify({ email: 'demo@agentest.dev' }),
       credentials: 'include',

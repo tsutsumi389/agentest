@@ -26,7 +26,6 @@
 - [開発フロー](./guides/development.md) - 日常のワークフロー
 - [トラブルシューティング](./guides/troubleshooting.md) - よくある問題と解決方法
 - [API 認証](./api/auth.md) - 認証の実装
-- [API レート制限](./api/rate-limits.md) - レート制限仕様
 - [管理者監査ログ API](./api/admin-audit-logs.md) - 全体監査ログ閲覧
 - [認証基盤詳細設計](./architecture/phase1-auth/README.md) - Phase 1 認証基盤の詳細設計
 

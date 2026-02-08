@@ -325,16 +325,13 @@ setInterval(() => {
 **症状**: `429 Too Many Requests`
 
 **確認事項**:
-```bash
-# レスポンスヘッダー確認
-curl -I https://api.agentest.io/health
-# X-RateLimit-Remaining を確認
-```
+- レート制限はCloud Load Balancer + Cloud Armorのインフラ層で制御されています
+- GCPコンソールのCloud Armorポリシーでレート制限ルールを確認してください
 
 **解決策**:
 1. リクエスト間隔を空ける
 2. バッチリクエストを使用
-3. 上位プランへアップグレード
+3. Cloud Armorのレート制限ルールを調整（インフラ管理者に依頼）
 
 ### 7.2 タイムアウト
 
