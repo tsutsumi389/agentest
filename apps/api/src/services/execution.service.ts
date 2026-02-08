@@ -3,7 +3,7 @@ import { NotFoundError, BadRequestError } from '@agentest/shared';
 import { createStorageClient } from '@agentest/storage';
 import { randomUUID } from 'node:crypto';
 import { ExecutionRepository } from '../repositories/execution.repository.js';
-import { MAX_EVIDENCES_PER_RESULT } from '../config/upload.js';
+import { MAX_EVIDENCES_PER_RESULT, validateMagicBytes } from '../config/upload.js';
 import { publishDashboardUpdated } from '../lib/redis-publisher.js';
 import { notificationService } from './notification.service.js';
 import { logger as baseLogger } from '../utils/logger.js';
@@ -333,6 +333,9 @@ export class ExecutionService {
     if (expectedResult.evidences.length >= MAX_EVIDENCES_PER_RESULT) {
       throw new BadRequestError(`エビデンスの上限（${MAX_EVIDENCES_PER_RESULT}件）に達しています`);
     }
+
+    // マジックバイト検証（ファイル内容とMIMEタイプの一致を確認）
+    await validateMagicBytes(file.buffer, file.mimetype);
 
     // MinIOへのアップロード
     const fileKey = `evidences/${executionId}/${expectedResultId}/${randomUUID()}_${file.originalname}`;

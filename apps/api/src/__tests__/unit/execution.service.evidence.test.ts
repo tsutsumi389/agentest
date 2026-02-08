@@ -58,8 +58,20 @@ vi.mock('@agentest/db', () => ({
   },
 }));
 
+// validateMagicBytes のモック
+vi.mock('../../config/upload.js', async (importOriginal) => {
+  const original = await importOriginal<typeof import('../../config/upload.js')>();
+  return {
+    ...original,
+    validateMagicBytes: vi.fn().mockResolvedValue(undefined),
+  };
+});
+
 // モック設定後にインポート
 import { ExecutionService } from '../../services/execution.service.js';
+import { validateMagicBytes } from '../../config/upload.js';
+
+const mockValidateMagicBytes = vi.mocked(validateMagicBytes);
 
 // テスト用の固定ID
 const TEST_EXECUTION_ID = '11111111-1111-1111-1111-111111111111';
@@ -182,6 +194,29 @@ describe('ExecutionService - Evidence', () => {
       await expect(
         service.uploadEvidence(TEST_EXECUTION_ID, TEST_EXPECTED_RESULT_ID, TEST_USER_ID, createMockFile())
       ).rejects.toThrow('エビデンスの上限（10件）に達しています');
+    });
+
+    it('マジックバイト検証に失敗した場合はBadRequestErrorを投げる', async () => {
+      const mockExecution = createMockExecution();
+      const mockFile = createMockFile();
+      const mockExpectedResult = {
+        id: TEST_EXPECTED_RESULT_ID,
+        executionId: TEST_EXECUTION_ID,
+        evidences: [],
+      };
+
+      mockFindById.mockResolvedValue(mockExecution);
+      mockExpectedResultFindFirst.mockResolvedValue(mockExpectedResult);
+      mockValidateMagicBytes.mockRejectedValueOnce(
+        new BadRequestError('ファイルの内容が宣言されたMIMEタイプと一致しません')
+      );
+
+      await expect(
+        service.uploadEvidence(TEST_EXECUTION_ID, TEST_EXPECTED_RESULT_ID, TEST_USER_ID, mockFile)
+      ).rejects.toThrow(BadRequestError);
+
+      // ストレージにはアップロードされていないことを確認
+      expect(mockStorageUpload).not.toHaveBeenCalled();
     });
 
     it('MinIOへのアップロードが正しいパスで行われる', async () => {
