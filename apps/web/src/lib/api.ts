@@ -806,6 +806,10 @@ export const authApi = {
   me: () => api.get<{ user: User }>('/api/auth/me'),
   refresh: () => api.post<{ accessToken: string; refreshToken: string }>('/api/auth/refresh'),
   logout: () => api.post<{ message: string }>('/api/auth/logout'),
+  login: (data: { email: string; password: string }) =>
+    api.post<{ user: User }>('/api/auth/login', data),
+  register: (data: { email: string; password: string; name: string }) =>
+    api.post<{ user: User }>('/api/auth/register', data),
 };
 
 // ============================================

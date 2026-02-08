@@ -1,81 +1,88 @@
-import { Link, Navigate, useNavigate, useSearchParams } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { Github } from 'lucide-react';
 import { AgentestLogo } from '../components/ui/AgentestLogo';
 import { GoogleIcon } from '../components/ui/GoogleIcon';
 import { useAuthStore } from '../stores/auth';
 import { authApi } from '../lib/api';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 /**
- * リダイレクト先が外部オリジンかどうかを判定
+ * パスワード強度チェックの条件
  */
-function isExternalUrl(url: string): boolean {
-  try {
-    const parsedUrl = new URL(url, window.location.origin);
-    return parsedUrl.origin !== window.location.origin;
-  } catch {
-    return false;
-  }
+const PASSWORD_CHECKS = [
+  { label: '8文字以上', test: (pw: string) => pw.length >= 8 },
+  { label: '大文字を含む', test: (pw: string) => /[A-Z]/.test(pw) },
+  { label: '小文字を含む', test: (pw: string) => /[a-z]/.test(pw) },
+  { label: '数字を含む', test: (pw: string) => /[0-9]/.test(pw) },
+  { label: '記号を含む', test: (pw: string) => /[^A-Za-z0-9]/.test(pw) },
+] as const;
+
+/**
+ * パスワード強度チェックリスト
+ */
+function PasswordStrengthChecklist({ password }: { password: string }) {
+  return (
+    <ul className="space-y-1 text-sm">
+      {PASSWORD_CHECKS.map((check) => {
+        const met = check.test(password);
+        return (
+          <li
+            key={check.label}
+            data-testid="password-check-item"
+            data-met={met}
+            className={`flex items-center gap-2 ${met ? 'text-success' : 'text-foreground-muted'}`}
+          >
+            <span className="text-xs">{met ? '✓' : '○'}</span>
+            {check.label}
+          </li>
+        );
+      })}
+    </ul>
+  );
 }
 
 /**
- * ログインページ
+ * 新規登録ページ
  */
-export function LoginPage() {
-  const { isAuthenticated, isLoading, setUser } = useAuthStore();
-  const [searchParams] = useSearchParams();
+export function RegisterPage() {
   const navigate = useNavigate();
+  const { setUser } = useAuthStore();
 
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordConfirm, setPasswordConfirm] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // リダイレクト先を取得（認証後に戻る先）
-  const redirectTo = searchParams.get('redirect');
-
-  // 既にログイン済みで外部オリジンへのリダイレクトが必要な場合
-  useEffect(() => {
-    if (isAuthenticated && !isLoading && redirectTo && isExternalUrl(redirectTo)) {
-      window.location.href = redirectTo;
-    }
-  }, [isAuthenticated, isLoading, redirectTo]);
-
-  // 既にログイン済みの場合はリダイレクト先またはダッシュボードにリダイレクト
-  if (isAuthenticated && !isLoading) {
-    // 外部オリジンの場合はuseEffectで処理するので、ここではnullを返す
-    if (redirectTo && isExternalUrl(redirectTo)) {
-      return null;
-    }
-    return <Navigate to={redirectTo || '/dashboard'} replace />;
-  }
-
-  // リダイレクト先をsessionStorageに保存（OAuth認証後に使用）
-  if (redirectTo) {
-    sessionStorage.setItem('auth_redirect', redirectTo);
-  }
-
   const apiUrl = import.meta.env.VITE_API_URL || '';
 
-  const handleGitHubLogin = () => {
+  const handleGitHubRegister = () => {
     window.location.href = `${apiUrl}/api/auth/github`;
   };
 
-  const handleGoogleLogin = () => {
+  const handleGoogleRegister = () => {
     window.location.href = `${apiUrl}/api/auth/google`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // パスワード一致チェック
+    if (password !== passwordConfirm) {
+      setError('パスワードが一致しません');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      const { user } = await authApi.login({ email, password });
+      const { user } = await authApi.register({ email, password, name });
       setUser(user);
-      navigate(redirectTo || '/dashboard', { replace: true });
+      navigate('/dashboard', { replace: true });
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'ログインに失敗しました';
+      const message = err instanceof Error ? err.message : '登録に失敗しました';
       setError(message);
       setIsSubmitting(false);
     }
@@ -95,10 +102,10 @@ export function LoginPage() {
           </p>
         </div>
 
-        {/* ログインカード */}
+        {/* 登録カード */}
         <div className="card p-6">
           <h1 className="text-lg font-semibold text-foreground text-center mb-6">
-            ログイン
+            アカウント作成
           </h1>
 
           {/* メール/パスワードフォーム */}
@@ -108,6 +115,21 @@ export function LoginPage() {
                 {error}
               </div>
             )}
+
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-foreground mb-1">
+                名前
+              </label>
+              <input
+                id="name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="input w-full"
+                placeholder="表示名"
+                required
+              />
+            </div>
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-foreground mb-1">
@@ -137,12 +159,24 @@ export function LoginPage() {
                 placeholder="パスワードを入力"
                 required
               />
+              <div className="mt-2">
+                <PasswordStrengthChecklist password={password} />
+              </div>
             </div>
 
-            <div className="flex justify-end">
-              <Link to="/forgot-password" className="text-sm text-accent hover:underline">
-                パスワードをお忘れですか？
-              </Link>
+            <div>
+              <label htmlFor="password-confirm" className="block text-sm font-medium text-foreground mb-1">
+                パスワード（確認）
+              </label>
+              <input
+                id="password-confirm"
+                type="password"
+                value={passwordConfirm}
+                onChange={(e) => setPasswordConfirm(e.target.value)}
+                className="input w-full"
+                placeholder="パスワードを再入力"
+                required
+              />
             </div>
 
             <button
@@ -150,7 +184,7 @@ export function LoginPage() {
               disabled={isSubmitting}
               className="btn btn-primary w-full"
             >
-              {isSubmitting ? 'ログイン中...' : 'ログイン'}
+              {isSubmitting ? '作成中...' : 'アカウント作成'}
             </button>
           </form>
 
@@ -167,28 +201,28 @@ export function LoginPage() {
           {/* OAuthボタン */}
           <div className="space-y-3">
             <button
-              onClick={handleGitHubLogin}
+              onClick={handleGitHubRegister}
               className="btn btn-secondary w-full"
             >
               <Github className="w-5 h-5" />
-              GitHubでログイン
+              GitHubで登録
             </button>
 
             <button
-              onClick={handleGoogleLogin}
+              onClick={handleGoogleRegister}
               className="btn btn-secondary w-full"
             >
               <GoogleIcon className="w-5 h-5" />
-              Googleでログイン
+              Googleで登録
             </button>
           </div>
 
-          {/* 新規登録リンク */}
+          {/* ログインリンク */}
           <div className="mt-6 pt-6 border-t border-border">
             <p className="text-sm text-foreground-muted text-center">
-              アカウントをお持ちでない場合は{' '}
-              <Link to="/register" className="text-accent hover:underline">
-                新規登録
+              既にアカウントをお持ちの場合は{' '}
+              <Link to="/login" className="text-accent hover:underline">
+                ログイン
               </Link>
             </p>
           </div>
