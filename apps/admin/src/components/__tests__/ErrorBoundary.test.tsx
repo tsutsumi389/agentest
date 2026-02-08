@@ -1,10 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ErrorBoundary } from '../ErrorBoundary';
 
 // console.errorを抑制（ErrorBoundaryが内部で呼ぶため）
 beforeEach(() => {
   vi.spyOn(console, 'error').mockImplementation(() => {});
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 /** レンダー時に必ずエラーを投げるコンポーネント */
@@ -43,7 +47,17 @@ describe('ErrorBoundary', () => {
     ).toBeInTheDocument();
   });
 
-  it('エラー詳細を展開できる', () => {
+  it('エラー発生時にrole="alert"が設定される', () => {
+    render(
+      <ErrorBoundary>
+        <ThrowError message="テストエラー" />
+      </ErrorBoundary>,
+    );
+
+    expect(screen.getByRole('alert')).toBeInTheDocument();
+  });
+
+  it('エラー詳細を展開できる（開発環境）', () => {
     render(
       <ErrorBoundary>
         <ThrowError message="詳細エラーメッセージ" />
@@ -91,10 +105,12 @@ describe('ErrorBoundary', () => {
   });
 
   it('ページを再読み込みボタンでwindow.location.reloadが呼ばれる', () => {
+    const originalLocation = window.location;
     const reloadMock = vi.fn();
     Object.defineProperty(window, 'location', {
       value: { ...window.location, reload: reloadMock },
       writable: true,
+      configurable: true,
     });
 
     render(
@@ -105,5 +121,12 @@ describe('ErrorBoundary', () => {
 
     fireEvent.click(screen.getByText('ページを再読み込み'));
     expect(reloadMock).toHaveBeenCalled();
+
+    // window.locationを復元
+    Object.defineProperty(window, 'location', {
+      value: originalLocation,
+      writable: true,
+      configurable: true,
+    });
   });
 });

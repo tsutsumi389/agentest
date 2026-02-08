@@ -26,7 +26,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error('エラーバウンダリでエラーをキャッチ:', error, errorInfo);
+    // 開発環境のみエラーログを出力
+    if (import.meta.env.DEV) {
+      // eslint-disable-next-line no-console
+      console.error('エラーバウンダリでエラーをキャッチ:', error, errorInfo);
+    }
   }
 
   handleReload = () => {
@@ -44,9 +48,9 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="flex items-center justify-center min-h-screen bg-background">
+        <div role="alert" className="flex items-center justify-center min-h-screen bg-background">
           <div className="card p-8 max-w-md text-center">
-            <div className="flex justify-center mb-4">
+            <div className="flex justify-center mb-4" aria-hidden="true">
               <div className="p-3 bg-danger-subtle rounded-full">
                 <AlertTriangle className="w-8 h-8 text-danger" />
               </div>
@@ -57,7 +61,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <p className="text-foreground-muted mb-6">
               予期しないエラーが発生しました。ページを再読み込みするか、しばらくしてから再度お試しください。
             </p>
-            {this.state.error && (
+            {import.meta.env.DEV && this.state.error && (
               <details className="mb-6 text-left">
                 <summary className="text-sm text-foreground-subtle cursor-pointer hover:text-foreground-muted">
                   エラー詳細
@@ -68,11 +72,11 @@ export class ErrorBoundary extends Component<Props, State> {
               </details>
             )}
             <div className="flex gap-3 justify-center">
-              <button onClick={this.handleReset} className="btn btn-secondary">
+              <button type="button" onClick={this.handleReset} className="btn btn-secondary">
                 再試行
               </button>
-              <button onClick={this.handleReload} className="btn btn-primary">
-                <RefreshCw className="w-4 h-4" />
+              <button type="button" onClick={this.handleReload} className="btn btn-primary">
+                <RefreshCw className="w-4 h-4" aria-hidden="true" />
                 ページを再読み込み
               </button>
             </div>
