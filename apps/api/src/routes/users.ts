@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requireAuth } from '@agentest/auth';
 import { UserController } from '../controllers/user.controller.js';
+import { UserPasswordController } from '../controllers/user-password.controller.js';
 import { SubscriptionController } from '../controllers/subscription.controller.js';
 import { PaymentMethodController } from '../controllers/payment-method.controller.js';
 import { UserInvoiceController } from '../controllers/user-invoice.controller.js';
@@ -9,6 +10,7 @@ import { requireOwnership } from '../middleware/require-ownership.js';
 
 const router: Router = Router();
 const userController = new UserController();
+const passwordController = new UserPasswordController();
 const subscriptionController = new SubscriptionController();
 const paymentMethodController = new PaymentMethodController();
 const userInvoiceController = new UserInvoiceController();
@@ -63,6 +65,28 @@ router.get('/:userId/accounts', requireAuth(authConfig), userController.getAccou
  * DELETE /api/users/:userId/accounts/:provider
  */
 router.delete('/:userId/accounts/:provider', requireAuth(authConfig), userController.unlinkAccount);
+
+// ============================================
+// パスワード管理関連（認証 + オーナーシップ）
+// ============================================
+
+/**
+ * パスワード設定状況確認
+ * GET /api/users/:userId/password/status
+ */
+router.get('/:userId/password/status', authWithOwnership, passwordController.getPasswordStatus);
+
+/**
+ * パスワード初回設定（OAuthユーザー向け）
+ * POST /api/users/:userId/password
+ */
+router.post('/:userId/password', authWithOwnership, passwordController.setPassword);
+
+/**
+ * パスワード変更
+ * PUT /api/users/:userId/password
+ */
+router.put('/:userId/password', authWithOwnership, passwordController.changePassword);
 
 // ============================================
 // サブスクリプション関連（認証 + オーナーシップ）
