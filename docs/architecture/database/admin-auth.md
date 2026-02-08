@@ -57,7 +57,7 @@ CREATE INDEX idx_admin_users_deleted ON "admin_users"("deleted_at");
 |--------|-----|------|------|
 | `id` | UUID | NO | 主キー |
 | `admin_user_id` | UUID | NO | 管理者ユーザー ID（FK） |
-| `token` | VARCHAR(500) | NO | セッショントークン（一意） |
+| `token_hash` | VARCHAR(64) | NO | セッショントークンの SHA-256 ハッシュ値（hex、64文字、一意） |
 | `user_agent` | TEXT | YES | ユーザーエージェント |
 | `ip_address` | VARCHAR(45) | YES | IP アドレス |
 | `last_active_at` | TIMESTAMP | NO | 最終アクティブ日時 |
@@ -65,11 +65,16 @@ CREATE INDEX idx_admin_users_deleted ON "admin_users"("deleted_at");
 | `revoked_at` | TIMESTAMP | YES | 無効化日時 |
 | `created_at` | TIMESTAMP | NO | 作成日時 |
 
+### トークン保存方式
+
+- 生トークンは Cookie にのみ保持し、DB には SHA-256 ハッシュのみ保存
+- 検証フロー: Cookie から生トークン取得 → `hashToken()` で SHA-256 ハッシュ化 → DB でハッシュ検索
+
 ### インデックス
 
 ```sql
 CREATE INDEX idx_admin_sessions_user_id ON "admin_sessions"("admin_user_id");
-CREATE UNIQUE INDEX idx_admin_sessions_token ON "admin_sessions"("token");
+CREATE UNIQUE INDEX idx_admin_sessions_token_hash ON "admin_sessions"("token_hash");
 CREATE INDEX idx_admin_sessions_expires ON "admin_sessions"("expires_at");
 ```
 
@@ -212,7 +217,7 @@ erDiagram
     AdminSession {
         uuid id PK
         uuid admin_user_id FK
-        string token UK
+        string token_hash UK
         string user_agent
         string ip_address
         timestamp last_active_at
@@ -269,6 +274,7 @@ erDiagram
 ### セッション管理
 
 - セッショントークンは 32 バイトの暗号的に安全なランダム値
+- DB には SHA-256 ハッシュのみ保存（生トークンは Cookie にのみ保持）
 - 有効期限: 8時間
 - 非アクティブ時のタイムアウト: 30分
 - HttpOnly + Secure + SameSite=Strict Cookie で管理
