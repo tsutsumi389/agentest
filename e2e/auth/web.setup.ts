@@ -5,7 +5,11 @@ const authFile = '.auth/web-user.json';
 
 setup('Webアプリの認証状態を作成', async ({ page }) => {
   // ブラウザでページを開く
-  await page.goto(`${WEB_URL}/login`);
+  // ViteのHMR WebSocketにより`load`イベントが発火しないためdomcontentloadedで待機
+  await page.goto(`${WEB_URL}/login`, { waitUntil: 'domcontentloaded' });
+
+  // Reactアプリのレンダリングとリダイレクト完了を待機
+  await page.waitForTimeout(3000);
 
   // Viteプロキシ経由でテストログインAPIを呼び出し、クッキーをブラウザに保存させる
   const result = await page.evaluate(async () => {
