@@ -287,6 +287,23 @@ describe('UserController', () => {
       );
     });
 
+    it('"personal"で個人プロジェクトのみ取得', async () => {
+      mockUserService.getProjects.mockResolvedValue([]);
+      mockUserService.countProjects.mockResolvedValue(0);
+
+      const req = mockRequest({
+        query: { organizationId: 'personal' },
+      }) as Request;
+      const res = mockResponse() as Response;
+
+      await controller.getUserProjects(req, res, mockNext);
+
+      expect(mockUserService.getProjects).toHaveBeenCalledWith(
+        TEST_USER_ID,
+        expect.objectContaining({ organizationId: null })
+      );
+    });
+
     it('"null"で個人プロジェクトのみ取得', async () => {
       mockUserService.getProjects.mockResolvedValue([]);
       mockUserService.countProjects.mockResolvedValue(0);

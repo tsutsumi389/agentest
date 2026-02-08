@@ -19,8 +19,8 @@ const getUserProjectsQuerySchema = z.object({
     .string()
     .optional()
     .transform((val) => {
-      // "null" 文字列を null に変換（個人プロジェクトのみフィルタ）
-      if (val === 'null') return null;
+      // "personal" または "null" を null に変換（個人プロジェクトのみフィルタ）
+      if (val === 'personal' || val === 'null') return null;
       // 空文字列は undefined として扱う（フィルタなし）
       if (val === '') return undefined;
       return val;
