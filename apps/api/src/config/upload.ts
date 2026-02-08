@@ -93,7 +93,7 @@ export async function validateMagicBytes(
 
   if (normalizedMime !== declaredMimeType) {
     throw new BadRequestError(
-      `ファイルの内容が宣言されたMIMEタイプと一致しません（宣言: ${declaredMimeType}、検出: ${normalizedMime}）`
+      'ファイルの内容が宣言されたMIMEタイプと一致しません'
     );
   }
 }
