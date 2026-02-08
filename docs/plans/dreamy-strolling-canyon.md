@@ -123,14 +123,6 @@ Admin側の `admin-auth.service.ts` のパターンを再利用:
 | `POST /api/users/:id/password` | setPassword | 必須 | パスワード追加設定 |
 | `PUT /api/users/:id/password` | changePassword | 必須 | パスワード変更 |
 
-### 3.3 レート制限
-
-ブルートフォース攻撃対策（Redis使用、既存のRedis設定を活用）:
-
-- `/api/auth/login` — 同一IP: 10回/15分
-- `/api/auth/register` — 同一IP: 5回/1時間
-- `/api/auth/forgot-password` — 同一IP: 3回/1時間
-
 ---
 
 ## フェーズ4: フロントエンド — ログイン/サインアップ
@@ -245,7 +237,6 @@ OAuthボタンの上にメール/パスワードフォームを追加:
 | セッション無効化 | パスワードリセット時は全セッション無効化 |
 | クッキー | httpOnly, secure(本番), sameSite=strict（既存設定） |
 | 入力バリデーション | Zodスキーマ（packages/shared から共有） |
-| レート制限 | Redis使用、エンドポイントごとに制限 |
 
 ---
 
