@@ -75,7 +75,7 @@ export function createRedisMock() {
     publisher: mockPublisher,
     subscriber: mockSubscriber,
     publishEvent: vi.fn().mockResolvedValue(undefined),
-    subscribeToChannel: vi.fn().mockResolvedValue(undefined),
+    subscribeToChannel: vi.fn().mockResolvedValue(true),
     unsubscribeFromChannel: vi.fn().mockResolvedValue(undefined),
     closeRedis: vi.fn().mockResolvedValue(undefined),
   };

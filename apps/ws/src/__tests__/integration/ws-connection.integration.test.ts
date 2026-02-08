@@ -20,7 +20,7 @@ vi.mock('../../redis.js', () => ({
     on: vi.fn().mockReturnThis(),
   },
   publishEvent: vi.fn().mockResolvedValue(undefined),
-  subscribeToChannel: vi.fn().mockResolvedValue(undefined),
+  subscribeToChannel: vi.fn().mockResolvedValue(true),
   unsubscribeFromChannel: vi.fn().mockResolvedValue(undefined),
   closeRedis: vi.fn().mockResolvedValue(undefined),
 }));
