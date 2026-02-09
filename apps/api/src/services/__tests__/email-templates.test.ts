@@ -73,6 +73,78 @@ describe('generatePasswordResetEmail', () => {
   });
 });
 
+describe('generateEmailVerificationEmail', () => {
+  const defaultParams = {
+    name: 'テスト太郎',
+    verificationUrl: 'https://example.com/verify-email?token=abc123',
+    expiresInHours: 24,
+  };
+
+  it('EmailContent（subject, text, html）を返す', () => {
+    const result = emailService.generateEmailVerificationEmail(defaultParams);
+
+    expect(result).toHaveProperty('subject');
+    expect(result).toHaveProperty('text');
+    expect(result).toHaveProperty('html');
+    expect(typeof result.subject).toBe('string');
+    expect(typeof result.text).toBe('string');
+    expect(typeof result.html).toBe('string');
+  });
+
+  it('subjectに「メールアドレスの確認」が含まれる', () => {
+    const result = emailService.generateEmailVerificationEmail(defaultParams);
+
+    expect(result.subject).toContain('メールアドレスの確認');
+  });
+
+  it('htmlに確認URLが含まれる', () => {
+    const result = emailService.generateEmailVerificationEmail(defaultParams);
+
+    expect(result.html).toContain(defaultParams.verificationUrl);
+  });
+
+  it('htmlにユーザー名が含まれる', () => {
+    const result = emailService.generateEmailVerificationEmail(defaultParams);
+
+    expect(result.html).toContain('テスト太郎');
+  });
+
+  it('htmlに有効期限の説明が含まれる', () => {
+    const result = emailService.generateEmailVerificationEmail(defaultParams);
+
+    expect(result.html).toContain('24時間');
+  });
+
+  it('ユーザー名にHTMLタグが含まれる場合にエスケープされる', () => {
+    const params = {
+      ...defaultParams,
+      name: '<script>alert("xss")</script>',
+    };
+
+    const result = emailService.generateEmailVerificationEmail(params);
+
+    expect(result.html).not.toContain('<script>');
+    expect(result.html).toContain('&lt;script&gt;');
+  });
+
+  it('確認URLにjavascript:が含まれる場合にサニタイズされる', () => {
+    const params = {
+      ...defaultParams,
+      verificationUrl: 'javascript:alert("xss")',
+    };
+
+    expect(() =>
+      emailService.generateEmailVerificationEmail(params),
+    ).toThrow();
+  });
+
+  it('textに確認URL（プレーンテキスト）が含まれる', () => {
+    const result = emailService.generateEmailVerificationEmail(defaultParams);
+
+    expect(result.text).toContain(defaultParams.verificationUrl);
+  });
+});
+
 describe('generateWelcomeEmail', () => {
   const defaultParams = {
     name: 'テスト太郎',

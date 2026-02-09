@@ -52,6 +52,18 @@ router.post('/login', authController.login);
 router.post('/register', authController.register);
 
 /**
+ * メールアドレス確認
+ * GET /api/auth/verify-email?token=xxx
+ */
+router.get('/verify-email', authController.verifyEmail);
+
+/**
+ * メールアドレス確認メール再送信
+ * POST /api/auth/resend-verification
+ */
+router.post('/resend-verification', authController.resendVerification);
+
+/**
  * パスワードリセット要求
  * POST /api/auth/forgot-password
  */

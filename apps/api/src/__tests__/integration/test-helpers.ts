@@ -19,6 +19,7 @@ export async function createTestUser(overrides: Partial<{
   avatarUrl: string | null;
   plan: 'FREE' | 'PRO';
   passwordHash: string | null;
+  emailVerified: boolean;
 }> = {}) {
   const id = overrides.id ?? randomUUID();
   return prisma.user.create({
@@ -28,6 +29,7 @@ export async function createTestUser(overrides: Partial<{
       name: overrides.name ?? `Test User ${id.slice(0, 8)}`,
       avatarUrl: overrides.avatarUrl ?? null,
       plan: overrides.plan ?? 'FREE',
+      emailVerified: overrides.emailVerified ?? true,
       ...(overrides.passwordHash !== undefined && { passwordHash: overrides.passwordHash }),
     },
   });

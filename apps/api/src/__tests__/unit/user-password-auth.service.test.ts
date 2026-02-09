@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { UserPasswordAuthService } from '../../services/user-password-auth.service.js';
-import { AuthenticationError } from '@agentest/shared';
+import { AuthenticationError, AppError, BadRequestError } from '@agentest/shared';
 
 // --- モック定義 ---
 
@@ -53,6 +53,12 @@ const mockPrisma = vi.hoisted(() => ({
     create: vi.fn(),
     updateMany: vi.fn(),
   },
+  emailVerificationToken: {
+    create: vi.fn(),
+    findFirst: vi.fn(),
+    update: vi.fn(),
+    updateMany: vi.fn(),
+  },
   $transaction: vi.fn((fn: (tx: typeof mockPrisma) => Promise<unknown>) => fn(mockPrisma)),
 }));
 vi.mock('@agentest/db', () => ({ prisma: mockPrisma }));
@@ -103,6 +109,7 @@ const mockUser = {
   deletedAt: null,
   avatarUrl: null,
   plan: 'FREE',
+  emailVerified: true,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
@@ -173,21 +180,18 @@ describe('UserPasswordAuthService', () => {
   // register
   // ===========================================
   describe('register', () => {
-    it('有効なデータで新規ユーザーを作成し、JWTトークンペアを返す', async () => {
+    it('有効なデータで新規ユーザーを作成し、確認トークンを返す', async () => {
       mockPrisma.user.findFirst.mockResolvedValue(null); // 重複なし
       mockPrisma.user.create.mockResolvedValue(mockUser);
-      mockPrisma.refreshToken.create.mockResolvedValue({});
-      mockPrisma.session.create.mockResolvedValue({});
+      mockPrisma.emailVerificationToken.create.mockResolvedValue({});
 
       const result = await service.register({
         email: 'test@example.com',
         password: 'Password123!',
         name: 'Test User',
-        ipAddress: '127.0.0.1',
-        userAgent: 'TestAgent',
       });
 
-      expect(result.tokens).toEqual(mockTokens);
+      expect(result.verificationToken).toBeTruthy();
       expect(result.user).toEqual({
         id: mockUser.id,
         email: mockUser.email,
@@ -210,8 +214,7 @@ describe('UserPasswordAuthService', () => {
     it('パスワードがハッシュ化されてDBに保存される（平文でない）', async () => {
       mockPrisma.user.findFirst.mockResolvedValue(null);
       mockPrisma.user.create.mockResolvedValue(mockUser);
-      mockPrisma.refreshToken.create.mockResolvedValue({});
-      mockPrisma.session.create.mockResolvedValue({});
+      mockPrisma.emailVerificationToken.create.mockResolvedValue({});
 
       await service.register({
         email: 'test@example.com',
@@ -232,43 +235,6 @@ describe('UserPasswordAuthService', () => {
         expect.objectContaining({
           data: expect.objectContaining({
             passwordHash: 'Password123!',
-          }),
-        })
-      );
-    });
-
-    it('RefreshTokenとSessionがDBに保存される', async () => {
-      mockPrisma.user.findFirst.mockResolvedValue(null);
-      mockPrisma.user.create.mockResolvedValue(mockUser);
-      mockPrisma.refreshToken.create.mockResolvedValue({});
-      mockPrisma.session.create.mockResolvedValue({});
-
-      await service.register({
-        email: 'test@example.com',
-        password: 'Password123!',
-        name: 'Test User',
-        ipAddress: '127.0.0.1',
-        userAgent: 'TestAgent',
-      });
-
-      // RefreshTokenが作成される
-      expect(mockPrisma.refreshToken.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            userId: mockUser.id,
-            tokenHash: 'hashed-token-value',
-          }),
-        })
-      );
-
-      // Sessionが作成される
-      expect(mockPrisma.session.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            userId: mockUser.id,
-            tokenHash: 'hashed-token-value',
-            ipAddress: '127.0.0.1',
-            userAgent: 'TestAgent',
           }),
         })
       );
@@ -934,6 +900,282 @@ describe('UserPasswordAuthService', () => {
       const result = await service.hasPassword('user-oauth');
 
       expect(result).toBe(false);
+    });
+  });
+
+  // ===========================================
+  // register (メール確認フロー対応)
+  // ===========================================
+  describe('register (メール確認フロー)', () => {
+    it('登録後にJWTを発行せず、RegisterResultを返す', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(null);
+      mockPrisma.user.create.mockResolvedValue({ ...mockUser, emailVerified: false });
+      mockPrisma.emailVerificationToken.create.mockResolvedValue({});
+
+      const result = await service.register({
+        email: 'test@example.com',
+        password: 'Password123!',
+        name: 'Test User',
+      });
+
+      // RegisterResult型: tokens ではなく verificationToken を持つ
+      expect(result).toHaveProperty('verificationToken');
+      expect(result).toHaveProperty('user');
+      expect(result).not.toHaveProperty('tokens');
+    });
+
+    it('EmailVerificationTokenがDBに作成される', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(null);
+      mockPrisma.user.create.mockResolvedValue({ ...mockUser, emailVerified: false });
+      mockPrisma.emailVerificationToken.create.mockResolvedValue({});
+
+      await service.register({
+        email: 'test@example.com',
+        password: 'Password123!',
+        name: 'Test User',
+      });
+
+      expect(mockPrisma.emailVerificationToken.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            userId: mockUser.id,
+            tokenHash: 'hashed-token-value',
+          }),
+        })
+      );
+    });
+
+    it('確認トークンの有効期限が24時間後に設定される', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(null);
+      mockPrisma.user.create.mockResolvedValue({ ...mockUser, emailVerified: false });
+      mockPrisma.emailVerificationToken.create.mockResolvedValue({});
+
+      const before = Date.now();
+      await service.register({
+        email: 'test@example.com',
+        password: 'Password123!',
+        name: 'Test User',
+      });
+      const after = Date.now();
+
+      const createCall = mockPrisma.emailVerificationToken.create.mock.calls[0][0];
+      const expiresAt = createCall.data.expiresAt as Date;
+      const twentyFourHoursMs = 24 * 60 * 60 * 1000;
+
+      expect(expiresAt.getTime()).toBeGreaterThanOrEqual(before + twentyFourHoursMs - 2000);
+      expect(expiresAt.getTime()).toBeLessThanOrEqual(after + twentyFourHoursMs + 2000);
+    });
+
+    it('RefreshToken/Sessionは作成されない', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(null);
+      mockPrisma.user.create.mockResolvedValue({ ...mockUser, emailVerified: false });
+      mockPrisma.emailVerificationToken.create.mockResolvedValue({});
+
+      await service.register({
+        email: 'test@example.com',
+        password: 'Password123!',
+        name: 'Test User',
+      });
+
+      expect(mockPrisma.refreshToken.create).not.toHaveBeenCalled();
+      expect(mockPrisma.session.create).not.toHaveBeenCalled();
+    });
+  });
+
+  // ===========================================
+  // verifyEmail
+  // ===========================================
+  describe('verifyEmail', () => {
+    const validVerificationToken = {
+      id: 'vtoken-1',
+      userId: mockUser.id,
+      tokenHash: 'hashed-token-value',
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      usedAt: null,
+      createdAt: new Date(),
+      user: { ...mockUser, emailVerified: false },
+    };
+
+    it('有効なトークンでemailVerifiedをtrueに更新する', async () => {
+      mockPrisma.emailVerificationToken.findFirst.mockResolvedValue(validVerificationToken);
+      mockPrisma.emailVerificationToken.update.mockResolvedValue({});
+      mockPrisma.user.update.mockResolvedValue({});
+
+      await service.verifyEmail('raw-verification-token');
+
+      expect(mockPrisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: mockUser.id },
+          data: expect.objectContaining({
+            emailVerified: true,
+          }),
+        })
+      );
+    });
+
+    it('トークンが使用済みとしてマークされる', async () => {
+      mockPrisma.emailVerificationToken.findFirst.mockResolvedValue(validVerificationToken);
+      mockPrisma.emailVerificationToken.update.mockResolvedValue({});
+      mockPrisma.user.update.mockResolvedValue({});
+
+      await service.verifyEmail('raw-verification-token');
+
+      expect(mockPrisma.emailVerificationToken.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: validVerificationToken.id },
+          data: expect.objectContaining({
+            usedAt: expect.any(Date),
+          }),
+        })
+      );
+    });
+
+    it('存在しないトークンではエラーを返す', async () => {
+      mockPrisma.emailVerificationToken.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.verifyEmail('invalid-token')
+      ).rejects.toThrow(BadRequestError);
+    });
+
+    it('期限切れトークンではエラーを返す', async () => {
+      const expiredToken = {
+        ...validVerificationToken,
+        expiresAt: new Date(Date.now() - 1000),
+      };
+      mockPrisma.emailVerificationToken.findFirst.mockResolvedValue(expiredToken);
+
+      await expect(
+        service.verifyEmail('expired-token')
+      ).rejects.toThrow(BadRequestError);
+    });
+
+    it('使用済みトークンではエラーを返す', async () => {
+      const usedToken = {
+        ...validVerificationToken,
+        usedAt: new Date(),
+      };
+      mockPrisma.emailVerificationToken.findFirst.mockResolvedValue(usedToken);
+
+      await expect(
+        service.verifyEmail('used-token')
+      ).rejects.toThrow(BadRequestError);
+    });
+
+    it('既に確認済みのユーザーでもエラーにならない（冪等性）', async () => {
+      const alreadyVerifiedToken = {
+        ...validVerificationToken,
+        user: { ...mockUser, emailVerified: true },
+      };
+      mockPrisma.emailVerificationToken.findFirst.mockResolvedValue(alreadyVerifiedToken);
+      mockPrisma.emailVerificationToken.update.mockResolvedValue({});
+      mockPrisma.user.update.mockResolvedValue({});
+
+      await expect(
+        service.verifyEmail('raw-verification-token')
+      ).resolves.not.toThrow();
+    });
+  });
+
+  // ===========================================
+  // resendVerification
+  // ===========================================
+  describe('resendVerification', () => {
+    const unverifiedUser = {
+      ...mockUser,
+      emailVerified: false,
+    };
+
+    it('未確認ユーザーに新しい確認トークンを生成する', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(unverifiedUser);
+      mockPrisma.emailVerificationToken.updateMany.mockResolvedValue({ count: 0 });
+      mockPrisma.emailVerificationToken.create.mockResolvedValue({});
+
+      const result = await service.resendVerification('test@example.com');
+
+      expect(result).toBeTruthy();
+      expect(typeof result).toBe('string');
+    });
+
+    it('既存の未使用トークンが無効化される', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(unverifiedUser);
+      mockPrisma.emailVerificationToken.updateMany.mockResolvedValue({ count: 1 });
+      mockPrisma.emailVerificationToken.create.mockResolvedValue({});
+
+      await service.resendVerification('test@example.com');
+
+      expect(mockPrisma.emailVerificationToken.updateMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId: unverifiedUser.id, usedAt: null },
+          data: expect.objectContaining({
+            usedAt: expect.any(Date),
+          }),
+        })
+      );
+    });
+
+    it('ユーザーが存在しない場合はnullを返す（メール存在確認防止）', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(null);
+
+      const result = await service.resendVerification('notfound@example.com');
+
+      expect(result).toBeNull();
+    });
+
+    it('既に確認済みのユーザーの場合はnullを返す', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue({ ...mockUser, emailVerified: true });
+
+      const result = await service.resendVerification('test@example.com');
+
+      expect(result).toBeNull();
+    });
+
+    it('OAuthのみユーザー（passwordHash=null）の場合はnullを返す', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue({ ...mockOAuthOnlyUser, emailVerified: false });
+
+      const result = await service.resendVerification('test@example.com');
+
+      expect(result).toBeNull();
+    });
+  });
+
+  // ===========================================
+  // login (emailVerifiedチェック)
+  // ===========================================
+  describe('login (emailVerifiedチェック)', () => {
+    it('未確認ユーザーのログインでEMAIL_NOT_VERIFIEDエラーを返す', async () => {
+      const unverifiedUser = { ...mockUser, emailVerified: false };
+      mockPrisma.user.findFirst.mockResolvedValue(unverifiedUser);
+      mockBcrypt.compare.mockResolvedValue(true);
+
+      try {
+        await service.login({
+          email: 'test@example.com',
+          password: 'Password123!',
+        });
+        // ここに到達したらテスト失敗
+        expect.unreachable('エラーがスローされるべき');
+      } catch (error) {
+        expect(error).toBeInstanceOf(AppError);
+        expect((error as AppError).code).toBe('EMAIL_NOT_VERIFIED');
+        expect((error as AppError).statusCode).toBe(401);
+      }
+    });
+
+    it('確認済みユーザーは正常にログインできる', async () => {
+      const verifiedUser = { ...mockUser, emailVerified: true };
+      mockPrisma.user.findFirst.mockResolvedValue(verifiedUser);
+      mockBcrypt.compare.mockResolvedValue(true);
+      mockPrisma.user.update.mockResolvedValue({ ...verifiedUser, failedAttempts: 0 });
+      mockPrisma.refreshToken.create.mockResolvedValue({});
+      mockPrisma.session.create.mockResolvedValue({});
+
+      const result = await service.login({
+        email: 'test@example.com',
+        password: 'Password123!',
+      });
+
+      expect(result.tokens).toEqual(mockTokens);
     });
   });
 });

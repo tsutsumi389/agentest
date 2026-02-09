@@ -26,6 +26,15 @@ interface PasswordResetEmailParams {
 }
 
 /**
+ * メールアドレス確認メールパラメータ
+ */
+interface EmailVerificationEmailParams {
+  name: string;
+  verificationUrl: string;
+  expiresInHours: number;
+}
+
+/**
  * ウェルカムメールパラメータ
  */
 interface WelcomeEmailParams {
@@ -291,6 +300,136 @@ Agentest システム管理チーム
 
     <p class="note">
       ※このリンクは24時間有効です。期限を過ぎた場合は、管理者に再度招待を依頼してください。<br>
+      ※このメールに心当たりがない場合は、無視してください。
+    </p>
+
+    <div class="footer">
+      <p>Agentest システム管理チーム</p>
+    </div>
+  </div>
+</body>
+</html>
+`;
+
+    return { subject, text, html };
+  }
+
+  /**
+   * メールアドレス確認メールを生成
+   */
+  generateEmailVerificationEmail(params: EmailVerificationEmailParams): EmailContent {
+    const { name, verificationUrl, expiresInHours } = params;
+
+    // URLプロトコル検証（javascript: URI等を防止）
+    const validatedUrl = sanitizeUrl(verificationUrl);
+
+    const subject = '【Agentest】メールアドレスの確認';
+
+    const text = `${name} 様
+
+Agentestへのご登録ありがとうございます。
+
+以下のURLからメールアドレスの確認を完了してください。
+
+${validatedUrl}
+
+※このリンクは${expiresInHours}時間有効です。期限を過ぎた場合は、再度確認メールをリクエストしてください。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+このメールに心当たりがない場合は、無視してください。
+
+--
+Agentest システム管理チーム
+`;
+
+    // XSS防止: HTMLテンプレートに挿入する値をエスケープ
+    const safeName = escapeHtml(name);
+    const safeVerificationUrl = escapeHtml(validatedUrl);
+
+    const html = `
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>メールアドレスの確認</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    .container {
+      background-color: #ffffff;
+      border-radius: 8px;
+      padding: 32px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    .logo {
+      font-size: 24px;
+      font-weight: bold;
+      color: #1a1a1a;
+    }
+    h1 {
+      font-size: 20px;
+      margin-bottom: 16px;
+      color: #1a1a1a;
+    }
+    .button {
+      display: inline-block;
+      background-color: #1a1a1a;
+      color: #ffffff !important;
+      text-decoration: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      font-weight: bold;
+      margin: 24px 0;
+    }
+    .button:hover {
+      background-color: #333;
+    }
+    .note {
+      font-size: 14px;
+      color: #666;
+      margin-top: 24px;
+    }
+    .footer {
+      text-align: center;
+      font-size: 12px;
+      color: #999;
+      margin-top: 32px;
+      padding-top: 16px;
+      border-top: 1px solid #eee;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">Agentest</div>
+    </div>
+
+    <h1>${safeName} 様</h1>
+
+    <p>Agentestへのご登録ありがとうございます。</p>
+
+    <p>以下のボタンをクリックして、メールアドレスの確認を完了してください。</p>
+
+    <div style="text-align: center;">
+      <a href="${safeVerificationUrl}" class="button">メールアドレスを確認する</a>
+    </div>
+
+    <p class="note">
+      ※このリンクは${expiresInHours}時間有効です。期限を過ぎた場合は、再度確認メールをリクエストしてください。<br>
       ※このメールに心当たりがない場合は、無視してください。
     </p>
 

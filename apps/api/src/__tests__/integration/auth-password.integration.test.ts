@@ -71,6 +71,11 @@ vi.mock('../../services/email.service.js', () => ({
       text: 'テスト',
       html: '<p>テスト</p>',
     }),
+    generateEmailVerificationEmail: vi.fn().mockReturnValue({
+      subject: 'メール確認',
+      text: 'テスト',
+      html: '<p>テスト</p>',
+    }),
   },
 }));
 
@@ -152,7 +157,7 @@ describe('Auth Password API Integration Tests', () => {
       expect(isMatch).toBe(true);
     });
 
-    it('セッションとリフレッシュトークンがDBに作成される', async () => {
+    it('メール確認トークンがDBに作成される（セッション/リフレッシュトークンは作成されない）', async () => {
       await request(app)
         .post('/api/auth/register')
         .send({
@@ -161,22 +166,32 @@ describe('Auth Password API Integration Tests', () => {
           name: 'Session User',
         });
 
+      // 非同期メール送信を待つ
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       const user = await prisma.user.findFirst({
         where: { email: 'session@example.com' },
       });
 
+      // メール確認トークンが作成される
+      const verificationTokens = await prisma.emailVerificationToken.findMany({
+        where: { userId: user!.id },
+      });
+      expect(verificationTokens).toHaveLength(1);
+
+      // セッション/リフレッシュトークンは作成されない
       const sessions = await prisma.session.findMany({
         where: { userId: user!.id },
       });
-      expect(sessions).toHaveLength(1);
+      expect(sessions).toHaveLength(0);
 
       const refreshTokens = await prisma.refreshToken.findMany({
         where: { userId: user!.id },
       });
-      expect(refreshTokens).toHaveLength(1);
+      expect(refreshTokens).toHaveLength(0);
     });
 
-    it('クッキーが設定される', async () => {
+    it('クッキーは設定されない（メール確認が必要）', async () => {
       const response = await request(app)
         .post('/api/auth/register')
         .send({
@@ -186,12 +201,8 @@ describe('Auth Password API Integration Tests', () => {
         });
 
       const cookies = response.headers['set-cookie'];
-      expect(cookies).toBeDefined();
-      const cookieArray = Array.isArray(cookies) ? cookies : [cookies];
-      const hasAccessToken = cookieArray.some((c: string) => c.includes('access_token='));
-      const hasRefreshToken = cookieArray.some((c: string) => c.includes('refresh_token='));
-      expect(hasAccessToken).toBe(true);
-      expect(hasRefreshToken).toBe(true);
+      // クッキーは設定されない
+      expect(cookies).toBeUndefined();
     });
 
     it('メールアドレスが重複する場合は409エラー', async () => {
@@ -725,8 +736,8 @@ describe('Auth Password API Integration Tests', () => {
     });
   });
 
-  describe('完全フロー: 登録 → ログイン → パスワードリセット', () => {
-    it('ユーザー登録後にログインでき、リセット後に新パスワードでログインできる', async () => {
+  describe('完全フロー: 登録 → メール確認 → ログイン → パスワードリセット', () => {
+    it('ユーザー登録後にメール確認し、ログインでき、リセット後に新パスワードでログインできる', async () => {
       // 1. 登録
       const registerRes = await request(app)
         .post('/api/auth/register')
@@ -736,7 +747,24 @@ describe('Auth Password API Integration Tests', () => {
           name: 'Flow User',
         });
       expect(registerRes.status).toBe(201);
+      expect(registerRes.body.message).toBeDefined();
       const userId = registerRes.body.user.id;
+
+      // 1.5 メール確認前はログインできない
+      const preVerifyLoginRes = await request(app)
+        .post('/api/auth/login')
+        .send({
+          email: 'flow@example.com',
+          password: VALID_PASSWORD,
+        });
+      expect(preVerifyLoginRes.status).toBe(401);
+      expect(preVerifyLoginRes.body.error.code).toBe('EMAIL_NOT_VERIFIED');
+
+      // 1.6 メール確認（DBから直接トークンを取得してシミュレート）
+      await prisma.user.update({
+        where: { id: userId },
+        data: { emailVerified: true },
+      });
 
       // 2. ログイン
       const loginRes = await request(app)

@@ -809,7 +809,11 @@ export const authApi = {
   login: (data: { email: string; password: string }) =>
     api.post<{ user: User }>('/api/auth/login', data),
   register: (data: { email: string; password: string; name: string }) =>
-    api.post<{ user: User }>('/api/auth/register', data),
+    api.post<{ message: string; user: { id: string; email: string; name: string } }>('/api/auth/register', data),
+  verifyEmail: (token: string) =>
+    api.get<{ message: string }>(`/api/auth/verify-email?token=${encodeURIComponent(token)}`),
+  resendVerification: (data: { email: string }) =>
+    api.post<{ message: string }>('/api/auth/resend-verification', data),
   forgotPassword: (data: { email: string }) =>
     api.post<{ message: string }>('/api/auth/forgot-password', data),
   resetPassword: (data: { token: string; password: string }) =>

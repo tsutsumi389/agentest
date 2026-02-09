@@ -134,13 +134,20 @@ export function createApp(): Express {
       });
 
       if (!user) {
-        // 新規ユーザーを作成
+        // 新規ユーザーを作成（OAuthユーザーはメール確認済み）
         user = await prisma.user.create({
           data: {
             email: profile.email,
             name: profile.name,
             avatarUrl: profile.avatarUrl,
+            emailVerified: true,
           },
+        });
+      } else if (!user.emailVerified) {
+        // 既存ユーザーがOAuthでログインした場合、未確認なら確認済みに更新
+        user = await prisma.user.update({
+          where: { id: user.id },
+          data: { emailVerified: true },
         });
       }
 

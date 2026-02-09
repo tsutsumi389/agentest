@@ -25,7 +25,18 @@ vi.mock('../../stores/auth', () => ({
   useAuthStore: () => mockAuthStore,
 }));
 
-const { mockAuthApi } = vi.hoisted(() => {
+const { mockAuthApi, MockApiError } = vi.hoisted(() => {
+  // テスト用のApiErrorクラス
+  class MockApiError extends Error {
+    statusCode: number;
+    code: string;
+    constructor(statusCode: number, code: string, message: string) {
+      super(message);
+      this.name = 'ApiError';
+      this.statusCode = statusCode;
+      this.code = code;
+    }
+  }
   return {
     mockAuthApi: {
       login: vi.fn(),
@@ -34,11 +45,13 @@ const { mockAuthApi } = vi.hoisted(() => {
       refresh: vi.fn(),
       logout: vi.fn(),
     },
+    MockApiError,
   };
 });
 
 vi.mock('../../lib/api', () => ({
   authApi: mockAuthApi,
+  ApiError: MockApiError,
 }));
 
 import { LoginPage } from '../Login';

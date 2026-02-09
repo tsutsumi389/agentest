@@ -3,7 +3,6 @@ import { Github } from 'lucide-react';
 import { AgentestLogo } from '../components/ui/AgentestLogo';
 import { GoogleIcon } from '../components/ui/GoogleIcon';
 import { PasswordStrengthChecklist } from '../components/PasswordStrengthChecklist';
-import { useAuthStore } from '../stores/auth';
 import { authApi } from '../lib/api';
 import { useState } from 'react';
 
@@ -12,7 +11,6 @@ import { useState } from 'react';
  */
 export function RegisterPage() {
   const navigate = useNavigate();
-  const { setUser } = useAuthStore();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -44,9 +42,9 @@ export function RegisterPage() {
     setIsSubmitting(true);
 
     try {
-      const { user } = await authApi.register({ email, password, name });
-      setUser(user);
-      navigate('/dashboard', { replace: true });
+      await authApi.register({ email, password, name });
+      // 登録成功 → メール確認ページへリダイレクト
+      navigate(`/check-email?email=${encodeURIComponent(email)}`, { replace: true });
     } catch (err) {
       const message = err instanceof Error ? err.message : '登録に失敗しました';
       setError(message);
