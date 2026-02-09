@@ -145,7 +145,7 @@ export class UserPasswordAuthService {
     const { email, password, ipAddress, userAgent } = input;
 
     // ユーザー検索
-    const user = await prisma.user.findFirst({
+    let user = await prisma.user.findFirst({
       where: { email, deletedAt: null },
     });
 
@@ -162,12 +162,11 @@ export class UserPasswordAuthService {
 
     // ロック期間が終了している場合、失敗回数をリセット
     if (user.lockedUntil && user.lockedUntil <= new Date()) {
-      await prisma.user.update({
+      const unlocked = await prisma.user.update({
         where: { id: user.id },
         data: { failedAttempts: 0, lockedUntil: null },
       });
-      user.failedAttempts = 0;
-      user.lockedUntil = null;
+      user = { ...user, failedAttempts: unlocked.failedAttempts, lockedUntil: unlocked.lockedUntil };
     }
 
     // passwordHashがnull（OAuthのみユーザー）の場合

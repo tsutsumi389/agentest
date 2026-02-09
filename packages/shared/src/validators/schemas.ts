@@ -73,16 +73,16 @@ export const passwordSchema = z
 
 // ユーザー新規登録（メール/パスワード）
 export const userRegisterSchema = z.object({
-  email: z.string().email().max(255),
+  email: z.string().email().max(255).transform((v) => v.toLowerCase().trim()),
   password: passwordSchema,
-  name: z.string().min(1).max(100),
+  name: z.string().min(1).max(100).trim(),
 });
 
 export type UserRegister = z.infer<typeof userRegisterSchema>;
 
 // ユーザーログイン（パスワード強度チェックは不要、ログイン時は任意文字列でOK）
 export const userLoginSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email().transform((v) => v.toLowerCase().trim()),
   password: z.string().min(1),
 });
 
@@ -90,7 +90,7 @@ export type UserLogin = z.infer<typeof userLoginSchema>;
 
 // パスワードリセット要求
 export const passwordResetRequestSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email().transform((v) => v.toLowerCase().trim()),
 });
 
 export type PasswordResetRequest = z.infer<typeof passwordResetRequestSchema>;
@@ -111,10 +111,15 @@ export const setPasswordSchema = z.object({
 export type SetPassword = z.infer<typeof setPasswordSchema>;
 
 // パスワード変更
-export const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1),
-  newPassword: passwordSchema,
-});
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1),
+    newPassword: passwordSchema,
+  })
+  .refine((data) => data.currentPassword !== data.newPassword, {
+    message: '新しいパスワードは現在のパスワードと異なるものにしてください',
+    path: ['newPassword'],
+  });
 
 export type ChangePassword = z.infer<typeof changePasswordSchema>;
 
