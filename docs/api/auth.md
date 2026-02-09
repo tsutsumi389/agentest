@@ -2,11 +2,21 @@
 
 ## 概要
 
-OAuth 2.0 による認証を提供。GitHub / Google アカウントでログイン可能。
+メール/パスワード認証および OAuth 2.0 による認証を提供。メールアドレスとパスワード、または GitHub / Google アカウントでログイン可能。
 
 認証後は JWT（Access Token / Refresh Token）を発行。
 
 ## フロー
+
+### メール/パスワード認証
+
+```
+1. クライアント → POST /auth/login (or /auth/register)
+2. サーバーで認証
+3. JWT Cookie 設定 → ユーザー情報を返却
+```
+
+### OAuth 認証
 
 ```
 1. クライアント → /auth/github (or /auth/google)
@@ -17,6 +27,170 @@ OAuth 2.0 による認証を提供。GitHub / Google アカウントでログイ
 ```
 
 ## エンドポイント
+
+### メール/パスワードログイン
+
+```
+POST /auth/login
+```
+
+メールアドレスとパスワードでログイン。
+
+**Request:**
+
+```json
+{
+  "email": "user@example.com",
+  "password": "SecureP@ss1"
+}
+```
+
+| フィールド | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| `email` | string | Yes | メールアドレス |
+| `password` | string | Yes | パスワード |
+
+**Response:**
+
+```json
+{
+  "data": {
+    "user": {
+      "id": "usr_123456",
+      "email": "user@example.com",
+      "name": "John Doe",
+      "avatarUrl": "https://..."
+    }
+  }
+}
+```
+
+**Errors:**
+
+| コード | ステータス | 説明 |
+|-------|-----------|------|
+| `AUTH_INVALID_CREDENTIALS` | 401 | メールアドレスまたはパスワードが不正 |
+| `AUTH_ACCOUNT_LOCKED` | 401 | アカウントがロック中（5回連続失敗で30分ロック） |
+| `VALIDATION_ERROR` | 400 | 入力値が不正 |
+
+---
+
+### 新規登録
+
+```
+POST /auth/register
+```
+
+メールアドレスとパスワードでアカウントを作成し、自動的にログイン。
+
+**Request:**
+
+```json
+{
+  "email": "user@example.com",
+  "password": "SecureP@ss1",
+  "name": "John Doe"
+}
+```
+
+| フィールド | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| `email` | string | Yes | メールアドレス |
+| `password` | string | Yes | パスワード（8〜100文字、大文字・小文字・数字・記号必須） |
+| `name` | string | Yes | 表示名（1〜100文字） |
+
+**Response:**
+
+```json
+{
+  "data": {
+    "user": {
+      "id": "usr_123456",
+      "email": "user@example.com",
+      "name": "John Doe",
+      "avatarUrl": null
+    }
+  }
+}
+```
+
+**Errors:**
+
+| コード | ステータス | 説明 |
+|-------|-----------|------|
+| `AUTH_EMAIL_EXISTS` | 409 | メールアドレスが既に使用されている |
+| `VALIDATION_ERROR` | 400 | 入力値が不正 |
+
+---
+
+### パスワードリセット要求
+
+```
+POST /auth/forgot-password
+```
+
+パスワードリセット用のリンクをメールで送信。セキュリティのため、ユーザーが存在しない場合も同じレスポンスを返す。
+
+**Request:**
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Response:**
+
+```json
+{
+  "data": {
+    "message": "パスワードリセットのメールを送信しました。"
+  }
+}
+```
+
+---
+
+### パスワードリセット実行
+
+```
+POST /auth/reset-password
+```
+
+リセットトークンを使ってパスワードを変更。成功時、全セッションが無効化される。
+
+**Request:**
+
+```json
+{
+  "token": "abcdef1234567890...",
+  "password": "NewSecureP@ss1"
+}
+```
+
+| フィールド | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| `token` | string | Yes | メールで受け取ったリセットトークン |
+| `password` | string | Yes | 新しいパスワード（8〜100文字、大文字・小文字・数字・記号必須） |
+
+**Response:**
+
+```json
+{
+  "data": {
+    "message": "パスワードがリセットされました。"
+  }
+}
+```
+
+**Errors:**
+
+| コード | ステータス | 説明 |
+|-------|-----------|------|
+| `AUTH_INVALID_TOKEN` | 400 | トークンが無効または期限切れ |
+| `VALIDATION_ERROR` | 400 | 入力値が不正 |
+
+---
 
 ### GitHub OAuth 開始
 
@@ -165,14 +339,48 @@ Set-Cookie: refresh_token=<token>; HttpOnly; Secure; SameSite=Strict; Path=/
 | `AUTH_TOKEN_EXPIRED` | トークンが期限切れ |
 | `AUTH_UNAUTHORIZED` | 認証が必要 |
 | `AUTH_OAUTH_FAILED` | OAuth 認証に失敗 |
+| `AUTH_INVALID_CREDENTIALS` | メールアドレスまたはパスワードが不正 |
+| `AUTH_ACCOUNT_LOCKED` | アカウントがロック中 |
+| `AUTH_EMAIL_EXISTS` | メールアドレスが既に使用されている |
 
 ## 使用例
 
 ### JavaScript (fetch)
 
 ```javascript
-// ログイン（リダイレクト）
+// メール/パスワードログイン
+const response = await fetch('/api/v1/auth/login', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email: 'user@example.com', password: 'SecureP@ss1' }),
+  credentials: 'include'
+});
+const { data: { user } } = await response.json();
+
+// 新規登録
+const response = await fetch('/api/v1/auth/register', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email: 'user@example.com', password: 'SecureP@ss1', name: 'John' }),
+  credentials: 'include'
+});
+
+// OAuthログイン（リダイレクト）
 window.location.href = '/api/v1/auth/github';
+
+// パスワードリセット要求
+await fetch('/api/v1/auth/forgot-password', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email: 'user@example.com' })
+});
+
+// パスワードリセット実行
+await fetch('/api/v1/auth/reset-password', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ token: 'reset-token', password: 'NewSecureP@ss1' })
+});
 
 // ユーザー情報取得
 const response = await fetch('/api/v1/auth/me', {

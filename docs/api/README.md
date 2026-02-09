@@ -26,6 +26,10 @@ Authorization: Bearer <access_token>
 
 | メソッド | パス | 説明 |
 |---------|------|------|
+| POST | `/auth/login` | メール/パスワードログイン |
+| POST | `/auth/register` | 新規登録 |
+| POST | `/auth/forgot-password` | パスワードリセット要求 |
+| POST | `/auth/reset-password` | パスワードリセット実行 |
 | GET | `/auth/github` | GitHub OAuth 開始 |
 | GET | `/auth/google` | Google OAuth 開始 |
 | POST | `/auth/refresh` | トークン更新 |
@@ -121,6 +125,9 @@ Authorization: Bearer <access_token>
 | PATCH | `/users/:id` | ユーザー更新 |
 | DELETE | `/users/:id` | ユーザー削除（論理削除） |
 | GET | `/users/:userId/recent-executions` | 最近のテスト実行結果一覧 |
+| GET | `/users/:userId/password/status` | パスワード設定状況確認 |
+| POST | `/users/:userId/password` | パスワード設定 |
+| PUT | `/users/:userId/password` | パスワード変更 |
 
 → [ユーザー API 詳細](./users.md)
 

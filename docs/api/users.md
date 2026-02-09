@@ -193,6 +193,156 @@ Authorization: Bearer <access_token>
 
 ---
 
+### パスワード設定状況確認
+
+```
+GET /users/:userId/password/status
+```
+
+ユーザーにパスワードが設定されているかを確認。自分自身のみ取得可能。
+
+**Path Parameters:**
+
+| パラメータ | 説明 |
+|-----------|------|
+| `userId` | ユーザー ID |
+
+**Headers:**
+
+```
+Authorization: Bearer <access_token>
+```
+
+**Response:**
+
+```json
+{
+  "data": {
+    "hasPassword": true
+  }
+}
+```
+
+**Errors:**
+
+| コード | ステータス | 説明 |
+|-------|-----------|------|
+| `AUTH_UNAUTHORIZED` | 401 | 認証が必要 |
+| `AUTH_FORBIDDEN` | 403 | 他人のデータは取得不可 |
+
+---
+
+### パスワード設定
+
+```
+POST /users/:userId/password
+```
+
+OAuthのみのユーザーがパスワードを追加設定。既にパスワードが設定済みの場合はエラー。
+
+**Path Parameters:**
+
+| パラメータ | 説明 |
+|-----------|------|
+| `userId` | ユーザー ID |
+
+**Headers:**
+
+```
+Authorization: Bearer <access_token>
+Content-Type: application/json
+```
+
+**Request Body:**
+
+```json
+{
+  "password": "SecureP@ss1"
+}
+```
+
+| フィールド | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| `password` | string | Yes | パスワード（8〜100文字、大文字・小文字・数字・記号必須） |
+
+**Response:**
+
+```json
+{
+  "data": {
+    "message": "パスワードが設定されました。"
+  }
+}
+```
+
+**Errors:**
+
+| コード | ステータス | 説明 |
+|-------|-----------|------|
+| `AUTH_UNAUTHORIZED` | 401 | 認証が必要 |
+| `AUTH_FORBIDDEN` | 403 | 他人のデータは変更不可 |
+| `PASSWORD_ALREADY_SET` | 409 | パスワードが既に設定済み |
+| `VALIDATION_ERROR` | 400 | 入力値が不正 |
+
+---
+
+### パスワード変更
+
+```
+PUT /users/:userId/password
+```
+
+現在のパスワードを変更。変更後、現在のセッション以外の全セッションが無効化される。
+
+**Path Parameters:**
+
+| パラメータ | 説明 |
+|-----------|------|
+| `userId` | ユーザー ID |
+
+**Headers:**
+
+```
+Authorization: Bearer <access_token>
+Content-Type: application/json
+```
+
+**Request Body:**
+
+```json
+{
+  "currentPassword": "OldP@ssw0rd",
+  "newPassword": "NewSecureP@ss1"
+}
+```
+
+| フィールド | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| `currentPassword` | string | Yes | 現在のパスワード |
+| `newPassword` | string | Yes | 新しいパスワード（8〜100文字、大文字・小文字・数字・記号必須、現在のパスワードと異なること） |
+
+**Response:**
+
+```json
+{
+  "data": {
+    "message": "パスワードが変更されました。"
+  }
+}
+```
+
+**Errors:**
+
+| コード | ステータス | 説明 |
+|-------|-----------|------|
+| `AUTH_UNAUTHORIZED` | 401 | 認証が必要 |
+| `AUTH_FORBIDDEN` | 403 | 他人のデータは変更不可 |
+| `AUTH_INVALID_CREDENTIALS` | 401 | 現在のパスワードが不正 |
+| `PASSWORD_NOT_SET` | 400 | パスワードが未設定 |
+| `VALIDATION_ERROR` | 400 | 入力値が不正 |
+
+---
+
 ## データモデル
 
 ### User
@@ -239,6 +389,35 @@ const response = await fetch('/api/v1/users/usr_123456/recent-executions?limit=5
   }
 });
 const { data: recentExecutions } = await response.json();
+
+// パスワード設定状況確認
+const response = await fetch('/api/v1/users/usr_123456/password/status', {
+  headers: { 'Authorization': `Bearer ${accessToken}` }
+});
+const { data: { hasPassword } } = await response.json();
+
+// パスワード設定（OAuthユーザー向け）
+await fetch('/api/v1/users/usr_123456/password', {
+  method: 'POST',
+  headers: {
+    'Authorization': `Bearer ${accessToken}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({ password: 'SecureP@ss1' })
+});
+
+// パスワード変更
+await fetch('/api/v1/users/usr_123456/password', {
+  method: 'PUT',
+  headers: {
+    'Authorization': `Bearer ${accessToken}`,
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    currentPassword: 'OldP@ssw0rd',
+    newPassword: 'NewSecureP@ss1'
+  })
+});
 ```
 
 ## 関連ドキュメント

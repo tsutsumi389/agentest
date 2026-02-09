@@ -2,7 +2,7 @@
 
 ## 概要
 
-OAuth ログイン（GitHub, Google）とセッション管理のためのテーブル。
+メール/パスワード認証、OAuth ログイン（GitHub, Google）、セッション管理のためのテーブル。
 
 ## User
 
@@ -16,6 +16,9 @@ OAuth ログイン（GitHub, Google）とセッション管理のためのテー
 | `email` | VARCHAR(255) | NO | - | メールアドレス（一意） |
 | `name` | VARCHAR(100) | NO | - | 表示名 |
 | `avatarUrl` | TEXT | YES | NULL | アバター画像 URL |
+| `passwordHash` | VARCHAR(255) | YES | NULL | bcryptパスワードハッシュ（OAuthのみのユーザーはNULL） |
+| `failedAttempts` | INT | NO | 0 | ログイン連続失敗回数 |
+| `lockedUntil` | TIMESTAMP | YES | NULL | アカウントロック解除日時 |
 | `plan` | ENUM | NO | FREE | 個人プラン（FREE, PRO） |
 | `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
 | `updatedAt` | TIMESTAMP | NO | now() | 更新日時 |
@@ -42,18 +45,22 @@ enum UserPlan {
 }
 
 model User {
-  id        String    @id @default(uuid()) @db.Uuid
-  email     String    @unique @db.VarChar(255)
-  name      String    @db.VarChar(100)
-  avatarUrl String?
-  plan      UserPlan  @default(FREE)
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  id             String    @id @default(uuid()) @db.Uuid
+  email          String    @unique @db.VarChar(255)
+  name           String    @db.VarChar(100)
+  avatarUrl      String?
+  passwordHash   String?   @map("password_hash") @db.VarChar(255)
+  failedAttempts Int       @default(0) @map("failed_attempts")
+  lockedUntil    DateTime? @map("locked_until")
+  plan           UserPlan  @default(FREE)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  deletedAt      DateTime?
 
   accounts              Account[]
   refreshTokens         RefreshToken[]
   sessions              Session[]
+  passwordResetTokens   PasswordResetToken[]
   organizationMembers   OrganizationMember[]
   ownedProjects         Project[]            @relation("ProjectOwner")
   executions            Execution[]
@@ -225,14 +232,62 @@ model Session {
 
 ---
 
+## PasswordResetToken
+
+パスワードリセットトークンを管理するテーブル。
+
+### カラム定義
+
+| カラム | 型 | NULL | デフォルト | 説明 |
+|--------|------|------|------------|------|
+| `id` | UUID | NO | gen_random_uuid() | 主キー |
+| `userId` | UUID | NO | - | ユーザー ID（外部キー） |
+| `tokenHash` | VARCHAR(64) | NO | - | トークンの SHA-256 ハッシュ値（hex、64文字） |
+| `expiresAt` | TIMESTAMP | NO | - | 有効期限（作成から1時間後） |
+| `usedAt` | TIMESTAMP | YES | NULL | 使用日時（使用済みマーク） |
+| `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
+
+### 制約
+
+- `tokenHash` は一意
+- `userId` に対する外部キー（Cascade 削除）
+
+### トークン保存方式
+
+- 生トークン（32バイトランダムhex）はメールのリンクにのみ含まれ、DB には SHA-256 ハッシュのみ保存
+- 検証フロー: URLから生トークン取得 → `hashToken()` で SHA-256 ハッシュ化 → DB でハッシュ検索
+- 使用済みトークン（`usedAt` が設定済み）は再利用不可
+- 期限切れトークン（`expiresAt` が過去）は無効
+
+### Prisma スキーマ
+
+```prisma
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  tokenHash String    @unique @map("token_hash") @db.VarChar(64)
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
+}
+```
+
+---
+
 ## 関連機能
 
 | 機能 ID | 機能 | 説明 |
 |---------|------|------|
-| USR-001 | ユーザー登録 | GitHub / Google OAuth でアカウント作成 |
+| USR-001 | ユーザー登録 | メール/パスワードまたは GitHub / Google OAuth でアカウント作成 |
 | USR-002 | プロフィール設定 | 表示名、アバター、メールアドレスの設定 |
 | USR-003 | OAuth 連携追加 | 既存アカウントに別の OAuth プロバイダーを追加 |
-| USR-004 | OAuth 連携解除 | 連携済みプロバイダーの解除（最低1つは必須） |
+| USR-004 | OAuth 連携解除 | 連携済みプロバイダーの解除（パスワード設定済みなら全解除可能） |
 | USR-005 | セッション管理 | アクティブセッションの確認・無効化 |
 | USR-006 | アカウント削除 | 自身のアカウントを削除（30日後に物理削除） |
 | USR-007 | 個人プラン選択 | Free / Pro プランの選択・変更 |
