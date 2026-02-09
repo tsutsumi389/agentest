@@ -240,7 +240,7 @@ export function InviteMemberModal({
             </div>
             <h2 id="invite-member-title" className="text-lg font-semibold text-foreground">
               {createdInvitation
-                ? emailSent ? '招待メール送信完了' : '招待リンク'
+                ? emailSent ? '招待を送信しました' : '招待リンク'
                 : 'メンバーを招待'}
             </h2>
           </div>
@@ -262,8 +262,8 @@ export function InviteMemberModal({
               </p>
               <p className="text-sm text-foreground-muted">
                 {emailSent
-                  ? '招待メールを送信しました。以下のリンクからも招待を受け入れることができます。'
-                  : '該当するアカウントが見つからないため、メール送信は行われません。以下のリンクを共有してください。'}
+                  ? '招待通知を送信しました。以下のリンクからも招待を受け入れることができます。'
+                  : '該当するアカウントが見つからないため、通知は送信されません。以下のリンクを共有してください。'}
               </p>
             </div>
 
