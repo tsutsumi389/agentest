@@ -83,7 +83,7 @@ const envSchema = z.object({
   SMTP_USER: z.string().optional(),               // mailpitでは不要
   SMTP_PASS: z.string().optional(),               // mailpitでは不要
   SMTP_FROM: z.string().email().default('noreply@agentest.local'),
-  SMTP_SECURE: z.coerce.boolean().default(false), // 本番: true
+  SMTP_SECURE: z.string().default('false').transform((val) => val === 'true'), // 本番: true
 });
 
 // 環境変数を検証

@@ -19,6 +19,8 @@ import { ProjectSettingsPage } from './pages/ProjectSettings';
 import { InvitationAcceptPage } from './pages/InvitationAccept';
 import { OAuthConsentPage } from './pages/OAuthConsent';
 import { RegisterPage } from './pages/Register';
+import { CheckEmailPage } from './pages/CheckEmail';
+import { VerifyEmailPage } from './pages/VerifyEmail';
 import { ForgotPasswordPage } from './pages/ForgotPassword';
 import { ResetPasswordPage } from './pages/ResetPassword';
 import NotificationsPage from './pages/Notifications';
@@ -62,6 +64,8 @@ export function App() {
           {/* パブリックルート */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/check-email" element={<CheckEmailPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />

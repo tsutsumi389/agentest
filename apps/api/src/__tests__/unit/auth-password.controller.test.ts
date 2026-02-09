@@ -32,6 +32,7 @@ const mockEmailService = vi.hoisted(() => ({
   send: vi.fn(),
   generatePasswordResetEmail: vi.fn(),
   generateWelcomeEmail: vi.fn(),
+  generateEmailVerificationEmail: vi.fn(),
 }));
 
 vi.mock('../../services/email.service.js', () => ({
@@ -275,20 +276,17 @@ describe('AuthController - パスワード認証', () => {
   describe('register', () => {
     it('有効なデータでユーザーが作成され201を返す', async () => {
       mockPasswordAuthService.register.mockResolvedValue({
-        tokens: {
-          accessToken: 'mock-access-token',
-          refreshToken: 'mock-refresh-token',
-        },
+        verificationToken: 'mock-verification-token',
         user: {
           id: 'user-new',
           email: 'newuser@example.com',
           name: '新規ユーザー',
         },
       });
-      mockEmailService.generateWelcomeEmail.mockReturnValue({
-        subject: 'ようこそ',
-        text: 'ようこそ',
-        html: '<p>ようこそ</p>',
+      mockEmailService.generateEmailVerificationEmail.mockReturnValue({
+        subject: '確認',
+        text: '確認',
+        html: '<p>確認</p>',
       });
       mockEmailService.send.mockResolvedValue(undefined);
 
@@ -304,8 +302,12 @@ describe('AuthController - パスワード認証', () => {
 
       await controller.register(req, res, next);
 
+      // 非同期メール送信を待つ
+      await new Promise(resolve => setTimeout(resolve, 0));
+
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith({
+        message: expect.stringContaining('確認メール'),
         user: {
           id: 'user-new',
           email: 'newuser@example.com',
@@ -314,22 +316,19 @@ describe('AuthController - パスワード認証', () => {
       });
     });
 
-    it('トークンクッキーが設定される', async () => {
+    it('確認メールが送信される（クッキーは設定されない）', async () => {
       mockPasswordAuthService.register.mockResolvedValue({
-        tokens: {
-          accessToken: 'mock-access-token',
-          refreshToken: 'mock-refresh-token',
-        },
+        verificationToken: 'mock-verification-token',
         user: {
           id: 'user-new',
           email: 'newuser@example.com',
           name: '新規ユーザー',
         },
       });
-      mockEmailService.generateWelcomeEmail.mockReturnValue({
-        subject: 'ようこそ',
-        text: 'ようこそ',
-        html: '<p>ようこそ</p>',
+      mockEmailService.generateEmailVerificationEmail.mockReturnValue({
+        subject: '確認',
+        text: '確認',
+        html: '<p>確認</p>',
       });
       mockEmailService.send.mockResolvedValue(undefined);
 
@@ -345,16 +344,14 @@ describe('AuthController - パスワード認証', () => {
 
       await controller.register(req, res, next);
 
-      expect(res.cookie).toHaveBeenCalledWith(
-        'access_token',
-        'mock-access-token',
-        expect.objectContaining({ httpOnly: true, path: '/' })
-      );
-      expect(res.cookie).toHaveBeenCalledWith(
-        'refresh_token',
-        'mock-refresh-token',
-        expect.objectContaining({ httpOnly: true, path: '/' })
-      );
+      // 非同期メール送信を待つ
+      await new Promise(resolve => setTimeout(resolve, 0));
+
+      // クッキーは設定されない（メール確認が必要）
+      expect(res.cookie).not.toHaveBeenCalled();
+      // 確認メールが送信される
+      expect(mockEmailService.generateEmailVerificationEmail).toHaveBeenCalled();
+      expect(mockEmailService.send).toHaveBeenCalled();
     });
 
     it('バリデーションエラー（パスワード要件不足）で400を返す', async () => {
@@ -395,20 +392,17 @@ describe('AuthController - パスワード認証', () => {
 
     it('レスポンスにユーザー情報が含まれる', async () => {
       mockPasswordAuthService.register.mockResolvedValue({
-        tokens: {
-          accessToken: 'mock-access-token',
-          refreshToken: 'mock-refresh-token',
-        },
+        verificationToken: 'mock-verification-token',
         user: {
           id: 'user-reg',
           email: 'reg@example.com',
           name: '登録ユーザー',
         },
       });
-      mockEmailService.generateWelcomeEmail.mockReturnValue({
-        subject: 'ようこそ',
-        text: 'ようこそ',
-        html: '<p>ようこそ</p>',
+      mockEmailService.generateEmailVerificationEmail.mockReturnValue({
+        subject: '確認',
+        text: '確認',
+        html: '<p>確認</p>',
       });
       mockEmailService.send.mockResolvedValue(undefined);
 

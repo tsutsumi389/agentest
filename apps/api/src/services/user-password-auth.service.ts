@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { prisma, type Prisma } from '@agentest/db';
 import { generateTokens, type TokenPair } from '@agentest/auth';
-import { AuthenticationError, ConflictError, BadRequestError } from '@agentest/shared';
+import { AppError, AuthenticationError, ConflictError, BadRequestError } from '@agentest/shared';
 import { authConfig } from '../config/auth.js';
 import { hashToken } from '../utils/pkce.js';
 import { logger as baseLogger } from '../utils/logger.js';
@@ -19,15 +19,29 @@ const LOCK_DURATION_MS = 30 * 60 * 1000;
 const RESET_TOKEN_EXPIRY_MS = 60 * 60 * 1000;
 // セッション有効期限（7日）
 const SESSION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
+// メールアドレス確認トークンの有効期限（24時間）
+const VERIFICATION_TOKEN_EXPIRY_MS = 24 * 60 * 60 * 1000;
 // タイミング攻撃対策用のダミーハッシュ（有効なbcrypt形式）
 const DUMMY_PASSWORD_HASH =
   '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4bEaLwrMlxAqP6C2';
 
 /**
- * ログイン・登録結果
+ * ログイン結果
  */
 export interface AuthResult {
   tokens: TokenPair;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+  };
+}
+
+/**
+ * 登録結果（メール確認が必要なため、JWTは発行しない）
+ */
+export interface RegisterResult {
+  verificationToken: string;
   user: {
     id: string;
     email: string;
@@ -59,15 +73,16 @@ export class UserPasswordAuthService {
 
   /**
    * 新規ユーザー登録
+   *
+   * メール確認が完了するまでJWTは発行しない。
+   * 確認トークンを生成し、メール送信用に返却する。
    */
   async register(input: {
     email: string;
     password: string;
     name: string;
-    ipAddress?: string;
-    userAgent?: string;
-  }): Promise<AuthResult> {
-    const { email, password, name, ipAddress, userAgent } = input;
+  }): Promise<RegisterResult> {
+    const { email, password, name } = input;
 
     // メールアドレス重複チェック
     const existing = await prisma.user.findFirst({
@@ -80,9 +95,13 @@ export class UserPasswordAuthService {
     // パスワードハッシュ化
     const passwordHash = await this.hashPassword(password);
 
-    // トランザクションでユーザー作成とトークン保存をアトミックに実行
-    const user = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      const created = await tx.user.create({
+    // 確認トークン生成
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = hashToken(rawToken);
+
+    // トランザクションでユーザー作成と確認トークン保存をアトミックに実行
+    const created = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      const user = await tx.user.create({
         data: {
           email,
           name,
@@ -90,41 +109,26 @@ export class UserPasswordAuthService {
         },
       });
 
-      // JWT生成
-      const tokens = generateTokens(created.id, created.email, authConfig);
-      const tokenHash = hashToken(tokens.refreshToken);
+      // EmailVerificationTokenを保存
+      await tx.emailVerificationToken.create({
+        data: {
+          userId: user.id,
+          tokenHash,
+          expiresAt: new Date(Date.now() + VERIFICATION_TOKEN_EXPIRY_MS),
+        },
+      });
 
-      // RefreshTokenとSessionを保存
-      await Promise.all([
-        tx.refreshToken.create({
-          data: {
-            userId: created.id,
-            tokenHash,
-            expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
-          },
-        }),
-        tx.session.create({
-          data: {
-            userId: created.id,
-            tokenHash,
-            userAgent,
-            ipAddress,
-            expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
-          },
-        }),
-      ]);
-
-      return { user: created, tokens };
+      return user;
     });
 
-    logger.info({ userId: user.user.id, email }, 'ユーザー登録完了');
+    logger.info({ userId: created.id, email }, 'ユーザー登録完了（メール確認待ち）');
 
     return {
-      tokens: user.tokens,
+      verificationToken: rawToken,
       user: {
-        id: user.user.id,
-        email: user.user.email,
-        name: user.user.name,
+        id: created.id,
+        email: created.email,
+        name: created.name,
       },
     };
   }
@@ -200,6 +204,11 @@ export class UserPasswordAuthService {
       });
 
       throw new AuthenticationError('メールアドレスまたはパスワードが正しくありません');
+    }
+
+    // メールアドレス確認チェック
+    if (!user.emailVerified) {
+      throw new AppError(401, 'EMAIL_NOT_VERIFIED', 'メールアドレスが確認されていません。受信トレイの確認メールをご確認ください');
     }
 
     // JWT生成
@@ -467,5 +476,87 @@ export class UserPasswordAuthService {
     }
 
     return user.passwordHash !== null;
+  }
+
+  /**
+   * メールアドレス確認
+   *
+   * トークンを検証し、ユーザーの emailVerified を true に更新する。
+   * resetPassword() と同パターン。
+   */
+  async verifyEmail(token: string): Promise<void> {
+    const tokenHash = hashToken(token);
+
+    // トークンを検索
+    const verificationToken = await prisma.emailVerificationToken.findFirst({
+      where: { tokenHash },
+      include: { user: true },
+    });
+
+    // トークンの有効性を検証（情報漏洩防止のため統一エラーメッセージ）
+    if (!verificationToken || verificationToken.usedAt || verificationToken.expiresAt < new Date()) {
+      throw new BadRequestError('メールアドレス確認トークンが無効です');
+    }
+
+    // トランザクションで実行
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // トークンを使用済みにする
+      await tx.emailVerificationToken.update({
+        where: { id: verificationToken.id },
+        data: { usedAt: new Date() },
+      });
+
+      // emailVerified を true に更新
+      await tx.user.update({
+        where: { id: verificationToken.userId },
+        data: { emailVerified: true },
+      });
+    });
+
+    logger.info({ userId: verificationToken.userId }, 'メールアドレス確認完了');
+  }
+
+  /**
+   * メールアドレス確認メール再送信
+   *
+   * セキュリティ対策:
+   * - ユーザーが存在しない場合もエラーを投げない（メール存在確認防止）
+   * - 確認済み/OAuthのみの場合もエラーを投げない
+   */
+  async resendVerification(email: string): Promise<string | null> {
+    const user = await prisma.user.findFirst({
+      where: { email, deletedAt: null },
+    });
+
+    // ユーザーが存在しない、確認済み、またはOAuthのみユーザーの場合はnullを返す
+    if (!user || user.emailVerified || !user.passwordHash) {
+      return null;
+    }
+
+    // 確認トークン生成
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = hashToken(rawToken);
+
+    // トランザクションで既存トークン無効化と新規トークン作成をアトミックに実行
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+      // 同一ユーザーの既存未使用トークンを無効化
+      await tx.emailVerificationToken.updateMany({
+        where: { userId: user.id, usedAt: null },
+        data: { usedAt: new Date() },
+      });
+
+      // 新しいトークンをDBに保存
+      await tx.emailVerificationToken.create({
+        data: {
+          userId: user.id,
+          tokenHash,
+          expiresAt: new Date(Date.now() + VERIFICATION_TOKEN_EXPIRY_MS),
+        },
+      });
+    });
+
+    logger.info({ userId: user.id, email }, 'メールアドレス確認トークン再生成');
+
+    return rawToken;
   }
 }

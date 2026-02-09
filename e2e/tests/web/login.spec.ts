@@ -56,4 +56,33 @@ test.describe('ログインページ', () => {
     await page.goto('/projects');
     await expect(page).toHaveURL(/\/login/);
   });
+
+  test('メール未確認ユーザーのログイン時にメール確認ページにリダイレクトされる', async ({ page }) => {
+    await page.goto('/login');
+
+    const testEmail = 'unverified@example.com';
+
+    // ログインAPIをモック（EMAIL_NOT_VERIFIEDエラーを返す）
+    await page.route('**/api/auth/login', (route) => {
+      route.fulfill({
+        status: 401,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          error: {
+            message: 'メールアドレスが確認されていません。受信トレイの確認メールをご確認ください',
+            code: 'EMAIL_NOT_VERIFIED',
+          },
+        }),
+      });
+    });
+
+    // フォームを入力してログイン
+    await page.getByLabel('メールアドレス').fill(testEmail);
+    await page.getByLabel('パスワード').fill('Test1234!');
+    await page.getByRole('button', { name: 'ログイン', exact: true }).click();
+
+    // メール確認ページにリダイレクトされる
+    await expect(page).toHaveURL(new RegExp(`/check-email\\?email=${encodeURIComponent(testEmail)}`));
+    await expect(page.getByRole('heading', { name: 'メールアドレスの確認' })).toBeVisible();
+  });
 });

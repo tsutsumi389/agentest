@@ -27,6 +27,7 @@
 | AUTH-017 | パスワード設定 | OAuthユーザーがパスワードを追加設定 | 実装済 |
 | AUTH-018 | パスワード変更 | 既存パスワードを変更 | 実装済 |
 | AUTH-019 | アカウントロック | ログイン失敗回数超過でロック | 実装済 |
+| AUTH-020 | メールアドレス確認 | 登録時に確認メール送信、確認完了までログインブロック | 実装済 |
 
 ## 画面仕様
 
@@ -51,6 +52,7 @@
 - **エラー表示**
   - 認証失敗時: 「メールアドレスまたはパスワードが正しくありません。」
   - アカウントロック時: 「アカウントがロックされています。しばらく経ってから再度お試しください。」
+  - メール未確認時: `/check-email?email=...` にリダイレクト
   - OAuth失敗時: 「認証に失敗しました。再度お試しください。」
 
 ### 新規登録画面
@@ -67,13 +69,37 @@
   - GitHubで登録ボタン / Googleで登録ボタン
   - 「既にアカウントをお持ちの場合はログイン」リンク（→ `/login`）
 - **操作**
-  - フォーム入力 → アカウント作成ボタン → ユーザー作成 + 自動ログイン → ダッシュボードへリダイレクト
-  - OAuthボタン → OAuthプロバイダーへリダイレクト
+  - フォーム入力 → アカウント作成ボタン → ユーザー作成 + 確認メール送信 → `/check-email` へリダイレクト
+  - OAuthボタン → OAuthプロバイダーへリダイレクト（メール確認不要で即ログイン）
 - **バリデーション**
   - 名前: 1〜100文字
   - メールアドレス: 有効なメールアドレス形式
   - パスワード: 8〜100文字、大文字・小文字・数字・記号を各1文字以上
   - パスワード確認: パスワードと一致
+
+### 確認メール送信済み画面
+
+- **URL**: `/check-email?email=xxx`
+- **表示要素**
+  - 「確認メールを送信しました」メッセージ
+  - 送信先メールアドレスの表示（URLクエリパラメータから取得）
+  - 「再送信」ボタン → `POST /auth/resend-verification`
+  - 「ログインに戻る」リンク（→ `/login`）
+- **表示タイミング**
+  - 新規登録完了後に自動リダイレクト
+  - ログイン時にメール未確認エラー（`EMAIL_NOT_VERIFIED`）の場合にリダイレクト
+
+### メールアドレス確認画面
+
+- **URL**: `/verify-email?token=xxx`
+- **表示要素**
+  - ローディング表示（確認処理中）
+  - 成功: 「メールアドレスが確認されました」メッセージ + ログインリンク
+  - 失敗: エラーメッセージ + 再送信リンク
+- **処理**
+  - マウント時にURLクエリパラメータからトークンを取得
+  - `GET /auth/verify-email?token=xxx` を呼び出し
+  - 成功/失敗に応じて表示を切り替え
 
 ### パスワードリセット要求画面
 
@@ -154,10 +180,15 @@ sequenceDiagram
             B->>F: 401 認証失敗
         else パスワード一致
             B->>DB: 失敗回数リセット
-            B->>DB: セッション作成
-            B->>B: JWT発行（アクセス・リフレッシュ）
-            B->>F: Cookie設定 + ユーザー情報
-            F->>U: ダッシュボード表示
+            alt メールアドレス未確認
+                B->>F: 401 EMAIL_NOT_VERIFIED
+                F->>U: /check-email にリダイレクト
+            else メールアドレス確認済み
+                B->>DB: セッション作成
+                B->>B: JWT発行（アクセス・リフレッシュ）
+                B->>F: Cookie設定 + ユーザー情報
+                F->>U: ダッシュボード表示
+            end
         end
     end
 ```
@@ -170,6 +201,7 @@ sequenceDiagram
     participant F as フロントエンド
     participant B as バックエンド
     participant DB as データベース
+    participant M as メールサービス
 
     U->>F: 名前/メール/パスワードを入力
     F->>F: クライアントバリデーション
@@ -180,12 +212,26 @@ sequenceDiagram
         B->>F: 409 メールアドレスが既に使用されています
     else 新規ユーザー
         B->>B: bcryptでパスワードハッシュ化（12ラウンド）
-        B->>DB: ユーザー作成
-        B->>DB: セッション作成
-        B->>B: JWT発行（アクセス・リフレッシュ）
-        B->>B: ウェルカムメール送信（非同期）
-        B->>F: Cookie設定 + ユーザー情報
-        F->>U: ダッシュボード表示
+        B->>DB: ユーザー作成（emailVerified=false）
+        B->>B: 確認トークン生成（32バイトランダム）
+        B->>DB: EmailVerificationToken保存（SHA-256ハッシュ、有効期限24時間）
+        B->>M: 確認メール送信
+        B->>F: 201 ユーザー情報（JWT未発行）
+        F->>U: /check-email にリダイレクト
+    end
+
+    Note over U,M: ユーザーが確認メールのリンクをクリック
+
+    U->>F: /verify-email?token=xxx にアクセス
+    F->>B: GET /api/auth/verify-email?token=xxx
+    B->>DB: トークンハッシュで検索・検証
+    alt トークンが無効または期限切れ
+        B->>F: 400 トークンが無効です
+    else トークンが有効
+        B->>DB: emailVerified=true に更新
+        B->>DB: トークンを使用済みにマーク
+        B->>F: 200 メールアドレスが確認されました
+        F->>U: 確認完了メッセージ + ログインへのリンク
     end
 ```
 
@@ -309,6 +355,7 @@ erDiagram
     User ||--o{ Session : "has"
     User ||--o{ RefreshToken : "has"
     User ||--o{ PasswordResetToken : "has"
+    User ||--o{ EmailVerificationToken : "has"
 
     User {
         uuid id PK
@@ -316,6 +363,7 @@ erDiagram
         string name
         string avatarUrl
         string passwordHash "bcryptハッシュ（nullable）"
+        boolean emailVerified "メールアドレス確認済みフラグ"
         int failedAttempts "ログイン失敗回数"
         timestamp lockedUntil "ロック解除日時"
         enum plan
@@ -357,6 +405,15 @@ erDiagram
     }
 
     PasswordResetToken {
+        uuid id PK
+        uuid userId FK
+        string tokenHash UK "SHA-256ハッシュ"
+        timestamp expiresAt
+        timestamp usedAt
+        timestamp createdAt
+    }
+
+    EmailVerificationToken {
         uuid id PK
         uuid userId FK
         string tokenHash UK "SHA-256ハッシュ"
@@ -406,6 +463,17 @@ erDiagram
 - リセット実行時、全セッションを無効化
 - `forgot-password` エンドポイントはユーザー不存在でも常に200を返す（メール存在確認防止）
 
+### メールアドレス確認
+
+- メール/パスワードで登録したユーザーは、メールアドレスの確認が完了するまでログイン不可
+- 確認トークン: 32バイトのランダム値（hex形式）
+- DB にはトークンの SHA-256 ハッシュのみ保存
+- 有効期限: 24時間
+- 使用済みトークンは再利用不可（`usedAt` でマーク）
+- OAuthユーザーは自動で `emailVerified=true`（メール確認不要）
+- `resend-verification` エンドポイントはユーザー不存在・確認済みでも常に同じレスポンスを返す（メール存在確認防止）
+- 再送信時、既存の未使用トークンを無効化して新トークンを生成
+
 ### OAuth連携
 
 - 対応プロバイダー: GitHub、Google
@@ -441,6 +509,11 @@ erDiagram
   - メール存在確認防止: forgot-password は常に同じレスポンスを返す
   - パスワードリセット時は全セッション無効化
   - パスワード変更時は現在のセッション以外を無効化
+- **メールアドレス確認**
+  - 確認トークン: SHA-256ハッシュ化してDB保存、有効期限24時間、使い捨て
+  - メール確認完了まで JWT 未発行（ログインブロック）
+  - 確認メール再送信: 既存トークン無効化 + 新トークン生成
+  - メール存在確認防止: resend-verification は常に同じレスポンスを返す
 - **Cookie設定**
   - HttpOnly: XSS対策
   - Secure: HTTPS必須（本番環境）

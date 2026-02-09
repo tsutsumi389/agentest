@@ -17,6 +17,7 @@
 | `name` | VARCHAR(100) | NO | - | 表示名 |
 | `avatarUrl` | TEXT | YES | NULL | アバター画像 URL |
 | `passwordHash` | VARCHAR(255) | YES | NULL | bcryptパスワードハッシュ（OAuthのみのユーザーはNULL） |
+| `emailVerified` | BOOLEAN | NO | false | メールアドレス確認済みフラグ |
 | `failedAttempts` | INT | NO | 0 | ログイン連続失敗回数 |
 | `lockedUntil` | TIMESTAMP | YES | NULL | アカウントロック解除日時 |
 | `plan` | ENUM | NO | FREE | 個人プラン（FREE, PRO） |
@@ -50,6 +51,7 @@ model User {
   name           String    @db.VarChar(100)
   avatarUrl      String?
   passwordHash   String?   @map("password_hash") @db.VarChar(255)
+  emailVerified  Boolean   @default(false) @map("email_verified")
   failedAttempts Int       @default(0) @map("failed_attempts")
   lockedUntil    DateTime? @map("locked_until")
   plan           UserPlan  @default(FREE)
@@ -60,8 +62,9 @@ model User {
   accounts              Account[]
   refreshTokens         RefreshToken[]
   sessions              Session[]
-  passwordResetTokens   PasswordResetToken[]
-  organizationMembers   OrganizationMember[]
+  passwordResetTokens        PasswordResetToken[]
+  emailVerificationTokens    EmailVerificationToken[]
+  organizationMembers        OrganizationMember[]
   ownedProjects         Project[]            @relation("ProjectOwner")
   executions            Execution[]
   reviewComments        ReviewComment[]
@@ -275,6 +278,55 @@ model PasswordResetToken {
   @@index([userId])
   @@index([expiresAt])
   @@map("password_reset_tokens")
+}
+```
+
+---
+
+## EmailVerificationToken
+
+メールアドレス確認トークンを管理するテーブル。新規登録時に確認メールとともにトークンを発行し、メールアドレスの所有を確認する。
+
+### カラム定義
+
+| カラム | 型 | NULL | デフォルト | 説明 |
+|--------|------|------|------------|------|
+| `id` | UUID | NO | gen_random_uuid() | 主キー |
+| `userId` | UUID | NO | - | ユーザー ID（外部キー） |
+| `tokenHash` | VARCHAR(64) | NO | - | トークンの SHA-256 ハッシュ値（hex、64文字） |
+| `expiresAt` | TIMESTAMP | NO | - | 有効期限（作成から24時間後） |
+| `usedAt` | TIMESTAMP | YES | NULL | 使用日時（使用済みマーク） |
+| `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
+
+### 制約
+
+- `tokenHash` は一意
+- `userId` に対する外部キー（Cascade 削除）
+
+### トークン保存方式
+
+- 生トークン（32バイトランダムhex）は確認メールのリンクにのみ含まれ、DB には SHA-256 ハッシュのみ保存
+- 検証フロー: URLから生トークン取得 → `hashToken()` で SHA-256 ハッシュ化 → DB でハッシュ検索
+- 使用済みトークン（`usedAt` が設定済み）は再利用不可
+- 期限切れトークン（`expiresAt` が過去）は無効
+- 確認メール再送信時、既存の未使用トークンは無効化される
+
+### Prisma スキーマ
+
+```prisma
+model EmailVerificationToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  tokenHash String    @unique @map("token_hash") @db.VarChar(64)
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("email_verification_tokens")
 }
 ```
 

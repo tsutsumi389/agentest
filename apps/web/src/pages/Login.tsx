@@ -3,7 +3,7 @@ import { Github } from 'lucide-react';
 import { AgentestLogo } from '../components/ui/AgentestLogo';
 import { GoogleIcon } from '../components/ui/GoogleIcon';
 import { useAuthStore } from '../stores/auth';
-import { authApi } from '../lib/api';
+import { authApi, ApiError } from '../lib/api';
 import { useEffect, useState } from 'react';
 
 /**
@@ -75,6 +75,11 @@ export function LoginPage() {
       setUser(user);
       navigate(redirectTo || '/dashboard', { replace: true });
     } catch (err) {
+      // メール未確認エラーの場合はメール確認ページへリダイレクト
+      if (err instanceof ApiError && err.code === 'EMAIL_NOT_VERIFIED') {
+        navigate(`/check-email?email=${encodeURIComponent(email)}`, { replace: true });
+        return;
+      }
       const message = err instanceof Error ? err.message : 'ログインに失敗しました';
       setError(message);
       setIsSubmitting(false);

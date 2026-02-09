@@ -49,4 +49,34 @@ test.describe('新規登録ページ', () => {
     await expect(page).toHaveURL(/\/login/);
     await expect(page.getByRole('heading', { name: 'ログイン' })).toBeVisible();
   });
+
+  test('新規登録成功後にメール確認待ちページにリダイレクトされる', async ({ page }) => {
+    const testEmail = `e2e-register-${Date.now()}@example.com`;
+
+    // 登録APIをモック（実際のユーザー作成を避ける）
+    await page.route('**/api/auth/register', (route) => {
+      route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          message: '確認メールを送信しました。メール内のリンクをクリックしてアカウントを有効化してください。',
+          user: { id: 'test-id', email: testEmail, name: 'テストユーザー' },
+        }),
+      });
+    });
+
+    // フォームを入力
+    await page.getByLabel('名前').fill('テストユーザー');
+    await page.getByLabel('メールアドレス').fill(testEmail);
+    await page.getByLabel('パスワード', { exact: true }).fill('Test1234!');
+    await page.getByLabel('パスワード（確認）').fill('Test1234!');
+
+    // 登録ボタンをクリック
+    await page.getByRole('button', { name: 'アカウント作成' }).click();
+
+    // メール確認待ちページにリダイレクトされる
+    await expect(page).toHaveURL(new RegExp(`/check-email\\?email=${encodeURIComponent(testEmail)}`));
+    await expect(page.getByRole('heading', { name: 'メールアドレスの確認' })).toBeVisible();
+    await expect(page.getByText('確認メールを送信しました')).toBeVisible();
+  });
 });

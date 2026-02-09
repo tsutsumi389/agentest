@@ -3,6 +3,7 @@ import { generateTokens, verifyRefreshToken } from '@agentest/auth';
 import { prisma } from '@agentest/db';
 import {
   AuthenticationError,
+  BadRequestError,
   userLoginSchema,
   userRegisterSchema,
   passwordResetRequestSchema,
@@ -229,6 +230,8 @@ export class AuthController {
 
   /**
    * メール/パスワード新規登録
+   *
+   * メール確認フロー: JWT発行せず、確認メールを送信
    */
   register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -237,32 +240,99 @@ export class AuthController {
         throw createValidationError(parsed.error);
       }
 
-      const clientInfo = extractClientInfo(req);
       const result = await this.passwordAuthService.register({
         email: parsed.data.email,
         password: parsed.data.password,
         name: parsed.data.name,
-        ipAddress: clientInfo.ipAddress,
-        userAgent: clientInfo.userAgent,
       });
 
-      this.setAuthCookies(res, result.tokens);
-
-      // ウェルカムメール送信（非同期、失敗してもエラーにしない）
-      const welcomeEmail = emailService.generateWelcomeEmail({
+      // 確認メール送信（非同期、失敗してもエラーにしない）
+      const verificationUrl = `${env.FRONTEND_URL}/verify-email?token=${result.verificationToken}`;
+      const verificationEmail = emailService.generateEmailVerificationEmail({
         name: result.user.name,
-        loginUrl: `${env.FRONTEND_URL}/login`,
+        verificationUrl,
+        expiresInHours: 24,
       });
       emailService.send({
         to: result.user.email,
-        subject: welcomeEmail.subject,
-        text: welcomeEmail.text,
-        html: welcomeEmail.html,
+        subject: verificationEmail.subject,
+        text: verificationEmail.text,
+        html: verificationEmail.html,
       }).catch((error) => {
-        logger.warn({ userId: result.user.id, email: result.user.email, error }, 'ウェルカムメール送信失敗');
+        logger.warn({ userId: result.user.id, email: result.user.email, error }, '確認メール送信失敗');
       });
 
-      res.status(201).json({ user: result.user });
+      res.status(201).json({
+        message: '確認メールを送信しました。メールをご確認ください。',
+        user: result.user,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * メールアドレス確認
+   */
+  verifyEmail = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const token = req.query.token as string;
+      if (!token) {
+        throw new BadRequestError('トークンが必要です');
+      }
+
+      await this.passwordAuthService.verifyEmail(token);
+
+      res.json({
+        message: 'メールアドレスが確認されました。ログインしてください。',
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * メールアドレス確認メール再送信
+   *
+   * forgotPasswordと同じ火消し型パターン（成功/失敗に関わらず同一レスポンス）
+   */
+  resendVerification = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parsed = passwordResetRequestSchema.safeParse(req.body);
+      if (!parsed.success) {
+        throw createValidationError(parsed.error);
+      }
+
+      // バックグラウンドで処理し、即座にレスポンスを返す（タイミングサイドチャネル対策）
+      const resendPromise = (async () => {
+        const verificationToken = await this.passwordAuthService.resendVerification(parsed.data.email);
+
+        // トークンがある場合は確認メールを送信
+        if (verificationToken) {
+          const verificationUrl = `${env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
+          const verificationEmail = emailService.generateEmailVerificationEmail({
+            name: parsed.data.email,
+            verificationUrl,
+            expiresInHours: 24,
+          });
+          await emailService.send({
+            to: parsed.data.email,
+            subject: verificationEmail.subject,
+            text: verificationEmail.text,
+            html: verificationEmail.html,
+          });
+        }
+      })();
+
+      // エラーをログに記録（レスポンスには影響させない）
+      resendPromise.catch((error) => {
+        logger.error({ email: parsed.data.email, error }, '確認メール再送信処理エラー');
+      });
+
+      // 常に即座に同じメッセージを返す（メール存在確認防止 + タイミング差排除）
+      res.json({
+        message: '確認メールを送信しました。メールをご確認ください。',
+      });
     } catch (error) {
       next(error);
     }

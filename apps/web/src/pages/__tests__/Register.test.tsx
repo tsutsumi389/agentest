@@ -25,14 +25,6 @@ vi.mock('../../lib/api', () => ({
   authApi: mockAuthApi,
 }));
 
-const { mockSetUser } = vi.hoisted(() => {
-  return { mockSetUser: vi.fn() };
-});
-
-vi.mock('../../stores/auth', () => ({
-  useAuthStore: () => ({ setUser: mockSetUser }),
-}));
-
 import { RegisterPage } from '../Register';
 
 function renderRegisterPage() {
@@ -176,9 +168,8 @@ describe('RegisterPage', () => {
       });
     });
 
-    it('登録成功後にダッシュボードに遷移する', async () => {
-      const mockUser = { id: 'user-1', name: 'テスト', email: 'test@example.com' };
-      mockAuthApi.register.mockResolvedValue({ user: mockUser });
+    it('登録成功後にメール確認ページに遷移する', async () => {
+      mockAuthApi.register.mockResolvedValue({ message: '確認メールを送信しました', user: { id: 'user-1', email: 'test@example.com', name: 'テスト' } });
 
       renderRegisterPage();
 
@@ -195,7 +186,7 @@ describe('RegisterPage', () => {
       fireEvent.click(screen.getByRole('button', { name: 'アカウント作成' }));
 
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
+        expect(mockNavigate).toHaveBeenCalledWith('/check-email?email=test%40example.com', { replace: true });
       });
     });
 
