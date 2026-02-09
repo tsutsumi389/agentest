@@ -1,6 +1,6 @@
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
-import { prisma } from '@agentest/db';
+import { prisma, type Prisma } from '@agentest/db';
 import { generateTokens, type TokenPair } from '@agentest/auth';
 import { AuthenticationError, ConflictError, BadRequestError } from '@agentest/shared';
 import { authConfig } from '../config/auth.js';
@@ -81,7 +81,7 @@ export class UserPasswordAuthService {
     const passwordHash = await this.hashPassword(password);
 
     // トランザクションでユーザー作成とトークン保存をアトミックに実行
-    const user = await prisma.$transaction(async (tx) => {
+    const user = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       const created = await tx.user.create({
         data: {
           email,
@@ -182,7 +182,7 @@ export class UserPasswordAuthService {
 
     if (!isPasswordValid) {
       // トランザクションで失敗回数インクリメントとロック設定をアトミックに実行
-      await prisma.$transaction(async (tx) => {
+      await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
         const updated = await tx.user.update({
           where: { id: user.id },
           data: { failedAttempts: { increment: 1 } },
@@ -208,7 +208,7 @@ export class UserPasswordAuthService {
     const tokenHash = hashToken(tokens.refreshToken);
 
     // トランザクションで失敗回数リセットとトークン保存をアトミックに実行
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // ログイン成功: 失敗回数をリセット
       await tx.user.update({
         where: { id: user.id },
@@ -273,7 +273,7 @@ export class UserPasswordAuthService {
     const tokenHash = hashToken(rawToken);
 
     // トランザクションで既存トークン無効化と新規トークン作成をアトミックに実行
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // 同一ユーザーの既存未使用トークンを無効化
       await tx.passwordResetToken.updateMany({
         where: { userId: user.id, usedAt: null },
@@ -326,7 +326,7 @@ export class UserPasswordAuthService {
     const passwordHash = await this.hashPassword(newPassword);
 
     // トランザクションで実行
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       // トークンを使用済みにする
       await tx.passwordResetToken.update({
         where: { id: resetToken.id },
@@ -425,7 +425,7 @@ export class UserPasswordAuthService {
     const passwordHash = await this.hashPassword(newPassword);
 
     // トランザクションでパスワード更新と他セッション無効化をアトミックに実行
-    await prisma.$transaction(async (tx) => {
+    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
       await tx.user.update({
         where: { id: userId },
         data: { passwordHash },
