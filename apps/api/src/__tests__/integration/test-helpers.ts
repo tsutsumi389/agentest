@@ -18,6 +18,7 @@ export async function createTestUser(overrides: Partial<{
   name: string;
   avatarUrl: string | null;
   plan: 'FREE' | 'PRO';
+  passwordHash: string | null;
 }> = {}) {
   const id = overrides.id ?? randomUUID();
   return prisma.user.create({
@@ -27,6 +28,7 @@ export async function createTestUser(overrides: Partial<{
       name: overrides.name ?? `Test User ${id.slice(0, 8)}`,
       avatarUrl: overrides.avatarUrl ?? null,
       plan: overrides.plan ?? 'FREE',
+      ...(overrides.passwordHash !== undefined && { passwordHash: overrides.passwordHash }),
     },
   });
 }
@@ -253,6 +255,7 @@ export async function cleanupTestData() {
   await prisma.oAuthAccessToken.deleteMany({});
   await prisma.oAuthAuthorizationCode.deleteMany({});
   await prisma.oAuthClient.deleteMany({});
+  await prisma.passwordResetToken.deleteMany({});
   await prisma.session.deleteMany({});
   await prisma.refreshToken.deleteMany({});
   await prisma.account.deleteMany({});

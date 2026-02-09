@@ -8,9 +8,11 @@
 
 | テーブル | 説明 |
 |---------|------|
-| [User](./database/auth.md#user) | ユーザー情報 |
+| [User](./database/auth.md#user) | ユーザー情報（パスワードハッシュ、ロック情報を含む） |
 | [Account](./database/auth.md#account) | OAuth アカウント（GitHub, Google） |
 | [RefreshToken](./database/auth.md#refreshtoken) | JWT リフレッシュトークン |
+| [Session](./database/auth.md#session) | ユーザーセッション |
+| [PasswordResetToken](./database/auth.md#passwordresettoken) | パスワードリセットトークン |
 
 ### OAuth 2.1（MCP クライアント向け）
 

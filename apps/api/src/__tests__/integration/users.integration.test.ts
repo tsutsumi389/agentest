@@ -98,12 +98,12 @@ describe('Users API Integration Tests', () => {
       expect(response.body.user.avatarUrl).toBe('https://example.com/avatar.png');
     });
 
-    it('存在しないユーザーは404エラー', async () => {
+    it('他のユーザーIDへのアクセスは403エラー', async () => {
       const response = await request(app)
         .get('/api/users/non-existent-user-id')
-        .expect(404);
+        .expect(403);
 
-      expect(response.body.error.code).toBe('NOT_FOUND');
+      expect(response.body.error.code).toBe('AUTHORIZATION_ERROR');
     });
 
     it('未認証の場合は401エラー', async () => {

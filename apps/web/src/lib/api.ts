@@ -111,8 +111,8 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
 
   // 401エラー時の自動リフレッシュ処理
   if (response.status === 401) {
-    // リフレッシュエンドポイント自体の401は除外（無限ループ防止）
-    if (endpoint.includes('/auth/refresh')) {
+    // リフレッシュ・認証確認エンドポイントの401は除外（無限ループ防止）
+    if (endpoint.includes('/auth/refresh') || endpoint.includes('/auth/me')) {
       throw new ApiError(
         401,
         'AUTHENTICATION_ERROR',
@@ -806,6 +806,14 @@ export const authApi = {
   me: () => api.get<{ user: User }>('/api/auth/me'),
   refresh: () => api.post<{ accessToken: string; refreshToken: string }>('/api/auth/refresh'),
   logout: () => api.post<{ message: string }>('/api/auth/logout'),
+  login: (data: { email: string; password: string }) =>
+    api.post<{ user: User }>('/api/auth/login', data),
+  register: (data: { email: string; password: string; name: string }) =>
+    api.post<{ user: User }>('/api/auth/register', data),
+  forgotPassword: (data: { email: string }) =>
+    api.post<{ message: string }>('/api/auth/forgot-password', data),
+  resetPassword: (data: { token: string; password: string }) =>
+    api.post<{ message: string }>('/api/auth/reset-password', data),
 };
 
 // ============================================
@@ -1258,6 +1266,26 @@ export const accountsApi = {
     const apiUrl = import.meta.env.VITE_API_URL || '';
     return `${apiUrl}/api/auth/${provider}/link`;
   },
+};
+
+// ============================================
+// パスワード管理API
+// ============================================
+
+export const passwordApi = {
+  // パスワード設定状況を取得
+  getStatus: (userId: string) =>
+    api.get<{ hasPassword: boolean }>(`/api/users/${userId}/password/status`),
+
+  // パスワードを初回設定
+  setPassword: (userId: string, data: { password: string }) =>
+    api.post<{ message: string }>(`/api/users/${userId}/password`, data),
+
+  // パスワードを変更
+  changePassword: (
+    userId: string,
+    data: { currentPassword: string; newPassword: string },
+  ) => api.put<{ message: string }>(`/api/users/${userId}/password`, data),
 };
 
 // ============================================

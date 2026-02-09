@@ -69,6 +69,57 @@ test.describe('プロフィール設定', () => {
   });
 });
 
+test.describe('パスワード管理', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto('/settings?tab=security');
+  });
+
+  test('パスワードセクションが表示される', async ({ page }) => {
+    // パスワードセクションが表示される
+    await expect(page.getByRole('heading', { name: 'パスワード' })).toBeVisible({ timeout: 10000 });
+
+    // デモユーザーはOAuth専用のためパスワード未設定
+    await expect(page.getByText('パスワードが設定されていません')).toBeVisible({ timeout: 10000 });
+
+    // パスワード設定ボタンが表示される
+    await expect(page.getByRole('button', { name: 'パスワードを設定' })).toBeVisible();
+  });
+
+  test('パスワード設定モーダルが開く', async ({ page }) => {
+    // パスワードセクションの読み込みを待機
+    await expect(page.getByRole('heading', { name: 'パスワード' })).toBeVisible({ timeout: 10000 });
+
+    // パスワード設定ボタンをクリック
+    await page.getByRole('button', { name: 'パスワードを設定' }).click();
+
+    // モーダルが表示される
+    await expect(page.getByRole('heading', { name: 'パスワードを設定する' })).toBeVisible();
+
+    // フォーム要素の確認
+    await expect(page.getByLabel('新しいパスワード')).toBeVisible();
+    await expect(page.getByLabel('パスワード（確認）')).toBeVisible();
+
+    // ボタンの確認
+    await expect(page.getByRole('button', { name: 'キャンセル' })).toBeVisible();
+    await expect(page.getByRole('button', { name: '設定する' })).toBeVisible();
+  });
+
+  test('パスワード設定モーダルをキャンセルで閉じられる', async ({ page }) => {
+    // パスワードセクションの読み込みを待機
+    await expect(page.getByRole('heading', { name: 'パスワード' })).toBeVisible({ timeout: 10000 });
+
+    // モーダルを開く
+    await page.getByRole('button', { name: 'パスワードを設定' }).click();
+    await expect(page.getByRole('heading', { name: 'パスワードを設定する' })).toBeVisible();
+
+    // キャンセルで閉じる
+    await page.getByRole('button', { name: 'キャンセル' }).click();
+
+    // モーダルが閉じる
+    await expect(page.getByRole('heading', { name: 'パスワードを設定する' })).not.toBeVisible();
+  });
+});
+
 test.describe('セキュリティ設定', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/settings?tab=security');

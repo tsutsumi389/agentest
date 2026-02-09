@@ -1,12 +1,24 @@
 import type { Request, Response, NextFunction } from 'express';
 import { generateTokens, verifyRefreshToken } from '@agentest/auth';
 import { prisma } from '@agentest/db';
-import { AuthenticationError } from '@agentest/shared';
+import {
+  AuthenticationError,
+  userLoginSchema,
+  userRegisterSchema,
+  passwordResetRequestSchema,
+  passwordResetSchema,
+} from '@agentest/shared';
 import { env } from '../config/env.js';
 import { SessionService } from '../services/session.service.js';
+import { UserPasswordAuthService } from '../services/user-password-auth.service.js';
+import { emailService } from '../services/email.service.js';
 import { extractClientInfo } from '../middleware/session.middleware.js';
 import { encryptToken } from '../utils/crypto.js';
 import { hashToken } from '../utils/pkce.js';
+import { createValidationError } from '../utils/validation.js';
+import { logger as baseLogger } from '../utils/logger.js';
+
+const logger = baseLogger.child({ module: 'auth-controller' });
 
 const authConfig = {
   jwt: {
@@ -49,6 +61,7 @@ interface LinkModeInfo {
  */
 export class AuthController {
   private sessionService = new SessionService();
+  private passwordAuthService = new UserPasswordAuthService();
 
   /**
    * 現在のユーザー情報を取得
@@ -149,14 +162,7 @@ export class AuthController {
       });
 
       // クッキーに設定（生トークン）
-      res.cookie('access_token', tokens.accessToken, {
-        ...cookieOptions,
-        maxAge: 15 * 60 * 1000, // 15分
-      });
-      res.cookie('refresh_token', tokens.refreshToken, {
-        ...cookieOptions,
-        maxAge: SESSION_EXPIRY_MS,
-      });
+      this.setAuthCookies(res, tokens);
 
       res.json({ message: 'トークンが更新されました' });
     } catch (error) {
@@ -195,6 +201,151 @@ export class AuthController {
       next(error);
     }
   };
+
+  /**
+   * メール/パスワードログイン
+   */
+  login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parsed = userLoginSchema.safeParse(req.body);
+      if (!parsed.success) {
+        throw createValidationError(parsed.error);
+      }
+
+      const clientInfo = extractClientInfo(req);
+      const result = await this.passwordAuthService.login({
+        email: parsed.data.email,
+        password: parsed.data.password,
+        ipAddress: clientInfo.ipAddress,
+        userAgent: clientInfo.userAgent,
+      });
+
+      this.setAuthCookies(res, result.tokens);
+      res.json({ user: result.user });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * メール/パスワード新規登録
+   */
+  register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parsed = userRegisterSchema.safeParse(req.body);
+      if (!parsed.success) {
+        throw createValidationError(parsed.error);
+      }
+
+      const clientInfo = extractClientInfo(req);
+      const result = await this.passwordAuthService.register({
+        email: parsed.data.email,
+        password: parsed.data.password,
+        name: parsed.data.name,
+        ipAddress: clientInfo.ipAddress,
+        userAgent: clientInfo.userAgent,
+      });
+
+      this.setAuthCookies(res, result.tokens);
+
+      // ウェルカムメール送信（非同期、失敗してもエラーにしない）
+      const welcomeEmail = emailService.generateWelcomeEmail({
+        name: result.user.name,
+        loginUrl: `${env.FRONTEND_URL}/login`,
+      });
+      emailService.send({
+        to: result.user.email,
+        subject: welcomeEmail.subject,
+        text: welcomeEmail.text,
+        html: welcomeEmail.html,
+      }).catch((error) => {
+        logger.warn({ userId: result.user.id, email: result.user.email, error }, 'ウェルカムメール送信失敗');
+      });
+
+      res.status(201).json({ user: result.user });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * パスワードリセット要求
+   */
+  forgotPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parsed = passwordResetRequestSchema.safeParse(req.body);
+      if (!parsed.success) {
+        throw createValidationError(parsed.error);
+      }
+
+      // バックグラウンドで処理し、即座にレスポンスを返す（タイミングサイドチャネル対策）
+      const resetPromise = (async () => {
+        const resetToken = await this.passwordAuthService.requestPasswordReset(parsed.data.email);
+
+        // トークンがある場合はリセットメールを送信
+        if (resetToken) {
+          const resetUrl = `${env.FRONTEND_URL}/reset-password?token=${resetToken}`;
+          const resetEmail = emailService.generatePasswordResetEmail({
+            name: parsed.data.email,
+            resetUrl,
+            expiresInMinutes: 60,
+          });
+          await emailService.send({
+            to: parsed.data.email,
+            subject: resetEmail.subject,
+            text: resetEmail.text,
+            html: resetEmail.html,
+          });
+        }
+      })();
+
+      // エラーをログに記録（レスポンスには影響させない）
+      resetPromise.catch((error) => {
+        logger.error({ email: parsed.data.email, error }, 'パスワードリセット処理エラー');
+      });
+
+      // 常に即座に同じメッセージを返す（メール存在確認防止 + タイミング差排除）
+      res.json({
+        message: 'パスワードリセット用のメールを送信しました。メールをご確認ください。',
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * パスワードリセット実行
+   */
+  resetPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parsed = passwordResetSchema.safeParse(req.body);
+      if (!parsed.success) {
+        throw createValidationError(parsed.error);
+      }
+
+      await this.passwordAuthService.resetPassword(parsed.data.token, parsed.data.password);
+
+      res.json({
+        message: 'パスワードがリセットされました。新しいパスワードでログインしてください。',
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 認証クッキーを設定する共通メソッド
+   */
+  private setAuthCookies(res: Response, tokens: { accessToken: string; refreshToken: string }): void {
+    res.cookie('access_token', tokens.accessToken, {
+      ...cookieOptions,
+      maxAge: 15 * 60 * 1000, // 15分
+    });
+    res.cookie('refresh_token', tokens.refreshToken, {
+      ...cookieOptions,
+      maxAge: SESSION_EXPIRY_MS,
+    });
+  }
 
   /**
    * OAuthコールバック処理
@@ -270,14 +421,7 @@ export class AuthController {
       ]);
 
       // クッキーに設定（生トークン）
-      res.cookie('access_token', tokens.accessToken, {
-        ...cookieOptions,
-        maxAge: 15 * 60 * 1000,
-      });
-      res.cookie('refresh_token', tokens.refreshToken, {
-        ...cookieOptions,
-        maxAge: 7 * 24 * 60 * 60 * 1000,
-      });
+      this.setAuthCookies(res, tokens);
 
       // フロントエンドにリダイレクト（CORS_ORIGINは複数値の可能性があるためFRONTEND_URLを使用）
       res.redirect(`${env.FRONTEND_URL}/auth/callback`);

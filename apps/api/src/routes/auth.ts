@@ -40,6 +40,30 @@ router.post('/refresh', authController.refresh);
 router.post('/logout', requireAuth(authConfig), authController.logout);
 
 /**
+ * メール/パスワードログイン
+ * POST /api/auth/login
+ */
+router.post('/login', authController.login);
+
+/**
+ * メール/パスワード新規登録
+ * POST /api/auth/register
+ */
+router.post('/register', authController.register);
+
+/**
+ * パスワードリセット要求
+ * POST /api/auth/forgot-password
+ */
+router.post('/forgot-password', authController.forgotPassword);
+
+/**
+ * パスワードリセット実行
+ * POST /api/auth/reset-password
+ */
+router.post('/reset-password', authController.resetPassword);
+
+/**
  * GitHub OAuth開始
  * GET /api/auth/github
  */

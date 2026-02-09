@@ -204,6 +204,11 @@ model User {
   updatedAt         DateTime  @updatedAt @map("updated_at")
   deletedAt         DateTime? @map("deleted_at")
 
+  // パスワード認証
+  passwordHash    String?   @map("password_hash") @db.VarChar(255)
+  failedAttempts  Int       @default(0) @map("failed_attempts")
+  lockedUntil     DateTime? @map("locked_until")
+
   // リレーション
   accounts                   Account[]
   refreshTokens              RefreshToken[]
@@ -232,6 +237,7 @@ model User {
   oauthAuthorizationCodes    OAuthAuthorizationCode[]
   oauthAccessTokens          OAuthAccessToken[]
   oauthRefreshTokens         OAuthRefreshToken[]
+  passwordResetTokens        PasswordResetToken[]
   // 実行結果の実施者リレーション
   preconditionResultsChecked ExecutionPreconditionResult[] @relation("PreconditionResultChecker")
   stepResultsExecuted        ExecutionStepResult[]         @relation("StepResultExecutor")
@@ -292,6 +298,22 @@ model Session {
   @@index([userId])
   @@index([expiresAt])
   @@map("sessions")
+}
+
+// パスワードリセットトークン
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  tokenHash String    @unique @map("token_hash") @db.VarChar(64)
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
 }
 
 // ============================================

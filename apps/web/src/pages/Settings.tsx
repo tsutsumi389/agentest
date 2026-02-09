@@ -3,8 +3,10 @@ import { useSearchParams, useLocation } from 'react-router';
 import { User, Bell, Shield, Key, Loader2, Monitor, Smartphone, Tablet, X, AlertTriangle, Github, Link2, Unlink, Plus, Copy, Check, Trash2, Eye, EyeOff, CreditCard } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { toast } from '../stores/toast';
-import { ApiError, sessionsApi, accountsApi, apiTokensApi, type Session, type Account, type ApiToken, type CreatedApiToken } from '../lib/api';
+import { ApiError, sessionsApi, accountsApi, passwordApi, apiTokensApi, type Session, type Account, type ApiToken, type CreatedApiToken } from '../lib/api';
+import { PasswordStrengthChecklist, PASSWORD_CHECKS } from '../components/PasswordStrengthChecklist';
 import { BillingSettings } from '../components/settings/BillingSettings';
+import { GoogleIcon } from '../components/ui/GoogleIcon';
 
 type SettingsTab = 'profile' | 'notifications' | 'security' | 'api-tokens' | 'billing';
 
@@ -643,18 +645,6 @@ const OAUTH_PROVIDERS = [
   { id: 'google' as const, name: 'Google', icon: GoogleIcon },
 ];
 
-// Googleアイコンコンポーネント
-function GoogleIcon({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
-      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
-    </svg>
-  );
-}
-
 /**
  * セキュリティ設定
  */
@@ -672,6 +662,28 @@ function SecuritySettings() {
     sessionId?: string;
     provider?: string;
   } | null>(null);
+
+  // パスワード管理の状態
+  const [hasPassword, setHasPassword] = useState<boolean | null>(null);
+  const [showPasswordModal, setShowPasswordModal] = useState<'set' | 'change' | null>(null);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [isSubmittingPassword, setIsSubmittingPassword] = useState(false);
+
+  // パスワード設定状況を取得
+  const fetchPasswordStatus = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const response = await passwordApi.getStatus(user.id);
+      setHasPassword(response.hasPassword);
+    } catch {
+      // パスワード状況の取得に失敗してもページ表示は続行
+    }
+  }, [user?.id]);
 
   // セッション一覧を取得
   const fetchSessions = useCallback(async () => {
@@ -709,7 +721,8 @@ function SecuritySettings() {
   useEffect(() => {
     fetchSessions();
     fetchAccounts();
-  }, [fetchSessions, fetchAccounts]);
+    fetchPasswordStatus();
+  }, [fetchSessions, fetchAccounts, fetchPasswordStatus]);
 
   // 個別セッションを終了
   const handleRevokeSession = async (sessionId: string) => {
@@ -776,6 +789,59 @@ function SecuritySettings() {
     window.location.href = accountsApi.getLinkUrl(provider);
   };
 
+  // パスワードモーダルを開く
+  const openPasswordModal = (type: 'set' | 'change') => {
+    setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    setPasswordError(null);
+    setShowPasswordModal(type);
+  };
+
+  // パスワードモーダルを閉じる
+  const closePasswordModal = () => {
+    setShowPasswordModal(null);
+    setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    setPasswordError(null);
+  };
+
+  // パスワード設定/変更を送信
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setPasswordError(null);
+
+    // パスワード一致チェック
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError('パスワードが一致しません');
+      return;
+    }
+
+    if (!user?.id) return;
+    setIsSubmittingPassword(true);
+
+    try {
+      if (showPasswordModal === 'set') {
+        await passwordApi.setPassword(user.id, { password: passwordForm.newPassword });
+        toast.success('パスワードを設定しました');
+      } else {
+        await passwordApi.changePassword(user.id, {
+          currentPassword: passwordForm.currentPassword,
+          newPassword: passwordForm.newPassword,
+        });
+        toast.success('パスワードを変更しました');
+      }
+      closePasswordModal();
+      // ステータスを再取得
+      await fetchPasswordStatus();
+    } catch (error) {
+      if (error instanceof ApiError) {
+        toast.error(error.message);
+      } else {
+        toast.error('パスワードの更新に失敗しました');
+      }
+    } finally {
+      setIsSubmittingPassword(false);
+    }
+  };
+
   // 確認ダイアログを開く
   const openConfirmDialog = (
     type: 'session' | 'all-sessions' | 'unlink',
@@ -809,6 +875,136 @@ function SecuritySettings() {
 
   return (
     <div className="space-y-6">
+      {/* パスワード管理 */}
+      <div className="card p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-semibold text-foreground">パスワード</h2>
+            <p className="text-sm text-foreground-muted mt-1">
+              {hasPassword
+                ? 'パスワードが設定されています'
+                : 'パスワードが設定されていません'}
+            </p>
+          </div>
+          {hasPassword === false && (
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={() => openPasswordModal('set')}
+            >
+              パスワードを設定
+            </button>
+          )}
+          {hasPassword === true && (
+            <button
+              className="btn btn-ghost btn-sm"
+              onClick={() => openPasswordModal('change')}
+            >
+              パスワードを変更
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* パスワード設定/変更モーダル */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-modal flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={closePasswordModal} />
+          <div className="relative bg-background border border-border rounded-lg shadow-lg max-w-md w-full mx-4 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-foreground">
+                {showPasswordModal === 'set' ? 'パスワードを設定する' : 'パスワードを変更する'}
+              </h3>
+              <button onClick={closePasswordModal} disabled={isSubmittingPassword}>
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handlePasswordSubmit} className="space-y-4">
+              {showPasswordModal === 'change' && (
+                <div>
+                  <label htmlFor="current-password" className="block text-sm font-medium text-foreground mb-1">
+                    現在のパスワード
+                  </label>
+                  <input
+                    id="current-password"
+                    type="password"
+                    className="input w-full"
+                    value={passwordForm.currentPassword}
+                    onChange={(e) =>
+                      setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }))
+                    }
+                    required
+                  />
+                </div>
+              )}
+
+              <div>
+                <label htmlFor="new-password" className="block text-sm font-medium text-foreground mb-1">
+                  新しいパスワード
+                </label>
+                <input
+                  id="new-password"
+                  type="password"
+                  className="input w-full"
+                  value={passwordForm.newPassword}
+                  onChange={(e) =>
+                    setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))
+                  }
+                  required
+                />
+                <div className="mt-2">
+                  <PasswordStrengthChecklist password={passwordForm.newPassword} />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="confirm-password" className="block text-sm font-medium text-foreground mb-1">
+                  パスワード（確認）
+                </label>
+                <input
+                  id="confirm-password"
+                  type="password"
+                  className="input w-full"
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) =>
+                    setPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }))
+                  }
+                  required
+                />
+              </div>
+
+              {passwordError && (
+                <p className="text-sm text-danger">{passwordError}</p>
+              )}
+
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  onClick={closePasswordModal}
+                  disabled={isSubmittingPassword}
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="submit"
+                  className="btn btn-primary"
+                  disabled={
+                    isSubmittingPassword ||
+                    !passwordForm.newPassword ||
+                    !passwordForm.confirmPassword ||
+                    !PASSWORD_CHECKS.every((check) => check.test(passwordForm.newPassword))
+                  }
+                >
+                  {isSubmittingPassword && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {showPasswordModal === 'set' ? '設定する' : '変更する'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* 接続済みアカウント */}
       <div className="card p-6">
         <div className="flex items-center justify-between mb-4">
@@ -830,7 +1026,7 @@ function SecuritySettings() {
               const linked = isProviderLinked(provider.id);
               const account = accounts.find((a) => a.provider === provider.id);
               const isUnlinking = unlinkingProvider === provider.id;
-              const canUnlink = accounts.length > 1;
+              const canUnlink = accounts.length > 1 || hasPassword === true;
 
               return (
                 <div
@@ -885,9 +1081,9 @@ function SecuritySettings() {
           </div>
         )}
 
-        {accounts.length === 1 && (
+        {accounts.length === 1 && !hasPassword && (
           <p className="text-xs text-foreground-subtle mt-4">
-            ※ 最低1つのOAuth連携が必要です。連携を解除するには別のプロバイダーを先に連携してください。
+            ※ 最低1つのOAuth連携が必要です。連携を解除するには別のプロバイダーを先に連携するか、パスワードを設定してください。
           </p>
         )}
       </div>

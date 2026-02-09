@@ -60,9 +60,72 @@ export const judgmentStatusSchema = z.enum([
   JudgmentStatus.SKIPPED,
 ]);
 
+// パスワード共通バリデーション
+// パスワード要件: 8文字以上100文字以内、大文字・小文字・数字・記号を含む
+export const passwordSchema = z
+  .string()
+  .min(8, 'パスワードは8文字以上で入力してください')
+  .max(100, 'パスワードは100文字以内で入力してください')
+  .regex(/[A-Z]/, 'パスワードには大文字を含めてください')
+  .regex(/[a-z]/, 'パスワードには小文字を含めてください')
+  .regex(/[0-9]/, 'パスワードには数字を含めてください')
+  .regex(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/, 'パスワードには記号を含めてください');
+
+// ユーザー新規登録（メール/パスワード）
+export const userRegisterSchema = z.object({
+  email: z.string().email().max(255).transform((v) => v.toLowerCase().trim()),
+  password: passwordSchema,
+  name: z.string().min(1).max(100).trim(),
+});
+
+export type UserRegister = z.infer<typeof userRegisterSchema>;
+
+// ユーザーログイン（パスワード強度チェックは不要、ログイン時は任意文字列でOK）
+export const userLoginSchema = z.object({
+  email: z.string().email().transform((v) => v.toLowerCase().trim()),
+  password: z.string().min(1),
+});
+
+export type UserLogin = z.infer<typeof userLoginSchema>;
+
+// パスワードリセット要求
+export const passwordResetRequestSchema = z.object({
+  email: z.string().email().transform((v) => v.toLowerCase().trim()),
+});
+
+export type PasswordResetRequest = z.infer<typeof passwordResetRequestSchema>;
+
+// パスワードリセット実行
+export const passwordResetSchema = z.object({
+  token: z.string().min(1),
+  password: passwordSchema,
+});
+
+export type PasswordReset = z.infer<typeof passwordResetSchema>;
+
+// パスワード初回設定（OAuthユーザーがパスワードを追加）
+export const setPasswordSchema = z.object({
+  password: passwordSchema,
+});
+
+export type SetPassword = z.infer<typeof setPasswordSchema>;
+
+// パスワード変更
+export const changePasswordSchema = z
+  .object({
+    currentPassword: z.string().min(1),
+    newPassword: passwordSchema,
+  })
+  .refine((data) => data.currentPassword !== data.newPassword, {
+    message: '新しいパスワードは現在のパスワードと異なるものにしてください',
+    path: ['newPassword'],
+  });
+
+export type ChangePassword = z.infer<typeof changePasswordSchema>;
+
 // ユーザースキーマ
 export const userCreateSchema = z.object({
-  email: z.string().email().max(255),
+  email: z.string().email().max(255).transform((v) => v.toLowerCase().trim()),
   name: z.string().min(1).max(100),
   avatarUrl: z.string().url().nullish(),
 });
@@ -76,17 +139,17 @@ export const userUpdateSchema = z.object({
 export const organizationCreateSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).nullish(),
-  billingEmail: z.string().email().nullish(),
+  billingEmail: z.string().email().transform((v) => v.toLowerCase().trim()).nullish(),
 });
 
 export const organizationUpdateSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   description: z.string().max(500).nullish(),
-  billingEmail: z.string().email().nullish(),
+  billingEmail: z.string().email().transform((v) => v.toLowerCase().trim()).nullish(),
 });
 
 export const organizationInviteSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email().transform((v) => v.toLowerCase().trim()),
   role: organizationRoleSchema.exclude(['OWNER']),
 });
 
@@ -649,7 +712,7 @@ export type SystemAdminSearch = z.infer<typeof systemAdminSearchSchema>;
 
 // システム管理者招待スキーマ
 export const systemAdminInviteSchema = z.object({
-  email: z.string().email('有効なメールアドレスを入力してください').max(255),
+  email: z.string().email('有効なメールアドレスを入力してください').max(255).transform((v) => v.toLowerCase().trim()),
   name: z.string().min(1, '名前は必須です').max(100),
   role: systemAdminRoleSchema,
 });
@@ -665,16 +728,8 @@ export const systemAdminUpdateSchema = z.object({
 export type SystemAdminUpdate = z.infer<typeof systemAdminUpdateSchema>;
 
 // 招待受諾スキーマ（パスワード設定）
-// パスワード要件: 8文字以上、大文字・小文字・数字・記号を含む
 export const acceptInvitationSchema = z.object({
-  password: z
-    .string()
-    .min(8, 'パスワードは8文字以上で入力してください')
-    .max(100, 'パスワードは100文字以内で入力してください')
-    .regex(/[A-Z]/, 'パスワードには大文字を含めてください')
-    .regex(/[a-z]/, 'パスワードには小文字を含めてください')
-    .regex(/[0-9]/, 'パスワードには数字を含めてください')
-    .regex(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/, 'パスワードには記号を含めてください'),
+  password: passwordSchema,
 });
 
 export type AcceptInvitation = z.infer<typeof acceptInvitationSchema>;
