@@ -148,4 +148,15 @@ describe('changePasswordSchema', () => {
       newPassword: 'NewPass1!',
     }).success).toBe(false);
   });
+
+  it('現在のパスワードと同じ新しいパスワードを拒否する', () => {
+    const result = changePasswordSchema.safeParse({
+      currentPassword: 'SamePass1!',
+      newPassword: 'SamePass1!',
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues[0].path).toContain('newPassword');
+    }
+  });
 });

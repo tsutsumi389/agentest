@@ -125,7 +125,7 @@ export type ChangePassword = z.infer<typeof changePasswordSchema>;
 
 // ユーザースキーマ
 export const userCreateSchema = z.object({
-  email: z.string().email().max(255),
+  email: z.string().email().max(255).transform((v) => v.toLowerCase().trim()),
   name: z.string().min(1).max(100),
   avatarUrl: z.string().url().nullish(),
 });
@@ -139,17 +139,17 @@ export const userUpdateSchema = z.object({
 export const organizationCreateSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).nullish(),
-  billingEmail: z.string().email().nullish(),
+  billingEmail: z.string().email().transform((v) => v.toLowerCase().trim()).nullish(),
 });
 
 export const organizationUpdateSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   description: z.string().max(500).nullish(),
-  billingEmail: z.string().email().nullish(),
+  billingEmail: z.string().email().transform((v) => v.toLowerCase().trim()).nullish(),
 });
 
 export const organizationInviteSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email().transform((v) => v.toLowerCase().trim()),
   role: organizationRoleSchema.exclude(['OWNER']),
 });
 
@@ -712,7 +712,7 @@ export type SystemAdminSearch = z.infer<typeof systemAdminSearchSchema>;
 
 // システム管理者招待スキーマ
 export const systemAdminInviteSchema = z.object({
-  email: z.string().email('有効なメールアドレスを入力してください').max(255),
+  email: z.string().email('有効なメールアドレスを入力してください').max(255).transform((v) => v.toLowerCase().trim()),
   name: z.string().min(1, '名前は必須です').max(100),
   role: systemAdminRoleSchema,
 });
