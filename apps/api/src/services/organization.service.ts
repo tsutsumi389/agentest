@@ -197,7 +197,8 @@ export class OrganizationService {
       details: { email: data.email, role: data.role },
     });
 
-    // 既存ユーザーに通知を送信
+    // 既存ユーザーに通知を送信（メール含む）
+    let emailSent = false;
     if (existingUser) {
       const inviter = await prisma.user.findUnique({
         where: { id: invitedByUserId },
@@ -213,9 +214,10 @@ export class OrganizationService {
         data: { organizationId, inviteToken: token },
         organizationId,
       });
+      emailSent = true;
     }
 
-    return invitation;
+    return { invitation, emailSent };
   }
 
   /**
