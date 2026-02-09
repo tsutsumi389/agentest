@@ -442,7 +442,8 @@ describe('OrganizationService', () => {
       });
 
       expect(mockPrisma.organizationInvitation.create).toHaveBeenCalled();
-      expect(result.email).toBe('newuser@example.com');
+      expect(result.invitation.email).toBe('newuser@example.com');
+      expect(result.emailSent).toBe(false);
     });
 
     it('既にメンバーのユーザーを招待しようとするとConflictErrorを投げる', async () => {

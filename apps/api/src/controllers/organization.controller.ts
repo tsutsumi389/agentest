@@ -150,9 +150,9 @@ export class OrganizationController {
     try {
       const { organizationId } = req.params;
       const data = inviteSchema.parse(req.body);
-      const invitation = await this.orgService.invite(organizationId, req.user!.id, data);
+      const { invitation, emailSent } = await this.orgService.invite(organizationId, req.user!.id, data);
 
-      res.status(201).json({ invitation });
+      res.status(201).json({ invitation, emailSent });
     } catch (error) {
       next(error);
     }

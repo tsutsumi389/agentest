@@ -41,6 +41,7 @@ export function InviteMemberModal({
 
   // 招待完了状態
   const [createdInvitation, setCreatedInvitation] = useState<OrganizationInvitation | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
 
   // フォームをリセットする
@@ -49,6 +50,7 @@ export function InviteMemberModal({
     setRole('MEMBER');
     setErrors({});
     setCreatedInvitation(null);
+    setEmailSent(false);
     setIsCopied(false);
   }, []);
 
@@ -145,6 +147,7 @@ export function InviteMemberModal({
 
       // 招待完了画面に遷移
       setCreatedInvitation(response.invitation);
+      setEmailSent(response.emailSent);
       onSuccess?.(response.invitation);
       toast.success('招待を送信しました');
     } catch (err) {
@@ -226,13 +229,19 @@ export function InviteMemberModal({
           <div className="flex items-center gap-3">
             <div className="p-2 rounded-lg bg-background-tertiary">
               {createdInvitation ? (
-                <Link className="w-5 h-5 text-foreground-muted" aria-hidden="true" />
+                emailSent ? (
+                  <Mail className="w-5 h-5 text-foreground-muted" aria-hidden="true" />
+                ) : (
+                  <Link className="w-5 h-5 text-foreground-muted" aria-hidden="true" />
+                )
               ) : (
                 <Mail className="w-5 h-5 text-foreground-muted" aria-hidden="true" />
               )}
             </div>
             <h2 id="invite-member-title" className="text-lg font-semibold text-foreground">
-              {createdInvitation ? '招待リンク' : 'メンバーを招待'}
+              {createdInvitation
+                ? emailSent ? '招待を送信しました' : '招待リンク'
+                : 'メンバーを招待'}
             </h2>
           </div>
           <button
@@ -252,7 +261,9 @@ export function InviteMemberModal({
                 <strong>{createdInvitation.email}</strong> に招待を送信しました。
               </p>
               <p className="text-sm text-foreground-muted">
-                以下のリンクを共有してください。メール送信は行われません。
+                {emailSent
+                  ? '招待通知を送信しました。以下のリンクからも招待を受け入れることができます。'
+                  : '該当するアカウントが見つからないため、通知は送信されません。以下のリンクを共有してください。'}
               </p>
             </div>
 

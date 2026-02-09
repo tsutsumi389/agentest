@@ -1365,7 +1365,7 @@ export const organizationsApi = {
 
   // メンバーを招待
   invite: (organizationId: string, data: InviteMemberRequest) =>
-    api.post<{ invitation: OrganizationInvitation }>(`/api/organizations/${organizationId}/invitations`, data),
+    api.post<{ invitation: OrganizationInvitation; emailSent: boolean }>(`/api/organizations/${organizationId}/invitations`, data),
 
   // 保留中の招待一覧を取得
   getInvitations: (organizationId: string) =>
