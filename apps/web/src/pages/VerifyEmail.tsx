@@ -1,7 +1,7 @@
 import { Link, useSearchParams } from 'react-router';
 import { AgentestLogo } from '../components/ui/AgentestLogo';
 import { authApi } from '../lib/api';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 /**
  * メールアドレス確認ページ
@@ -13,6 +13,8 @@ export function VerifyEmailPage() {
 
   const [status, setStatus] = useState<'verifying' | 'success' | 'error'>('verifying');
   const [errorMessage, setErrorMessage] = useState('');
+  // Strict Modeによる二重実行を防止
+  const verifiedRef = useRef(false);
 
   useEffect(() => {
     if (!token) {
@@ -20,6 +22,9 @@ export function VerifyEmailPage() {
       setErrorMessage('確認トークンが見つかりません');
       return;
     }
+
+    if (verifiedRef.current) return;
+    verifiedRef.current = true;
 
     const verify = async () => {
       try {
