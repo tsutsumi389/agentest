@@ -3,7 +3,6 @@ import { generateTokens, verifyRefreshToken } from '@agentest/auth';
 import { prisma } from '@agentest/db';
 import {
   AuthenticationError,
-  ValidationError,
   userLoginSchema,
   userRegisterSchema,
   passwordResetRequestSchema,
@@ -16,6 +15,7 @@ import { emailService } from '../services/email.service.js';
 import { extractClientInfo } from '../middleware/session.middleware.js';
 import { encryptToken } from '../utils/crypto.js';
 import { hashToken } from '../utils/pkce.js';
+import { createValidationError } from '../utils/validation.js';
 import { logger as baseLogger } from '../utils/logger.js';
 
 const logger = baseLogger.child({ module: 'auth-controller' });
@@ -54,20 +54,6 @@ const LINK_MODE_COOKIE = 'oauth_link_mode';
 interface LinkModeInfo {
   provider: string;
   userId: string;
-}
-
-/**
- * Zodパース結果からValidationErrorを生成するヘルパー
- */
-function createValidationError(error: import('zod').ZodError): ValidationError {
-  const fieldErrors = error.flatten().fieldErrors;
-  const details: Record<string, string[]> = {};
-  for (const [key, value] of Object.entries(fieldErrors)) {
-    if (value) {
-      details[key] = value;
-    }
-  }
-  return new ValidationError('入力内容に誤りがあります', details);
 }
 
 /**

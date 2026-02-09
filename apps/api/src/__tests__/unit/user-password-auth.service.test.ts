@@ -822,6 +822,8 @@ describe('UserPasswordAuthService', () => {
       mockPrisma.user.findFirst.mockResolvedValue(mockUser);
       mockBcrypt.compare.mockResolvedValue(true);
       mockPrisma.user.update.mockResolvedValue({});
+      mockPrisma.refreshToken.updateMany.mockResolvedValue({ count: 2 });
+      mockPrisma.session.updateMany.mockResolvedValue({ count: 2 });
 
       await expect(
         service.changePassword('user-1', 'CurrentPassword123!', 'NewPassword456!')
@@ -835,6 +837,65 @@ describe('UserPasswordAuthService', () => {
           }),
         })
       );
+    });
+
+    it('他のセッションを無効化する', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+      mockBcrypt.compare.mockResolvedValue(true);
+      mockPrisma.user.update.mockResolvedValue({});
+      mockPrisma.refreshToken.updateMany.mockResolvedValue({ count: 2 });
+      mockPrisma.session.updateMany.mockResolvedValue({ count: 2 });
+
+      await service.changePassword('user-1', 'CurrentPassword123!', 'NewPassword456!');
+
+      // リフレッシュトークンの無効化が呼ばれる
+      expect(mockPrisma.refreshToken.updateMany).toHaveBeenCalledWith({
+        where: {
+          userId: 'user-1',
+          revokedAt: null,
+        },
+        data: { revokedAt: expect.any(Date) },
+      });
+
+      // セッションの無効化が呼ばれる
+      expect(mockPrisma.session.updateMany).toHaveBeenCalledWith({
+        where: {
+          userId: 'user-1',
+          revokedAt: null,
+        },
+        data: { revokedAt: expect.any(Date) },
+      });
+    });
+
+    it('currentTokenHashが指定された場合、現在のセッションを除外して無効化する', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(mockUser);
+      mockBcrypt.compare.mockResolvedValue(true);
+      mockPrisma.user.update.mockResolvedValue({});
+      mockPrisma.refreshToken.updateMany.mockResolvedValue({ count: 1 });
+      mockPrisma.session.updateMany.mockResolvedValue({ count: 1 });
+
+      const currentTokenHash = 'current-token-hash';
+      await service.changePassword('user-1', 'CurrentPassword123!', 'NewPassword456!', currentTokenHash);
+
+      // 現在のセッションを除外してリフレッシュトークンを無効化
+      expect(mockPrisma.refreshToken.updateMany).toHaveBeenCalledWith({
+        where: {
+          userId: 'user-1',
+          revokedAt: null,
+          tokenHash: { not: currentTokenHash },
+        },
+        data: { revokedAt: expect.any(Date) },
+      });
+
+      // 現在のセッションを除外してセッションを無効化
+      expect(mockPrisma.session.updateMany).toHaveBeenCalledWith({
+        where: {
+          userId: 'user-1',
+          revokedAt: null,
+          tokenHash: { not: currentTokenHash },
+        },
+        data: { revokedAt: expect.any(Date) },
+      });
     });
 
     it('現在のパスワードが間違っている場合にエラーを返す', async () => {

@@ -28,6 +28,9 @@ const { mockLogger } = vi.hoisted(() => {
   return { mockLogger };
 });
 vi.mock('../../utils/logger.js', () => ({ logger: mockLogger }));
+vi.mock('../../utils/pkce.js', () => ({
+  hashToken: vi.fn((token: string) => `hashed-${token}`),
+}));
 
 // テスト対象のインポート（モック設定後）
 import { UserPasswordController } from '../user-password.controller.js';
@@ -183,6 +186,22 @@ describe('UserPasswordController', () => {
 
     it('正しい現在のパスワードで新しいパスワードに変更できる（200を返す）', async () => {
       mockPasswordAuthService.changePassword.mockResolvedValue(undefined);
+      const req = mockRequest({ body: validBody, cookies: { refresh_token: 'test-refresh-token' } }) as Request;
+      const res = mockResponse() as Response;
+
+      await controller.changePassword(req, res, mockNext);
+
+      expect(mockPasswordAuthService.changePassword).toHaveBeenCalledWith(
+        TEST_USER_ID,
+        validBody.currentPassword,
+        validBody.newPassword,
+        'hashed-test-refresh-token'
+      );
+      expect(res.json).toHaveBeenCalledWith({ message: 'パスワードを変更しました' });
+    });
+
+    it('リフレッシュトークンがない場合はcurrentTokenHashをundefinedで渡す', async () => {
+      mockPasswordAuthService.changePassword.mockResolvedValue(undefined);
       const req = mockRequest({ body: validBody }) as Request;
       const res = mockResponse() as Response;
 
@@ -191,9 +210,9 @@ describe('UserPasswordController', () => {
       expect(mockPasswordAuthService.changePassword).toHaveBeenCalledWith(
         TEST_USER_ID,
         validBody.currentPassword,
-        validBody.newPassword
+        validBody.newPassword,
+        undefined
       );
-      expect(res.json).toHaveBeenCalledWith({ message: 'パスワードを変更しました' });
     });
 
     it('現在のパスワードが間違っている場合はnextにAuthenticationErrorを渡す', async () => {

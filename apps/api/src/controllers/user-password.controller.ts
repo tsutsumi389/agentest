@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { setPasswordSchema, changePasswordSchema } from '@agentest/shared';
 import { UserPasswordAuthService } from '../services/user-password-auth.service.js';
 import { createValidationError } from '../utils/validation.js';
+import { hashToken } from '../utils/pkce.js';
 
 /**
  * パスワード管理コントローラー
@@ -61,10 +62,15 @@ export class UserPasswordController {
         throw createValidationError(parsed.error);
       }
 
+      // 現在のセッションを維持するために、リフレッシュトークンのハッシュを渡す
+      const refreshToken = req.cookies?.refresh_token;
+      const currentTokenHash = refreshToken ? hashToken(refreshToken) : undefined;
+
       await this.authService.changePassword(
         userId,
         parsed.data.currentPassword,
-        parsed.data.newPassword
+        parsed.data.newPassword,
+        currentTokenHash
       );
 
       res.json({ message: 'パスワードを変更しました' });

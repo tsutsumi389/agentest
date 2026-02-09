@@ -393,11 +393,15 @@ export class UserPasswordAuthService {
 
   /**
    * パスワード変更
+   *
+   * セキュリティ対策:
+   * - パスワード変更後、現在のセッション以外を全て無効化
    */
   async changePassword(
     userId: string,
     currentPassword: string,
-    newPassword: string
+    newPassword: string,
+    currentTokenHash?: string
   ): Promise<void> {
     const user = await prisma.user.findFirst({
       where: { id: userId, deletedAt: null },
@@ -420,12 +424,35 @@ export class UserPasswordAuthService {
 
     const passwordHash = await this.hashPassword(newPassword);
 
-    await prisma.user.update({
-      where: { id: userId },
-      data: { passwordHash },
+    // トランザクションでパスワード更新と他セッション無効化をアトミックに実行
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: { passwordHash },
+      });
+
+      // 現在のセッション以外のリフレッシュトークンを無効化
+      await tx.refreshToken.updateMany({
+        where: {
+          userId,
+          revokedAt: null,
+          ...(currentTokenHash ? { tokenHash: { not: currentTokenHash } } : {}),
+        },
+        data: { revokedAt: new Date() },
+      });
+
+      // 現在のセッション以外のセッションを無効化
+      await tx.session.updateMany({
+        where: {
+          userId,
+          revokedAt: null,
+          ...(currentTokenHash ? { tokenHash: { not: currentTokenHash } } : {}),
+        },
+        data: { revokedAt: new Date() },
+      });
     });
 
-    logger.info({ userId }, 'パスワード変更完了');
+    logger.info({ userId }, 'パスワード変更完了（他セッション無効化済み）');
   }
 
   /**
