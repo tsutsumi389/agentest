@@ -11,8 +11,16 @@
 ### メール/パスワード認証
 
 ```
-1. クライアント → POST /auth/login (or /auth/register)
-2. サーバーで認証
+■ 新規登録
+1. クライアント → POST /auth/register
+2. サーバーでユーザー作成 + 確認メール送信
+3. ユーザー情報を返却（JWT は未発行）
+4. ユーザーが確認メール内リンクをクリック → GET /auth/verify-email?token=xxx
+5. メールアドレス確認完了 → ログイン可能に
+
+■ ログイン
+1. クライアント → POST /auth/login
+2. サーバーで認証（メールアドレス確認済みチェックを含む）
 3. JWT Cookie 設定 → ユーザー情報を返却
 ```
 
@@ -71,6 +79,7 @@ POST /auth/login
 |-------|-----------|------|
 | `AUTH_INVALID_CREDENTIALS` | 401 | メールアドレスまたはパスワードが不正 |
 | `AUTH_ACCOUNT_LOCKED` | 401 | アカウントがロック中（5回連続失敗で30分ロック） |
+| `EMAIL_NOT_VERIFIED` | 401 | メールアドレスが未確認 |
 | `VALIDATION_ERROR` | 400 | 入力値が不正 |
 
 ---
@@ -81,7 +90,7 @@ POST /auth/login
 POST /auth/register
 ```
 
-メールアドレスとパスワードでアカウントを作成し、自動的にログイン。
+メールアドレスとパスワードでアカウントを作成。確認メールが送信される（自動ログインはされない）。
 
 **Request:**
 
@@ -99,17 +108,52 @@ POST /auth/register
 | `password` | string | Yes | パスワード（8〜100文字、大文字・小文字・数字・記号必須） |
 | `name` | string | Yes | 表示名（1〜100文字） |
 
+**Response (201):**
+
+```json
+{
+  "data": {
+    "message": "確認メールを送信しました。メールをご確認ください。",
+    "user": {
+      "id": "usr_123456",
+      "email": "user@example.com",
+      "name": "John Doe"
+    }
+  }
+}
+```
+
+**注意:** 登録後は自動ログインされず、確認メール内のリンクをクリックしてメールアドレスを確認する必要がある。確認完了後にログイン可能になる。
+
+**Errors:**
+
+| コード | ステータス | 説明 |
+|-------|-----------|------|
+| `AUTH_EMAIL_EXISTS` | 409 | メールアドレスが既に使用されている |
+| `VALIDATION_ERROR` | 400 | 入力値が不正 |
+
+---
+
+### メールアドレス確認
+
+```
+GET /auth/verify-email?token=xxx
+```
+
+確認メール内のリンクから呼び出され、メールアドレスの所有を確認する。
+
+**Query Parameters:**
+
+| パラメータ | 必須 | 説明 |
+|-----------|------|------|
+| `token` | Yes | 確認メールに含まれるトークン |
+
 **Response:**
 
 ```json
 {
   "data": {
-    "user": {
-      "id": "usr_123456",
-      "email": "user@example.com",
-      "name": "John Doe",
-      "avatarUrl": null
-    }
+    "message": "メールアドレスが確認されました。ログインしてください。"
   }
 }
 ```
@@ -118,8 +162,35 @@ POST /auth/register
 
 | コード | ステータス | 説明 |
 |-------|-----------|------|
-| `AUTH_EMAIL_EXISTS` | 409 | メールアドレスが既に使用されている |
-| `VALIDATION_ERROR` | 400 | 入力値が不正 |
+| `AUTH_INVALID_TOKEN` | 400 | トークンが無効または期限切れ |
+
+---
+
+### 確認メール再送信
+
+```
+POST /auth/resend-verification
+```
+
+メールアドレス確認メールを再送信する。セキュリティのため、ユーザーが存在しない場合や既に確認済みの場合も同じレスポンスを返す。
+
+**Request:**
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Response:**
+
+```json
+{
+  "data": {
+    "message": "確認メールを再送信しました。"
+  }
+}
+```
 
 ---
 
@@ -342,6 +413,7 @@ Set-Cookie: refresh_token=<token>; HttpOnly; Secure; SameSite=Strict; Path=/
 | `AUTH_INVALID_CREDENTIALS` | メールアドレスまたはパスワードが不正 |
 | `AUTH_ACCOUNT_LOCKED` | アカウントがロック中 |
 | `AUTH_EMAIL_EXISTS` | メールアドレスが既に使用されている |
+| `EMAIL_NOT_VERIFIED` | メールアドレスが未確認（確認メールのリンクをクリックしてください） |
 
 ## 使用例
 
@@ -357,12 +429,25 @@ const response = await fetch('/api/v1/auth/login', {
 });
 const { data: { user } } = await response.json();
 
-// 新規登録
+// 新規登録（確認メールが送信される、自動ログインなし）
 const response = await fetch('/api/v1/auth/register', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ email: 'user@example.com', password: 'SecureP@ss1', name: 'John' }),
   credentials: 'include'
+});
+// → /check-email にリダイレクト
+
+// メールアドレス確認（確認メール内リンクから）
+const response = await fetch('/api/v1/auth/verify-email?token=abcdef1234567890', {
+  credentials: 'include'
+});
+
+// 確認メール再送信
+await fetch('/api/v1/auth/resend-verification', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email: 'user@example.com' })
 });
 
 // OAuthログイン（リダイレクト）
