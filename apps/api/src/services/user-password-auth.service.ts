@@ -493,19 +493,9 @@ export class UserPasswordAuthService {
       include: { user: true },
     });
 
-    // トークンが存在しない
-    if (!verificationToken) {
-      throw new BadRequestError('無効なメールアドレス確認トークンです');
-    }
-
-    // トークンが使用済み
-    if (verificationToken.usedAt) {
-      throw new BadRequestError('このメールアドレス確認トークンは既に使用されています');
-    }
-
-    // トークンが期限切れ
-    if (verificationToken.expiresAt < new Date()) {
-      throw new BadRequestError('メールアドレス確認トークンの有効期限が切れています');
+    // トークンの有効性を検証（情報漏洩防止のため統一エラーメッセージ）
+    if (!verificationToken || verificationToken.usedAt || verificationToken.expiresAt < new Date()) {
+      throw new BadRequestError('メールアドレス確認トークンが無効です');
     }
 
     // トランザクションで実行

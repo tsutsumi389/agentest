@@ -53,7 +53,7 @@ export function VerifyEmailPage() {
           </h1>
 
           {status === 'verifying' && (
-            <div className="space-y-4">
+            <div className="space-y-4" role="status" aria-live="polite">
               <p className="text-sm text-foreground-muted text-center">
                 メールアドレスを確認しています...
               </p>

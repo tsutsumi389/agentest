@@ -145,10 +145,18 @@ export function createApp(): Express {
         });
       } else if (!user.emailVerified) {
         // 既存ユーザーがOAuthでログインした場合、未確認なら確認済みに更新
-        user = await prisma.user.update({
-          where: { id: user.id },
-          data: { emailVerified: true },
-        });
+        // 未使用のメール確認トークンも無効化
+        const [updatedUser] = await prisma.$transaction([
+          prisma.user.update({
+            where: { id: user.id },
+            data: { emailVerified: true },
+          }),
+          prisma.emailVerificationToken.updateMany({
+            where: { userId: user.id, usedAt: null },
+            data: { usedAt: new Date() },
+          }),
+        ]);
+        user = updatedUser;
       }
 
       // OAuth アカウント連携を作成（トークンは暗号化して保存）
