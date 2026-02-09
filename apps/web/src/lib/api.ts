@@ -111,12 +111,17 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
 
   // 401エラー時の自動リフレッシュ処理
   if (response.status === 401) {
-    // リフレッシュ・認証確認エンドポイントの401は除外（無限ループ防止）
-    if (endpoint.includes('/auth/refresh') || endpoint.includes('/auth/me')) {
+    // 認証系エンドポイントの401は除外（無限ループ防止・ログイン時のエラーコード伝播）
+    if (endpoint.includes('/auth/refresh') || endpoint.includes('/auth/me') || endpoint.includes('/auth/login')) {
+      const contentType = response.headers.get('content-type');
+      const isJson = contentType?.includes('application/json');
+      const data = isJson ? await response.json() : null;
+      const error = data?.error || {};
       throw new ApiError(
         401,
-        'AUTHENTICATION_ERROR',
-        'セッションが期限切れです。再ログインしてください。'
+        error.code || 'AUTHENTICATION_ERROR',
+        error.message || 'セッションが期限切れです。再ログインしてください。',
+        error.details
       );
     }
 
