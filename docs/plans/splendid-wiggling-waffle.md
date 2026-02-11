@@ -350,7 +350,7 @@ router.post('/2fa/disable', requireAuth(authConfig), rateLimiter({ max: 5, windo
 
 ---
 
-### Task 11: フロントエンド - 設定ページ2FAセクション
+### Task 11: フロントエンド - 設定ページ2FAセクション ✅ 完了
 
 **変更ファイル**: `apps/web/src/pages/Settings.tsx`
 

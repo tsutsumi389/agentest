@@ -18,6 +18,8 @@
 | `avatarUrl` | TEXT | YES | NULL | アバター画像 URL |
 | `passwordHash` | VARCHAR(255) | YES | NULL | bcryptパスワードハッシュ（OAuthのみのユーザーはNULL） |
 | `emailVerified` | BOOLEAN | NO | false | メールアドレス確認済みフラグ |
+| `totpSecret` | VARCHAR(255) | YES | NULL | TOTP秘密鍵（AES-256-GCM暗号化） |
+| `totpEnabled` | BOOLEAN | NO | false | 2FA有効フラグ |
 | `failedAttempts` | INT | NO | 0 | ログイン連続失敗回数 |
 | `lockedUntil` | TIMESTAMP | YES | NULL | アカウントロック解除日時 |
 | `plan` | ENUM | NO | FREE | 個人プラン（FREE, PRO） |
@@ -52,6 +54,8 @@ model User {
   avatarUrl      String?
   passwordHash   String?   @map("password_hash") @db.VarChar(255)
   emailVerified  Boolean   @default(false) @map("email_verified")
+  totpSecret     String?   @map("totp_secret") @db.VarChar(255)
+  totpEnabled    Boolean   @default(false) @map("totp_enabled")
   failedAttempts Int       @default(0) @map("failed_attempts")
   lockedUntil    DateTime? @map("locked_until")
   plan           UserPlan  @default(FREE)
