@@ -178,7 +178,7 @@ describe('Project Member OWNER Protection Integration Tests', () => {
 
       const response = await request(app)
         .post(`/api/projects/${project.id}/members`)
-        .send({ userId: newUser.id, role: 'OWNER' })
+        .send({ email: newUser.email, role: 'OWNER' })
         .expect(400);
 
       // バリデーションエラー（zodで'OWNER'が許可されていない）
@@ -218,13 +218,13 @@ describe('Project Member OWNER Protection Integration Tests', () => {
       expect(deletedMember).toBeNull();
     });
 
-    it('ADMINは新しいメンバーを追加できる', async () => {
+    it('ADMINは新しいメンバーをメールアドレスで追加できる', async () => {
       setTestAuth(admin, 'ADMIN');
       const newUser = await createTestUser({ email: 'new@example.com', name: 'New User' });
 
       const response = await request(app)
         .post(`/api/projects/${project.id}/members`)
-        .send({ userId: newUser.id, role: 'READ' })
+        .send({ email: newUser.email, role: 'READ' })
         .expect(201);
 
       expect(response.body.member.role).toBe('READ');
