@@ -324,6 +324,10 @@ export class AuthController {
           id: user.id,
           email: user.email,
           name: user.name,
+          avatarUrl: user.avatarUrl,
+          plan: user.plan,
+          createdAt: user.createdAt,
+          totpEnabled: user.totpEnabled,
         },
       });
     } catch (error) {

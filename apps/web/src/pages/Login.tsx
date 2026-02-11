@@ -22,7 +22,7 @@ function isExternalUrl(url: string): boolean {
  * ログインページ
  */
 export function LoginPage() {
-  const { isAuthenticated, isLoading, setUser } = useAuthStore();
+  const { isAuthenticated, isLoading, setUser, set2FARequired } = useAuthStore();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -71,8 +71,18 @@ export function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const { user } = await authApi.login({ email, password });
-      setUser(user);
+      const response = await authApi.login({ email, password });
+
+      // 2FA有効ユーザー: 2FA検証ページへ遷移
+      if (response.requires2FA) {
+        set2FARequired(response.twoFactorToken);
+        const params = redirectTo ? `?redirect=${encodeURIComponent(redirectTo)}` : '';
+        navigate(`/2fa/verify${params}`, { replace: true });
+        return;
+      }
+
+      // 2FA無効ユーザー: 従来通りダッシュボードへ遷移
+      setUser(response.user);
       navigate(redirectTo || '/dashboard', { replace: true });
     } catch (err) {
       // メール未確認エラーの場合はメール確認ページへリダイレクト

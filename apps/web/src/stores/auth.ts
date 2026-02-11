@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { authApi, usersApi, type User, type UpdateUserRequest } from '../lib/api';
+import { authApi, ApiError, usersApi, type User, type UpdateUserRequest } from '../lib/api';
 import { wsClient } from '../lib/ws';
 
 interface AuthState {
@@ -8,12 +8,20 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
 
+  // 2FA状態
+  requires2FA: boolean;
+  twoFactorToken: string | null;
+
   // アクション
   initialize: () => Promise<void>;
   logout: () => Promise<void>;
   setUser: (user: User) => void;
   updateUser: (data: UpdateUserRequest) => Promise<void>;
   clearError: () => void;
+
+  // 2FAアクション
+  set2FARequired: (twoFactorToken: string) => void;
+  verify2FA: (code: string) => Promise<void>;
 }
 
 /**
@@ -24,6 +32,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   isLoading: true,
   error: null,
+  requires2FA: false,
+  twoFactorToken: null,
 
   /**
    * 認証状態を初期化
@@ -65,6 +75,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         user: null,
         isAuthenticated: false,
         error: null,
+        requires2FA: false,
+        twoFactorToken: null,
       });
     }
   },
@@ -98,5 +110,47 @@ export const useAuthStore = create<AuthState>((set, get) => ({
    */
   clearError: () => {
     set({ error: null });
+  },
+
+  /**
+   * 2FA必要状態を設定（ログイン時にrequires2FAレスポンスを受けた場合）
+   */
+  set2FARequired: (twoFactorToken: string) => {
+    set({
+      requires2FA: true,
+      twoFactorToken,
+      isAuthenticated: false,
+      isLoading: false,
+    });
+  },
+
+  /**
+   * 2FA検証（TOTPコードで認証を完了する）
+   *
+   * 認証エラー（401）の場合はトークンをクリア（バックエンドで消費済み）。
+   * ネットワークエラー等の場合はトークンを保持してリトライ可能にする。
+   */
+  verify2FA: async (code: string) => {
+    const token = get().twoFactorToken;
+    if (!token) {
+      throw new Error('2FAトークンがありません');
+    }
+
+    try {
+      const { user } = await authApi.verify2FA(token, code);
+      set({
+        user,
+        isAuthenticated: true,
+        requires2FA: false,
+        twoFactorToken: null,
+      });
+    } catch (error) {
+      // 認証エラー（トークン無効/期限切れ/コード不正）: トークンをクリア
+      if (error instanceof ApiError && error.statusCode === 401) {
+        set({ twoFactorToken: null });
+      }
+      // ネットワークエラーや5xxの場合はトークンを保持（リトライ可能）
+      throw error;
+    }
   },
 }));

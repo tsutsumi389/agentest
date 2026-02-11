@@ -15,8 +15,11 @@ const { mockAuthStore } = vi.hoisted(() => {
       isAuthenticated: false,
       isLoading: false,
       user: null,
+      requires2FA: false,
+      twoFactorToken: null,
       initialize: vi.fn(),
       setUser: vi.fn(),
+      set2FARequired: vi.fn(),
     },
   };
 });
@@ -70,6 +73,8 @@ describe('LoginPage', () => {
     mockAuthStore.isAuthenticated = false;
     mockAuthStore.isLoading = false;
     mockAuthStore.user = null;
+    mockAuthStore.requires2FA = false;
+    mockAuthStore.twoFactorToken = null;
   });
 
   describe('フォーム表示', () => {
@@ -195,6 +200,74 @@ describe('LoginPage', () => {
       await waitFor(() => {
         const submitButton = screen.getByRole('button', { name: /ログイン中/ });
         expect(submitButton).toBeDisabled();
+      });
+    });
+  });
+
+  describe('2FAフロー', () => {
+    it('2FA必要レスポンスの場合はset2FARequiredが呼ばれ、/2fa/verifyに遷移する', async () => {
+      mockAuthApi.login.mockResolvedValue({
+        requires2FA: true,
+        twoFactorToken: 'temp-token-abc',
+      });
+
+      renderLoginPage();
+
+      fireEvent.change(screen.getByLabelText('メールアドレス'), {
+        target: { value: 'test@example.com' },
+      });
+      fireEvent.change(screen.getByLabelText('パスワード'), {
+        target: { value: 'Password123!' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'ログイン' }));
+
+      await waitFor(() => {
+        expect(mockAuthStore.set2FARequired).toHaveBeenCalledWith('temp-token-abc');
+        expect(mockNavigate).toHaveBeenCalledWith('/2fa/verify', { replace: true });
+      });
+    });
+
+    it('2FAリダイレクト時にredirectToクエリパラメータを引き継ぐ', async () => {
+      mockAuthApi.login.mockResolvedValue({
+        requires2FA: true,
+        twoFactorToken: 'temp-token-abc',
+      });
+
+      renderLoginPage(['/login?redirect=/projects/123']);
+
+      fireEvent.change(screen.getByLabelText('メールアドレス'), {
+        target: { value: 'test@example.com' },
+      });
+      fireEvent.change(screen.getByLabelText('パスワード'), {
+        target: { value: 'Password123!' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'ログイン' }));
+
+      await waitFor(() => {
+        expect(mockNavigate).toHaveBeenCalledWith(
+          '/2fa/verify?redirect=%2Fprojects%2F123',
+          { replace: true }
+        );
+      });
+    });
+
+    it('2FA不要の通常ログインレスポンスは従来通りダッシュボードに遷移', async () => {
+      const mockUser = { id: 'user-1', name: 'テスト', email: 'test@example.com' };
+      mockAuthApi.login.mockResolvedValue({ user: mockUser });
+
+      renderLoginPage();
+
+      fireEvent.change(screen.getByLabelText('メールアドレス'), {
+        target: { value: 'test@example.com' },
+      });
+      fireEvent.change(screen.getByLabelText('パスワード'), {
+        target: { value: 'Password123!' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'ログイン' }));
+
+      await waitFor(() => {
+        expect(mockAuthStore.setUser).toHaveBeenCalledWith(mockUser);
+        expect(mockNavigate).toHaveBeenCalledWith('/dashboard', { replace: true });
       });
     });
   });
