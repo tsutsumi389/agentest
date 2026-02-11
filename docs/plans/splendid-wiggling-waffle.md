@@ -60,7 +60,7 @@ totpEnabled Boolean @default(false) @map("totp_enabled")
 
 ---
 
-### Task 3: TOTP暗号化ユーティリティ（RED → GREEN → REFACTOR）
+### Task 3: TOTP暗号化ユーティリティ（RED → GREEN → REFACTOR） ✅ 完了
 
 **目的**: totpSecretをDBに平文で保存せず、アプリケーション層でAES-256-GCMにより暗号化する。DB漏洩時に全ユーザーの2FAがバイパスされるリスクを軽減する。
 
