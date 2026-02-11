@@ -28,6 +28,7 @@ vi.mock('../../redis.js', () => ({
 // 認証モジュールのモック
 vi.mock('../../auth.js', () => ({
   authenticateToken: vi.fn(),
+  authenticateFromCookie: vi.fn(),
 }));
 
 // プレゼンスハンドラのモック
@@ -47,7 +48,8 @@ vi.mock('../../config.js', async () => {
 // インポート
 // ============================================
 
-import { authenticateToken } from '../../auth.js';
+import { authenticateToken, authenticateFromCookie } from '../../auth.js';
+import { subscribeToChannel } from '../../redis.js';
 import { createWebSocketServer } from '../../server.js';
 import {
   TEST_USER_ID,
@@ -116,6 +118,8 @@ describe('WebSocket接続 統合テスト', () => {
       if (token === 'valid-token-user2') return testUser2;
       return null;
     });
+    // クッキー認証はデフォルトでnull（テスト内で個別にオーバーライド）
+    vi.mocked(authenticateFromCookie).mockResolvedValue(null);
   });
 
   afterEach(async () => {
@@ -587,5 +591,129 @@ describe('WebSocket接続 統合テスト', () => {
     });
 
     expect(ws.readyState).toBe(WebSocket.CLOSED);
+  });
+
+  // ------------------------------------------
+  // クッキー認証テスト
+  // ------------------------------------------
+
+  it('クッキーによるWebSocket自動認証', async () => {
+    // クッキー認証が成功するようにモック
+    vi.mocked(authenticateFromCookie).mockResolvedValue(testUser);
+
+    const ws = new WebSocket(serverUrl, {
+      headers: { cookie: `access_token=${VALID_TOKEN}` },
+    });
+    clients.push(ws);
+
+    // open前にメッセージリスナーを登録（サーバーが先にauthenticatedを送信するため）
+    const message = await waitForMessage(ws, 'authenticated') as {
+      type: string;
+      userId: string;
+      timestamp: number;
+    };
+
+    expect(message.type).toBe('authenticated');
+    expect(message.userId).toBe(TEST_USER_ID);
+    expect(authenticateFromCookie).toHaveBeenCalledWith(`access_token=${VALID_TOKEN}`);
+  });
+
+  it('クッキー認証成功時にユーザーチャンネルが自動購読される', async () => {
+    vi.mocked(authenticateFromCookie).mockResolvedValue(testUser);
+
+    const ws = new WebSocket(serverUrl, {
+      headers: { cookie: `access_token=${VALID_TOKEN}` },
+    });
+    clients.push(ws);
+
+    // open前にメッセージリスナーを登録
+    await waitForMessage(ws, 'authenticated');
+
+    // 自動購読の処理が完了するまで少し待つ
+    await wait(100);
+
+    // Redisにuser:チャンネルが購読されたことを確認
+    expect(subscribeToChannel).toHaveBeenCalledWith(`user:${TEST_USER_ID}`);
+  });
+
+  it('クッキー認証失敗時はメッセージ認証にフォールバック', async () => {
+    // クッキー認証が失敗するようにモック
+    vi.mocked(authenticateFromCookie).mockResolvedValue(null);
+
+    const ws = new WebSocket(serverUrl, {
+      headers: { cookie: 'access_token=invalid-token' },
+    });
+    clients.push(ws);
+
+    await new Promise<void>((resolve) => {
+      ws.on('open', resolve);
+    });
+
+    // クッキー認証失敗後、authenticateメッセージで認証
+    sendMessage(ws, {
+      type: 'authenticate',
+      token: VALID_TOKEN,
+      timestamp: Date.now(),
+    });
+
+    const message = await waitForMessage(ws, 'authenticated') as {
+      type: string;
+      userId: string;
+    };
+
+    expect(message.type).toBe('authenticated');
+    expect(message.userId).toBe(TEST_USER_ID);
+  });
+
+  it('メッセージ認証成功時にもユーザーチャンネルが自動購読される', async () => {
+    // クッキー認証なし（クッキーヘッダーなし）
+    vi.mocked(authenticateFromCookie).mockResolvedValue(null);
+
+    const ws = new WebSocket(serverUrl);
+    clients.push(ws);
+
+    await new Promise<void>((resolve) => {
+      ws.on('open', resolve);
+    });
+
+    sendMessage(ws, {
+      type: 'authenticate',
+      token: VALID_TOKEN,
+      timestamp: Date.now(),
+    });
+
+    await waitForMessage(ws, 'authenticated');
+
+    // 自動購読の処理が完了するまで少し待つ
+    await wait(100);
+
+    // Redisにuser:チャンネルが購読されたことを確認
+    expect(subscribeToChannel).toHaveBeenCalledWith(`user:${TEST_USER_ID}`);
+  });
+
+  it('クッキー認証済みの場合は再度のauthenticateメッセージを拒否', async () => {
+    vi.mocked(authenticateFromCookie).mockResolvedValue(testUser);
+
+    const ws = new WebSocket(serverUrl, {
+      headers: { cookie: `access_token=${VALID_TOKEN}` },
+    });
+    clients.push(ws);
+
+    // open前にメッセージリスナーを登録
+    await waitForMessage(ws, 'authenticated');
+
+    // 既にクッキーで認証済みの状態でauthenticateメッセージを送信
+    sendMessage(ws, {
+      type: 'authenticate',
+      token: 'valid-token-user2',
+      timestamp: Date.now(),
+    });
+
+    const errorMsg = await waitForMessage(ws, 'error') as {
+      type: string;
+      code: string;
+    };
+
+    expect(errorMsg.code).toBe('ALREADY_AUTHENTICATED');
   });
 });

@@ -49,8 +49,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false,
       });
 
-      // WebSocket接続（トークンはクッキーにあるので空文字で接続試行）
-      // 実際にはクッキーからトークンを取得する必要がある
+      // クッキー認証でWebSocket接続
+      wsClient.connect();
     } catch {
       set({
         user: null,
@@ -90,6 +90,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       isAuthenticated: true,
       isLoading: false,
     });
+
+    // クッキー認証でWebSocket接続
+    wsClient.connect();
   },
 
   /**
@@ -144,6 +147,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         requires2FA: false,
         twoFactorToken: null,
       });
+
+      // クッキー認証でWebSocket接続
+      wsClient.connect();
     } catch (error) {
       // 認証エラー（トークン無効/期限切れ/コード不正）: トークンをクリア
       if (error instanceof ApiError && error.statusCode === 401) {

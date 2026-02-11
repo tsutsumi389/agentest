@@ -4,8 +4,9 @@ import type {
   ServerMessage,
   ServerEvent,
 } from '@agentest/ws-types';
+import { Channels } from '@agentest/ws-types';
 import { z } from 'zod';
-import { authenticateToken, type AuthenticatedUser } from './auth.js';
+import { authenticateToken, authenticateFromCookie, type AuthenticatedUser } from './auth.js';
 import { subscriber, subscribeToChannel, unsubscribeFromChannel } from './redis.js';
 import { handlePresenceJoin, handlePresenceLeave } from './handlers/presence.js';
 import { logger as baseLogger } from './utils/logger.js';
@@ -102,23 +103,46 @@ export function createWebSocketServer(port: number, host: string): WebSocketServ
 
 /**
  * 接続ハンドラ
- * セキュリティ対策: URLクエリパラメータでのトークン送信を廃止し、
- * 接続後にauthenticateメッセージで認証する方式を採用。
- * これにより、トークンがプロキシログやブラウザ履歴に露出するリスクを排除。
+ * クッキー認証を最初に試行し、失敗時はメッセージ認証にフォールバック。
+ * セキュリティ対策: URLクエリパラメータでのトークン送信は廃止済み。
  */
-async function handleConnection(ws: WebSocket, _request: IncomingMessage): Promise<void> {
+async function handleConnection(ws: WebSocket, request: IncomingMessage): Promise<void> {
   const extWs = ws as ExtendedWebSocket;
   extWs.channels = new Set();
   extWs.isAlive = true;
   extWs.authAttempts = 0;
 
-  // 認証タイムアウト: 一定時間内に認証しなければ切断
-  extWs.authTimeout = setTimeout(() => {
-    if (!extWs.userId) {
-      sendError(extWs, 'AUTH_TIMEOUT', '認証がタイムアウトしました');
-      extWs.close();
+  // クッキーからの自動認証を試行
+  const cookieHeader = request.headers.cookie;
+  const user = await authenticateFromCookie(cookieHeader);
+
+  if (user) {
+    // クッキー認証成功: 認証タイムアウト不要
+    logger.debug({ userId: user.id }, 'クッキー認証成功');
+    extWs.userId = user.id;
+    extWs.user = user;
+    registerConnection(extWs);
+
+    sendMessage(extWs, {
+      type: 'authenticated',
+      userId: user.id,
+      timestamp: Date.now(),
+    });
+
+    // ユーザーチャンネルを自動購読
+    await autoSubscribeUserChannel(extWs);
+  } else {
+    // クッキー認証失敗: メッセージ認証にフォールバック
+    if (cookieHeader) {
+      logger.debug('クッキー認証失敗、メッセージ認証にフォールバック');
     }
-  }, AUTH_TIMEOUT_MS);
+    extWs.authTimeout = setTimeout(() => {
+      if (!extWs.userId) {
+        sendError(extWs, 'AUTH_TIMEOUT', '認証がタイムアウトしました');
+        extWs.close();
+      }
+    }, AUTH_TIMEOUT_MS);
+  }
 
   // Pongレスポンス
   extWs.on('pong', () => {
@@ -148,6 +172,28 @@ async function handleConnection(ws: WebSocket, _request: IncomingMessage): Promi
       logger.error({ err }, 'エラー時のクリーンアップエラー');
     });
   });
+}
+
+/**
+ * 認証済みユーザーのチャンネルを自動購読
+ * サーバー側の自動処理のため、subscribedメッセージは送信しない
+ */
+async function autoSubscribeUserChannel(ws: ExtendedWebSocket): Promise<void> {
+  if (!ws.userId) return;
+
+  const channel = Channels.user(ws.userId);
+
+  if (!channelSubscribers.has(channel)) {
+    const subscribed = await subscribeToChannel(channel);
+    if (!subscribed) {
+      logger.warn({ channel, userId: ws.userId }, 'ユーザーチャンネルの自動購読に失敗');
+      return;
+    }
+    channelSubscribers.set(channel, new Set());
+  }
+
+  channelSubscribers.get(channel)!.add(ws);
+  ws.channels.add(channel);
 }
 
 /**
@@ -241,6 +287,9 @@ async function handleAuthenticate(ws: ExtendedWebSocket, token: string): Promise
     userId: user.id,
     timestamp: Date.now(),
   });
+
+  // ユーザーチャンネルを自動購読
+  await autoSubscribeUserChannel(ws);
 }
 
 /**
