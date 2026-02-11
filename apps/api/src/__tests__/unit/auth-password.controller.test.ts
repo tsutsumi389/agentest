@@ -707,6 +707,9 @@ describe('AuthController - パスワード認証', () => {
         id: 'user-1',
         email: 'user@example.com',
         name: 'テストユーザー',
+        avatarUrl: null,
+        plan: 'free',
+        createdAt: new Date('2024-01-01'),
         totpEnabled: true,
         deletedAt: null,
       });
@@ -742,6 +745,10 @@ describe('AuthController - パスワード認証', () => {
           id: 'user-1',
           email: 'user@example.com',
           name: 'テストユーザー',
+          avatarUrl: null,
+          plan: 'free',
+          createdAt: new Date('2024-01-01'),
+          totpEnabled: true,
         },
       });
 

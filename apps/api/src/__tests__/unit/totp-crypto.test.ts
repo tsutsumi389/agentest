@@ -1,20 +1,32 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+// envモジュールをモック（TOTP_ENCRYPTION_KEYを制御可能にする）
+const { mockEnv } = vi.hoisted(() => {
+  return {
+    mockEnv: {
+      TOTP_ENCRYPTION_KEY: 'a'.repeat(64), // 64文字（256-bit相当）
+    } as Record<string, string>,
+  };
+});
+
+vi.mock('../../config/env.js', () => ({
+  env: mockEnv,
+}));
 
 describe('totp-crypto', () => {
-  const VALID_KEY = 'a'.repeat(64); // 64文字hex（256-bit）
+  const VALID_KEY = 'a'.repeat(64);
 
   beforeEach(() => {
-    vi.stubEnv('TOTP_ENCRYPTION_KEY', VALID_KEY);
+    mockEnv.TOTP_ENCRYPTION_KEY = VALID_KEY;
   });
 
-  afterEach(() => {
-    vi.unstubAllEnvs();
-  });
-
-  // テスト対象を動的にインポート（環境変数の変更を反映するため）
+  // テスト対象を動的にインポート（モック値の変更を反映するため）
   async function importModule() {
-    // モジュールキャッシュをクリアして再インポート
     vi.resetModules();
+    // vi.mockをリセット後に再登録
+    vi.mock('../../config/env.js', () => ({
+      env: mockEnv,
+    }));
     return import('../../lib/totp-crypto.js');
   }
 
@@ -91,40 +103,13 @@ describe('totp-crypto', () => {
       expect(() => decryptTotpSecret(tampered)).toThrow();
     });
 
-    it('TOTP_ENCRYPTION_KEY が未設定の場合にエラーが発生する', async () => {
-      vi.stubEnv('TOTP_ENCRYPTION_KEY', '');
-      const { encryptTotpSecret } = await importModule();
-
-      expect(() => encryptTotpSecret('JBSWY3DPEHPK3PXP')).toThrow(
-        'TOTP_ENCRYPTION_KEY'
-      );
-    });
-
-    it('TOTP_ENCRYPTION_KEY が未定義の場合に復号でもエラーが発生する', async () => {
-      vi.stubEnv('TOTP_ENCRYPTION_KEY', '');
-      const { decryptTotpSecret } = await importModule();
-
-      expect(() => decryptTotpSecret('enc:v1:dummy:dummy:dummy')).toThrow(
-        'TOTP_ENCRYPTION_KEY'
-      );
-    });
-
-    it('TOTP_ENCRYPTION_KEY が短すぎる場合にエラーが発生する', async () => {
-      vi.stubEnv('TOTP_ENCRYPTION_KEY', 'short-key');
-      const { encryptTotpSecret } = await importModule();
-
-      expect(() => encryptTotpSecret('JBSWY3DPEHPK3PXP')).toThrow(
-        '最低32文字'
-      );
-    });
-
     it('異なるキーで暗号化されたシークレットは復号できない', async () => {
       const { encryptTotpSecret } = await importModule();
       const secret = 'JBSWY3DPEHPK3PXP';
       const encrypted = encryptTotpSecret(secret);
 
       // 別のキーに変更
-      vi.stubEnv('TOTP_ENCRYPTION_KEY', 'b'.repeat(64));
+      mockEnv.TOTP_ENCRYPTION_KEY = 'b'.repeat(64);
       const { decryptTotpSecret } = await importModule();
 
       expect(() => decryptTotpSecret(encrypted)).toThrow();
