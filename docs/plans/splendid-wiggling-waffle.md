@@ -33,7 +33,7 @@ totpEnabled Boolean @default(false) @map("totp_enabled")
 
 ---
 
-### Task 2: Redis TOTP関数（RED → GREEN → REFACTOR）
+### Task 2: Redis TOTP関数（RED → GREEN → REFACTOR） ✅ 完了
 
 **RED**: `apps/api/src/__tests__/unit/redis-store-user-totp.test.ts` を作成
 
