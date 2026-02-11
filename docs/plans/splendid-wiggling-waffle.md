@@ -112,7 +112,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 ---
 
-### Task 4: UserRepository TOTP拡張（RED → GREEN → REFACTOR）
+### Task 4: UserRepository TOTP拡張（RED → GREEN → REFACTOR） ✅ 完了
 
 **RED**: `apps/api/src/__tests__/unit/user-repository-totp.test.ts` を作成
 - `enableTotp(id, encryptedSecret)` - 暗号化済みtotpSecret保存 + totpEnabled = true
