@@ -9,6 +9,33 @@ export interface AuthenticatedUser {
 }
 
 /**
+ * Cookieヘッダーからaccess_tokenを抽出
+ */
+export function parseCookieToken(cookieHeader: string | undefined): string | null {
+  if (!cookieHeader) return null;
+
+  const cookies = cookieHeader.split(';');
+  for (const cookie of cookies) {
+    const [name, ...rest] = cookie.trim().split('=');
+    if (name === 'access_token') {
+      const value = rest.join('=');
+      return value || null;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Cookieヘッダーからトークンを抽出して認証
+ */
+export async function authenticateFromCookie(cookieHeader: string | undefined): Promise<AuthenticatedUser | null> {
+  const token = parseCookieToken(cookieHeader);
+  if (!token) return null;
+  return authenticateToken(token);
+}
+
+/**
  * JWTトークンを検証してユーザー情報を取得
  */
 export async function authenticateToken(token: string): Promise<AuthenticatedUser | null> {

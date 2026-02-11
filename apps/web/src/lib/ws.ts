@@ -18,19 +18,25 @@ class WebSocketClient {
   private reconnectDelay = 1000;
   private subscribedChannels = new Set<string>();
   private token: string | null = null;
+  private useCookieAuth = false;
 
   /**
    * WebSocket接続を確立
-   * セキュリティ対策: トークンはURLクエリパラメータではなく、
-   * 接続確立後にauthenticateメッセージで送信する。
-   * これにより、プロキシログやブラウザ履歴へのトークン露出を防止。
+   * トークンあり: 接続後にauthenticateメッセージで認証
+   * トークンなし: サーバーがクッキーで自動認証
    */
-  connect(token: string): void {
+  connect(token?: string): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
       return;
     }
 
-    this.token = token;
+    if (token) {
+      this.token = token;
+      this.useCookieAuth = false;
+    } else {
+      this.token = null;
+      this.useCookieAuth = true;
+    }
     this.ws = new WebSocket(WS_URL);
 
     this.ws.onopen = () => {
@@ -68,6 +74,7 @@ class WebSocketClient {
           const code = (data as { code: string }).code;
           if (code === 'AUTHENTICATION_FAILED' || code === 'AUTH_TIMEOUT' || code === 'TOO_MANY_ATTEMPTS') {
             this.token = null;
+            this.useCookieAuth = false;
           }
         }
 
@@ -95,7 +102,8 @@ class WebSocketClient {
       return;
     }
 
-    if (!this.token) {
+    // トークンもクッキー認証もない場合は再接続しない
+    if (!this.token && !this.useCookieAuth) {
       return;
     }
 
@@ -103,7 +111,9 @@ class WebSocketClient {
     const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1);
 
     setTimeout(() => {
-      if (this.token) {
+      if (this.useCookieAuth) {
+        this.connect();
+      } else if (this.token) {
         this.connect(this.token);
       }
     }, delay);
@@ -114,6 +124,7 @@ class WebSocketClient {
    */
   disconnect(): void {
     this.token = null;
+    this.useCookieAuth = false;
     this.subscribedChannels.clear();
     if (this.ws) {
       this.ws.close();

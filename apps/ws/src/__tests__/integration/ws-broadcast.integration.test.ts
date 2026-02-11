@@ -34,6 +34,7 @@ vi.mock('../../redis.js', () => ({
 // 認証モジュールのモック
 vi.mock('../../auth.js', () => ({
   authenticateToken: vi.fn(),
+  authenticateFromCookie: vi.fn().mockResolvedValue(null),
 }));
 
 // プレゼンスハンドラのモック
@@ -53,7 +54,7 @@ vi.mock('../../config.js', async () => {
 // インポート
 // ============================================
 
-import { authenticateToken } from '../../auth.js';
+import { authenticateToken, authenticateFromCookie } from '../../auth.js';
 import { createWebSocketServer, broadcastToChannel, sendToUser } from '../../server.js';
 import {
   TEST_USER_ID,
@@ -128,6 +129,8 @@ describe('WebSocketブロードキャスト 統合テスト', () => {
       if (token === 'valid-token-user3') return testUser3;
       return null;
     });
+    // クッキー認証はデフォルトでnull
+    vi.mocked(authenticateFromCookie).mockResolvedValue(null);
   });
 
   afterEach(async () => {

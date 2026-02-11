@@ -32,6 +32,7 @@ vi.mock('../../lib/api', () => ({
 
 vi.mock('../../lib/ws', () => ({
   wsClient: {
+    connect: vi.fn(),
     disconnect: vi.fn(),
   },
 }));
@@ -61,7 +62,7 @@ describe('auth store', () => {
   });
 
   describe('initialize', () => {
-    it('認証済みの場合はユーザー情報を設定する', async () => {
+    it('認証済みの場合はユーザー情報を設定しWebSocket接続する', async () => {
       const mockUser = createMockUser({ name: 'テスト' });
       mockAuthApi.me.mockResolvedValue({ user: mockUser });
 
@@ -71,6 +72,7 @@ describe('auth store', () => {
       expect(state.user).toEqual(mockUser);
       expect(state.isAuthenticated).toBe(true);
       expect(state.isLoading).toBe(false);
+      expect(mockWsClient.connect).toHaveBeenCalled();
     });
 
     it('未認証の場合は未認証状態にする', async () => {
@@ -121,7 +123,7 @@ describe('auth store', () => {
   });
 
   describe('setUser', () => {
-    it('ユーザーを設定して認証状態にする', () => {
+    it('ユーザーを設定して認証状態にしWebSocket接続する', () => {
       const mockUser = createMockUser();
       useAuthStore.getState().setUser(mockUser);
 
@@ -129,6 +131,7 @@ describe('auth store', () => {
       expect(state.user).toEqual(mockUser);
       expect(state.isAuthenticated).toBe(true);
       expect(state.isLoading).toBe(false);
+      expect(mockWsClient.connect).toHaveBeenCalled();
     });
   });
 
@@ -197,7 +200,7 @@ describe('auth store', () => {
       expect(state.isLoading).toBe(false);
     });
 
-    it('verify2FA 成功時にユーザー設定と2FA状態クリア', async () => {
+    it('verify2FA 成功時にユーザー設定と2FA状態クリアしWebSocket接続する', async () => {
       const mockUser = createMockUser({ name: '2FAユーザー' });
       mockAuthApi.verify2FA.mockResolvedValue({ user: mockUser });
 
@@ -214,6 +217,7 @@ describe('auth store', () => {
       expect(state.requires2FA).toBe(false);
       expect(state.twoFactorToken).toBeNull();
       expect(mockAuthApi.verify2FA).toHaveBeenCalledWith('temp-token-123', '123456');
+      expect(mockWsClient.connect).toHaveBeenCalled();
     });
 
     it('verify2FA でtwoFactorTokenがない場合はエラー', async () => {
