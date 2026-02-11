@@ -27,6 +27,23 @@ vi.mock('../../services/user-password-auth.service.js', () => ({
   UserPasswordAuthService: vi.fn().mockImplementation(() => mockPasswordAuthService),
 }));
 
+// UserTotpService のモック
+const mockTotpService = vi.hoisted(() => ({
+  verifyTotp: vi.fn(),
+}));
+
+vi.mock('../../services/user-totp.service.js', () => ({
+  UserTotpService: vi.fn().mockImplementation(() => mockTotpService),
+}));
+
+// Redis store のモック（2FA認証用）
+const mockRedisStore = vi.hoisted(() => ({
+  getUserIdByTwoFactorToken: vi.fn(),
+  deleteUserTwoFactorToken: vi.fn().mockResolvedValue(true),
+}));
+
+vi.mock('../../lib/redis-store.js', () => mockRedisStore);
+
 // EmailService のモック
 const mockEmailService = vi.hoisted(() => ({
   send: vi.fn(),
@@ -61,23 +78,27 @@ vi.mock('../../config/env.js', () => ({
 }));
 
 // @agentest/auth のモック
+const mockGenerateTokens = vi.hoisted(() => vi.fn().mockReturnValue({
+  accessToken: 'mock-access-token',
+  refreshToken: 'mock-refresh-token',
+}));
 vi.mock('@agentest/auth', () => ({
-  generateTokens: vi.fn().mockReturnValue({
-    accessToken: 'mock-access-token',
-    refreshToken: 'mock-refresh-token',
-  }),
+  generateTokens: mockGenerateTokens,
   verifyRefreshToken: vi.fn(),
   passport: {},
   requireAuth: vi.fn(),
 }));
 
 // @agentest/db のモック
-vi.mock('@agentest/db', () => ({
-  prisma: {
-    refreshToken: { create: vi.fn() },
-    session: { create: vi.fn() },
-  },
+const mockPrisma = vi.hoisted(() => ({
+  user: { findUnique: vi.fn() },
+  refreshToken: { create: vi.fn() },
+  session: { create: vi.fn() },
+  $transaction: vi.fn(),
 }));
+// $transaction はコールバックに prisma 自身を渡す
+mockPrisma.$transaction.mockImplementation(async (fn: (tx: typeof mockPrisma) => Promise<unknown>) => fn(mockPrisma));
+vi.mock('@agentest/db', () => ({ prisma: mockPrisma }));
 
 // pkce のモック
 vi.mock('../../utils/pkce.js', () => ({
@@ -597,6 +618,239 @@ describe('AuthController - パスワード認証', () => {
 
       expect(next).toHaveBeenCalledWith(expect.any(ValidationError));
       expect(mockPasswordAuthService.resetPassword).not.toHaveBeenCalled();
+    });
+  });
+
+  // ===== POST /api/auth/login (2FA対応) =====
+  describe('login (2FA対応)', () => {
+    it('2FA有効ユーザー: クッキー未設定、requires2FA + twoFactorToken レスポンス', async () => {
+      mockPasswordAuthService.login.mockResolvedValue({
+        requires2FA: true,
+        twoFactorToken: 'mock-2fa-token',
+      });
+
+      const req = createMockReq({
+        body: {
+          email: 'user@example.com',
+          password: 'Password1!',
+        },
+      });
+      const res = createMockRes();
+      const next = createMockNext();
+
+      await controller.login(req, res, next);
+
+      // クッキーは設定されない
+      expect(res.cookie).not.toHaveBeenCalled();
+
+      // requires2FA + twoFactorToken レスポンス
+      expect(res.json).toHaveBeenCalledWith({
+        requires2FA: true,
+        twoFactorToken: 'mock-2fa-token',
+      });
+    });
+
+    it('2FA無効ユーザー: 従来通りクッキーにJWT設定', async () => {
+      mockPasswordAuthService.login.mockResolvedValue({
+        requires2FA: false,
+        tokens: {
+          accessToken: 'mock-access-token',
+          refreshToken: 'mock-refresh-token',
+        },
+        user: {
+          id: 'user-1',
+          email: 'user@example.com',
+          name: 'テストユーザー',
+        },
+      });
+
+      const req = createMockReq({
+        body: {
+          email: 'user@example.com',
+          password: 'Password1!',
+        },
+      });
+      const res = createMockRes();
+      const next = createMockNext();
+
+      await controller.login(req, res, next);
+
+      // クッキーが設定される
+      expect(res.cookie).toHaveBeenCalledWith(
+        'access_token',
+        'mock-access-token',
+        expect.any(Object)
+      );
+      expect(res.cookie).toHaveBeenCalledWith(
+        'refresh_token',
+        'mock-refresh-token',
+        expect.any(Object)
+      );
+
+      // ユーザー情報レスポンス
+      expect(res.json).toHaveBeenCalledWith({
+        user: {
+          id: 'user-1',
+          email: 'user@example.com',
+          name: 'テストユーザー',
+        },
+      });
+    });
+  });
+
+  // ===== POST /api/auth/2fa/verify =====
+  describe('verifyTwoFactor', () => {
+    it('正しいtwoFactorToken + code で JWT設定 + ユーザー情報返却', async () => {
+      mockRedisStore.getUserIdByTwoFactorToken.mockResolvedValue('user-1');
+      mockTotpService.verifyTotp.mockResolvedValue(true);
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        email: 'user@example.com',
+        name: 'テストユーザー',
+        totpEnabled: true,
+        deletedAt: null,
+      });
+      mockPrisma.refreshToken.create.mockResolvedValue({});
+      mockPrisma.session.create.mockResolvedValue({});
+
+      const req = createMockReq({
+        body: {
+          twoFactorToken: 'valid-2fa-token',
+          code: '123456',
+        },
+      });
+      const res = createMockRes();
+      const next = createMockNext();
+
+      await controller.verifyTwoFactor(req, res, next);
+
+      // クッキーにJWT設定
+      expect(res.cookie).toHaveBeenCalledWith(
+        'access_token',
+        'mock-access-token',
+        expect.any(Object)
+      );
+      expect(res.cookie).toHaveBeenCalledWith(
+        'refresh_token',
+        'mock-refresh-token',
+        expect.any(Object)
+      );
+
+      // ユーザー情報返却
+      expect(res.json).toHaveBeenCalledWith({
+        user: {
+          id: 'user-1',
+          email: 'user@example.com',
+          name: 'テストユーザー',
+        },
+      });
+
+      // トランザクションでDB操作が実行される
+      expect(mockPrisma.$transaction).toHaveBeenCalled();
+    });
+
+    it('無効なtwoFactorTokenでAuthenticationError', async () => {
+      mockRedisStore.getUserIdByTwoFactorToken.mockResolvedValue(null);
+
+      const req = createMockReq({
+        body: {
+          twoFactorToken: 'invalid-token',
+          code: '123456',
+        },
+      });
+      const res = createMockRes();
+      const next = createMockNext();
+
+      await controller.verifyTwoFactor(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(expect.any(AuthenticationError));
+    });
+
+    it('TOTPコード不正でエラーがnextに渡される（トークンは消費済み）', async () => {
+      mockRedisStore.getUserIdByTwoFactorToken.mockResolvedValue('user-1');
+      const authError = new AuthenticationError('TOTPコードが正しくありません');
+      mockTotpService.verifyTotp.mockRejectedValue(authError);
+
+      const req = createMockReq({
+        body: {
+          twoFactorToken: 'valid-2fa-token',
+          code: '000000',
+        },
+      });
+      const res = createMockRes();
+      const next = createMockNext();
+
+      await controller.verifyTwoFactor(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(authError);
+      // トークンは検証前に削除されているので、失敗時でも消費済み
+      expect(mockRedisStore.deleteUserTwoFactorToken).toHaveBeenCalledWith('valid-2fa-token');
+    });
+
+    it('検証前にRedis 2FAトークンが削除される（ワンタイム使用保証）', async () => {
+      // deleteUserTwoFactorToken の呼び出し順序を検証
+      const callOrder: string[] = [];
+      mockRedisStore.deleteUserTwoFactorToken.mockImplementation(async () => {
+        callOrder.push('deleteToken');
+        return true;
+      });
+      mockTotpService.verifyTotp.mockImplementation(async () => {
+        callOrder.push('verifyTotp');
+        return true;
+      });
+      mockRedisStore.getUserIdByTwoFactorToken.mockResolvedValue('user-1');
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'user-1',
+        email: 'user@example.com',
+        name: 'テストユーザー',
+        totpEnabled: true,
+        deletedAt: null,
+      });
+      mockPrisma.refreshToken.create.mockResolvedValue({});
+      mockPrisma.session.create.mockResolvedValue({});
+
+      const req = createMockReq({
+        body: {
+          twoFactorToken: 'valid-2fa-token',
+          code: '123456',
+        },
+      });
+      const res = createMockRes();
+      const next = createMockNext();
+
+      await controller.verifyTwoFactor(req, res, next);
+
+      expect(mockRedisStore.deleteUserTwoFactorToken).toHaveBeenCalledWith('valid-2fa-token');
+      // トークン削除はTOTP検証より前に実行される
+      expect(callOrder).toEqual(['deleteToken', 'verifyTotp']);
+    });
+
+    it('twoFactorTokenが未指定の場合はValidationError', async () => {
+      const req = createMockReq({
+        body: {
+          code: '123456',
+        },
+      });
+      const res = createMockRes();
+      const next = createMockNext();
+
+      await controller.verifyTwoFactor(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(expect.any(Error));
+    });
+
+    it('codeが未指定の場合はValidationError', async () => {
+      const req = createMockReq({
+        body: {
+          twoFactorToken: 'valid-token',
+        },
+      });
+      const res = createMockRes();
+      const next = createMockNext();
+
+      await controller.verifyTwoFactor(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(expect.any(Error));
     });
   });
 });

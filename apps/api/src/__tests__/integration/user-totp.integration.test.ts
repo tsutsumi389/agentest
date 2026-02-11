@@ -208,6 +208,16 @@ describe('User TOTP API Integration Tests', () => {
   describe('POST /api/auth/2fa/verify', () => {
     let totpSecret: string;
 
+    // 実際のログインで twoFactorToken を取得するヘルパー
+    async function loginAndGetTwoFactorToken(): Promise<string> {
+      const loginResponse = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'user-totp@example.com', password: testPassword });
+
+      expect(loginResponse.body.requires2FA).toBe(true);
+      return loginResponse.body.twoFactorToken;
+    }
+
     beforeEach(async () => {
       // TOTPを有効化
       const setupResponse = await request(app)
@@ -223,26 +233,32 @@ describe('User TOTP API Integration Tests', () => {
         .send({ code: validCode });
     });
 
-    it('正しいコードで検証成功', async () => {
+    it('正しいtwoFactorToken + コードで検証成功しJWTが設定される', async () => {
+      const twoFactorToken = await loginAndGetTwoFactorToken();
       const validCode = generateSync({ secret: totpSecret });
 
       const response = await request(app)
         .post('/api/auth/2fa/verify')
-        .set('Cookie', [accessTokenCookie, refreshTokenCookie])
-        .send({ code: validCode });
+        .send({ twoFactorToken, code: validCode });
 
       expect(response.status).toBe(200);
-      expect(response.body.message).toBe('2要素認証に成功しました');
-      expect(response.body.verified).toBe(true);
+      expect(response.body.user).toBeDefined();
+      expect(response.body.user.id).toBe(testUser.id);
+
+      // JWTクッキーが設定される
+      const cookies = response.headers['set-cookie'];
+      const cookieArray = Array.isArray(cookies) ? cookies : [cookies];
+      expect(cookieArray.some((c: string) => c.startsWith('access_token='))).toBe(true);
+      expect(cookieArray.some((c: string) => c.startsWith('refresh_token='))).toBe(true);
     });
 
     it('監査ログが記録される', async () => {
+      const twoFactorToken = await loginAndGetTwoFactorToken();
       const validCode = generateSync({ secret: totpSecret });
 
       await request(app)
         .post('/api/auth/2fa/verify')
-        .set('Cookie', [accessTokenCookie, refreshTokenCookie])
-        .send({ code: validCode });
+        .send({ twoFactorToken, code: validCode });
 
       const logs = await prisma.auditLog.findMany({
         where: {
@@ -255,30 +271,33 @@ describe('User TOTP API Integration Tests', () => {
     });
 
     it('不正なコードで401エラー', async () => {
+      const twoFactorToken = await loginAndGetTwoFactorToken();
+
       const response = await request(app)
         .post('/api/auth/2fa/verify')
-        .set('Cookie', [accessTokenCookie, refreshTokenCookie])
-        .send({ code: '000000' });
+        .send({ twoFactorToken, code: '000000' });
 
       expect(response.status).toBe(401);
     });
 
     it('同じコードを2回使用するとリプレイ攻撃として拒否される', async () => {
+      const twoFactorToken1 = await loginAndGetTwoFactorToken();
       const validCode = generateSync({ secret: totpSecret });
 
       // 1回目は成功
       const response1 = await request(app)
         .post('/api/auth/2fa/verify')
-        .set('Cookie', [accessTokenCookie, refreshTokenCookie])
-        .send({ code: validCode });
+        .send({ twoFactorToken: twoFactorToken1, code: validCode });
 
       expect(response1.status).toBe(200);
 
-      // 2回目は同じコードでリプレイ攻撃として拒否
+      // 2回目: 新しいtwoFactorTokenを取得（1回目で消費されたため）
+      const twoFactorToken2 = await loginAndGetTwoFactorToken();
+
+      // 同じTOTPコードで再度検証 → リプレイ攻撃として拒否
       const response2 = await request(app)
         .post('/api/auth/2fa/verify')
-        .set('Cookie', [accessTokenCookie, refreshTokenCookie])
-        .send({ code: validCode });
+        .send({ twoFactorToken: twoFactorToken2, code: validCode });
 
       expect(response2.status).toBe(401);
       expect(response2.body.error.message).toContain('既に使用');
@@ -295,7 +314,17 @@ describe('User TOTP API Integration Tests', () => {
       expect(logs.length).toBeGreaterThan(0);
     });
 
+    it('無効なtwoFactorTokenで401エラー', async () => {
+      const response = await request(app)
+        .post('/api/auth/2fa/verify')
+        .send({ twoFactorToken: 'invalid-token', code: '123456' });
+
+      expect(response.status).toBe(401);
+    });
+
     it('TOTP未設定の場合は401エラー', async () => {
+      const twoFactorToken = await loginAndGetTwoFactorToken();
+
       // TOTPを無効化
       await prisma.user.update({
         where: { id: testUser.id },
@@ -304,8 +333,7 @@ describe('User TOTP API Integration Tests', () => {
 
       const response = await request(app)
         .post('/api/auth/2fa/verify')
-        .set('Cookie', [accessTokenCookie, refreshTokenCookie])
-        .send({ code: '123456' });
+        .send({ twoFactorToken, code: '123456' });
 
       expect(response.status).toBe(401);
     });
@@ -456,15 +484,21 @@ describe('User TOTP API Integration Tests', () => {
       expect(statusResponse2.status).toBe(200);
       expect(statusResponse2.body.totpEnabled).toBe(true);
 
-      // 5. 検証
+      // 5. ログインで2FAトークンを取得 → 検証
+      const loginResponse = await request(app)
+        .post('/api/auth/login')
+        .send({ email: 'user-totp@example.com', password: testPassword });
+
+      expect(loginResponse.body.requires2FA).toBe(true);
+      const { twoFactorToken } = loginResponse.body;
+
       const verifyCode = generateSync({ secret });
       const verifyResponse = await request(app)
         .post('/api/auth/2fa/verify')
-        .set('Cookie', [accessTokenCookie, refreshTokenCookie])
-        .send({ code: verifyCode });
+        .send({ twoFactorToken, code: verifyCode });
 
       expect(verifyResponse.status).toBe(200);
-      expect(verifyResponse.body.verified).toBe(true);
+      expect(verifyResponse.body.user).toBeDefined();
 
       // 6. 無効化
       const disableResponse = await request(app)

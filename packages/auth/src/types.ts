@@ -4,6 +4,7 @@ export interface JwtPayload {
   sub: string; // User ID
   email: string;
   type: 'access' | 'refresh';
+  jti: string; // JWT ID（トークンの一意性を保証）
   iat: number;
   exp: number;
 }

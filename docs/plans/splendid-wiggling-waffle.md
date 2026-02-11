@@ -223,7 +223,7 @@ router.post('/2fa/disable', requireAuth(authConfig), rateLimiter({ max: 5, windo
 
 ---
 
-### Task 8: ログインフロー変更（RED → GREEN → REFACTOR）
+### Task 8: ログインフロー変更（RED → GREEN → REFACTOR） ✅ 完了
 
 **セキュリティ設計の核心**: 2FA有効ユーザーにはJWTを発行しない。
 

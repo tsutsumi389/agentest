@@ -1,4 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
+import { z } from 'zod';
 import { generateTokens, verifyRefreshToken } from '@agentest/auth';
 import { prisma } from '@agentest/db';
 import {
@@ -12,11 +13,13 @@ import {
 import { env } from '../config/env.js';
 import { SessionService } from '../services/session.service.js';
 import { UserPasswordAuthService } from '../services/user-password-auth.service.js';
+import { UserTotpService } from '../services/user-totp.service.js';
 import { emailService } from '../services/email.service.js';
 import { extractClientInfo } from '../middleware/session.middleware.js';
 import { encryptToken } from '../utils/crypto.js';
 import { hashToken } from '../utils/pkce.js';
 import { createValidationError } from '../utils/validation.js';
+import { getUserIdByTwoFactorToken, deleteUserTwoFactorToken } from '../lib/redis-store.js';
 import { logger as baseLogger } from '../utils/logger.js';
 
 const logger = baseLogger.child({ module: 'auth-controller' });
@@ -57,12 +60,19 @@ interface LinkModeInfo {
   userId: string;
 }
 
+// 2FA検証リクエストのバリデーション
+const twoFactorVerifySchema = z.object({
+  twoFactorToken: z.string().min(1, '2FAトークンを入力してください'),
+  code: z.string().regex(/^\d{6}$/, 'TOTPコードは6桁の数字で入力してください'),
+});
+
 /**
  * 認証コントローラー
  */
 export class AuthController {
   private sessionService = new SessionService();
   private passwordAuthService = new UserPasswordAuthService();
+  private totpService = new UserTotpService();
 
   /**
    * 現在のユーザー情報を取得
@@ -81,6 +91,7 @@ export class AuthController {
           avatarUrl: req.user.avatarUrl,
           plan: req.user.plan,
           createdAt: req.user.createdAt,
+          totpEnabled: req.user.totpEnabled,
         },
       });
     } catch (error) {
@@ -205,6 +216,9 @@ export class AuthController {
 
   /**
    * メール/パスワードログイン
+   *
+   * 2FA有効ユーザー: JWTを発行せず、一時トークンを返却
+   * 2FA無効ユーザー: 従来通りJWTをクッキーに設定
    */
   login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -221,8 +235,97 @@ export class AuthController {
         userAgent: clientInfo.userAgent,
       });
 
+      // 2FA有効: クッキー未設定、一時トークンを返却
+      if (result.requires2FA) {
+        res.json({
+          requires2FA: true,
+          twoFactorToken: result.twoFactorToken,
+        });
+        return;
+      }
+
+      // 2FA無効: 従来通りJWTをクッキーに設定
       this.setAuthCookies(res, result.tokens);
       res.json({ user: result.user });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * 2FA検証（ログイン時の第2ステップ）
+   * POST /api/auth/2fa/verify
+   *
+   * twoFactorTokenとTOTPコードを受け取り、検証成功でJWTを発行する。
+   * requireAuthミドルウェアは使用しない（JWT未発行状態で呼ばれるため）。
+   */
+  verifyTwoFactor = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parsed = twoFactorVerifySchema.safeParse(req.body);
+      if (!parsed.success) {
+        throw createValidationError(parsed.error);
+      }
+
+      const { twoFactorToken, code } = parsed.data;
+
+      // Redisから一時トークンでユーザーIDを取得
+      const userId = await getUserIdByTwoFactorToken(twoFactorToken);
+      if (!userId) {
+        throw new AuthenticationError('2FAトークンが無効または期限切れです');
+      }
+
+      // ワンタイム使用を保証: 検証前にトークンを削除
+      await deleteUserTwoFactorToken(twoFactorToken);
+
+      // TOTPコード検証（失敗してもトークンは既に消費済み）
+      const clientInfo = extractClientInfo(req);
+      await this.totpService.verifyTotp(userId, code, clientInfo.ipAddress, clientInfo.userAgent);
+
+      // ユーザー情報を取得
+      const user = await prisma.user.findUnique({
+        where: { id: userId },
+      });
+      if (!user || user.deletedAt) {
+        throw new AuthenticationError('ユーザーが見つかりません');
+      }
+
+      // JWT発行 + セッション作成（トランザクションでアトミックに実行）
+      const tokens = generateTokens(user.id, user.email, authConfig);
+      const tokenHash = hashToken(tokens.refreshToken);
+
+      await prisma.$transaction(async (tx) => {
+        await Promise.all([
+          tx.refreshToken.create({
+            data: {
+              userId: user.id,
+              tokenHash,
+              expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
+            },
+          }),
+          tx.session.create({
+            data: {
+              userId: user.id,
+              tokenHash,
+              userAgent: clientInfo.userAgent,
+              ipAddress: clientInfo.ipAddress,
+              expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
+            },
+          }),
+        ]);
+      });
+
+      // クッキーにJWT設定
+      this.setAuthCookies(res, tokens);
+
+      logger.info({ userId: user.id }, '2FA検証成功、ログイン完了');
+
+      res.json({
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+        },
+      });
     } catch (error) {
       next(error);
     }

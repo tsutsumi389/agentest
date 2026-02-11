@@ -5,6 +5,7 @@ import { generateTokens, type TokenPair } from '@agentest/auth';
 import { AppError, AuthenticationError, ConflictError, BadRequestError } from '@agentest/shared';
 import { authConfig } from '../config/auth.js';
 import { hashToken } from '../utils/pkce.js';
+import { setUserTwoFactorToken } from '../lib/redis-store.js';
 import { logger as baseLogger } from '../utils/logger.js';
 
 const logger = baseLogger.child({ module: 'user-password-auth' });
@@ -26,16 +27,14 @@ const DUMMY_PASSWORD_HASH =
   '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4bEaLwrMlxAqP6C2';
 
 /**
- * ログイン結果
+ * ログイン結果（判別共用体）
+ *
+ * 2FA無効: JWTトークンペア + ユーザー情報
+ * 2FA有効: 一時トークン（JWT未発行）
  */
-export interface AuthResult {
-  tokens: TokenPair;
-  user: {
-    id: string;
-    email: string;
-    name: string;
-  };
-}
+export type LoginResult =
+  | { requires2FA: false; tokens: TokenPair; user: { id: string; email: string; name: string } }
+  | { requires2FA: true; twoFactorToken: string };
 
 /**
  * 登録結果（メール確認が必要なため、JWTは発行しない）
@@ -145,7 +144,7 @@ export class UserPasswordAuthService {
     password: string;
     ipAddress?: string;
     userAgent?: string;
-  }): Promise<AuthResult> {
+  }): Promise<LoginResult> {
     const { email, password, ipAddress, userAgent } = input;
 
     // ユーザー検索
@@ -211,7 +210,26 @@ export class UserPasswordAuthService {
       throw new AppError(401, 'EMAIL_NOT_VERIFIED', 'メールアドレスが確認されていません。受信トレイの確認メールをご確認ください');
     }
 
-    // JWT生成
+    // 2FA有効ユーザー: JWTを発行せず、一時トークンをRedisに保存して返す
+    if (user.totpEnabled) {
+      const twoFactorToken = crypto.randomBytes(32).toString('hex');
+      const stored = await setUserTwoFactorToken(user.id, twoFactorToken);
+      if (!stored) {
+        throw new AppError(500, 'INTERNAL_ERROR', '2FA認証の準備に失敗しました。しばらく経ってから再度お試しください');
+      }
+
+      // パスワード認証成功: 失敗回数をリセット
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { failedAttempts: 0, lockedUntil: null },
+      });
+
+      logger.info({ userId: user.id, email }, 'ログイン成功（2FA検証待ち）');
+
+      return { requires2FA: true, twoFactorToken };
+    }
+
+    // 2FA無効ユーザー: 従来通りJWT発行
     const tokens = generateTokens(user.id, user.email, authConfig);
     const tokenHash = hashToken(tokens.refreshToken);
 
@@ -250,6 +268,7 @@ export class UserPasswordAuthService {
     logger.info({ userId: user.id, email }, 'ログイン成功');
 
     return {
+      requires2FA: false,
       tokens,
       user: {
         id: user.id,

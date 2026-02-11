@@ -169,14 +169,14 @@ router.post('/2fa/setup', requireAuth(authConfig), rateLimiter({ max: 3, windowM
 router.post('/2fa/enable', requireAuth(authConfig), rateLimiter({ max: 5, windowMs: 60000, routeId: '2fa-enable' }), userTotpController.enable);
 
 /**
- * 2FA検証（ログイン時）
+ * 2FA検証（ログイン時の第2ステップ）
  * POST /api/auth/2fa/verify
  *
- * TODO: Task 8でtwoFactorToken認証に変更予定（JWT未発行状態で呼ばれるため）
- * 現在はrequireAuthで暫定認証
+ * JWT未発行状態で呼ばれるため、requireAuth不要。
+ * twoFactorTokenで認証する（AuthControllerが処理）。
  * レート制限: 5回/分（ブルートフォース対策）
  */
-router.post('/2fa/verify', requireAuth(authConfig), rateLimiter({ max: 5, windowMs: 60000, routeId: '2fa-verify' }), userTotpController.verify);
+router.post('/2fa/verify', rateLimiter({ max: 5, windowMs: 60000, routeId: '2fa-verify' }), authController.verifyTwoFactor);
 
 /**
  * 2FA無効化

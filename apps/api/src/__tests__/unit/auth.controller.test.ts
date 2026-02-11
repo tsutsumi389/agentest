@@ -144,6 +144,29 @@ describe('AuthController', () => {
 
       expect(mockNext).toHaveBeenCalledWith(expect.any(AuthenticationError));
     });
+
+    it('レスポンスにtotpEnabledが含まれる', async () => {
+      const req = mockRequest({
+        user: {
+          id: TEST_USER_ID,
+          email: 'test@example.com',
+          name: 'Test User',
+          avatarUrl: null,
+          plan: 'FREE',
+          createdAt: new Date(),
+          totpEnabled: true,
+        } as any,
+      }) as Request;
+      const res = mockResponse() as Response;
+
+      await controller.me(req, res, mockNext);
+
+      expect(res.json).toHaveBeenCalledWith({
+        user: expect.objectContaining({
+          totpEnabled: true,
+        }),
+      });
+    });
   });
 
   describe('refresh', () => {

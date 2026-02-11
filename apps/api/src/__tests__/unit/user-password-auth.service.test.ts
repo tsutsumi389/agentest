@@ -31,6 +31,12 @@ const mockCrypto = vi.hoisted(() => ({
 }));
 vi.mock('crypto', () => ({ default: mockCrypto, ...mockCrypto }));
 
+// Redis storeモック（2FAトークン保存用）
+const mockRedisStore = vi.hoisted(() => ({
+  setUserTwoFactorToken: vi.fn().mockResolvedValue(true),
+}));
+vi.mock('../../lib/redis-store.js', () => mockRedisStore);
+
 // Prismaモック
 const mockPrisma = vi.hoisted(() => ({
   user: {
@@ -120,6 +126,13 @@ const mockOAuthOnlyUser = {
   ...mockUser,
   id: 'user-oauth',
   passwordHash: null,
+};
+
+// 2FA有効ユーザー
+const mockUserWith2FA = {
+  ...mockUser,
+  id: 'user-2fa',
+  totpEnabled: true,
 };
 
 // --- テスト ---
@@ -261,12 +274,15 @@ describe('UserPasswordAuthService', () => {
         userAgent: 'TestAgent',
       });
 
-      expect(result.tokens).toEqual(mockTokens);
-      expect(result.user).toEqual({
-        id: mockUser.id,
-        email: mockUser.email,
-        name: mockUser.name,
-      });
+      expect(result.requires2FA).toBe(false);
+      if (!result.requires2FA) {
+        expect(result.tokens).toEqual(mockTokens);
+        expect(result.user).toEqual({
+          id: mockUser.id,
+          email: mockUser.email,
+          name: mockUser.name,
+        });
+      }
     });
 
     it('メールアドレスが存在しない場合にAuthenticationErrorを返す', async () => {
@@ -430,7 +446,10 @@ describe('UserPasswordAuthService', () => {
         password: 'Password123!',
       });
 
-      expect(result.tokens).toEqual(mockTokens);
+      expect(result.requires2FA).toBe(false);
+      if (!result.requires2FA) {
+        expect(result.tokens).toEqual(mockTokens);
+      }
     });
 
     it('ロック期間終了時にfailedAttemptsとlockedUntilがリセットされる', async () => {
@@ -1177,7 +1196,112 @@ describe('UserPasswordAuthService', () => {
         password: 'Password123!',
       });
 
-      expect(result.tokens).toEqual(mockTokens);
+      expect(result.requires2FA).toBe(false);
+      if (!result.requires2FA) {
+        expect(result.tokens).toEqual(mockTokens);
+      }
+    });
+  });
+
+  // ===========================================
+  // login (2FA対応)
+  // ===========================================
+  describe('login (2FA対応)', () => {
+    it('2FA無効ユーザー: requires2FA: false + tokens + user を返す', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(mockUser); // totpEnabled: false
+      mockBcrypt.compare.mockResolvedValue(true);
+      mockPrisma.user.update.mockResolvedValue({ ...mockUser, failedAttempts: 0 });
+      mockPrisma.refreshToken.create.mockResolvedValue({});
+      mockPrisma.session.create.mockResolvedValue({});
+
+      const result = await service.login({
+        email: 'test@example.com',
+        password: 'Password123!',
+      });
+
+      expect(result.requires2FA).toBe(false);
+      if (!result.requires2FA) {
+        expect(result.tokens).toEqual(mockTokens);
+        expect(result.user).toEqual({
+          id: mockUser.id,
+          email: mockUser.email,
+          name: mockUser.name,
+        });
+      }
+    });
+
+    it('2FA有効ユーザー: requires2FA: true + twoFactorToken を返す（JWTなし）', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(mockUserWith2FA);
+      mockBcrypt.compare.mockResolvedValue(true);
+      mockPrisma.user.update.mockResolvedValue({ ...mockUserWith2FA, failedAttempts: 0 });
+
+      const result = await service.login({
+        email: 'test@example.com',
+        password: 'Password123!',
+      });
+
+      expect(result.requires2FA).toBe(true);
+      expect(result).toHaveProperty('twoFactorToken');
+      expect(result).not.toHaveProperty('tokens');
+      expect(result).not.toHaveProperty('user');
+    });
+
+    it('2FA有効ユーザー: twoFactorTokenがRedisに保存される', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(mockUserWith2FA);
+      mockBcrypt.compare.mockResolvedValue(true);
+      mockPrisma.user.update.mockResolvedValue({ ...mockUserWith2FA, failedAttempts: 0 });
+
+      const result = await service.login({
+        email: 'test@example.com',
+        password: 'Password123!',
+      });
+
+      // Redisに保存されることを確認
+      expect(mockRedisStore.setUserTwoFactorToken).toHaveBeenCalledWith(
+        mockUserWith2FA.id,
+        expect.any(String)
+      );
+      // 返却されたトークンとRedisに保存されたトークンが一致
+      const savedToken = mockRedisStore.setUserTwoFactorToken.mock.calls[0][1];
+      expect((result as { twoFactorToken: string }).twoFactorToken).toBe(savedToken);
+    });
+
+    it('2FA有効ユーザー: RefreshToken/Sessionが作成されない', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(mockUserWith2FA);
+      mockBcrypt.compare.mockResolvedValue(true);
+      mockPrisma.user.update.mockResolvedValue({ ...mockUserWith2FA, failedAttempts: 0 });
+
+      await service.login({
+        email: 'test@example.com',
+        password: 'Password123!',
+      });
+
+      // JWTもRefreshToken/Sessionも作成されない
+      expect(mockPrisma.refreshToken.create).not.toHaveBeenCalled();
+      expect(mockPrisma.session.create).not.toHaveBeenCalled();
+    });
+
+    it('2FA有効ユーザー: failedAttemptsがリセットされる', async () => {
+      const userWith2FAAndFailures = { ...mockUserWith2FA, failedAttempts: 3 };
+      mockPrisma.user.findFirst.mockResolvedValue(userWith2FAAndFailures);
+      mockBcrypt.compare.mockResolvedValue(true);
+      mockPrisma.user.update.mockResolvedValue({ ...userWith2FAAndFailures, failedAttempts: 0 });
+
+      await service.login({
+        email: 'test@example.com',
+        password: 'Password123!',
+      });
+
+      // パスワード認証成功後にfailedAttemptsがリセットされる
+      expect(mockPrisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: mockUserWith2FA.id },
+          data: expect.objectContaining({
+            failedAttempts: 0,
+            lockedUntil: null,
+          }),
+        })
+      );
     });
   });
 });
