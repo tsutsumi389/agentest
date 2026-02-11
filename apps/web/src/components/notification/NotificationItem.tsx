@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router';
 import { formatDistanceToNow } from 'date-fns';
 import { ja } from 'date-fns/locale';
+import { getNotificationNavigationPath } from '../../lib/notification-navigation';
 import {
   Mail,
   UserPlus,
@@ -59,12 +61,17 @@ export function NotificationItem({
   onDelete,
   onClick,
 }: NotificationItemProps) {
+  const navigate = useNavigate();
   const [isHovered, setIsHovered] = useState(false);
   const isUnread = !notification.readAt;
 
   const handleClick = () => {
     if (isUnread) {
       onMarkAsRead(notification.id);
+    }
+    const path = getNotificationNavigationPath(notification);
+    if (path) {
+      navigate(path);
     }
     onClick?.();
   };
