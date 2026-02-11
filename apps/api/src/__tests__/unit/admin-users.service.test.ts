@@ -93,6 +93,8 @@ describe('AdminUsersService', () => {
       failedAttempts: 0,
       lockedUntil: null,
       emailVerified: true,
+      totpSecret: null,
+      totpEnabled: false,
       createdAt: new Date('2024-01-15T00:00:00.000Z'),
       updatedAt: new Date('2024-01-20T00:00:00.000Z'),
       deletedAt: null,

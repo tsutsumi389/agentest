@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import jwt, { type SignOptions } from 'jsonwebtoken';
 import type { JwtPayload, TokenPair, AuthConfig } from './types.js';
 import { AuthenticationError } from '@agentest/shared';
@@ -11,12 +12,14 @@ export function generateTokens(
     sub: userId,
     email,
     type: 'access',
+    jti: crypto.randomUUID(),
   };
 
   const refreshPayload: Omit<JwtPayload, 'iat' | 'exp'> = {
     sub: userId,
     email,
     type: 'refresh',
+    jti: crypto.randomUUID(),
   };
 
   const accessOptions: SignOptions = {

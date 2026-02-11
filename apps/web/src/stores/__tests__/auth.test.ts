@@ -3,14 +3,31 @@ import { useAuthStore } from '../auth';
 import { createMockUser } from '../../__tests__/factories';
 
 // APIとWebSocketをモック
+// テスト用のApiErrorクラス
+const { MockApiError } = vi.hoisted(() => {
+  class MockApiError extends Error {
+    statusCode: number;
+    code: string;
+    constructor(statusCode: number, code: string, message: string) {
+      super(message);
+      this.name = 'ApiError';
+      this.statusCode = statusCode;
+      this.code = code;
+    }
+  }
+  return { MockApiError };
+});
+
 vi.mock('../../lib/api', () => ({
   authApi: {
     me: vi.fn(),
     logout: vi.fn(),
+    verify2FA: vi.fn(),
   },
   usersApi: {
     update: vi.fn(),
   },
+  ApiError: MockApiError,
 }));
 
 vi.mock('../../lib/ws', () => ({
@@ -32,6 +49,8 @@ describe('auth store', () => {
       isAuthenticated: false,
       isLoading: true,
       error: null,
+      requires2FA: false,
+      twoFactorToken: null,
     });
     vi.clearAllMocks();
     vi.spyOn(console, 'error').mockImplementation(() => {});
@@ -158,6 +177,108 @@ describe('auth store', () => {
       useAuthStore.setState({ error: 'エラー' });
       useAuthStore.getState().clearError();
       expect(useAuthStore.getState().error).toBeNull();
+    });
+  });
+
+  describe('2FA状態管理', () => {
+    it('初期状態でrequires2FAがfalse、twoFactorTokenがnull', () => {
+      const state = useAuthStore.getState();
+      expect(state.requires2FA).toBe(false);
+      expect(state.twoFactorToken).toBeNull();
+    });
+
+    it('set2FARequired で2FA必要状態を設定できる', () => {
+      useAuthStore.getState().set2FARequired('temp-token-123');
+
+      const state = useAuthStore.getState();
+      expect(state.requires2FA).toBe(true);
+      expect(state.twoFactorToken).toBe('temp-token-123');
+      expect(state.isAuthenticated).toBe(false);
+      expect(state.isLoading).toBe(false);
+    });
+
+    it('verify2FA 成功時にユーザー設定と2FA状態クリア', async () => {
+      const mockUser = createMockUser({ name: '2FAユーザー' });
+      mockAuthApi.verify2FA.mockResolvedValue({ user: mockUser });
+
+      useAuthStore.setState({
+        requires2FA: true,
+        twoFactorToken: 'temp-token-123',
+      });
+
+      await useAuthStore.getState().verify2FA('123456');
+
+      const state = useAuthStore.getState();
+      expect(state.user).toEqual(mockUser);
+      expect(state.isAuthenticated).toBe(true);
+      expect(state.requires2FA).toBe(false);
+      expect(state.twoFactorToken).toBeNull();
+      expect(mockAuthApi.verify2FA).toHaveBeenCalledWith('temp-token-123', '123456');
+    });
+
+    it('verify2FA でtwoFactorTokenがない場合はエラー', async () => {
+      useAuthStore.setState({
+        requires2FA: false,
+        twoFactorToken: null,
+      });
+
+      await expect(
+        useAuthStore.getState().verify2FA('123456')
+      ).rejects.toThrow('2FAトークンがありません');
+    });
+
+    it('verify2FA 認証エラー（401）時はトークンをクリア', async () => {
+      mockAuthApi.verify2FA.mockRejectedValue(
+        new MockApiError(401, 'AUTHENTICATION_ERROR', '2FAトークンが無効です')
+      );
+
+      useAuthStore.setState({
+        requires2FA: true,
+        twoFactorToken: 'temp-token-123',
+      });
+
+      await expect(
+        useAuthStore.getState().verify2FA('000000')
+      ).rejects.toThrow('2FAトークンが無効です');
+
+      const state = useAuthStore.getState();
+      expect(state.requires2FA).toBe(true);
+      // 認証エラーではトークンはクリアされる（バックエンドで消費済み）
+      expect(state.twoFactorToken).toBeNull();
+    });
+
+    it('verify2FA ネットワークエラー時はトークンを保持（リトライ可能）', async () => {
+      mockAuthApi.verify2FA.mockRejectedValue(new Error('Network Error'));
+
+      useAuthStore.setState({
+        requires2FA: true,
+        twoFactorToken: 'temp-token-123',
+      });
+
+      await expect(
+        useAuthStore.getState().verify2FA('000000')
+      ).rejects.toThrow('Network Error');
+
+      const state = useAuthStore.getState();
+      expect(state.requires2FA).toBe(true);
+      // ネットワークエラーではトークンは保持される（リトライ可能）
+      expect(state.twoFactorToken).toBe('temp-token-123');
+    });
+
+    it('ログアウト時に2FA状態もクリアされる', async () => {
+      useAuthStore.setState({
+        user: createMockUser(),
+        isAuthenticated: true,
+        requires2FA: true,
+        twoFactorToken: 'temp-token',
+      });
+      mockAuthApi.logout.mockResolvedValue({ message: 'OK' });
+
+      await useAuthStore.getState().logout();
+
+      const state = useAuthStore.getState();
+      expect(state.requires2FA).toBe(false);
+      expect(state.twoFactorToken).toBeNull();
     });
   });
 });

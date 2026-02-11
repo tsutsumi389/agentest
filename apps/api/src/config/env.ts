@@ -77,6 +77,12 @@ const envSchema = z.object({
     ? z.string().min(32)
     : z.string().min(32).default('development-token-encryption-key-32ch'),
 
+  // TOTP（2要素認証）シークレット暗号化キー
+  // 本番環境ではデフォルト値なし（必須）、開発環境ではデフォルト値あり
+  TOTP_ENCRYPTION_KEY: isProduction
+    ? z.string().min(32)
+    : z.string().min(32).default('development-totp-encryption-key-32char-minimum-length'),
+
   // SMTP（メール送信）
   SMTP_HOST: z.string().default('mailpit'),       // dev/staging: mailpit
   SMTP_PORT: z.coerce.number().default(1025),     // dev/staging: 1025

@@ -29,6 +29,9 @@ const isProduction = env.NODE_ENV === 'production';
 const KEY_PREFIX = {
   TOTP_SETUP: 'totp:setup:',
   TOTP_USED: 'totp:used:',
+  USER_TOTP_SETUP: 'user:totp:setup:',
+  USER_TOTP_USED: 'user:totp:used:',
+  USER_2FA_TOKEN: 'user:2fa:token:',
   ADMIN_DASHBOARD: 'admin:dashboard',
   ADMIN_USERS: 'admin:users:',
   ADMIN_USER_DETAIL: 'admin:user:detail:',
@@ -235,6 +238,213 @@ export async function closeRedisStore(): Promise<void> {
   if (redisClient) {
     await redisClient.quit();
     redisClient = null;
+  }
+}
+
+// ============================================
+// ユーザーTOTP関連
+// ============================================
+
+/**
+ * ユーザーTOTPセットアップ用の秘密鍵を一時保存
+ * @param userId ユーザーID
+ * @param secret TOTP秘密鍵
+ * @param ttlSeconds 有効期限（秒）、デフォルト5分
+ * @throws Error 本番環境でRedis未設定の場合
+ */
+export async function setUserTotpSetupSecret(
+  userId: string,
+  secret: string,
+  ttlSeconds: number = 300
+): Promise<boolean> {
+  requireRedisInProduction();
+
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    const key = `${KEY_PREFIX.USER_TOTP_SETUP}${userId}`;
+    await redis.setex(key, ttlSeconds, secret);
+    return true;
+  } catch (error) {
+    logger.error({ err: error, userId }, 'ユーザーTOTP秘密鍵の保存に失敗');
+    return false;
+  }
+}
+
+/**
+ * ユーザーTOTPセットアップ用の秘密鍵を取得
+ * @param userId ユーザーID
+ */
+export async function getUserTotpSetupSecret(
+  userId: string
+): Promise<string | null> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return null;
+  }
+
+  try {
+    const key = `${KEY_PREFIX.USER_TOTP_SETUP}${userId}`;
+    return await redis.get(key);
+  } catch (error) {
+    logger.error({ err: error, userId }, 'ユーザーTOTP秘密鍵の取得に失敗');
+    return null;
+  }
+}
+
+/**
+ * ユーザーTOTPセットアップ用の秘密鍵を削除
+ * @param userId ユーザーID
+ */
+export async function deleteUserTotpSetupSecret(
+  userId: string
+): Promise<boolean> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    const key = `${KEY_PREFIX.USER_TOTP_SETUP}${userId}`;
+    await redis.del(key);
+    return true;
+  } catch (error) {
+    logger.error({ err: error, userId }, 'ユーザーTOTP秘密鍵の削除に失敗');
+    return false;
+  }
+}
+
+/**
+ * ユーザーTOTPコードを使用済みとしてマーク（リプレイ攻撃対策）
+ *
+ * 注意: この関数はリプレイ攻撃のみを防ぐ。
+ * ブルートフォース攻撃対策は呼び出し元でレート制限を実装すること。
+ *
+ * @param userId ユーザーID
+ * @param code TOTPコード
+ * @param ttlSeconds 有効期限（秒）、デフォルト90秒
+ * @throws Error 本番環境でRedis未設定の場合
+ */
+export async function markUserTotpCodeUsed(
+  userId: string,
+  code: string,
+  ttlSeconds: number = 90
+): Promise<boolean> {
+  requireRedisInProduction();
+
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    const key = `${KEY_PREFIX.USER_TOTP_USED}${userId}:${code}`;
+    // NXオプション: キーが存在しない場合のみ設定
+    const result = await redis.set(key, '1', 'EX', ttlSeconds, 'NX');
+    return result === 'OK';
+  } catch (error) {
+    logger.error({ err: error, userId }, 'ユーザーTOTPコードの使用済みマークに失敗');
+    return false;
+  }
+}
+
+/**
+ * ユーザーTOTPコードが使用済みかどうかを確認
+ * @param userId ユーザーID
+ * @param code TOTPコード
+ */
+export async function isUserTotpCodeUsed(
+  userId: string,
+  code: string
+): Promise<boolean> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    const key = `${KEY_PREFIX.USER_TOTP_USED}${userId}:${code}`;
+    const result = await redis.exists(key);
+    return result === 1;
+  } catch (error) {
+    logger.error({ err: error, userId }, 'ユーザーTOTPコードの使用済み確認に失敗');
+    return false;
+  }
+}
+
+/**
+ * 2FA認証用の一時トークンを保存
+ * トークンをキー、ユーザーIDを値として保存する
+ * @param userId ユーザーID
+ * @param token 一時トークン（crypto.randomBytesで生成）
+ * @param ttlSeconds 有効期限（秒）、デフォルト5分
+ * @throws Error 本番環境でRedis未設定の場合
+ */
+export async function setUserTwoFactorToken(
+  userId: string,
+  token: string,
+  ttlSeconds: number = 300
+): Promise<boolean> {
+  requireRedisInProduction();
+
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    const key = `${KEY_PREFIX.USER_2FA_TOKEN}${token}`;
+    await redis.setex(key, ttlSeconds, userId);
+    return true;
+  } catch (error) {
+    logger.error({ err: error, userId }, 'ユーザー2FA一時トークンの保存に失敗');
+    return false;
+  }
+}
+
+/**
+ * 2FA認証用の一時トークンからユーザーIDを取得
+ * @param token 一時トークン
+ */
+export async function getUserIdByTwoFactorToken(
+  token: string
+): Promise<string | null> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return null;
+  }
+
+  try {
+    const key = `${KEY_PREFIX.USER_2FA_TOKEN}${token}`;
+    return await redis.get(key);
+  } catch (error) {
+    logger.error({ err: error }, 'ユーザー2FA一時トークンからのユーザーID取得に失敗');
+    return null;
+  }
+}
+
+/**
+ * 2FA認証用の一時トークンを削除
+ * @param token 一時トークン
+ */
+export async function deleteUserTwoFactorToken(
+  token: string
+): Promise<boolean> {
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    const key = `${KEY_PREFIX.USER_2FA_TOKEN}${token}`;
+    await redis.del(key);
+    return true;
+  } catch (error) {
+    logger.error({ err: error }, 'ユーザー2FA一時トークンの削除に失敗');
+    return false;
   }
 }
 
@@ -635,3 +845,17 @@ export async function setSystemAdminDetailCache<T>(adminUserId: string, data: T,
 export async function invalidateSystemAdminDetailCache(adminUserId: string): Promise<boolean> {
   return invalidateCache(`${KEY_PREFIX.SYSTEM_ADMIN_DETAIL}${adminUserId}`, 'システム管理者詳細キャッシュの無効化に失敗');
 }
+
+// ============================================
+// レート制限キーのクリア（テスト用）
+// ============================================
+
+/**
+ * レート制限関連のRedisキーをすべて削除する
+ * テストのクリーンアップ用途
+ */
+export async function clearRateLimitKeys(): Promise<boolean> {
+  // rate-limiter.tsのRATE_LIMIT_PREFIXと一致させる
+  return invalidateCacheByPattern('ratelimit:*', 'レート制限キーのクリアに失敗');
+}
+// NOTE: 循環依存を避けるためプレフィックス文字列は直接記述

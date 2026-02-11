@@ -20,6 +20,7 @@ export function createMockUser(overrides: Partial<User> = {}): User {
     avatarUrl: null,
     plan: 'FREE',
     createdAt: '2024-01-01T00:00:00Z',
+    totpEnabled: false,
     ...overrides,
   };
 }

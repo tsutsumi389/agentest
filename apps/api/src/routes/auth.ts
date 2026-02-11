@@ -2,14 +2,17 @@ import { Router } from 'express';
 import { passport, requireAuth, generateTokens } from '@agentest/auth';
 import { prisma } from '@agentest/db';
 import { AuthController } from '../controllers/auth.controller.js';
+import { UserTotpController } from '../controllers/user-totp.controller.js';
 import { authConfig } from '../config/auth.js';
 import { env } from '../config/env.js';
 import { SessionService } from '../services/session.service.js';
 import { extractClientInfo } from '../middleware/session.middleware.js';
 import { hashToken } from '../utils/pkce.js';
+import { rateLimiter } from '../middleware/rate-limiter.js';
 
 const router: Router = Router();
 const authController = new AuthController();
+const userTotpController = new UserTotpController();
 
 // OAuth連携追加モードを示すクッキー設定
 const LINK_MODE_COOKIE = 'oauth_link_mode';
@@ -140,6 +143,48 @@ if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
     res.redirect('/api/auth/google');
   });
 }
+
+// ==================== 2FA (TOTP) エンドポイント ====================
+
+/**
+ * 2FAステータス取得
+ * GET /api/auth/2fa/status
+ */
+router.get('/2fa/status', requireAuth(authConfig), userTotpController.status);
+
+/**
+ * 2FAセットアップ開始
+ * POST /api/auth/2fa/setup
+ *
+ * QRコードと秘密鍵を返却（レート制限: 3回/分）
+ */
+router.post('/2fa/setup', requireAuth(authConfig), rateLimiter({ max: 3, windowMs: 60000, routeId: '2fa-setup' }), userTotpController.setup);
+
+/**
+ * 2FA有効化
+ * POST /api/auth/2fa/enable
+ *
+ * TOTPコードを検証し有効化（レート制限: 5回/分）
+ */
+router.post('/2fa/enable', requireAuth(authConfig), rateLimiter({ max: 5, windowMs: 60000, routeId: '2fa-enable' }), userTotpController.enable);
+
+/**
+ * 2FA検証（ログイン時の第2ステップ）
+ * POST /api/auth/2fa/verify
+ *
+ * JWT未発行状態で呼ばれるため、requireAuth不要。
+ * twoFactorTokenで認証する（AuthControllerが処理）。
+ * レート制限: 5回/分（ブルートフォース対策）
+ */
+router.post('/2fa/verify', rateLimiter({ max: 5, windowMs: 60000, routeId: '2fa-verify' }), authController.verifyTwoFactor);
+
+/**
+ * 2FA無効化
+ * POST /api/auth/2fa/disable
+ *
+ * パスワード確認後に無効化（レート制限: 5回/分）
+ */
+router.post('/2fa/disable', requireAuth(authConfig), rateLimiter({ max: 5, windowMs: 60000, routeId: '2fa-disable' }), userTotpController.disable);
 
 // テスト用ログインエンドポイント（非本番環境のみ）
 if (env.NODE_ENV !== 'production') {

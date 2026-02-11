@@ -58,7 +58,7 @@ POST /auth/login
 | `email` | string | Yes | メールアドレス |
 | `password` | string | Yes | パスワード |
 
-**Response:**
+**Response（2FA無効ユーザー）:**
 
 ```json
 {
@@ -69,6 +69,19 @@ POST /auth/login
       "name": "John Doe",
       "avatarUrl": "https://..."
     }
+  }
+}
+```
+
+**Response（2FA有効ユーザー）:**
+
+2FA有効ユーザーの場合、JWTは発行されず一時トークンが返却される。`POST /auth/2fa/verify` で検証完了後にJWTが発行される。
+
+```json
+{
+  "data": {
+    "requires2FA": true,
+    "twoFactorToken": "a1b2c3d4e5f6..."
   }
 }
 ```
@@ -305,6 +318,183 @@ Google の認可画面にリダイレクト。
 
 ---
 
+## 2FA（二要素認証）エンドポイント
+
+TOTP（Time-based One-Time Password）による二要素認証。
+
+### 2FAステータス取得
+
+```
+GET /auth/2fa/status
+```
+
+2FAの有効/無効状態を取得。**認証必須。** レート制限: 3回/分。
+
+**Response:**
+
+```json
+{
+  "data": {
+    "totpEnabled": false
+  }
+}
+```
+
+---
+
+### 2FAセットアップ
+
+```
+POST /auth/2fa/setup
+```
+
+TOTP秘密鍵を生成し、QRコードを返却。**認証必須。** レート制限: 3回/分。
+
+**Response:**
+
+```json
+{
+  "data": {
+    "secret": "JBSWY3DPEHPK3PXP",
+    "qrCode": "data:image/png;base64,...",
+    "otpauthUrl": "otpauth://totp/Agentest:user@example.com?secret=..."
+  }
+}
+```
+
+**注意:** 秘密鍵はRedisに一時保存（5分TTL）。有効期限内に `POST /auth/2fa/enable` で有効化する必要がある。
+
+---
+
+### 2FA有効化
+
+```
+POST /auth/2fa/enable
+```
+
+セットアップ時のTOTPコードを検証し、2FAを有効化。**認証必須。** レート制限: 5回/分。
+
+**Request:**
+
+```json
+{
+  "code": "123456"
+}
+```
+
+| フィールド | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| `code` | string | Yes | 6桁のTOTPコード |
+
+**Response:**
+
+```json
+{
+  "data": {
+    "message": "2FAが有効化されました"
+  }
+}
+```
+
+**Errors:**
+
+| コード | ステータス | 説明 |
+|-------|-----------|------|
+| `2FA_ALREADY_ENABLED` | 400 | 既に2FAが有効 |
+| `2FA_SETUP_EXPIRED` | 400 | セットアップ秘密鍵が期限切れ |
+| `2FA_INVALID_CODE` | 400 | TOTPコードが不正 |
+
+---
+
+### 2FA検証（ログイン時）
+
+```
+POST /auth/2fa/verify
+```
+
+ログイン時の2FA検証。**認証不要**（一時トークンで認証）。レート制限: 5回/分。
+
+**Request:**
+
+```json
+{
+  "twoFactorToken": "a1b2c3d4e5f6...",
+  "code": "123456"
+}
+```
+
+| フィールド | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| `twoFactorToken` | string | Yes | ログイン時に返却された一時トークン |
+| `code` | string | Yes | 6桁のTOTPコード |
+
+**Response:**
+
+検証成功時、JWTが発行されCookieに設定される。
+
+```json
+{
+  "data": {
+    "user": {
+      "id": "usr_123456",
+      "email": "user@example.com",
+      "name": "John Doe",
+      "avatarUrl": "https://..."
+    }
+  }
+}
+```
+
+**Errors:**
+
+| コード | ステータス | 説明 |
+|-------|-----------|------|
+| `AUTH_INVALID_TOKEN` | 401 | 一時トークンが無効または期限切れ（5分） |
+| `2FA_INVALID_CODE` | 400 | TOTPコードが不正 |
+| `2FA_CODE_ALREADY_USED` | 400 | TOTPコードが既に使用済み（リプレイ攻撃対策） |
+| `RATE_LIMIT_EXCEEDED` | 429 | レート制限超過 |
+
+---
+
+### 2FA無効化
+
+```
+POST /auth/2fa/disable
+```
+
+パスワード確認後、2FAを無効化。**認証必須。** レート制限: 5回/分。
+
+**Request:**
+
+```json
+{
+  "password": "SecureP@ss1"
+}
+```
+
+| フィールド | 型 | 必須 | 説明 |
+|-----------|-----|------|------|
+| `password` | string | Yes | 現在のパスワード |
+
+**Response:**
+
+```json
+{
+  "data": {
+    "message": "2FAが無効化されました"
+  }
+}
+```
+
+**Errors:**
+
+| コード | ステータス | 説明 |
+|-------|-----------|------|
+| `AUTH_INVALID_CREDENTIALS` | 401 | パスワードが不正 |
+| `2FA_NOT_ENABLED` | 400 | 2FAが有効化されていない |
+
+---
+
 ### トークン更新
 
 ```
@@ -378,6 +568,7 @@ Authorization: Bearer <access_token>
     "email": "user@example.com",
     "name": "John Doe",
     "avatarUrl": "https://...",
+    "totpEnabled": false,
     "createdAt": "2024-01-01T00:00:00Z"
   }
 }
@@ -414,6 +605,12 @@ Set-Cookie: refresh_token=<token>; HttpOnly; Secure; SameSite=Strict; Path=/
 | `AUTH_ACCOUNT_LOCKED` | アカウントがロック中 |
 | `AUTH_EMAIL_EXISTS` | メールアドレスが既に使用されている |
 | `EMAIL_NOT_VERIFIED` | メールアドレスが未確認（確認メールのリンクをクリックしてください） |
+| `2FA_ALREADY_ENABLED` | 2FAが既に有効化されている |
+| `2FA_SETUP_EXPIRED` | 2FAセットアップの秘密鍵が期限切れ |
+| `2FA_INVALID_CODE` | TOTPコードが不正 |
+| `2FA_CODE_ALREADY_USED` | TOTPコードが既に使用済み |
+| `2FA_NOT_ENABLED` | 2FAが有効化されていない |
+| `RATE_LIMIT_EXCEEDED` | レート制限超過 |
 
 ## 使用例
 
@@ -465,6 +662,44 @@ await fetch('/api/v1/auth/reset-password', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ token: 'reset-token', password: 'NewSecureP@ss1' })
+});
+
+// ログイン（2FA有効ユーザーの場合）
+const loginRes = await fetch('/api/v1/auth/login', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email: 'user@example.com', password: 'SecureP@ss1' }),
+  credentials: 'include'
+});
+const loginData = await loginRes.json();
+if (loginData.data.requires2FA) {
+  // 2FA検証
+  const verifyRes = await fetch('/api/v1/auth/2fa/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      twoFactorToken: loginData.data.twoFactorToken,
+      code: '123456'
+    }),
+    credentials: 'include'
+  });
+  const { data: { user } } = await verifyRes.json();
+}
+
+// 2FAセットアップ（設定画面から）
+const setupRes = await fetch('/api/v1/auth/2fa/setup', {
+  method: 'POST',
+  credentials: 'include'
+});
+const { data: { qrCode, secret } } = await setupRes.json();
+// QRコードを表示 → ユーザーが認証アプリでスキャン
+
+// 2FA有効化
+await fetch('/api/v1/auth/2fa/enable', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ code: '123456' }),
+  credentials: 'include'
 });
 
 // ユーザー情報取得

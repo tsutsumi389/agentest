@@ -93,6 +93,7 @@ export const testJwtPayload = {
   sub: TEST_USER_ID,
   email: 'test@example.com',
   type: 'access' as const,
+  jti: 'test-jwt-id',
   iat: Math.floor(Date.now() / 1000),
   exp: Math.floor(Date.now() / 1000) + 900,
 };

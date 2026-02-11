@@ -66,6 +66,14 @@ import {
   getSystemAdminDetailCache,
   setSystemAdminDetailCache,
   invalidateSystemAdminDetailCache,
+  setUserTotpSetupSecret,
+  getUserTotpSetupSecret,
+  deleteUserTotpSetupSecret,
+  markUserTotpCodeUsed,
+  isUserTotpCodeUsed,
+  setUserTwoFactorToken,
+  getUserIdByTwoFactorToken,
+  deleteUserTwoFactorToken,
 } from '../../lib/redis-store.js';
 
 const TEST_ADMIN_USER_ID = 'admin-user-1';
@@ -513,6 +521,244 @@ describe('redis-store', () => {
       getRedisClient();
       await closeRedisStore();
       expect(mockRedis.quit).toHaveBeenCalled();
+    });
+  });
+
+  // ===========================================
+  // ユーザーTOTP関連
+  // ===========================================
+  describe('ユーザーTOTP操作', () => {
+    // セットアップ用一時秘密鍵
+    describe('setUserTotpSetupSecret', () => {
+      it('秘密鍵を保存できる', async () => {
+        const result = await setUserTotpSetupSecret(TEST_USER_ID, 'user-secret123');
+        expect(result).toBe(true);
+        expect(mockRedis.setex).toHaveBeenCalledWith(
+          `user:totp:setup:${TEST_USER_ID}`,
+          300,
+          'user-secret123'
+        );
+      });
+
+      it('カスタムTTLを指定できる', async () => {
+        await setUserTotpSetupSecret(TEST_USER_ID, 'secret', 600);
+        expect(mockRedis.setex).toHaveBeenCalledWith(
+          `user:totp:setup:${TEST_USER_ID}`,
+          600,
+          'secret'
+        );
+      });
+
+      it('Redis未設定時はfalseを返す', async () => {
+        mockEnv.REDIS_URL = '';
+        const result = await setUserTotpSetupSecret(TEST_USER_ID, 'secret');
+        expect(result).toBe(false);
+      });
+
+      it('Redisエラー時はfalseを返す', async () => {
+        mockRedis.setex.mockRejectedValueOnce(new Error('Redis error'));
+        const result = await setUserTotpSetupSecret(TEST_USER_ID, 'secret');
+        expect(result).toBe(false);
+      });
+    });
+
+    describe('getUserTotpSetupSecret', () => {
+      it('秘密鍵を取得できる', async () => {
+        mockRedis.get.mockResolvedValue('user-secret123');
+        const result = await getUserTotpSetupSecret(TEST_USER_ID);
+        expect(result).toBe('user-secret123');
+        expect(mockRedis.get).toHaveBeenCalledWith(`user:totp:setup:${TEST_USER_ID}`);
+      });
+
+      it('存在しない場合はnullを返す', async () => {
+        mockRedis.get.mockResolvedValue(null);
+        const result = await getUserTotpSetupSecret(TEST_USER_ID);
+        expect(result).toBeNull();
+      });
+
+      it('Redis未設定時はnullを返す', async () => {
+        mockEnv.REDIS_URL = '';
+        const result = await getUserTotpSetupSecret(TEST_USER_ID);
+        expect(result).toBeNull();
+      });
+
+      it('Redisエラー時はnullを返す', async () => {
+        mockRedis.get.mockRejectedValueOnce(new Error('Redis error'));
+        const result = await getUserTotpSetupSecret(TEST_USER_ID);
+        expect(result).toBeNull();
+      });
+    });
+
+    describe('deleteUserTotpSetupSecret', () => {
+      it('秘密鍵を削除できる', async () => {
+        const result = await deleteUserTotpSetupSecret(TEST_USER_ID);
+        expect(result).toBe(true);
+        expect(mockRedis.del).toHaveBeenCalledWith(`user:totp:setup:${TEST_USER_ID}`);
+      });
+
+      it('Redis未設定時はfalseを返す', async () => {
+        mockEnv.REDIS_URL = '';
+        const result = await deleteUserTotpSetupSecret(TEST_USER_ID);
+        expect(result).toBe(false);
+      });
+
+      it('Redisエラー時はfalseを返す', async () => {
+        mockRedis.del.mockRejectedValueOnce(new Error('Redis error'));
+        const result = await deleteUserTotpSetupSecret(TEST_USER_ID);
+        expect(result).toBe(false);
+      });
+    });
+
+    // リプレイ攻撃対策
+    describe('markUserTotpCodeUsed', () => {
+      it('コードを使用済みマークできる', async () => {
+        const result = await markUserTotpCodeUsed(TEST_USER_ID, '654321');
+        expect(result).toBe(true);
+        expect(mockRedis.set).toHaveBeenCalledWith(
+          `user:totp:used:${TEST_USER_ID}:654321`,
+          '1',
+          'EX',
+          90,
+          'NX'
+        );
+      });
+
+      it('カスタムTTLを指定できる', async () => {
+        await markUserTotpCodeUsed(TEST_USER_ID, '654321', 120);
+        expect(mockRedis.set).toHaveBeenCalledWith(
+          `user:totp:used:${TEST_USER_ID}:654321`,
+          '1',
+          'EX',
+          120,
+          'NX'
+        );
+      });
+
+      it('既に使用済みの場合はfalseを返す', async () => {
+        mockRedis.set.mockResolvedValueOnce(null);
+        const result = await markUserTotpCodeUsed(TEST_USER_ID, '654321');
+        expect(result).toBe(false);
+      });
+
+      it('Redis未設定時はfalseを返す', async () => {
+        mockEnv.REDIS_URL = '';
+        const result = await markUserTotpCodeUsed(TEST_USER_ID, '654321');
+        expect(result).toBe(false);
+      });
+
+      it('Redisエラー時はfalseを返す', async () => {
+        mockRedis.set.mockRejectedValueOnce(new Error('Redis error'));
+        const result = await markUserTotpCodeUsed(TEST_USER_ID, '654321');
+        expect(result).toBe(false);
+      });
+    });
+
+    describe('isUserTotpCodeUsed', () => {
+      it('使用済みコードの場合trueを返す', async () => {
+        mockRedis.exists.mockResolvedValue(1);
+        const result = await isUserTotpCodeUsed(TEST_USER_ID, '654321');
+        expect(result).toBe(true);
+        expect(mockRedis.exists).toHaveBeenCalledWith(`user:totp:used:${TEST_USER_ID}:654321`);
+      });
+
+      it('未使用コードの場合falseを返す', async () => {
+        mockRedis.exists.mockResolvedValue(0);
+        const result = await isUserTotpCodeUsed(TEST_USER_ID, '654321');
+        expect(result).toBe(false);
+      });
+
+      it('Redis未設定時はfalseを返す', async () => {
+        mockEnv.REDIS_URL = '';
+        const result = await isUserTotpCodeUsed(TEST_USER_ID, '654321');
+        expect(result).toBe(false);
+      });
+
+      it('Redisエラー時はfalseを返す', async () => {
+        mockRedis.exists.mockRejectedValueOnce(new Error('Redis error'));
+        const result = await isUserTotpCodeUsed(TEST_USER_ID, '654321');
+        expect(result).toBe(false);
+      });
+    });
+
+    // 2FA認証用一時トークン
+    describe('setUserTwoFactorToken', () => {
+      it('一時トークンを保存できる', async () => {
+        const result = await setUserTwoFactorToken(TEST_USER_ID, 'token-abc123');
+        expect(result).toBe(true);
+        expect(mockRedis.setex).toHaveBeenCalledWith(
+          `user:2fa:token:token-abc123`,
+          300,
+          TEST_USER_ID
+        );
+      });
+
+      it('カスタムTTLを指定できる', async () => {
+        await setUserTwoFactorToken(TEST_USER_ID, 'token-abc123', 600);
+        expect(mockRedis.setex).toHaveBeenCalledWith(
+          `user:2fa:token:token-abc123`,
+          600,
+          TEST_USER_ID
+        );
+      });
+
+      it('Redis未設定時はfalseを返す', async () => {
+        mockEnv.REDIS_URL = '';
+        const result = await setUserTwoFactorToken(TEST_USER_ID, 'token-abc123');
+        expect(result).toBe(false);
+      });
+
+      it('Redisエラー時はfalseを返す', async () => {
+        mockRedis.setex.mockRejectedValueOnce(new Error('Redis error'));
+        const result = await setUserTwoFactorToken(TEST_USER_ID, 'token-abc123');
+        expect(result).toBe(false);
+      });
+    });
+
+    describe('getUserIdByTwoFactorToken', () => {
+      it('トークンからユーザーIDを取得できる', async () => {
+        mockRedis.get.mockResolvedValue(TEST_USER_ID);
+        const result = await getUserIdByTwoFactorToken('token-abc123');
+        expect(result).toBe(TEST_USER_ID);
+        expect(mockRedis.get).toHaveBeenCalledWith('user:2fa:token:token-abc123');
+      });
+
+      it('存在しない場合はnullを返す', async () => {
+        mockRedis.get.mockResolvedValue(null);
+        const result = await getUserIdByTwoFactorToken('expired-token');
+        expect(result).toBeNull();
+      });
+
+      it('Redis未設定時はnullを返す', async () => {
+        mockEnv.REDIS_URL = '';
+        const result = await getUserIdByTwoFactorToken('token-abc123');
+        expect(result).toBeNull();
+      });
+
+      it('Redisエラー時はnullを返す', async () => {
+        mockRedis.get.mockRejectedValueOnce(new Error('Redis error'));
+        const result = await getUserIdByTwoFactorToken('token-abc123');
+        expect(result).toBeNull();
+      });
+    });
+
+    describe('deleteUserTwoFactorToken', () => {
+      it('一時トークンを削除できる', async () => {
+        const result = await deleteUserTwoFactorToken('token-abc123');
+        expect(result).toBe(true);
+        expect(mockRedis.del).toHaveBeenCalledWith('user:2fa:token:token-abc123');
+      });
+
+      it('Redis未設定時はfalseを返す', async () => {
+        mockEnv.REDIS_URL = '';
+        const result = await deleteUserTwoFactorToken('token-abc123');
+        expect(result).toBe(false);
+      });
+
+      it('Redisエラー時はfalseを返す', async () => {
+        mockRedis.del.mockRejectedValueOnce(new Error('Redis error'));
+        const result = await deleteUserTwoFactorToken('token-abc123');
+        expect(result).toBe(false);
+      });
     });
   });
 

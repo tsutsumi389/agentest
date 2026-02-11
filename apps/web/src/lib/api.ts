@@ -112,7 +112,7 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
   // 401エラー時の自動リフレッシュ処理
   if (response.status === 401) {
     // 認証系エンドポイントの401は除外（無限ループ防止・ログイン時のエラーコード伝播）
-    if (endpoint.includes('/auth/refresh') || endpoint.includes('/auth/me') || endpoint.includes('/auth/login')) {
+    if (endpoint.includes('/auth/refresh') || endpoint.includes('/auth/me') || endpoint.includes('/auth/login') || endpoint.includes('/auth/2fa/verify')) {
       const contentType = response.headers.get('content-type');
       const isJson = contentType?.includes('application/json');
       const data = isJson ? await response.json() : null;
@@ -251,6 +251,7 @@ export interface User {
   avatarUrl: string | null;
   plan: string;
   createdAt: string;
+  totpEnabled: boolean;
 }
 
 export interface Organization {
@@ -807,12 +808,24 @@ export interface ExecutionWithDetails extends Execution {
 // 認証API
 // ============================================
 
+/** ログインレスポンス: 2FA不要の場合はuser、2FA必要の場合はtwoFactorToken */
+export type LoginResponse =
+  | { user: User; requires2FA?: undefined }
+  | { requires2FA: true; twoFactorToken: string; user?: undefined };
+
+/** 2FAセットアップレスポンス */
+export interface TwoFactorSetupResponse {
+  secret: string;
+  qrCodeDataUrl: string;
+  otpauthUrl: string;
+}
+
 export const authApi = {
   me: () => api.get<{ user: User }>('/api/auth/me'),
   refresh: () => api.post<{ accessToken: string; refreshToken: string }>('/api/auth/refresh'),
   logout: () => api.post<{ message: string }>('/api/auth/logout'),
   login: (data: { email: string; password: string }) =>
-    api.post<{ user: User }>('/api/auth/login', data),
+    api.post<LoginResponse>('/api/auth/login', data),
   register: (data: { email: string; password: string; name: string }) =>
     api.post<{ message: string; user: { id: string; email: string; name: string } }>('/api/auth/register', data),
   verifyEmail: (token: string) =>
@@ -823,6 +836,18 @@ export const authApi = {
     api.post<{ message: string }>('/api/auth/forgot-password', data),
   resetPassword: (data: { token: string; password: string }) =>
     api.post<{ message: string }>('/api/auth/reset-password', data),
+
+  // 2FA関連
+  get2FAStatus: () =>
+    api.get<{ totpEnabled: boolean }>('/api/auth/2fa/status'),
+  setup2FA: () =>
+    api.post<TwoFactorSetupResponse>('/api/auth/2fa/setup'),
+  enable2FA: (code: string) =>
+    api.post<{ message: string }>('/api/auth/2fa/enable', { code }),
+  verify2FA: (twoFactorToken: string, code: string) =>
+    api.post<{ user: User }>('/api/auth/2fa/verify', { twoFactorToken, code }),
+  disable2FA: (password: string) =>
+    api.post<{ message: string }>('/api/auth/2fa/disable', { password }),
 };
 
 // ============================================

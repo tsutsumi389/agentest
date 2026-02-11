@@ -57,7 +57,7 @@ Agentestは、ユーザーデータの保護とサービスのセキュリティ
 | パスワード | bcrypt (cost=12) |
 | セッション | JWT + Refresh Token |
 | OAuth | GitHub, Google |
-| MFA | TOTP対応 (Pro以上) |
+| MFA | TOTP対応（ユーザー・管理者ともに対応、AES-256-GCM暗号化保存） |
 | RBAC | 組織/プロジェクトレベル |
 
 ### 3.2 通信の暗号化
@@ -113,6 +113,7 @@ app.use(helmet({
 | パスワード | ハッシュ化 (bcrypt) |
 | セッション・リフレッシュトークン | SHA-256 ハッシュ保存（生トークンは Cookie のみ） |
 | OAuthトークン | AES-256-GCM 暗号化保存（`TOKEN_ENCRYPTION_KEY`） |
+| TOTP秘密鍵 | AES-256-GCM 暗号化保存（`TOTP_ENCRYPTION_KEY`） |
 | APIトークン | SHA-256 ハッシュ保存、プレフィックス表示 |
 | 支払い情報 | 決済代行会社で管理 |
 | 個人情報 | 暗号化 + アクセスログ |
