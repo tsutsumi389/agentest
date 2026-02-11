@@ -245,10 +245,6 @@ export function OrgCurrentPlanCard({ organizationId, memberCount }: OrgCurrentPl
                 <span className="w-1.5 h-1.5 rounded-full bg-accent" />
                 監査ログ機能
               </li>
-              <li className="flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-                優先メールサポート
-              </li>
             </ul>
             <p className="text-xs text-foreground-subtle mt-3">
               月額 {formatPrice(TEAM_PLAN_PRICES.MONTHLY)}/人 または 年額 {formatPrice(TEAM_PLAN_PRICES.YEARLY)}/人

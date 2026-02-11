@@ -50,8 +50,7 @@ GET /api/plans
         { "name": "プロジェクト数", "description": "1プロジェクト", "included": true },
         { "name": "テストケース数", "description": "100件まで", "included": true },
         { "name": "MCP連携", "description": "利用可能", "included": true },
-        { "name": "チーム機能", "description": "利用不可", "included": false },
-        { "name": "優先サポート", "description": "利用不可", "included": false }
+        { "name": "チーム機能", "description": "利用不可", "included": false }
       ]
     },
     "PRO": {
@@ -61,8 +60,7 @@ GET /api/plans
         { "name": "プロジェクト数", "description": "無制限", "included": true },
         { "name": "テストケース数", "description": "無制限", "included": true },
         { "name": "MCP連携", "description": "利用可能", "included": true },
-        { "name": "チーム機能", "description": "利用不可", "included": false },
-        { "name": "優先サポート", "description": "メールサポート", "included": true }
+        { "name": "チーム機能", "description": "利用不可", "included": false }
       ]
     }
   }
