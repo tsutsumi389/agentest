@@ -291,7 +291,7 @@ router.post('/2fa/disable', requireAuth(authConfig), rateLimiter({ max: 5, windo
 
 ---
 
-### Task 9: フロントエンド - API・型定義・ストア更新（RED → GREEN → REFACTOR）✅ 完了
+### Task 9: フロントエンド - API・型定義・ストア更新（RED → GREEN → REFACTOR） ✅ 完了
 
 **RED**: `apps/web/src/stores/__tests__/auth-2fa.test.ts` を作成
 
@@ -318,7 +318,7 @@ router.post('/2fa/disable', requireAuth(authConfig), rateLimiter({ max: 5, windo
 
 ---
 
-### Task 10: フロントエンド - 2FA認証ページ・フォーム（RED → GREEN → REFACTOR）
+### Task 10: フロントエンド - 2FA認証ページ・フォーム（RED → GREEN → REFACTOR） ✅ 完了
 
 **RED**: `apps/web/src/pages/__tests__/TwoFactorAuth.test.tsx` を作成
 

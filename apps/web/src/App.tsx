@@ -19,6 +19,7 @@ import { ProjectSettingsPage } from './pages/ProjectSettings';
 import { InvitationAcceptPage } from './pages/InvitationAccept';
 import { OAuthConsentPage } from './pages/OAuthConsent';
 import { RegisterPage } from './pages/Register';
+import { TwoFactorVerifyPage } from './pages/TwoFactorVerify';
 import { CheckEmailPage } from './pages/CheckEmail';
 import { VerifyEmailPage } from './pages/VerifyEmail';
 import { ForgotPasswordPage } from './pages/ForgotPassword';
@@ -68,6 +69,7 @@ export function App() {
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/2fa/verify" element={<TwoFactorVerifyPage />} />
           <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route path="/invitations/:token" element={<InvitationAcceptPage />} />
           <Route path="/oauth/consent" element={<OAuthConsentPage />} />

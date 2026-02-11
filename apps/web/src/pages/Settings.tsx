@@ -6,6 +6,7 @@ import { toast } from '../stores/toast';
 import { ApiError, sessionsApi, accountsApi, passwordApi, apiTokensApi, type Session, type Account, type ApiToken, type CreatedApiToken } from '../lib/api';
 import { PasswordStrengthChecklist, PASSWORD_CHECKS } from '../components/PasswordStrengthChecklist';
 import { BillingSettings } from '../components/settings/BillingSettings';
+import { TwoFactorSettings } from '../components/settings/TwoFactorSettings';
 import { GoogleIcon } from '../components/ui/GoogleIcon';
 
 type SettingsTab = 'profile' | 'notifications' | 'security' | 'api-tokens' | 'billing';
@@ -904,6 +905,9 @@ function SecuritySettings() {
           )}
         </div>
       </div>
+
+      {/* 二要素認証 */}
+      <TwoFactorSettings />
 
       {/* パスワード設定/変更モーダル */}
       {showPasswordModal && (
