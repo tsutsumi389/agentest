@@ -128,7 +128,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 ---
 
-### Task 5: UserTotpService（RED → GREEN → REFACTOR）
+### Task 5: UserTotpService（RED → GREEN → REFACTOR） ✅ 完了
 
 **RED**: `apps/api/src/__tests__/unit/user-totp.service.test.ts` を作成
 
