@@ -39,7 +39,6 @@ export const PERSONAL_PLAN_PRICING: Record<PersonalPlan, PlanPricing> = {
       { name: 'テストケース数', description: '100件まで', included: true },
       { name: 'MCP連携', description: '利用可能', included: true },
       { name: 'チーム機能', description: '利用不可', included: false },
-      { name: '優先サポート', description: '利用不可', included: false },
     ],
   },
   PRO: {
@@ -56,7 +55,6 @@ export const PERSONAL_PLAN_PRICING: Record<PersonalPlan, PlanPricing> = {
       { name: 'テストケース数', description: '無制限', included: true },
       { name: 'MCP連携', description: '利用可能', included: true },
       { name: 'チーム機能', description: '利用不可', included: false },
-      { name: '優先サポート', description: 'メールサポート', included: true },
     ],
   },
 };
@@ -134,7 +132,6 @@ export const ORG_PLAN_PRICING: Record<OrgPlan, OrgPlanPricing> = {
       { name: 'MCP連携', description: '利用不可', included: false },
       { name: 'チーム機能', description: '利用不可', included: false },
       { name: 'メンバー管理', description: '利用不可', included: false },
-      { name: '優先サポート', description: '利用不可', included: false },
     ],
   },
   TEAM: {
@@ -154,7 +151,6 @@ export const ORG_PLAN_PRICING: Record<OrgPlan, OrgPlanPricing> = {
       { name: 'MCP連携', description: '利用可能', included: true },
       { name: 'チーム機能', description: '利用可能', included: true },
       { name: 'メンバー管理', description: 'ロールベース', included: true },
-      { name: '優先サポート', description: 'メールサポート', included: true },
     ],
   },
 };

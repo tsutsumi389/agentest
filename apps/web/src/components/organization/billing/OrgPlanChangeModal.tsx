@@ -452,10 +452,6 @@ function BillingCycleStep({
             <Check className="w-4 h-4 text-success" aria-hidden="true" />
             監査ログ機能
           </li>
-          <li className="flex items-center gap-2 text-sm text-foreground-muted">
-            <Check className="w-4 h-4 text-success" aria-hidden="true" />
-            優先メールサポート
-          </li>
         </ul>
       </div>
     </div>
