@@ -110,6 +110,8 @@ const mockUser = {
   avatarUrl: null,
   plan: 'FREE',
   emailVerified: true,
+  totpSecret: null,
+  totpEnabled: false,
   createdAt: new Date(),
   updatedAt: new Date(),
 };
