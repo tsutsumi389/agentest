@@ -16,6 +16,7 @@
 | NOTIF-006 | メール通知 | SMTP 経由でメール送信（dev: Mailpit） | 実装済 |
 | NOTIF-007 | ユーザー設定 | 通知タイプ別のメール/アプリ内 ON/OFF | 実装済 |
 | NOTIF-008 | 組織設定 | 組織レベルでの通知一括制御 | 実装済 |
+| NOTIF-009 | 通知クリックナビゲーション | 通知タイプに応じた関連ページへの自動遷移 | 実装済 |
 
 ## 画面仕様
 
@@ -31,7 +32,7 @@
     - 「すべて既読にする」ボタン
 - **操作**
   - ベルアイコンクリック → ドロップダウン表示/非表示
-  - 通知クリック → 関連ページへ遷移（data に含まれる URL）
+  - 通知クリック → 通知タイプに応じた関連ページへ遷移（未読の場合は自動的に既読処理も実行）
   - 通知を既読にする → 自動的に既読処理
 - **リアルタイム更新**
   - WebSocket で新着通知を受信 → リストに追加
@@ -170,6 +171,27 @@ erDiagram
 | `USAGE_ALERT` | 使用量アラート | 使用量が閾値超過時 |
 | `BILLING` | 課金関連 | 請求・支払い関連イベント |
 | `SECURITY_ALERT` | セキュリティ | 異常ログイン検知等 |
+
+### 通知クリック時のナビゲーション先
+
+通知をクリックした際、`data` フィールドの値に基づいて関連ページへ遷移する。ナビゲーションロジックは純粋関数 `getNotificationNavigationPath()` として `apps/web/src/lib/notification-navigation.ts` に実装されている。
+
+| タイプ | data のキー | 遷移先 |
+|--------|------------|--------|
+| `ORG_INVITATION` | `inviteToken` | `/invitations/:inviteToken` |
+| `INVITATION_ACCEPTED` | `organizationId` | `/organizations/:organizationId/settings` |
+| `PROJECT_ADDED` | `projectId` | `/projects/:projectId` |
+| `REVIEW_COMMENT` | `testSuiteId` | `/test-suites/:testSuiteId` |
+| `TEST_COMPLETED` | `executionId` | `/executions/:executionId` |
+| `TEST_FAILED` | `executionId` | `/executions/:executionId` |
+| `USAGE_ALERT` | - | ナビゲーションなし |
+| `BILLING` | - | ナビゲーションなし |
+| `SECURITY_ALERT` | - | ナビゲーションなし |
+
+**ナビゲーションしない条件**:
+- `data` が `null` の場合
+- 必要なプロパティが欠損・空文字列・非文字列の場合
+- パスセグメントとして不正な文字（英数字・ハイフン・アンダースコア以外）を含む場合
 
 ### テスト完了/失敗通知の詳細
 

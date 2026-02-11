@@ -40,7 +40,8 @@
       "body": "Example Org から招待されました",
       "data": {
         "organizationId": "uuid",
-        "invitationId": "uuid"
+        "invitationId": "uuid",
+        "inviteToken": "token-string"
       },
       "readAt": null,
       "createdAt": "2025-01-15T10:00:00.000Z"
@@ -271,6 +272,23 @@
 | `USAGE_ALERT` | 使用量アラート |
 | `BILLING` | 課金関連 |
 | `SECURITY_ALERT` | セキュリティ |
+
+---
+
+## 通知データ（data フィールド）のナビゲーション用キー
+
+フロントエンドは通知クリック時に `data` フィールドの以下のキーを使用して関連ページへ遷移する。
+
+| 通知タイプ | キー | 遷移先 |
+|-----------|------|--------|
+| `ORG_INVITATION` | `inviteToken` | `/invitations/:inviteToken` |
+| `INVITATION_ACCEPTED` | `organizationId` | `/organizations/:organizationId/settings` |
+| `PROJECT_ADDED` | `projectId` | `/projects/:projectId` |
+| `REVIEW_COMMENT` | `testSuiteId` | `/test-suites/:testSuiteId` |
+| `TEST_COMPLETED` | `executionId` | `/executions/:executionId` |
+| `TEST_FAILED` | `executionId` | `/executions/:executionId` |
+
+`USAGE_ALERT`、`BILLING`、`SECURITY_ALERT` はナビゲーション対象外。
 
 ---
 
