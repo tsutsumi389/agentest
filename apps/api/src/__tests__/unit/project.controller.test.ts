@@ -28,6 +28,15 @@ vi.mock('../../services/project.service.js', () => ({
   ProjectService: vi.fn().mockImplementation(() => mockProjectService),
 }));
 
+// UserRepository のモック
+const mockUserRepo = {
+  findByEmail: vi.fn(),
+};
+
+vi.mock('../../repositories/user.repository.js', () => ({
+  UserRepository: vi.fn().mockImplementation(() => mockUserRepo),
+}));
+
 // テスト用の固定値
 const TEST_USER_ID = '11111111-1111-1111-1111-111111111111';
 const TEST_PROJECT_ID = '22222222-2222-2222-2222-222222222222';
@@ -157,21 +166,51 @@ describe('ProjectController', () => {
   });
 
   describe('addMember', () => {
-    it('メンバーを追加できる', async () => {
-      const newUserId = '44444444-4444-4444-4444-444444444444';
+    const newUserId = '44444444-4444-4444-4444-444444444444';
+    const newUserEmail = 'newuser@example.com';
+
+    it('メールアドレスでメンバーを追加できる', async () => {
+      const mockUser = { id: newUserId, email: newUserEmail };
       const mockMember = { userId: newUserId, role: 'READ' };
+      mockUserRepo.findByEmail.mockResolvedValue(mockUser);
       mockProjectService.addMember.mockResolvedValue(mockMember);
 
       const req = mockRequest({
-        body: { userId: newUserId, role: 'READ' },
+        body: { email: newUserEmail, role: 'READ' },
       }) as Request;
       const res = mockResponse() as Response;
 
       await controller.addMember(req, res, mockNext);
 
+      expect(mockUserRepo.findByEmail).toHaveBeenCalledWith(newUserEmail);
       expect(mockProjectService.addMember).toHaveBeenCalledWith(TEST_PROJECT_ID, newUserId, 'READ', TEST_USER_ID);
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith({ member: mockMember });
+    });
+
+    it('存在しないメールアドレスの場合はNotFoundErrorをnextに渡す', async () => {
+      mockUserRepo.findByEmail.mockResolvedValue(null);
+
+      const req = mockRequest({
+        body: { email: 'notfound@example.com', role: 'READ' },
+      }) as Request;
+      const res = mockResponse() as Response;
+
+      await controller.addMember(req, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(expect.any(NotFoundError));
+    });
+
+    it('不正なメールアドレス形式の場合はバリデーションエラーをnextに渡す', async () => {
+      const req = mockRequest({
+        body: { email: 'invalid-email', role: 'READ' },
+      }) as Request;
+      const res = mockResponse() as Response;
+
+      await controller.addMember(req, res, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(expect.any(Error));
+      expect(mockUserRepo.findByEmail).not.toHaveBeenCalled();
     });
   });
 

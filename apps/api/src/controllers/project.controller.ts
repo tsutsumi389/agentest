@@ -8,9 +8,11 @@ import {
   projectEnvironmentReorderSchema,
   testSuiteSearchSchema,
   suggestionSearchSchema,
+  NotFoundError,
 } from '@agentest/shared';
 import { ProjectService } from '../services/project.service.js';
 import { ProjectDashboardService } from '../services/project-dashboard.service.js';
+import { UserRepository } from '../repositories/user.repository.js';
 import type { TestSuiteSearchItem, JudgmentCounts } from '../repositories/test-suite.repository.js';
 
 /**
@@ -36,7 +38,7 @@ function countJudgmentStatuses(
 }
 
 const addMemberSchema = z.object({
-  userId: z.string().uuid(),
+  email: z.string().email(),
   role: z.enum(['ADMIN', 'WRITE', 'READ']).default('READ'),
 });
 
@@ -50,6 +52,7 @@ const updateMemberRoleSchema = z.object({
 export class ProjectController {
   private projectService = new ProjectService();
   private dashboardService = new ProjectDashboardService();
+  private userRepo = new UserRepository();
 
   /**
    * プロジェクト作成
@@ -129,7 +132,14 @@ export class ProjectController {
     try {
       const { projectId } = req.params;
       const data = addMemberSchema.parse(req.body);
-      const member = await this.projectService.addMember(projectId, data.userId, data.role, req.user!.id);
+
+      // メールアドレスからユーザーを検索
+      const user = await this.userRepo.findByEmail(data.email);
+      if (!user) {
+        throw new NotFoundError('User');
+      }
+
+      const member = await this.projectService.addMember(projectId, user.id, data.role, req.user!.id);
 
       res.status(201).json({ member });
     } catch (error) {
