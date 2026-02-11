@@ -1,101 +1,142 @@
-# Web 2FA（二要素認証）実装計画
+# Web 2FA（二要素認証）実装計画 - TDD方式
 
 ## Context
 
 webアプリのログインに2FA（TOTP）を追加する。既存のadminアプリの2FA実装パターンを踏襲し、一貫性のあるユーザー体験を提供する。
 
-**セキュリティモデル**: adminと同様、ログイン時にJWTトークンを発行した後、フロントエンドで2FA検証を強制する方式。2FA検証前はフロントエンドが保護ルートへのアクセスをブロックする。
+**セキュリティモデル**: adminと同様、ログイン時にJWTトークンを発行した後、フロントエンドで2FA検証を強制する方式。
 
-## 実装フェーズ
+## TDD実装タスク
 
-### Phase 1: データベーススキーマ変更
+各タスクは **RED → GREEN → REFACTOR** サイクルで実装する。
 
-**ファイル**: `packages/db/prisma/schema.prisma`
+---
 
-UserモデルにTOTPフィールドを追加（AdminUserと同じパターン）:
+### Task 1: DB スキーマ変更（基盤準備）
+
+テスト不要の基盤作業。後続タスクの前提条件。
+
+**変更ファイル**:
+- `packages/db/prisma/schema.prisma` - UserモデルにtotpSecret/totpEnabled追加
+
 ```prisma
-model User {
-  // 既存フィールド...
-
-  // 2FA
-  totpSecret  String? @map("totp_secret") @db.VarChar(255)
-  totpEnabled Boolean @default(false) @map("totp_enabled")
-}
+// パスワード認証の後に追加
+// 2FA
+totpSecret  String? @map("totp_secret") @db.VarChar(255)
+totpEnabled Boolean @default(false) @map("totp_enabled")
 ```
 
-マイグレーション生成: `prisma migrate dev --name add_user_totp`
-
-### Phase 2: Redis関数追加
-
-**ファイル**: `apps/api/src/lib/redis-store.ts`
-
-ユーザーTOTP用のキープレフィックスを追加（admin用との衝突回避）:
-```typescript
-const KEY_PREFIX = {
-  // 既存...
-  USER_TOTP_SETUP: 'user:totp:setup:',
-  USER_TOTP_USED: 'user:totp:used:',
-};
+**コマンド**:
+```bash
+docker compose exec dev pnpm --filter @agentest/db prisma migrate dev --name add_user_totp
+docker compose exec dev pnpm --filter @agentest/db prisma generate
 ```
 
-以下の関数を追加:
-- `setUserTotpSetupSecret(userId, secret, ttl)`
-- `getUserTotpSetupSecret(userId)`
-- `deleteUserTotpSetupSecret(userId)`
-- `markUserTotpCodeUsed(userId, code, ttl)`
-- `isUserTotpCodeUsed(userId, code)`
+---
 
-既存のadmin TOTP関数（`setTotpSetupSecret`等）と同じ実装パターン。
+### Task 2: Redis TOTP関数（RED → GREEN → REFACTOR）
 
-### Phase 3: UserRepository拡張
+**RED**: `apps/api/src/__tests__/unit/redis-store-user-totp.test.ts` を作成
+- `setUserTotpSetupSecret` - 秘密鍵の保存テスト
+- `getUserTotpSetupSecret` - 秘密鍵の取得テスト
+- `deleteUserTotpSetupSecret` - 秘密鍵の削除テスト
+- `markUserTotpCodeUsed` - 使用済みマークテスト
+- `isUserTotpCodeUsed` - 使用済み確認テスト
 
-**ファイル**: `apps/api/src/repositories/user.repository.ts`
+**GREEN**: `apps/api/src/lib/redis-store.ts` にユーザーTOTP関数を追加
+- キープレフィックス: `USER_TOTP_SETUP: 'user:totp:setup:'`, `USER_TOTP_USED: 'user:totp:used:'`
+- 既存admin TOTP関数と同じパターンで実装
 
-以下のメソッドを追加:
-- `findByIdWithPassword(id)` - TOTP無効化時のパスワード確認用
-- `enableTotp(id, totpSecret)` - TOTP有効化
-- `disableTotp(id)` - TOTP無効化
-- `getTotpSecret(id)` - TOTP秘密鍵取得
+**参考**: 既存admin TOTP Redis関数（同ファイル行96-229）
 
-参考: `apps/api/src/repositories/admin-user.repository.ts` (行110-151)
+---
 
-### Phase 4: UserTotpService作成
+### Task 3: UserRepository TOTP拡張（RED → GREEN → REFACTOR）
 
-**新規ファイル**: `apps/api/src/services/user-totp.service.ts`
+**RED**: `apps/api/src/__tests__/unit/user-repository-totp.test.ts` を作成
+- `enableTotp(id, secret)` - totpSecret保存 + totpEnabled = true
+- `disableTotp(id)` - totpSecret = null + totpEnabled = false
+- `getTotpSecret(id)` - 秘密鍵取得（設定済み/未設定）
+- `findByIdWithPassword(id)` - パスワードハッシュ含むユーザー取得
 
-AdminTotpService（`apps/api/src/services/admin/admin-totp.service.ts`）をベースに:
-- `UserRepository` を使用（AdminUserRepositoryではなく）
-- `AuditLogService` を使用（AdminAuditLogServiceではなく）
-- `USER_TOTP_SETUP`/`USER_TOTP_USED` Redis関数を使用
-- APP_NAMEを `'Agentest'` に変更（`'Agentest Admin'` ではなく）
+**GREEN**: `apps/api/src/repositories/user.repository.ts` にメソッド追加
 
-メソッド:
-- `setupTotp(userId, email, ipAddress?, userAgent?)` - QRコード生成
-- `enableTotp(userId, code, ipAddress?, userAgent?)` - 有効化
-- `verifyTotp(userId, code, ipAddress?, userAgent?)` - ログイン時検証
-- `disableTotp(userId, password, ipAddress?, userAgent?)` - 無効化
+**参考**: `apps/api/src/repositories/admin-user.repository.ts` 行110-151
 
-### Phase 5: UserTotpController作成
+---
 
-**新規ファイル**: `apps/api/src/controllers/user-totp.controller.ts`
+### Task 4: UserTotpService（RED → GREEN → REFACTOR）
 
-AdminTotpController（`apps/api/src/controllers/admin/totp.controller.ts`）をベースに:
-- `req.user` を使用（`req.adminUser` ではなく）
-- `UserTotpService` を使用
+**RED**: `apps/api/src/__tests__/unit/user-totp.service.test.ts` を作成
 
-エンドポイント:
-- `setup` - POST `/api/auth/2fa/setup`
-- `enable` - POST `/api/auth/2fa/enable`
-- `verify` - POST `/api/auth/2fa/verify`
-- `disable` - POST `/api/auth/2fa/disable`
-- `status` - GET `/api/auth/2fa/status`（フロントエンドから2FA状態を取得）
+テストケース:
+- **setupTotp**
+  - 秘密鍵生成・QRコード・otpauth URL返却
+  - Redisに一時秘密鍵保存（5分TTL）
+  - 監査ログ記録
+- **enableTotp**
+  - 正常: Redis一時鍵取得 → コード検証 → DB保存 → Redis削除
+  - 異常: 既に有効 / 期限切れ / コード不正
+  - 監査ログ記録（成功/失敗）
+- **verifyTotp**
+  - 正常: DB秘密鍵取得 → コード検証 → 使用済みマーク
+  - リプレイ攻撃対策: 使用済みコード拒否
+  - 異常: TOTP未設定 / コード不正
+  - 監査ログ記録（成功/失敗）
+- **disableTotp**
+  - 正常: パスワード確認 → DB無効化
+  - 異常: パスワード不正 / ユーザー不存在
+  - 監査ログ記録
 
-### Phase 6: ルーティング追加
+**GREEN**: `apps/api/src/services/user-totp.service.ts` を作成
 
-**ファイル**: `apps/api/src/routes/auth.ts`
+**参考**: `apps/api/src/services/admin/admin-totp.service.ts`
+
+主な違い:
+- `UserRepository` 使用（`AdminUserRepository` ではなく）
+- `AuditLogService` 使用 + カテゴリ `AUTH`（`AdminAuditLogService` ではなく）
+- `setUserTotpSetupSecret`等のRedis関数使用
+- APP_NAME = `'Agentest'`
+
+---
+
+### Task 5: UserTotpController（RED → GREEN → REFACTOR）
+
+**RED**: `apps/api/src/__tests__/unit/user-totp.controller.test.ts` を作成
+
+テストケース:
+- **setup**: req.user存在確認 → サービス呼び出し → QRコードレスポンス
+- **enable**: Zodバリデーション（6桁数字） → サービス呼び出し
+- **verify**: Zodバリデーション → サービス呼び出し → verified: true レスポンス
+- **disable**: Zodバリデーション（password必須） → サービス呼び出し
+- **status**: req.user.totpEnabled返却
+- 認証なしの場合 → AuthenticationError
+- バリデーションエラー → ValidationError
+
+**GREEN**: `apps/api/src/controllers/user-totp.controller.ts` を作成
+
+**参考**: `apps/api/src/controllers/admin/totp.controller.ts`
+
+主な違い:
+- `req.user` 使用（`req.adminUser` ではなく）
+- `UserTotpService` 使用
+- statusエンドポイント追加
+
+---
+
+### Task 6: ルーティング追加 + 統合テスト（RED → GREEN → REFACTOR）
+
+**RED**: `apps/api/src/__tests__/integration/user-totp.integration.test.ts` を作成
+
+統合テストケース:
+- 完全フロー: setup → enable → verify → disable
+- 未認証でのアクセス拒否
+- リプレイ攻撃対策
+- 不正コードの拒否
+
+**GREEN**: `apps/api/src/routes/auth.ts` に2FAルート追加
 
 ```typescript
-// 2FAエンドポイント
 router.get('/2fa/status', requireAuth(authConfig), userTotpController.status);
 router.post('/2fa/setup', requireAuth(authConfig), userTotpController.setup);
 router.post('/2fa/enable', requireAuth(authConfig), userTotpController.enable);
@@ -103,155 +144,112 @@ router.post('/2fa/verify', requireAuth(authConfig), userTotpController.verify);
 router.post('/2fa/disable', requireAuth(authConfig), userTotpController.disable);
 ```
 
-### Phase 7: ログインフロー変更
+**参考**: `apps/api/src/__tests__/integration/admin-totp.integration.test.ts`
 
-**ファイル**: `apps/api/src/services/user-password-auth.service.ts`
+---
 
-`AuthResult`の`user`に`totpEnabled`を追加:
-```typescript
-export interface AuthResult {
-  tokens: TokenPair;
-  user: {
-    id: string;
-    email: string;
-    name: string;
-    totpEnabled: boolean;  // 追加
-  };
-}
-```
+### Task 7: ログインフロー変更（RED → GREEN → REFACTOR）
 
-login()メソッドで`totpEnabled`を返却。
+**RED**: 既存の認証テストを更新/拡張
+- `user-password-auth.service` のテスト: loginが`totpEnabled`を返すことを確認
+- `auth.controller` のテスト: login/meが`totpEnabled`を含むことを確認
 
-**ファイル**: `apps/api/src/controllers/auth.controller.ts`
+**GREEN**:
 
-- `login` メソッド: レスポンスに `totpEnabled` を含める
-- `me` メソッド: レスポンスに `totpEnabled` を含める
+1. `apps/api/src/services/user-password-auth.service.ts`:
+   - `AuthResult.user` に `totpEnabled: boolean` 追加
+   - `login()` で `user.totpEnabled` を返却
 
-### Phase 8: フロントエンドAPI型定義更新
+2. `apps/api/src/controllers/auth.controller.ts`:
+   - `login`: レスポンスに `totpEnabled` 含める
+   - `me`: レスポンスに `totpEnabled` 含める
 
-**ファイル**: `apps/web/src/lib/api.ts`
+---
 
-User型に`totpEnabled`を追加:
-```typescript
-export interface User {
-  // 既存フィールド...
-  totpEnabled: boolean;
-}
-```
+### Task 8: フロントエンド - API・型定義・ストア更新
 
-authApiに2FAメソッドを追加:
-```typescript
-export const authApi = {
-  // 既存...
-  get2FAStatus: () => api.get<{ totpEnabled: boolean }>('/api/auth/2fa/status'),
-  setup2FA: () => api.post<{ secret: string; qrCodeDataUrl: string; otpauthUrl: string }>('/api/auth/2fa/setup'),
-  enable2FA: (code: string) => api.post<{ message: string }>('/api/auth/2fa/enable', { code }),
-  verify2FA: (code: string) => api.post<{ message: string; verified: boolean }>('/api/auth/2fa/verify', { code }),
-  disable2FA: (password: string) => api.post<{ message: string }>('/api/auth/2fa/disable', { password }),
-};
-```
+テスト対象外（UIレイヤー）。
 
-### Phase 9: 認証ストア変更
+**変更ファイル**:
 
-**ファイル**: `apps/web/src/stores/auth.ts`
+1. `apps/web/src/lib/api.ts`:
+   - `User` 型に `totpEnabled: boolean` 追加
+   - `authApi` に 2FA メソッド追加（get2FAStatus, setup2FA, enable2FA, verify2FA, disable2FA）
 
-admin-auth.store.tsのパターンを踏襲:
-```typescript
-interface AuthState {
-  // 既存フィールド...
-  requires2FA: boolean;  // 追加
+2. `apps/web/src/stores/auth.ts`:
+   - `requires2FA: boolean` ステート追加
+   - `login(email, password)` アクション追加（totpEnabledチェック）
+   - `verify2FA(code)` アクション追加
 
-  // 既存アクション...
-  login: (email: string, password: string) => Promise<void>;  // 変更
-  verify2FA: (code: string) => Promise<void>;  // 追加
-}
-```
+**参考**: `apps/admin/src/stores/admin-auth.store.ts`
 
-- `login`: authApi.loginの戻り値から`totpEnabled`を確認。trueなら`requires2FA = true`, `isAuthenticated = false`
-- `verify2FA`: authApi.verify2FAを呼び出し、成功時に`isAuthenticated = true`, `requires2FA = false`
-- `initialize`: meレスポンスの`totpEnabled`状態を確認（既にログイン済みの場合はrequires2FAは不要）
+---
 
-### Phase 10: フロントエンドコンポーネント
+### Task 9: フロントエンド - 2FA認証ページ・フォーム
 
-#### 10a: TwoFactorFormコンポーネント
-**新規ファイル**: `apps/web/src/components/auth/TwoFactorForm.tsx`
+テスト対象外（UIレイヤー）。
 
-admin版（`apps/admin/src/components/auth/TwoFactorForm.tsx`）をベースに:
-- `useAuth` フックを使用（`useAdminAuth` ではなく）
-- スタイリングをwebアプリのデザインに合わせる
-- CLI風の装飾テキストを `$ auth --verify-2fa` に変更
+**新規ファイル**:
 
-#### 10b: TwoFactorAuthページ
-**新規ファイル**: `apps/web/src/pages/TwoFactorAuth.tsx`
+1. `apps/web/src/components/auth/TwoFactorForm.tsx` - 6桁コード入力フォーム
+   - 参考: `apps/admin/src/components/auth/TwoFactorForm.tsx`
+   - `useAuthStore` の `verify2FA`/`logout` を使用
 
-admin版（`apps/admin/src/pages/auth/TwoFactorAuth.tsx`）をベースに:
-- `useAuthStore` を使用
-- ロゴをAgentestLogoに変更
+2. `apps/web/src/pages/TwoFactorAuth.tsx` - 2FA認証ページ
+   - 参考: `apps/admin/src/pages/auth/TwoFactorAuth.tsx`
+   - requires2FAがfalseなら `/login` にリダイレクト
+   - isAuthenticatedなら `/dashboard` にリダイレクト
 
-#### 10c: 2FAセットアップUI（設定ページ内）
-**ファイル**: `apps/web/src/pages/Settings.tsx`
+**変更ファイル**:
+
+3. `apps/web/src/App.tsx`:
+   - `/2fa` ルート追加（パブリック）
+
+4. `apps/web/src/pages/Login.tsx`:
+   - handleSubmit変更: ストアの `login()` を呼び出し、requires2FAなら `/2fa` にリダイレクト
+
+---
+
+### Task 10: フロントエンド - 設定ページ2FAセクション
+
+テスト対象外（UIレイヤー）。
+
+**変更ファイル**: `apps/web/src/pages/Settings.tsx`
 
 SecuritySettings内に2FAセクションを追加:
-- 2FA状態表示（有効/無効）
-- 「有効化」ボタン → セットアップフロー（QRコード表示 + コード入力）
-- 「無効化」ボタン → パスワード確認ダイアログ
+- 2FA状態表示（有効/無効バッジ）
+- **有効化フロー**: ボタン → QRコード表示モーダル → コード入力 → 有効化確認
+- **無効化フロー**: ボタン → パスワード確認モーダル → 無効化
 
-### Phase 11: ルーティング追加
+---
 
-**ファイル**: `apps/web/src/App.tsx`
+## タスク依存関係
 
-```typescript
-// パブリックルートに追加
-<Route path="/2fa" element={<TwoFactorAuthPage />} />
+```
+Task 1 (DB) ─┬─→ Task 2 (Redis)
+              ├─→ Task 3 (Repository)
+              │     └─→ Task 4 (Service) ─→ Task 5 (Controller) ─→ Task 6 (Routes+統合テスト)
+              └─→ Task 7 (ログインフロー変更)
+                    └─→ Task 8 (FE API・ストア) ─→ Task 9 (FE 2FAページ)
+                                                  └─→ Task 10 (FE 設定ページ)
 ```
 
-LoginPageのhandleSubmit変更:
-- ログイン成功時、`totpEnabled`がtrueなら`/2fa`にリダイレクト
+Task 2, 3, 7 は Task 1 完了後に並列実行可能。
 
-### Phase 12: テスト
-
-#### バックエンドテスト
-- **ユニットテスト**: `apps/api/src/__tests__/unit/user-totp.service.test.ts`
-  - 参考: `apps/api/src/__tests__/unit/admin-totp.service.test.ts`
-- **ユニットテスト**: `apps/api/src/__tests__/unit/user-totp.controller.test.ts`
-  - 参考: `apps/api/src/__tests__/unit/admin-totp.controller.test.ts`
-- **統合テスト**: `apps/api/src/__tests__/integration/user-totp.integration.test.ts`
-  - 参考: `apps/api/src/__tests__/integration/admin-totp.integration.test.ts`
-
-## 主要ファイル一覧
-
-### 変更するファイル
-| ファイル | 変更内容 |
-|---------|---------|
-| `packages/db/prisma/schema.prisma` | UserモデルにtotpSecret/totpEnabled追加 |
-| `apps/api/src/lib/redis-store.ts` | ユーザーTOTP用Redis関数追加 |
-| `apps/api/src/repositories/user.repository.ts` | TOTP関連メソッド追加 |
-| `apps/api/src/services/user-password-auth.service.ts` | ログインにtotpEnabled返却追加 |
-| `apps/api/src/controllers/auth.controller.ts` | login/meにtotpEnabled追加 |
-| `apps/api/src/routes/auth.ts` | 2FAルート追加 |
-| `apps/web/src/lib/api.ts` | User型にtotpEnabled追加、2FA API追加 |
-| `apps/web/src/stores/auth.ts` | requires2FA/verify2FA/login変更 |
-| `apps/web/src/pages/Login.tsx` | 2FAリダイレクト処理追加 |
-| `apps/web/src/pages/Settings.tsx` | セキュリティタブに2FAセクション追加 |
-| `apps/web/src/App.tsx` | /2faルート追加 |
-
-### 新規作成するファイル
-| ファイル | 内容 |
-|---------|------|
-| `apps/api/src/services/user-totp.service.ts` | ユーザーTOTPサービス |
-| `apps/api/src/controllers/user-totp.controller.ts` | ユーザーTOTPコントローラー |
-| `apps/web/src/components/auth/TwoFactorForm.tsx` | 2FAフォームコンポーネント |
-| `apps/web/src/pages/TwoFactorAuth.tsx` | 2FA認証ページ |
-| `apps/api/src/__tests__/unit/user-totp.service.test.ts` | サービスユニットテスト |
-| `apps/api/src/__tests__/unit/user-totp.controller.test.ts` | コントローラーユニットテスト |
-| `apps/api/src/__tests__/integration/user-totp.integration.test.ts` | 統合テスト |
+---
 
 ## 再利用するリソース
-- `otplib` (generateSecret, generateURI, verifySync) - 既にapi依存関係に含まれる
-- `qrcode` (toDataURL) - 既にapi依存関係に含まれる
-- `AuditLogService` (`apps/api/src/services/audit-log.service.ts`) - AUTH カテゴリ
-- `extractClientInfo` (`apps/api/src/middleware/session.middleware.ts`)
-- Redisストアのジェネリックパターン (`apps/api/src/lib/redis-store.ts`)
+
+| リソース | パス |
+|---------|------|
+| otplib (generateSecret, generateURI, verifySync) | 既存api依存関係 |
+| qrcode (toDataURL) | 既存api依存関係 |
+| AuditLogService | `apps/api/src/services/audit-log.service.ts` |
+| extractClientInfo | `apps/api/src/middleware/session.middleware.ts` |
+| Admin TOTP Service（参考実装） | `apps/api/src/services/admin/admin-totp.service.ts` |
+| Admin TOTP Controller（参考実装） | `apps/api/src/controllers/admin/totp.controller.ts` |
+| Admin TwoFactorForm（参考実装） | `apps/admin/src/components/auth/TwoFactorForm.tsx` |
+| Admin Auth Store（参考実装） | `apps/admin/src/stores/admin-auth.store.ts` |
 
 ## 検証方法
 
@@ -259,7 +257,6 @@ LoginPageのhandleSubmit変更:
 2. **ビルド**: `docker compose exec dev pnpm build`
 3. **テスト実行**: `docker compose exec dev pnpm test`
 4. **手動テスト**:
-   - ログイン → 設定 → セキュリティ → 2FA有効化（QRコードスキャン → コード入力）
-   - ログアウト → ログイン → 2FA入力画面表示 → コード入力 → ダッシュボード表示
-   - 設定 → 2FA無効化（パスワード確認）
-   - ログアウト → ログイン → 2FA画面スキップ → 直接ダッシュボード
+   - 設定 → セキュリティ → 2FA有効化（QRスキャン → コード入力）
+   - ログアウト → ログイン → 2FA画面 → コード入力 → ダッシュボード
+   - 設定 → 2FA無効化（パスワード確認）→ ログアウト → ログイン → 直接ダッシュボード
