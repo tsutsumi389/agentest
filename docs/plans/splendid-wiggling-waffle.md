@@ -164,7 +164,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 ---
 
-### Task 6: UserTotpController（RED → GREEN → REFACTOR）
+### Task 6: UserTotpController（RED → GREEN → REFACTOR） ✅ 完了
 
 **RED**: `apps/api/src/__tests__/unit/user-totp.controller.test.ts` を作成
 
