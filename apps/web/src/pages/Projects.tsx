@@ -17,7 +17,10 @@ export function ProjectsPage() {
   const { user } = useAuthStore();
   const { organizations } = useOrganizationStore();
   const [searchQuery, setSearchQuery] = useState('');
-  const [organizationFilter, setOrganizationFilter] = useState<OrganizationFilter>('personal');
+  const { selectedOrganizationId } = useOrganizationStore();
+  const [organizationFilter, setOrganizationFilter] = useState<OrganizationFilter>(
+    selectedOrganizationId ?? 'personal'
+  );
   const [includeDeleted, setIncludeDeleted] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
