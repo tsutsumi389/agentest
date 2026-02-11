@@ -188,7 +188,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 ---
 
-### Task 7: ルーティング + レート制限 + 統合テスト（RED → GREEN → REFACTOR）
+### Task 7: ルーティング + レート制限 + 統合テスト（RED → GREEN → REFACTOR） ✅ 完了
 
 **RED**: `apps/api/src/__tests__/integration/user-totp.integration.test.ts` を作成
 

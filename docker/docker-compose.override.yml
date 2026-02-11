@@ -46,6 +46,7 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-agentest}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-agentest123}
       MINIO_BUCKET: ${MINIO_BUCKET:-agentest}
+      TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY:-development-totp-encryption-key-32char-minimum-length}
     depends_on:
       db:
         condition: service_healthy
@@ -95,6 +96,8 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
       GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
+      # TOTP暗号化キー
+      TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY:-development-totp-encryption-key-32char-minimum-length}
       # Stripe決済
       PAYMENT_GATEWAY: ${PAYMENT_GATEWAY:-stripe}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
