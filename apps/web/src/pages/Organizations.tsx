@@ -23,10 +23,10 @@ export function OrganizationsPage() {
     org.organization.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // 組織を選択してダッシュボードに移動
+  // 組織を選択してプロジェクト一覧に移動
   const handleSelectOrganization = (organizationId: string) => {
     selectOrganization(organizationId);
-    navigate('/dashboard');
+    navigate('/projects');
   };
 
   // 復元確認モーダルを開く
@@ -135,9 +135,9 @@ export function OrganizationsPage() {
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
         onSuccess={(organizationId) => {
-          // 作成した組織を選択してダッシュボードに移動
+          // 作成した組織を選択してプロジェクト一覧に移動
           selectOrganization(organizationId);
-          navigate('/dashboard');
+          navigate('/projects');
         }}
       />
 
