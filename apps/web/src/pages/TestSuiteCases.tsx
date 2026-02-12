@@ -9,7 +9,7 @@ import { useTestSuiteRealtime } from '../hooks/useTestSuiteRealtime';
 import { useTestCaseRealtime } from '../hooks/useTestCaseRealtime';
 import { toast } from '../stores/toast';
 import { TestSuiteHeader, type TabType, type TestCaseTabType } from '../components/test-suite/TestSuiteHeader';
-import { TestCaseSidebar } from '../components/test-suite/TestCaseSidebar';
+import { TestCaseSidebar, type TestCaseFilter } from '../components/test-suite/TestCaseSidebar';
 import { TestCaseDetailPanel, useTestCaseDetails } from '../components/test-case/TestCaseDetailPanel';
 import { CopyTestCaseModal } from '../components/test-case/CopyTestCaseModal';
 import { TestCaseForm } from '../components/test-case/TestCaseForm';
@@ -41,6 +41,7 @@ export function TestSuiteCasesPage() {
   const [isEditMode, setIsEditMode] = useState(false);
   const [isCopyModalOpen, setIsCopyModalOpen] = useState(false);
   const [isTestCaseEditMode, setIsTestCaseEditMode] = useState(false);
+  const [sidebarFilter, setSidebarFilter] = useState<TestCaseFilter>('active');
 
   // URLクエリパラメータから作成モードを取得
   const isCreateMode = searchParams.get('mode') === 'create';
@@ -159,12 +160,27 @@ export function TestSuiteCasesPage() {
     return member?.role;
   })();
 
-  // テストケース一覧を取得
+  // フィルタに応じたAPI パラメータ
+  const filterParams = (() => {
+    switch (sidebarFilter) {
+      case 'active': return { status: 'ACTIVE' };
+      case 'draft': return { status: 'DRAFT' };
+      case 'archived': return { status: 'ARCHIVED' };
+      case 'deleted': return { includeDeleted: true };
+    }
+  })();
+
+  // テストケース一覧を取得（フィルタ対応）
   const { data: casesData, isLoading: isLoadingCases } = useQuery({
-    queryKey: ['test-suite-cases', testSuiteId],
-    queryFn: () => testSuitesApi.getTestCases(testSuiteId!),
+    queryKey: ['test-suite-cases', testSuiteId, sidebarFilter],
+    queryFn: () => testSuitesApi.getTestCases(testSuiteId!, filterParams),
     enabled: !!testSuiteId,
   });
+
+  // フィルタ変更ハンドラ
+  const handleSidebarFilterChange = useCallback((filter: TestCaseFilter) => {
+    setSidebarFilter(filter);
+  }, []);
 
   // 実行履歴を取得（概要タブ用）
   const { data: executionsData } = useQuery({
@@ -200,7 +216,12 @@ export function TestSuiteCasesPage() {
     },
   });
 
-  const testCases = casesData?.testCases || [];
+  // ゴミ箱フィルタ: includeDeleted=trueで削除済みを含むすべてを取得し、
+  // クライアント側でdeletedAt != nullのみに絞り込む
+  // （バックエンドAPIはincludeDeletedフラグのみ対応し、削除済みのみを返す機能がないため）
+  const testCases = sidebarFilter === 'deleted'
+    ? (casesData?.testCases || []).filter(tc => tc.deletedAt != null)
+    : (casesData?.testCases || []);
   const executions = executionsData?.executions || [];
 
   // 選択中のテストケースの詳細情報を取得
@@ -229,8 +250,8 @@ export function TestSuiteCasesPage() {
 
   // テストケース並び替え後の更新ハンドラ
   const handleTestCasesReordered = useCallback((reorderedTestCases: TestCase[]) => {
-    queryClient.setQueryData(['test-suite-cases', testSuiteId], { testCases: reorderedTestCases });
-  }, [queryClient, testSuiteId]);
+    queryClient.setQueryData(['test-suite-cases', testSuiteId, sidebarFilter], { testCases: reorderedTestCases });
+  }, [queryClient, testSuiteId, sidebarFilter]);
 
   // サイドバーにテストケース一覧を表示
   useEffect(() => {
@@ -249,11 +270,13 @@ export function TestSuiteCasesPage() {
         isCreateMode={isCreateMode}
         isOverviewMode={!selectedTestCaseId && !isCreateMode}
         onOverviewClick={handleShowOverview}
+        activeFilter={sidebarFilter}
+        onFilterChange={handleSidebarFilterChange}
       />
     );
 
     return () => setSidebarContent(null);
-  }, [testSuiteId, testCases, selectedTestCaseId, currentRole, isLoadingCases, setSidebarContent, handleTestCasesReordered, handleSelectTestCase, handleStartCreateMode, isCreateMode, handleShowOverview]);
+  }, [testSuiteId, testCases, selectedTestCaseId, currentRole, isLoadingCases, setSidebarContent, handleTestCasesReordered, handleSelectTestCase, handleStartCreateMode, isCreateMode, handleShowOverview, sidebarFilter, handleSidebarFilterChange]);
 
   if (isLoadingSuite) {
     return (
