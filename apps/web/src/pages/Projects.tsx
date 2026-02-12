@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router';
-import { FolderKanban, Plus, Search, MoreHorizontal, Filter, User, Building2, Trash2 } from 'lucide-react';
+import { FolderKanban, Plus, Search, Filter, User, Building2, Trash2 } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { useOrganizationStore } from '../stores/organization';
 import { usersApi, type ProjectWithRole } from '../lib/api';
@@ -176,17 +176,6 @@ function ProjectCard({ project }: { project: ProjectWithRole }) {
         <div className={`w-10 h-10 rounded flex items-center justify-center ${isDeleted ? 'bg-background-muted' : 'bg-accent-subtle'}`}>
           <FolderKanban className={`w-5 h-5 ${isDeleted ? 'text-foreground-subtle' : 'text-accent'}`} />
         </div>
-        {!isDeleted && (
-          <button
-            onClick={(e) => {
-              e.preventDefault();
-              // メニューを表示
-            }}
-            className="p-1 text-foreground-subtle hover:text-foreground-muted"
-          >
-            <MoreHorizontal className="w-4 h-4" />
-          </button>
-        )}
       </div>
 
       <h3 className="font-semibold text-foreground mb-1">{project.name}</h3>
