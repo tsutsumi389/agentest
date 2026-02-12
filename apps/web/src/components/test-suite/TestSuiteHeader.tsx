@@ -108,10 +108,12 @@ export function TestSuiteHeader({
               <span className={`px-2 py-0.5 text-xs font-medium rounded ${PRIORITY_COLORS[selectedTestCase.priority]}`}>
                 {PRIORITY_LABELS[selectedTestCase.priority]}
               </span>
-              {/* ステータスバッジ */}
-              <span className={`px-2 py-0.5 text-xs font-medium rounded ${STATUS_COLORS[selectedTestCase.status]}`}>
-                {STATUS_LABELS[selectedTestCase.status]}
-              </span>
+              {/* ステータスバッジ（アクティブは通常状態のため非表示） */}
+              {selectedTestCase.status !== 'ACTIVE' && (
+                <span className={`px-2 py-0.5 text-xs font-medium rounded ${STATUS_COLORS[selectedTestCase.status]}`}>
+                  {STATUS_LABELS[selectedTestCase.status]}
+                </span>
+              )}
               {/* 削除予定バッジ */}
               {selectedTestCase.deletedAt && (
                 <span className="px-2 py-0.5 text-xs font-medium rounded bg-danger/20 text-danger">
