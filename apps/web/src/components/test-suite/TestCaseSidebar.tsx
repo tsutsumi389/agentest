@@ -27,6 +27,7 @@ import {
   Archive,
   Trash2,
   RotateCcw,
+  CircleDot,
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
 import { testSuitesApi, testCasesApi, ApiError, type TestCase, type ProjectMemberRole } from '../../lib/api';
@@ -87,8 +88,8 @@ function getRemainingDays(deletedAt: string | null | undefined): number {
 /**
  * フィルタ定義
  */
-const FILTER_DEFINITIONS: { key: TestCaseFilter; label: string; icon?: React.ComponentType<{ className?: string }> }[] = [
-  { key: 'active', label: 'アクティブ' },
+const FILTER_DEFINITIONS: { key: TestCaseFilter; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { key: 'active', label: 'アクティブ', icon: CircleDot },
   { key: 'draft', label: '下書き', icon: FileEdit },
   { key: 'archived', label: 'アーカイブ', icon: Archive },
   { key: 'deleted', label: 'ゴミ箱', icon: Trash2 },
@@ -399,19 +400,18 @@ export function TestCaseSidebar({
                 key={filter.key}
                 type="button"
                 onClick={() => handleFilterChange(filter.key)}
+                title={filter.label}
                 aria-label={filter.label}
                 aria-pressed={isActive}
                 className={`
-                  px-2 py-1 text-xs rounded-full transition-colors flex items-center gap-1
+                  p-1.5 rounded-full transition-colors
                   ${isActive
                     ? 'bg-accent-subtle text-accent'
                     : 'text-foreground-muted hover:text-foreground hover:bg-background-tertiary'
                   }
                 `}
               >
-                {Icon && <Icon className="w-3 h-3" />}
-                {/* ゴミ箱以外はラベルテキストも表示 */}
-                {filter.key !== 'deleted' && <span>{filter.label}</span>}
+                <Icon className="w-4 h-4" />
               </button>
             );
           })}
