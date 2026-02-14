@@ -1015,8 +1015,15 @@ export const testSuitesApi = {
     api.patch<{ testSuite: TestSuite }>(`/api/test-suites/${testSuiteId}`, data),
   delete: (testSuiteId: string, options?: { groupId?: string }) =>
     api.delete<void>(`/api/test-suites/${testSuiteId}`, options),
-  getTestCases: (testSuiteId: string) =>
-    api.get<{ testCases: TestCase[] }>(`/api/test-suites/${testSuiteId}/test-cases`),
+  getTestCases: (testSuiteId: string, params?: { status?: string; includeDeleted?: boolean }) => {
+    const query = new URLSearchParams();
+    if (params?.status) query.set('status', params.status);
+    if (params?.includeDeleted) query.set('includeDeleted', 'true');
+    const queryString = query.toString();
+    return api.get<{ testCases: TestCase[]; total: number }>(
+      `/api/test-suites/${testSuiteId}/test-cases${queryString ? `?${queryString}` : ''}`
+    );
+  },
   getExecutions: (testSuiteId: string, params?: ExecutionSearchParams) => {
     const query = new URLSearchParams();
     if (params?.from) query.set('from', params.from);

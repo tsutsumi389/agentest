@@ -23,9 +23,18 @@ import {
   Search,
   FileText,
   LayoutGrid,
+  FileEdit,
+  Archive,
+  Trash2,
+  RotateCcw,
+  CircleDot,
 } from 'lucide-react';
-import { testSuitesApi, ApiError, type TestCase, type ProjectMemberRole } from '../../lib/api';
+import { useQueryClient } from '@tanstack/react-query';
+import { testSuitesApi, testCasesApi, ApiError, type TestCase, type ProjectMemberRole } from '../../lib/api';
 import { toast } from '../../stores/toast';
+
+/** ステータスフィルタの種類 */
+export type TestCaseFilter = 'active' | 'draft' | 'archived' | 'deleted';
 
 interface TestCaseSidebarProps {
   testSuiteId: string;
@@ -42,6 +51,10 @@ interface TestCaseSidebarProps {
   isOverviewMode?: boolean;
   /** 概要ボタンクリック時のハンドラ */
   onOverviewClick?: () => void;
+  /** 外部からフィルタを制御する場合 */
+  activeFilter?: TestCaseFilter;
+  /** フィルタ変更時のコールバック */
+  onFilterChange?: (filter: TestCaseFilter) => void;
 }
 
 /**
@@ -54,6 +67,34 @@ const priorityStyles = {
   LOW: { dot: 'bg-foreground-muted', label: '低' },
 } as const;
 
+/** ソフトデリートの猶予期間（日数） */
+const SOFT_DELETE_RETENTION_DAYS = 30;
+
+/** 残り日数の警告閾値（この日数以下で警告色表示） */
+const REMAINING_DAYS_WARNING_THRESHOLD = 3;
+
+/**
+ * 削除済みテストケースの残り日数を計算
+ * UTC基準のミリ秒差分で算出し、タイムゾーンによるオフバイワンを防止する
+ */
+function getRemainingDays(deletedAt: string | null | undefined): number {
+  if (!deletedAt) return SOFT_DELETE_RETENTION_DAYS;
+  const deletedMs = new Date(deletedAt).getTime();
+  const nowMs = Date.now();
+  const elapsedDays = Math.floor((nowMs - deletedMs) / (1000 * 60 * 60 * 24));
+  return Math.max(0, SOFT_DELETE_RETENTION_DAYS - elapsedDays);
+}
+
+/**
+ * フィルタ定義
+ */
+const FILTER_DEFINITIONS: { key: TestCaseFilter; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { key: 'active', label: 'アクティブ', icon: CircleDot },
+  { key: 'draft', label: '下書き', icon: FileEdit },
+  { key: 'archived', label: 'アーカイブ', icon: Archive },
+  { key: 'deleted', label: 'ゴミ箱', icon: Trash2 },
+];
+
 /**
  * ソート可能なテストケースアイテム
  */
@@ -63,12 +104,16 @@ function SortableTestCaseItem({
   canReorder,
   isReordering,
   onSelect,
+  isDeletedFilter,
+  onRestore,
 }: {
   testCase: TestCase;
   isSelected: boolean;
   canReorder: boolean;
   isReordering: boolean;
   onSelect: () => void;
+  isDeletedFilter?: boolean;
+  onRestore?: (testCaseId: string) => void;
 }) {
   const {
     attributes,
@@ -77,7 +122,7 @@ function SortableTestCaseItem({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: testCase.id, disabled: !canReorder || isReordering });
+  } = useSortable({ id: testCase.id, disabled: !canReorder || isReordering || !!isDeletedFilter });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -85,6 +130,10 @@ function SortableTestCaseItem({
   };
 
   const priority = priorityStyles[testCase.priority];
+
+  // ゴミ箱フィルタ時の残り日数
+  const remainingDays = isDeletedFilter ? getRemainingDays(testCase.deletedAt) : null;
+  const isWarning = remainingDays !== null && remainingDays <= REMAINING_DAYS_WARNING_THRESHOLD;
 
   return (
     <div
@@ -100,8 +149,8 @@ function SortableTestCaseItem({
       `}
       onClick={onSelect}
     >
-      {/* ドラッグハンドル */}
-      {canReorder && (
+      {/* ドラッグハンドル（ゴミ箱フィルタ時は非表示） */}
+      {canReorder && !isDeletedFilter && (
         <button
           {...attributes}
           {...listeners}
@@ -113,16 +162,45 @@ function SortableTestCaseItem({
         </button>
       )}
 
-      {/* 優先度ドット */}
-      <span
-        className={`w-2 h-2 rounded-full flex-shrink-0 ${priority.dot}`}
-        title={priority.label}
-      />
+      {/* ゴミ箱アイコン（ゴミ箱フィルタ時） */}
+      {isDeletedFilter && (
+        <Trash2 className="w-3.5 h-3.5 text-foreground-muted flex-shrink-0" />
+      )}
+
+      {/* 優先度ドット（ゴミ箱フィルタ時は非表示） */}
+      {!isDeletedFilter && (
+        <span
+          className={`w-2 h-2 rounded-full flex-shrink-0 ${priority.dot}`}
+          title={priority.label}
+        />
+      )}
 
       {/* タイトル */}
       <span className="text-sm truncate flex-1">
         {testCase.title}
       </span>
+
+      {/* 残り日数バッジ（ゴミ箱フィルタ時） */}
+      {remainingDays !== null && (
+        <span className={`text-xs flex-shrink-0 ${isWarning ? 'text-warning' : 'text-foreground-muted'}`}>
+          残り{remainingDays}日
+        </span>
+      )}
+
+      {/* 復元ボタン（ゴミ箱フィルタ時） */}
+      {isDeletedFilter && onRestore && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onRestore(testCase.id);
+          }}
+          className="p-1 text-foreground-muted hover:text-accent rounded transition-colors flex-shrink-0"
+          aria-label="復元"
+          title="復元"
+        >
+          <RotateCcw className="w-3.5 h-3.5" />
+        </button>
+      )}
     </div>
   );
 }
@@ -142,24 +220,33 @@ export function TestCaseSidebar({
   isCreateMode = false,
   isOverviewMode = false,
   onOverviewClick,
+  activeFilter: externalFilter,
+  onFilterChange,
 }: TestCaseSidebarProps) {
+  const queryClient = useQueryClient();
+  const [internalFilter, setInternalFilter] = useState<TestCaseFilter>('active');
   const [searchQuery, setSearchQuery] = useState('');
   const [isReordering, setIsReordering] = useState(false);
   const [localTestCases, setLocalTestCases] = useState<TestCase[]>([]);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
+
+  // 外部制御かローカル制御かを判定
+  const currentFilter = externalFilter ?? internalFilter;
+  const isDeletedFilter = currentFilter === 'deleted';
 
   // 検索フィルタ適用中かどうか
   const isSearching = searchQuery.trim().length > 0;
 
   // 権限チェック
   const canEdit = currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'WRITE';
-  // 検索中は並び替えを無効化
-  const canReorder = canEdit && !isSearching;
+  // 検索中またはゴミ箱フィルタ時は並び替えを無効化
+  const canReorder = canEdit && !isSearching && !isDeletedFilter;
 
   // dnd-kit センサー設定
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // 8px以上動かしたらドラッグ開始
+        distance: 8,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -183,6 +270,35 @@ export function TestCaseSidebar({
         );
       })
     : displayTestCases;
+
+  // フィルタ変更ハンドラ
+  const handleFilterChange = (filter: TestCaseFilter) => {
+    if (onFilterChange) {
+      onFilterChange(filter);
+    } else {
+      setInternalFilter(filter);
+    }
+  };
+
+  // テストケース復元ハンドラ（二重クリック防止付き）
+  const handleRestore = async (testCaseId: string) => {
+    if (restoringId) return;
+    setRestoringId(testCaseId);
+    try {
+      await testCasesApi.restore(testCaseId);
+      toast.success('テストケースを復元しました');
+      // ゴミ箱・アクティブフィルタの両方のキャッシュを無効化
+      queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
+    } catch (err) {
+      if (err instanceof ApiError) {
+        toast.error(err.message);
+      } else {
+        toast.error('テストケースの復元に失敗しました');
+      }
+    } finally {
+      setRestoringId(null);
+    }
+  };
 
   // ドラッグ終了時のハンドラー
   const handleDragEnd = async (event: DragEndEvent) => {
@@ -233,6 +349,13 @@ export function TestCaseSidebar({
     }
   }, [testCases, isReordering]);
 
+  // 空メッセージの出し分け
+  const emptyMessage = isDeletedFilter
+    ? '削除済みテストケースはありません'
+    : isSearching
+      ? '検索結果がありません'
+      : 'テストケースがありません';
+
   return (
     <div className="flex flex-col h-full">
       {/* ヘッダー */}
@@ -271,6 +394,37 @@ export function TestCaseSidebar({
             className="w-full pl-8 pr-3 py-1.5 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-1 focus:ring-accent focus:border-accent"
           />
         </div>
+
+        {/* ステータスフィルタ */}
+        <div className="flex items-center gap-1">
+          {FILTER_DEFINITIONS.map((filter) => {
+            const isActive = currentFilter === filter.key;
+            const Icon = filter.icon;
+            return (
+              <div key={filter.key} className="relative group">
+                <button
+                  type="button"
+                  onClick={() => handleFilterChange(filter.key)}
+                  aria-label={filter.label}
+                  aria-pressed={isActive}
+                  className={`
+                    p-1.5 rounded-full transition-colors
+                    ${isActive
+                      ? 'bg-accent-subtle text-accent'
+                      : 'text-foreground-muted hover:text-foreground hover:bg-background-tertiary'
+                    }
+                  `}
+                >
+                  <Icon className="w-4 h-4" />
+                </button>
+                {/* ツールチップ */}
+                <span className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 px-2 py-1 text-xs text-foreground bg-background-secondary border border-border rounded shadow-md whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-[var(--z-tooltip)]">
+                  {filter.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* 概要ボタン */}
@@ -302,11 +456,15 @@ export function TestCaseSidebar({
           </div>
         ) : filteredTestCases.length === 0 ? (
           <div className="text-center py-8">
-            <FileText className="w-10 h-10 text-foreground-subtle mx-auto mb-3" />
+            {isDeletedFilter ? (
+              <Trash2 className="w-10 h-10 text-foreground-subtle mx-auto mb-3" />
+            ) : (
+              <FileText className="w-10 h-10 text-foreground-subtle mx-auto mb-3" />
+            )}
             <p className="text-sm text-foreground-muted">
-              {isSearching ? '検索結果がありません' : 'テストケースがありません'}
+              {emptyMessage}
             </p>
-            {!isSearching && canEdit && (
+            {!isSearching && !isDeletedFilter && canEdit && (
               <button
                 onClick={onCreateClick}
                 className="mt-3 text-sm text-accent hover:text-accent-hover"
@@ -334,6 +492,8 @@ export function TestCaseSidebar({
                     canReorder={canReorder}
                     isReordering={isReordering}
                     onSelect={() => onSelect(testCase.id)}
+                    isDeletedFilter={isDeletedFilter}
+                    onRestore={isDeletedFilter && canEdit ? handleRestore : undefined}
                   />
                 ))}
               </div>
