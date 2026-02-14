@@ -88,11 +88,13 @@ export class TestCaseController {
 
   /**
    * テストケース詳細取得
+   * ミドルウェアで削除済みテストケースへのアクセスも許可されているため、
+   * includeDeleted: true でゴミ箱内のテストケースも表示可能にする
    */
   getById = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { testCaseId } = req.params;
-      const testCase = await this.testCaseService.findById(testCaseId);
+      const testCase = await this.testCaseService.findById(testCaseId, { includeDeleted: true });
 
       res.json({ testCase });
     } catch (error) {

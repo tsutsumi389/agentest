@@ -83,9 +83,10 @@ export class TestCaseChildrenService {
 
   /**
    * テストケースをIDで検索（存在しない場合はNotFoundErrorをスロー）
+   * @param options.includeDeleted trueの場合、削除済みテストケースも含めて検索する
    */
-  async findById(testCaseId: string) {
-    const testCase = await this.testCaseRepo.findById(testCaseId);
+  async findById(testCaseId: string, options?: { includeDeleted?: boolean }) {
+    const testCase = await this.testCaseRepo.findById(testCaseId, options);
     if (!testCase) {
       throw new NotFoundError('TestCase', testCaseId);
     }

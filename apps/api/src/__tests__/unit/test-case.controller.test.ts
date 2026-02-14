@@ -116,7 +116,7 @@ describe('TestCaseController', () => {
 
       await controller.getById(req, res, mockNext);
 
-      expect(mockTestCaseService.findById).toHaveBeenCalledWith(TEST_CASE_ID);
+      expect(mockTestCaseService.findById).toHaveBeenCalledWith(TEST_CASE_ID, { includeDeleted: true });
       expect(res.json).toHaveBeenCalledWith({ testCase: mockCase });
     });
 

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useSearchParams, useNavigate, Link } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Calendar } from 'lucide-react';
@@ -219,9 +219,14 @@ export function TestSuiteCasesPage() {
   // ゴミ箱フィルタ: includeDeleted=trueで削除済みを含むすべてを取得し、
   // クライアント側でdeletedAt != nullのみに絞り込む
   // （バックエンドAPIはincludeDeletedフラグのみ対応し、削除済みのみを返す機能がないため）
-  const testCases = sidebarFilter === 'deleted'
-    ? (casesData?.testCases || []).filter(tc => tc.deletedAt != null)
-    : (casesData?.testCases || []);
+  // useMemoで安定化: .filter()は毎レンダーで新しい配列参照を生成するため、
+  // useEffectの依存配列で無限ループを引き起こす
+  const testCases = useMemo(() => {
+    if (sidebarFilter === 'deleted') {
+      return (casesData?.testCases || []).filter(tc => tc.deletedAt != null);
+    }
+    return casesData?.testCases || [];
+  }, [casesData?.testCases, sidebarFilter]);
   const executions = executionsData?.executions || [];
 
   // 選択中のテストケースの詳細情報を取得

@@ -24,8 +24,9 @@ router.post('/', requireAuth(authConfig), testCaseController.create);
 /**
  * テストケース詳細取得
  * GET /api/test-cases/:testCaseId
+ * 削除済みテストケースの閲覧も許可（ゴミ箱フィルタからの詳細表示用）
  */
-router.get('/:testCaseId', requireAuth(authConfig), requireTestCaseRole([...readRoles]), testCaseController.getById);
+router.get('/:testCaseId', requireAuth(authConfig), requireTestCaseRole([...readRoles], { allowDeletedTestCase: true }), testCaseController.getById);
 
 /**
  * テストケース更新

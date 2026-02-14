@@ -96,12 +96,13 @@ export interface TestCaseSearchOptions {
 export class TestCaseRepository {
   /**
    * IDでテストケースを検索
+   * @param includeDeleted trueの場合、削除済みテストケースも含めて検索する
    */
-  async findById(id: string) {
+  async findById(id: string, options?: { includeDeleted?: boolean }) {
     return prisma.testCase.findFirst({
       where: {
         id,
-        deletedAt: null,
+        ...(options?.includeDeleted ? {} : { deletedAt: null }),
       },
       include: {
         testSuite: {
