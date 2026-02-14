@@ -75,14 +75,14 @@ const REMAINING_DAYS_WARNING_THRESHOLD = 3;
 
 /**
  * 削除済みテストケースの残り日数を計算
+ * UTC基準のミリ秒差分で算出し、タイムゾーンによるオフバイワンを防止する
  */
 function getRemainingDays(deletedAt: string | null | undefined): number {
   if (!deletedAt) return SOFT_DELETE_RETENTION_DAYS;
-  const deletedDate = new Date(deletedAt);
-  const expiryDate = new Date(deletedDate.getTime() + SOFT_DELETE_RETENTION_DAYS * 24 * 60 * 60 * 1000);
-  const now = new Date();
-  const remaining = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  return Math.max(0, remaining);
+  const deletedMs = new Date(deletedAt).getTime();
+  const nowMs = Date.now();
+  const elapsedDays = Math.floor((nowMs - deletedMs) / (1000 * 60 * 60 * 24));
+  return Math.max(0, SOFT_DELETE_RETENTION_DAYS - elapsedDays);
 }
 
 /**
@@ -228,6 +228,7 @@ export function TestCaseSidebar({
   const [searchQuery, setSearchQuery] = useState('');
   const [isReordering, setIsReordering] = useState(false);
   const [localTestCases, setLocalTestCases] = useState<TestCase[]>([]);
+  const [restoringId, setRestoringId] = useState<string | null>(null);
 
   // 外部制御かローカル制御かを判定
   const currentFilter = externalFilter ?? internalFilter;
@@ -279,8 +280,10 @@ export function TestCaseSidebar({
     }
   };
 
-  // テストケース復元ハンドラ
+  // テストケース復元ハンドラ（二重クリック防止付き）
   const handleRestore = async (testCaseId: string) => {
+    if (restoringId) return;
+    setRestoringId(testCaseId);
     try {
       await testCasesApi.restore(testCaseId);
       toast.success('テストケースを復元しました');
@@ -292,6 +295,8 @@ export function TestCaseSidebar({
       } else {
         toast.error('テストケースの復元に失敗しました');
       }
+    } finally {
+      setRestoringId(null);
     }
   };
 
@@ -488,7 +493,7 @@ export function TestCaseSidebar({
                     isReordering={isReordering}
                     onSelect={() => onSelect(testCase.id)}
                     isDeletedFilter={isDeletedFilter}
-                    onRestore={isDeletedFilter ? handleRestore : undefined}
+                    onRestore={isDeletedFilter && canEdit ? handleRestore : undefined}
                   />
                 ))}
               </div>

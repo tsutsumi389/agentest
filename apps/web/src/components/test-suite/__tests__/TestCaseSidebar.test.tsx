@@ -80,9 +80,13 @@ const defaultProps = {
   currentRole: 'OWNER' as const,
 };
 
+// 固定時刻（2026-02-14T12:00:00Z）- テストの決定性を担保
+const FIXED_NOW = new Date('2026-02-14T12:00:00Z').getTime();
+
 describe('TestCaseSidebar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(Date, 'now').mockReturnValue(FIXED_NOW);
   });
 
   describe('フィルタボタンの表示', () => {
@@ -167,18 +171,19 @@ describe('TestCaseSidebar', () => {
   });
 
   describe('ゴミ箱フィルタ', () => {
+    // 固定時刻（2026-02-14T12:00:00Z）基準で計算
     const deletedTestCases = [
       createTestCase({
         id: 'tc-del-1',
         title: '削除済みテスト1',
-        // 25日後に完全削除（5日前に削除）
-        deletedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        // 5日前に削除 → 残り25日
+        deletedAt: '2026-02-09T12:00:00Z',
       }),
       createTestCase({
         id: 'tc-del-2',
         title: '削除済みテスト2',
-        // 3日後に完全削除（27日前に削除）
-        deletedAt: new Date(Date.now() - 27 * 24 * 60 * 60 * 1000).toISOString(),
+        // 27日前に削除 → 残り3日
+        deletedAt: '2026-01-18T12:00:00Z',
       }),
     ];
 
@@ -266,7 +271,7 @@ describe('TestCaseSidebar', () => {
       createTestCase({
         id: 'tc-del-1',
         title: '削除済みテスト1',
-        deletedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
+        deletedAt: '2026-02-09T12:00:00Z',
       }),
     ];
 
@@ -326,6 +331,48 @@ describe('TestCaseSidebar', () => {
 
       await waitFor(() => {
         expect(toast.error).toHaveBeenCalledWith('テストケースの復元に失敗しました');
+      });
+    });
+
+    it('READ権限ユーザーにはゴミ箱フィルタで復元ボタンが表示されない', () => {
+      renderWithProviders(
+        <TestCaseSidebar
+          {...defaultProps}
+          currentRole="READ"
+          testCases={deletedTestCases}
+          activeFilter="deleted"
+        />
+      );
+
+      expect(screen.queryByRole('button', { name: '復元' })).not.toBeInTheDocument();
+    });
+
+    it('二重クリック時にAPIが1回しか呼ばれない', async () => {
+      // resolveを遅延させて二重クリックをシミュレート
+      let resolveRestore: () => void;
+      vi.mocked(testCasesApi.restore).mockImplementation(
+        () => new Promise<{ testCase: TestCase }>((resolve) => {
+          resolveRestore = () => resolve({ testCase: createTestCase({ id: 'tc-del-1' }) });
+        })
+      );
+
+      renderWithProviders(
+        <TestCaseSidebar
+          {...defaultProps}
+          testCases={deletedTestCases}
+          activeFilter="deleted"
+        />
+      );
+
+      const restoreButton = screen.getByRole('button', { name: '復元' });
+      fireEvent.click(restoreButton);
+      fireEvent.click(restoreButton);
+
+      // 遅延Promiseを解決
+      resolveRestore!();
+
+      await waitFor(() => {
+        expect(testCasesApi.restore).toHaveBeenCalledTimes(1);
       });
     });
   });
