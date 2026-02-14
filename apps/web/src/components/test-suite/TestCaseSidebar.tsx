@@ -396,23 +396,27 @@ export function TestCaseSidebar({
             const isActive = currentFilter === filter.key;
             const Icon = filter.icon;
             return (
-              <button
-                key={filter.key}
-                type="button"
-                onClick={() => handleFilterChange(filter.key)}
-                title={filter.label}
-                aria-label={filter.label}
-                aria-pressed={isActive}
-                className={`
-                  p-1.5 rounded-full transition-colors
-                  ${isActive
-                    ? 'bg-accent-subtle text-accent'
-                    : 'text-foreground-muted hover:text-foreground hover:bg-background-tertiary'
-                  }
-                `}
-              >
-                <Icon className="w-4 h-4" />
-              </button>
+              <div key={filter.key} className="relative group">
+                <button
+                  type="button"
+                  onClick={() => handleFilterChange(filter.key)}
+                  aria-label={filter.label}
+                  aria-pressed={isActive}
+                  className={`
+                    p-1.5 rounded-full transition-colors
+                    ${isActive
+                      ? 'bg-accent-subtle text-accent'
+                      : 'text-foreground-muted hover:text-foreground hover:bg-background-tertiary'
+                    }
+                  `}
+                >
+                  <Icon className="w-4 h-4" />
+                </button>
+                {/* ツールチップ */}
+                <span className="absolute left-1/2 -translate-x-1/2 top-full mt-1.5 px-2 py-1 text-xs text-foreground bg-background-secondary border border-border rounded shadow-md whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity z-[var(--z-tooltip)]">
+                  {filter.label}
+                </span>
+              </div>
             );
           })}
         </div>
