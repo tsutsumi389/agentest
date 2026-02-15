@@ -2,7 +2,7 @@
 
 production-readiness.md の C-5 に対応するデプロイ計画。
 
-## 現在の状態（2026-02-14 時点）
+## 現在の状態（2026-02-15 時点）
 
 ### 完了済み
 
@@ -11,153 +11,128 @@ production-readiness.md の C-5 に対応するデプロイ計画。
 - [x] gcloud CLI インストール・認証
 - [x] Terraform インストール
 - [x] Bootstrap 実行（GCS tfstate バケット + 13 API 有効化）
-- [x] `.gitignore` に Terraform 除外ルール追加
+- [x] `.gitignore` に Terraform 除外ルール追加（`*.tfvars` 含む）
+- [x] ドメイン取得（`agentest.jp` / お名前.com）
+- [x] staging 環境 `terraform apply` 完了（全リソース作成済み）
+- [x] Docker イメージのビルド＆プッシュ（全6サービス）
+- [x] Secret Manager にシークレット値を投入（必須7件）
+- [x] DNS 設定（お名前.com で A レコード登録済み）
+- [x] ビルド・デプロイ用スクリプト作成
 
-### GCP 上に存在するリソース
+### デプロイ時に発見・修正したバグ
 
-| リソース | 名前 |
-|---------|------|
-| GCS バケット | `agentest-staging-tfstate` |
-| 有効化済み API | compute, sqladmin, redis, run, secretmanager, artifactregistry, cloudscheduler, servicenetworking, vpcaccess, cloudresourcemanager, iam, certificatemanager, dns |
+| 修正内容 | ファイル |
+|---------|---------|
+| Cloud Run v2 の ingress 値修正（`INGRESS_TRAFFIC_INTERNAL_AND_GCLB` → `INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER`） | `modules/cloud-run-service/variables.tf` |
+| Cloud Armor のアクション修正（`throttle` → `rate_based_ban`） | `modules/load-balancer/main.tf` |
+| Secret Manager の `for_each` キーを静的値に変更 | `modules/secret-manager/main.tf` |
+| Private Service Access の伝播遅延対策（`time_sleep` 60秒追加） | `modules/networking/main.tf` |
+| WebSocket サービスのメモリを 256Mi → 512Mi に変更（CPU常時割当の最低要件） | `environments/staging/main.tf` |
+| LB バックエンドサービスの `timeout_sec` 削除（サーバーレスNEG非対応） | `modules/load-balancer/main.tf` |
+| Dockerfile に `@agentest/ws-types` 依存追加（API, WS, Web） | `docker/Dockerfile.api`, `Dockerfile.ws`, `Dockerfile.web` |
+| Dockerfile に `@agentest/shared` 依存追加（Admin） | `docker/Dockerfile.admin` |
+| Dockerfile に `prisma generate` 追加、ルート `package.json` 追加（Jobs） | `apps/jobs/Dockerfile` |
+| Prisma クライアントの COPY パス修正（`packages/db/node_modules/.prisma` → ルート `node_modules` に含まれる） | `docker/Dockerfile.api`, `Dockerfile.ws` |
+| Docker ビルドに `--platform linux/amd64` 追加（Apple Silicon 対応） | `infrastructure/scripts/build-and-push.sh` |
 
-### まだ作成されていないリソース
+### GCP 上に存在するリソース（staging）
 
-VPC, Cloud SQL, Redis, Cloud Run, Secret Manager, Load Balancer, Cloud Armor, Artifact Registry, Cloud Storage, Cloud Scheduler 等（staging 環境の全リソース）
+| カテゴリ | リソース |
+|---------|---------|
+| ネットワーク | VPC, サブネット, Private Service Access, VPC コネクタ |
+| データベース | Cloud SQL (PostgreSQL 16, db-f1-micro), Memorystore (Redis 7, 1GB) |
+| コンピュート | Cloud Run × 5 (api, ws, mcp, web, admin), Cloud Run Job × 1 |
+| ストレージ | GCS バケット (`agentest-storage-staging`), Artifact Registry |
+| セキュリティ | Secret Manager (20件), Cloud Armor, IAM サービスアカウント |
+| ロードバランサー | グローバル HTTPS LB, Google マネージド SSL 証明書 |
+| スケジューラー | Cloud Scheduler (バッチジョブ用) |
+
+### 主要な出力値
+
+```
+lb_ip_address     = 34.120.151.165
+cloud_sql_private_ip = 10.46.1.3
+redis_host        = 10.46.0.3
+storage_bucket    = agentest-storage-staging
+artifact_registry = asia-northeast1-docker.pkg.dev/agentest-staging/agentest-docker
+```
+
+### ドメイン設定
+
+| ドメイン | TYPE | VALUE |
+|---------|------|-------|
+| `app.staging.agentest.jp` | A | `34.120.151.165` |
+| `admin.staging.agentest.jp` | A | `34.120.151.165` |
 
 ---
 
 ## 次のステップ
 
-### Step 1: 前提条件の準備
+### Step 1: SSL 証明書の発行待ち（進行中）
 
-staging 環境デプロイの前に以下を準備する。
-
-#### 1-1. ドメインの取得・設定
-
-- `app.staging.agentest.example.com` （ユーザー向け）
-- `admin.staging.agentest.example.com` （管理画面）
-- ドメインレジストラで取得し、terraform apply 後に A レコードを設定
-
-#### 1-2. Docker イメージのビルド
-
-各サービスの Docker イメージをビルドできる状態にする。staging デプロイ時に `var.api_image` 等で渡す。
+Google マネージド SSL 証明書が PROVISIONING 状態。DNS は反映済みだが、Google 側の検証がまだ完了していない。自動リトライされるため待機（最大24時間）。
 
 ```bash
-# Artifact Registry へのプッシュ例（staging デプロイ後に実行）
-gcloud auth configure-docker asia-northeast1-docker.pkg.dev
-
-docker build -f docker/Dockerfile.api -t asia-northeast1-docker.pkg.dev/agentest-staging/agentest-docker/agentest-api:latest .
-docker push asia-northeast1-docker.pkg.dev/agentest-staging/agentest-docker/agentest-api:latest
+# 状態確認コマンド
+gcloud compute ssl-certificates describe agentest-app-cert-staging \
+  --project=agentest-staging --format="get(managed.status,managed.domainStatus)"
+# ACTIVE + app.staging.agentest.jp=ACTIVE になれば完了
 ```
 
-対象イメージ:
-- `agentest-api` (docker/Dockerfile.api)
-- `agentest-ws` (docker/Dockerfile.ws)
-- `agentest-mcp` (docker/Dockerfile.mcp) ※要作成（C-5 の前提条件 H-8）
-- `agentest-web` (docker/Dockerfile.web)
-- `agentest-admin` (docker/Dockerfile.admin)
-- `agentest-jobs` (apps/jobs/Dockerfile)
+### Step 2: Prisma マイグレーション
 
-#### 1-3. シークレット値の準備
-
-以下の値を事前に生成・取得しておく:
+SSL 証明書が有効化された後、Cloud SQL にスキーマを適用する。
 
 ```bash
-# 自動生成するもの
-openssl rand -base64 32  # JWT_ACCESS_SECRET
-openssl rand -base64 32  # JWT_REFRESH_SECRET
-openssl rand -hex 32     # INTERNAL_API_SECRET
-openssl rand -base64 32  # TOKEN_ENCRYPTION_KEY
-openssl rand -base64 32  # TOTP_ENCRYPTION_KEY
+# Cloud SQL Proxy 経由で接続してマイグレーション実行
+# （Cloud SQL はプライベート IP のみのため、直接接続不可）
+gcloud sql connect agentest-db-staging --user=agentest --database=agentest
 
-# 外部サービスから取得するもの
-# - GitHub OAuth: GitHub Developer Settings で作成
-# - Google OAuth: Google Cloud Console で作成
-# - Stripe: Stripe Dashboard から取得
-# - SMTP: SendGrid 等のメールサービスから取得
+# または Cloud Run Job でマイグレーション実行
 ```
 
-#### 1-4. CI/CD パイプライン（C-1）
+### Step 3: 動作確認
 
-C-1（GitHub Actions）の構築が完了していると、イメージのビルド・プッシュとデプロイが自動化される。手動デプロイも可能だが、CI/CD があると効率的。
-
----
-
-### Step 2: staging 環境デプロイ
-
-**想定費用: 月 $80〜120**
-
-#### 2-1. terraform.tfvars の設定
-
-```bash
-cd infrastructure/terraform/environments/staging
-```
-
-`terraform.tfvars` を編集するか、環境変数で値を渡す:
-
-```bash
-export TF_VAR_project_id="agentest-staging"
-export TF_VAR_database_password="$(openssl rand -base64 24)"
-export TF_VAR_app_domain="app.staging.agentest.example.com"
-export TF_VAR_admin_domain="admin.staging.agentest.example.com"
-export TF_VAR_api_image="asia-northeast1-docker.pkg.dev/agentest-staging/agentest-docker/agentest-api:latest"
-export TF_VAR_ws_image="asia-northeast1-docker.pkg.dev/agentest-staging/agentest-docker/agentest-ws:latest"
-export TF_VAR_mcp_image="asia-northeast1-docker.pkg.dev/agentest-staging/agentest-docker/agentest-mcp:latest"
-export TF_VAR_web_image="asia-northeast1-docker.pkg.dev/agentest-staging/agentest-docker/agentest-web:latest"
-export TF_VAR_admin_image="asia-northeast1-docker.pkg.dev/agentest-staging/agentest-docker/agentest-admin:latest"
-export TF_VAR_jobs_image="asia-northeast1-docker.pkg.dev/agentest-staging/agentest-docker/agentest-jobs:latest"
-```
-
-#### 2-2. Terraform 実行
-
-```bash
-terraform init -backend-config="bucket=agentest-staging-tfstate"
-terraform plan -out=tfplan
-terraform apply tfplan
-```
-
-#### 2-3. シークレット値の投入
-
-```bash
-# 各シークレットの値を Secret Manager に投入
-echo -n "YOUR_VALUE" | gcloud secrets versions add agentest-staging-JWT_ACCESS_SECRET --data-file=-
-# ... 全20個のシークレットについて実行
-```
-
-#### 2-4. DNS 設定
-
-`terraform output lb_ip_address` で表示された IP を DNS に設定:
-
-```
-app.staging.agentest.example.com    A  <LB_IP>
-admin.staging.agentest.example.com  A  <LB_IP>
-```
-
-#### 2-5. Prisma マイグレーション
-
-```bash
-# Cloud SQL にスキーマを適用
-docker run --rm \
-  -e DATABASE_URL="postgresql://agentest:PASSWORD@CLOUD_SQL_IP/agentest" \
-  asia-northeast1-docker.pkg.dev/agentest-staging/agentest-docker/agentest-api:latest \
-  pnpm --filter @agentest/db prisma migrate deploy
-```
-
-#### 2-6. 動作確認
-
+- [ ] SSL 証明書が ACTIVE になった
+- [ ] `https://app.staging.agentest.jp` にアクセスできる
+- [ ] `https://admin.staging.agentest.jp` にアクセスできる
 - [ ] 各 Cloud Run サービスの `/health` 応答確認
 - [ ] API → Cloud SQL 接続確認
 - [ ] API → Redis 接続確認
 - [ ] WebSocket 接続・メッセージ送受信
-- [ ] Web / Admin フロントエンドの表示
 - [ ] MCP サーバー接続
-- [ ] Cloud Armor レートリミットテスト
-- [ ] CDN キャッシュヒット確認
 - [ ] バッチジョブ手動実行テスト
+
+### Step 4: 外部サービスシークレットの設定
+
+以下のシークレットは現在プレースホルダー値。各サービスの準備ができたら更新する:
+
+```bash
+# GitHub OAuth（GitHub Developer Settings で作成）
+gcloud secrets versions add agentest-staging-GITHUB_CLIENT_ID --project=agentest-staging --data-file=-
+gcloud secrets versions add agentest-staging-GITHUB_CLIENT_SECRET --project=agentest-staging --data-file=-
+
+# Google OAuth（Google Cloud Console で作成）
+gcloud secrets versions add agentest-staging-GOOGLE_CLIENT_ID --project=agentest-staging --data-file=-
+gcloud secrets versions add agentest-staging-GOOGLE_CLIENT_SECRET --project=agentest-staging --data-file=-
+
+# Stripe（Stripe Dashboard から取得）
+gcloud secrets versions add agentest-staging-STRIPE_SECRET_KEY --project=agentest-staging --data-file=-
+gcloud secrets versions add agentest-staging-STRIPE_WEBHOOK_SECRET --project=agentest-staging --data-file=-
+gcloud secrets versions add agentest-staging-STRIPE_PUBLISHABLE_KEY --project=agentest-staging --data-file=-
+gcloud secrets versions add agentest-staging-STRIPE_PRICE_PRO_MONTHLY --project=agentest-staging --data-file=-
+gcloud secrets versions add agentest-staging-STRIPE_PRICE_PRO_YEARLY --project=agentest-staging --data-file=-
+gcloud secrets versions add agentest-staging-STRIPE_PRICE_TEAM_MONTHLY --project=agentest-staging --data-file=-
+gcloud secrets versions add agentest-staging-STRIPE_PRICE_TEAM_YEARLY --project=agentest-staging --data-file=-
+
+# SMTP（SendGrid 等のメールサービスから取得）
+gcloud secrets versions add agentest-staging-SMTP_USER --project=agentest-staging --data-file=-
+gcloud secrets versions add agentest-staging-SMTP_PASS --project=agentest-staging --data-file=-
+```
 
 ---
 
-### Step 3: production 環境デプロイ
+### Step 5: production 環境デプロイ
 
 **想定費用: 月 $400〜600**
 
@@ -167,20 +142,29 @@ staging で動作確認が完了した後に実施。
 2. Bootstrap を production プロジェクトで実行
 3. `environments/production/` で terraform apply
 4. 本番用シークレット投入
-5. 本番用 DNS 設定
+5. 本番用 DNS 設定（`app.agentest.jp`, `admin.agentest.jp`）
 6. SSL 証明書プロビジョニング待ち
-7. 最終動作確認
+7. Prisma マイグレーション
+8. 最終動作確認
 
 ---
+
+## 運用スクリプト
+
+| スクリプト | 用途 |
+|-----------|------|
+| `infrastructure/scripts/build-and-push.sh` | 全6サービスのイメージビルド＆プッシュ（`--platform linux/amd64`） |
+| `infrastructure/scripts/init-secrets.sh` | Secret Manager にプレースホルダー値を投入（初回セットアップ用） |
+| `infrastructure/scripts/update-secrets.sh` | Secret Manager の必須シークレット値を更新 |
 
 ## 関連タスク
 
 | タスク | 状態 | 依存関係 |
 |-------|------|---------|
 | C-1: CI/CD パイプライン | 未着手 | C-5 の後に実施すると効率的 |
-| C-5: Infrastructure as Code | **Terraform コード完了、Bootstrap 完了** | - |
-| C-6: シークレット管理 | 未着手 | C-5 の Secret Manager モジュールで対応済み |
-| H-8: MCP Dockerfile 作成 | 未着手 | staging デプロイ前に必要 |
+| C-5: Infrastructure as Code | **staging デプロイ完了、SSL 証明書待ち** | - |
+| C-6: シークレット管理 | 必須分完了、外部サービス分は未設定 | C-5 の Secret Manager モジュールで対応済み |
+| H-8: MCP Dockerfile 作成 | **完了** | - |
 
 ## Terraform ファイル構成
 
@@ -189,13 +173,17 @@ infrastructure/terraform/
   README.md                           # 運用ガイド
   bootstrap/                          # ✅ 実行済み
     main.tf / variables.tf / outputs.tf / terraform.tfvars
-  modules/                            # ✅ コード作成済み（10モジュール）
+  modules/                            # ✅ コード作成済み・バグ修正済み（10モジュール）
     iam/ networking/ cloud-sql/ memorystore/
     artifact-registry/ cloud-run-service/ cloud-run-job/
     cloud-storage/ secret-manager/ load-balancer/
-  environments/                       # ⏸️ 未実行
-    staging/                          # 次にデプロイする環境
-    production/                       # staging 検証後にデプロイ
+  environments/
+    staging/                          # ✅ デプロイ済み
+    production/                       # ⏸️ staging 検証後にデプロイ
+infrastructure/scripts/
+  build-and-push.sh                   # ✅ イメージビルド＆プッシュ
+  init-secrets.sh                     # ✅ 初期シークレット投入
+  update-secrets.sh                   # ✅ シークレット値更新
 ```
 
 ## コスト管理
