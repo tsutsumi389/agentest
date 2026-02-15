@@ -1,6 +1,6 @@
 import { prisma, type PreconditionStatus, type StepStatus, type JudgmentStatus } from '@agentest/db';
 import { NotFoundError, BadRequestError } from '@agentest/shared';
-import { createStorageClient } from '@agentest/storage';
+import { createStorageClient, type StorageClient } from '@agentest/storage';
 import { randomUUID } from 'node:crypto';
 import { ExecutionRepository } from '../repositories/execution.repository.js';
 import { MAX_EVIDENCES_PER_RESULT, validateMagicBytes } from '../config/upload.js';
@@ -23,7 +23,15 @@ export interface ExecutorContext {
  */
 export class ExecutionService {
   private executionRepo = new ExecutionRepository();
-  private storage = createStorageClient();
+  private _storage: StorageClient | null = null;
+
+  /** ストレージクライアントを遅延初期化（MINIO_*環境変数が未設定でも起動可能にする） */
+  private get storage(): StorageClient {
+    if (!this._storage) {
+      this._storage = createStorageClient();
+    }
+    return this._storage;
+  }
 
   /**
    * 実行をIDで検索

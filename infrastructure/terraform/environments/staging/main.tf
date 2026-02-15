@@ -117,19 +117,12 @@ module "cloud_run_api" {
   startup_probe_path    = "/health/live"
 
   env_vars = {
-    NODE_ENV      = "production"
-    LOG_LEVEL     = "info"
-    API_URL       = "https://${var.app_domain}"
-    WEB_URL       = "https://${var.app_domain}"
-    ADMIN_URL     = "https://${var.admin_domain}"
-    CORS_ORIGIN   = "https://${var.app_domain},https://${var.admin_domain}"
-    DB_HOST       = module.cloud_sql.private_ip_address
-    DB_PORT       = "5432"
-    DB_NAME       = module.cloud_sql.database_name
-    DB_USER       = module.cloud_sql.database_user
-    REDIS_HOST    = module.memorystore.host
-    REDIS_PORT    = tostring(module.memorystore.port)
-    STORAGE_BUCKET = module.cloud_storage.bucket_name
+    NODE_ENV           = "production"
+    LOG_LEVEL          = "info"
+    API_BASE_URL       = "https://${var.app_domain}"
+    FRONTEND_URL       = "https://${var.app_domain}"
+    ADMIN_FRONTEND_URL = "https://${var.admin_domain}"
+    CORS_ORIGIN        = "https://${var.app_domain},https://${var.admin_domain}"
   }
 
   secret_env_vars = {
@@ -153,6 +146,10 @@ module "cloud_run_api" {
     STRIPE_PRICE_TEAM_YEARLY  = "${local.secret_prefix}-STRIPE_PRICE_TEAM_YEARLY"
     SMTP_USER              = "${local.secret_prefix}-SMTP_USER"
     SMTP_PASS              = "${local.secret_prefix}-SMTP_PASS"
+    MINIO_ENDPOINT         = "${local.secret_prefix}-MINIO_ENDPOINT"
+    MINIO_ACCESS_KEY       = "${local.secret_prefix}-MINIO_ACCESS_KEY"
+    MINIO_SECRET_KEY       = "${local.secret_prefix}-MINIO_SECRET_KEY"
+    MINIO_BUCKET           = "${local.secret_prefix}-MINIO_BUCKET"
   }
 }
 
@@ -179,20 +176,15 @@ module "cloud_run_ws" {
   startup_probe_path    = "/health/live"
 
   env_vars = {
-    NODE_ENV   = "production"
-    LOG_LEVEL  = "info"
-    DB_HOST    = module.cloud_sql.private_ip_address
-    DB_PORT    = "5432"
-    DB_NAME    = module.cloud_sql.database_name
-    DB_USER    = module.cloud_sql.database_user
-    REDIS_HOST = module.memorystore.host
-    REDIS_PORT = tostring(module.memorystore.port)
+    NODE_ENV  = "production"
+    LOG_LEVEL = "info"
   }
 
   secret_env_vars = {
-    DATABASE_URL      = "${local.secret_prefix}-DATABASE_URL"
-    REDIS_URL         = "${local.secret_prefix}-REDIS_URL"
-    JWT_ACCESS_SECRET = "${local.secret_prefix}-JWT_ACCESS_SECRET"
+    DATABASE_URL       = "${local.secret_prefix}-DATABASE_URL"
+    REDIS_URL          = "${local.secret_prefix}-REDIS_URL"
+    JWT_ACCESS_SECRET  = "${local.secret_prefix}-JWT_ACCESS_SECRET"
+    JWT_REFRESH_SECRET = "${local.secret_prefix}-JWT_REFRESH_SECRET"
   }
 }
 
@@ -213,18 +205,14 @@ module "cloud_run_mcp" {
   max_instances         = 3
   service_account_email = module.iam.service_account_emails["mcp"]
   vpc_connector_id      = module.networking.vpc_connector_id
-  startup_probe_path    = "/health/live"
+  startup_probe_path    = "/health"
+  health_check_path     = "/health"
 
   env_vars = {
-    NODE_ENV   = "production"
-    LOG_LEVEL  = "info"
-    DB_HOST    = module.cloud_sql.private_ip_address
-    DB_PORT    = "5432"
-    DB_NAME    = module.cloud_sql.database_name
-    DB_USER    = module.cloud_sql.database_user
-    REDIS_HOST = module.memorystore.host
-    REDIS_PORT = tostring(module.memorystore.port)
-    API_URL    = "https://${var.app_domain}"
+    NODE_ENV         = "production"
+    LOG_LEVEL        = "info"
+    API_URL          = "https://${var.app_domain}"
+    API_INTERNAL_URL = "https://${var.app_domain}"
   }
 
   secret_env_vars = {
