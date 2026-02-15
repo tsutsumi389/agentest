@@ -21,7 +21,9 @@ export function getRedisClient(): Redis | null {
   }
 
   if (!redisClient) {
-    redisClient = new Redis(redisUrl);
+    redisClient = new Redis(redisUrl, {
+      ...(redisUrl.startsWith('rediss://') && { tls: { rejectUnauthorized: false } }),
+    });
     redisClient.on('connect', () => {
       logger.info('Redisに接続しました');
     });
