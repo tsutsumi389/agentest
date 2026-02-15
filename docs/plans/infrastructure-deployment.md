@@ -2,7 +2,7 @@
 
 production-readiness.md の C-5 に対応するデプロイ計画。
 
-## 現在の状態（2026-02-15 時点）
+## 現在の状態（2026-02-16 時点）
 
 ### 完了済み
 
@@ -15,11 +15,16 @@ production-readiness.md の C-5 に対応するデプロイ計画。
 - [x] ドメイン取得（`agentest.jp` / お名前.com）
 - [x] staging 環境 `terraform apply` 完了（全リソース作成済み）
 - [x] Docker イメージのビルド＆プッシュ（全6サービス）
-- [x] Secret Manager にシークレット値を投入（必須7件）
+- [x] Secret Manager にシークレット値を投入（必須7件 + MINIO 4件）
 - [x] DNS 設定（お名前.com で A レコード登録済み）
 - [x] ビルド・デプロイ用スクリプト作成
+- [x] Dockerfile 全面修正（pnpm 互換性、OCI フォーマット対応）
+- [x] Cloud Run 全5サービス起動成功（api, ws, mcp, web, admin）
+- [x] Terraform 環境変数をアプリの env スキーマと整合
 
 ### デプロイ時に発見・修正したバグ
+
+#### Phase 1（インフラ構築時）
 
 | 修正内容 | ファイル |
 |---------|---------|
@@ -29,11 +34,47 @@ production-readiness.md の C-5 に対応するデプロイ計画。
 | Private Service Access の伝播遅延対策（`time_sleep` 60秒追加） | `modules/networking/main.tf` |
 | WebSocket サービスのメモリを 256Mi → 512Mi に変更（CPU常時割当の最低要件） | `environments/staging/main.tf` |
 | LB バックエンドサービスの `timeout_sec` 削除（サーバーレスNEG非対応） | `modules/load-balancer/main.tf` |
-| Dockerfile に `@agentest/ws-types` 依存追加（API, WS, Web） | `docker/Dockerfile.api`, `Dockerfile.ws`, `Dockerfile.web` |
-| Dockerfile に `@agentest/shared` 依存追加（Admin） | `docker/Dockerfile.admin` |
-| Dockerfile に `prisma generate` 追加、ルート `package.json` 追加（Jobs） | `apps/jobs/Dockerfile` |
-| Prisma クライアントの COPY パス修正（`packages/db/node_modules/.prisma` → ルート `node_modules` に含まれる） | `docker/Dockerfile.api`, `Dockerfile.ws` |
-| Docker ビルドに `--platform linux/amd64` 追加（Apple Silicon 対応） | `infrastructure/scripts/build-and-push.sh` |
+
+#### Phase 2（Docker ビルド修正）
+
+| 修正内容 | ファイル |
+|---------|---------|
+| OCI イメージフォーマットエラー修正（`--provenance=false --sbom=false` 追加） | `infrastructure/scripts/build-and-push.sh` |
+| `docker build` → `docker buildx build --push` に変更 | `infrastructure/scripts/build-and-push.sh` |
+| digest ベースのイメージ参照に変更（`:latest` → `@sha256:...`） | `infrastructure/scripts/build-and-push.sh` |
+| pnpm symlink 問題を `node-linker=hoisted` で解決 | 全 Dockerfile |
+| `pnpm --filter` → 直接 `tsc -p` 実行に変更 | 全バックエンド Dockerfile |
+| `ENV PATH="/app/node_modules/.bin:$PATH"` 追加 | 全バックエンド Dockerfile |
+| ワークスペースパッケージの symlink を builder/runner 両ステージに追加 | 全バックエンド Dockerfile |
+| `.dockerignore` を `**/node_modules`, `**/dist` に修正 | `.dockerignore` |
+| Vite ビルドを `cd apps/xxx && vite build` に変更（Tailwind 設定解決） | `Dockerfile.web`, `Dockerfile.admin` |
+| ワークスペースパッケージの型定義を事前ビルド（`tsc -p packages/shared`） | `Dockerfile.web`, `Dockerfile.admin` |
+
+#### Phase 3（Cloud Run 起動修正）
+
+| 修正内容 | ファイル |
+|---------|---------|
+| startup probe に `/health/live` を追加（DB/Redis 不要のエンドポイント） | `modules/cloud-run-service/main.tf`, `environments/staging/main.tf` |
+| WS サーバーに HTTP ヘルスチェックエンドポイント追加（WebSocket は 426 を返すため） | `apps/ws/src/server.ts` |
+| MCP の health check パスを `/health` に修正（`/health/live` は存在しない） | `environments/staging/main.tf` |
+| Cloud Run v2 の予約語 `PORT` を env_vars から削除（自動設定される） | `environments/staging/main.tf` |
+| ストレージクライアントを遅延初期化に変更（MINIO_* 未設定でも起動可能に） | `apps/api/src/services/execution.service.ts` |
+| API 環境変数名を env スキーマに合わせて修正（`API_URL` → `API_BASE_URL` 等） | `environments/staging/main.tf` |
+| WS の不要なシークレット参照を削除（`DATABASE_URL` のみ残し、DB_HOST 等を削除） | `environments/staging/main.tf` |
+| MCP に `API_INTERNAL_URL` 環境変数を追加 | `environments/staging/main.tf` |
+| MINIO_* シークレットを Secret Manager モジュールに追加（IAM 権限付与） | `modules/secret-manager/variables.tf` |
+| DATABASE_URL のパスワード URL エンコード修正（`*` → `%2A`） | Secret Manager |
+| Cloud SQL パスワードリセット | Cloud SQL |
+
+### Cloud Run サービス状態
+
+| サービス | 状態 | ポート | ヘルスチェック |
+|---------|------|-------|--------------|
+| agentest-api | ✅ 稼働中 | 3001 | `/health/live` (startup), `/health` (liveness) |
+| agentest-ws | ✅ 稼働中 | 3002 | `/health/live` |
+| agentest-mcp | ✅ 稼働中 | 3004 | `/health` |
+| agentest-web | ✅ 稼働中 | 80 | `/` |
+| agentest-admin | ✅ 稼働中 | 80 | `/` |
 
 ### GCP 上に存在するリソース（staging）
 
@@ -43,18 +84,18 @@ production-readiness.md の C-5 に対応するデプロイ計画。
 | データベース | Cloud SQL (PostgreSQL 16, db-f1-micro), Memorystore (Redis 7, 1GB) |
 | コンピュート | Cloud Run × 5 (api, ws, mcp, web, admin), Cloud Run Job × 1 |
 | ストレージ | GCS バケット (`agentest-storage-staging`), Artifact Registry |
-| セキュリティ | Secret Manager (20件), Cloud Armor, IAM サービスアカウント |
+| セキュリティ | Secret Manager (24件), Cloud Armor, IAM サービスアカウント |
 | ロードバランサー | グローバル HTTPS LB, Google マネージド SSL 証明書 |
 | スケジューラー | Cloud Scheduler (バッチジョブ用) |
 
 ### 主要な出力値
 
 ```
-lb_ip_address     = 34.120.151.165
+lb_ip_address      = 34.120.151.165
 cloud_sql_private_ip = 10.46.1.3
-redis_host        = 10.46.0.3
-storage_bucket    = agentest-storage-staging
-artifact_registry = asia-northeast1-docker.pkg.dev/agentest-staging/agentest-docker
+redis_host         = 10.46.0.3
+storage_bucket     = agentest-storage-staging
+artifact_registry  = asia-northeast1-docker.pkg.dev/agentest-staging/agentest-docker
 ```
 
 ### ドメイン設定
@@ -68,31 +109,44 @@ artifact_registry = asia-northeast1-docker.pkg.dev/agentest-staging/agentest-doc
 
 ## 次のステップ
 
-### Step 1: SSL 証明書の発行待ち（進行中）
+### Step 1: Prisma マイグレーション（未完了）
 
-Google マネージド SSL 証明書が PROVISIONING 状態。DNS は反映済みだが、Google 側の検証がまだ完了していない。自動リトライされるため待機（最大24時間）。
+Cloud SQL はプライベート IP のみのため、ローカルの cloud-sql-proxy 経由では Prisma エンジンが接続できない問題がある。以下のいずれかの方法で実行する:
+
+**方法 A: Cloud SQL のパブリック IP を一時的に有効化**
 
 ```bash
-# 状態確認コマンド
+# パブリック IP を有効化
+gcloud sql instances patch agentest-db-staging --assign-ip --project=agentest-staging
+
+# マイグレーション実行
+cloud-sql-proxy agentest-staging:asia-northeast1:agentest-db-staging --port=15432 &
+DATABASE_URL='postgresql://agentest:<password>@127.0.0.1:15432/agentest' \
+  pnpm --filter @agentest/db exec prisma migrate deploy
+
+# パブリック IP を無効化（セキュリティのため）
+gcloud sql instances patch agentest-db-staging --no-assign-ip --project=agentest-staging
+```
+
+**方法 B: Cloud Shell から実行**
+
+GCP コンソールの Cloud Shell（`>_` アイコン）からリポジトリをクローンして実行。
+
+**方法 C: Cloud Run Job でマイグレーション実行**
+
+マイグレーション専用の Cloud Run Job を作成し、VPC コネクタ経由でプライベート IP に接続。
+
+### Step 2: SSL 証明書の確認
+
+```bash
 gcloud compute ssl-certificates describe agentest-app-cert-staging \
   --project=agentest-staging --format="get(managed.status,managed.domainStatus)"
 # ACTIVE + app.staging.agentest.jp=ACTIVE になれば完了
 ```
 
-### Step 2: Prisma マイグレーション
-
-SSL 証明書が有効化された後、Cloud SQL にスキーマを適用する。
-
-```bash
-# Cloud SQL Proxy 経由で接続してマイグレーション実行
-# （Cloud SQL はプライベート IP のみのため、直接接続不可）
-gcloud sql connect agentest-db-staging --user=agentest --database=agentest
-
-# または Cloud Run Job でマイグレーション実行
-```
-
 ### Step 3: 動作確認
 
+- [ ] Prisma マイグレーション完了
 - [ ] SSL 証明書が ACTIVE になった
 - [ ] `https://app.staging.agentest.jp` にアクセスできる
 - [ ] `https://admin.staging.agentest.jp` にアクセスできる
@@ -153,7 +207,7 @@ staging で動作確認が完了した後に実施。
 
 | スクリプト | 用途 |
 |-----------|------|
-| `infrastructure/scripts/build-and-push.sh` | 全6サービスのイメージビルド＆プッシュ（`--platform linux/amd64`） |
+| `infrastructure/scripts/build-and-push.sh` | 全6サービスのイメージビルド＆プッシュ（`docker buildx build --push --provenance=false --sbom=false`） |
 | `infrastructure/scripts/init-secrets.sh` | Secret Manager にプレースホルダー値を投入（初回セットアップ用） |
 | `infrastructure/scripts/update-secrets.sh` | Secret Manager の必須シークレット値を更新 |
 
@@ -162,7 +216,7 @@ staging で動作確認が完了した後に実施。
 | タスク | 状態 | 依存関係 |
 |-------|------|---------|
 | C-1: CI/CD パイプライン | 未着手 | C-5 の後に実施すると効率的 |
-| C-5: Infrastructure as Code | **staging デプロイ完了、SSL 証明書待ち** | - |
+| C-5: Infrastructure as Code | **全サービス起動完了、DB マイグレーション待ち** | - |
 | C-6: シークレット管理 | 必須分完了、外部サービス分は未設定 | C-5 の Secret Manager モジュールで対応済み |
 | H-8: MCP Dockerfile 作成 | **完了** | - |
 
@@ -178,7 +232,7 @@ infrastructure/terraform/
     artifact-registry/ cloud-run-service/ cloud-run-job/
     cloud-storage/ secret-manager/ load-balancer/
   environments/
-    staging/                          # ✅ デプロイ済み
+    staging/                          # ✅ デプロイ済み・全サービス稼働中
     production/                       # ⏸️ staging 検証後にデプロイ
 infrastructure/scripts/
   build-and-push.sh                   # ✅ イメージビルド＆プッシュ
@@ -199,3 +253,21 @@ gcloud sql instances patch agentest-db-staging --activation-policy=ALWAYS
 ```
 
 Cloud Run は min_instances=0 なのでリクエストがなければ自動で $0 になる。
+
+## 学んだこと
+
+### pnpm + Docker の互換性
+
+pnpm のシンボリックリンク構造は Docker の `COPY` と互換性がない。`node-linker=hoisted` を使って npm 互換のフラットな `node_modules` を生成する必要がある。また、ワークスペースパッケージ（`@agentest/*`）の symlink は builder/runner 両ステージで手動作成が必要。
+
+### Docker buildx と Cloud Run
+
+Docker Desktop の buildx はデフォルトで OCI イメージインデックスを生成するが、Cloud Run は `amd64/linux` をサポートするマニフェストを要求する。`--provenance=false --sbom=false` が必要。
+
+### Cloud Run v2 の予約環境変数
+
+`PORT` は Cloud Run v2 が `container_port` から自動設定する予約語。`env_vars` に明示指定するとエラーになる。
+
+### Terraform とシークレットの更新
+
+Terraform はインフラ設定の変更のみを検出する。Secret Manager のシークレット値を変更しただけでは Cloud Run の新リビジョンは作成されない。`gcloud run services update --update-labels=force-deploy=$(date +%s)` で強制再デプロイが必要。
