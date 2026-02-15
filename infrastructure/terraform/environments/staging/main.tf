@@ -117,12 +117,14 @@ module "cloud_run_api" {
   startup_probe_path    = "/health/live"
 
   env_vars = {
-    NODE_ENV           = "production"
-    LOG_LEVEL          = "info"
-    API_BASE_URL       = "https://${var.app_domain}"
-    FRONTEND_URL       = "https://${var.app_domain}"
-    ADMIN_FRONTEND_URL = "https://${var.admin_domain}"
-    CORS_ORIGIN        = "https://${var.app_domain},https://${var.admin_domain}"
+    NODE_ENV            = "production"
+    LOG_LEVEL           = "info"
+    API_BASE_URL        = "https://${var.app_domain}"
+    FRONTEND_URL        = "https://${var.app_domain}"
+    ADMIN_FRONTEND_URL  = "https://${var.admin_domain}"
+    CORS_ORIGIN         = "https://${var.app_domain},https://${var.admin_domain}"
+    GITHUB_CALLBACK_URL = "https://${var.app_domain}/api/auth/github/callback"
+    GOOGLE_CALLBACK_URL = "https://${var.app_domain}/api/auth/google/callback"
   }
 
   secret_env_vars = {
