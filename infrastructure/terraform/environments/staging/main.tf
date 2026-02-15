@@ -114,6 +114,7 @@ module "cloud_run_api" {
   max_instances         = 5
   service_account_email = module.iam.service_account_emails["api"]
   vpc_connector_id      = module.networking.vpc_connector_id
+  startup_probe_path    = "/health/live"
 
   env_vars = {
     NODE_ENV      = "production"
@@ -175,6 +176,7 @@ module "cloud_run_ws" {
   timeout               = "3600s"
   service_account_email = module.iam.service_account_emails["ws"]
   vpc_connector_id      = module.networking.vpc_connector_id
+  startup_probe_path    = "/health/live"
 
   env_vars = {
     NODE_ENV   = "production"
@@ -211,6 +213,7 @@ module "cloud_run_mcp" {
   max_instances         = 3
   service_account_email = module.iam.service_account_emails["mcp"]
   vpc_connector_id      = module.networking.vpc_connector_id
+  startup_probe_path    = "/health/live"
 
   env_vars = {
     NODE_ENV   = "production"
