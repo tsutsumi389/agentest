@@ -1,5 +1,5 @@
 # Dependencies
-node_modules
+**/node_modules
 .pnpm-store
 
 # Git
@@ -17,8 +17,8 @@ docs
 
 # Build cache
 .turbo
-dist
-coverage
+**/dist
+**/coverage
 
 # IDE
 .idea

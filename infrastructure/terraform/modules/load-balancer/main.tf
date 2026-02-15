@@ -48,7 +48,6 @@ resource "google_compute_backend_service" "services" {
 
   protocol              = "HTTPS"
   load_balancing_scheme = "EXTERNAL_MANAGED"
-  timeout_sec           = each.value.timeout_sec
 
   # CDN 設定
   enable_cdn = each.value.enable_cdn
@@ -197,9 +196,9 @@ resource "google_compute_security_policy" "main" {
     description = "デフォルト許可"
   }
 
-  # 認証エンドポイントのレートリミット: 10 req/min/IP
+  # 認証エンドポイントのレートリミット: 10 req/min/IP、超過時10分BAN
   rule {
-    action   = "throttle"
+    action   = "rate_based_ban"
     priority = 1000
 
     match {

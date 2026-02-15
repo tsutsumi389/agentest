@@ -18,6 +18,10 @@ COPY packages/shared/package.json ./packages/shared/
 COPY packages/db/package.json ./packages/db/
 COPY packages/auth/package.json ./packages/auth/
 
+# Docker COPYがpnpmのsymlink構造を解決できない問題を回避するため
+# npm互換のフラットなnode_modules構造を使用
+RUN echo "node-linker=hoisted" > .npmrc
+
 # 依存関係をインストール（UIビルドにdevDependenciesが必要）
 RUN pnpm install --frozen-lockfile --prod=false
 
@@ -26,29 +30,40 @@ RUN pnpm install --frozen-lockfile --prod=false
 # ===========================================
 FROM node:22-alpine AS builder
 
-RUN corepack enable && corepack prepare pnpm@10.0.0 --activate
-
 WORKDIR /app
 
-# 依存関係をコピー
+# hoistedモードのルートnode_modulesにすべての依存が含まれる
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/mcp-server/node_modules ./apps/mcp-server/node_modules
-COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
-COPY --from=deps /app/packages/db/node_modules ./packages/db/node_modules
-COPY --from=deps /app/packages/auth/node_modules ./packages/auth/node_modules
 
 # ソースコードをコピー
-COPY package.json pnpm-workspace.yaml turbo.json tsconfig.base.json ./
+COPY tsconfig.base.json ./
 COPY apps/mcp-server ./apps/mcp-server
 COPY packages/shared ./packages/shared
 COPY packages/db ./packages/db
 COPY packages/auth ./packages/auth
 
-# Prismaクライアントを生成
-RUN pnpm --filter @agentest/db exec prisma generate
+# PATHにnode_modules/.binを追加（pnmを介さず直接ビルドコマンドを実行）
+ENV PATH="/app/node_modules/.bin:$PATH"
 
-# ビルド（UIビルド + TypeScriptビルド）
-RUN pnpm --filter @agentest/mcp-server build
+# ワークスペースパッケージのシンボリックリンクを作成（tscのモジュール解決に必要）
+RUN mkdir -p node_modules/@agentest && \
+    ln -s ../../packages/shared node_modules/@agentest/shared && \
+    ln -s ../../packages/db node_modules/@agentest/db && \
+    ln -s ../../packages/auth node_modules/@agentest/auth
+
+# Prismaクライアントを生成
+RUN prisma generate --schema=packages/db/prisma/schema.prisma
+
+# ワークスペースパッケージを依存順にビルド
+RUN tsc -p packages/shared/tsconfig.json && \
+    tsc -p packages/db/tsconfig.json && \
+    tsc -p packages/auth/tsconfig.json
+
+# UIビルド（viteはmcp-serverディレクトリで実行する必要がある）
+RUN cd apps/mcp-server && cross-env INPUT=src/apps/test-suites-app/index.html vite build
+
+# TypeScriptビルド
+RUN tsc -p apps/mcp-server/tsconfig.json
 
 # ===========================================
 # ステージ3: 本番イメージ
@@ -63,14 +78,8 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 agentest
 
-# pnpmのシンボリックリンク構造を含むnode_modulesをコピー
-# ルートnode_modules: .pnpm/内の実体パッケージ
+# 外部依存パッケージ（hoistedなのでフラット構造、symlink問題なし）
 COPY --from=builder --chown=agentest:nodejs /app/node_modules ./node_modules
-# ワークスペース固有のnode_modules: pnpmストアへのシンボリックリンク
-COPY --from=builder --chown=agentest:nodejs /app/apps/mcp-server/node_modules ./apps/mcp-server/node_modules
-COPY --from=builder --chown=agentest:nodejs /app/packages/shared/node_modules ./packages/shared/node_modules
-COPY --from=builder --chown=agentest:nodejs /app/packages/db/node_modules ./packages/db/node_modules
-COPY --from=builder --chown=agentest:nodejs /app/packages/auth/node_modules ./packages/auth/node_modules
 
 # ビルド成果物とpackage.jsonをコピー
 COPY --from=builder --chown=agentest:nodejs /app/apps/mcp-server/dist ./apps/mcp-server/dist
@@ -81,6 +90,12 @@ COPY --from=builder --chown=agentest:nodejs /app/packages/db/dist ./packages/db/
 COPY --from=builder --chown=agentest:nodejs /app/packages/db/package.json ./packages/db/
 COPY --from=builder --chown=agentest:nodejs /app/packages/auth/dist ./packages/auth/dist
 COPY --from=builder --chown=agentest:nodejs /app/packages/auth/package.json ./packages/auth/
+
+# ワークスペースパッケージのシンボリックリンクを作成
+RUN mkdir -p node_modules/@agentest && \
+    ln -s ../../packages/shared node_modules/@agentest/shared && \
+    ln -s ../../packages/db node_modules/@agentest/db && \
+    ln -s ../../packages/auth node_modules/@agentest/auth
 
 # ユーザーを切り替え
 USER agentest

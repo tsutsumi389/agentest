@@ -19,7 +19,9 @@ function getPublisher(): Redis | null {
   }
 
   if (!publisher) {
-    publisher = new Redis(env.REDIS_URL);
+    publisher = new Redis(env.REDIS_URL, {
+      ...(env.REDIS_URL.startsWith('rediss://') && { tls: { rejectUnauthorized: false } }),
+    });
 
     publisher.on('connect', () => {
       logger.info('Redis Publisher (API) に接続しました');

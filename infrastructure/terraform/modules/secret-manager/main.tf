@@ -23,7 +23,7 @@ resource "google_secret_manager_secret" "secrets" {
 # リソースレベルで個別付与（プロジェクトレベルの広範な権限は付与しない）
 resource "google_secret_manager_secret_iam_member" "access" {
   for_each = {
-    for binding in local.secret_bindings : "${binding.secret_id}-${binding.sa_email}" => binding
+    for binding in local.secret_bindings : "${binding.secret_id}-${binding.sa_key}" => binding
   }
 
   project   = var.project_id
@@ -38,6 +38,7 @@ locals {
     for sa_key, secrets in var.secret_access_map : [
       for secret_id in secrets : {
         secret_id = secret_id
+        sa_key    = sa_key
         sa_email  = var.service_account_emails[sa_key]
       }
     ]

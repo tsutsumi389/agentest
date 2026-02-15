@@ -29,6 +29,7 @@ export function getRedisClient(): Redis | null {
       maxRetriesPerRequest: 1,
       enableOfflineQueue: false,
       connectTimeout: 3000,
+      ...(env.REDIS_URL.startsWith('rediss://') && { tls: { rejectUnauthorized: false } }),
     });
 
     redisClient.on('connect', () => {

@@ -54,6 +54,8 @@ e2e/playwright-report/
 **/.terraform/
 *.tfstate
 *.tfstate.backup
+*.tfvars
+*.tfvars.json
 
 # OS files
 Thumbs.db

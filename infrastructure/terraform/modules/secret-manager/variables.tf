@@ -38,6 +38,10 @@ variable "secret_ids" {
     "STRIPE_PRICE_TEAM_YEARLY",
     "SMTP_USER",
     "SMTP_PASS",
+    "MINIO_ENDPOINT",
+    "MINIO_ACCESS_KEY",
+    "MINIO_SECRET_KEY",
+    "MINIO_BUCKET",
   ]
 }
 
@@ -71,11 +75,16 @@ variable "secret_access_map" {
       "STRIPE_PRICE_TEAM_YEARLY",
       "SMTP_USER",
       "SMTP_PASS",
+      "MINIO_ENDPOINT",
+      "MINIO_ACCESS_KEY",
+      "MINIO_SECRET_KEY",
+      "MINIO_BUCKET",
     ]
     ws = [
       "DATABASE_URL",
       "REDIS_URL",
       "JWT_ACCESS_SECRET",
+      "JWT_REFRESH_SECRET",
     ]
     mcp = [
       "DATABASE_URL",

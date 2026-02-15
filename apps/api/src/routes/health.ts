@@ -27,7 +27,9 @@ async function checkRedis(): Promise<{ status: 'healthy' | 'unhealthy' | 'not_co
   }
 
   const start = Date.now();
-  const redis = new Redis(env.REDIS_URL);
+  const redis = new Redis(env.REDIS_URL, {
+    ...(env.REDIS_URL.startsWith('rediss://') && { tls: { rejectUnauthorized: false } }),
+  });
 
   try {
     await redis.ping();

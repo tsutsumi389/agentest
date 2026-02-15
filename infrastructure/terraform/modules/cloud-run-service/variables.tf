@@ -85,7 +85,7 @@ variable "session_affinity" {
 variable "ingress" {
   description = "Ingress 設定（LB経由のみに制限してCloud Armorバイパスを防止）"
   type        = string
-  default     = "INGRESS_TRAFFIC_INTERNAL_AND_GCLB"
+  default     = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
 }
 
 variable "service_account_email" {
@@ -112,9 +112,15 @@ variable "secret_env_vars" {
 }
 
 variable "health_check_path" {
-  description = "ヘルスチェックのパス"
+  description = "liveness probe のパス"
   type        = string
   default     = "/health"
+}
+
+variable "startup_probe_path" {
+  description = "startup probe のパス（未指定時は health_check_path を使用）"
+  type        = string
+  default     = null
 }
 
 variable "startup_probe_initial_delay" {

@@ -14,6 +14,11 @@ WORKDIR /app
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/web/package.json ./apps/web/
 COPY packages/shared/package.json ./packages/shared/
+COPY packages/ws-types/package.json ./packages/ws-types/
+
+# Docker COPYがpnpmのsymlink構造を解決できない問題を回避するため
+# npm互換のフラットなnode_modules構造を使用
+RUN echo "node-linker=hoisted" > .npmrc
 
 # 依存関係をインストール
 RUN pnpm install --frozen-lockfile --prod=false
@@ -23,29 +28,40 @@ RUN pnpm install --frozen-lockfile --prod=false
 # ===========================================
 FROM node:22-alpine AS builder
 
-RUN corepack enable && corepack prepare pnpm@10.0.0 --activate
-
 WORKDIR /app
 
 # ビルド時引数（環境変数として使用）
 ARG VITE_API_URL
 ARG VITE_WS_URL
 
-# 依存関係をコピー
+# hoistedモードのルートnode_modulesにすべての依存が含まれる
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
-COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
 
 # ソースコードをコピー
-COPY package.json pnpm-workspace.yaml turbo.json tsconfig.base.json ./
+COPY tsconfig.base.json ./
 COPY apps/web ./apps/web
 COPY packages/shared ./packages/shared
+COPY packages/ws-types ./packages/ws-types
+
+# PATHにnode_modules/.binを追加
+ENV PATH="/app/node_modules/.bin:$PATH"
+
+# ワークスペースパッケージのシンボリックリンクを作成（tscのモジュール解決に必要）
+RUN mkdir -p node_modules/@agentest && \
+    ln -s ../../packages/shared node_modules/@agentest/shared && \
+    ln -s ../../packages/ws-types node_modules/@agentest/ws-types
 
 # 環境変数を設定してビルド
 ENV VITE_API_URL=${VITE_API_URL}
 ENV VITE_WS_URL=${VITE_WS_URL}
 
-RUN pnpm --filter @agentest/web build
+# ワークスペースパッケージを先にビルド（型定義をdist/に生成）
+RUN tsc -p packages/shared/tsconfig.json && \
+    tsc -p packages/ws-types/tsconfig.json
+
+# Web の型チェック + Viteバンドル（viteはアプリディレクトリで実行）
+RUN tsc -b apps/web/tsconfig.json && \
+    cd apps/web && vite build
 
 # ===========================================
 # ステージ3: 本番イメージ（nginx）

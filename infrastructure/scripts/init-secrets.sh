@@ -1,0 +1,34 @@
+#!/bin/bash
+# シークレットにプレースホルダー値を投入するスクリプト
+PROJECT_ID="agentest-staging"
+
+SECRETS=(
+  DATABASE_URL
+  REDIS_URL
+  JWT_ACCESS_SECRET
+  JWT_REFRESH_SECRET
+  INTERNAL_API_SECRET
+  TOKEN_ENCRYPTION_KEY
+  TOTP_ENCRYPTION_KEY
+  GITHUB_CLIENT_ID
+  GITHUB_CLIENT_SECRET
+  GOOGLE_CLIENT_ID
+  GOOGLE_CLIENT_SECRET
+  STRIPE_SECRET_KEY
+  STRIPE_WEBHOOK_SECRET
+  STRIPE_PUBLISHABLE_KEY
+  STRIPE_PRICE_PRO_MONTHLY
+  STRIPE_PRICE_PRO_YEARLY
+  STRIPE_PRICE_TEAM_MONTHLY
+  STRIPE_PRICE_TEAM_YEARLY
+  SMTP_USER
+  SMTP_PASS
+)
+
+for SECRET in "${SECRETS[@]}"; do
+  echo "Setting agentest-staging-${SECRET}..."
+  echo "placeholder" | gcloud secrets versions add "agentest-staging-${SECRET}" \
+    --project="${PROJECT_ID}" --data-file=-
+done
+
+echo "Done!"

@@ -8,9 +8,7 @@ resource "google_sql_database_instance" "main" {
 
   deletion_protection = var.deletion_protection
 
-  # Private Service Access が完了してから作成する
-  # 依存関係は環境レベルの module.networking 経由で暗黙的に解決されるが、
-  # network_id だけでは Private Service Access の完了を保証できないため明示する
+  # Private Service Access が完了してから作成する（変数経由の暗黙的依存）
 
   settings {
     tier              = var.tier

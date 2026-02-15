@@ -35,6 +35,12 @@ resource "google_service_networking_connection" "private_service_access" {
   reserved_peering_ranges = [google_compute_global_address.private_service_access.name]
 }
 
+# Private Service Access の反映を待機（GCP 側の伝播遅延対策）
+resource "time_sleep" "wait_for_private_service_access" {
+  depends_on      = [google_service_networking_connection.private_service_access]
+  create_duration = "60s"
+}
+
 # サーバーレス VPC コネクタ（Cloud Run → VPC 内リソース接続用）
 resource "google_vpc_access_connector" "main" {
   name          = "${var.prefix}-connector"

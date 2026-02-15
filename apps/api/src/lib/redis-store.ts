@@ -82,7 +82,9 @@ export function getRedisClient(): Redis | null {
   }
 
   if (!redisClient) {
-    redisClient = new Redis(env.REDIS_URL);
+    redisClient = new Redis(env.REDIS_URL, {
+      ...(env.REDIS_URL.startsWith('rediss://') && { tls: { rejectUnauthorized: false } }),
+    });
 
     redisClient.on('connect', () => {
       logger.info('Redis Store 接続しました');

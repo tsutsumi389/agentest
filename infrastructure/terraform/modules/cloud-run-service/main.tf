@@ -72,7 +72,7 @@ resource "google_cloud_run_v2_service" "main" {
       # ヘルスチェック: startup probe
       startup_probe {
         http_get {
-          path = var.health_check_path
+          path = coalesce(var.startup_probe_path, var.health_check_path)
           port = var.port
         }
         initial_delay_seconds = var.startup_probe_initial_delay

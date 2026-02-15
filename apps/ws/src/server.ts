@@ -1,5 +1,5 @@
 import { WebSocketServer, WebSocket } from 'ws';
-import type { IncomingMessage } from 'http';
+import { createServer, type Server, type IncomingMessage } from 'http';
 import type {
   ServerMessage,
   ServerEvent,
@@ -60,7 +60,8 @@ interface ExtendedWebSocket extends WebSocket {
   authAttempts: number;
 }
 
-// WebSocketサーバー
+// HTTP + WebSocketサーバー
+let httpServer: Server;
 let wss: WebSocketServer;
 
 // ユーザーIDからWebSocketへのマップ
@@ -73,9 +74,23 @@ const channelSubscribers = new Map<string, Set<ExtendedWebSocket>>();
  * WebSocketサーバーを作成
  */
 export function createWebSocketServer(port: number, host: string): WebSocketServer {
-  wss = new WebSocketServer({ port, host, maxPayload: 64 * 1024 });
+  // HTTPサーバーを作成（ヘルスチェック用）
+  httpServer = createServer((req, res) => {
+    if (req.url === '/health/live' || req.url === '/health') {
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({ status: 'ok', service: 'ws' }));
+      return;
+    }
+    res.writeHead(404);
+    res.end();
+  });
 
-  logger.info({ host, port }, 'WebSocketサーバーが起動しました');
+  // WebSocketサーバーをHTTPサーバーに紐づけ
+  wss = new WebSocketServer({ server: httpServer, maxPayload: 64 * 1024 });
+
+  httpServer.listen(port, host, () => {
+    logger.info({ host, port }, 'WebSocketサーバーが起動しました');
+  });
 
   // 接続ハンドラ
   wss.on('connection', handleConnection);
@@ -511,8 +526,10 @@ export function broadcastToChannel(channel: string, event: ServerEvent): void {
 export function closeServer(): Promise<void> {
   return new Promise((resolve) => {
     wss.close(() => {
-      logger.info('WebSocketサーバーを終了しました');
-      resolve();
+      httpServer.close(() => {
+        logger.info('WebSocketサーバーを終了しました');
+        resolve();
+      });
     });
   });
 }

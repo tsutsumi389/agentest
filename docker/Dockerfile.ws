@@ -18,7 +18,11 @@ COPY packages/db/package.json ./packages/db/
 COPY packages/auth/package.json ./packages/auth/
 COPY packages/ws-types/package.json ./packages/ws-types/
 
-# 依存関係をインストール（本番用）
+# Docker COPYがpnpmのsymlink構造を解決できない問題を回避するため
+# npm互換のフラットなnode_modules構造を使用
+RUN echo "node-linker=hoisted" > .npmrc
+
+# 依存関係をインストール
 RUN pnpm install --frozen-lockfile --prod=false
 
 # ===========================================
@@ -26,31 +30,38 @@ RUN pnpm install --frozen-lockfile --prod=false
 # ===========================================
 FROM node:22-alpine AS builder
 
-RUN corepack enable && corepack prepare pnpm@10.0.0 --activate
-
 WORKDIR /app
 
-# 依存関係をコピー
+# hoistedモードのルートnode_modulesにすべての依存が含まれる
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/ws/node_modules ./apps/ws/node_modules
-COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
-COPY --from=deps /app/packages/db/node_modules ./packages/db/node_modules
-COPY --from=deps /app/packages/auth/node_modules ./packages/auth/node_modules
-COPY --from=deps /app/packages/ws-types/node_modules ./packages/ws-types/node_modules
 
 # ソースコードをコピー
-COPY package.json pnpm-workspace.yaml turbo.json tsconfig.base.json ./
+COPY tsconfig.base.json ./
 COPY apps/ws ./apps/ws
 COPY packages/shared ./packages/shared
 COPY packages/db ./packages/db
 COPY packages/auth ./packages/auth
 COPY packages/ws-types ./packages/ws-types
 
-# Prismaクライアントを生成
-RUN pnpm --filter @agentest/db exec prisma generate
+# PATHにnode_modules/.binを追加（pnmを介さず直接ビルドコマンドを実行）
+ENV PATH="/app/node_modules/.bin:$PATH"
 
-# ビルド
-RUN pnpm --filter @agentest/ws build
+# ワークスペースパッケージのシンボリックリンクを作成（tscのモジュール解決に必要）
+RUN mkdir -p node_modules/@agentest && \
+    ln -s ../../packages/shared node_modules/@agentest/shared && \
+    ln -s ../../packages/db node_modules/@agentest/db && \
+    ln -s ../../packages/auth node_modules/@agentest/auth && \
+    ln -s ../../packages/ws-types node_modules/@agentest/ws-types
+
+# Prismaクライアントを生成
+RUN prisma generate --schema=packages/db/prisma/schema.prisma
+
+# ワークスペースパッケージを依存順にビルド
+RUN tsc -p packages/shared/tsconfig.json && \
+    tsc -p packages/ws-types/tsconfig.json && \
+    tsc -p packages/db/tsconfig.json && \
+    tsc -p packages/auth/tsconfig.json && \
+    tsc -p apps/ws/tsconfig.json
 
 # ===========================================
 # ステージ3: 本番イメージ
@@ -65,7 +76,10 @@ WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 agentest
 
-# 必要なファイルをコピー
+# 外部依存パッケージ（hoistedなのでフラット構造、symlink問題なし）
+COPY --from=builder --chown=agentest:nodejs /app/node_modules ./node_modules
+
+# ビルド成果物とpackage.jsonをコピー
 COPY --from=builder --chown=agentest:nodejs /app/apps/ws/dist ./apps/ws/dist
 COPY --from=builder --chown=agentest:nodejs /app/apps/ws/package.json ./apps/ws/
 COPY --from=builder --chown=agentest:nodejs /app/packages/shared/dist ./packages/shared/dist
@@ -76,8 +90,13 @@ COPY --from=builder --chown=agentest:nodejs /app/packages/auth/dist ./packages/a
 COPY --from=builder --chown=agentest:nodejs /app/packages/auth/package.json ./packages/auth/
 COPY --from=builder --chown=agentest:nodejs /app/packages/ws-types/dist ./packages/ws-types/dist
 COPY --from=builder --chown=agentest:nodejs /app/packages/ws-types/package.json ./packages/ws-types/
-COPY --from=builder --chown=agentest:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=agentest:nodejs /app/packages/db/node_modules/.prisma ./packages/db/node_modules/.prisma
+
+# ワークスペースパッケージのシンボリックリンクを作成
+RUN mkdir -p node_modules/@agentest && \
+    ln -s ../../packages/shared node_modules/@agentest/shared && \
+    ln -s ../../packages/db node_modules/@agentest/db && \
+    ln -s ../../packages/auth node_modules/@agentest/auth && \
+    ln -s ../../packages/ws-types node_modules/@agentest/ws-types
 
 # ユーザーを切り替え
 USER agentest
