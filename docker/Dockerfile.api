@@ -90,6 +90,8 @@ COPY --from=builder --chown=agentest:nodejs /app/packages/shared/dist ./packages
 COPY --from=builder --chown=agentest:nodejs /app/packages/shared/package.json ./packages/shared/
 COPY --from=builder --chown=agentest:nodejs /app/packages/db/dist ./packages/db/dist
 COPY --from=builder --chown=agentest:nodejs /app/packages/db/package.json ./packages/db/
+# マイグレーション用: Prisma スキーマとマイグレーションファイル
+COPY --from=builder --chown=agentest:nodejs /app/packages/db/prisma ./packages/db/prisma
 COPY --from=builder --chown=agentest:nodejs /app/packages/auth/dist ./packages/auth/dist
 COPY --from=builder --chown=agentest:nodejs /app/packages/auth/package.json ./packages/auth/
 COPY --from=builder --chown=agentest:nodejs /app/packages/storage/dist ./packages/storage/dist

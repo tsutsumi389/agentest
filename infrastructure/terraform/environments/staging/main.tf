@@ -313,7 +313,31 @@ module "load_balancer" {
   log_sample_rate = 1.0
 }
 
-# --- Phase 4: バッチジョブ ---
+# --- Phase 4: DB マイグレーション ---
+
+# API イメージを使用（Prisma CLI + マイグレーションファイルを含む）
+# デプロイ時に手動実行: gcloud run jobs execute agentest-db-migrate-staging --region asia-northeast1 --wait
+module "cloud_run_migration" {
+  source = "../../modules/cloud-run-migration"
+
+  project_id            = var.project_id
+  region                = var.region
+  prefix                = local.prefix
+  environment           = local.environment
+  image                 = var.api_image
+  service_account_email = module.iam.service_account_emails["api"]
+  vpc_connector_id      = module.networking.vpc_connector_id
+
+  env_vars = {
+    NODE_ENV = "production"
+  }
+
+  secret_env_vars = {
+    DATABASE_URL = "${local.secret_prefix}-DATABASE_URL"
+  }
+}
+
+# --- Phase 5: バッチジョブ ---
 
 module "cloud_run_job" {
   source = "../../modules/cloud-run-job"

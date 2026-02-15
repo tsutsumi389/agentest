@@ -8,6 +8,9 @@ TAG="latest"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 TFVARS_FILE="${SCRIPT_DIR}/../terraform/environments/staging/terraform.tfvars"
 
+# プロジェクトルートに移動（Docker ビルドコンテキストとして使用）
+cd "${SCRIPT_DIR}/../.."
+
 # フロントエンドのビルド時環境変数
 VITE_API_URL="https://app.staging.agentest.jp"
 VITE_WS_URL="wss://app.staging.agentest.jp"
@@ -110,4 +113,7 @@ echo "  web_image   = \"${REGISTRY}/web@${WEB_DIGEST}\""
 echo "  admin_image = \"${REGISTRY}/admin@${ADMIN_DIGEST}\""
 echo "  jobs_image  = \"${REGISTRY}/jobs@${JOBS_DIGEST}\""
 echo ""
-echo "次のステップ: cd infrastructure/terraform/environments/staging && terraform apply"
+echo "次のステップ:"
+echo "  1. terraform apply:  cd infrastructure/terraform/environments/staging && terraform apply"
+echo "  2. DB マイグレーション: gcloud run jobs execute agentest-db-migrate-staging --region asia-northeast1 --wait"
+echo "  3. サービス確認:     curl https://app.staging.agentest.jp/health"
