@@ -14,6 +14,7 @@ WORKDIR /app
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY apps/web/package.json ./apps/web/
 COPY packages/shared/package.json ./packages/shared/
+COPY packages/ws-types/package.json ./packages/ws-types/
 
 # 依存関係をインストール
 RUN pnpm install --frozen-lockfile --prod=false
@@ -35,11 +36,13 @@ ARG VITE_WS_URL
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_modules
+COPY --from=deps /app/packages/ws-types/node_modules ./packages/ws-types/node_modules
 
 # ソースコードをコピー
 COPY package.json pnpm-workspace.yaml turbo.json tsconfig.base.json ./
 COPY apps/web ./apps/web
 COPY packages/shared ./packages/shared
+COPY packages/ws-types ./packages/ws-types
 
 # 環境変数を設定してビルド
 ENV VITE_API_URL=${VITE_API_URL}

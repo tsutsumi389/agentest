@@ -77,7 +77,6 @@ COPY --from=builder --chown=agentest:nodejs /app/packages/auth/package.json ./pa
 COPY --from=builder --chown=agentest:nodejs /app/packages/ws-types/dist ./packages/ws-types/dist
 COPY --from=builder --chown=agentest:nodejs /app/packages/ws-types/package.json ./packages/ws-types/
 COPY --from=builder --chown=agentest:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=agentest:nodejs /app/packages/db/node_modules/.prisma ./packages/db/node_modules/.prisma
 
 # ユーザーを切り替え
 USER agentest

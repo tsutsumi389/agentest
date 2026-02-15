@@ -85,7 +85,7 @@ variable "session_affinity" {
 variable "ingress" {
   description = "Ingress 設定（LB経由のみに制限してCloud Armorバイパスを防止）"
   type        = string
-  default     = "INGRESS_TRAFFIC_INTERNAL_AND_GCLB"
+  default     = "INGRESS_TRAFFIC_INTERNAL_LOAD_BALANCER"
 }
 
 variable "service_account_email" {

@@ -24,6 +24,6 @@ output "vpc_connector_id" {
 }
 
 output "private_service_access_connection" {
-  description = "Private Service Access 接続"
-  value       = google_service_networking_connection.private_service_access.id
+  description = "Private Service Access 接続（time_sleep 経由で伝播待機済み）"
+  value       = time_sleep.wait_for_private_service_access.id
 }

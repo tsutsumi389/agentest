@@ -166,7 +166,7 @@ module "cloud_run_ws" {
   service_name          = "ws"
   image                 = var.ws_image
   port                  = 3002
-  memory                = "256Mi"
+  memory                = "512Mi"
   cpu                   = "1"
   min_instances         = 0
   max_instances         = 3

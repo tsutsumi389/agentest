@@ -7,7 +7,7 @@ WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@10.0.0 --activate
 
 # 依存関係のコピーとインストール
-COPY pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/db/package.json packages/db/
 COPY packages/shared/package.json packages/shared/
 COPY apps/jobs/package.json apps/jobs/
@@ -20,7 +20,8 @@ COPY packages/shared packages/shared
 COPY apps/jobs apps/jobs
 COPY tsconfig.base.json ./
 
-# ビルド
+# Prismaクライアントを生成してビルド
+RUN pnpm --filter @agentest/db exec prisma generate
 RUN pnpm --filter @agentest/db build
 RUN pnpm --filter @agentest/shared build
 RUN pnpm --filter @agentest/jobs build

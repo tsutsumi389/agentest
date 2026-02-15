@@ -17,6 +17,7 @@ COPY packages/shared/package.json ./packages/shared/
 COPY packages/db/package.json ./packages/db/
 COPY packages/auth/package.json ./packages/auth/
 COPY packages/storage/package.json ./packages/storage/
+COPY packages/ws-types/package.json ./packages/ws-types/
 
 # 依存関係をインストール（本番用）
 RUN pnpm install --frozen-lockfile --prod=false
@@ -37,6 +38,7 @@ COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_module
 COPY --from=deps /app/packages/db/node_modules ./packages/db/node_modules
 COPY --from=deps /app/packages/auth/node_modules ./packages/auth/node_modules
 COPY --from=deps /app/packages/storage/node_modules ./packages/storage/node_modules
+COPY --from=deps /app/packages/ws-types/node_modules ./packages/ws-types/node_modules
 
 # ソースコードをコピー
 COPY package.json pnpm-workspace.yaml turbo.json tsconfig.base.json ./
@@ -45,6 +47,7 @@ COPY packages/shared ./packages/shared
 COPY packages/db ./packages/db
 COPY packages/auth ./packages/auth
 COPY packages/storage ./packages/storage
+COPY packages/ws-types ./packages/ws-types
 
 # Prismaクライアントを生成
 RUN pnpm --filter @agentest/db exec prisma generate
@@ -76,8 +79,9 @@ COPY --from=builder --chown=agentest:nodejs /app/packages/auth/dist ./packages/a
 COPY --from=builder --chown=agentest:nodejs /app/packages/auth/package.json ./packages/auth/
 COPY --from=builder --chown=agentest:nodejs /app/packages/storage/dist ./packages/storage/dist
 COPY --from=builder --chown=agentest:nodejs /app/packages/storage/package.json ./packages/storage/
+COPY --from=builder --chown=agentest:nodejs /app/packages/ws-types/dist ./packages/ws-types/dist
+COPY --from=builder --chown=agentest:nodejs /app/packages/ws-types/package.json ./packages/ws-types/
 COPY --from=builder --chown=agentest:nodejs /app/node_modules ./node_modules
-COPY --from=builder --chown=agentest:nodejs /app/packages/db/node_modules/.prisma ./packages/db/node_modules/.prisma
 
 # ユーザーを切り替え
 USER agentest
