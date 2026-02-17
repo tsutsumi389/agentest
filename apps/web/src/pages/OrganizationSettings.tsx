@@ -92,7 +92,7 @@ export function OrganizationSettingsPage() {
     refreshOrganizations();
   };
 
-  // タブ定義（課金タブはOWNER/ADMINのみ表示）
+  // タブ定義
   const tabs = [
     { id: 'general' as const, label: '一般', icon: Settings },
     { id: 'members' as const, label: 'メンバー', icon: Users },

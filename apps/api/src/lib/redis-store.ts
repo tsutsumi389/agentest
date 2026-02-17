@@ -38,7 +38,6 @@ const KEY_PREFIX = {
   ADMIN_ORGANIZATIONS: 'admin:organizations:',
   ADMIN_ORGANIZATION_DETAIL: 'admin:organization:detail:',
   ADMIN_AUDIT_LOGS: 'admin:audit-logs:',
-  ADMIN_METRICS: 'admin:metrics:',
   SYSTEM_ADMINS: 'admin:system-admins:',
   SYSTEM_ADMIN_DETAIL: 'admin:system-admin:detail:',
 } as const;
@@ -686,30 +685,6 @@ export async function getAdminAuditLogsCache<T>(params: Record<string, unknown>)
     generateParamsKey(KEY_PREFIX.ADMIN_AUDIT_LOGS, params),
     '管理者監査ログキャッシュの取得に失敗'
   );
-}
-
-// ============================================
-// アクティブユーザーメトリクスキャッシュ（DAU/WAU/MAU）
-// ============================================
-
-export async function setAdminMetricsCache<T>(
-  params: Record<string, unknown>, data: T, ttlSeconds: number = 300
-): Promise<boolean> {
-  return setCache(
-    generateParamsKey(KEY_PREFIX.ADMIN_METRICS, params),
-    data, ttlSeconds, 'アクティブユーザーメトリクスキャッシュの保存に失敗'
-  );
-}
-
-export async function getAdminMetricsCache<T>(params: Record<string, unknown>): Promise<T | null> {
-  return getCache<T>(
-    generateParamsKey(KEY_PREFIX.ADMIN_METRICS, params),
-    'アクティブユーザーメトリクスキャッシュの取得に失敗'
-  );
-}
-
-export async function invalidateAdminMetricsCache(): Promise<boolean> {
-  return invalidateCacheByPattern(`${KEY_PREFIX.ADMIN_METRICS}*`, 'アクティブユーザーメトリクスキャッシュの無効化に失敗');
 }
 
 // ============================================

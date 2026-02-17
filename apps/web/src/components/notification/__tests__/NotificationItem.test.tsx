@@ -55,9 +55,9 @@ describe('NotificationItem', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it('USAGE_ALERT クリックでナビゲーションしない', () => {
+  it('SECURITY_ALERT クリックでナビゲーションしない', () => {
     const notification = createMockNotification({
-      type: 'USAGE_ALERT',
+      type: 'SECURITY_ALERT',
       data: { someKey: 'value' },
     });
     renderItem({ notification });

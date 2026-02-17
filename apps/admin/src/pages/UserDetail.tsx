@@ -118,19 +118,12 @@ export function UserDetail() {
             {/* 統計 */}
             <UserStatsSection stats={data.user.stats} />
 
-            {/* 2カラムレイアウト */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* 左カラム */}
-              <div className="space-y-6">
-                <UserOrganizationsSection
-                  organizations={data.user.organizations}
-                />
-                <UserOAuthSection providers={data.user.oauthProviders} />
-              </div>
-
-              {/* 右カラム */}
-              <div className="space-y-6">
-              </div>
+            {/* 組織・OAuth */}
+            <div className="space-y-6">
+              <UserOrganizationsSection
+                organizations={data.user.organizations}
+              />
+              <UserOAuthSection providers={data.user.oauthProviders} />
             </div>
 
             {/* 監査ログ（フル幅） */}

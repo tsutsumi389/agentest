@@ -170,10 +170,6 @@ import type {
   AdminOrganizationDetailResponse,
   AdminAuditLogListResponse,
   AdminAuditLogSearchParams,
-  ActiveUserMetricsResponse,
-  MetricGranularity,
-  PlanDistributionResponse,
-  PlanDistributionView,
   SystemAdminSearchParams,
   SystemAdminListResponse,
   SystemAdminDetailResponse,
@@ -206,7 +202,6 @@ export const adminDashboardApi = {
  */
 interface SearchParams {
   q?: string;
-  plan?: string[];
   status?: string;
   createdFrom?: string;
   createdTo?: string;
@@ -223,9 +218,6 @@ function toSearchQueryString(params: SearchParams): string {
   const searchParams = new URLSearchParams();
 
   if (params.q) searchParams.set('q', params.q);
-  if (params.plan && params.plan.length > 0) {
-    searchParams.set('plan', params.plan.join(','));
-  }
   if (params.status) searchParams.set('status', params.status);
   if (params.createdFrom) searchParams.set('createdFrom', params.createdFrom);
   if (params.createdTo) searchParams.set('createdTo', params.createdTo);
@@ -308,80 +300,6 @@ export const adminAuditLogsApi = {
   list: (params: AdminAuditLogSearchParams = {}) =>
     api.get<AdminAuditLogListResponse>(`/admin/audit-logs${toAuditLogQueryString(params)}`),
 };
-
-// ============================================
-// 管理者メトリクスAPI
-// ============================================
-
-/** メトリクス取得パラメータ */
-export interface AdminMetricsParams {
-  granularity?: MetricGranularity;
-  startDate?: string;
-  endDate?: string;
-  timezone?: string;
-}
-
-/**
- * メトリクスパラメータをクエリ文字列に変換
- */
-function toMetricsQueryString(params: AdminMetricsParams): string {
-  const searchParams = new URLSearchParams();
-
-  if (params.granularity) searchParams.set('granularity', params.granularity);
-  if (params.startDate) searchParams.set('startDate', params.startDate);
-  if (params.endDate) searchParams.set('endDate', params.endDate);
-  if (params.timezone) searchParams.set('timezone', params.timezone);
-
-  const qs = searchParams.toString();
-  return qs ? `?${qs}` : '';
-}
-
-export const adminMetricsApi = {
-  /**
-   * アクティブユーザーメトリクスを取得
-   */
-  getActiveUsers: (params: AdminMetricsParams = {}) =>
-    api.get<ActiveUserMetricsResponse>(`/admin/metrics/active-users${toMetricsQueryString(params)}`),
-
-  /**
-   * プラン分布メトリクスを取得
-   */
-  getPlanDistribution: (params: PlanDistributionParams = {}) =>
-    api.get<PlanDistributionResponse>(`/admin/metrics/plan-distribution${toPlanDistributionQueryString(params)}`),
-};
-
-// ============================================
-// プラン分布メトリクスAPI
-// ============================================
-
-/** プラン分布取得パラメータ */
-export interface PlanDistributionParams {
-  granularity?: MetricGranularity;
-  startDate?: string;
-  endDate?: string;
-  timezone?: string;
-  view?: PlanDistributionView;
-  includeMembers?: boolean;
-}
-
-/**
- * プラン分布パラメータをクエリ文字列に変換
- */
-function toPlanDistributionQueryString(params: PlanDistributionParams): string {
-  const searchParams = new URLSearchParams();
-
-  if (params.granularity) searchParams.set('granularity', params.granularity);
-  if (params.startDate) searchParams.set('startDate', params.startDate);
-  if (params.endDate) searchParams.set('endDate', params.endDate);
-  if (params.timezone) searchParams.set('timezone', params.timezone);
-  if (params.view) searchParams.set('view', params.view);
-  if (params.includeMembers !== undefined) {
-    searchParams.set('includeMembers', String(params.includeMembers));
-  }
-
-  const qs = searchParams.toString();
-  return qs ? `?${qs}` : '';
-}
 
 // ============================================
 // システム管理者アカウント管理API

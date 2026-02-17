@@ -51,9 +51,6 @@ import {
   invalidateAdminOrganizationDetailCache,
   setAdminAuditLogsCache,
   getAdminAuditLogsCache,
-  setAdminMetricsCache,
-  getAdminMetricsCache,
-  invalidateAdminMetricsCache,
   setSystemAdminsCache,
   getSystemAdminsCache,
   invalidateSystemAdminsCache,
@@ -403,28 +400,6 @@ describe('redis-store', () => {
       mockRedis.get.mockResolvedValue(JSON.stringify(data));
       const result = await getAdminAuditLogsCache({ page: 1 });
       expect(result).toEqual(data);
-    });
-  });
-
-  // ===========================================
-  // メトリクスキャッシュ
-  // ===========================================
-  describe('メトリクスキャッシュ', () => {
-    it('パラメトリックキーで保存・取得できる', async () => {
-      const data = { dau: 100, wau: 500, mau: 1000 };
-      await setAdminMetricsCache({ period: 'week' }, data);
-      expect(mockRedis.setex).toHaveBeenCalled();
-
-      mockRedis.get.mockResolvedValue(JSON.stringify(data));
-      const result = await getAdminMetricsCache({ period: 'week' });
-      expect(result).toEqual(data);
-    });
-
-    it('SCANでパターンマッチし全キャッシュを無効化する', async () => {
-      mockRedis.scan.mockResolvedValue(['0', ['admin:metrics:key1']]);
-      const result = await invalidateAdminMetricsCache();
-      expect(result).toBe(true);
-      expect(mockRedis.scan).toHaveBeenCalledWith('0', 'MATCH', 'admin:metrics:*', 'COUNT', 100);
     });
   });
 

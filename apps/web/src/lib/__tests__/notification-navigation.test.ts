@@ -113,16 +113,13 @@ describe('getNotificationNavigationPath', () => {
   });
 
   describe('ナビゲーションなしのタイプ', () => {
-    it.each(['USAGE_ALERT', 'SECURITY_ALERT'] as const)(
-      '%s は null を返す',
-      (type) => {
-        const notification = createMockNotification({
-          type,
-          data: { someKey: 'value' },
-        });
-        expect(getNotificationNavigationPath(notification)).toBeNull();
-      },
-    );
+    it('SECURITY_ALERT は null を返す', () => {
+      const notification = createMockNotification({
+        type: 'SECURITY_ALERT',
+        data: { someKey: 'value' },
+      });
+      expect(getNotificationNavigationPath(notification)).toBeNull();
+    });
   });
 
   describe('data が null の場合', () => {
@@ -133,7 +130,6 @@ describe('getNotificationNavigationPath', () => {
       'REVIEW_COMMENT',
       'TEST_COMPLETED',
       'TEST_FAILED',
-      'USAGE_ALERT',
       'SECURITY_ALERT',
     ] as const)('%s で data: null の場合、null を返す', (type) => {
       const notification = createMockNotification({ type, data: null });

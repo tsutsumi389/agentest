@@ -276,7 +276,6 @@ function NotificationSettings() {
     REVIEW_COMMENT: { label: 'レビューコメント', description: 'レビューにコメントがついたとき' },
     TEST_COMPLETED: { label: 'テスト完了', description: 'テスト実行が完了したとき' },
     TEST_FAILED: { label: 'テスト失敗', description: 'テスト実行が失敗したとき' },
-    USAGE_ALERT: { label: '使用量アラート', description: '使用量が上限に近づいたとき' },
     SECURITY_ALERT: { label: 'セキュリティ', description: 'セキュリティに関する重要な通知' },
   };
 

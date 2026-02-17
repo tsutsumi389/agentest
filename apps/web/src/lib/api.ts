@@ -1781,7 +1781,6 @@ export type NotificationType =
   | 'REVIEW_COMMENT'
   | 'TEST_COMPLETED'
   | 'TEST_FAILED'
-  | 'USAGE_ALERT'
   | 'SECURITY_ALERT';
 
 /** 通知 */
