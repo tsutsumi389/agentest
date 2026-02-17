@@ -11,7 +11,6 @@ import {
   CheckCircle,
   XCircle,
   AlertTriangle,
-  CreditCard,
   Shield,
   X,
 } from 'lucide-react';
@@ -43,8 +42,6 @@ function getNotificationIcon(type: NotificationType) {
       return <XCircle className="w-5 h-5 text-error" />;
     case 'USAGE_ALERT':
       return <AlertTriangle className="w-5 h-5 text-warning" />;
-    case 'BILLING':
-      return <CreditCard className="w-5 h-5 text-foreground-muted" />;
     case 'SECURITY_ALERT':
       return <Shield className="w-5 h-5 text-error" />;
     default:

@@ -1,15 +1,14 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useLocation } from 'react-router';
-import { User, Bell, Shield, Key, Loader2, Monitor, Smartphone, Tablet, X, AlertTriangle, Github, Link2, Unlink, Plus, Copy, Check, Trash2, Eye, EyeOff, CreditCard } from 'lucide-react';
+import { User, Bell, Shield, Key, Loader2, Monitor, Smartphone, Tablet, X, AlertTriangle, Github, Link2, Unlink, Plus, Copy, Check, Trash2, Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
 import { toast } from '../stores/toast';
 import { ApiError, sessionsApi, accountsApi, passwordApi, apiTokensApi, type Session, type Account, type ApiToken, type CreatedApiToken } from '../lib/api';
 import { PasswordStrengthChecklist, PASSWORD_CHECKS } from '../components/PasswordStrengthChecklist';
-import { BillingSettings } from '../components/settings/BillingSettings';
 import { TwoFactorSettings } from '../components/settings/TwoFactorSettings';
 import { GoogleIcon } from '../components/ui/GoogleIcon';
 
-type SettingsTab = 'profile' | 'notifications' | 'security' | 'api-tokens' | 'billing';
+type SettingsTab = 'profile' | 'notifications' | 'security' | 'api-tokens';
 
 /**
  * 設定ページ
@@ -26,7 +25,7 @@ export function SettingsPage() {
       return 'notifications';
     }
     // クエリパラメータからタブを取得
-    if (tabParam && ['profile', 'notifications', 'security', 'api-tokens', 'billing'].includes(tabParam)) {
+    if (tabParam && ['profile', 'notifications', 'security', 'api-tokens'].includes(tabParam)) {
       return tabParam;
     }
     return 'profile';
@@ -66,7 +65,6 @@ export function SettingsPage() {
     { id: 'notifications' as const, label: '通知', icon: Bell },
     { id: 'security' as const, label: 'セキュリティ', icon: Shield },
     { id: 'api-tokens' as const, label: 'APIトークン', icon: Key },
-    { id: 'billing' as const, label: '課金', icon: CreditCard },
   ];
 
   return (
@@ -109,7 +107,6 @@ export function SettingsPage() {
           {activeTab === 'notifications' && <NotificationSettings />}
           {activeTab === 'security' && <SecuritySettings />}
           {activeTab === 'api-tokens' && <ApiTokenSettings />}
-          {activeTab === 'billing' && <BillingSettings />}
         </div>
       </div>
     </div>
@@ -280,7 +277,6 @@ function NotificationSettings() {
     TEST_COMPLETED: { label: 'テスト完了', description: 'テスト実行が完了したとき' },
     TEST_FAILED: { label: 'テスト失敗', description: 'テスト実行が失敗したとき' },
     USAGE_ALERT: { label: '使用量アラート', description: '使用量が上限に近づいたとき' },
-    BILLING: { label: '請求関連', description: '請求や支払いに関する通知' },
     SECURITY_ALERT: { label: 'セキュリティ', description: 'セキュリティに関する重要な通知' },
   };
 

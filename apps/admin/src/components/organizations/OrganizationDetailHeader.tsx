@@ -1,7 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router';
 import type { AdminOrganizationDetail } from '@agentest/shared/types';
-import { OrganizationPlanBadge } from '../common';
 
 interface OrganizationDetailHeaderProps {
   organization: AdminOrganizationDetail;
@@ -39,11 +38,10 @@ export function OrganizationDetailHeader({ organization }: OrganizationDetailHea
           </div>
         )}
 
-        {/* 名前・バッジ・説明 */}
+        {/* 名前・説明 */}
         <div className="space-y-1">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-foreground">{organization.name}</h1>
-            <OrganizationPlanBadge plan={organization.plan} />
             {organization.deletedAt && (
               <span className="px-2 py-0.5 text-xs font-medium rounded bg-error/20 text-error">
                 削除済み

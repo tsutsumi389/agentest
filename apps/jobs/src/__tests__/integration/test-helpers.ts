@@ -1,8 +1,7 @@
 /**
  * 結合テスト用ヘルパー関数
  */
-import { prisma } from '../../lib/prisma.js';
-import type { Prisma } from '@agentest/db';
+import { prisma, type Prisma } from '@agentest/db';
 import { randomUUID } from 'crypto';
 
 // ============================================
@@ -31,7 +30,6 @@ export async function createTestUser(
     email: string;
     name: string;
     avatarUrl: string | null;
-    plan: 'FREE' | 'PRO';
   }> = {}
 ) {
   const id = overrides.id ?? randomUUID();
@@ -41,128 +39,6 @@ export async function createTestUser(
       email: overrides.email ?? `test-${id}@example.com`,
       name: overrides.name ?? `Test User ${id.slice(0, 8)}`,
       avatarUrl: overrides.avatarUrl ?? null,
-      plan: overrides.plan ?? 'FREE',
-    },
-  });
-}
-
-// ============================================
-// サブスクリプション作成
-// ============================================
-
-/**
- * テスト用サブスクリプションを作成
- */
-export async function createTestSubscription(
-  overrides: Partial<{
-    id: string;
-    userId: string | null;
-    organizationId: string | null;
-    externalId: string | null;
-    plan: 'FREE' | 'PRO' | 'TEAM' | 'ENTERPRISE';
-    status: 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'TRIALING';
-    billingCycle: 'MONTHLY' | 'YEARLY';
-    currentPeriodStart: Date;
-    currentPeriodEnd: Date;
-    cancelAtPeriodEnd: boolean;
-  }> = {}
-) {
-  const id = overrides.id ?? randomUUID();
-  const now = new Date();
-  return prisma.subscription.create({
-    data: {
-      id,
-      userId: overrides.userId ?? null,
-      organizationId: overrides.organizationId ?? null,
-      externalId: overrides.externalId ?? null,
-      plan: overrides.plan ?? 'FREE',
-      status: overrides.status ?? 'ACTIVE',
-      billingCycle: overrides.billingCycle ?? 'MONTHLY',
-      currentPeriodStart: overrides.currentPeriodStart ?? now,
-      currentPeriodEnd:
-        overrides.currentPeriodEnd ??
-        new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
-      cancelAtPeriodEnd: overrides.cancelAtPeriodEnd ?? false,
-    },
-  });
-}
-
-// ============================================
-// PaymentEvent作成
-// ============================================
-
-/**
- * テスト用PaymentEventを作成
- */
-export async function createTestPaymentEvent(
-  overrides: Partial<{
-    id: string;
-    externalId: string;
-    eventType: string;
-    payload: Prisma.InputJsonValue;
-    status: 'PENDING' | 'PROCESSED' | 'FAILED';
-    retryCount: number;
-    errorMessage: string | null;
-    processedAt: Date | null;
-    createdAt: Date;
-  }> = {}
-) {
-  const id = overrides.id ?? randomUUID();
-  return prisma.paymentEvent.create({
-    data: {
-      id,
-      externalId: overrides.externalId ?? `evt_${id.slice(0, 8)}`,
-      eventType: overrides.eventType ?? 'invoice.paid',
-      payload: overrides.payload ?? { type: 'test' },
-      status: overrides.status ?? 'PENDING',
-      retryCount: overrides.retryCount ?? 0,
-      errorMessage: overrides.errorMessage ?? null,
-      processedAt: overrides.processedAt ?? null,
-      ...(overrides.createdAt && { createdAt: overrides.createdAt }),
-    },
-  });
-}
-
-// ============================================
-// Invoice作成
-// ============================================
-
-/**
- * テスト用Invoiceを作成
- */
-export async function createTestInvoice(
-  subscriptionId: string,
-  overrides: Partial<{
-    id: string;
-    invoiceNumber: string;
-    amount: number;
-    currency: string;
-    status: 'PENDING' | 'PAID' | 'FAILED' | 'VOID';
-    periodStart: Date;
-    periodEnd: Date;
-    dueDate: Date;
-    pdfUrl: string | null;
-  }> = {}
-) {
-  const id = overrides.id ?? randomUUID();
-  const now = new Date();
-  return prisma.invoice.create({
-    data: {
-      id,
-      subscriptionId,
-      invoiceNumber:
-        overrides.invoiceNumber ?? `INV-${id.slice(0, 8).toUpperCase()}`,
-      amount: overrides.amount ?? 980,
-      currency: overrides.currency ?? 'JPY',
-      status: overrides.status ?? 'PENDING',
-      periodStart: overrides.periodStart ?? now,
-      periodEnd:
-        overrides.periodEnd ??
-        new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
-      dueDate:
-        overrides.dueDate ??
-        new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000),
-      pdfUrl: overrides.pdfUrl ?? null,
     },
   });
 }
@@ -180,7 +56,6 @@ export async function createTestOrganization(
     id: string;
     name: string;
     description: string | null;
-    plan: 'TEAM' | 'ENTERPRISE';
   }> = {}
 ) {
   const id = overrides.id ?? randomUUID();
@@ -189,7 +64,6 @@ export async function createTestOrganization(
       id,
       name: overrides.name ?? `Test Org ${id.slice(0, 8)}`,
       description: overrides.description ?? null,
-      plan: overrides.plan ?? 'TEAM',
     },
   });
 
@@ -450,10 +324,6 @@ export async function createTestProjectHistory(
  */
 export async function cleanupTestData() {
   // 外部キー制約を考慮した順序で削除
-  await prisma.paymentEvent.deleteMany({});
-  await prisma.invoice.deleteMany({});
-  await prisma.subscription.deleteMany({});
-  await prisma.paymentMethod.deleteMany({});
   await prisma.testCaseHistory.deleteMany({});
   await prisma.testSuiteHistory.deleteMany({});
   await prisma.projectHistory.deleteMany({});
@@ -483,19 +353,11 @@ export async function cleanupTestData() {
  */
 export async function createHistoryCleanupTestData(options: {
   userId?: string;
-  plan?: 'FREE' | 'PRO';
   historyAge: number;
 }) {
   // ユーザー作成
   const user = await createTestUser({
     id: options.userId,
-    plan: options.plan ?? 'FREE',
-  });
-
-  // サブスクリプション作成
-  await createTestSubscription({
-    userId: user.id,
-    plan: options.plan ?? 'FREE',
   });
 
   // プロジェクト作成

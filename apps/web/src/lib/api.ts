@@ -249,7 +249,6 @@ export interface User {
   email: string;
   name: string;
   avatarUrl: string | null;
-  plan: string;
   createdAt: string;
   totpEnabled: boolean;
 }
@@ -259,8 +258,6 @@ export interface Organization {
   name: string;
   description: string | null;
   avatarUrl: string | null;
-  billingEmail: string | null;
-  plan: string;
   createdAt: string;
   updatedAt?: string;
   deletedAt?: string | null;
@@ -1341,7 +1338,6 @@ export interface CreateOrganizationRequest {
 export interface UpdateOrganizationRequest {
   name?: string;
   description?: string | null;
-  billingEmail?: string | null;
 }
 
 export interface InviteMemberRequest {
@@ -1786,7 +1782,6 @@ export type NotificationType =
   | 'TEST_COMPLETED'
   | 'TEST_FAILED'
   | 'USAGE_ALERT'
-  | 'BILLING'
   | 'SECURITY_ALERT';
 
 /** 通知 */
@@ -1853,271 +1848,3 @@ export const notificationsApi = {
     api.patch<{ preference: NotificationPreference }>(`/api/notifications/preferences/${type}`, data),
 };
 
-// ============================================
-// 課金API
-// ============================================
-
-/** 請求サイクル */
-export type BillingCycle = 'MONTHLY' | 'YEARLY';
-
-/** 個人プラン */
-export type PersonalPlan = 'FREE' | 'PRO';
-
-/** プラン機能 */
-export interface PlanFeature {
-  name: string;
-  description: string;
-  included: boolean;
-}
-
-/** プラン情報 */
-export interface PlanInfo {
-  plan: PersonalPlan;
-  monthlyPrice: number;
-  yearlyPrice: number;
-  features: PlanFeature[];
-}
-
-/** サブスクリプション */
-export interface Subscription {
-  id: string;
-  plan: PersonalPlan;
-  billingCycle: BillingCycle;
-  status: string;
-  currentPeriodStart: string;
-  currentPeriodEnd: string;
-  cancelAtPeriodEnd: boolean;
-}
-
-/** 支払い方法タイプ */
-export type PaymentMethodType = 'CARD';
-
-/** 支払い方法 */
-export interface PaymentMethod {
-  id: string;
-  type: PaymentMethodType;
-  brand: string | null;
-  last4: string | null;
-  expiryMonth: number | null;
-  expiryYear: number | null;
-  isDefault: boolean;
-  createdAt: string;
-}
-
-/** 料金計算結果 */
-export interface PlanChangeCalculation {
-  plan: PersonalPlan;
-  billingCycle: BillingCycle;
-  price: number;
-  currency: string;
-  prorationAmount?: number;
-  effectiveDate: string;
-}
-
-/** サブスクリプション作成リクエスト */
-export interface CreateSubscriptionRequest {
-  plan: 'PRO';
-  billingCycle: BillingCycle;
-  paymentMethodId: string;
-}
-
-export const plansApi = {
-  // プラン一覧取得
-  list: () =>
-    api.get<{ plans: PlanInfo[] }>('/api/plans'),
-
-  // 料金計算
-  calculate: (plan: PersonalPlan, billingCycle: BillingCycle) =>
-    api.get<{ calculation: PlanChangeCalculation }>(
-      `/api/plans/${plan}/calculate?billingCycle=${billingCycle}`
-    ),
-};
-
-export const subscriptionApi = {
-  // サブスクリプション取得
-  get: (userId: string) =>
-    api.get<{ subscription: Subscription | null }>(`/api/users/${userId}/subscription`),
-
-  // サブスクリプション作成（アップグレード）
-  create: (userId: string, data: CreateSubscriptionRequest) =>
-    api.post<{ subscription: Subscription }>(`/api/users/${userId}/subscription`, data),
-
-  // サブスクリプションキャンセル（ダウングレード予約）
-  cancel: (userId: string) =>
-    api.delete<{ subscription: Subscription }>(`/api/users/${userId}/subscription`),
-
-  // ダウングレード予約キャンセル
-  reactivate: (userId: string) =>
-    api.post<{ subscription: Subscription }>(`/api/users/${userId}/subscription/reactivate`),
-};
-
-export const paymentMethodsApi = {
-  // 支払い方法一覧取得
-  list: (userId: string) =>
-    api.get<{ paymentMethods: PaymentMethod[] }>(`/api/users/${userId}/payment-methods`),
-
-  // 支払い方法追加
-  add: (userId: string, token: string) =>
-    api.post<{ paymentMethod: PaymentMethod }>(`/api/users/${userId}/payment-methods`, { token }),
-
-  // 支払い方法削除
-  delete: (userId: string, paymentMethodId: string) =>
-    api.delete<void>(`/api/users/${userId}/payment-methods/${paymentMethodId}`),
-
-  // デフォルト設定
-  setDefault: (userId: string, paymentMethodId: string) =>
-    api.put<{ paymentMethod: PaymentMethod }>(
-      `/api/users/${userId}/payment-methods/${paymentMethodId}/default`
-    ),
-
-  // SetupIntent作成
-  setupIntent: (userId: string) =>
-    api.post<{ setupIntent: { clientSecret: string } }>(
-      `/api/users/${userId}/payment-methods/setup-intent`
-    ),
-};
-
-// ============================================
-// 組織課金API
-// ============================================
-
-/** 組織プラン */
-export type OrgPlan = 'TEAM' | 'ENTERPRISE';
-
-/** 組織サブスクリプションステータス */
-export type OrgSubscriptionStatus = 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'TRIALING';
-
-/** 組織サブスクリプション */
-export interface OrgSubscription {
-  id: string;
-  organizationId: string;
-  plan: OrgPlan;
-  billingCycle: BillingCycle;
-  status: OrgSubscriptionStatus;
-  currentPeriodStart: string;
-  currentPeriodEnd: string;
-  cancelAtPeriodEnd: boolean;
-  quantity: number;  // メンバー数
-}
-
-/** 組織請求書ステータス */
-export type OrgInvoiceStatus = 'PENDING' | 'PAID' | 'FAILED' | 'REFUNDED';
-
-/** 組織請求書 */
-export interface OrgInvoice {
-  id: string;
-  invoiceNumber: string;
-  amount: number;
-  currency: string;
-  status: OrgInvoiceStatus;
-  periodStart: string;
-  periodEnd: string;
-  dueDate: string;
-  pdfUrl: string | null;
-  createdAt: string;
-}
-
-/** 組織サブスクリプション作成リクエスト */
-export interface CreateOrgSubscriptionRequest {
-  billingCycle: BillingCycle;
-  paymentMethodId: string;
-}
-
-/** 組織プラン料金計算結果 */
-export interface OrgPlanCalculation {
-  plan: OrgPlan;
-  billingCycle: BillingCycle;
-  unitPrice: number;
-  quantity: number;
-  totalPrice: number;
-  currency: string;
-  effectiveDate: string;
-}
-
-export const orgBillingApi = {
-  // サブスクリプション
-  getSubscription: (orgId: string) =>
-    api.get<{ subscription: OrgSubscription | null }>(`/api/organizations/${orgId}/subscription`),
-  createSubscription: (orgId: string, data: CreateOrgSubscriptionRequest) =>
-    api.post<{ subscription: OrgSubscription }>(`/api/organizations/${orgId}/subscription`, data),
-  updateSubscription: (orgId: string, data: { billingCycle: BillingCycle }) =>
-    api.put<{ subscription: OrgSubscription }>(`/api/organizations/${orgId}/subscription`, data),
-  cancelSubscription: (orgId: string) =>
-    api.delete<{ subscription: OrgSubscription }>(`/api/organizations/${orgId}/subscription`),
-  reactivateSubscription: (orgId: string) =>
-    api.post<{ subscription: OrgSubscription }>(`/api/organizations/${orgId}/subscription/reactivate`),
-  calculatePlanChange: (orgId: string, billingCycle: BillingCycle) =>
-    api.get<{ calculation: OrgPlanCalculation }>(
-      `/api/organizations/${orgId}/subscription/calculate?billingCycle=${billingCycle}`
-    ),
-
-  // 支払い方法
-  getPaymentMethods: (orgId: string) =>
-    api.get<{ paymentMethods: PaymentMethod[] }>(`/api/organizations/${orgId}/payment-methods`),
-  addPaymentMethod: (orgId: string, paymentMethodId: string) =>
-    api.post<{ paymentMethod: PaymentMethod }>(`/api/organizations/${orgId}/payment-methods`, { paymentMethodId }),
-  deletePaymentMethod: (orgId: string, paymentMethodId: string) =>
-    api.delete<void>(`/api/organizations/${orgId}/payment-methods/${paymentMethodId}`),
-  setDefaultPaymentMethod: (orgId: string, paymentMethodId: string) =>
-    api.put<{ paymentMethod: PaymentMethod }>(
-      `/api/organizations/${orgId}/payment-methods/${paymentMethodId}/default`
-    ),
-  createSetupIntent: (orgId: string) =>
-    api.post<{ setupIntent: { clientSecret: string } }>(
-      `/api/organizations/${orgId}/payment-methods/setup-intent`
-    ),
-
-  // 請求書
-  getInvoices: (orgId: string, params?: { page?: number; limit?: number }) => {
-    const query = new URLSearchParams();
-    if (params?.page) query.set('page', String(params.page));
-    if (params?.limit) query.set('limit', String(params.limit));
-    const queryString = query.toString();
-    return api.get<{ invoices: OrgInvoice[]; total: number; page: number; limit: number; totalPages: number }>(
-      `/api/organizations/${orgId}/invoices${queryString ? `?${queryString}` : ''}`
-    );
-  },
-};
-
-// ============================================
-// ユーザー請求履歴API
-// ============================================
-
-/** ユーザー請求書ステータス */
-export type UserInvoiceStatus = 'draft' | 'open' | 'paid' | 'uncollectible' | 'void';
-
-/** ユーザー請求書 */
-export interface UserInvoice {
-  id: string;
-  invoiceNumber: string;
-  amount: number;
-  currency: string;
-  status: UserInvoiceStatus;
-  periodStart: string;
-  periodEnd: string;
-  dueDate: string | null;
-  pdfUrl: string | null;
-  createdAt: string;
-}
-
-/** ユーザー請求履歴APIレスポンス */
-export interface UserInvoiceListResponse {
-  invoices: UserInvoice[];
-  total: number;
-}
-
-export const userInvoicesApi = {
-  // 請求書一覧取得
-  getInvoices: (userId: string) =>
-    api.get<UserInvoiceListResponse>(`/api/users/${userId}/invoices`),
-
-  // 請求書詳細取得
-  getInvoice: (userId: string, invoiceId: string) =>
-    api.get<{ invoice: UserInvoice }>(`/api/users/${userId}/invoices/${invoiceId}`),
-
-  // 請求書PDFダウンロード（リダイレクトURL取得）
-  getInvoicePdfUrl: (userId: string, invoiceId: string) => {
-    const apiUrl = import.meta.env.VITE_API_URL || '';
-    return `${apiUrl}/api/users/${userId}/invoices/${invoiceId}/pdf`;
-  },
-};

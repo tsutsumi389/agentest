@@ -13,7 +13,6 @@ const createOrgSchema = z.object({
 const updateOrgSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   description: z.string().max(500).optional().nullable(),
-  billingEmail: z.string().email().optional().nullable(),
 });
 
 const inviteSchema = z.object({

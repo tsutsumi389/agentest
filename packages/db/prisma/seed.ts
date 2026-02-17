@@ -1,4 +1,4 @@
-import { PrismaClient, UserPlan, OrganizationPlan, EntityStatus, TestCasePriority } from '@prisma/client';
+import { PrismaClient, EntityStatus, TestCasePriority } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -12,7 +12,6 @@ async function main() {
     create: {
       email: 'demo@agentest.dev',
       name: 'Demo User',
-      plan: UserPlan.PRO,
     },
   });
 
@@ -26,8 +25,6 @@ async function main() {
       id: '00000000-0000-0000-0000-000000000100',
       name: 'Demo Organization',
       description: 'A demo organization for testing',
-      plan: OrganizationPlan.TEAM,
-      billingEmail: 'billing@demo-org.dev',
     },
   });
 

@@ -2,11 +2,9 @@ import { Filter, X } from 'lucide-react';
 import type { AdminUserStatus } from '@agentest/shared/types';
 
 interface UserFiltersProps {
-  plan: ('FREE' | 'PRO')[];
   status: AdminUserStatus;
   createdFrom: string;
   createdTo: string;
-  onPlanChange: (plan: ('FREE' | 'PRO')[]) => void;
   onStatusChange: (status: AdminUserStatus) => void;
   onCreatedFromChange: (date: string) => void;
   onCreatedToChange: (date: string) => void;
@@ -17,11 +15,9 @@ interface UserFiltersProps {
  * ユーザーフィルターUI
  */
 export function UserFilters({
-  plan,
   status,
   createdFrom,
   createdTo,
-  onPlanChange,
   onStatusChange,
   onCreatedFromChange,
   onCreatedToChange,
@@ -29,19 +25,9 @@ export function UserFilters({
 }: UserFiltersProps) {
   // フィルターがアクティブか判定
   const hasActiveFilters =
-    plan.length > 0 ||
     status !== 'active' ||
     createdFrom !== '' ||
     createdTo !== '';
-
-  // プランをトグル
-  const togglePlan = (p: 'FREE' | 'PRO') => {
-    if (plan.includes(p)) {
-      onPlanChange(plan.filter((x) => x !== p));
-    } else {
-      onPlanChange([...plan, p]);
-    }
-  };
 
   return (
     <div className="space-y-4">
@@ -62,33 +48,6 @@ export function UserFilters({
       </div>
 
       <div className="flex flex-wrap gap-4">
-        {/* プランフィルター */}
-        <div className="space-y-2">
-          <label className="text-xs text-foreground-muted">プラン</label>
-          <div className="flex gap-2">
-            <button
-              onClick={() => togglePlan('FREE')}
-              className={`px-3 py-1 text-sm rounded border ${
-                plan.includes('FREE')
-                  ? 'bg-accent-muted text-accent border-accent'
-                  : 'bg-background-secondary text-foreground-muted border-border hover:border-foreground-muted'
-              }`}
-            >
-              FREE
-            </button>
-            <button
-              onClick={() => togglePlan('PRO')}
-              className={`px-3 py-1 text-sm rounded border ${
-                plan.includes('PRO')
-                  ? 'bg-accent-muted text-accent border-accent'
-                  : 'bg-background-secondary text-foreground-muted border-border hover:border-foreground-muted'
-              }`}
-            >
-              PRO
-            </button>
-          </div>
-        </div>
-
         {/* ステータスフィルター */}
         <div className="space-y-2">
           <label className="text-xs text-foreground-muted">ステータス</label>

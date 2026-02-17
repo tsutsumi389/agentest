@@ -1,11 +1,8 @@
-import type { UserPlan } from './enums.js';
-
 export interface User {
   id: string;
   email: string;
   name: string;
   avatarUrl: string | null;
-  plan: UserPlan;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -50,5 +47,4 @@ export interface UserPublic {
   email: string;
   name: string;
   avatarUrl: string | null;
-  plan: UserPlan;
 }

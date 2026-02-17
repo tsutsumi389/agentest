@@ -49,7 +49,6 @@ describe('AdminUsersController', () => {
           email: 'test@example.com',
           name: 'Test User',
           avatarUrl: null,
-          plan: 'FREE',
           createdAt: '2024-01-15T00:00:00.000Z',
           updatedAt: '2024-01-20T00:00:00.000Z',
           deletedAt: null,
@@ -57,7 +56,6 @@ describe('AdminUsersController', () => {
           stats: { organizationCount: 0, projectCount: 0, testSuiteCount: 0, executionCount: 0 },
           organizations: [],
           oauthProviders: [],
-          subscription: null,
           recentAuditLogs: [],
         },
       };
@@ -142,7 +140,6 @@ describe('AdminUsersController', () => {
           email: 'test@example.com',
           name: 'Test User',
           avatarUrl: null,
-          plan: 'PRO',
           createdAt: '2024-01-15T00:00:00.000Z',
           updatedAt: '2024-01-20T00:00:00.000Z',
           deletedAt: null,
@@ -150,14 +147,6 @@ describe('AdminUsersController', () => {
           stats: { organizationCount: 1, projectCount: 3, testSuiteCount: 5, executionCount: 20 },
           organizations: [{ id: 'org-1', name: 'Test Org', role: 'MEMBER', joinedAt: '2024-01-10T00:00:00.000Z' }],
           oauthProviders: [{ provider: 'github', createdAt: '2024-01-05T00:00:00.000Z' }],
-          subscription: {
-            plan: 'PRO',
-            status: 'ACTIVE',
-            billingCycle: 'MONTHLY',
-            currentPeriodStart: '2024-01-01T00:00:00.000Z',
-            currentPeriodEnd: '2024-02-01T00:00:00.000Z',
-            cancelAtPeriodEnd: false,
-          },
           recentAuditLogs: [],
         },
       };

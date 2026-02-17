@@ -1,7 +1,6 @@
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router';
 import type { AdminUserDetail } from '@agentest/shared/types';
-import { PlanBadge } from '../common';
 
 interface UserDetailHeaderProps {
   user: AdminUserDetail;
@@ -39,11 +38,10 @@ export function UserDetailHeader({ user }: UserDetailHeaderProps) {
           </div>
         )}
 
-        {/* 名前・メール・バッジ */}
+        {/* 名前・メール */}
         <div className="space-y-1">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold text-foreground">{user.name}</h1>
-            <PlanBadge plan={user.plan} />
             {user.deletedAt && (
               <span className="px-2 py-0.5 text-xs font-medium rounded bg-error/20 text-error">
                 削除済み

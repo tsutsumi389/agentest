@@ -27,7 +27,6 @@ describe('OrganizationRepository', () => {
         id: 'org-1',
         name: 'Test Organization',
         description: 'Test description',
-        billingEmail: 'billing@example.com',
         deletedAt: null,
       };
       mockPrismaOrganization.findFirst.mockResolvedValue(mockOrg);
@@ -99,22 +98,6 @@ describe('OrganizationRepository', () => {
       expect(result).toEqual(mockOrg);
     });
 
-    it('billingEmailを更新できる', async () => {
-      const mockOrg = {
-        id: 'org-1',
-        billingEmail: 'new-billing@example.com',
-      };
-      mockPrismaOrganization.update.mockResolvedValue(mockOrg);
-
-      const result = await repository.update('org-1', { billingEmail: 'new-billing@example.com' });
-
-      expect(mockPrismaOrganization.update).toHaveBeenCalledWith({
-        where: { id: 'org-1' },
-        data: { billingEmail: 'new-billing@example.com' },
-      });
-      expect(result).toEqual(mockOrg);
-    });
-
     it('descriptionをnullに設定できる', async () => {
       const mockOrg = {
         id: 'org-1',
@@ -136,14 +119,12 @@ describe('OrganizationRepository', () => {
         id: 'org-1',
         name: 'New Name',
         description: 'New description',
-        billingEmail: 'billing@example.com',
       };
       mockPrismaOrganization.update.mockResolvedValue(mockOrg);
 
       const result = await repository.update('org-1', {
         name: 'New Name',
         description: 'New description',
-        billingEmail: 'billing@example.com',
       });
 
       expect(mockPrismaOrganization.update).toHaveBeenCalledWith({
@@ -151,7 +132,6 @@ describe('OrganizationRepository', () => {
         data: {
           name: 'New Name',
           description: 'New description',
-          billingEmail: 'billing@example.com',
         },
       });
       expect(result).toEqual(mockOrg);

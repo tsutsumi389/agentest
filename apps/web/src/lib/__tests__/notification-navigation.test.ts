@@ -113,7 +113,7 @@ describe('getNotificationNavigationPath', () => {
   });
 
   describe('ナビゲーションなしのタイプ', () => {
-    it.each(['USAGE_ALERT', 'BILLING', 'SECURITY_ALERT'] as const)(
+    it.each(['USAGE_ALERT', 'SECURITY_ALERT'] as const)(
       '%s は null を返す',
       (type) => {
         const notification = createMockNotification({
@@ -134,7 +134,6 @@ describe('getNotificationNavigationPath', () => {
       'TEST_COMPLETED',
       'TEST_FAILED',
       'USAGE_ALERT',
-      'BILLING',
       'SECURITY_ALERT',
     ] as const)('%s で data: null の場合、null を返す', (type) => {
       const notification = createMockNotification({ type, data: null });

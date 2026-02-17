@@ -28,7 +28,6 @@ export class AdminOrganizationsService {
     // デフォルト値を設定
     const {
       q,
-      plan,
       status = 'active',
       createdFrom,
       createdTo,
@@ -41,7 +40,6 @@ export class AdminOrganizationsService {
     // キャッシュパラメータを構築
     const cacheParams = {
       q,
-      plan,
       status,
       createdFrom,
       createdTo,
@@ -60,7 +58,6 @@ export class AdminOrganizationsService {
     // WHERE句を構築
     const where = this.buildWhereClause({
       q,
-      plan,
       status,
       createdFrom,
       createdTo,
@@ -130,8 +127,6 @@ export class AdminOrganizationsService {
         name: org.name,
         description: org.description,
         avatarUrl: org.avatarUrl,
-        plan: org.plan,
-        billingEmail: org.billingEmail,
         createdAt: org.createdAt.toISOString(),
         updatedAt: org.updatedAt.toISOString(),
         deletedAt: org.deletedAt?.toISOString() ?? null,
@@ -164,22 +159,16 @@ export class AdminOrganizationsService {
    */
   private buildWhereClause(params: {
     q?: string;
-    plan?: ('NONE' | 'TEAM' | 'ENTERPRISE')[];
     status?: string;
     createdFrom?: string;
     createdTo?: string;
   }): Prisma.OrganizationWhereInput {
-    const { q, plan, status, createdFrom, createdTo } = params;
+    const { q, status, createdFrom, createdTo } = params;
     const where: Prisma.OrganizationWhereInput = {};
 
     // 検索クエリ（名前で部分一致）
     if (q) {
       where.name = { contains: q, mode: 'insensitive' };
-    }
-
-    // プランフィルタ
-    if (plan && plan.length > 0) {
-      where.plan = { in: plan };
     }
 
     // ステータスフィルタ
@@ -214,8 +203,6 @@ export class AdminOrganizationsService {
     switch (sortBy) {
       case 'name':
         return { name: sortOrder };
-      case 'plan':
-        return { plan: sortOrder };
       case 'createdAt':
       default:
         return { createdAt: sortOrder };
@@ -266,8 +253,6 @@ export class AdminOrganizationsService {
             },
           },
         },
-        // サブスクリプション
-        subscription: true,
         // 監査ログ（最新10件）
         auditLogs: {
           orderBy: { createdAt: 'desc' },
@@ -326,9 +311,6 @@ export class AdminOrganizationsService {
       name: org.name,
       description: org.description,
       avatarUrl: org.avatarUrl,
-      plan: org.plan,
-      billingEmail: org.billingEmail,
-      paymentCustomerId: org.paymentCustomerId,
       createdAt: org.createdAt.toISOString(),
       updatedAt: org.updatedAt.toISOString(),
       deletedAt: org.deletedAt?.toISOString() ?? null,
@@ -355,16 +337,6 @@ export class AdminOrganizationsService {
         testSuiteCount: project._count.testSuites,
         createdAt: project.createdAt.toISOString(),
       })),
-      subscription: org.subscription
-        ? {
-            plan: org.subscription.plan,
-            status: org.subscription.status,
-            billingCycle: org.subscription.billingCycle,
-            currentPeriodStart: org.subscription.currentPeriodStart.toISOString(),
-            currentPeriodEnd: org.subscription.currentPeriodEnd.toISOString(),
-            cancelAtPeriodEnd: org.subscription.cancelAtPeriodEnd,
-          }
-        : null,
       recentAuditLogs: org.auditLogs.map((log) => ({
         id: log.id,
         category: log.category,

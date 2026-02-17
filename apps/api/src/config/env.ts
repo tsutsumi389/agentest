@@ -62,15 +62,6 @@ const envSchema = z.object({
   S3_BUCKET: z.string().default('agentest'),
   S3_REGION: z.string().default('us-east-1'),
 
-  // Payment (Stripe)
-  PAYMENT_GATEWAY: z.enum(['mock', 'stripe']).default('mock'),
-  STRIPE_SECRET_KEY: z.string().optional(),
-  STRIPE_WEBHOOK_SECRET: z.string().optional(),
-  STRIPE_PRICE_PRO_MONTHLY: z.string().optional(),
-  STRIPE_PRICE_PRO_YEARLY: z.string().optional(),
-  STRIPE_PRICE_TEAM_MONTHLY: z.string().optional(),
-  STRIPE_PRICE_TEAM_YEARLY: z.string().optional(),
-
   // OAuthトークン暗号化キー
   // 本番環境ではデフォルト値なし（必須）、開発環境ではデフォルト値あり
   TOKEN_ENCRYPTION_KEY: isProduction

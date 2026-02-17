@@ -11,17 +11,6 @@ datasource db {
 // 列挙型 (ENUMS)
 // ============================================
 
-enum UserPlan {
-  FREE
-  PRO
-}
-
-enum OrganizationPlan {
-  NONE
-  TEAM
-  ENTERPRISE
-}
-
 enum OrganizationRole {
   OWNER
   ADMIN
@@ -110,42 +99,6 @@ enum AgentSessionStatus {
   TIMEOUT
 }
 
-enum SubscriptionPlan {
-  FREE
-  PRO
-  TEAM
-  ENTERPRISE
-}
-
-enum SubscriptionStatus {
-  ACTIVE
-  PAST_DUE
-  CANCELED
-  TRIALING
-}
-
-enum BillingCycle {
-  MONTHLY
-  YEARLY
-}
-
-enum InvoiceStatus {
-  PENDING
-  PAID
-  FAILED
-  VOID
-}
-
-enum PaymentEventStatus {
-  PENDING
-  PROCESSED
-  FAILED
-}
-
-enum PaymentMethodType {
-  CARD
-}
-
 enum ChangeType {
   CREATE
   UPDATE
@@ -160,8 +113,6 @@ enum NotificationType {
   REVIEW_COMMENT
   TEST_COMPLETED
   TEST_FAILED
-  USAGE_ALERT
-  BILLING
   SECURITY_ALERT
 }
 
@@ -172,7 +123,6 @@ enum AuditLogCategory {
   MEMBER
   PROJECT
   API_TOKEN
-  BILLING
 }
 
 // 管理者ロール定義
@@ -198,8 +148,6 @@ model User {
   email             String    @unique @db.VarChar(255)
   name              String    @db.VarChar(100)
   avatarUrl         String?   @map("avatar_url")
-  plan              UserPlan  @default(FREE)
-  paymentCustomerId String?   @unique @map("payment_customer_id") @db.VarChar(255) // 決済サービス顧客ID
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
   deletedAt         DateTime? @map("deleted_at")
@@ -233,12 +181,9 @@ model User {
   testSuiteHistories         TestSuiteHistory[]            @relation("TestSuiteHistoryUser")
   testCaseHistories          TestCaseHistory[]             @relation("TestCaseHistoryUser")
   apiTokens                  ApiToken[]                    @relation("UserApiTokens")
-  subscription               Subscription?                 @relation("UserSubscription")
-  paymentMethods             PaymentMethod[]               @relation("UserPaymentMethods")
   notifications              Notification[]
   notificationPreferences    NotificationPreference[]
   auditLogs                  AuditLog[]
-  usageRecords               UsageRecord[]                 @relation("UserUsageRecords")
   oauthAuthorizationCodes    OAuthAuthorizationCode[]
   oauthAccessTokens          OAuthAccessToken[]
   oauthRefreshTokens         OAuthRefreshToken[]
@@ -347,9 +292,6 @@ model Organization {
   name              String           @db.VarChar(100)
   description       String?          @db.Text
   avatarUrl         String?          @map("avatar_url")
-  plan              OrganizationPlan @default(NONE)
-  paymentCustomerId String?          @unique @map("payment_customer_id") @db.VarChar(255) // 決済サービス顧客ID
-  billingEmail      String?          @map("billing_email") @db.VarChar(255)
   createdAt         DateTime         @default(now()) @map("created_at")
   updatedAt         DateTime         @updatedAt @map("updated_at")
   deletedAt         DateTime?        @map("deleted_at")
@@ -358,12 +300,9 @@ model Organization {
   members              OrganizationMember[]
   invitations          OrganizationInvitation[]
   projects             Project[]
-  subscription         Subscription?                     @relation("OrgSubscription")
-  paymentMethods       PaymentMethod[]                   @relation("OrgPaymentMethods")
   apiTokens            ApiToken[]                        @relation("OrgApiTokens")
   notificationSettings OrganizationNotificationSetting[]
   auditLogs            AuditLog[]
-  usageRecords         UsageRecord[]                     @relation("OrgUsageRecords")
 
   @@index([deletedAt])
   @@map("organizations")
@@ -1006,94 +945,6 @@ model AgentSession {
 }
 
 // ============================================
-// 課金モデル
-// ============================================
-
-model Subscription {
-  id                 String             @id @default(uuid())
-  userId             String?            @unique @map("user_id")
-  organizationId     String?            @unique @map("organization_id")
-  externalId         String?            @unique @map("external_id") @db.VarChar(255) // 決済サービスのサブスクリプションID
-  plan               SubscriptionPlan   @default(FREE)
-  status             SubscriptionStatus @default(ACTIVE)
-  billingCycle       BillingCycle       @default(MONTHLY) @map("billing_cycle")
-  currentPeriodStart DateTime           @map("current_period_start")
-  currentPeriodEnd   DateTime           @map("current_period_end")
-  cancelAtPeriodEnd  Boolean            @default(false) @map("cancel_at_period_end")
-  createdAt          DateTime           @default(now()) @map("created_at")
-  updatedAt          DateTime           @updatedAt @map("updated_at")
-
-  user         User?         @relation("UserSubscription", fields: [userId], references: [id], onDelete: Cascade)
-  organization Organization? @relation("OrgSubscription", fields: [organizationId], references: [id], onDelete: Cascade)
-  invoices     Invoice[]
-
-  @@index([status])
-  @@map("subscriptions")
-}
-
-model Invoice {
-  id             String        @id @default(uuid())
-  subscriptionId String        @map("subscription_id")
-  invoiceNumber  String        @unique @map("invoice_number") @db.VarChar(50)
-  amount         Decimal       @db.Decimal(10, 2)
-  currency       String        @default("JPY") @db.VarChar(3)
-  status         InvoiceStatus @default(PENDING)
-  periodStart    DateTime      @map("period_start")
-  periodEnd      DateTime      @map("period_end")
-  dueDate        DateTime      @map("due_date")
-  pdfUrl         String?       @map("pdf_url")
-  createdAt      DateTime      @default(now()) @map("created_at")
-  updatedAt      DateTime      @updatedAt @map("updated_at")
-
-  subscription Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
-
-  @@index([subscriptionId])
-  @@index([status])
-  @@map("invoices")
-}
-
-// Webhook冪等性確保・監査ログ用
-model PaymentEvent {
-  id           String             @id @default(uuid())
-  externalId   String             @unique @map("external_id") @db.VarChar(255)
-  eventType    String             @map("event_type") @db.VarChar(100)
-  payload      Json
-  status       PaymentEventStatus @default(PENDING)
-  processedAt  DateTime?          @map("processed_at")
-  errorMessage String?            @map("error_message") @db.Text
-  retryCount   Int                @default(0) @map("retry_count")
-  createdAt    DateTime           @default(now()) @map("created_at")
-  updatedAt    DateTime           @updatedAt @map("updated_at")
-
-  @@index([status])
-  @@index([eventType])
-  @@index([createdAt])
-  @@map("payment_events")
-}
-
-model PaymentMethod {
-  id             String            @id @default(uuid())
-  userId         String?           @map("user_id")
-  organizationId String?           @map("organization_id")
-  type           PaymentMethodType @default(CARD)
-  externalId     String            @map("external_id") @db.VarChar(255)
-  brand          String?           @db.VarChar(50)
-  last4          String?           @db.VarChar(4)
-  expiryMonth    Int?              @map("expiry_month")
-  expiryYear     Int?              @map("expiry_year")
-  isDefault      Boolean           @default(false) @map("is_default")
-  createdAt      DateTime          @default(now()) @map("created_at")
-  updatedAt      DateTime          @updatedAt @map("updated_at")
-
-  user         User?         @relation("UserPaymentMethods", fields: [userId], references: [id], onDelete: Cascade)
-  organization Organization? @relation("OrgPaymentMethods", fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([organizationId])
-  @@map("payment_methods")
-}
-
-// ============================================
 // APIトークン・通知モデル
 // ============================================
 
@@ -1196,29 +1047,6 @@ model AuditLog {
   @@index([createdAt])
   @@index([organizationId, createdAt])
   @@map("audit_logs")
-}
-
-model UsageRecord {
-  id              String    @id @default(uuid())
-  userId          String?   @map("user_id")
-  organizationId  String?   @map("organization_id")
-  periodStart     DateTime  @map("period_start") @db.Date
-  periodEnd       DateTime  @map("period_end") @db.Date
-  mcpSessions     Int       @default(0) @map("mcp_sessions")
-  mcpSessionLimit Int       @default(0) @map("mcp_session_limit")
-  alertSentAt     DateTime? @map("alert_sent_at")
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-
-  user         User?         @relation("UserUsageRecords", fields: [userId], references: [id], onDelete: Cascade)
-  organization Organization? @relation("OrgUsageRecords", fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, periodStart])
-  @@unique([organizationId, periodStart])
-  @@index([userId])
-  @@index([organizationId])
-  @@index([periodStart])
-  @@map("usage_records")
 }
 
 // ============================================
@@ -1471,26 +1299,3 @@ model ActiveUserMetric {
   @@map("active_user_metrics")
 }
 
-// プラン分布メトリクス（日次/週次/月次の集計データ）
-model PlanDistributionMetric {
-  id          String            @id @default(uuid())
-  granularity MetricGranularity
-  periodStart DateTime          @map("period_start") @db.Date
-
-  // ユーザープラン
-  freeUserCount Int @default(0) @map("free_user_count")
-  proUserCount  Int @default(0) @map("pro_user_count")
-
-  // 組織プラン
-  teamOrgCount          Int @default(0) @map("team_org_count")
-  teamMemberCount       Int @default(0) @map("team_member_count")
-  enterpriseOrgCount    Int @default(0) @map("enterprise_org_count")
-  enterpriseMemberCount Int @default(0) @map("enterprise_member_count")
-
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  @@unique([granularity, periodStart])
-  @@index([granularity, periodStart])
-  @@map("plan_distribution_metrics")
-}

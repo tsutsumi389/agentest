@@ -7,7 +7,6 @@ import {
   UserStatsSection,
   UserOrganizationsSection,
   UserOAuthSection,
-  UserSubscriptionSection,
   UserAuditLogSection,
 } from '../components/users';
 import { formatDateTime } from '../lib/date-utils';
@@ -131,9 +130,6 @@ export function UserDetail() {
 
               {/* 右カラム */}
               <div className="space-y-6">
-                <UserSubscriptionSection
-                  subscription={data.user.subscription}
-                />
               </div>
             </div>
 

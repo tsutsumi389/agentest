@@ -28,10 +28,9 @@ export default defineConfig({
         '**/index.ts',
         'src/__tests__/**',
         'vitest.config.ts',
-        // インフラ層（APIクライアント、WebSocket、Stripe）は統合テストで対応
+        // インフラ層（APIクライアント、WebSocket）は統合テストで対応
         'src/lib/api.ts',
         'src/lib/ws.ts',
-        'src/lib/stripe.ts',
         // WebSocket/API依存が強いフックは統合テストで対応
         'src/hooks/useEditLock.ts',
         'src/hooks/useNotifications.ts',

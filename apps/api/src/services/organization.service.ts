@@ -1,17 +1,14 @@
 import { prisma } from '@agentest/db';
 import { NotFoundError, ConflictError, AuthorizationError, DELETION_GRACE_PERIOD_DAYS } from '@agentest/shared';
 import { OrganizationRepository } from '../repositories/organization.repository.js';
-import { OrganizationSubscriptionService } from './organization-subscription.service.js';
 import { auditLogService } from './audit-log.service.js';
 import { notificationService } from './notification.service.js';
-import { logger } from '../utils/logger.js';
 
 /**
  * 組織サービス
  */
 export class OrganizationService {
   private orgRepo = new OrganizationRepository();
-  private orgSubscriptionService = new OrganizationSubscriptionService();
 
   /**
    * 組織を作成
@@ -67,7 +64,7 @@ export class OrganizationService {
    */
   async update(
     organizationId: string,
-    data: { name?: string; description?: string | null; billingEmail?: string | null },
+    data: { name?: string; description?: string | null },
     userId?: string
   ) {
     await this.findById(organizationId);
@@ -348,16 +345,6 @@ export class OrganizationService {
       });
     }
 
-    // メンバー数を Stripe と同期（エラーでも招待承諾は成功させる）
-    try {
-      await this.orgSubscriptionService.syncMemberCount(invitation.organizationId);
-    } catch (error) {
-      logger.warn({
-        organizationId: invitation.organizationId,
-        error: error instanceof Error ? error.message : String(error),
-      }, 'Failed to sync member count after invitation acceptance');
-    }
-
     return member;
   }
 
@@ -461,16 +448,6 @@ export class OrganizationService {
         role: member.role,
       },
     });
-
-    // メンバー数を Stripe と同期（エラーでもメンバー削除は成功させる）
-    try {
-      await this.orgSubscriptionService.syncMemberCount(organizationId);
-    } catch (error) {
-      logger.warn({
-        organizationId,
-        error: error instanceof Error ? error.message : String(error),
-      }, 'Failed to sync member count after member removal');
-    }
 
     return result;
   }

@@ -398,7 +398,7 @@ describe('Project CRUD API 統合テスト', () => {
       const response = await request(app)
         .post(`/api/projects/${project.id}/members`)
         .send({
-          userId: newUser.id,
+          email: newUser.email,
         })
         .expect(201);
 
@@ -415,7 +415,7 @@ describe('Project CRUD API 統合テスト', () => {
       const response = await request(app)
         .post(`/api/projects/${project.id}/members`)
         .send({
-          userId: newUser.id,
+          email: newUser.email,
           role: 'WRITE',
         })
         .expect(201);

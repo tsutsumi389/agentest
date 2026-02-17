@@ -1,4 +1,4 @@
-import { prisma, type UserPlan } from '@agentest/db';
+import { prisma } from '@agentest/db';
 
 /**
  * ユーザーリポジトリ
@@ -35,16 +35,6 @@ export class UserRepository {
     return prisma.user.update({
       where: { id },
       data,
-    });
-  }
-
-  /**
-   * ユーザーのプランを更新
-   */
-  async updatePlan(id: string, plan: UserPlan) {
-    return prisma.user.update({
-      where: { id },
-      data: { plan },
     });
   }
 

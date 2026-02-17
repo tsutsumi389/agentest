@@ -19,7 +19,6 @@ let mockAuthUser: {
   email: string;
   name: string;
   avatarUrl: string | null;
-  plan: string;
   createdAt: Date;
 } | null = null;
 
@@ -109,7 +108,6 @@ describe('Auth API Integration Tests', () => {
         email: testUser.email,
         name: testUser.name,
         avatarUrl: testUser.avatarUrl,
-        plan: 'FREE',
         createdAt: testUser.createdAt,
       });
 
@@ -128,7 +126,6 @@ describe('Auth API Integration Tests', () => {
         email: testUser.email,
         name: testUser.name,
         avatarUrl: 'https://example.com/avatar.png',
-        plan: 'PRO',
         createdAt: testUser.createdAt,
       });
 
@@ -139,7 +136,6 @@ describe('Auth API Integration Tests', () => {
       expect(response.body.user).toHaveProperty('email');
       expect(response.body.user).toHaveProperty('name');
       expect(response.body.user).toHaveProperty('avatarUrl');
-      expect(response.body.user).toHaveProperty('plan');
       expect(response.body.user).toHaveProperty('createdAt');
     });
 
@@ -302,7 +298,6 @@ describe('Auth API Integration Tests', () => {
         email: testUser.email,
         name: testUser.name,
         avatarUrl: testUser.avatarUrl,
-        plan: 'FREE',
         createdAt: testUser.createdAt,
       });
     });

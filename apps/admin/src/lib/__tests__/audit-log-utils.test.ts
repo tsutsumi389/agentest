@@ -10,11 +10,10 @@ describe('audit-log-utils', () => {
       expect(CATEGORY_LABELS.MEMBER).toBe('メンバー');
       expect(CATEGORY_LABELS.PROJECT).toBe('プロジェクト');
       expect(CATEGORY_LABELS.API_TOKEN).toBe('APIトークン');
-      expect(CATEGORY_LABELS.BILLING).toBe('課金');
     });
 
-    it('7つのカテゴリが存在する', () => {
-      expect(Object.keys(CATEGORY_LABELS)).toHaveLength(7);
+    it('6つのカテゴリが存在する', () => {
+      expect(Object.keys(CATEGORY_LABELS)).toHaveLength(6);
     });
   });
 });

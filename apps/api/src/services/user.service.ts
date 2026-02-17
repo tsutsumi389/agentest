@@ -56,7 +56,6 @@ export class UserService {
             name: true,
             description: true,
             avatarUrl: true,
-            plan: true,
             createdAt: true,
             deletedAt: true,
             _count: {

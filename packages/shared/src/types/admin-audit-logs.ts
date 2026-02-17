@@ -15,8 +15,7 @@ export type AdminAuditLogCategory =
   | 'ORGANIZATION'
   | 'MEMBER'
   | 'PROJECT'
-  | 'API_TOKEN'
-  | 'BILLING';
+  | 'API_TOKEN';
 
 /**
  * カテゴリ一覧（フィルター用）
@@ -28,7 +27,6 @@ export const ADMIN_AUDIT_LOG_CATEGORIES: AdminAuditLogCategory[] = [
   'MEMBER',
   'PROJECT',
   'API_TOKEN',
-  'BILLING',
 ];
 
 // ============================================

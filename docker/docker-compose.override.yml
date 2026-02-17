@@ -98,14 +98,6 @@ services:
       GOOGLE_CALLBACK_URL: ${GOOGLE_CALLBACK_URL}
       # TOTP暗号化キー
       TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY:-development-totp-encryption-key-32char-minimum-length}
-      # Stripe決済
-      PAYMENT_GATEWAY: ${PAYMENT_GATEWAY:-stripe}
-      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY}
-      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET}
-      STRIPE_PRICE_PRO_MONTHLY: ${STRIPE_PRICE_PRO_MONTHLY}
-      STRIPE_PRICE_PRO_YEARLY: ${STRIPE_PRICE_PRO_YEARLY}
-      STRIPE_PRICE_TEAM_MONTHLY: ${STRIPE_PRICE_TEAM_MONTHLY}
-      STRIPE_PRICE_TEAM_YEARLY: ${STRIPE_PRICE_TEAM_YEARLY}
     ports:
       - "${API_EXTERNAL_PORT:-3001}:3001"
     restart: "no"
@@ -201,9 +193,6 @@ services:
       NODE_ENV: development
       VITE_API_URL: ${VITE_API_URL:-http://localhost:3001}
       VITE_WS_URL: ${VITE_WS_URL:-ws://localhost:3002}
-      # Stripe決済（フロントエンド）
-      VITE_PAYMENT_GATEWAY: ${VITE_PAYMENT_GATEWAY:-stripe}
-      VITE_STRIPE_PUBLISHABLE_KEY: ${VITE_STRIPE_PUBLISHABLE_KEY}
       # Docker内部でのAPIプロキシ先
       VITE_API_PROXY_TARGET: http://api:3001
     ports:

@@ -11,7 +11,6 @@ import {
   createTestProject,
   createTestSuite,
   createTestAccount,
-  createTestSubscription,
   createTestAuditLog,
   cleanupTestData,
 } from './test-helpers.js';
@@ -63,7 +62,6 @@ describe('Admin Users API Integration Tests', () => {
       const testUser = await createTestUser({
         email: 'target@example.com',
         name: 'Target User',
-        plan: 'PRO',
       });
 
       const response = await request(app)
@@ -134,7 +132,6 @@ describe('Admin Users API Integration Tests', () => {
       const testUser = await createTestUser({
         email: 'basic@example.com',
         name: 'Basic User',
-        plan: 'PRO',
         avatarUrl: 'https://example.com/avatar.png',
       });
 
@@ -147,7 +144,6 @@ describe('Admin Users API Integration Tests', () => {
       expect(user.id).toBe(testUser.id);
       expect(user.email).toBe('basic@example.com');
       expect(user.name).toBe('Basic User');
-      expect(user.plan).toBe('PRO');
       expect(user.avatarUrl).toBe('https://example.com/avatar.png');
       expect(user.createdAt).toBeDefined();
       expect(user.updatedAt).toBeDefined();
@@ -270,52 +266,6 @@ describe('Admin Users API Integration Tests', () => {
       expect(oauthProviders[0].createdAt).toBeDefined();
     });
 
-    it('レスポンスにsubscription情報が含まれる（サブスクリプションあり）', async () => {
-      const testUser = await createTestUser({
-        email: 'subscription@example.com',
-        name: 'Subscription User',
-        plan: 'PRO',
-      });
-
-      // サブスクリプションを作成
-      await createTestSubscription({
-        userId: testUser.id,
-        plan: 'PRO',
-        status: 'ACTIVE',
-        billingCycle: 'MONTHLY',
-        cancelAtPeriodEnd: false,
-      });
-
-      const response = await request(app)
-        .get(`/admin/users/${testUser.id}`)
-        .set('Cookie', sessionCookie);
-
-      expect(response.status).toBe(200);
-      const subscription = response.body.user.subscription;
-      expect(subscription).toBeDefined();
-      expect(subscription.plan).toBe('PRO');
-      expect(subscription.status).toBe('ACTIVE');
-      expect(subscription.billingCycle).toBe('MONTHLY');
-      expect(subscription.currentPeriodStart).toBeDefined();
-      expect(subscription.currentPeriodEnd).toBeDefined();
-      expect(subscription.cancelAtPeriodEnd).toBe(false);
-    });
-
-    it('レスポンスにsubscription情報がnullの場合', async () => {
-      const testUser = await createTestUser({
-        email: 'no-subscription@example.com',
-        name: 'No Subscription User',
-        plan: 'FREE',
-      });
-
-      const response = await request(app)
-        .get(`/admin/users/${testUser.id}`)
-        .set('Cookie', sessionCookie);
-
-      expect(response.status).toBe(200);
-      expect(response.body.user.subscription).toBeNull();
-    });
-
     it('レスポンスにrecentAuditLogs情報が含まれる', async () => {
       const testUser = await createTestUser({
         email: 'auditlog@example.com',
@@ -358,7 +308,6 @@ describe('Admin Users API Integration Tests', () => {
       const testUser = await createTestUser({
         email: 'complete@example.com',
         name: 'Complete User',
-        plan: 'PRO',
         avatarUrl: 'https://example.com/avatar.png',
       });
 
@@ -385,13 +334,6 @@ describe('Admin Users API Integration Tests', () => {
       // OAuthアカウント
       await createTestAccount(testUser.id, { provider: 'github' });
 
-      // サブスクリプション
-      await createTestSubscription({
-        userId: testUser.id,
-        plan: 'PRO',
-        status: 'ACTIVE',
-      });
-
       // 監査ログ
       await createTestAuditLog({
         userId: testUser.id,
@@ -410,7 +352,6 @@ describe('Admin Users API Integration Tests', () => {
       expect(user.id).toBe(testUser.id);
       expect(user.email).toBe('complete@example.com');
       expect(user.name).toBe('Complete User');
-      expect(user.plan).toBe('PRO');
 
       // activity
       expect(user.activity.activeSessionCount).toBeGreaterThanOrEqual(1);
@@ -427,10 +368,6 @@ describe('Admin Users API Integration Tests', () => {
       // oauthProviders
       expect(user.oauthProviders).toHaveLength(1);
       expect(user.oauthProviders[0].provider).toBe('github');
-
-      // subscription
-      expect(user.subscription).not.toBeNull();
-      expect(user.subscription.plan).toBe('PRO');
 
       // recentAuditLogs
       expect(user.recentAuditLogs.length).toBeGreaterThanOrEqual(1);

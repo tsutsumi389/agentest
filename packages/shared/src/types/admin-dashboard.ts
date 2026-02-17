@@ -42,11 +42,6 @@ export interface AdminDashboardSystemHealth {
 export interface AdminDashboardUserStats {
   /** 総ユーザー数 */
   total: number;
-  /** プラン別ユーザー数 */
-  byPlan: {
-    free: number;
-    pro: number;
-  };
   /** 当月新規ユーザー数 */
   newThisMonth: number;
   /** アクティブユーザー数（30日以内にログイン） */
@@ -63,11 +58,6 @@ export interface AdminDashboardUserStats {
 export interface AdminDashboardOrgStats {
   /** 総組織数 */
   total: number;
-  /** プラン別組織数 */
-  byPlan: {
-    team: number;
-    enterprise: number;
-  };
   /** 当月新規組織数 */
   newThisMonth: number;
   /** アクティブ組織数（30日以内にアクティビティあり） */
@@ -93,24 +83,6 @@ export interface AdminDashboardExecutionStats {
 }
 
 // ============================================
-// 収益統計
-// ============================================
-
-/**
- * 収益統計情報
- */
-export interface AdminDashboardRevenueStats {
-  /** 月間経常収益（円） */
-  mrr: number;
-  /** 請求書ステータス別件数 */
-  invoices: {
-    paid: number;
-    pending: number;
-    failed: number;
-  };
-}
-
-// ============================================
 // ダッシュボード統合レスポンス
 // ============================================
 
@@ -124,8 +96,6 @@ export interface AdminDashboardStats {
   organizations: AdminDashboardOrgStats;
   /** テスト実行統計 */
   executions: AdminDashboardExecutionStats;
-  /** 収益統計 */
-  revenue: AdminDashboardRevenueStats;
   /** システムヘルス */
   systemHealth: AdminDashboardSystemHealth;
   /** 取得日時（ISO 8601形式） */

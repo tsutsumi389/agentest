@@ -14,7 +14,7 @@ export type AdminUserStatus = 'active' | 'deleted' | 'all';
 /**
  * ソート項目
  */
-export type AdminUserSortBy = 'createdAt' | 'name' | 'email' | 'plan';
+export type AdminUserSortBy = 'createdAt' | 'name' | 'email';
 
 /**
  * ユーザー検索パラメータ
@@ -22,8 +22,6 @@ export type AdminUserSortBy = 'createdAt' | 'name' | 'email' | 'plan';
 export interface AdminUserSearchParams {
   /** 検索クエリ（メール・名前で部分一致） */
   q?: string;
-  /** プランフィルタ（カンマ区切り） */
-  plan?: ('FREE' | 'PRO')[];
   /** ステータスフィルタ */
   status?: AdminUserStatus;
   /** 登録日From */
@@ -68,8 +66,6 @@ export interface AdminUserListItem {
   name: string;
   /** アバターURL */
   avatarUrl: string | null;
-  /** プラン */
-  plan: 'FREE' | 'PRO';
   /** 作成日時 */
   createdAt: string;
   /** 更新日時 */
@@ -133,25 +129,6 @@ export interface AdminUserOAuthProvider {
 }
 
 /**
- * サブスクリプション情報
- * 注: planはサブスクリプションプラン（4種類）で、ユーザープラン（FREE/PRO）とは異なる
- */
-export interface AdminUserSubscription {
-  /** サブスクリプションプラン（ユーザープランとは別概念） */
-  plan: 'FREE' | 'PRO' | 'TEAM' | 'ENTERPRISE';
-  /** ステータス */
-  status: 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'TRIALING';
-  /** 請求サイクル */
-  billingCycle: 'MONTHLY' | 'YEARLY';
-  /** 現在の期間開始日 */
-  currentPeriodStart: string;
-  /** 現在の期間終了日 */
-  currentPeriodEnd: string;
-  /** 期間終了時にキャンセル予定 */
-  cancelAtPeriodEnd: boolean;
-}
-
-/**
  * 監査ログエントリ
  */
 export interface AdminUserAuditLogEntry {
@@ -183,8 +160,6 @@ export interface AdminUserDetail {
   name: string;
   /** アバターURL */
   avatarUrl: string | null;
-  /** ユーザープラン（個人向け: FREE/PRO。組織向けはSubscription.planで管理） */
-  plan: 'FREE' | 'PRO';
   /** 作成日時 */
   createdAt: string;
   /** 更新日時 */
@@ -213,8 +188,6 @@ export interface AdminUserDetail {
   organizations: AdminUserOrganization[];
   /** OAuth連携プロバイダー一覧 */
   oauthProviders: AdminUserOAuthProvider[];
-  /** サブスクリプション情報 */
-  subscription: AdminUserSubscription | null;
   /** 最近の監査ログ */
   recentAuditLogs: AdminUserAuditLogEntry[];
 }

@@ -3,13 +3,9 @@
  * JOB_NAME環境変数で実行するジョブを振り分ける
  */
 import { runHistoryCleanup } from './jobs/history-cleanup.js';
-import { runWebhookRetry } from './jobs/webhook-retry.js';
-import { runPaymentEventCleanup } from './jobs/payment-event-cleanup.js';
-import { runSubscriptionSync } from './jobs/subscription-sync.js';
 import { runProjectCleanup } from './jobs/project-cleanup.js';
 import { runMetricsAggregation } from './jobs/metrics-aggregation.js';
 import { runMetricsBackfill } from './jobs/metrics-backfill.js';
-import { runPlanDistributionAggregation } from './jobs/plan-distribution-aggregation.js';
 import { closeRedis } from './lib/redis.js';
 import { closePrisma } from './lib/prisma.js';
 import { registerProcessHandlers } from '@agentest/shared';
@@ -37,13 +33,9 @@ registerProcessHandlers({
 // 利用可能なジョブの定義
 const jobs: Record<string, () => Promise<void>> = {
   'history-cleanup': runHistoryCleanup,
-  'webhook-retry': runWebhookRetry,
-  'payment-event-cleanup': runPaymentEventCleanup,
-  'subscription-sync': runSubscriptionSync,
   'project-cleanup': runProjectCleanup,
   'metrics-aggregation': runMetricsAggregation,
   'metrics-backfill': runMetricsBackfill,
-  'plan-distribution-aggregation': runPlanDistributionAggregation,
 };
 
 async function main() {

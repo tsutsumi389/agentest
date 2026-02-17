@@ -14,7 +14,7 @@ export type AdminOrganizationStatus = 'active' | 'deleted' | 'all';
 /**
  * ソート項目
  */
-export type AdminOrganizationSortBy = 'createdAt' | 'name' | 'plan';
+export type AdminOrganizationSortBy = 'createdAt' | 'name';
 
 /**
  * 組織検索パラメータ
@@ -25,8 +25,6 @@ export type AdminOrganizationSortBy = 'createdAt' | 'name' | 'plan';
 export interface AdminOrganizationSearchParams {
   /** 検索クエリ（名前で部分一致） */
   q?: string;
-  /** プランフィルタ（カンマ区切り） */
-  plan?: ('NONE' | 'TEAM' | 'ENTERPRISE')[];
   /** ステータスフィルタ */
   status?: AdminOrganizationStatus;
   /** 登録日From */
@@ -83,10 +81,6 @@ export interface AdminOrganizationListItem {
   description: string | null;
   /** アバターURL */
   avatarUrl: string | null;
-  /** プラン */
-  plan: 'NONE' | 'TEAM' | 'ENTERPRISE';
-  /** 請求先メールアドレス */
-  billingEmail: string | null;
   /** 作成日時 */
   createdAt: string;
   /** 更新日時 */
@@ -166,27 +160,6 @@ export interface AdminOrganizationProject {
 }
 
 /**
- * 組織サブスクリプション情報
- * 注: Subscriptionテーブルはユーザー・組織共用のため、planにはFREE/PROも含まれる。
- * 組織のサブスクリプションでは通常TEAM/ENTERPRISEが使用される。
- * (NONEはOrganization.planの値であり、Subscription.planには含まれない)
- */
-export interface AdminOrganizationSubscription {
-  /** プラン（SubscriptionPlan enum） */
-  plan: 'FREE' | 'PRO' | 'TEAM' | 'ENTERPRISE';
-  /** ステータス */
-  status: 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'TRIALING';
-  /** 請求サイクル */
-  billingCycle: 'MONTHLY' | 'YEARLY';
-  /** 現在の請求期間開始日 */
-  currentPeriodStart: string;
-  /** 現在の請求期間終了日 */
-  currentPeriodEnd: string;
-  /** 期間終了時にキャンセル予定か */
-  cancelAtPeriodEnd: boolean;
-}
-
-/**
  * 組織監査ログエントリ
  */
 export interface AdminOrganizationAuditLogEntry {
@@ -234,12 +207,6 @@ export interface AdminOrganizationDetail {
   description: string | null;
   /** アバターURL */
   avatarUrl: string | null;
-  /** プラン */
-  plan: 'NONE' | 'TEAM' | 'ENTERPRISE';
-  /** 請求先メールアドレス */
-  billingEmail: string | null;
-  /** 決済顧客ID */
-  paymentCustomerId: string | null;
   /** 作成日時 */
   createdAt: string;
   /** 更新日時 */
@@ -252,8 +219,6 @@ export interface AdminOrganizationDetail {
   members: AdminOrganizationMember[];
   /** プロジェクト一覧（最新10件） */
   projects: AdminOrganizationProject[];
-  /** サブスクリプション情報 */
-  subscription: AdminOrganizationSubscription | null;
   /** 監査ログ（最新10件） */
   recentAuditLogs: AdminOrganizationAuditLogEntry[];
 }

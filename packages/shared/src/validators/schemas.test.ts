@@ -30,12 +30,9 @@ import {
   adminOrganizationSearchSchema,
   adminAuditLogSearchSchema,
   activeUserMetricsQuerySchema,
-  planDistributionQuerySchema,
   systemAdminSearchSchema,
   systemAdminInviteSchema,
   acceptInvitationSchema,
-  userPlanSchema,
-  organizationPlanSchema,
   organizationRoleSchema,
   projectRoleSchema,
   entityStatusSchema,
@@ -105,24 +102,6 @@ describe('共通スキーマ', () => {
 });
 
 describe('Enumスキーマ', () => {
-  describe('userPlanSchema', () => {
-    it('FREEとPROを受け入れる', () => {
-      expect(userPlanSchema.safeParse('FREE').success).toBe(true);
-      expect(userPlanSchema.safeParse('PRO').success).toBe(true);
-    });
-
-    it('無効な値を拒否する', () => {
-      expect(userPlanSchema.safeParse('INVALID').success).toBe(false);
-    });
-  });
-
-  describe('organizationPlanSchema', () => {
-    it('TEAMとENTERPRISEを受け入れる', () => {
-      expect(organizationPlanSchema.safeParse('TEAM').success).toBe(true);
-      expect(organizationPlanSchema.safeParse('ENTERPRISE').success).toBe(true);
-    });
-  });
-
   describe('organizationRoleSchema', () => {
     it('OWNER, ADMIN, MEMBERを受け入れる', () => {
       expect(organizationRoleSchema.safeParse('OWNER').success).toBe(true);
@@ -252,11 +231,10 @@ describe('組織スキーマ', () => {
       expect(result.success).toBe(true);
     });
 
-    it('descriptionとbillingEmailを含められる', () => {
+    it('descriptionを含められる', () => {
       const result = organizationCreateSchema.safeParse({
         name: 'テスト組織',
         description: 'テスト用の組織です',
-        billingEmail: 'billing@example.com',
       });
       expect(result.success).toBe(true);
     });
@@ -725,12 +703,6 @@ describe('管理者向けスキーマ', () => {
       });
     });
 
-    it('planをカンマ区切りから配列に変換する', () => {
-      const result = adminUserSearchSchema.parse({
-        plan: 'FREE,PRO',
-      });
-      expect(result.plan).toEqual(['FREE', 'PRO']);
-    });
   });
 
   describe('adminOrganizationSearchSchema', () => {
@@ -790,21 +762,6 @@ describe('メトリクスクエリスキーマ', () => {
     });
   });
 
-  describe('planDistributionQuerySchema', () => {
-    it('includeMembersを文字列からbooleanに変換する', () => {
-      const result1 = planDistributionQuerySchema.parse({ includeMembers: 'true' });
-      expect(result1.includeMembers).toBe(true);
-
-      const result2 = planDistributionQuerySchema.parse({ includeMembers: 'false' });
-      expect(result2.includeMembers).toBe(false);
-    });
-
-    it('viewの全ての値を受け入れる', () => {
-      expect(planDistributionQuerySchema.safeParse({ view: 'combined' }).success).toBe(true);
-      expect(planDistributionQuerySchema.safeParse({ view: 'users' }).success).toBe(true);
-      expect(planDistributionQuerySchema.safeParse({ view: 'organizations' }).success).toBe(true);
-    });
-  });
 });
 
 describe('システム管理者スキーマ', () => {
