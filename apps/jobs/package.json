@@ -15,8 +15,7 @@
     "@agentest/db": "workspace:*",
     "@agentest/shared": "workspace:*",
     "ioredis": "catalog:",
-    "nodemailer": "^7.0.12",
-    "stripe": "^20.2.0"
+    "nodemailer": "^7.0.12"
   },
   "devDependencies": {
     "@types/node": "catalog:",
