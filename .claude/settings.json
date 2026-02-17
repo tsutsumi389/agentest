@@ -1,4 +1,9 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(docker compose *)"
+    ]
+  },
   "plansDirectory": "docs/plans",
   "enabledPlugins": {
     "everything-claude-code@everything-claude-code": true
