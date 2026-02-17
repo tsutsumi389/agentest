@@ -95,7 +95,7 @@ gcloud run jobs create agentest-jobs \
   --image gcr.io/PROJECT_ID/agentest-jobs:latest \
   --region asia-northeast1 \
   --task-timeout=30m \
-  --set-secrets=DATABASE_URL=DATABASE_URL:latest,REDIS_URL=REDIS_URL:latest,STRIPE_SECRET_KEY=STRIPE_SECRET_KEY:latest \
+  --set-secrets=DATABASE_URL=DATABASE_URL:latest,REDIS_URL=REDIS_URL:latest \
   --set-env-vars SMTP_HOST=smtp.sendgrid.net,SMTP_PORT=587,SMTP_FROM=noreply@agentest.io
 ```
 
@@ -107,9 +107,6 @@ gcloud run jobs create agentest-jobs \
 |---------|---------|---------|
 | history-cleanup | `0 3 * * *` (毎日 3:00 JST) | `JOB_NAME=history-cleanup` |
 | project-cleanup | `0 4 * * *` (毎日 4:00 JST) | `JOB_NAME=project-cleanup` |
-| webhook-retry | `0 * * * *` (毎時 0分) | `JOB_NAME=webhook-retry` |
-| payment-event-cleanup | `0 4 * * 0` (毎週日曜 4:00 JST) | `JOB_NAME=payment-event-cleanup` |
-| subscription-sync | `0 5 * * 0` (毎週日曜 5:00 JST) | `JOB_NAME=subscription-sync` |
 
 ```bash
 # history-cleanup
@@ -121,36 +118,6 @@ gcloud scheduler jobs create http agentest-history-cleanup \
   --http-method=POST \
   --oauth-service-account-email=SERVICE_ACCOUNT@PROJECT_ID.iam.gserviceaccount.com \
   --message-body='{"overrides":{"containerOverrides":[{"env":[{"name":"JOB_NAME","value":"history-cleanup"}]}]}}'
-
-# webhook-retry
-gcloud scheduler jobs create http agentest-webhook-retry \
-  --location=asia-northeast1 \
-  --schedule="0 * * * *" \
-  --time-zone="Asia/Tokyo" \
-  --uri="https://asia-northeast1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/PROJECT_ID/jobs/agentest-jobs:run" \
-  --http-method=POST \
-  --oauth-service-account-email=SERVICE_ACCOUNT@PROJECT_ID.iam.gserviceaccount.com \
-  --message-body='{"overrides":{"containerOverrides":[{"env":[{"name":"JOB_NAME","value":"webhook-retry"}]}]}}'
-
-# payment-event-cleanup
-gcloud scheduler jobs create http agentest-payment-event-cleanup \
-  --location=asia-northeast1 \
-  --schedule="0 4 * * 0" \
-  --time-zone="Asia/Tokyo" \
-  --uri="https://asia-northeast1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/PROJECT_ID/jobs/agentest-jobs:run" \
-  --http-method=POST \
-  --oauth-service-account-email=SERVICE_ACCOUNT@PROJECT_ID.iam.gserviceaccount.com \
-  --message-body='{"overrides":{"containerOverrides":[{"env":[{"name":"JOB_NAME","value":"payment-event-cleanup"}]}]}}'
-
-# subscription-sync
-gcloud scheduler jobs create http agentest-subscription-sync \
-  --location=asia-northeast1 \
-  --schedule="0 5 * * 0" \
-  --time-zone="Asia/Tokyo" \
-  --uri="https://asia-northeast1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/PROJECT_ID/jobs/agentest-jobs:run" \
-  --http-method=POST \
-  --oauth-service-account-email=SERVICE_ACCOUNT@PROJECT_ID.iam.gserviceaccount.com \
-  --message-body='{"overrides":{"containerOverrides":[{"env":[{"name":"JOB_NAME","value":"subscription-sync"}]}]}}'
 
 # project-cleanup
 gcloud scheduler jobs create http agentest-project-cleanup \

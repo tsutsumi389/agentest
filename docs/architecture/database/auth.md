@@ -22,17 +22,9 @@
 | `totpEnabled` | BOOLEAN | NO | false | 2FA有効フラグ |
 | `failedAttempts` | INT | NO | 0 | ログイン連続失敗回数 |
 | `lockedUntil` | TIMESTAMP | YES | NULL | アカウントロック解除日時 |
-| `plan` | ENUM | NO | FREE | 個人プラン（FREE, PRO） |
 | `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
 | `updatedAt` | TIMESTAMP | NO | now() | 更新日時 |
 | `deletedAt` | TIMESTAMP | YES | NULL | 削除日時（論理削除、30日後に物理削除） |
-
-### 個人プラン
-
-| プラン | 説明 |
-|--------|------|
-| `FREE` | 無料プラン（個人利用・評価目的） |
-| `PRO` | 有料プラン $10/月（個人の本格利用） |
 
 ### 制約
 
@@ -42,11 +34,6 @@
 ### Prisma スキーマ
 
 ```prisma
-enum UserPlan {
-  FREE
-  PRO
-}
-
 model User {
   id             String    @id @default(uuid()) @db.Uuid
   email          String    @unique @db.VarChar(255)
@@ -58,7 +45,6 @@ model User {
   totpEnabled    Boolean   @default(false) @map("totp_enabled")
   failedAttempts Int       @default(0) @map("failed_attempts")
   lockedUntil    DateTime? @map("locked_until")
-  plan           UserPlan  @default(FREE)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
   deletedAt      DateTime?
@@ -79,11 +65,9 @@ model User {
   testSuiteHistories    TestSuiteHistory[]
   testCaseHistories     TestCaseHistory[]
   apiTokens             ApiToken[]
-  subscription          Subscription?
   notifications         Notification[]
   notificationPrefs     NotificationPreference[]
   auditLogs             AuditLog[]
-  usageRecords          UsageRecord[]
 }
 ```
 
@@ -346,11 +330,9 @@ model EmailVerificationToken {
 | USR-004 | OAuth 連携解除 | 連携済みプロバイダーの解除（パスワード設定済みなら全解除可能） |
 | USR-005 | セッション管理 | アクティブセッションの確認・無効化 |
 | USR-006 | アカウント削除 | 自身のアカウントを削除（30日後に物理削除） |
-| USR-007 | 個人プラン選択 | Free / Pro プランの選択・変更 |
 
 ## 関連ドキュメント
 
 - [テーブル一覧](./index.md)
 - [組織・プロジェクト](./organization.md)
 - [API トークン](./api-token.md)
-- [課金・サブスクリプション](./billing.md)

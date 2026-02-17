@@ -126,42 +126,6 @@ SMTP_FROM=noreply@agentest.local
 
 Mailpit は送信されたメールを全てキャプチャし、Web UI で確認できます。実際のメール送信は行われません。
 
-## Stripe 開発・テスト
-
-### Mock ゲートウェイ（デフォルト）
-
-デフォルトでは `PAYMENT_GATEWAY=mock` が設定されており、Stripe アカウントなしで課金機能の開発が可能です。Mock ゲートウェイはインメモリでデータを管理し、実際の決済は行いません。
-
-### Stripe テストモードでの動作確認
-
-Stripe の実際の API を使って動作確認する場合：
-
-1. `.env` に以下を設定：
-
-```env
-PAYMENT_GATEWAY=stripe
-STRIPE_SECRET_KEY=sk_test_xxx
-STRIPE_PUBLISHABLE_KEY=pk_test_xxx
-STRIPE_WEBHOOK_SECRET=whsec_xxx
-STRIPE_PRICE_PRO_MONTHLY=price_xxx
-STRIPE_PRICE_PRO_YEARLY=price_xxx
-VITE_PAYMENT_GATEWAY=stripe
-VITE_STRIPE_PUBLISHABLE_KEY=pk_test_xxx
-```
-
-2. テストカード番号: `4242 4242 4242 4242`（有効期限・CVC は任意）
-
-### Webhook テスト
-
-Stripe CLI を使用してローカルで Webhook イベントをテストできます：
-
-```bash
-# Stripe CLI でイベントをローカルに転送
-stripe listen --forward-to localhost:3001/webhooks/stripe
-```
-
-表示される Webhook シークレット（`whsec_xxx`）を `.env` の `STRIPE_WEBHOOK_SECRET` に設定してください。
-
 ## ログ設定
 
 バックエンドサービス（API, WS, Jobs, MCP Server）は [Pino](https://getpino.io/) を使用した構造化JSONログを出力します。

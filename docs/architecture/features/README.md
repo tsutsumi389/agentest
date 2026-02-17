@@ -36,18 +36,17 @@
 |------|------|-------------|
 | MCP連携 | AIエージェント連携（MCPサーバー）- 検索/取得/作成/更新/削除ツール、MCP Apps（テストスイート一覧App）実装済 | [mcp-integration.md](./mcp-integration.md) |
 
-### 通知・課金
+### 通知
 
 | 機能 | 説明 | ドキュメント |
 |------|------|-------------|
 | 通知 | メール・アプリ内通知、WebSocket リアルタイム配信 | [notification.md](./notification.md) |
-| 課金 | サブスクリプション、請求 | [billing.md](./billing.md) |
 
 ### バッチ処理
 
 | 機能 | 説明 | ドキュメント |
 |------|------|-------------|
-| バッチ処理 | 履歴クリーンアップ、Webhook再処理、Stripe同期 | [batch-processing.md](./batch-processing.md) |
+| バッチ処理 | 履歴クリーンアップ、メトリクス集計 | [batch-processing.md](./batch-processing.md) |
 
 ### 管理者システム
 

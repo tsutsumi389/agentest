@@ -209,8 +209,6 @@ erDiagram
         string name
         string description
         string avatarUrl
-        enum plan
-        string billingEmail
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt
@@ -252,28 +250,6 @@ erDiagram
 - 移譲後、現オーナーはADMINになる
 - 1組織に1人のOWNERのみ
 
-### プラン
-
-| プラン | 説明 | 料金 |
-|--------|------|------|
-| (無料) | 組織作成直後のデフォルト状態 | ¥0 |
-| TEAM | チーム向けプラン | ¥1,200/ユーザー/月 または ¥12,000/ユーザー/年 |
-| ENTERPRISE | エンタープライズプラン | 要問い合わせ（初期リリース対象外） |
-
-### TEAM プラン機能
-
-- プロジェクト数: 無制限
-- テストケース数: 無制限
-- MCP連携: 利用可能
-- チーム機能: 利用可能
-- メンバー管理: ロールベースアクセス制御
-
-### 組織課金関連画面
-
-| 画面 | URL | 説明 |
-|------|-----|------|
-| 組織設定（請求タブ） | `/organizations/{id}/settings?tab=billing` | サブスクリプション・支払い方法管理 |
-
 ## 権限
 
 | 操作 | OWNER | ADMIN | MEMBER |
@@ -296,4 +272,3 @@ erDiagram
 
 - [メンバー管理](./member-management.md) - メンバーの招待・削除
 - [監査ログ](./audit-log.md) - 組織操作の記録
-- [組織課金](./billing.md#課金機能組織プラン) - TEAM プラン・支払い方法管理

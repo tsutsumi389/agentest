@@ -21,13 +21,12 @@ Cookie: admin_session=<session_id>
 | パラメータ | 型 | デフォルト | 説明 |
 |-----------|-----|----------|------|
 | `q` | string | - | 名前で部分一致検索（最大100文字） |
-| `plan` | string | - | プラン（TEAM,ENTERPRISE）カンマ区切り |
 | `status` | enum | `active` | active / deleted / all |
 | `createdFrom` | datetime | - | 登録日From（ISO 8601形式） |
 | `createdTo` | datetime | - | 登録日To（ISO 8601形式） |
 | `page` | number | 1 | ページ番号 |
 | `limit` | number | 20 | 1ページあたり件数（max: 100） |
-| `sortBy` | enum | `createdAt` | createdAt / name / plan |
+| `sortBy` | enum | `createdAt` | createdAt / name |
 | `sortOrder` | enum | `desc` | asc / desc |
 
 **バリデーション:**
@@ -45,8 +44,6 @@ Cookie: admin_session=<session_id>
       "name": "サンプル株式会社",
       "description": "サンプルの組織です",
       "avatarUrl": "https://example.com/avatar.png",
-      "plan": "TEAM",
-      "billingEmail": "billing@example.com",
       "createdAt": "2024-01-15T12:00:00.000Z",
       "updatedAt": "2024-06-01T09:30:00.000Z",
       "deletedAt": null,
@@ -88,8 +85,6 @@ Cookie: admin_session=<session_id>
 | name | string | 組織名 |
 | description | string \| null | 説明 |
 | avatarUrl | string \| null | アバター画像URL |
-| plan | `TEAM` \| `ENTERPRISE` | 契約プラン |
-| billingEmail | string \| null | 請求先メールアドレス |
 | createdAt | string | 作成日時（ISO 8601形式） |
 | updatedAt | string | 更新日時（ISO 8601形式） |
 | deletedAt | string \| null | 削除日時（論理削除時のみ） |
@@ -134,8 +129,6 @@ interface AdminOrganizationListItem {
   name: string;
   description: string | null;
   avatarUrl: string | null;
-  plan: 'TEAM' | 'ENTERPRISE';
-  billingEmail: string | null;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
@@ -189,7 +182,7 @@ curl -X GET "http://localhost:3001/api/v1/admin/organizations" \
   -H "Cookie: admin_session=your-session-id"
 
 # 検索・フィルタ付き
-curl -X GET "http://localhost:3001/api/v1/admin/organizations?q=sample&plan=TEAM&status=active&page=1&limit=50" \
+curl -X GET "http://localhost:3001/api/v1/admin/organizations?q=sample&status=active&page=1&limit=50" \
   -H "Cookie: admin_session=your-session-id"
 
 # ソート指定
@@ -216,7 +209,6 @@ console.log(`総組織数: ${pagination.total}`);
 // 検索・フィルタ付き
 const params = new URLSearchParams({
   q: 'sample',
-  plan: 'TEAM',
   status: 'active',
   page: '1',
   limit: '50',
@@ -231,7 +223,7 @@ const filteredResponse = await fetch(`/api/v1/admin/organizations?${params}`, {
 
 const data = await filteredResponse.json();
 data.organizations.forEach((org) => {
-  console.log(`${org.name} - ${org.plan}`);
+  console.log(`${org.name}`);
   console.log(`  メンバー: ${org.stats.memberCount}名`);
   console.log(`  プロジェクト: ${org.stats.projectCount}件`);
   if (org.owner) {
@@ -271,9 +263,6 @@ Cookie: admin_session=<session_id>
     "name": "サンプル株式会社",
     "description": "サンプルの組織です",
     "avatarUrl": "https://example.com/avatar.png",
-    "plan": "TEAM",
-    "billingEmail": "billing@example.com",
-    "paymentCustomerId": "cus_xxx123",
     "createdAt": "2024-01-15T12:00:00.000Z",
     "updatedAt": "2024-06-01T09:30:00.000Z",
     "deletedAt": null,
@@ -304,14 +293,6 @@ Cookie: admin_session=<session_id>
         "createdAt": "2024-02-01T10:00:00.000Z"
       }
     ],
-    "subscription": {
-      "plan": "TEAM",
-      "status": "ACTIVE",
-      "billingCycle": "MONTHLY",
-      "currentPeriodStart": "2024-06-01T00:00:00.000Z",
-      "currentPeriodEnd": "2024-07-01T00:00:00.000Z",
-      "cancelAtPeriodEnd": false
-    },
     "recentAuditLogs": [
       {
         "id": "log_123",
@@ -348,16 +329,12 @@ Cookie: admin_session=<session_id>
 | name | string | 組織名 |
 | description | string \| null | 説明 |
 | avatarUrl | string \| null | アバター画像URL |
-| plan | `TEAM` \| `ENTERPRISE` | 契約プラン |
-| billingEmail | string \| null | 請求先メールアドレス |
-| paymentCustomerId | string \| null | 決済顧客ID |
 | createdAt | string | 作成日時（ISO 8601形式） |
 | updatedAt | string | 更新日時（ISO 8601形式） |
 | deletedAt | string \| null | 削除日時（論理削除時のみ） |
 | stats | AdminOrganizationDetailStats | 組織統計情報 |
 | members | AdminOrganizationMember[] | メンバー一覧（最新20件） |
 | projects | AdminOrganizationProject[] | プロジェクト一覧（最新10件） |
-| subscription | AdminOrganizationSubscription \| null | サブスクリプション情報 |
 | recentAuditLogs | AdminOrganizationAuditLogEntry[] | 監査ログ（最新10件） |
 
 ### AdminOrganizationDetailStats
@@ -392,17 +369,6 @@ Cookie: admin_session=<session_id>
 | testSuiteCount | number | テストスイート数 |
 | createdAt | string | 作成日時（ISO 8601形式） |
 
-### AdminOrganizationSubscription
-
-| フィールド | 型 | 説明 |
-|-----------|------|------|
-| plan | `FREE` \| `PRO` \| `TEAM` \| `ENTERPRISE` | プラン |
-| status | `ACTIVE` \| `PAST_DUE` \| `CANCELED` \| `TRIALING` | ステータス |
-| billingCycle | `MONTHLY` \| `YEARLY` | 請求サイクル |
-| currentPeriodStart | string | 現在の請求期間開始日（ISO 8601形式） |
-| currentPeriodEnd | string | 現在の請求期間終了日（ISO 8601形式） |
-| cancelAtPeriodEnd | boolean | 期間終了時にキャンセル予定か |
-
 ### AdminOrganizationAuditLogEntry
 
 | フィールド | 型 | 説明 |
@@ -428,16 +394,12 @@ interface AdminOrganizationDetail {
   name: string;
   description: string | null;
   avatarUrl: string | null;
-  plan: 'TEAM' | 'ENTERPRISE';
-  billingEmail: string | null;
-  paymentCustomerId: string | null;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
   stats: AdminOrganizationDetailStats;
   members: AdminOrganizationMember[];
   projects: AdminOrganizationProject[];
-  subscription: AdminOrganizationSubscription | null;
   recentAuditLogs: AdminOrganizationAuditLogEntry[];
 }
 
@@ -465,15 +427,6 @@ interface AdminOrganizationProject {
   memberCount: number;
   testSuiteCount: number;
   createdAt: string;
-}
-
-interface AdminOrganizationSubscription {
-  plan: 'FREE' | 'PRO' | 'TEAM' | 'ENTERPRISE';
-  status: 'ACTIVE' | 'PAST_DUE' | 'CANCELED' | 'TRIALING';
-  billingCycle: 'MONTHLY' | 'YEARLY';
-  currentPeriodStart: string;
-  currentPeriodEnd: string;
-  cancelAtPeriodEnd: boolean;
 }
 
 interface AdminOrganizationAuditLogEntry {
@@ -523,7 +476,7 @@ curl -X GET "http://localhost:3001/api/v1/admin/organizations" \
   -H "Cookie: admin_session=your-session-id"
 
 # 検索・フィルタ付き
-curl -X GET "http://localhost:3001/api/v1/admin/organizations?q=sample&plan=TEAM&status=active&page=1&limit=50" \
+curl -X GET "http://localhost:3001/api/v1/admin/organizations?q=sample&status=active&page=1&limit=50" \
   -H "Cookie: admin_session=your-session-id"
 
 # ソート指定
@@ -554,7 +507,6 @@ console.log(`総組織数: ${pagination.total}`);
 // 検索・フィルタ付き
 const params = new URLSearchParams({
   q: 'sample',
-  plan: 'TEAM',
   status: 'active',
   page: '1',
   limit: '50',
@@ -569,7 +521,7 @@ const filteredResponse = await fetch(`/api/v1/admin/organizations?${params}`, {
 
 const data = await filteredResponse.json();
 data.organizations.forEach((org) => {
-  console.log(`${org.name} - ${org.plan}`);
+  console.log(`${org.name}`);
   console.log(`  メンバー: ${org.stats.memberCount}名`);
   console.log(`  プロジェクト: ${org.stats.projectCount}件`);
   if (org.owner) {
@@ -589,11 +541,6 @@ console.log(`メンバー数: ${organization.stats.memberCount}`);
 console.log(`プロジェクト数: ${organization.stats.projectCount}`);
 console.log(`テストスイート数: ${organization.stats.testSuiteCount}`);
 console.log(`テスト実行数: ${organization.stats.executionCount}`);
-
-if (organization.subscription) {
-  console.log(`プラン: ${organization.subscription.plan}`);
-  console.log(`ステータス: ${organization.subscription.status}`);
-}
 
 organization.members.forEach((member) => {
   console.log(`  ${member.name} (${member.role})`);

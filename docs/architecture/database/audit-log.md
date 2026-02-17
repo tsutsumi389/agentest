@@ -36,7 +36,6 @@
 | `MEMBER` | メンバー | 招待、ロール変更、削除 |
 | `PROJECT` | プロジェクト | 作成、設定変更、メンバー変更、削除 |
 | `API_TOKEN` | API トークン | 作成、削除 |
-| `BILLING` | 課金 | プラン変更、支払い方法変更 |
 
 ### アクション例
 
@@ -48,7 +47,6 @@
 | MEMBER | `invite`, `role_change`, `remove` |
 | PROJECT | `create`, `update`, `member_add`, `member_remove`, `delete` |
 | API_TOKEN | `create`, `revoke` |
-| BILLING | `plan_change`, `payment_method_add`, `payment_method_remove` |
 
 ### 詳細情報構造
 
@@ -66,12 +64,9 @@
 
 ### ログ保持期間
 
-| プラン | 保持期間 |
-|--------|----------|
-| Free（個人） | 30日 |
-| Pro（個人） | 30日 |
-| Team（組織） | 90日 |
-| Enterprise（組織） | 無制限 |
+| 対象 | 保持期間 |
+|------|----------|
+| 全ユーザー・組織 | 90日 |
 
 ※ 保持期間を超えたログは日次バッチで自動削除
 
@@ -85,7 +80,6 @@ enum AuditLogCategory {
   MEMBER
   PROJECT
   API_TOKEN
-  BILLING
 }
 
 model AuditLog {

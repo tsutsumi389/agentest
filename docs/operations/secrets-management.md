@@ -149,7 +149,6 @@ gcloud run services update agentest-api \
 | `MINIO_ROOT_PASSWORD` | MinIO管理者 | 年次 |
 | `TOKEN_ENCRYPTION_KEY` | OAuthトークン暗号化（AES-256-GCM） | 年次 |
 | `SENTRY_DSN` | エラー監視 | - |
-| `STRIPE_SECRET_KEY` | 決済 | 必要時 |
 
 ## 5. シークレットのローテーション
 
