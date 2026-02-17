@@ -97,7 +97,7 @@ resource "google_compute_url_map" "main" {
     default_service = google_compute_backend_service.services["web"].id
 
     path_rule {
-      paths   = ["/api/*", "/auth/*"]
+      paths   = ["/api/*"]
       service = google_compute_backend_service.services["api"].id
     }
 
