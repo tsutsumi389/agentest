@@ -31,8 +31,6 @@ const testUser = {
   email: 'user@example.com',
   name: 'Test User',
   avatarUrl: null,
-  plan: 'FREE' as const,
-  paymentCustomerId: null,
   createdAt: new Date(),
   updatedAt: new Date(),
   deletedAt: null,

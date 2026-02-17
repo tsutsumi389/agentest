@@ -18,7 +18,6 @@ describe('audit-log', () => {
       expect(AUDIT_LOG_CATEGORIES.MEMBER).toBeDefined();
       expect(AUDIT_LOG_CATEGORIES.PROJECT).toBeDefined();
       expect(AUDIT_LOG_CATEGORIES.API_TOKEN).toBeDefined();
-      expect(AUDIT_LOG_CATEGORIES.BILLING).toBeDefined();
     });
 
     it('各カテゴリにlabel, icon, color, bgColorが含まれる', () => {
@@ -49,7 +48,7 @@ describe('audit-log', () => {
     it('有効なカテゴリキーの場合はtrueを返す', () => {
       expect(isAuditLogCategoryKey('AUTH')).toBe(true);
       expect(isAuditLogCategoryKey('USER')).toBe(true);
-      expect(isAuditLogCategoryKey('BILLING')).toBe(true);
+      expect(isAuditLogCategoryKey('API_TOKEN')).toBe(true);
     });
 
     it('無効なカテゴリキーの場合はfalseを返す', () => {

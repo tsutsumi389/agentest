@@ -49,8 +49,6 @@ describe('AdminOrganizationsService', () => {
       name: string;
       description: string | null;
       avatarUrl: string | null;
-      plan: 'NONE' | 'TEAM' | 'ENTERPRISE';
-      billingEmail: string | null;
       createdAt: Date;
       updatedAt: Date;
       deletedAt: Date | null;
@@ -64,9 +62,6 @@ describe('AdminOrganizationsService', () => {
       name: 'Test Organization',
       description: 'Test description',
       avatarUrl: 'https://example.com/avatar.png',
-      plan: 'TEAM' as const,
-      paymentCustomerId: null,
-      billingEmail: 'billing@example.com',
       createdAt: new Date('2024-01-15T00:00:00.000Z'),
       updatedAt: new Date('2024-01-20T00:00:00.000Z'),
       deletedAt: null,
@@ -83,8 +78,6 @@ describe('AdminOrganizationsService', () => {
             name: 'Test Organization',
             description: 'Test description',
             avatarUrl: 'https://example.com/avatar.png',
-            plan: 'TEAM',
-            billingEmail: 'billing@example.com',
             createdAt: '2024-01-15T00:00:00.000Z',
             updatedAt: '2024-01-20T00:00:00.000Z',
             deletedAt: null,
@@ -144,8 +137,6 @@ describe('AdminOrganizationsService', () => {
         name: 'Test Organization',
         description: 'Test description',
         avatarUrl: 'https://example.com/avatar.png',
-        plan: 'TEAM',
-        billingEmail: 'billing@example.com',
         createdAt: expect.any(String),
         updatedAt: expect.any(String),
         deletedAt: null,
@@ -212,23 +203,6 @@ describe('AdminOrganizationsService', () => {
         expect.objectContaining({
           where: expect.objectContaining({
             name: { contains: 'test', mode: 'insensitive' },
-          }),
-        })
-      );
-    });
-
-    it('プランフィルタが正しくWHERE句に変換される', async () => {
-      vi.mocked(getAdminOrganizationsCache).mockResolvedValue(null);
-      vi.mocked(setAdminOrganizationsCache).mockResolvedValue(true);
-      vi.mocked(prisma.organization.findMany).mockResolvedValue([]);
-      vi.mocked(prisma.organization.count).mockResolvedValue(0);
-
-      await service.findOrganizations({ plan: ['TEAM', 'ENTERPRISE'] });
-
-      expect(prisma.organization.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: expect.objectContaining({
-            plan: { in: ['TEAM', 'ENTERPRISE'] },
           }),
         })
       );
@@ -338,21 +312,6 @@ describe('AdminOrganizationsService', () => {
       );
     });
 
-    it('ソートがplanで正しく動作する', async () => {
-      vi.mocked(getAdminOrganizationsCache).mockResolvedValue(null);
-      vi.mocked(setAdminOrganizationsCache).mockResolvedValue(true);
-      vi.mocked(prisma.organization.findMany).mockResolvedValue([]);
-      vi.mocked(prisma.organization.count).mockResolvedValue(0);
-
-      await service.findOrganizations({ sortBy: 'plan', sortOrder: 'asc' });
-
-      expect(prisma.organization.findMany).toHaveBeenCalledWith(
-        expect.objectContaining({
-          orderBy: { plan: 'asc' },
-        })
-      );
-    });
-
     it('削除済み組織のdeletedAtが正しく変換される', async () => {
       const deletedAt = new Date('2024-01-25T00:00:00.000Z');
       vi.mocked(getAdminOrganizationsCache).mockResolvedValue(null);
@@ -435,9 +394,6 @@ describe('AdminOrganizationsService', () => {
       name: string;
       description: string | null;
       avatarUrl: string | null;
-      plan: 'NONE' | 'TEAM' | 'ENTERPRISE';
-      billingEmail: string | null;
-      paymentCustomerId: string | null;
       createdAt: Date;
       updatedAt: Date;
       deletedAt: Date | null;
@@ -455,14 +411,6 @@ describe('AdminOrganizationsService', () => {
         createdAt: Date;
         _count: { members: number; testSuites: number };
       }[];
-      subscription: {
-        plan: string;
-        status: string;
-        billingCycle: string;
-        currentPeriodStart: Date;
-        currentPeriodEnd: Date;
-        cancelAtPeriodEnd: boolean;
-      } | null;
       auditLogs: {
         id: string;
         category: string;
@@ -478,9 +426,6 @@ describe('AdminOrganizationsService', () => {
       name: 'Test Organization',
       description: 'Test description',
       avatarUrl: 'https://example.com/avatar.png',
-      plan: 'TEAM' as const,
-      billingEmail: 'billing@example.com',
-      paymentCustomerId: 'cus_12345',
       createdAt: new Date('2024-01-15T00:00:00.000Z'),
       updatedAt: new Date('2024-01-20T00:00:00.000Z'),
       deletedAt: null,
@@ -507,7 +452,6 @@ describe('AdminOrganizationsService', () => {
           _count: { members: 1, testSuites: 3 },
         },
       ],
-      subscription: null,
       auditLogs: [],
       ...overrides,
     });
@@ -519,16 +463,12 @@ describe('AdminOrganizationsService', () => {
           name: 'Test Organization',
           description: 'Test description',
           avatarUrl: 'https://example.com/avatar.png',
-          plan: 'TEAM',
-          billingEmail: 'billing@example.com',
-          paymentCustomerId: 'cus_12345',
           createdAt: '2024-01-15T00:00:00.000Z',
           updatedAt: '2024-01-20T00:00:00.000Z',
           deletedAt: null,
           stats: { memberCount: 2, projectCount: 1, testSuiteCount: 5, executionCount: 10 },
           members: [],
           projects: [],
-          subscription: null,
           recentAuditLogs: [],
         },
       };
@@ -586,9 +526,6 @@ describe('AdminOrganizationsService', () => {
         name: 'Test Organization',
         description: 'Test description',
         avatarUrl: 'https://example.com/avatar.png',
-        plan: 'TEAM',
-        billingEmail: 'billing@example.com',
-        paymentCustomerId: 'cus_12345',
         createdAt: expect.any(String),
         updatedAt: expect.any(String),
         deletedAt: null,
@@ -700,50 +637,6 @@ describe('AdminOrganizationsService', () => {
         memberCount: 3,
         testSuiteCount: 5,
         createdAt: '2024-01-16T00:00:00.000Z',
-      });
-    });
-
-    it('subscription情報がnullの場合はnullを返す', async () => {
-      vi.mocked(getAdminOrganizationDetailCache).mockResolvedValue(null);
-      vi.mocked(setAdminOrganizationDetailCache).mockResolvedValue(true);
-      vi.mocked(prisma.organization.findUnique).mockResolvedValue(
-        createMockOrganizationDetailData({ subscription: null }) as never
-      );
-      vi.mocked(prisma.testSuite.count).mockResolvedValue(0);
-      vi.mocked(prisma.execution.count).mockResolvedValue(0);
-
-      const result = await service.findOrganizationById(validOrgId);
-
-      expect(result!.organization.subscription).toBeNull();
-    });
-
-    it('subscription情報が正しく変換される', async () => {
-      const mockSubscription = {
-        plan: 'TEAM',
-        status: 'ACTIVE',
-        billingCycle: 'MONTHLY',
-        currentPeriodStart: new Date('2024-01-01T00:00:00.000Z'),
-        currentPeriodEnd: new Date('2024-02-01T00:00:00.000Z'),
-        cancelAtPeriodEnd: false,
-      };
-
-      vi.mocked(getAdminOrganizationDetailCache).mockResolvedValue(null);
-      vi.mocked(setAdminOrganizationDetailCache).mockResolvedValue(true);
-      vi.mocked(prisma.organization.findUnique).mockResolvedValue(
-        createMockOrganizationDetailData({ subscription: mockSubscription }) as never
-      );
-      vi.mocked(prisma.testSuite.count).mockResolvedValue(0);
-      vi.mocked(prisma.execution.count).mockResolvedValue(0);
-
-      const result = await service.findOrganizationById(validOrgId);
-
-      expect(result!.organization.subscription).toEqual({
-        plan: 'TEAM',
-        status: 'ACTIVE',
-        billingCycle: 'MONTHLY',
-        currentPeriodStart: '2024-01-01T00:00:00.000Z',
-        currentPeriodEnd: '2024-02-01T00:00:00.000Z',
-        cancelAtPeriodEnd: false,
       });
     });
 

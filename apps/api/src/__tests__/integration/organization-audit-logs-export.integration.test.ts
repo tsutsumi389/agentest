@@ -550,7 +550,7 @@ describe('Organization Audit Logs Export API Integration Tests', () => {
       });
 
       it('全てのカテゴリでフィルタできる', async () => {
-        const categories = ['AUTH', 'USER', 'ORGANIZATION', 'MEMBER', 'PROJECT', 'API_TOKEN', 'BILLING'] as const;
+        const categories = ['AUTH', 'USER', 'ORGANIZATION', 'MEMBER', 'PROJECT', 'API_TOKEN'] as const;
 
         for (const category of categories) {
           await createTestAuditLog({

@@ -6,5 +6,4 @@ export { UserActivitySection } from './UserActivitySection';
 export { UserStatsSection } from './UserStatsSection';
 export { UserOrganizationsSection } from './UserOrganizationsSection';
 export { UserOAuthSection } from './UserOAuthSection';
-export { UserSubscriptionSection } from './UserSubscriptionSection';
 export { UserAuditLogSection } from './UserAuditLogSection';

@@ -228,23 +228,3 @@ test.describe('APIトークン管理', () => {
     await expect(page.getByText('APIトークンを失効しました')).toBeVisible({ timeout: 10000 });
   });
 });
-
-test.describe('課金設定', () => {
-  test('現在のプランが表示される', async ({ page }) => {
-    await page.goto('/settings?tab=billing');
-
-    // 課金セクションまたはプラン情報が表示される
-    await expect(
-      page.getByText(/プラン|Free|Basic|Pro/).first()
-    ).toBeVisible({ timeout: 10000 });
-  });
-
-  test('課金関連の情報が表示される', async ({ page }) => {
-    await page.goto('/settings?tab=billing');
-
-    // 課金に関する情報が表示される（請求履歴、支払い方法など）
-    await expect(
-      page.getByText(/請求|支払い|プラン|利用/).first()
-    ).toBeVisible({ timeout: 10000 });
-  });
-});

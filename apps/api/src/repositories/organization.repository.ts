@@ -19,7 +19,7 @@ export class OrganizationRepository {
   /**
    * 組織を更新
    */
-  async update(id: string, data: { name?: string; description?: string | null; billingEmail?: string | null }) {
+  async update(id: string, data: { name?: string; description?: string | null }) {
     return prisma.organization.update({
       where: { id },
       data,

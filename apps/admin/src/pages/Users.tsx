@@ -19,9 +19,6 @@ export function Users() {
   // 検索パラメータを取得
   const params: AdminUserSearchParams = {
     q: searchParams.get('q') || undefined,
-    plan: searchParams.get('plan')
-      ? (searchParams.get('plan')!.split(',') as ('FREE' | 'PRO')[])
-      : undefined,
     status: (searchParams.get('status') as AdminUserStatus) || 'active',
     createdFrom: searchParams.get('createdFrom') || undefined,
     createdTo: searchParams.get('createdTo') || undefined,
@@ -109,11 +106,9 @@ export function Users() {
               onChange={(q) => updateParams({ q })}
             />
             <UserFilters
-              plan={params.plan || []}
               status={params.status || 'active'}
               createdFrom={params.createdFrom || ''}
               createdTo={params.createdTo || ''}
-              onPlanChange={(plan) => updateParams({ plan })}
               onStatusChange={(status) => updateParams({ status })}
               onCreatedFromChange={(createdFrom) => updateParams({ createdFrom })}
               onCreatedToChange={(createdTo) => updateParams({ createdTo })}

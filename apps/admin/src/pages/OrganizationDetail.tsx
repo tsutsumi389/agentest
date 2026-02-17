@@ -6,7 +6,6 @@ import {
   OrganizationStatsSection,
   OrganizationMembersSection,
   OrganizationProjectsSection,
-  OrganizationSubscriptionSection,
   OrganizationAuditLogSection,
 } from '../components/organizations';
 import { formatDateTime } from '../lib/date-utils';
@@ -120,13 +119,9 @@ export function OrganizationDetail() {
               {/* 左カラム: メンバー一覧 */}
               <OrganizationMembersSection members={data.organization.members} />
 
-              {/* 右カラム: プロジェクト一覧 + サブスクリプション */}
+              {/* 右カラム: プロジェクト一覧 */}
               <div className="space-y-6">
                 <OrganizationProjectsSection projects={data.organization.projects} />
-                <OrganizationSubscriptionSection
-                  subscription={data.organization.subscription}
-                  billingEmail={data.organization.billingEmail}
-                />
               </div>
             </div>
 

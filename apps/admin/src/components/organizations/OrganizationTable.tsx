@@ -6,7 +6,6 @@ import type {
   AdminOrganizationPagination,
 } from '@agentest/shared/types';
 import { formatDate } from '../../lib/date-utils';
-import { OrganizationPlanBadge } from '../common';
 
 interface OrganizationTableProps {
   organizations: AdminOrganizationListItem[];
@@ -109,14 +108,6 @@ export function OrganizationTable({
               <th className="px-4 py-3 text-left text-sm font-medium text-foreground-muted">
                 オーナー
               </th>
-              <SortableHeader
-                column="plan"
-                sortBy={sortBy}
-                sortOrder={sortOrder}
-                onSort={onSort}
-              >
-                プラン
-              </SortableHeader>
               <th className="px-4 py-3 text-left text-sm font-medium text-foreground-muted">
                 統計
               </th>
@@ -134,7 +125,7 @@ export function OrganizationTable({
             {organizations.length === 0 ? (
               <tr>
                 <td
-                  colSpan={5}
+                  colSpan={4}
                   className="px-4 py-12 text-center text-foreground-muted"
                 >
                   組織が見つかりません
@@ -205,11 +196,6 @@ export function OrganizationTable({
                     ) : (
                       <span className="text-sm text-foreground-muted">-</span>
                     )}
-                  </td>
-
-                  {/* プラン */}
-                  <td className="px-4 py-3">
-                    <OrganizationPlanBadge plan={org.plan} />
                   </td>
 
                   {/* 統計 */}

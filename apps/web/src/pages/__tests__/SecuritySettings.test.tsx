@@ -81,11 +81,6 @@ vi.mock('../../lib/api', () => ({
   },
 }));
 
-// BillingSettings モック
-vi.mock('../../components/settings/BillingSettings', () => ({
-  BillingSettings: () => <div data-testid="billing-settings">BillingSettings</div>,
-}));
-
 import { SettingsPage } from '../Settings';
 
 // ヘルパー関数

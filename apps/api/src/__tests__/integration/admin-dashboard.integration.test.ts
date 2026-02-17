@@ -18,8 +18,6 @@ import {
   createTestExecutionTestCaseExpectedResult,
   createTestCaseExpectedResult,
   createTestExecutionExpectedResult,
-  createTestSubscription,
-  createTestInvoice,
   cleanupTestData,
 } from './test-helpers.js';
 import { createApp } from '../../app.js';
@@ -71,7 +69,6 @@ describe('Admin Dashboard API Integration Tests', () => {
       expect(response.body).toHaveProperty('users');
       expect(response.body).toHaveProperty('organizations');
       expect(response.body).toHaveProperty('executions');
-      expect(response.body).toHaveProperty('revenue');
       expect(response.body).toHaveProperty('systemHealth');
       expect(response.body).toHaveProperty('fetchedAt');
     });
@@ -85,9 +82,9 @@ describe('Admin Dashboard API Integration Tests', () => {
 
     it('ユーザー統計が正しく集計される', async () => {
       // テストユーザーを作成
-      const user1 = await createTestUser({ plan: 'FREE' });
-      await createTestUser({ plan: 'PRO' });
-      await createTestUser({ plan: 'FREE' });
+      const user1 = await createTestUser();
+      await createTestUser();
+      await createTestUser();
 
       // アクティブセッションを作成（30日以内）
       await prisma.session.create({
@@ -105,8 +102,6 @@ describe('Admin Dashboard API Integration Tests', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.users.total).toBe(3);
-      expect(response.body.users.byPlan.free).toBe(2);
-      expect(response.body.users.byPlan.pro).toBe(1);
       expect(response.body.users.activeUsers).toBe(1);
     });
 
@@ -115,8 +110,8 @@ describe('Admin Dashboard API Integration Tests', () => {
       const user = await createTestUser();
 
       // テスト組織を作成
-      await createTestOrganization(user.id, { plan: 'TEAM' });
-      await createTestOrganization(user.id, { plan: 'ENTERPRISE' });
+      await createTestOrganization(user.id);
+      await createTestOrganization(user.id);
 
       const response = await request(app)
         .get('/admin/dashboard')
@@ -124,8 +119,6 @@ describe('Admin Dashboard API Integration Tests', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.organizations.total).toBe(2);
-      expect(response.body.organizations.byPlan.team).toBe(1);
-      expect(response.body.organizations.byPlan.enterprise).toBe(1);
     });
 
     it('テスト実行統計が正しく集計される', async () => {
@@ -187,42 +180,6 @@ describe('Admin Dashboard API Integration Tests', () => {
       expect(response.body.executions.passCount).toBe(1);
       expect(response.body.executions.failCount).toBe(1);
       expect(response.body.executions.passRate).toBe(50);
-    });
-
-    it('収益統計が正しく集計される', async () => {
-      // テストユーザーを作成
-      const user1 = await createTestUser();
-      const user2 = await createTestUser();
-
-      // サブスクリプションを作成
-      const sub1 = await createTestSubscription({
-        userId: user1.id,
-        plan: 'PRO',
-        status: 'ACTIVE',
-        billingCycle: 'MONTHLY',
-      });
-      const sub2 = await createTestSubscription({
-        userId: user2.id,
-        plan: 'TEAM',
-        status: 'ACTIVE',
-        billingCycle: 'MONTHLY',
-      });
-
-      // インボイスを作成
-      await createTestInvoice(sub1.id, { status: 'PAID' });
-      await createTestInvoice(sub1.id, { status: 'PENDING' });
-      await createTestInvoice(sub2.id, { status: 'FAILED' });
-
-      const response = await request(app)
-        .get('/admin/dashboard')
-        .set('Cookie', `admin_session=${rawSessionToken}`);
-
-      expect(response.status).toBe(200);
-      // MRRの計算: PRO月払い(980) + TEAM月払い(4980) = 5960
-      expect(response.body.revenue.mrr).toBe(5960);
-      expect(response.body.revenue.invoices.paid).toBe(1);
-      expect(response.body.revenue.invoices.pending).toBe(1);
-      expect(response.body.revenue.invoices.failed).toBe(1);
     });
 
     it('システムヘルスにAPIとデータベースが含まれる', async () => {

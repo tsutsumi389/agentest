@@ -1,6 +1,6 @@
 # Agentest
 
-Coding Agent（Claude Code等）から使うテスト管理ツールSaaS。MCPでAIと連携し、テストケース作成・実行を自動化。
+Coding Agent（Claude Code等）から使うテスト管理ツール（OSS）。MCPでAIと連携し、テストケース作成・実行を自動化。
 
 ## 技術スタック
 

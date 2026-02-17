@@ -7,9 +7,6 @@ const logger = baseLogger.child({ module: 'prisma' });
 
 export { prisma } from '@agentest/db';
 
-// 型のre-export
-export type { PaymentEvent, SubscriptionStatus } from '@agentest/db';
-
 /**
  * Prisma接続をクローズ
  */

@@ -47,8 +47,6 @@ describe('AdminUsersService', () => {
       email: string;
       name: string;
       avatarUrl: string | null;
-      plan: 'FREE' | 'PRO';
-      paymentCustomerId: string | null;
       createdAt: Date;
       updatedAt: Date;
       deletedAt: Date | null;
@@ -59,14 +57,6 @@ describe('AdminUsersService', () => {
         organization: { id: string; name: string };
       }[];
       accounts: { provider: string; createdAt: Date }[];
-      subscription: {
-        plan: string;
-        status: string;
-        billingCycle: string;
-        currentPeriodStart: Date;
-        currentPeriodEnd: Date;
-        cancelAtPeriodEnd: boolean;
-      } | null;
       auditLogs: {
         id: string;
         category: string;
@@ -87,8 +77,6 @@ describe('AdminUsersService', () => {
       email: 'test@example.com',
       name: 'Test User',
       avatarUrl: 'https://example.com/avatar.png',
-      plan: 'PRO' as const,
-      paymentCustomerId: null,
       passwordHash: null,
       failedAttempts: 0,
       lockedUntil: null,
@@ -101,7 +89,6 @@ describe('AdminUsersService', () => {
       sessions: [],
       organizationMembers: [],
       accounts: [],
-      subscription: null,
       auditLogs: [],
       _count: {
         organizationMembers: 0,
@@ -119,7 +106,6 @@ describe('AdminUsersService', () => {
           email: 'test@example.com',
           name: 'Test User',
           avatarUrl: 'https://example.com/avatar.png',
-          plan: 'PRO',
           createdAt: '2024-01-15T00:00:00.000Z',
           updatedAt: '2024-01-20T00:00:00.000Z',
           deletedAt: null,
@@ -127,7 +113,6 @@ describe('AdminUsersService', () => {
           stats: { organizationCount: 0, projectCount: 0, testSuiteCount: 0, executionCount: 0 },
           organizations: [],
           oauthProviders: [],
-          subscription: null,
           recentAuditLogs: [],
         },
       };
@@ -183,7 +168,6 @@ describe('AdminUsersService', () => {
         email: 'test@example.com',
         name: 'Test User',
         avatarUrl: 'https://example.com/avatar.png',
-        plan: 'PRO',
         createdAt: expect.any(String),
         updatedAt: expect.any(String),
         deletedAt: null,
@@ -191,7 +175,6 @@ describe('AdminUsersService', () => {
         stats: expect.any(Object),
         organizations: expect.any(Array),
         oauthProviders: expect.any(Array),
-        subscription: null,
         recentAuditLogs: expect.any(Array),
       });
     });
@@ -308,48 +291,6 @@ describe('AdminUsersService', () => {
       expect(result!.user.oauthProviders[0]).toEqual({
         provider: 'github',
         createdAt: createdAt.toISOString(),
-      });
-    });
-
-    it('subscription情報がnullの場合はnullを返す', async () => {
-      vi.mocked(getAdminUserDetailCache).mockResolvedValue(null);
-      vi.mocked(setAdminUserDetailCache).mockResolvedValue(true);
-      vi.mocked(prisma.user.findUnique).mockResolvedValue(
-        createMockUserData({ subscription: null })
-      );
-
-      const result = await service.findUserById(mockUserId);
-
-      expect(result!.user.subscription).toBeNull();
-    });
-
-    it('subscription情報が正しく変換される', async () => {
-      const currentPeriodStart = new Date('2024-01-01T00:00:00.000Z');
-      const currentPeriodEnd = new Date('2024-02-01T00:00:00.000Z');
-      vi.mocked(getAdminUserDetailCache).mockResolvedValue(null);
-      vi.mocked(setAdminUserDetailCache).mockResolvedValue(true);
-      vi.mocked(prisma.user.findUnique).mockResolvedValue(
-        createMockUserData({
-          subscription: {
-            plan: 'PRO',
-            status: 'ACTIVE',
-            billingCycle: 'MONTHLY',
-            currentPeriodStart,
-            currentPeriodEnd,
-            cancelAtPeriodEnd: false,
-          },
-        })
-      );
-
-      const result = await service.findUserById(mockUserId);
-
-      expect(result!.user.subscription).toEqual({
-        plan: 'PRO',
-        status: 'ACTIVE',
-        billingCycle: 'MONTHLY',
-        currentPeriodStart: currentPeriodStart.toISOString(),
-        currentPeriodEnd: currentPeriodEnd.toISOString(),
-        cancelAtPeriodEnd: false,
       });
     });
 

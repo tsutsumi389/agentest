@@ -9,7 +9,6 @@ import {
   AlertTriangle,
   ArrowLeft,
   Loader2,
-  CreditCard,
 } from 'lucide-react';
 import { organizationsApi, ApiError, type Organization } from '../lib/api';
 import { useOrganization } from '../contexts/OrganizationContext';
@@ -20,9 +19,7 @@ import { InvitationList } from '../components/organization/InvitationList';
 import { AuditLogList } from '../components/organization/AuditLogList';
 import { TransferOwnershipModal } from '../components/organization/TransferOwnershipModal';
 import { DeleteOrganizationModal } from '../components/organization/DeleteOrganizationModal';
-import { OrgBillingSettings } from '../components/organization/billing';
-
-type SettingsTab = 'general' | 'members' | 'invitations' | 'audit-logs' | 'billing' | 'danger';
+type SettingsTab = 'general' | 'members' | 'invitations' | 'audit-logs' | 'danger';
 
 /**
  * 組織設定ページ
@@ -36,7 +33,7 @@ export function OrganizationSettingsPage() {
   // タブ状態
   const tabParam = searchParams.get('tab') as SettingsTab | null;
   const [activeTab, setActiveTab] = useState<SettingsTab>(
-    tabParam && ['general', 'members', 'invitations', 'audit-logs', 'billing', 'danger'].includes(tabParam)
+    tabParam && ['general', 'members', 'invitations', 'audit-logs', 'danger'].includes(tabParam)
       ? tabParam
       : 'general'
   );
@@ -95,13 +92,12 @@ export function OrganizationSettingsPage() {
     refreshOrganizations();
   };
 
-  // タブ定義（課金タブはOWNER/ADMINのみ表示）
+  // タブ定義
   const tabs = [
     { id: 'general' as const, label: '一般', icon: Settings },
     { id: 'members' as const, label: 'メンバー', icon: Users },
     { id: 'invitations' as const, label: '招待', icon: Mail },
     { id: 'audit-logs' as const, label: '監査ログ', icon: FileText },
-    { id: 'billing' as const, label: '課金', icon: CreditCard },
     { id: 'danger' as const, label: '危険な操作', icon: AlertTriangle },
   ];
 
@@ -214,9 +210,6 @@ export function OrganizationSettingsPage() {
           {activeTab === 'audit-logs' && (
             <AuditLogsSettings organizationId={organization.id} />
           )}
-          {activeTab === 'billing' && (
-            <OrgBillingSettings organizationId={organization.id} />
-          )}
           {activeTab === 'danger' && (
             <DangerSettings
               organization={organization}
@@ -249,7 +242,6 @@ function GeneralSettings({
 }) {
   const [name, setName] = useState(organization.name);
   const [description, setDescription] = useState(organization.description || '');
-  const [billingEmail, setBillingEmail] = useState(organization.billingEmail || '');
   const [isSaving, setIsSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -257,20 +249,17 @@ function GeneralSettings({
   useEffect(() => {
     setName(organization.name);
     setDescription(organization.description || '');
-    setBillingEmail(organization.billingEmail || '');
     setErrors({});
   }, [organization]);
 
   const hasChanges =
     name !== organization.name ||
-    description !== (organization.description || '') ||
-    billingEmail !== (organization.billingEmail || '');
+    description !== (organization.description || '');
 
   // 入力値を元に戻す
   const handleCancel = () => {
     setName(organization.name);
     setDescription(organization.description || '');
-    setBillingEmail(organization.billingEmail || '');
     setErrors({});
   };
 
@@ -286,10 +275,6 @@ function GeneralSettings({
 
     if (description.length > 500) {
       newErrors.description = '説明は500文字以内で入力してください';
-    }
-
-    if (billingEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(billingEmail)) {
-      newErrors.billingEmail = '有効なメールアドレスを入力してください';
     }
 
     setErrors(newErrors);
@@ -310,7 +295,6 @@ function GeneralSettings({
       const response = await organizationsApi.update(organization.id, {
         name: name.trim(),
         description: description.trim() || null,
-        billingEmail: billingEmail.trim() || null,
       });
 
       onUpdated(response.organization);
@@ -380,31 +364,6 @@ function GeneralSettings({
           {errors.description && (
             <p className="text-xs text-danger mt-1">{errors.description}</p>
           )}
-        </div>
-
-        {/* 請求先メール */}
-        <div>
-          <label htmlFor="billing-email" className="block text-sm font-medium text-foreground mb-1">
-            請求先メール
-          </label>
-          <input
-            id="billing-email"
-            type="email"
-            value={billingEmail}
-            onChange={(e) => {
-              setBillingEmail(e.target.value);
-              setErrors((prev) => ({ ...prev, billingEmail: '' }));
-            }}
-            className={`input w-full max-w-md ${errors.billingEmail ? 'border-danger focus:border-danger focus:ring-danger' : ''}`}
-            disabled={isSaving}
-            placeholder="billing@example.com"
-          />
-          {errors.billingEmail && (
-            <p className="text-xs text-danger mt-1">{errors.billingEmail}</p>
-          )}
-          <p className="text-xs text-foreground-subtle mt-1">
-            請求関連の通知を受け取るメールアドレス
-          </p>
         </div>
 
         {/* ボタン */}

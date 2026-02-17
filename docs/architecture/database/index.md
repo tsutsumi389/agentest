@@ -34,14 +34,6 @@ PostgreSQL を使用。Prisma ORM でスキーマ管理。
 | `ProjectMember` | プロジェクトメンバー（多対多） | [organization.md](./organization.md#projectmember) |
 | `ProjectHistory` | プロジェクトの変更履歴 | [organization.md](./organization.md#projecthistory) |
 
-### 課金・サブスクリプション
-
-| テーブル | 説明 | 詳細 |
-|---------|------|------|
-| `Subscription` | サブスクリプション情報 | [billing.md](./billing.md#subscription) |
-| `Invoice` | 請求書 | [billing.md](./billing.md#invoice) |
-| `PaymentMethod` | 支払い方法 | [billing.md](./billing.md#paymentmethod) |
-
 ### API トークン
 
 | テーブル | 説明 | 詳細 |
@@ -75,13 +67,6 @@ PostgreSQL を使用。Prisma ORM でスキーマ管理。
 | テーブル | 説明 | 詳細 |
 |---------|------|------|
 | `ActiveUserMetric` | アクティブユーザーメトリクス | [metrics.md](./metrics.md#activeusermetric) |
-| `PlanDistributionMetric` | プラン分布メトリクス | [metrics.md](./metrics.md#plandistributionmetric) |
-
-### 使用量記録
-
-| テーブル | 説明 | 詳細 |
-|---------|------|------|
-| `UsageRecord` | 月次使用量記録 | [usage.md](./usage.md#usagerecord) |
 
 ### Agent セッション
 
@@ -206,8 +191,6 @@ Coding Agent が理解しやすい英語の文字列を使用。
 | `JudgmentStatus` | PENDING, PASS, FAIL, SKIPPED | 期待値の判定結果 |
 | `ReviewStatus` | OPEN, RESOLVED | レビューコメントのステータス |
 | `AgentSessionStatus` | ACTIVE, IDLE, ENDED, TIMEOUT | Agent セッションのステータス |
-| `SubscriptionStatus` | ACTIVE, PAST_DUE, CANCELED, TRIALING | サブスクリプションステータス |
-| `InvoiceStatus` | PENDING, PAID, FAILED, VOID | 請求書ステータス |
 
 ### 種別系
 
@@ -219,20 +202,10 @@ Coding Agent が理解しやすい英語の文字列を使用。
 | `LockTargetType` | SUITE, CASE | ロック対象種別 |
 | `OrganizationRole` | OWNER, ADMIN, MEMBER | 組織内の権限 |
 | `ProjectRole` | ADMIN, WRITE, READ | プロジェクト内の権限 |
-| `BillingCycle` | MONTHLY, YEARLY | 請求サイクル |
-| `PaymentMethodType` | CARD | 支払い方法タイプ |
-| `NotificationType` | ORG_INVITATION, INVITATION_ACCEPTED, PROJECT_ADDED, REVIEW_COMMENT, TEST_COMPLETED, TEST_FAILED, USAGE_ALERT, BILLING, SECURITY_ALERT | 通知種別 |
-| `AuditLogCategory` | AUTH, USER, ORGANIZATION, MEMBER, PROJECT, API_TOKEN, BILLING | 監査ログカテゴリ |
+| `NotificationType` | ORG_INVITATION, INVITATION_ACCEPTED, PROJECT_ADDED, REVIEW_COMMENT, TEST_COMPLETED, TEST_FAILED, SECURITY_ALERT | 通知種別 |
+| `AuditLogCategory` | AUTH, USER, ORGANIZATION, MEMBER, PROJECT, API_TOKEN | 監査ログカテゴリ |
 | `AdminRoleType` | SUPER_ADMIN, ADMIN, VIEWER | 管理者ロール |
 | `MetricGranularity` | DAY, WEEK, MONTH | メトリクス集計粒度 |
-
-### プラン系
-
-| ENUM | 値 | 説明 |
-|------|-----|------|
-| `UserPlan` | FREE, PRO | 個人プラン |
-| `OrganizationPlan` | NONE, TEAM, ENTERPRISE | 組織プラン |
-| `SubscriptionPlan` | FREE, PRO, TEAM, ENTERPRISE | サブスクリプションプラン |
 
 ## インデックス戦略
 
@@ -318,15 +291,6 @@ CREATE INDEX idx_org_invitations_email ON "OrganizationInvitation"("email");
 CREATE INDEX idx_project_members_project_id ON "ProjectMember"("projectId");
 CREATE INDEX idx_project_members_user_id ON "ProjectMember"("userId");
 
--- 課金・サブスクリプション
-CREATE INDEX idx_subscriptions_user_id ON "Subscription"("userId");
-CREATE INDEX idx_subscriptions_org_id ON "Subscription"("organizationId");
-CREATE INDEX idx_subscriptions_status ON "Subscription"("status");
-CREATE INDEX idx_invoices_subscription_id ON "Invoice"("subscriptionId");
-CREATE INDEX idx_invoices_status ON "Invoice"("status");
-CREATE INDEX idx_payment_methods_user_id ON "PaymentMethod"("userId");
-CREATE INDEX idx_payment_methods_org_id ON "PaymentMethod"("organizationId");
-
 -- API トークン
 CREATE INDEX idx_api_tokens_user_id ON "ApiToken"("userId");
 CREATE INDEX idx_api_tokens_org_id ON "ApiToken"("organizationId");
@@ -359,15 +323,6 @@ CREATE INDEX idx_admin_audit_logs_created ON "admin_audit_logs"("created_at");
 -- メトリクス
 CREATE UNIQUE INDEX idx_active_user_metrics_granularity_period ON "active_user_metrics"("granularity", "period_start");
 CREATE INDEX idx_active_user_metrics_period ON "active_user_metrics"("granularity", "period_start");
-
--- プラン分布メトリクス
-CREATE UNIQUE INDEX idx_plan_distribution_metrics_granularity_period ON "plan_distribution_metrics"("granularity", "period_start");
-CREATE INDEX idx_plan_distribution_metrics_period ON "plan_distribution_metrics"("granularity", "period_start");
-
--- 使用量記録
-CREATE INDEX idx_usage_records_user_id ON "UsageRecord"("userId");
-CREATE INDEX idx_usage_records_org_id ON "UsageRecord"("organizationId");
-CREATE INDEX idx_usage_records_period ON "UsageRecord"("periodStart");
 
 -- 全文検索用（pg_bigm: 日本語対応）
 -- 拡張の有効化（マイグレーション時に1回実行）
@@ -414,11 +369,9 @@ docker compose exec api pnpm --filter @agentest/db prisma migrate deploy
 - [テスト実行](./execution.md)
 - [レビュー](./review.md)
 - [同時編集制御](./edit-lock.md)
-- [課金・サブスクリプション](./billing.md)
 - [API トークン](./api-token.md)
 - [通知](./notification.md)
 - [監査ログ](./audit-log.md)
-- [使用量記録](./usage.md)
 - [管理者認証](./admin-auth.md)
 - [メトリクス](./metrics.md)
 - [システム全体像](../overview.md)

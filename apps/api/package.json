@@ -30,7 +30,6 @@
     "nodemailer": "^7.0.12",
     "otplib": "^13.1.1",
     "qrcode": "^1.5.4",
-    "stripe": "^20.2.0",
     "zod": "catalog:"
   },
   "devDependencies": {

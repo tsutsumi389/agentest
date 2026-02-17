@@ -188,27 +188,15 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "https://js.stripe.com"],
+      scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https:"],
-      frameSrc: ["'self'", "https://js.stripe.com"],
-      connectSrc: ["'self'", "https://js.stripe.com"],
+      frameSrc: ["'self'"],
+      connectSrc: ["'self'"],
     },
   },
   hsts: { maxAge: 31536000, includeSubDomains: true },
 }));
-```
-
-> **Note**: Stripe Elements を使用するため、`js.stripe.com` を `script-src`、`frame-src`、`connect-src` に追加しています。
-
-## Webhook ルートの特殊処理
-
-`/webhooks/stripe` エンドポイントは、Stripe の署名検証のために `express.raw()` で raw body を受信する必要があります。このルートは `express.json()` ミドルウェアより前に登録し、JSON パースをバイパスします。
-
-```typescript
-// express.json() より前に登録
-app.use('/webhooks', webhookRoutes); // express.raw() を使用
-app.use(express.json());             // 他のルートは JSON パース
 ```
 
 ## 関連ドキュメント

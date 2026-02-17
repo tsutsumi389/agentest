@@ -5,7 +5,6 @@ import {
   Users,
   FolderKanban,
   Key,
-  CreditCard,
   HelpCircle,
   type LucideIcon,
 } from 'lucide-react';
@@ -23,7 +22,6 @@ export const AUDIT_LOG_CATEGORIES = {
   MEMBER: { label: 'メンバー', icon: Users, color: 'text-orange-500', bgColor: 'bg-orange-500/10' },
   PROJECT: { label: 'プロジェクト', icon: FolderKanban, color: 'text-cyan-500', bgColor: 'bg-cyan-500/10' },
   API_TOKEN: { label: 'APIトークン', icon: Key, color: 'text-yellow-500', bgColor: 'bg-yellow-500/10' },
-  BILLING: { label: '課金', icon: CreditCard, color: 'text-pink-500', bgColor: 'bg-pink-500/10' },
 } as const;
 
 export type AuditLogCategoryKey = keyof typeof AUDIT_LOG_CATEGORIES;
@@ -91,8 +89,6 @@ export const KNOWN_FIELD_LABELS: Record<string, string> = {
   ipAddress: 'IPアドレス',
   provider: 'プロバイダー',
   tokenName: 'トークン名',
-  planFrom: '変更前プラン',
-  planTo: '変更後プラン',
 };
 
 /**

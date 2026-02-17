@@ -38,9 +38,6 @@ const KEY_PREFIX = {
   ADMIN_ORGANIZATIONS: 'admin:organizations:',
   ADMIN_ORGANIZATION_DETAIL: 'admin:organization:detail:',
   ADMIN_AUDIT_LOGS: 'admin:audit-logs:',
-  ADMIN_METRICS: 'admin:metrics:',
-  USER_INVOICES: 'invoices:user:',
-  ORG_INVOICES: 'invoices:org:',
   SYSTEM_ADMINS: 'admin:system-admins:',
   SYSTEM_ADMIN_DETAIL: 'admin:system-admin:detail:',
 } as const;
@@ -671,100 +668,6 @@ function generateParamsKey(prefix: string, params: Record<string, unknown>): str
 }
 
 // ============================================
-// 請求履歴キャッシュ（個人・組織）
-// ============================================
-
-/**
- * ユーザーの請求履歴をキャッシュに保存
- * @param userId ユーザーID
- * @param data 請求履歴データ
- * @param ttlSeconds 有効期限（秒）、デフォルト5分
- */
-export async function setUserInvoicesCache<T>(
-  userId: string,
-  data: T,
-  ttlSeconds: number = 300
-): Promise<boolean> {
-  return setCache(
-    `${KEY_PREFIX.USER_INVOICES}${userId}`,
-    data,
-    ttlSeconds,
-    'ユーザー請求履歴キャッシュの保存に失敗:'
-  );
-}
-
-/**
- * ユーザーの請求履歴をキャッシュから取得
- * @param userId ユーザーID
- */
-export async function getUserInvoicesCache<T>(
-  userId: string
-): Promise<T | null> {
-  return getCache<T>(
-    `${KEY_PREFIX.USER_INVOICES}${userId}`,
-    'ユーザー請求履歴キャッシュの取得に失敗:'
-  );
-}
-
-/**
- * ユーザーの請求履歴キャッシュを無効化
- * @param userId ユーザーID
- */
-export async function invalidateUserInvoicesCache(
-  userId: string
-): Promise<boolean> {
-  return invalidateCache(
-    `${KEY_PREFIX.USER_INVOICES}${userId}`,
-    'ユーザー請求履歴キャッシュの無効化に失敗:'
-  );
-}
-
-/**
- * 組織の請求履歴をキャッシュに保存
- * @param organizationId 組織ID
- * @param data 請求履歴データ
- * @param ttlSeconds 有効期限（秒）、デフォルト5分
- */
-export async function setOrgInvoicesCache<T>(
-  organizationId: string,
-  data: T,
-  ttlSeconds: number = 300
-): Promise<boolean> {
-  return setCache(
-    `${KEY_PREFIX.ORG_INVOICES}${organizationId}`,
-    data,
-    ttlSeconds,
-    '組織請求履歴キャッシュの保存に失敗:'
-  );
-}
-
-/**
- * 組織の請求履歴をキャッシュから取得
- * @param organizationId 組織ID
- */
-export async function getOrgInvoicesCache<T>(
-  organizationId: string
-): Promise<T | null> {
-  return getCache<T>(
-    `${KEY_PREFIX.ORG_INVOICES}${organizationId}`,
-    '組織請求履歴キャッシュの取得に失敗:'
-  );
-}
-
-/**
- * 組織の請求履歴キャッシュを無効化
- * @param organizationId 組織ID
- */
-export async function invalidateOrgInvoicesCache(
-  organizationId: string
-): Promise<boolean> {
-  return invalidateCache(
-    `${KEY_PREFIX.ORG_INVOICES}${organizationId}`,
-    '組織請求履歴キャッシュの無効化に失敗:'
-  );
-}
-
-// ============================================
 // 管理者監査ログキャッシュ
 // ============================================
 
@@ -782,30 +685,6 @@ export async function getAdminAuditLogsCache<T>(params: Record<string, unknown>)
     generateParamsKey(KEY_PREFIX.ADMIN_AUDIT_LOGS, params),
     '管理者監査ログキャッシュの取得に失敗'
   );
-}
-
-// ============================================
-// アクティブユーザーメトリクスキャッシュ（DAU/WAU/MAU）
-// ============================================
-
-export async function setAdminMetricsCache<T>(
-  params: Record<string, unknown>, data: T, ttlSeconds: number = 300
-): Promise<boolean> {
-  return setCache(
-    generateParamsKey(KEY_PREFIX.ADMIN_METRICS, params),
-    data, ttlSeconds, 'アクティブユーザーメトリクスキャッシュの保存に失敗'
-  );
-}
-
-export async function getAdminMetricsCache<T>(params: Record<string, unknown>): Promise<T | null> {
-  return getCache<T>(
-    generateParamsKey(KEY_PREFIX.ADMIN_METRICS, params),
-    'アクティブユーザーメトリクスキャッシュの取得に失敗'
-  );
-}
-
-export async function invalidateAdminMetricsCache(): Promise<boolean> {
-  return invalidateCacheByPattern(`${KEY_PREFIX.ADMIN_METRICS}*`, 'アクティブユーザーメトリクスキャッシュの無効化に失敗');
 }
 
 // ============================================

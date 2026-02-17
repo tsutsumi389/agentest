@@ -10,5 +10,4 @@ export const CATEGORY_LABELS: Record<AdminAuditLogCategory, string> = {
   MEMBER: 'メンバー',
   PROJECT: 'プロジェクト',
   API_TOKEN: 'APIトークン',
-  BILLING: '課金',
 };

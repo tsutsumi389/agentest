@@ -13,12 +13,6 @@ vi.mock('@agentest/db', () => ({
     executionExpectedResult: {
       groupBy: vi.fn(),
     },
-    subscription: {
-      findMany: vi.fn(),
-    },
-    invoice: {
-      groupBy: vi.fn(),
-    },
     $queryRaw: vi.fn(),
   },
 }));
@@ -53,10 +47,9 @@ describe('AdminDashboardService', () => {
   describe('getDashboard', () => {
     it('キャッシュがある場合はキャッシュを返す', async () => {
       const cachedStats: AdminDashboardStats = {
-        users: { total: 100, byPlan: { free: 80, pro: 20 }, newThisMonth: 10, activeUsers: 50 },
-        organizations: { total: 20, byPlan: { team: 15, enterprise: 5 }, newThisMonth: 2, activeOrgs: 10 },
+        users: { total: 100, newThisMonth: 10, activeUsers: 50 },
+        organizations: { total: 20, newThisMonth: 2, activeOrgs: 10 },
         executions: { totalThisMonth: 500, passCount: 400, failCount: 100, passRate: 80 },
-        revenue: { mrr: 50000, invoices: { paid: 30, pending: 5, failed: 2 } },
         systemHealth: {
           api: { status: 'healthy', latency: 0 },
           database: { status: 'healthy', latency: 5 },
@@ -84,8 +77,6 @@ describe('AdminDashboardService', () => {
       vi.mocked(prisma.user.count).mockResolvedValue(100);
       vi.mocked(prisma.organization.count).mockResolvedValue(20);
       vi.mocked(prisma.executionExpectedResult.groupBy).mockResolvedValue([]);
-      vi.mocked(prisma.subscription.findMany).mockResolvedValue([]);
-      vi.mocked(prisma.invoice.groupBy).mockResolvedValue([]);
       vi.mocked(prisma.$queryRaw).mockResolvedValue([{ '?column?': 1 }]);
 
       const result = await service.getDashboard();
@@ -93,7 +84,6 @@ describe('AdminDashboardService', () => {
       expect(result.users).toBeDefined();
       expect(result.organizations).toBeDefined();
       expect(result.executions).toBeDefined();
-      expect(result.revenue).toBeDefined();
       expect(result.systemHealth).toBeDefined();
       expect(result.fetchedAt).toBeDefined();
 
@@ -108,23 +98,18 @@ describe('AdminDashboardService', () => {
       const mockCount = vi.mocked(prisma.user.count);
       mockCount
         .mockResolvedValueOnce(100)  // total
-        .mockResolvedValueOnce(70)   // free
-        .mockResolvedValueOnce(30)   // pro
         .mockResolvedValueOnce(15)   // newThisMonth
         .mockResolvedValueOnce(60);  // activeUsers
 
       // 他のモック
       vi.mocked(prisma.organization.count).mockResolvedValue(0);
       vi.mocked(prisma.executionExpectedResult.groupBy).mockResolvedValue([]);
-      vi.mocked(prisma.subscription.findMany).mockResolvedValue([]);
-      vi.mocked(prisma.invoice.groupBy).mockResolvedValue([]);
       vi.mocked(prisma.$queryRaw).mockResolvedValue([{ '?column?': 1 }]);
 
       const result = await service.getDashboard();
 
-      expect(result.users).toEqual({
+      expect(result.users).toMatchObject({
         total: 100,
-        byPlan: { free: 70, pro: 30 },
         newThisMonth: 15,
         activeUsers: 60,
       });
@@ -141,21 +126,16 @@ describe('AdminDashboardService', () => {
       const mockOrgCount = vi.mocked(prisma.organization.count);
       mockOrgCount
         .mockResolvedValueOnce(50)   // total
-        .mockResolvedValueOnce(35)   // team
-        .mockResolvedValueOnce(15)   // enterprise
         .mockResolvedValueOnce(5)    // newThisMonth
         .mockResolvedValueOnce(30);  // activeOrgs
 
       vi.mocked(prisma.executionExpectedResult.groupBy).mockResolvedValue([]);
-      vi.mocked(prisma.subscription.findMany).mockResolvedValue([]);
-      vi.mocked(prisma.invoice.groupBy).mockResolvedValue([]);
       vi.mocked(prisma.$queryRaw).mockResolvedValue([{ '?column?': 1 }]);
 
       const result = await service.getDashboard();
 
-      expect(result.organizations).toEqual({
+      expect(result.organizations).toMatchObject({
         total: 50,
-        byPlan: { team: 35, enterprise: 15 },
         newThisMonth: 5,
         activeOrgs: 30,
       });
@@ -167,8 +147,6 @@ describe('AdminDashboardService', () => {
 
       vi.mocked(prisma.user.count).mockResolvedValue(0);
       vi.mocked(prisma.organization.count).mockResolvedValue(0);
-      vi.mocked(prisma.subscription.findMany).mockResolvedValue([]);
-      vi.mocked(prisma.invoice.groupBy).mockResolvedValue([]);
       vi.mocked(prisma.$queryRaw).mockResolvedValue([{ '?column?': 1 }]);
 
       // 実行結果のモック: 80 PASS, 20 FAIL
@@ -187,44 +165,6 @@ describe('AdminDashboardService', () => {
       expect(result.executions.passRate).toBe(80); // 80 / (80 + 20) * 100
     });
 
-    it('収益統計のMRRが正しく計算される', async () => {
-      vi.mocked(getAdminDashboardCache).mockResolvedValue(null);
-      vi.mocked(setAdminDashboardCache).mockResolvedValue(true);
-
-      vi.mocked(prisma.user.count).mockResolvedValue(0);
-      vi.mocked(prisma.organization.count).mockResolvedValue(0);
-      vi.mocked(prisma.executionExpectedResult.groupBy).mockResolvedValue([]);
-      vi.mocked(prisma.$queryRaw).mockResolvedValue([{ '?column?': 1 }]);
-
-      // アクティブなサブスクリプション
-      vi.mocked(prisma.subscription.findMany).mockResolvedValue([
-        { plan: 'PRO', billingCycle: 'MONTHLY' },
-        { plan: 'PRO', billingCycle: 'YEARLY' },
-        { plan: 'TEAM', billingCycle: 'MONTHLY' },
-        { plan: 'ENTERPRISE', billingCycle: 'MONTHLY' },
-      ] as never);
-
-      // インボイス統計
-      vi.mocked(prisma.invoice.groupBy).mockResolvedValue([
-        { status: 'PAID', _count: { status: 10 } },
-        { status: 'PENDING', _count: { status: 3 } },
-        { status: 'FAILED', _count: { status: 1 } },
-      ] as never);
-
-      const result = await service.getDashboard();
-
-      // MRR計算:
-      // - PRO月払い: 980
-      // - PRO年払い: 9800/12 = 817（切り上げ）
-      // - TEAM月払い: 4980
-      // - ENTERPRISE月払い: 19800
-      // 合計: 980 + 817 + 4980 + 19800 = 26577
-      expect(result.revenue.mrr).toBe(26577);
-      expect(result.revenue.invoices.paid).toBe(10);
-      expect(result.revenue.invoices.pending).toBe(3);
-      expect(result.revenue.invoices.failed).toBe(1);
-    });
-
     it('システムヘルスが正しく返される', async () => {
       vi.mocked(getAdminDashboardCache).mockResolvedValue(null);
       vi.mocked(setAdminDashboardCache).mockResolvedValue(true);
@@ -232,8 +172,6 @@ describe('AdminDashboardService', () => {
       vi.mocked(prisma.user.count).mockResolvedValue(0);
       vi.mocked(prisma.organization.count).mockResolvedValue(0);
       vi.mocked(prisma.executionExpectedResult.groupBy).mockResolvedValue([]);
-      vi.mocked(prisma.subscription.findMany).mockResolvedValue([]);
-      vi.mocked(prisma.invoice.groupBy).mockResolvedValue([]);
       vi.mocked(prisma.$queryRaw).mockResolvedValue([{ '?column?': 1 }]);
 
       const result = await service.getDashboard();
@@ -251,8 +189,6 @@ describe('AdminDashboardService', () => {
 
       vi.mocked(prisma.user.count).mockResolvedValue(0);
       vi.mocked(prisma.organization.count).mockResolvedValue(0);
-      vi.mocked(prisma.subscription.findMany).mockResolvedValue([]);
-      vi.mocked(prisma.invoice.groupBy).mockResolvedValue([]);
       vi.mocked(prisma.$queryRaw).mockResolvedValue([{ '?column?': 1 }]);
 
       // PASSもFAILもない場合

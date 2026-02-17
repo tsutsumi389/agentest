@@ -282,7 +282,7 @@ FROM users
 WHERE email ILIKE '%example.com%';
 
 -- 組織情報
-SELECT o.id, o.name, o.plan, om.role
+SELECT o.id, o.name, om.role
 FROM organizations o
 JOIN organization_members om ON o.id = om.organization_id
 WHERE om.user_id = 'USER_ID';
@@ -441,10 +441,6 @@ gcloud run jobs execute agentest-jobs \
   --region=asia-northeast1 \
   --set-env-vars JOB_NAME=history-cleanup
 
-# Webhook再処理を手動実行
-gcloud run jobs execute agentest-jobs \
-  --region=asia-northeast1 \
-  --set-env-vars JOB_NAME=webhook-retry
 ```
 
 ### 11.3 ログ確認

@@ -16,40 +16,18 @@
 | `name` | VARCHAR(100) | NO | - | 組織名 |
 | `description` | TEXT | YES | NULL | 組織の説明 |
 | `avatarUrl` | TEXT | YES | NULL | 組織アバター画像 URL |
-| `plan` | ENUM | NO | NONE | 組織プラン（NONE, TEAM, ENTERPRISE） |
-| `billingEmail` | VARCHAR(255) | YES | NULL | 請求先メールアドレス |
 | `createdAt` | TIMESTAMP | NO | now() | 作成日時 |
 | `updatedAt` | TIMESTAMP | NO | now() | 更新日時 |
 | `deletedAt` | TIMESTAMP | YES | NULL | 削除日時（論理削除、30日後に物理削除） |
 
-### 組織プラン
-
-| プラン | 料金 | 説明 |
-|--------|------|------|
-| `NONE` | - | 契約なし（プロジェクト作成不可） |
-| `TEAM` | $6/ユーザー/月（最低10ユーザー） | 小〜中規模チーム |
-| `ENTERPRISE` | 要問合せ | 大規模組織・高度なセキュリティ要件 |
-
-### 制約
-
-- `billingEmail` は有効なメールアドレス形式
-
 ### Prisma スキーマ
 
 ```prisma
-enum OrganizationPlan {
-  NONE
-  TEAM
-  ENTERPRISE
-}
-
 model Organization {
   id           String           @id @default(uuid()) @db.Uuid
   name         String           @db.VarChar(100)
   description  String?
   avatarUrl    String?
-  plan         OrganizationPlan @default(NONE)
-  billingEmail String?          @db.VarChar(255)
   createdAt    DateTime         @default(now())
   updatedAt    DateTime         @updatedAt
   deletedAt    DateTime?
@@ -57,10 +35,8 @@ model Organization {
   members      OrganizationMember[]
   invitations  OrganizationInvitation[]
   projects     Project[]
-  subscription Subscription?
   apiTokens    ApiToken[]
   auditLogs    AuditLog[]
-  usageRecords UsageRecord[]
 }
 ```
 
@@ -89,7 +65,7 @@ model Organization {
 | ロール | 説明 | 権限 |
 |--------|------|------|
 | `OWNER` | 組織オーナー | 全権限 + 組織削除 + オーナー移譲 |
-| `ADMIN` | 管理者 | メンバー管理 + 課金管理 + 全プロジェクト Admin |
+| `ADMIN` | 管理者 | メンバー管理 + 全プロジェクト Admin |
 | `MEMBER` | 一般メンバー | プロジェクト単位で付与された権限のみ |
 
 ### Prisma スキーマ
@@ -413,8 +389,6 @@ model ProjectMember {
 | ORG-003 | 組織一覧 | 所属する組織の一覧表示 |
 | ORG-004 | オーナー権限移譲 | 組織のオーナー権限を他のメンバーに移譲 |
 | ORG-005 | 組織削除 | 組織を削除（オーナーのみ、30日後に物理削除） |
-| ORG-006 | 組織プラン選択 | Team / Enterprise プランの選択・変更 |
-| ORG-007 | 請求先設定 | 組織の請求先情報を設定 |
 | MBR-001 | メンバー招待 | メールアドレスで組織にメンバーを招待 |
 | MBR-002 | 招待承諾/辞退 | 招待の承諾または辞退 |
 | MBR-003 | メンバー一覧 | 組織メンバーの一覧表示 |
@@ -434,4 +408,3 @@ model ProjectMember {
 - [認証関連](./auth.md)
 - [テストスイート](./test-suite.md)
 - [API トークン](./api-token.md)
-- [課金・サブスクリプション](./billing.md)

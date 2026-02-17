@@ -1,12 +1,10 @@
-import type { OrganizationPlan, OrganizationRole, ProjectRole } from './enums.js';
+import type { OrganizationRole, ProjectRole } from './enums.js';
 
 export interface Organization {
   id: string;
   name: string;
   description: string | null;
   avatarUrl: string | null;
-  plan: OrganizationPlan;
-  billingEmail: string | null;
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
@@ -70,7 +68,6 @@ export interface OrganizationPublic {
   name: string;
   description: string | null;
   avatarUrl: string | null;
-  plan: OrganizationPlan;
 }
 
 export interface ProjectPublic {

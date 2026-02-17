@@ -6,7 +6,6 @@ import type {
   AdminUserPagination,
 } from '@agentest/shared/types';
 import { formatDate, formatRelativeTime } from '../../lib/date-utils';
-import { PlanBadge } from '../common';
 
 interface UserTableProps {
   users: AdminUserListItem[];
@@ -114,14 +113,6 @@ export function UserTable({
               >
                 メール
               </SortableHeader>
-              <SortableHeader
-                column="plan"
-                sortBy={sortBy}
-                sortOrder={sortOrder}
-                onSort={onSort}
-              >
-                プラン
-              </SortableHeader>
               <th className="px-4 py-3 text-left text-sm font-medium text-foreground-muted">
                 統計
               </th>
@@ -142,7 +133,7 @@ export function UserTable({
             {users.length === 0 ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={5}
                   className="px-4 py-12 text-center text-foreground-muted"
                 >
                   ユーザーが見つかりません
@@ -189,11 +180,6 @@ export function UserTable({
                   {/* メール */}
                   <td className="px-4 py-3 text-sm text-foreground-muted">
                     {user.email}
-                  </td>
-
-                  {/* プラン */}
-                  <td className="px-4 py-3">
-                    <PlanBadge plan={user.plan} />
                   </td>
 
                   {/* 統計 */}

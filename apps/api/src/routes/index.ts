@@ -15,14 +15,11 @@ import editLockRoutes from './edit-locks.js';
 import notificationRoutes from './notifications.js';
 import internalRoutes from './internal.js';
 import oauthRoutes from './oauth.js';
-import billingRoutes from './billing.js';
-import webhookRoutes from './webhooks.js';
 import adminAuthRoutes from './admin/auth.js';
 import adminDashboardRoutes from './admin/dashboard.js';
 import adminUsersRoutes from './admin/users.js';
 import adminOrganizationsRoutes from './admin/organizations.js';
 import adminAuditLogsRoutes from './admin/audit-logs.js';
-import adminMetricsRoutes from './admin/metrics.js';
 import adminAdminUsersRoutes from './admin/admin-users.js';
 import { oauthController } from '../controllers/oauth.controller.js';
 
@@ -49,12 +46,6 @@ router.use('/api/api-tokens', apiTokenRoutes);
 router.use('/api/locks', editLockRoutes);
 router.use('/api/notifications', notificationRoutes);
 
-// 課金関連ルート
-router.use('/api', billingRoutes);
-
-// Webhookルート（認証不要）
-router.use('/webhooks', webhookRoutes);
-
 // OAuth 2.1 エンドポイント (RFC 9728)
 router.use('/oauth', oauthRoutes);
 
@@ -72,9 +63,6 @@ router.use('/admin/organizations', adminOrganizationsRoutes);
 
 // 管理者監査ログ
 router.use('/admin/audit-logs', adminAuditLogsRoutes);
-
-// 管理者メトリクス
-router.use('/admin/metrics', adminMetricsRoutes);
 
 // システム管理者アカウント管理
 router.use('/admin/admin-users', adminAdminUsersRoutes);

@@ -19,9 +19,6 @@ export function Organizations() {
   // 検索パラメータを取得
   const params: AdminOrganizationSearchParams = {
     q: searchParams.get('q') || undefined,
-    plan: searchParams.get('plan')
-      ? (searchParams.get('plan')!.split(',') as ('TEAM' | 'ENTERPRISE')[])
-      : undefined,
     status: (searchParams.get('status') as AdminOrganizationStatus) || 'active',
     createdFrom: searchParams.get('createdFrom') || undefined,
     createdTo: searchParams.get('createdTo') || undefined,
@@ -109,11 +106,9 @@ export function Organizations() {
               onChange={(q) => updateParams({ q })}
             />
             <OrganizationFilters
-              plan={params.plan || []}
               status={params.status || 'active'}
               createdFrom={params.createdFrom || ''}
               createdTo={params.createdTo || ''}
-              onPlanChange={(plan) => updateParams({ plan })}
               onStatusChange={(status) => updateParams({ status })}
               onCreatedFromChange={(createdFrom) => updateParams({ createdFrom })}
               onCreatedToChange={(createdTo) => updateParams({ createdTo })}

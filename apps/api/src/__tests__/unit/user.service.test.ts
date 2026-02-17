@@ -61,7 +61,7 @@ describe('UserService', () => {
             name: 'Test Org 1',
             description: 'Description 1',
             avatarUrl: null,
-            plan: 'FREE',
+
             createdAt: new Date('2024-01-01'),
             _count: {
               members: 3,
@@ -79,7 +79,7 @@ describe('UserService', () => {
             name: 'Test Org 2',
             description: null,
             avatarUrl: 'https://example.com/avatar.png',
-            plan: 'PRO',
+
             createdAt: new Date('2024-02-01'),
             _count: {
               members: 5,
@@ -104,7 +104,7 @@ describe('UserService', () => {
               name: true,
               description: true,
               avatarUrl: true,
-              plan: true,
+
               createdAt: true,
               deletedAt: true,
               _count: {
@@ -142,7 +142,7 @@ describe('UserService', () => {
             name: 'Newest Org',
             description: null,
             avatarUrl: null,
-            plan: 'FREE',
+
             createdAt: new Date('2024-03-01'),
             _count: { members: 1 },
           },
@@ -158,7 +158,7 @@ describe('UserService', () => {
             name: 'Oldest Org',
             description: null,
             avatarUrl: null,
-            plan: 'FREE',
+
             createdAt: new Date('2024-01-01'),
             _count: { members: 2 },
           },

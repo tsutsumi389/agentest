@@ -49,17 +49,8 @@ import {
   getAdminOrganizationDetailCache,
   setAdminOrganizationDetailCache,
   invalidateAdminOrganizationDetailCache,
-  setUserInvoicesCache,
-  getUserInvoicesCache,
-  invalidateUserInvoicesCache,
-  setOrgInvoicesCache,
-  getOrgInvoicesCache,
-  invalidateOrgInvoicesCache,
   setAdminAuditLogsCache,
   getAdminAuditLogsCache,
-  setAdminMetricsCache,
-  getAdminMetricsCache,
-  invalidateAdminMetricsCache,
   setSystemAdminsCache,
   getSystemAdminsCache,
   invalidateSystemAdminsCache,
@@ -394,45 +385,6 @@ describe('redis-store', () => {
   });
 
   // ===========================================
-  // 請求履歴キャッシュ
-  // ===========================================
-  describe('ユーザー請求履歴キャッシュ', () => {
-    it('保存・取得・無効化できる', async () => {
-      const data = [{ id: 'inv-1' }];
-      await setUserInvoicesCache(TEST_USER_ID, data);
-      expect(mockRedis.setex).toHaveBeenCalledWith(
-        `invoices:user:${TEST_USER_ID}`,
-        300,
-        JSON.stringify(data)
-      );
-
-      mockRedis.get.mockResolvedValue(JSON.stringify(data));
-      expect(await getUserInvoicesCache(TEST_USER_ID)).toEqual(data);
-
-      await invalidateUserInvoicesCache(TEST_USER_ID);
-      expect(mockRedis.del).toHaveBeenCalledWith(`invoices:user:${TEST_USER_ID}`);
-    });
-  });
-
-  describe('組織請求履歴キャッシュ', () => {
-    it('保存・取得・無効化できる', async () => {
-      const data = [{ id: 'inv-2' }];
-      await setOrgInvoicesCache(TEST_ORG_ID, data);
-      expect(mockRedis.setex).toHaveBeenCalledWith(
-        `invoices:org:${TEST_ORG_ID}`,
-        300,
-        JSON.stringify(data)
-      );
-
-      mockRedis.get.mockResolvedValue(JSON.stringify(data));
-      expect(await getOrgInvoicesCache(TEST_ORG_ID)).toEqual(data);
-
-      await invalidateOrgInvoicesCache(TEST_ORG_ID);
-      expect(mockRedis.del).toHaveBeenCalledWith(`invoices:org:${TEST_ORG_ID}`);
-    });
-  });
-
-  // ===========================================
   // 監査ログキャッシュ
   // ===========================================
   describe('管理者監査ログキャッシュ', () => {
@@ -448,28 +400,6 @@ describe('redis-store', () => {
       mockRedis.get.mockResolvedValue(JSON.stringify(data));
       const result = await getAdminAuditLogsCache({ page: 1 });
       expect(result).toEqual(data);
-    });
-  });
-
-  // ===========================================
-  // メトリクスキャッシュ
-  // ===========================================
-  describe('メトリクスキャッシュ', () => {
-    it('パラメトリックキーで保存・取得できる', async () => {
-      const data = { dau: 100, wau: 500, mau: 1000 };
-      await setAdminMetricsCache({ period: 'week' }, data);
-      expect(mockRedis.setex).toHaveBeenCalled();
-
-      mockRedis.get.mockResolvedValue(JSON.stringify(data));
-      const result = await getAdminMetricsCache({ period: 'week' });
-      expect(result).toEqual(data);
-    });
-
-    it('SCANでパターンマッチし全キャッシュを無効化する', async () => {
-      mockRedis.scan.mockResolvedValue(['0', ['admin:metrics:key1']]);
-      const result = await invalidateAdminMetricsCache();
-      expect(result).toBe(true);
-      expect(mockRedis.scan).toHaveBeenCalledWith('0', 'MATCH', 'admin:metrics:*', 'COUNT', 100);
     });
   });
 

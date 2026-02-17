@@ -4,7 +4,6 @@ import type {
   AdminDashboardUserStats,
   AdminDashboardOrgStats,
   AdminDashboardExecutionStats,
-  AdminDashboardRevenueStats,
   AdminDashboardSystemHealth,
   SystemHealthStatus,
 } from '@agentest/shared';
@@ -18,22 +17,6 @@ import {
 // 定数
 const CACHE_TTL_SECONDS = 300; // 5分
 const ACTIVE_DAYS = 30; // アクティブ判定用の日数
-
-// サブスクリプションプランごとの月額料金（円）
-const PLAN_MONTHLY_PRICES = {
-  FREE: 0,
-  PRO: 980,
-  TEAM: 4980,
-  ENTERPRISE: 19800,
-} as const;
-
-// 年払いの場合の年額料金（円）- 2ヶ月分割引
-const PLAN_YEARLY_PRICES = {
-  FREE: 0,
-  PRO: 9800,        // 980 * 10ヶ月分
-  TEAM: 49800,      // 4980 * 10ヶ月分
-  ENTERPRISE: 198000, // 19800 * 10ヶ月分
-} as const;
 
 /**
  * 管理者ダッシュボードサービス
@@ -50,12 +33,11 @@ export class AdminDashboardService {
     }
 
     // 並列でデータを取得
-    const [users, organizations, executions, revenue, systemHealth] =
+    const [users, organizations, executions, systemHealth] =
       await Promise.all([
         this.getUserStats(),
         this.getOrgStats(),
         this.getExecutionStats(),
-        this.getRevenueStats(),
         this.getSystemHealth(),
       ]);
 
@@ -63,7 +45,6 @@ export class AdminDashboardService {
       users,
       organizations,
       executions,
-      revenue,
       systemHealth,
       fetchedAt: new Date().toISOString(),
     };
@@ -82,18 +63,10 @@ export class AdminDashboardService {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const thirtyDaysAgo = new Date(now.getTime() - ACTIVE_DAYS * 24 * 60 * 60 * 1000);
 
-    const [total, freeCount, proCount, newThisMonth, activeUsers] = await Promise.all([
+    const [total, newThisMonth, activeUsers] = await Promise.all([
       // 総ユーザー数
       prisma.user.count({
         where: { deletedAt: null },
-      }),
-      // FREEプランユーザー数
-      prisma.user.count({
-        where: { plan: 'FREE', deletedAt: null },
-      }),
-      // PROプランユーザー数
-      prisma.user.count({
-        where: { plan: 'PRO', deletedAt: null },
       }),
       // 当月新規ユーザー数
       prisma.user.count({
@@ -118,10 +91,6 @@ export class AdminDashboardService {
 
     return {
       total,
-      byPlan: {
-        free: freeCount,
-        pro: proCount,
-      },
       newThisMonth,
       activeUsers,
     };
@@ -135,18 +104,10 @@ export class AdminDashboardService {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const thirtyDaysAgo = new Date(now.getTime() - ACTIVE_DAYS * 24 * 60 * 60 * 1000);
 
-    const [total, teamCount, enterpriseCount, newThisMonth, activeOrgs] = await Promise.all([
+    const [total, newThisMonth, activeOrgs] = await Promise.all([
       // 総組織数
       prisma.organization.count({
         where: { deletedAt: null },
-      }),
-      // TEAMプラン組織数
-      prisma.organization.count({
-        where: { plan: 'TEAM', deletedAt: null },
-      }),
-      // ENTERPRISEプラン組織数
-      prisma.organization.count({
-        where: { plan: 'ENTERPRISE', deletedAt: null },
       }),
       // 当月新規組織数
       prisma.organization.count({
@@ -179,10 +140,6 @@ export class AdminDashboardService {
 
     return {
       total,
-      byPlan: {
-        team: teamCount,
-        enterprise: enterpriseCount,
-      },
       newThisMonth,
       activeOrgs,
     };
@@ -230,63 +187,6 @@ export class AdminDashboardService {
       passCount,
       failCount,
       passRate,
-    };
-  }
-
-  /**
-   * 収益統計を取得
-   */
-  private async getRevenueStats(): Promise<AdminDashboardRevenueStats> {
-    // アクティブなサブスクリプションを取得
-    const activeSubscriptions = await prisma.subscription.findMany({
-      where: {
-        status: 'ACTIVE',
-      },
-      select: {
-        plan: true,
-        billingCycle: true,
-      },
-    });
-
-    // MRRを計算（年払いは実際の年額から月額換算）
-    let mrr = 0;
-    for (const sub of activeSubscriptions) {
-      if (sub.billingCycle === 'YEARLY') {
-        // 年払いの場合: 年額を12で割って月額換算
-        const yearlyPrice = PLAN_YEARLY_PRICES[sub.plan] || 0;
-        mrr += Math.round(yearlyPrice / 12);
-      } else {
-        // 月払いの場合: そのまま月額を加算
-        mrr += PLAN_MONTHLY_PRICES[sub.plan] || 0;
-      }
-    }
-
-    // 請求書ステータス別件数を取得
-    const invoiceCounts = await prisma.invoice.groupBy({
-      by: ['status'],
-      _count: { status: true },
-    });
-
-    const invoices = {
-      paid: 0,
-      pending: 0,
-      failed: 0,
-    };
-
-    for (const invoice of invoiceCounts) {
-      const count = invoice._count.status;
-      if (invoice.status === 'PAID') {
-        invoices.paid = count;
-      } else if (invoice.status === 'PENDING') {
-        invoices.pending = count;
-      } else if (invoice.status === 'FAILED') {
-        invoices.failed = count;
-      }
-    }
-
-    return {
-      mrr,
-      invoices,
     };
   }
 

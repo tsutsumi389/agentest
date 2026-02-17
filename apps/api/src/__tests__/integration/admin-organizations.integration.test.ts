@@ -10,7 +10,6 @@ import {
   createTestOrganization,
   createTestProject,
   createTestOrgMember,
-  createTestSubscription,
   createTestAuditLog,
   createTestSuite,
   cleanupTestData,
@@ -109,51 +108,6 @@ describe('Admin Organizations API Integration Tests', () => {
       expect(response.status).toBe(200);
       expect(response.body.organizations).toHaveLength(1);
       expect(response.body.organizations[0].name).toBe(`${testPrefix}-alpha-org`);
-    });
-
-    it('プランフィルタ（plan）で絞り込みできる', async () => {
-      const testUser = await createTestUser({
-        email: 'owner@example.com',
-        name: 'Owner User',
-      });
-      await createTestOrganization(testUser.id, {
-        name: `${testPrefix}-team-org`,
-        plan: 'TEAM',
-      });
-      await createTestOrganization(testUser.id, {
-        name: `${testPrefix}-enterprise-org`,
-        plan: 'ENTERPRISE',
-      });
-
-      const response = await request(app)
-        .get(`/admin/organizations?q=${testPrefix}&plan=ENTERPRISE`)
-        .set('Cookie', sessionCookie);
-
-      expect(response.status).toBe(200);
-      expect(response.body.organizations).toHaveLength(1);
-      expect(response.body.organizations[0].plan).toBe('ENTERPRISE');
-    });
-
-    it('複数のプランフィルタで絞り込みできる', async () => {
-      const testUser = await createTestUser({
-        email: 'owner@example.com',
-        name: 'Owner User',
-      });
-      await createTestOrganization(testUser.id, {
-        name: `${testPrefix}-team-org`,
-        plan: 'TEAM',
-      });
-      await createTestOrganization(testUser.id, {
-        name: `${testPrefix}-enterprise-org`,
-        plan: 'ENTERPRISE',
-      });
-
-      const response = await request(app)
-        .get(`/admin/organizations?q=${testPrefix}&plan=TEAM,ENTERPRISE`)
-        .set('Cookie', sessionCookie);
-
-      expect(response.status).toBe(200);
-      expect(response.body.organizations).toHaveLength(2);
     });
 
     it('ステータスフィルタ（active）でアクティブな組織のみ取得できる', async () => {
@@ -312,12 +266,6 @@ describe('Admin Organizations API Integration Tests', () => {
       const org = await createTestOrganization(testUser.id, {
         name: `${testPrefix}-test-org`,
         description: 'Test description',
-        plan: 'ENTERPRISE',
-      });
-      // billingEmailを設定
-      await prisma.organization.update({
-        where: { id: org.id },
-        data: { billingEmail: 'billing@example.com' },
       });
 
       const response = await request(app)
@@ -330,8 +278,6 @@ describe('Admin Organizations API Integration Tests', () => {
       expect(organization.id).toBe(org.id);
       expect(organization.name).toBe(`${testPrefix}-test-org`);
       expect(organization.description).toBe('Test description');
-      expect(organization.plan).toBe('ENTERPRISE');
-      expect(organization.billingEmail).toBe('billing@example.com');
       expect(organization.createdAt).toBeDefined();
       expect(organization.updatedAt).toBeDefined();
       expect(organization.deletedAt).toBeNull();
@@ -430,7 +376,7 @@ describe('Admin Organizations API Integration Tests', () => {
 
     it('不正なクエリパラメータはエラーを返す', async () => {
       const response = await request(app)
-        .get('/admin/organizations?plan=INVALID_PLAN')
+        .get('/admin/organizations?status=INVALID_STATUS')
         .set('Cookie', sessionCookie);
 
       expect(response.status).toBe(400);
@@ -540,12 +486,6 @@ describe('Admin Organizations API Integration Tests', () => {
       const org = await createTestOrganization(testUser.id, {
         name: `${testPrefix}-basic-info-org`,
         description: 'Test description',
-        plan: 'ENTERPRISE',
-      });
-      // billingEmailを設定
-      await prisma.organization.update({
-        where: { id: org.id },
-        data: { billingEmail: 'billing@example.com' },
       });
 
       const response = await request(app)
@@ -557,8 +497,6 @@ describe('Admin Organizations API Integration Tests', () => {
       expect(organization.id).toBe(org.id);
       expect(organization.name).toBe(`${testPrefix}-basic-info-org`);
       expect(organization.description).toBe('Test description');
-      expect(organization.plan).toBe('ENTERPRISE');
-      expect(organization.billingEmail).toBe('billing@example.com');
       expect(organization.createdAt).toBeDefined();
       expect(organization.updatedAt).toBeDefined();
       expect(organization.deletedAt).toBeNull();
@@ -721,56 +659,6 @@ describe('Admin Organizations API Integration Tests', () => {
       // アクティブプロジェクトのみ
       expect(organization.projects).toHaveLength(1);
       expect(organization.projects[0].id).toBe(activeProject.id);
-    });
-
-    it('サブスクリプションがある場合は情報が含まれる', async () => {
-      const testUser = await createTestUser({
-        email: 'owner@example.com',
-        name: 'Owner User',
-      });
-      const org = await createTestOrganization(testUser.id, {
-        name: `${testPrefix}-subscription-org`,
-        plan: 'TEAM',
-      });
-      // サブスクリプションを追加
-      await createTestSubscription({
-        organizationId: org.id,
-        plan: 'TEAM',
-        status: 'ACTIVE',
-        billingCycle: 'MONTHLY',
-      });
-
-      const response = await request(app)
-        .get(`/admin/organizations/${org.id}`)
-        .set('Cookie', sessionCookie);
-
-      expect(response.status).toBe(200);
-      const organization = response.body.organization;
-      expect(organization.subscription).not.toBeNull();
-      expect(organization.subscription.plan).toBe('TEAM');
-      expect(organization.subscription.status).toBe('ACTIVE');
-      expect(organization.subscription.billingCycle).toBe('MONTHLY');
-      expect(organization.subscription.currentPeriodStart).toBeDefined();
-      expect(organization.subscription.currentPeriodEnd).toBeDefined();
-      expect(organization.subscription.cancelAtPeriodEnd).toBe(false);
-    });
-
-    it('サブスクリプションがない場合はnullになる', async () => {
-      const testUser = await createTestUser({
-        email: 'owner@example.com',
-        name: 'Owner User',
-      });
-      const org = await createTestOrganization(testUser.id, {
-        name: `${testPrefix}-no-subscription-org`,
-      });
-
-      const response = await request(app)
-        .get(`/admin/organizations/${org.id}`)
-        .set('Cookie', sessionCookie);
-
-      expect(response.status).toBe(200);
-      const organization = response.body.organization;
-      expect(organization.subscription).toBeNull();
     });
 
     it('削除済み組織の詳細も取得できる', async () => {

@@ -347,7 +347,7 @@ export class TestApiClient {
 
   async updateOrganization(
     organizationId: string,
-    data: { name?: string; description?: string | null; billingEmail?: string | null },
+    data: { name?: string; description?: string | null },
   ) {
     const response = await this.request.patch(`${this.baseUrl}/api/organizations/${organizationId}`, {
       data,

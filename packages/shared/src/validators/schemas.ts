@@ -1,7 +1,5 @@
 import { z } from 'zod';
 import {
-  UserPlan,
-  OrganizationPlan,
   OrganizationRole,
   ProjectRole,
   EntityStatus,
@@ -28,8 +26,6 @@ export const sortSchema = z.object({
 });
 
 // Enumスキーマ
-export const userPlanSchema = z.enum([UserPlan.FREE, UserPlan.PRO]);
-export const organizationPlanSchema = z.enum([OrganizationPlan.TEAM, OrganizationPlan.ENTERPRISE]);
 export const organizationRoleSchema = z.enum([
   OrganizationRole.OWNER,
   OrganizationRole.ADMIN,
@@ -139,13 +135,11 @@ export const userUpdateSchema = z.object({
 export const organizationCreateSchema = z.object({
   name: z.string().min(1).max(100),
   description: z.string().max(500).nullish(),
-  billingEmail: z.string().email().transform((v) => v.toLowerCase().trim()).nullish(),
 });
 
 export const organizationUpdateSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   description: z.string().max(500).nullish(),
-  billingEmail: z.string().email().transform((v) => v.toLowerCase().trim()).nullish(),
 });
 
 export const organizationInviteSchema = z.object({
@@ -409,7 +403,6 @@ const auditLogCategories = [
   AuditLogCategory.MEMBER,
   AuditLogCategory.PROJECT,
   AuditLogCategory.API_TOKEN,
-  AuditLogCategory.BILLING,
 ] as const;
 
 // 監査ログエクスポートスキーマ
@@ -478,12 +471,6 @@ export type AuditLogExport = z.infer<typeof auditLogExportSchema>;
 export const adminUserSearchSchema = z.object({
   // 検索クエリ
   q: z.string().max(100).optional(),
-  // プランフィルタ（カンマ区切り → 配列変換）
-  plan: z
-    .string()
-    .optional()
-    .transform((val) => val?.split(',').map((s) => s.trim()))
-    .pipe(z.array(userPlanSchema).optional()),
   // ステータスフィルタ
   status: z.enum(['active', 'deleted', 'all']).default('active'),
   // 日付フィルタ
@@ -493,7 +480,7 @@ export const adminUserSearchSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   // ソート
-  sortBy: z.enum(['createdAt', 'name', 'email', 'plan']).default('createdAt'),
+  sortBy: z.enum(['createdAt', 'name', 'email']).default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
@@ -506,12 +493,6 @@ export type AdminUserSearch = z.infer<typeof adminUserSearchSchema>;
 export const adminOrganizationSearchSchema = z.object({
   // 検索クエリ
   q: z.string().max(100).optional(),
-  // プランフィルタ（カンマ区切り → 配列変換）
-  plan: z
-    .string()
-    .optional()
-    .transform((val) => val?.split(',').map((s) => s.trim()))
-    .pipe(z.array(organizationPlanSchema).optional()),
   // ステータスフィルタ
   status: z.enum(['active', 'deleted', 'all']).default('active'),
   // 日付フィルタ
@@ -521,7 +502,7 @@ export const adminOrganizationSearchSchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   // ソート
-  sortBy: z.enum(['createdAt', 'name', 'plan']).default('createdAt'),
+  sortBy: z.enum(['createdAt', 'name']).default('createdAt'),
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 }).refine(
   (data) => {
@@ -557,7 +538,6 @@ export const adminAuditLogSearchSchema = z.object({
       AuditLogCategory.MEMBER,
       AuditLogCategory.PROJECT,
       AuditLogCategory.API_TOKEN,
-      AuditLogCategory.BILLING,
     ])).optional()),
   // 組織IDフィルタ
   organizationId: z.string().uuid().optional(),
@@ -620,44 +600,6 @@ export const activeUserMetricsQuerySchema = z.object({
 );
 
 export type ActiveUserMetricsQuery = z.infer<typeof activeUserMetricsQuerySchema>;
-
-// ============================================
-// プラン分布メトリクスクエリスキーマ
-// ============================================
-
-export const planDistributionQuerySchema = z.object({
-  granularity: z.enum(['day', 'week', 'month']).default('day'),
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
-  timezone: z.string()
-    .regex(/^[A-Za-z_]+\/[A-Za-z_]+$/, '無効なタイムゾーン形式です')
-    .default('Asia/Tokyo'),
-  view: z.enum(['combined', 'users', 'organizations']).default('combined'),
-  includeMembers: z.preprocess(
-    (val) => val === 'true' || val === true,
-    z.boolean().default(true)
-  ),
-}).refine(
-  (data) => {
-    if (data.startDate && data.endDate) {
-      return new Date(data.startDate) <= new Date(data.endDate);
-    }
-    return true;
-  },
-  { message: 'startDateはendDate以前の日付を指定してください', path: ['startDate'] }
-).refine(
-  (data) => {
-    if (data.startDate && data.endDate) {
-      const diffDays = (new Date(data.endDate).getTime() -
-                        new Date(data.startDate).getTime()) / (1000 * 60 * 60 * 24);
-      return diffDays <= 365;
-    }
-    return true;
-  },
-  { message: '期間は最大365日までです' }
-);
-
-export type PlanDistributionQuery = z.infer<typeof planDistributionQuerySchema>;
 
 // ============================================
 // システム管理者（AdminUser）検索スキーマ

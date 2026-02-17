@@ -42,9 +42,6 @@ export function createApp(): Express {
     allowedHeaders: ['Content-Type', 'Authorization', 'mcp-protocol-version'],
   }));
 
-  // Stripe Webhookはraw bodyが必要（署名検証のため、express.json()より前に配置）
-  app.use('/webhooks/stripe', express.raw({ type: 'application/json' }));
-
   // ボディパーサー（Base64エンコードされたファイルアップロードのため50MBに設定）
   app.use(express.json({ limit: '50mb' }));
   app.use(express.urlencoded({ extended: true }));

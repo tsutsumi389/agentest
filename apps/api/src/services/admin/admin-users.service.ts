@@ -28,7 +28,6 @@ export class AdminUsersService {
     // デフォルト値を設定
     const {
       q,
-      plan,
       status = 'active',
       createdFrom,
       createdTo,
@@ -41,7 +40,6 @@ export class AdminUsersService {
     // キャッシュパラメータを構築
     const cacheParams = {
       q,
-      plan,
       status,
       createdFrom,
       createdTo,
@@ -60,7 +58,6 @@ export class AdminUsersService {
     // WHERE句を構築
     const where = this.buildWhereClause({
       q,
-      plan,
       status,
       createdFrom,
       createdTo,
@@ -108,7 +105,6 @@ export class AdminUsersService {
       email: user.email,
       name: user.name,
       avatarUrl: user.avatarUrl,
-      plan: user.plan,
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
       deletedAt: user.deletedAt?.toISOString() ?? null,
@@ -140,12 +136,11 @@ export class AdminUsersService {
    */
   private buildWhereClause(params: {
     q?: string;
-    plan?: ('FREE' | 'PRO')[];
     status?: string;
     createdFrom?: string;
     createdTo?: string;
   }): Prisma.UserWhereInput {
-    const { q, plan, status, createdFrom, createdTo } = params;
+    const { q, status, createdFrom, createdTo } = params;
     const where: Prisma.UserWhereInput = {};
 
     // 検索クエリ（OR条件）
@@ -154,11 +149,6 @@ export class AdminUsersService {
         { email: { contains: q, mode: 'insensitive' } },
         { name: { contains: q, mode: 'insensitive' } },
       ];
-    }
-
-    // プランフィルタ
-    if (plan && plan.length > 0) {
-      where.plan = { in: plan };
     }
 
     // ステータスフィルタ
@@ -195,8 +185,6 @@ export class AdminUsersService {
         return { name: sortOrder };
       case 'email':
         return { email: sortOrder };
-      case 'plan':
-        return { plan: sortOrder };
       case 'createdAt':
       default:
         return { createdAt: sortOrder };
@@ -234,7 +222,6 @@ export class AdminUsersService {
         accounts: {
           select: { provider: true, createdAt: true },
         },
-        subscription: true,
         auditLogs: {
           orderBy: { createdAt: 'desc' },
           take: 10,
@@ -275,7 +262,6 @@ export class AdminUsersService {
       email: user.email,
       name: user.name,
       avatarUrl: user.avatarUrl,
-      plan: user.plan,
       createdAt: user.createdAt.toISOString(),
       updatedAt: user.updatedAt.toISOString(),
       deletedAt: user.deletedAt?.toISOString() ?? null,
@@ -299,16 +285,6 @@ export class AdminUsersService {
         provider: account.provider,
         createdAt: account.createdAt.toISOString(),
       })),
-      subscription: user.subscription
-        ? {
-            plan: user.subscription.plan,
-            status: user.subscription.status,
-            billingCycle: user.subscription.billingCycle,
-            currentPeriodStart: user.subscription.currentPeriodStart.toISOString(),
-            currentPeriodEnd: user.subscription.currentPeriodEnd.toISOString(),
-            cancelAtPeriodEnd: user.subscription.cancelAtPeriodEnd,
-          }
-        : null,
       recentAuditLogs: user.auditLogs.map((log) => ({
         id: log.id,
         category: log.category,
