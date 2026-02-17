@@ -29,7 +29,6 @@ import {
   adminUserSearchSchema,
   adminOrganizationSearchSchema,
   adminAuditLogSearchSchema,
-  activeUserMetricsQuerySchema,
   systemAdminSearchSchema,
   systemAdminInviteSchema,
   acceptInvitationSchema,
@@ -738,31 +737,6 @@ describe('管理者向けスキーマ', () => {
   });
 });
 
-describe('メトリクスクエリスキーマ', () => {
-  describe('activeUserMetricsQuerySchema', () => {
-    it('デフォルト値を適用する', () => {
-      const result = activeUserMetricsQuerySchema.parse({});
-      expect(result.granularity).toBe('day');
-      expect(result.timezone).toBe('Asia/Tokyo');
-    });
-
-    it('期間が365日を超える場合は拒否する', () => {
-      const result = activeUserMetricsQuerySchema.safeParse({
-        startDate: '2023-01-01T00:00:00Z',
-        endDate: '2024-12-31T00:00:00Z',
-      });
-      expect(result.success).toBe(false);
-    });
-
-    it('無効なタイムゾーン形式を拒否する', () => {
-      const result = activeUserMetricsQuerySchema.safeParse({
-        timezone: 'invalid',
-      });
-      expect(result.success).toBe(false);
-    });
-  });
-
-});
 
 describe('システム管理者スキーマ', () => {
   describe('systemAdminSearchSchema', () => {

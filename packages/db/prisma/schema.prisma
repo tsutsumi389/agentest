@@ -132,12 +132,6 @@ enum AdminRoleType {
   VIEWER // 閲覧専用
 }
 
-// アクティブユーザー集計の粒度
-enum MetricGranularity {
-  DAY
-  WEEK
-  MONTH
-}
 
 // ============================================
 // 認証モデル
@@ -1279,23 +1273,5 @@ model AdminAuditLog {
   @@index([action])
   @@index([createdAt])
   @@map("admin_audit_logs")
-}
-
-// ============================================
-// メトリクスモデル
-// ============================================
-
-// アクティブユーザーメトリクス（DAU/WAU/MAU集計テーブル）
-model ActiveUserMetric {
-  id          String            @id @default(uuid())
-  granularity MetricGranularity
-  periodStart DateTime          @map("period_start") @db.Date // 期間開始日
-  userCount   Int               @map("user_count")
-  createdAt   DateTime          @default(now()) @map("created_at")
-  updatedAt   DateTime          @updatedAt @map("updated_at")
-
-  @@unique([granularity, periodStart])
-  @@index([granularity, periodStart])
-  @@map("active_user_metrics")
 }
 

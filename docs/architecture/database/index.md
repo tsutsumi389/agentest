@@ -62,12 +62,6 @@ PostgreSQL を使用。Prisma ORM でスキーマ管理。
 | `AdminSession` | 管理者セッション | [admin-auth.md](./admin-auth.md#adminsession) |
 | `AdminAuditLog` | 管理者監査ログ | [admin-auth.md](./admin-auth.md#adminauditlog) |
 
-### メトリクス
-
-| テーブル | 説明 | 詳細 |
-|---------|------|------|
-| `ActiveUserMetric` | アクティブユーザーメトリクス | [metrics.md](./metrics.md#activeusermetric) |
-
 ### Agent セッション
 
 | テーブル | 説明 | 詳細 |
@@ -205,7 +199,6 @@ Coding Agent が理解しやすい英語の文字列を使用。
 | `NotificationType` | ORG_INVITATION, INVITATION_ACCEPTED, PROJECT_ADDED, REVIEW_COMMENT, TEST_COMPLETED, TEST_FAILED, SECURITY_ALERT | 通知種別 |
 | `AuditLogCategory` | AUTH, USER, ORGANIZATION, MEMBER, PROJECT, API_TOKEN | 監査ログカテゴリ |
 | `AdminRoleType` | SUPER_ADMIN, ADMIN, VIEWER | 管理者ロール |
-| `MetricGranularity` | DAY, WEEK, MONTH | メトリクス集計粒度 |
 
 ## インデックス戦略
 
@@ -320,10 +313,6 @@ CREATE INDEX idx_admin_audit_logs_user_id ON "admin_audit_logs"("admin_user_id")
 CREATE INDEX idx_admin_audit_logs_action ON "admin_audit_logs"("action");
 CREATE INDEX idx_admin_audit_logs_created ON "admin_audit_logs"("created_at");
 
--- メトリクス
-CREATE UNIQUE INDEX idx_active_user_metrics_granularity_period ON "active_user_metrics"("granularity", "period_start");
-CREATE INDEX idx_active_user_metrics_period ON "active_user_metrics"("granularity", "period_start");
-
 -- 全文検索用（pg_bigm: 日本語対応）
 -- 拡張の有効化（マイグレーション時に1回実行）
 CREATE EXTENSION IF NOT EXISTS pg_bigm;
@@ -373,7 +362,6 @@ docker compose exec api pnpm --filter @agentest/db prisma migrate deploy
 - [通知](./notification.md)
 - [監査ログ](./audit-log.md)
 - [管理者認証](./admin-auth.md)
-- [メトリクス](./metrics.md)
 - [システム全体像](../overview.md)
 - [API 設計方針](../api-design.md)
 - [ユーザー・オーガナイゼーション機能](../../requirements/user-organization.md)

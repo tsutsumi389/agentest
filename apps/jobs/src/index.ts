@@ -4,8 +4,6 @@
  */
 import { runHistoryCleanup } from './jobs/history-cleanup.js';
 import { runProjectCleanup } from './jobs/project-cleanup.js';
-import { runMetricsAggregation } from './jobs/metrics-aggregation.js';
-import { runMetricsBackfill } from './jobs/metrics-backfill.js';
 import { closeRedis } from './lib/redis.js';
 import { closePrisma } from './lib/prisma.js';
 import { registerProcessHandlers } from '@agentest/shared';
@@ -34,8 +32,6 @@ registerProcessHandlers({
 const jobs: Record<string, () => Promise<void>> = {
   'history-cleanup': runHistoryCleanup,
   'project-cleanup': runProjectCleanup,
-  'metrics-aggregation': runMetricsAggregation,
-  'metrics-backfill': runMetricsBackfill,
 };
 
 async function main() {

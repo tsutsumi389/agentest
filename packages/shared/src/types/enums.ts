@@ -134,6 +134,3 @@ export const AuditLogCategory = {
   API_TOKEN: 'API_TOKEN',
 } as const;
 export type AuditLogCategory = (typeof AuditLogCategory)[keyof typeof AuditLogCategory];
-
-// メトリクス粒度（再エクスポート用 - admin-metrics.tsで定義）
-// export { MetricGranularity } from './admin-metrics.js';
