@@ -204,8 +204,6 @@ export async function createTestAuditLog(
  */
 export async function cleanupTestData() {
   // 外部キー制約を考慮した順序で削除
-  // メトリクス関連
-  await prisma.activeUserMetric.deleteMany({});
   // 管理者関連
   await prisma.adminAuditLog.deleteMany({});
   await prisma.adminSession.deleteMany({});
@@ -1244,30 +1242,6 @@ export async function createTestAdminAuditLog(
       ipAddress: overrides.ipAddress ?? null,
       userAgent: overrides.userAgent ?? null,
       createdAt: overrides.createdAt ?? new Date(),
-    },
-  });
-}
-
-// ==================== メトリクス関連テストヘルパー ====================
-
-/**
- * テスト用アクティブユーザーメトリクスを作成
- */
-export async function createTestActiveUserMetric(
-  overrides: Partial<{
-    id: string;
-    granularity: 'DAY' | 'WEEK' | 'MONTH';
-    periodStart: Date;
-    userCount: number;
-  }> = {}
-) {
-  const id = overrides.id ?? randomUUID();
-  return prisma.activeUserMetric.create({
-    data: {
-      id,
-      granularity: overrides.granularity ?? 'DAY',
-      periodStart: overrides.periodStart ?? new Date(),
-      userCount: overrides.userCount ?? 0,
     },
   });
 }

@@ -11,7 +11,6 @@ Agentest のバッチジョブは Cloud Run Jobs で実行され、Cloud Schedul
 |---------|-------------|------|
 | `history-cleanup` | 毎日 3:00 JST | 古い履歴を削除 |
 | `project-cleanup` | 毎日 4:00 JST | ソフトデリート済みプロジェクトを物理削除 |
-| `metrics-aggregation` | 毎日 1:00 JST | DAU/WAU/MAUを集計 |
 
 ## 日常運用
 
@@ -80,15 +79,6 @@ gcloud run jobs execute agentest-jobs \
   --region=asia-northeast1 \
   --set-env-vars JOB_NAME=project-cleanup
 
-# metrics-aggregation を手動実行
-gcloud run jobs execute agentest-jobs \
-  --region=asia-northeast1 \
-  --set-env-vars JOB_NAME=metrics-aggregation
-
-# metrics-backfill を手動実行（過去3ヶ月分）
-gcloud run jobs execute agentest-jobs \
-  --region=asia-northeast1 \
-  --set-env-vars JOB_NAME=metrics-backfill,BACKFILL_MONTHS=3
 
 ```
 
@@ -163,32 +153,6 @@ gcloud sql connect agentest-db --user=agentest
 # 3. 問題が解消したら手動で再実行
 ```
 
-### 4. metrics-aggregation でデータが集計されない
-
-**症状**: ダッシュボードのアクティブユーザーグラフが更新されない
-
-**対応手順**:
-
-```sql
--- 最近の集計状況を確認
-SELECT granularity, period_start, user_count, created_at
-FROM active_user_metrics
-ORDER BY period_start DESC
-LIMIT 30;
-
--- 集計対象のセッションデータを確認
-SELECT DATE(last_active_at) as date, COUNT(DISTINCT user_id) as active_count
-FROM sessions
-WHERE last_active_at > NOW() - INTERVAL '7 days'
-  AND revoked_at IS NULL
-GROUP BY DATE(last_active_at)
-ORDER BY date DESC;
-```
-
-**復旧手順**:
-1. ログでエラーを確認
-2. 必要に応じてバックフィルジョブを実行
-
 ## データ確認クエリ
 
 ### 履歴クリーンアップ関連
@@ -198,47 +162,6 @@ ORDER BY date DESC;
 SELECT COUNT(*)
 FROM test_case_histories tch
 WHERE tch.created_at < NOW() - INTERVAL '30 days';
-```
-
-### メトリクス集計関連
-
-```sql
--- 日次メトリクスの確認
-SELECT period_start, user_count
-FROM active_user_metrics
-WHERE granularity = 'DAY'
-ORDER BY period_start DESC
-LIMIT 30;
-
--- 週次メトリクスの確認
-SELECT period_start, user_count
-FROM active_user_metrics
-WHERE granularity = 'WEEK'
-ORDER BY period_start DESC
-LIMIT 12;
-
--- 月次メトリクスの確認
-SELECT period_start, user_count
-FROM active_user_metrics
-WHERE granularity = 'MONTH'
-ORDER BY period_start DESC
-LIMIT 12;
-
--- 欠損している日付を確認
-WITH date_series AS (
-  SELECT generate_series(
-    (SELECT MIN(period_start) FROM active_user_metrics WHERE granularity = 'DAY'),
-    CURRENT_DATE - 1,
-    '1 day'::interval
-  )::date AS expected_date
-)
-SELECT expected_date
-FROM date_series
-WHERE expected_date NOT IN (
-  SELECT period_start::date
-  FROM active_user_metrics
-  WHERE granularity = 'DAY'
-);
 ```
 
 ### プロジェクトクリーンアップ関連
