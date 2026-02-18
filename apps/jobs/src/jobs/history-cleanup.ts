@@ -1,6 +1,6 @@
 /**
  * 履歴クリーンアップジョブ
- * 30日経過した変更履歴を削除
+ * 保持期間を超えた変更履歴を削除
  * 毎日 3:00 JST に実行
  */
 import { prisma } from '../lib/prisma.js';
@@ -8,16 +8,40 @@ import { logger as baseLogger } from '../utils/logger.js';
 
 const logger = baseLogger.child({ module: 'history-cleanup' });
 
-/** 履歴保持日数 */
-const HISTORY_RETENTION_DAYS = 30;
+/** デフォルト履歴保持日数 */
+const DEFAULT_HISTORY_RETENTION_DAYS = 30;
+
+/** 履歴保持日数の上限 */
+const MAX_HISTORY_RETENTION_DAYS = 365;
+
+/** 環境変数から履歴保持日数を取得（無効値はデフォルトにフォールバック） */
+function getHistoryRetentionDays(): number {
+  const envValue = process.env.HISTORY_RETENTION_DAYS;
+  if (envValue === undefined) {
+    return DEFAULT_HISTORY_RETENTION_DAYS;
+  }
+
+  const parsed = parseInt(envValue, 10);
+  if (isNaN(parsed) || parsed <= 0 || parsed > MAX_HISTORY_RETENTION_DAYS) {
+    logger.warn(
+      { value: envValue, default: DEFAULT_HISTORY_RETENTION_DAYS, max: MAX_HISTORY_RETENTION_DAYS },
+      'HISTORY_RETENTION_DAYS が無効な値です。デフォルト値を使用します'
+    );
+    return DEFAULT_HISTORY_RETENTION_DAYS;
+  }
+
+  return parsed;
+}
 
 export async function runHistoryCleanup(): Promise<void> {
+  const retentionDays = getHistoryRetentionDays();
+
   // 削除基準日を算出
   const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - HISTORY_RETENTION_DAYS);
+  cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
 
   logger.info(
-    { historyRetentionDays: HISTORY_RETENTION_DAYS, cutoffDate: cutoffDate.toISOString() },
+    { historyRetentionDays: retentionDays, cutoffDate: cutoffDate.toISOString() },
     '削除対象の履歴を検索'
   );
 

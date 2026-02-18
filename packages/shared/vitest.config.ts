@@ -16,7 +16,6 @@ export default defineConfig({
         '**/index.ts',
         'src/types/**/*.ts', // 型定義のみのファイル
         'src/config/constants.ts', // 定数定義
-        'src/config/plan-pricing.ts', // 料金テーブル定数
         'vitest.config.ts',
       ],
       thresholds: {
