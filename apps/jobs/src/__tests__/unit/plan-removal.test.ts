@@ -7,14 +7,17 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 
 describe('プラン制限・UsageRecord の削除確認', () => {
-  const sharedConfigDir = path.resolve(__dirname, '../../../../packages/shared/src/config');
+  const sharedConfigDir = path.resolve(__dirname, '../../../../../packages/shared/src/config');
   const historyCleanupPath = path.resolve(__dirname, '../../jobs/history-cleanup.ts');
 
   it('plan-pricing.ts が存在しないこと', () => {
+    // パスが正しいことを先に確認（ディレクトリ自体は存在するはず）
+    expect(fs.existsSync(sharedConfigDir)).toBe(true);
     expect(fs.existsSync(path.join(sharedConfigDir, 'plan-pricing.ts'))).toBe(false);
   });
 
   it('history-cleanup.ts にプラン関連の参照がないこと', () => {
+    expect(fs.existsSync(historyCleanupPath)).toBe(true);
     const content = fs.readFileSync(historyCleanupPath, 'utf-8');
     expect(content).not.toContain('UserPlan');
     expect(content).not.toContain('OrganizationPlan');
@@ -25,6 +28,7 @@ describe('プラン制限・UsageRecord の削除確認', () => {
   });
 
   it('history-cleanup.ts が環境変数で保持日数を設定できること', () => {
+    expect(fs.existsSync(historyCleanupPath)).toBe(true);
     const content = fs.readFileSync(historyCleanupPath, 'utf-8');
     expect(content).toContain('process.env');
     expect(content).toContain('HISTORY_RETENTION_DAYS');

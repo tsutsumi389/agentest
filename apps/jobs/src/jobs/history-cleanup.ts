@@ -11,6 +11,9 @@ const logger = baseLogger.child({ module: 'history-cleanup' });
 /** デフォルト履歴保持日数 */
 const DEFAULT_HISTORY_RETENTION_DAYS = 30;
 
+/** 履歴保持日数の上限 */
+const MAX_HISTORY_RETENTION_DAYS = 365;
+
 /** 環境変数から履歴保持日数を取得（無効値はデフォルトにフォールバック） */
 function getHistoryRetentionDays(): number {
   const envValue = process.env.HISTORY_RETENTION_DAYS;
@@ -19,9 +22,9 @@ function getHistoryRetentionDays(): number {
   }
 
   const parsed = parseInt(envValue, 10);
-  if (isNaN(parsed) || parsed <= 0) {
+  if (isNaN(parsed) || parsed <= 0 || parsed > MAX_HISTORY_RETENTION_DAYS) {
     logger.warn(
-      { value: envValue, default: DEFAULT_HISTORY_RETENTION_DAYS },
+      { value: envValue, default: DEFAULT_HISTORY_RETENTION_DAYS, max: MAX_HISTORY_RETENTION_DAYS },
       'HISTORY_RETENTION_DAYS が無効な値です。デフォルト値を使用します'
     );
     return DEFAULT_HISTORY_RETENTION_DAYS;

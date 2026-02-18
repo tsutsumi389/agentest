@@ -185,6 +185,22 @@ describe('runHistoryCleanup', () => {
       expect(getCutoffDate().getTime()).toBe(expectedCutoffDate(45).getTime());
     });
 
+    it('上限（365日）を超えた値はデフォルト30日にフォールバックする', async () => {
+      process.env.HISTORY_RETENTION_DAYS = '9999';
+      await runWithMocks();
+      expect(getCutoffDate().getTime()).toBe(expectedCutoffDate(30).getTime());
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({ value: '9999' }),
+        expect.stringContaining('HISTORY_RETENTION_DAYS')
+      );
+    });
+
+    it('上限（365日）ちょうどは有効値として使用する', async () => {
+      process.env.HISTORY_RETENTION_DAYS = '365';
+      await runWithMocks();
+      expect(getCutoffDate().getTime()).toBe(expectedCutoffDate(365).getTime());
+    });
+
     it('無効値で警告ログを出力する', async () => {
       process.env.HISTORY_RETENTION_DAYS = 'invalid';
       await runWithMocks();
