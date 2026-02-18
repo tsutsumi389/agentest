@@ -336,7 +336,8 @@ export class AuthController {
   /**
    * メール/パスワード新規登録
    *
-   * メール確認フロー: JWT発行せず、確認メールを送信
+   * REQUIRE_EMAIL_VERIFICATION=true: JWT発行せず、確認メールを送信
+   * REQUIRE_EMAIL_VERIFICATION=false: JWT即発行、クッキー設定
    */
   register = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -345,13 +346,27 @@ export class AuthController {
         throw createValidationError(parsed.error);
       }
 
+      const clientInfo = extractClientInfo(req);
       const result = await this.passwordAuthService.register({
         email: parsed.data.email,
         password: parsed.data.password,
         name: parsed.data.name,
+        ipAddress: clientInfo.ipAddress,
+        userAgent: clientInfo.userAgent,
       });
 
-      // 確認メール送信（非同期、失敗してもエラーにしない）
+      // メール認証スキップ時: クッキー設定して即ログイン状態にする
+      if (!result.requiresEmailVerification) {
+        this.setAuthCookies(res, result.tokens);
+        res.status(201).json({
+          message: 'アカウントが作成されました。',
+          user: result.user,
+          emailVerificationSkipped: true,
+        });
+        return;
+      }
+
+      // メール認証あり: 確認メール送信（非同期、失敗してもエラーにしない）
       const verificationUrl = `${env.FRONTEND_URL}/verify-email?token=${result.verificationToken}`;
       const verificationEmail = emailService.generateEmailVerificationEmail({
         name: result.user.name,

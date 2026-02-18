@@ -39,6 +39,9 @@ REDIS_PASSWORD=agentest
 # トークン暗号化（OAuthトークンのDB保存時に使用）
 TOKEN_ENCRYPTION_KEY=dev-token-encryption-key-change-in-production
 
+# メール認証（SMTP設定不要で始める場合は false に設定）
+# REQUIRE_EMAIL_VERIFICATION=false
+
 # OAuth（後で設定可）
 GITHUB_CLIENT_ID=
 GITHUB_CLIENT_SECRET=

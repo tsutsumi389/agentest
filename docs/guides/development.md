@@ -126,6 +126,8 @@ SMTP_FROM=noreply@agentest.local
 
 Mailpit は送信されたメールを全てキャプチャし、Web UI で確認できます。実際のメール送信は行われません。
 
+> **Tip:** SMTP 設定なしで素早く開発を始めたい場合は、環境変数 `REQUIRE_EMAIL_VERIFICATION=false` を設定することでメール認証をスキップできます。この場合、新規登録時に確認メールが送信されず、即座にログイン可能です。
+
 ## ログ設定
 
 バックエンドサービス（API, WS, Jobs, MCP Server）は [Pino](https://getpino.io/) を使用した構造化JSONログを出力します。

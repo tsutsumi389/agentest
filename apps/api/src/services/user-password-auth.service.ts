@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { prisma, type Prisma } from '@agentest/db';
 import { generateTokens, type TokenPair } from '@agentest/auth';
 import { AppError, AuthenticationError, ConflictError, BadRequestError } from '@agentest/shared';
+import { env } from '../config/env.js';
 import { authConfig } from '../config/auth.js';
 import { hashToken } from '../utils/pkce.js';
 import { setUserTwoFactorToken } from '../lib/redis-store.js';
@@ -37,16 +38,14 @@ export type LoginResult =
   | { requires2FA: true; twoFactorToken: string };
 
 /**
- * 登録結果（メール確認が必要なため、JWTは発行しない）
+ * 登録結果（判別共用体）
+ *
+ * メール認証あり: 確認トークンを返す（JWT未発行）
+ * メール認証スキップ: JWTトークンペアを即発行
  */
-export interface RegisterResult {
-  verificationToken: string;
-  user: {
-    id: string;
-    email: string;
-    name: string;
-  };
-}
+export type RegisterResult =
+  | { requiresEmailVerification: true; verificationToken: string; user: { id: string; email: string; name: string } }
+  | { requiresEmailVerification: false; tokens: TokenPair; user: { id: string; email: string; name: string } };
 
 /**
  * ユーザーパスワード認証サービス
@@ -73,15 +72,17 @@ export class UserPasswordAuthService {
   /**
    * 新規ユーザー登録
    *
-   * メール確認が完了するまでJWTは発行しない。
-   * 確認トークンを生成し、メール送信用に返却する。
+   * REQUIRE_EMAIL_VERIFICATION=true（デフォルト）: メール確認待ち、JWT未発行
+   * REQUIRE_EMAIL_VERIFICATION=false: emailVerified=true で即JWT発行
    */
   async register(input: {
     email: string;
     password: string;
     name: string;
+    ipAddress?: string;
+    userAgent?: string;
   }): Promise<RegisterResult> {
-    const { email, password, name } = input;
+    const { email, password, name, ipAddress, userAgent } = input;
 
     // メールアドレス重複チェック
     const existing = await prisma.user.findFirst({
@@ -94,7 +95,58 @@ export class UserPasswordAuthService {
     // パスワードハッシュ化
     const passwordHash = await this.hashPassword(password);
 
-    // 確認トークン生成
+    // メール認証スキップ時: emailVerified=true で作成し、JWT即発行
+    if (!env.REQUIRE_EMAIL_VERIFICATION) {
+      const created = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        const user = await tx.user.create({
+          data: {
+            email,
+            name,
+            passwordHash,
+            emailVerified: true,
+          },
+        });
+
+        // JWT発行 + セッション作成
+        const tokens = generateTokens(user.id, user.email, authConfig);
+        const tokenHash = hashToken(tokens.refreshToken);
+
+        await Promise.all([
+          tx.refreshToken.create({
+            data: {
+              userId: user.id,
+              tokenHash,
+              expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
+            },
+          }),
+          tx.session.create({
+            data: {
+              userId: user.id,
+              tokenHash,
+              userAgent,
+              ipAddress,
+              expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
+            },
+          }),
+        ]);
+
+        return { user, tokens };
+      });
+
+      logger.info({ userId: created.user.id, email }, 'ユーザー登録完了（メール認証スキップ）');
+
+      return {
+        requiresEmailVerification: false,
+        tokens: created.tokens,
+        user: {
+          id: created.user.id,
+          email: created.user.email,
+          name: created.user.name,
+        },
+      };
+    }
+
+    // メール認証あり（デフォルト）: 確認トークン生成
     const rawToken = crypto.randomBytes(32).toString('hex');
     const tokenHash = hashToken(rawToken);
 
@@ -123,6 +175,7 @@ export class UserPasswordAuthService {
     logger.info({ userId: created.id, email }, 'ユーザー登録完了（メール確認待ち）');
 
     return {
+      requiresEmailVerification: true,
       verificationToken: rawToken,
       user: {
         id: created.id,

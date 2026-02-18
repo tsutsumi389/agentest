@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { UserPasswordAuthService } from '../../services/user-password-auth.service.js';
 import { AuthenticationError, AppError, BadRequestError } from '@agentest/shared';
 
@@ -87,6 +87,12 @@ vi.mock('../../config/auth.js', () => ({
     oauth: {},
   },
 }));
+
+// envモック
+const mockEnv = vi.hoisted(() => ({
+  REQUIRE_EMAIL_VERIFICATION: true,
+}));
+vi.mock('../../config/env.js', () => ({ env: mockEnv }));
 
 // loggerモック
 const { mockLogger } = vi.hoisted(() => {
@@ -206,7 +212,10 @@ describe('UserPasswordAuthService', () => {
         name: 'Test User',
       });
 
-      expect(result.verificationToken).toBeTruthy();
+      expect(result.requiresEmailVerification).toBe(true);
+      if (result.requiresEmailVerification) {
+        expect(result.verificationToken).toBeTruthy();
+      }
       expect(result.user).toEqual({
         id: mockUser.id,
         email: mockUser.email,
@@ -928,7 +937,7 @@ describe('UserPasswordAuthService', () => {
   // register (メール確認フロー対応)
   // ===========================================
   describe('register (メール確認フロー)', () => {
-    it('登録後にJWTを発行せず、RegisterResultを返す', async () => {
+    it('登録後にJWTを発行せず、RegisterResultを返す（メール認証あり）', async () => {
       mockPrisma.user.findFirst.mockResolvedValue(null);
       mockPrisma.user.create.mockResolvedValue({ ...mockUser, emailVerified: false });
       mockPrisma.emailVerificationToken.create.mockResolvedValue({});
@@ -939,8 +948,11 @@ describe('UserPasswordAuthService', () => {
         name: 'Test User',
       });
 
-      // RegisterResult型: tokens ではなく verificationToken を持つ
-      expect(result).toHaveProperty('verificationToken');
+      // RegisterResult型（メール認証あり）: tokens ではなく verificationToken を持つ
+      expect(result.requiresEmailVerification).toBe(true);
+      if (result.requiresEmailVerification) {
+        expect(result.verificationToken).toBeTruthy();
+      }
       expect(result).toHaveProperty('user');
       expect(result).not.toHaveProperty('tokens');
     });
@@ -1000,6 +1012,96 @@ describe('UserPasswordAuthService', () => {
 
       expect(mockPrisma.refreshToken.create).not.toHaveBeenCalled();
       expect(mockPrisma.session.create).not.toHaveBeenCalled();
+    });
+  });
+
+  // ===========================================
+  // register (メール認証スキップ)
+  // ===========================================
+  describe('register (メール認証スキップ)', () => {
+    beforeEach(() => {
+      mockEnv.REQUIRE_EMAIL_VERIFICATION = false;
+    });
+
+    afterEach(() => {
+      mockEnv.REQUIRE_EMAIL_VERIFICATION = true;
+    });
+
+    it('emailVerified: true でユーザーが作成される', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(null);
+      mockPrisma.user.create.mockResolvedValue({ ...mockUser, emailVerified: true });
+      mockPrisma.refreshToken.create.mockResolvedValue({});
+      mockPrisma.session.create.mockResolvedValue({});
+
+      await service.register({
+        email: 'test@example.com',
+        password: 'Password123!',
+        name: 'Test User',
+      });
+
+      expect(mockPrisma.user.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            emailVerified: true,
+          }),
+        })
+      );
+    });
+
+    it('EmailVerificationToken が作成されない', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(null);
+      mockPrisma.user.create.mockResolvedValue({ ...mockUser, emailVerified: true });
+      mockPrisma.refreshToken.create.mockResolvedValue({});
+      mockPrisma.session.create.mockResolvedValue({});
+
+      await service.register({
+        email: 'test@example.com',
+        password: 'Password123!',
+        name: 'Test User',
+      });
+
+      expect(mockPrisma.emailVerificationToken.create).not.toHaveBeenCalled();
+    });
+
+    it('requiresEmailVerification: false と tokens を返す', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(null);
+      mockPrisma.user.create.mockResolvedValue({ ...mockUser, emailVerified: true });
+      mockPrisma.refreshToken.create.mockResolvedValue({});
+      mockPrisma.session.create.mockResolvedValue({});
+
+      const result = await service.register({
+        email: 'test@example.com',
+        password: 'Password123!',
+        name: 'Test User',
+      });
+
+      expect(result.requiresEmailVerification).toBe(false);
+      if (!result.requiresEmailVerification) {
+        expect(result.tokens).toEqual(mockTokens);
+      }
+      expect(result.user).toEqual({
+        id: mockUser.id,
+        email: mockUser.email,
+        name: mockUser.name,
+      });
+    });
+
+    it('RefreshToken と Session が作成される', async () => {
+      mockPrisma.user.findFirst.mockResolvedValue(null);
+      mockPrisma.user.create.mockResolvedValue({ ...mockUser, emailVerified: true });
+      mockPrisma.refreshToken.create.mockResolvedValue({});
+      mockPrisma.session.create.mockResolvedValue({});
+
+      await service.register({
+        email: 'test@example.com',
+        password: 'Password123!',
+        name: 'Test User',
+        ipAddress: '127.0.0.1',
+        userAgent: 'TestAgent',
+      });
+
+      expect(mockPrisma.refreshToken.create).toHaveBeenCalled();
+      expect(mockPrisma.session.create).toHaveBeenCalled();
     });
   });
 
