@@ -17,6 +17,11 @@ import routes from './routes/index.js';
 export function createApp(): Express {
   const app = express();
 
+  // リバースプロキシ環境でクライアントIPを正しく取得（レート制限・監査ログに必要）
+  if (env.NODE_ENV === 'production') {
+    app.set('trust proxy', 1);
+  }
+
   // セキュリティミドルウェア
   app.use(helmet({
     contentSecurityPolicy: {

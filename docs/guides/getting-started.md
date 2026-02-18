@@ -76,18 +76,9 @@ docker compose exec dev pnpm --filter @agentest/db db:generate
 
 # データベーススキーマを同期
 docker compose exec dev pnpm --filter @agentest/db db:push
-
-# 管理者ユーザーを作成
-docker compose exec dev pnpm --filter @agentest/db db:seed:admin
 ```
 
 > **Note:** テスト用データベース（agentest_test）は Docker 起動時に自動作成されます。テスト実行時にスキーマが自動同期されます。
-
-管理者ログイン情報：
-| 項目 | 値 |
-|------|-----|
-| Email | `admin@example.com` |
-| Password | `password123` |
 
 ### 6. 動作確認
 
@@ -97,6 +88,30 @@ docker compose exec dev pnpm --filter @agentest/db db:seed:admin
 | API | http://localhost:3001/health | `{"status":"ok"}` |
 | Admin | http://localhost:3003 | 管理画面 |
 | MinIO | http://localhost:9001 | コンソール |
+
+### 7. 管理者アカウントを作成
+
+ブラウザで http://localhost:3003 にアクセスすると、初回セットアップウィザードが表示されます。
+
+フォームに以下の情報を入力して SUPER_ADMIN アカウントを作成してください：
+
+| 項目 | 説明 |
+|------|------|
+| 名前 | 管理者の表示名（1〜100文字） |
+| メールアドレス | ログインに使用するメールアドレス |
+| パスワード | 下記のパスワード要件を満たすもの |
+
+**パスワード要件:**
+
+- 8文字以上
+- 大文字を含む（A-Z）
+- 小文字を含む（a-z）
+- 数字を含む（0-9）
+- 記号を含む（`!@#$%^&*()_+-=[]{}';:"|,.<>/?`）
+
+セットアップ完了後、ログイン画面にリダイレクトされます。作成したメールアドレスとパスワードでログインしてください。
+
+> **Note:** 初回セットアップは管理者ユーザーが0件の場合のみ実行できます。一度セットアップが完了すると、自動的にログイン画面にリダイレクトされます。
 
 ## トラブルシューティング
 

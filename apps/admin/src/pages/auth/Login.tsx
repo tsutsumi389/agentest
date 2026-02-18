@@ -3,6 +3,7 @@ import { Terminal } from 'lucide-react';
 import { LoginForm } from '../../components/auth/LoginForm';
 import { LoadingScreen } from '../../components/ui/LoadingScreen';
 import { useAdminAuth } from '../../hooks/useAdminAuth';
+import { useSetupStatus } from '../../hooks/useSetupStatus';
 
 /**
  * ログインページ
@@ -10,10 +11,16 @@ import { useAdminAuth } from '../../hooks/useAdminAuth';
  */
 export function LoginPage() {
   const { isAuthenticated, isLoading, requires2FA } = useAdminAuth();
+  const { setupCheckDone, isSetupRequired } = useSetupStatus();
 
   // 読み込み中
-  if (isLoading) {
+  if (isLoading || !setupCheckDone) {
     return <LoadingScreen />;
+  }
+
+  // セットアップ未完了の場合
+  if (isSetupRequired) {
+    return <Navigate to="/setup" replace />;
   }
 
   // 2FA検証が必要な場合
