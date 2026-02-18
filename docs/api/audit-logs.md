@@ -37,7 +37,6 @@ GET /api/v1/organizations/:organizationId/audit-logs
 | MEMBER | メンバー操作 |
 | PROJECT | プロジェクト操作 |
 | API_TOKEN | APIトークン操作 |
-| BILLING | 請求関連 |
 
 ### レスポンス例
 

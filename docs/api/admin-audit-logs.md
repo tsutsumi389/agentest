@@ -41,7 +41,6 @@ Cookie: admin_session=<session_id>
 | `MEMBER` | メンバー操作（招待、ロール変更等） |
 | `PROJECT` | プロジェクト操作（作成、更新、削除等） |
 | `API_TOKEN` | APIトークン操作（作成、失効等） |
-| `BILLING` | 課金操作（サブスクリプション変更等） |
 
 #### レスポンス
 
@@ -140,8 +139,7 @@ type AdminAuditLogCategory =
   | 'ORGANIZATION'
   | 'MEMBER'
   | 'PROJECT'
-  | 'API_TOKEN'
-  | 'BILLING';
+  | 'API_TOKEN';
 
 interface AdminAuditLogListResponse {
   auditLogs: AdminAuditLogEntry[];
