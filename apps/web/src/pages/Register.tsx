@@ -3,6 +3,7 @@ import { Github } from 'lucide-react';
 import { AgentestLogo } from '../components/ui/AgentestLogo';
 import { GoogleIcon } from '../components/ui/GoogleIcon';
 import { PasswordStrengthChecklist } from '../components/PasswordStrengthChecklist';
+import { useConfigStore } from '../stores/config';
 import { authApi } from '../lib/api';
 import { useState } from 'react';
 
@@ -11,6 +12,7 @@ import { useState } from 'react';
  */
 export function RegisterPage() {
   const navigate = useNavigate();
+  const { auth: { providers } } = useConfigStore();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -18,6 +20,10 @@ export function RegisterPage() {
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const showGitHub = providers.github;
+  const showGoogle = providers.google;
+  const showOAuth = showGitHub || showGoogle;
 
   const apiUrl = import.meta.env.VITE_API_URL || '';
 
@@ -156,34 +162,43 @@ export function RegisterPage() {
             </button>
           </form>
 
-          {/* 区切り線 */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-bg-secondary text-foreground-muted">または</span>
-            </div>
-          </div>
+          {/* OAuthセクション（有効なプロバイダーがある場合のみ表示） */}
+          {showOAuth && (
+            <>
+              {/* 区切り線 */}
+              <div className="relative my-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-bg-secondary text-foreground-muted">または</span>
+                </div>
+              </div>
 
-          {/* OAuthボタン */}
-          <div className="space-y-3">
-            <button
-              onClick={handleGitHubRegister}
-              className="btn btn-secondary w-full"
-            >
-              <Github className="w-5 h-5" />
-              GitHubで登録
-            </button>
+              {/* OAuthボタン */}
+              <div className="space-y-3">
+                {showGitHub && (
+                  <button
+                    onClick={handleGitHubRegister}
+                    className="btn btn-secondary w-full"
+                  >
+                    <Github className="w-5 h-5" />
+                    GitHubで登録
+                  </button>
+                )}
 
-            <button
-              onClick={handleGoogleRegister}
-              className="btn btn-secondary w-full"
-            >
-              <GoogleIcon className="w-5 h-5" />
-              Googleで登録
-            </button>
-          </div>
+                {showGoogle && (
+                  <button
+                    onClick={handleGoogleRegister}
+                    className="btn btn-secondary w-full"
+                  >
+                    <GoogleIcon className="w-5 h-5" />
+                    Googleで登録
+                  </button>
+                )}
+              </div>
+            </>
+          )}
 
           {/* ログインリンク */}
           <div className="mt-6 pt-6 border-t border-border">

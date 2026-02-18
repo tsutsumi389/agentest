@@ -1847,3 +1847,22 @@ export const notificationsApi = {
     api.patch<{ preference: NotificationPreference }>(`/api/notifications/preferences/${type}`, data),
 };
 
+// ============================================
+// 公開設定API
+// ============================================
+
+/** アプリケーション公開設定 */
+export interface AppConfig {
+  auth: {
+    providers: {
+      github: boolean;
+      google: boolean;
+    };
+    requireEmailVerification: boolean;
+  };
+}
+
+export const configApi = {
+  get: () => api.get<AppConfig>('/api/config'),
+};
+

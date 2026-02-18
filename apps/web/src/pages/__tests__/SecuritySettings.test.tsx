@@ -13,7 +13,7 @@ vi.mock('react-router', async () => {
 });
 
 // ストア モック
-const { mockAuthStore, mockToast } = vi.hoisted(() => {
+const { mockAuthStore, mockToast, mockConfigStore } = vi.hoisted(() => {
   return {
     mockAuthStore: {
       isAuthenticated: true,
@@ -27,11 +27,24 @@ const { mockAuthStore, mockToast } = vi.hoisted(() => {
       error: vi.fn(),
       info: vi.fn(),
     },
+    mockConfigStore: {
+      auth: {
+        providers: { github: true, google: true },
+        requireEmailVerification: true,
+      },
+      isLoaded: true,
+      fetchConfig: vi.fn(),
+      isOAuthEnabled: vi.fn(() => true),
+    },
   };
 });
 
 vi.mock('../../stores/auth', () => ({
   useAuthStore: () => mockAuthStore,
+}));
+
+vi.mock('../../stores/config', () => ({
+  useConfigStore: () => mockConfigStore,
 }));
 
 vi.mock('../../stores/toast', () => ({
@@ -156,6 +169,13 @@ describe('SecuritySettings - パスワード管理', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAuthStore.user = { id: 'user-1', name: 'テストユーザー', email: 'test@example.com' };
+    // デフォルト: 両プロバイダー有効
+    mockConfigStore.auth = {
+      providers: { github: true, google: true },
+      requireEmailVerification: true,
+    };
+    mockConfigStore.isLoaded = true;
+    mockConfigStore.isOAuthEnabled.mockReturnValue(true);
   });
 
   describe('パスワード管理セクション表示', () => {
@@ -552,6 +572,56 @@ describe('SecuritySettings - パスワード管理', () => {
         const unlinkButtons = screen.getAllByTitle('連携を解除');
         expect(unlinkButtons.length).toBeGreaterThanOrEqual(1);
       });
+    });
+  });
+
+  describe('OAuth条件表示', () => {
+    it('両プロバイダー無効の場合、接続済みアカウントセクションが非表示', async () => {
+      mockConfigStore.auth = {
+        providers: { github: false, google: false },
+        requireEmailVerification: true,
+      };
+      mockConfigStore.isOAuthEnabled.mockReturnValue(false);
+      setupDefaultMocks({ hasPassword: false, accountCount: 0 });
+      renderSecuritySettings();
+
+      await waitFor(() => {
+        expect(screen.getByText('パスワード')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByText('接続済みアカウント')).not.toBeInTheDocument();
+    });
+
+    it('いずれかのプロバイダーが有効の場合、接続済みアカウントセクションが表示される', async () => {
+      mockConfigStore.auth = {
+        providers: { github: true, google: false },
+        requireEmailVerification: true,
+      };
+      mockConfigStore.isOAuthEnabled.mockReturnValue(true);
+      setupDefaultMocks({ hasPassword: false, accountCount: 1 });
+      renderSecuritySettings();
+
+      await waitFor(() => {
+        expect(screen.getByText('接続済みアカウント')).toBeInTheDocument();
+      });
+    });
+
+    it('無効なプロバイダーの連携ボタンが非表示', async () => {
+      mockConfigStore.auth = {
+        providers: { github: true, google: false },
+        requireEmailVerification: true,
+      };
+      mockConfigStore.isOAuthEnabled.mockReturnValue(true);
+      setupDefaultMocks({ hasPassword: false, accountCount: 0 });
+      renderSecuritySettings();
+
+      await waitFor(() => {
+        expect(screen.getByText('接続済みアカウント')).toBeInTheDocument();
+      });
+
+      // GitHubは表示されるがGoogleは非表示
+      expect(screen.getByText('GitHub')).toBeInTheDocument();
+      expect(screen.queryByText('Google')).not.toBeInTheDocument();
     });
   });
 });

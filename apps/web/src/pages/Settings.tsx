@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams, useLocation } from 'react-router';
 import { User, Bell, Shield, Key, Loader2, Monitor, Smartphone, Tablet, X, AlertTriangle, Github, Link2, Unlink, Plus, Copy, Check, Trash2, Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
+import { useConfigStore } from '../stores/config';
 import { toast } from '../stores/toast';
 import { ApiError, sessionsApi, accountsApi, passwordApi, apiTokensApi, type Session, type Account, type ApiToken, type CreatedApiToken } from '../lib/api';
 import { PasswordStrengthChecklist, PASSWORD_CHECKS } from '../components/PasswordStrengthChecklist';
@@ -646,6 +647,13 @@ const OAUTH_PROVIDERS = [
  */
 function SecuritySettings() {
   const { user } = useAuthStore();
+  const { auth: { providers: enabledProviders }, isOAuthEnabled } = useConfigStore();
+
+  // 有効なプロバイダーのみフィルタリング
+  const availableProviders = OAUTH_PROVIDERS.filter(
+    (p) => enabledProviders[p.id]
+  );
+  const showOAuthSection = isOAuthEnabled();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isLoadingSessions, setIsLoadingSessions] = useState(true);
@@ -1004,7 +1012,8 @@ function SecuritySettings() {
         </div>
       )}
 
-      {/* 接続済みアカウント */}
+      {/* 接続済みアカウント（有効なOAuthプロバイダーがある場合のみ表示） */}
+      {showOAuthSection && (
       <div className="card p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -1021,7 +1030,7 @@ function SecuritySettings() {
           </div>
         ) : (
           <div className="space-y-2">
-            {OAUTH_PROVIDERS.map((provider) => {
+            {availableProviders.map((provider) => {
               const linked = isProviderLinked(provider.id);
               const account = accounts.find((a) => a.provider === provider.id);
               const isUnlinking = unlinkingProvider === provider.id;
@@ -1086,6 +1095,7 @@ function SecuritySettings() {
           </p>
         )}
       </div>
+      )}
 
       {/* セッション管理 */}
       <div className="card p-6">

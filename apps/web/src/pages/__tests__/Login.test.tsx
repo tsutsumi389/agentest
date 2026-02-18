@@ -28,6 +28,24 @@ vi.mock('../../stores/auth', () => ({
   useAuthStore: () => mockAuthStore,
 }));
 
+const { mockConfigStore } = vi.hoisted(() => {
+  return {
+    mockConfigStore: {
+      auth: {
+        providers: { github: true, google: true },
+        requireEmailVerification: true,
+      },
+      isLoaded: true,
+      fetchConfig: vi.fn(),
+      isOAuthEnabled: vi.fn(() => true),
+    },
+  };
+});
+
+vi.mock('../../stores/config', () => ({
+  useConfigStore: () => mockConfigStore,
+}));
+
 const { mockAuthApi, MockApiError } = vi.hoisted(() => {
   // テスト用のApiErrorクラス
   class MockApiError extends Error {
@@ -75,6 +93,13 @@ describe('LoginPage', () => {
     mockAuthStore.user = null;
     mockAuthStore.requires2FA = false;
     mockAuthStore.twoFactorToken = null;
+    // デフォルト: 両プロバイダー有効
+    mockConfigStore.auth = {
+      providers: { github: true, google: true },
+      requireEmailVerification: true,
+    };
+    mockConfigStore.isLoaded = true;
+    mockConfigStore.isOAuthEnabled.mockReturnValue(true);
   });
 
   describe('フォーム表示', () => {
@@ -117,6 +142,50 @@ describe('LoginPage', () => {
     it('「または」の区切り線が表示される', () => {
       renderLoginPage();
 
+      expect(screen.getByText('または')).toBeInTheDocument();
+    });
+  });
+
+  describe('OAuth条件表示', () => {
+    it('両プロバイダー無効の場合、OAuthボタンと「または」区切りが非表示', () => {
+      mockConfigStore.auth = {
+        providers: { github: false, google: false },
+        requireEmailVerification: true,
+      };
+      mockConfigStore.isOAuthEnabled.mockReturnValue(false);
+
+      renderLoginPage();
+
+      expect(screen.queryByRole('button', { name: /GitHub/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Google/ })).not.toBeInTheDocument();
+      expect(screen.queryByText('または')).not.toBeInTheDocument();
+    });
+
+    it('GitHubのみ有効の場合、GitHubボタンのみ表示', () => {
+      mockConfigStore.auth = {
+        providers: { github: true, google: false },
+        requireEmailVerification: true,
+      };
+      mockConfigStore.isOAuthEnabled.mockReturnValue(true);
+
+      renderLoginPage();
+
+      expect(screen.getByRole('button', { name: /GitHub/ })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Google/ })).not.toBeInTheDocument();
+      expect(screen.getByText('または')).toBeInTheDocument();
+    });
+
+    it('Googleのみ有効の場合、Googleボタンのみ表示', () => {
+      mockConfigStore.auth = {
+        providers: { github: false, google: true },
+        requireEmailVerification: true,
+      };
+      mockConfigStore.isOAuthEnabled.mockReturnValue(true);
+
+      renderLoginPage();
+
+      expect(screen.queryByRole('button', { name: /GitHub/ })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Google/ })).toBeInTheDocument();
       expect(screen.getByText('または')).toBeInTheDocument();
     });
   });
