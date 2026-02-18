@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
-import { initialSetupSchema, AuthorizationError, ValidationError } from '@agentest/shared';
+import { AuthorizationError, ValidationError } from '@agentest/shared';
+import { initialSetupSchema } from '@agentest/shared/validators';
 import { prisma } from '@agentest/db';
 import bcrypt from 'bcryptjs';
 import { logger } from '../../utils/logger.js';

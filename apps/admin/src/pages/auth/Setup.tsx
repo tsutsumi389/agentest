@@ -105,7 +105,7 @@ export function SetupPage() {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="w-8 h-8 animate-spin text-accent" />
+          <Loader2 className="w-8 h-8 animate-spin text-accent" aria-hidden="true" />
           <p className="text-foreground-muted">セットアップ状態を確認中...</p>
         </div>
       </div>
@@ -121,7 +121,7 @@ export function SetupPage() {
           <div className="flex flex-col items-center mb-8">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-lg bg-accent-muted flex items-center justify-center">
-                <Terminal className="w-6 h-6 text-accent" />
+                <Terminal className="w-6 h-6 text-accent" aria-hidden="true" />
               </div>
               <span className="text-2xl font-bold text-foreground">
                 Agentest Admin
@@ -133,7 +133,7 @@ export function SetupPage() {
           <div className="card p-6">
             <div className="flex flex-col items-center text-center">
               <div className="w-16 h-16 rounded-full bg-danger-muted flex items-center justify-center mb-4">
-                <AlertCircle className="w-8 h-8 text-danger" />
+                <AlertCircle className="w-8 h-8 text-danger" aria-hidden="true" />
               </div>
               <h1 className="text-xl font-semibold text-foreground mb-2">
                 サーバーに接続できません
@@ -149,12 +149,12 @@ export function SetupPage() {
               >
                 {isRetrying ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
                     再試行中...
                   </>
                 ) : (
                   <>
-                    <RefreshCw className="w-4 h-4" />
+                    <RefreshCw className="w-4 h-4" aria-hidden="true" />
                     再試行
                   </>
                 )}
@@ -180,7 +180,7 @@ export function SetupPage() {
           <div className="flex flex-col items-center mb-8">
             <div className="flex items-center gap-3 mb-2">
               <div className="w-10 h-10 rounded-lg bg-accent-muted flex items-center justify-center">
-                <Terminal className="w-6 h-6 text-accent" />
+                <Terminal className="w-6 h-6 text-accent" aria-hidden="true" />
               </div>
               <span className="text-2xl font-bold text-foreground">
                 Agentest Admin
@@ -192,7 +192,7 @@ export function SetupPage() {
           <div className="card p-6">
             <div className="flex flex-col items-center text-center">
               <div className="w-16 h-16 rounded-full bg-success-muted flex items-center justify-center mb-4">
-                <CheckCircle className="w-8 h-8 text-success" />
+                <CheckCircle className="w-8 h-8 text-success" aria-hidden="true" />
               </div>
               <h1 className="text-xl font-semibold text-foreground mb-2">
                 セットアップが完了しました
@@ -227,7 +227,7 @@ export function SetupPage() {
         <div className="flex flex-col items-center mb-8">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 rounded-lg bg-accent-muted flex items-center justify-center">
-              <Terminal className="w-6 h-6 text-accent" />
+              <Terminal className="w-6 h-6 text-accent" aria-hidden="true" />
             </div>
             <span className="text-2xl font-bold text-foreground">
               Agentest Admin
@@ -257,7 +257,7 @@ export function SetupPage() {
                 role="alert"
                 className="flex items-start gap-3 p-3 rounded-md bg-danger-muted text-danger"
               >
-                <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" aria-hidden="true" />
                 <p className="text-sm">{submitError}</p>
               </div>
             )}
@@ -272,7 +272,7 @@ export function SetupPage() {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <User className="w-5 h-5 text-foreground-subtle" />
+                  <User className="w-5 h-5 text-foreground-subtle" aria-hidden="true" />
                 </div>
                 <input
                   id="name"
@@ -299,7 +299,7 @@ export function SetupPage() {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="w-5 h-5 text-foreground-subtle" />
+                  <Mail className="w-5 h-5 text-foreground-subtle" aria-hidden="true" />
                 </div>
                 <input
                   id="email"
@@ -326,7 +326,7 @@ export function SetupPage() {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="w-5 h-5 text-foreground-subtle" />
+                  <Lock className="w-5 h-5 text-foreground-subtle" aria-hidden="true" />
                 </div>
                 <input
                   id="password"
@@ -338,6 +338,7 @@ export function SetupPage() {
                   autoComplete="new-password"
                   required
                   disabled={isSubmitting}
+                  maxLength={100}
                 />
                 <button
                   type="button"
@@ -346,9 +347,9 @@ export function SetupPage() {
                   className="absolute inset-y-0 right-0 pr-3 flex items-center text-foreground-subtle hover:text-foreground-muted"
                 >
                   {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
+                    <EyeOff className="w-5 h-5" aria-hidden="true" />
                   ) : (
-                    <Eye className="w-5 h-5" />
+                    <Eye className="w-5 h-5" aria-hidden="true" />
                   )}
                 </button>
               </div>
@@ -367,7 +368,7 @@ export function SetupPage() {
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="w-5 h-5 text-foreground-subtle" />
+                  <Lock className="w-5 h-5 text-foreground-subtle" aria-hidden="true" />
                 </div>
                 <input
                   id="confirmPassword"
@@ -381,6 +382,7 @@ export function SetupPage() {
                   autoComplete="new-password"
                   required
                   disabled={isSubmitting}
+                  maxLength={100}
                 />
                 <button
                   type="button"
@@ -389,9 +391,9 @@ export function SetupPage() {
                   className="absolute inset-y-0 right-0 pr-3 flex items-center text-foreground-subtle hover:text-foreground-muted"
                 >
                   {showConfirmPassword ? (
-                    <EyeOff className="w-5 h-5" />
+                    <EyeOff className="w-5 h-5" aria-hidden="true" />
                   ) : (
-                    <Eye className="w-5 h-5" />
+                    <Eye className="w-5 h-5" aria-hidden="true" />
                   )}
                 </button>
               </div>
@@ -405,10 +407,11 @@ export function SetupPage() {
               type="submit"
               className="btn btn-primary w-full"
               disabled={!canSubmit || isSubmitting}
+              aria-busy={isSubmitting}
             >
               {isSubmitting ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
                   セットアップ中...
                 </>
               ) : (
