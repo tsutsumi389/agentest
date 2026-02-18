@@ -26,8 +26,16 @@
 | 組織管理（詳細） | ✅ 実装済 | APIのみ |
 | システム管理者アカウント管理 | ✅ 実装済 | API + UI |
 | システム管理者招待 | ✅ 実装済 | API + UI |
+| 初回セットアップウィザード | ✅ 実装済 | API + UI |
 
 ## 機能一覧
+
+### 初回セットアップ
+
+| ID | 機能名 | 説明 | 状態 |
+|----|--------|------|------|
+| ADM-SETUP-001 | セットアップ状態確認 | AdminUserが0件かどうかを判定し、セットアップが必要か返却 | 実装済 |
+| ADM-SETUP-002 | 初回セットアップ実行 | 名前・メール・パスワードを入力してSUPER_ADMINアカウントを作成 | 実装済 |
 
 ### 管理者認証
 
@@ -92,6 +100,43 @@
 | ADM-SEC-001-6 | ロック解除・2FAリセット | セキュリティ管理 | 実装済 |
 
 ## 業務フロー
+
+### 初回セットアップフロー
+
+```mermaid
+sequenceDiagram
+    participant U as ユーザー
+    participant F as Admin App
+    participant B as API
+    participant DB as データベース
+
+    U->>F: http://localhost:3003 にアクセス
+    F->>B: GET /admin/setup/status
+    B->>DB: AdminUser件数を確認
+
+    alt セットアップ不要（AdminUser > 0件）
+        B->>F: { isSetupRequired: false }
+        F->>U: ログイン画面にリダイレクト
+    else セットアップ必要（AdminUser = 0件）
+        B->>F: { isSetupRequired: true }
+        F->>U: セットアップフォーム表示
+        U->>F: 名前・メール・パスワード入力
+        F->>F: パスワード要件のリアルタイム検証
+        F->>B: POST /admin/setup（CSRF保護）
+        B->>B: バリデーション・パスワードハッシュ化
+        B->>DB: Serializableトランザクション開始
+        B->>DB: AdminUser件数を再確認
+        alt 既にセットアップ済み（競合）
+            B->>F: 403 AUTHORIZATION_ERROR
+            F->>U: セットアップ済みメッセージ表示
+        else 未セットアップ
+            B->>DB: SUPER_ADMINアカウント作成
+            B->>DB: 監査ログ記録（INITIAL_SETUP）
+            B->>F: 201 Created
+            F->>U: 成功メッセージ + ログイン画面リンク
+        end
+    end
+```
 
 ### 管理者ログインフロー（2FA含む）
 
@@ -388,6 +433,7 @@ erDiagram
 
 | アクション | 説明 |
 |-----------|------|
+| INITIAL_SETUP | 初回セットアップ（SUPER_ADMIN作成） |
 | LOGIN | ログイン成功 |
 | LOGOUT | ログアウト |
 | LOGIN_FAILED | ログイン失敗 |
@@ -510,11 +556,14 @@ erDiagram
 | TOTPシークレット | AES-256-GCM暗号化保存 |
 | 監査証跡 | 全認証イベントをログ記録 |
 | タイミング攻撃 | ロック中もロック状態を示さない |
+| CSRF保護 | Origin/Refererヘッダー検証（初回セットアップ） |
+| 競合防止 | Serializableトランザクションで重複作成を防止 |
 
 ## 関連機能
 
 ### API仕様
 
+- [初回セットアップ API](../../api/admin-setup.md) - 初回セットアップウィザード
 - [管理者認証 API](../../api/admin-auth.md) - ログイン、2FA、セッション管理
 - [管理者ダッシュボード API](../../api/admin-dashboard.md) - システム統計
 - [管理者ユーザー管理 API](../../api/admin-users.md) - ユーザー一覧・詳細
