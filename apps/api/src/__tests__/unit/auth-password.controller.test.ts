@@ -297,6 +297,7 @@ describe('AuthController - パスワード認証', () => {
   describe('register', () => {
     it('有効なデータでユーザーが作成され201を返す', async () => {
       mockPasswordAuthService.register.mockResolvedValue({
+        requiresEmailVerification: true,
         verificationToken: 'mock-verification-token',
         user: {
           id: 'user-new',
@@ -339,6 +340,7 @@ describe('AuthController - パスワード認証', () => {
 
     it('確認メールが送信される（クッキーは設定されない）', async () => {
       mockPasswordAuthService.register.mockResolvedValue({
+        requiresEmailVerification: true,
         verificationToken: 'mock-verification-token',
         user: {
           id: 'user-new',
@@ -413,6 +415,7 @@ describe('AuthController - パスワード認証', () => {
 
     it('レスポンスにユーザー情報が含まれる', async () => {
       mockPasswordAuthService.register.mockResolvedValue({
+        requiresEmailVerification: true,
         verificationToken: 'mock-verification-token',
         user: {
           id: 'user-reg',

@@ -246,6 +246,7 @@ export async function cleanupTestData() {
   await prisma.oAuthAccessToken.deleteMany({});
   await prisma.oAuthAuthorizationCode.deleteMany({});
   await prisma.oAuthClient.deleteMany({});
+  await prisma.emailVerificationToken.deleteMany({});
   await prisma.passwordResetToken.deleteMany({});
   await prisma.session.deleteMany({});
   await prisma.refreshToken.deleteMany({});

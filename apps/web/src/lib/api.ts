@@ -824,7 +824,7 @@ export const authApi = {
   login: (data: { email: string; password: string }) =>
     api.post<LoginResponse>('/api/auth/login', data),
   register: (data: { email: string; password: string; name: string }) =>
-    api.post<{ message: string; user: { id: string; email: string; name: string } }>('/api/auth/register', data),
+    api.post<{ message: string; user: { id: string; email: string; name: string }; emailVerificationSkipped?: boolean }>('/api/auth/register', data),
   verifyEmail: (token: string) =>
     api.get<{ message: string }>(`/api/auth/verify-email?token=${encodeURIComponent(token)}`),
   resendVerification: (data: { email: string }) =>

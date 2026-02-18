@@ -42,9 +42,13 @@ export function RegisterPage() {
     setIsSubmitting(true);
 
     try {
-      await authApi.register({ email, password, name });
-      // 登録成功 → メール確認ページへリダイレクト
-      navigate(`/check-email?email=${encodeURIComponent(email)}`, { replace: true });
+      const result = await authApi.register({ email, password, name });
+      // メール認証スキップ時はダッシュボードへ、通常はメール確認ページへ
+      if (result.emailVerificationSkipped) {
+        navigate('/', { replace: true });
+      } else {
+        navigate(`/check-email?email=${encodeURIComponent(email)}`, { replace: true });
+      }
     } catch (err) {
       const message = err instanceof Error ? err.message : '登録に失敗しました';
       setError(message);

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import request from 'supertest';
 import bcrypt from 'bcryptjs';
 import type { Express } from 'express';
@@ -13,6 +13,7 @@ import {
 import { AuthenticationError } from '@agentest/shared';
 import { createApp } from '../../app.js';
 import { hashToken } from '../../utils/pkce.js';
+import { env } from '../../config/env.js';
 
 // generateTokensのモック: 毎回異なるトークンを返す（tokenHash @unique制約対策）
 let tokenCounter = 0;
@@ -733,6 +734,124 @@ describe('Auth Password API Integration Tests', () => {
 
       expect(response.status).toBe(400);
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
+    });
+  });
+
+  describe('POST /api/auth/register (メール認証スキップ)', () => {
+    const originalValue = env.REQUIRE_EMAIL_VERIFICATION;
+
+    beforeEach(() => {
+      (env as { REQUIRE_EMAIL_VERIFICATION: boolean }).REQUIRE_EMAIL_VERIFICATION = false;
+    });
+
+    afterEach(() => {
+      (env as { REQUIRE_EMAIL_VERIFICATION: boolean }).REQUIRE_EMAIL_VERIFICATION = originalValue;
+    });
+
+    it('クッキーが設定される', async () => {
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send({
+          email: 'skip-verify@example.com',
+          password: VALID_PASSWORD,
+          name: 'Skip Verify User',
+        });
+
+      expect(response.status).toBe(201);
+      const cookies = response.headers['set-cookie'];
+      expect(cookies).toBeDefined();
+      const cookieArray = Array.isArray(cookies) ? cookies : [cookies];
+      const hasAccessToken = cookieArray.some((c: string) => c.includes('access_token='));
+      const hasRefreshToken = cookieArray.some((c: string) => c.includes('refresh_token='));
+      expect(hasAccessToken).toBe(true);
+      expect(hasRefreshToken).toBe(true);
+    });
+
+    it('emailVerified: true でDB保存される', async () => {
+      await request(app)
+        .post('/api/auth/register')
+        .send({
+          email: 'verified-direct@example.com',
+          password: VALID_PASSWORD,
+          name: 'Verified Direct User',
+        });
+
+      const user = await prisma.user.findFirst({
+        where: { email: 'verified-direct@example.com' },
+      });
+      expect(user).not.toBeNull();
+      expect(user!.emailVerified).toBe(true);
+    });
+
+    it('EmailVerificationToken が作成されない', async () => {
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send({
+          email: 'no-token@example.com',
+          password: VALID_PASSWORD,
+          name: 'No Token User',
+        });
+
+      expect(response.status).toBe(201);
+
+      const user = await prisma.user.findFirst({
+        where: { email: 'no-token@example.com' },
+      });
+      const tokens = await prisma.emailVerificationToken.findMany({
+        where: { userId: user!.id },
+      });
+      expect(tokens).toHaveLength(0);
+    });
+
+    it('emailService.send が呼ばれない', async () => {
+      const { emailService } = await import('../../services/email.service.js');
+
+      await request(app)
+        .post('/api/auth/register')
+        .send({
+          email: 'no-email@example.com',
+          password: VALID_PASSWORD,
+          name: 'No Email User',
+        });
+
+      expect(emailService.send).not.toHaveBeenCalled();
+    });
+
+    it('セッションが作成される', async () => {
+      await request(app)
+        .post('/api/auth/register')
+        .send({
+          email: 'session-skip@example.com',
+          password: VALID_PASSWORD,
+          name: 'Session Skip User',
+        });
+
+      const user = await prisma.user.findFirst({
+        where: { email: 'session-skip@example.com' },
+      });
+      const sessions = await prisma.session.findMany({
+        where: { userId: user!.id },
+      });
+      expect(sessions).toHaveLength(1);
+
+      const refreshTokens = await prisma.refreshToken.findMany({
+        where: { userId: user!.id },
+      });
+      expect(refreshTokens).toHaveLength(1);
+    });
+
+    it('レスポンスに emailVerificationSkipped: true を含む', async () => {
+      const response = await request(app)
+        .post('/api/auth/register')
+        .send({
+          email: 'skipped-flag@example.com',
+          password: VALID_PASSWORD,
+          name: 'Skipped Flag User',
+        });
+
+      expect(response.status).toBe(201);
+      expect(response.body.emailVerificationSkipped).toBe(true);
+      expect(response.body.user).toBeDefined();
     });
   });
 
