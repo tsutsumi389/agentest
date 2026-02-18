@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
 import { useAuthStore } from './stores/auth';
+import { useConfigStore } from './stores/config';
 import { OrganizationProvider } from './contexts/OrganizationContext';
 import { Layout } from './components/Layout';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -52,11 +53,13 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
  */
 export function App() {
   const { initialize } = useAuthStore();
+  const { fetchConfig } = useConfigStore();
 
-  // 初回マウント時に認証状態を確認
+  // 初回マウント時に認証状態と公開設定を取得
   useEffect(() => {
     initialize();
-  }, [initialize]);
+    fetchConfig();
+  }, [initialize, fetchConfig]);
 
   return (
     <ErrorBoundary>

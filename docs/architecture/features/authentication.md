@@ -31,6 +31,7 @@
 | AUTH-021 | 2FA（TOTP） | TOTP認証による二要素認証の設定・検証 | 実装済 |
 | AUTH-022 | 2FAログイン検証 | 2FA有効ユーザーのログイン時にTOTPコード検証 | 実装済 |
 | AUTH-023 | メール認証の省略 | `REQUIRE_EMAIL_VERIFICATION=false` でメール認証をスキップ | 実装済 |
+| AUTH-024 | OAuthプロバイダー機能トグル | 環境変数でOAuthプロバイダーの有効/無効を制御、UIに自動反映 | 実装済 |
 
 ## 画面仕様
 
@@ -42,9 +43,9 @@
   - パスワード入力欄
   - 「パスワードを忘れた場合」リンク（→ `/forgot-password`）
   - ログインボタン
-  - 区切り線（「または」）
-  - GitHubログインボタン
-  - Googleログインボタン
+  - 区切り線（「または」）※ OAuthプロバイダーが1つ以上有効な場合のみ表示
+  - GitHubログインボタン ※ GitHub OAuthが有効な場合のみ表示
+  - Googleログインボタン ※ Google OAuthが有効な場合のみ表示
   - 「アカウントをお持ちでない場合は新規登録」リンク（→ `/register`）
   - 利用規約・プライバシーポリシーへのリンク
 - **操作**
@@ -86,8 +87,9 @@
   - パスワード強度チェックリスト（大文字・小文字・数字・記号の充足状況をリアルタイム表示）
   - パスワード確認入力欄
   - アカウント作成ボタン
-  - 区切り線（「または」）
-  - GitHubで登録ボタン / Googleで登録ボタン
+  - 区切り線（「または」）※ OAuthプロバイダーが1つ以上有効な場合のみ表示
+  - GitHubで登録ボタン ※ GitHub OAuthが有効な場合のみ表示
+  - Googleで登録ボタン ※ Google OAuthが有効な場合のみ表示
   - 「既にアカウントをお持ちの場合はログイン」リンク（→ `/login`）
 - **操作**
   - フォーム入力 → アカウント作成ボタン → ユーザー作成 + 確認メール送信 → `/check-email` へリダイレクト
@@ -562,6 +564,9 @@ erDiagram
 ### OAuth連携
 
 - 対応プロバイダー: GitHub、Google
+- OAuthプロバイダーの有効/無効は環境変数で制御（`GITHUB_CLIENT_ID` + `GITHUB_CLIENT_SECRET` が両方設定されている場合に有効）
+- `GET /api/config` で利用可能なプロバイダー情報を公開（認証不要）
+- 無効なプロバイダーはLogin/Register/Settingsの全画面でボタンが非表示
 - 1ユーザーに複数プロバイダーを連携可能
 - 同一メールアドレスの場合、既存ユーザーに連携追加
 - 最低1つの認証方法が必須（パスワードが設定されていればOAuth連携を全解除可能）
@@ -585,6 +590,10 @@ erDiagram
 | TOKEN_ENCRYPTION_KEY | - | OAuthトークン暗号化キー（本番必須） |
 | TOTP_ENCRYPTION_KEY | - | TOTP秘密鍵暗号化キー（AES-256-GCM、64文字hex） |
 | REQUIRE_EMAIL_VERIFICATION | true | `false` でメール認証をスキップ（セルフホスト向け） |
+| GITHUB_CLIENT_ID | - | GitHub OAuth クライアントID（未設定でGitHub認証無効） |
+| GITHUB_CLIENT_SECRET | - | GitHub OAuth シークレット（未設定でGitHub認証無効） |
+| GOOGLE_CLIENT_ID | - | Google OAuth クライアントID（未設定でGoogle認証無効） |
+| GOOGLE_CLIENT_SECRET | - | Google OAuth シークレット（未設定でGoogle認証無効） |
 
 ## セキュリティ考慮事項
 

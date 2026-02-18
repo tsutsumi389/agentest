@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import healthRoutes from './health.js';
+import configRoutes from './config.js';
 import authRoutes from './auth.js';
 import sessionRoutes from './sessions.js';
 import userRoutes from './users.js';
@@ -31,6 +32,9 @@ router.use('/', healthRoutes);
 
 // OAuth 2.1 Authorization Server Metadata (RFC 8414)
 router.get('/.well-known/oauth-authorization-server', oauthController.getMetadata);
+
+// 公開設定API（認証不要）
+router.use('/api/config', configRoutes);
 
 // API ルート
 router.use('/api/auth', authRoutes);

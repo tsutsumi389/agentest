@@ -9,6 +9,24 @@ vi.mock('react-router', async () => {
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
+const { mockConfigStore } = vi.hoisted(() => {
+  return {
+    mockConfigStore: {
+      auth: {
+        providers: { github: true, google: true },
+        requireEmailVerification: true,
+      },
+      isLoaded: true,
+      fetchConfig: vi.fn(),
+      isOAuthEnabled: vi.fn(() => true),
+    },
+  };
+});
+
+vi.mock('../../stores/config', () => ({
+  useConfigStore: () => mockConfigStore,
+}));
+
 const { mockAuthApi } = vi.hoisted(() => {
   return {
     mockAuthApi: {
@@ -38,6 +56,13 @@ function renderRegisterPage() {
 describe('RegisterPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // デフォルト: 両プロバイダー有効
+    mockConfigStore.auth = {
+      providers: { github: true, google: true },
+      requireEmailVerification: true,
+    };
+    mockConfigStore.isLoaded = true;
+    mockConfigStore.isOAuthEnabled.mockReturnValue(true);
   });
 
   describe('フォーム表示', () => {
@@ -69,6 +94,50 @@ describe('RegisterPage', () => {
       const link = screen.getByRole('link', { name: 'ログイン' });
       expect(link).toBeInTheDocument();
       expect(link).toHaveAttribute('href', '/login');
+    });
+  });
+
+  describe('OAuth条件表示', () => {
+    it('両プロバイダー無効の場合、OAuthボタンと「または」区切りが非表示', () => {
+      mockConfigStore.auth = {
+        providers: { github: false, google: false },
+        requireEmailVerification: true,
+      };
+      mockConfigStore.isOAuthEnabled.mockReturnValue(false);
+
+      renderRegisterPage();
+
+      expect(screen.queryByRole('button', { name: /GitHub/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Google/ })).not.toBeInTheDocument();
+      expect(screen.queryByText('または')).not.toBeInTheDocument();
+    });
+
+    it('GitHubのみ有効の場合、GitHubボタンのみ表示', () => {
+      mockConfigStore.auth = {
+        providers: { github: true, google: false },
+        requireEmailVerification: true,
+      };
+      mockConfigStore.isOAuthEnabled.mockReturnValue(true);
+
+      renderRegisterPage();
+
+      expect(screen.getByRole('button', { name: /GitHub/ })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Google/ })).not.toBeInTheDocument();
+      expect(screen.getByText('または')).toBeInTheDocument();
+    });
+
+    it('Googleのみ有効の場合、Googleボタンのみ表示', () => {
+      mockConfigStore.auth = {
+        providers: { github: false, google: true },
+        requireEmailVerification: true,
+      };
+      mockConfigStore.isOAuthEnabled.mockReturnValue(true);
+
+      renderRegisterPage();
+
+      expect(screen.queryByRole('button', { name: /GitHub/ })).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /Google/ })).toBeInTheDocument();
+      expect(screen.getByText('または')).toBeInTheDocument();
     });
   });
 
