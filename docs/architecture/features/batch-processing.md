@@ -151,6 +151,7 @@ await jobs[jobName]();
 | `JOB_NAME` | Yes | 実行するジョブ名 |
 | `DATABASE_URL` | Yes | PostgreSQL 接続文字列 |
 | `REDIS_URL` | Yes | Redis 接続文字列 |
+| `HISTORY_RETENTION_DAYS` | No | 履歴保持日数（デフォルト: 30） |
 
 ## 関連ドキュメント
 
