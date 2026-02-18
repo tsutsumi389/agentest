@@ -82,7 +82,6 @@
 | MEMBER | メンバー操作 | Users |
 | PROJECT | プロジェクト操作 | FolderKanban |
 | API_TOKEN | APIトークン操作 | Key |
-| BILLING | 請求関連 | CreditCard |
 
 ### アクション一覧
 
