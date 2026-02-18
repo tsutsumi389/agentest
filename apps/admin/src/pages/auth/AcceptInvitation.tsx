@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { checkPasswordRequirements, allPasswordRequirementsMet } from '@agentest/shared';
 import { invitationApi, ApiError } from '../../lib/api';
+import { PasswordRequirementsList } from '../../components/auth/PasswordRequirementsList';
 import type { AdminInvitationResponse } from '@agentest/shared/types';
 
 /**
@@ -340,6 +341,7 @@ export function AcceptInvitationPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'パスワードを隠す' : 'パスワードを表示'}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center text-foreground-subtle hover:text-foreground-muted"
                 >
                   {showPassword ? (
@@ -352,53 +354,7 @@ export function AcceptInvitationPage() {
             </div>
 
             {/* パスワード要件 */}
-            <div className="space-y-2 p-3 bg-surface-secondary rounded-md">
-              <p className="text-xs font-medium text-foreground-muted mb-2">
-                パスワード要件:
-              </p>
-              <ul className="space-y-1 text-xs">
-                <li
-                  className={`flex items-center gap-2 ${
-                    requirements.minLength ? 'text-success' : 'text-foreground-subtle'
-                  }`}
-                >
-                  <span>{requirements.minLength ? '✓' : '○'}</span>
-                  8文字以上
-                </li>
-                <li
-                  className={`flex items-center gap-2 ${
-                    requirements.hasUppercase ? 'text-success' : 'text-foreground-subtle'
-                  }`}
-                >
-                  <span>{requirements.hasUppercase ? '✓' : '○'}</span>
-                  大文字を含む (A-Z)
-                </li>
-                <li
-                  className={`flex items-center gap-2 ${
-                    requirements.hasLowercase ? 'text-success' : 'text-foreground-subtle'
-                  }`}
-                >
-                  <span>{requirements.hasLowercase ? '✓' : '○'}</span>
-                  小文字を含む (a-z)
-                </li>
-                <li
-                  className={`flex items-center gap-2 ${
-                    requirements.hasNumber ? 'text-success' : 'text-foreground-subtle'
-                  }`}
-                >
-                  <span>{requirements.hasNumber ? '✓' : '○'}</span>
-                  数字を含む (0-9)
-                </li>
-                <li
-                  className={`flex items-center gap-2 ${
-                    requirements.hasSymbol ? 'text-success' : 'text-foreground-subtle'
-                  }`}
-                >
-                  <span>{requirements.hasSymbol ? '✓' : '○'}</span>
-                  記号を含む (!@#$%...)
-                </li>
-              </ul>
-            </div>
+            <PasswordRequirementsList requirements={requirements} />
 
             {/* パスワード確認入力 */}
             <div className="space-y-2">
@@ -428,6 +384,7 @@ export function AcceptInvitationPage() {
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  aria-label={showConfirmPassword ? 'パスワードを隠す' : 'パスワードを表示'}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center text-foreground-subtle hover:text-foreground-muted"
                 >
                   {showConfirmPassword ? (

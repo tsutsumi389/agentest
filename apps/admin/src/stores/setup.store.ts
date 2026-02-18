@@ -16,6 +16,8 @@ interface SetupState {
   checkSetupStatus: () => Promise<void>;
   /** セットアップ完了後に状態を更新 */
   markSetupComplete: () => void;
+  /** リトライのためにチェック状態をリセット */
+  resetForRetry: () => void;
 }
 
 export const useSetupStore = create<SetupState>((set, get) => ({
@@ -38,5 +40,9 @@ export const useSetupStore = create<SetupState>((set, get) => ({
 
   markSetupComplete: () => {
     set({ isSetupRequired: false });
+  },
+
+  resetForRetry: () => {
+    set({ setupCheckDone: false, hasError: false });
   },
 }));

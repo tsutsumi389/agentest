@@ -57,6 +57,7 @@ export class AdminSetupController {
       const userAgent = req.headers['user-agent'] ?? null;
 
       // トランザクションで存在チェック + 作成 + 監査ログを一括実行（レースコンディション防止）
+      // Serializable分離レベルで並行リクエストによる複数SUPER_ADMIN作成を確実に防止
       const adminUser = await prisma.$transaction(async (tx) => {
         const existingCount = await tx.adminUser.count({
           where: { deletedAt: null },
@@ -90,13 +91,14 @@ export class AdminSetupController {
         });
 
         return user;
+      }, {
+        isolationLevel: 'Serializable',
       });
 
       log.info({ adminId: adminUser.id, email }, '初回セットアップが完了しました');
 
       res.status(201).json({
         admin: {
-          id: adminUser.id,
           email: adminUser.email,
           name: adminUser.name,
         },

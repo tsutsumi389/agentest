@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { AdminSetupController } from '../../controllers/admin/setup.controller.js';
 import { rateLimiter } from '../../middleware/rate-limiter.js';
+import { csrfProtection } from '../../middleware/csrf.middleware.js';
 
 const router: Router = Router();
 const controller = new AdminSetupController();
@@ -12,9 +13,9 @@ const controller = new AdminSetupController();
 router.get('/status', rateLimiter({ max: 30, windowMs: 60 * 1000, routeId: 'admin-setup-status' }), controller.getStatus);
 
 /**
- * 初回セットアップ（認証不要、レート制限: 5回/15分）
+ * 初回セットアップ（認証不要、CSRF保護 + レート制限: 5回/15分）
  * POST /admin/setup
  */
-router.post('/', rateLimiter({ max: 5, windowMs: 15 * 60 * 1000, routeId: 'admin-setup' }), controller.setup);
+router.post('/', rateLimiter({ max: 5, windowMs: 15 * 60 * 1000, routeId: 'admin-setup' }), csrfProtection(), controller.setup);
 
 export default router;

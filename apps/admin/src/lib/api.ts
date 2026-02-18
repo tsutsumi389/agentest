@@ -130,7 +130,6 @@ export interface SetupStatusResponse {
 
 export interface SetupAdminResponse {
   admin: {
-    id: string;
     email: string;
     name: string;
   };

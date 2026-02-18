@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { useNavigate, Link } from 'react-router';
+import { Navigate, Link } from 'react-router';
 import {
   Terminal,
   Lock,
@@ -16,16 +16,17 @@ import { checkPasswordRequirements, allPasswordRequirementsMet } from '@agentest
 import { setupApi, ApiError } from '../../lib/api';
 import { useSetupStatus } from '../../hooks/useSetupStatus';
 import { useSetupStore } from '../../stores/setup.store';
+import { PasswordRequirementsList } from '../../components/auth/PasswordRequirementsList';
 
 /**
  * 初回セットアップページ
  * AdminUserが0件の場合にSUPER_ADMINアカウントを作成する
  */
 export function SetupPage() {
-  const navigate = useNavigate();
   const { setupCheckDone, isSetupRequired, hasError } = useSetupStatus();
   const checkSetupStatus = useSetupStore((state) => state.checkSetupStatus);
   const markSetupComplete = useSetupStore((state) => state.markSetupComplete);
+  const resetForRetry = useSetupStore((state) => state.resetForRetry);
   const [isRetrying, setIsRetrying] = useState(false);
 
   // フォーム状態
@@ -53,16 +54,17 @@ export function SetupPage() {
   // リトライ処理
   const handleRetry = async () => {
     setIsRetrying(true);
-    // ストアのチェック済みフラグをリセットして再チェック
-    useSetupStore.setState({ setupCheckDone: false, hasError: false });
-    await checkSetupStatus();
-    setIsRetrying(false);
+    try {
+      resetForRetry();
+      await checkSetupStatus();
+    } finally {
+      setIsRetrying(false);
+    }
   };
 
   // セットアップ済みならログインページへリダイレクト
   if (setupCheckDone && !isSetupRequired && !hasError && !isSuccess) {
-    navigate('/login', { replace: true });
-    return null;
+    return <Navigate to="/login" replace />;
   }
 
   // フォーム送信
@@ -75,7 +77,7 @@ export function SetupPage() {
     setSubmitError(null);
 
     try {
-      await setupApi.setup({ email, name: name.trim(), password });
+      await setupApi.setup({ email: email.trim(), name: name.trim(), password });
       // ストアの状態を更新（他コンポーネントに反映）
       markSetupComplete();
       setIsSuccess(true);
@@ -340,6 +342,7 @@ export function SetupPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'パスワードを隠す' : 'パスワードを表示'}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center text-foreground-subtle hover:text-foreground-muted"
                 >
                   {showPassword ? (
@@ -352,53 +355,7 @@ export function SetupPage() {
             </div>
 
             {/* パスワード要件 */}
-            <div className="space-y-2 p-3 bg-surface-secondary rounded-md">
-              <p className="text-xs font-medium text-foreground-muted mb-2">
-                パスワード要件:
-              </p>
-              <ul className="space-y-1 text-xs">
-                <li
-                  className={`flex items-center gap-2 ${
-                    requirements.minLength ? 'text-success' : 'text-foreground-subtle'
-                  }`}
-                >
-                  <span>{requirements.minLength ? '✓' : '○'}</span>
-                  8文字以上
-                </li>
-                <li
-                  className={`flex items-center gap-2 ${
-                    requirements.hasUppercase ? 'text-success' : 'text-foreground-subtle'
-                  }`}
-                >
-                  <span>{requirements.hasUppercase ? '✓' : '○'}</span>
-                  大文字を含む (A-Z)
-                </li>
-                <li
-                  className={`flex items-center gap-2 ${
-                    requirements.hasLowercase ? 'text-success' : 'text-foreground-subtle'
-                  }`}
-                >
-                  <span>{requirements.hasLowercase ? '✓' : '○'}</span>
-                  小文字を含む (a-z)
-                </li>
-                <li
-                  className={`flex items-center gap-2 ${
-                    requirements.hasNumber ? 'text-success' : 'text-foreground-subtle'
-                  }`}
-                >
-                  <span>{requirements.hasNumber ? '✓' : '○'}</span>
-                  数字を含む (0-9)
-                </li>
-                <li
-                  className={`flex items-center gap-2 ${
-                    requirements.hasSymbol ? 'text-success' : 'text-foreground-subtle'
-                  }`}
-                >
-                  <span>{requirements.hasSymbol ? '✓' : '○'}</span>
-                  記号を含む (!@#$%...)
-                </li>
-              </ul>
-            </div>
+            <PasswordRequirementsList requirements={requirements} />
 
             {/* パスワード確認入力 */}
             <div className="space-y-2">
@@ -428,6 +385,7 @@ export function SetupPage() {
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  aria-label={showConfirmPassword ? 'パスワードを隠す' : 'パスワードを表示'}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center text-foreground-subtle hover:text-foreground-muted"
                 >
                   {showConfirmPassword ? (

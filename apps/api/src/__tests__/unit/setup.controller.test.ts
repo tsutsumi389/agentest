@@ -18,7 +18,7 @@ const mockPrisma = vi.hoisted(() => ({
   adminUser: {
     count: vi.fn(),
   },
-  $transaction: vi.fn((callback: (tx: typeof mockTx) => Promise<unknown>) => callback(mockTx)),
+  $transaction: vi.fn((callback: (tx: typeof mockTx) => Promise<unknown>, _options?: unknown) => callback(mockTx)),
 }));
 
 vi.mock('@agentest/db', () => ({
@@ -74,7 +74,7 @@ describe('AdminSetupController', () => {
     vi.clearAllMocks();
     // $transaction のデフォルト動作を再設定
     mockPrisma.$transaction.mockImplementation(
-      (callback: (tx: typeof mockTx) => Promise<unknown>) => callback(mockTx)
+      (callback: (tx: typeof mockTx) => Promise<unknown>, _options?: unknown) => callback(mockTx)
     );
     controller = new AdminSetupController();
   });
@@ -172,11 +172,10 @@ describe('AdminSetupController', () => {
         },
       });
 
-      // 201ステータスでレスポンスが返ること
+      // 201ステータスでレスポンスが返ること（内部IDは含まない）
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith({
         admin: {
-          id: 'admin-uuid-1',
           email: 'admin@example.com',
           name: 'Super Admin',
         },
@@ -292,6 +291,31 @@ describe('AdminSetupController', () => {
       await controller.setup(req, res, next);
 
       expect(next).toHaveBeenCalledWith(dbError);
+    });
+
+    it('トランザクションがSerializable分離レベルで実行されること', async () => {
+      mockTx.adminUser.count.mockResolvedValue(0);
+      mockBcrypt.hash.mockResolvedValue('hashed');
+      mockTx.adminUser.create.mockResolvedValue({
+        id: 'id-1',
+        email: 'admin@example.com',
+        name: 'Admin',
+        role: 'SUPER_ADMIN',
+        passwordHash: 'hashed',
+      });
+      mockTx.adminAuditLog.create.mockResolvedValue({});
+
+      const req = createMockReq({ body: validBody });
+      const res = createMockRes();
+      const next = createMockNext();
+
+      await controller.setup(req, res, next);
+
+      // $transaction の第2引数に isolationLevel が指定されること
+      expect(mockPrisma.$transaction).toHaveBeenCalledWith(
+        expect.any(Function),
+        { isolationLevel: 'Serializable' }
+      );
     });
 
     it('存在チェックと作成がトランザクション内で実行されること', async () => {
