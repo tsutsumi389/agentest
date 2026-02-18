@@ -643,3 +643,12 @@ export const acceptInvitationSchema = z.object({
 });
 
 export type AcceptInvitation = z.infer<typeof acceptInvitationSchema>;
+
+// 初回セットアップスキーマ（SUPER_ADMIN作成）
+export const initialSetupSchema = z.object({
+  email: z.string().email('有効なメールアドレスを入力してください').max(255).transform((v) => v.toLowerCase().trim()),
+  name: z.string().min(1, '名前は必須です').max(100),
+  password: passwordSchema,
+});
+
+export type InitialSetup = z.infer<typeof initialSetupSchema>;

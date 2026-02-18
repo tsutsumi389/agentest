@@ -121,6 +121,36 @@ const api = {
 };
 
 // ============================================
+// 初回セットアップAPI（認証不要）
+// ============================================
+
+export interface SetupStatusResponse {
+  isSetupRequired: boolean;
+}
+
+export interface SetupAdminResponse {
+  admin: {
+    id: string;
+    email: string;
+    name: string;
+  };
+}
+
+export const setupApi = {
+  /**
+   * セットアップ状態を取得
+   */
+  getStatus: () =>
+    api.get<SetupStatusResponse>('/admin/setup/status'),
+
+  /**
+   * 初回セットアップ（SUPER_ADMIN作成）
+   */
+  setup: (data: { email: string; name: string; password: string }) =>
+    api.post<SetupAdminResponse>('/admin/setup', data),
+};
+
+// ============================================
 // 管理者認証API
 // ============================================
 

@@ -21,6 +21,7 @@ import adminUsersRoutes from './admin/users.js';
 import adminOrganizationsRoutes from './admin/organizations.js';
 import adminAuditLogsRoutes from './admin/audit-logs.js';
 import adminAdminUsersRoutes from './admin/admin-users.js';
+import adminSetupRoutes from './admin/setup.js';
 import { oauthController } from '../controllers/oauth.controller.js';
 
 const router: Router = Router();
@@ -48,6 +49,9 @@ router.use('/api/notifications', notificationRoutes);
 
 // OAuth 2.1 エンドポイント (RFC 9728)
 router.use('/oauth', oauthRoutes);
+
+// 初回セットアップ（認証不要）
+router.use('/admin/setup', adminSetupRoutes);
 
 // 管理者認証
 router.use('/admin/auth', adminAuthRoutes);
