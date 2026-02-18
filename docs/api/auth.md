@@ -11,12 +11,18 @@
 ### メール/パスワード認証
 
 ```
-■ 新規登録
+■ 新規登録（REQUIRE_EMAIL_VERIFICATION=true、デフォルト）
 1. クライアント → POST /auth/register
 2. サーバーでユーザー作成 + 確認メール送信
 3. ユーザー情報を返却（JWT は未発行）
 4. ユーザーが確認メール内リンクをクリック → GET /auth/verify-email?token=xxx
 5. メールアドレス確認完了 → ログイン可能に
+
+■ 新規登録（REQUIRE_EMAIL_VERIFICATION=false、メール認証スキップ）
+1. クライアント → POST /auth/register
+2. サーバーで emailVerified=true のユーザー作成 + JWT 即発行
+3. Cookie 設定 + ユーザー情報を返却（emailVerificationSkipped: true）
+4. 確認メールは送信されない
 
 ■ ログイン
 1. クライアント → POST /auth/login
@@ -103,7 +109,7 @@ POST /auth/login
 POST /auth/register
 ```
 
-メールアドレスとパスワードでアカウントを作成。確認メールが送信される（自動ログインはされない）。
+メールアドレスとパスワードでアカウントを作成。`REQUIRE_EMAIL_VERIFICATION=true`（デフォルト）の場合、確認メールが送信される（自動ログインはされない）。`REQUIRE_EMAIL_VERIFICATION=false` の場合、メール認証をスキップして即ログインされる。
 
 **Request:**
 
@@ -121,7 +127,7 @@ POST /auth/register
 | `password` | string | Yes | パスワード（8〜100文字、大文字・小文字・数字・記号必須） |
 | `name` | string | Yes | 表示名（1〜100文字） |
 
-**Response (201):**
+**Response (201) - メール認証あり（デフォルト）:**
 
 ```json
 {
@@ -136,7 +142,27 @@ POST /auth/register
 }
 ```
 
-**注意:** 登録後は自動ログインされず、確認メール内のリンクをクリックしてメールアドレスを確認する必要がある。確認完了後にログイン可能になる。
+**Response (201) - メール認証スキップ時（`REQUIRE_EMAIL_VERIFICATION=false`）:**
+
+JWT Cookie（`access_token`, `refresh_token`）が設定される。
+
+```json
+{
+  "data": {
+    "message": "アカウントが作成されました。",
+    "user": {
+      "id": "usr_123456",
+      "email": "user@example.com",
+      "name": "John Doe"
+    },
+    "emailVerificationSkipped": true
+  }
+}
+```
+
+**注意:**
+- `REQUIRE_EMAIL_VERIFICATION=true`（デフォルト）: 登録後は自動ログインされず、確認メール内のリンクをクリックしてメールアドレスを確認する必要がある。確認完了後にログイン可能になる。
+- `REQUIRE_EMAIL_VERIFICATION=false`: 登録と同時に `emailVerified=true` でユーザーが作成され、JWT が即発行される。確認メールは送信されない。
 
 **Errors:**
 

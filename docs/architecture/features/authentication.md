@@ -30,6 +30,7 @@
 | AUTH-020 | メールアドレス確認 | 登録時に確認メール送信、確認完了までログインブロック | 実装済 |
 | AUTH-021 | 2FA（TOTP） | TOTP認証による二要素認証の設定・検証 | 実装済 |
 | AUTH-022 | 2FAログイン検証 | 2FA有効ユーザーのログイン時にTOTPコード検証 | 実装済 |
+| AUTH-023 | メール認証の省略 | `REQUIRE_EMAIL_VERIFICATION=false` でメール認証をスキップ | 実装済 |
 
 ## 画面仕様
 
@@ -90,6 +91,7 @@
   - 「既にアカウントをお持ちの場合はログイン」リンク（→ `/login`）
 - **操作**
   - フォーム入力 → アカウント作成ボタン → ユーザー作成 + 確認メール送信 → `/check-email` へリダイレクト
+  - `REQUIRE_EMAIL_VERIFICATION=false` の場合: ユーザー作成 → JWT即発行 → `/`（ダッシュボード）へリダイレクト
   - OAuthボタン → OAuthプロバイダーへリダイレクト（メール確認不要で即ログイン）
 - **バリデーション**
   - 名前: 1〜100文字
@@ -257,7 +259,14 @@ sequenceDiagram
     B->>DB: メールアドレス重複チェック
     alt メールアドレスが既に存在
         B->>F: 409 メールアドレスが既に使用されています
-    else 新規ユーザー
+    else REQUIRE_EMAIL_VERIFICATION=false（メール認証スキップ）
+        B->>B: bcryptでパスワードハッシュ化（12ラウンド）
+        B->>DB: ユーザー作成（emailVerified=true）
+        B->>DB: セッション作成
+        B->>B: JWT発行（アクセス・リフレッシュ）
+        B->>F: 201 Cookie設定 + ユーザー情報（emailVerificationSkipped: true）
+        F->>U: /（ダッシュボード）にリダイレクト
+    else REQUIRE_EMAIL_VERIFICATION=true（デフォルト）
         B->>B: bcryptでパスワードハッシュ化（12ラウンド）
         B->>DB: ユーザー作成（emailVerified=false）
         B->>B: 確認トークン生成（32バイトランダム）
@@ -267,7 +276,7 @@ sequenceDiagram
         F->>U: /check-email にリダイレクト
     end
 
-    Note over U,M: ユーザーが確認メールのリンクをクリック
+    Note over U,M: REQUIRE_EMAIL_VERIFICATION=true の場合のみ
 
     U->>F: /verify-email?token=xxx にアクセス
     F->>B: GET /api/auth/verify-email?token=xxx
@@ -538,6 +547,10 @@ erDiagram
 ### メールアドレス確認
 
 - メール/パスワードで登録したユーザーは、メールアドレスの確認が完了するまでログイン不可
+- `REQUIRE_EMAIL_VERIFICATION=false` でメール認証をスキップ可能（セルフホスト環境向け）
+  - スキップ時は `emailVerified=true` で即ユーザー作成、JWT即発行でログイン完了
+  - 確認メールは送信されない
+  - 本番環境で `false` に設定すると警告ログを出力
 - 確認トークン: 32バイトのランダム値（hex形式）
 - DB にはトークンの SHA-256 ハッシュのみ保存
 - 有効期限: 24時間
@@ -571,6 +584,7 @@ erDiagram
 | SESSION_EXPIRY | 7d | セッション有効期限 |
 | TOKEN_ENCRYPTION_KEY | - | OAuthトークン暗号化キー（本番必須） |
 | TOTP_ENCRYPTION_KEY | - | TOTP秘密鍵暗号化キー（AES-256-GCM、64文字hex） |
+| REQUIRE_EMAIL_VERIFICATION | true | `false` でメール認証をスキップ（セルフホスト向け） |
 
 ## セキュリティ考慮事項
 
