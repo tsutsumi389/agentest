@@ -63,15 +63,15 @@ JWT_SECRET=dev-jwt-secret-change-in-production
 JWT_ACCESS_EXPIRES_IN=15m
 JWT_REFRESH_EXPIRES_IN=7d
 
-# OAuth - GitHub
-GITHUB_CLIENT_ID=
-GITHUB_CLIENT_SECRET=
-GITHUB_CALLBACK_URL=http://localhost:3001/auth/github/callback
+# OAuth - GitHub（未設定の場合、GitHub認証は無効になりUIからもボタンが非表示になります）
+# GITHUB_CLIENT_ID=your-github-client-id
+# GITHUB_CLIENT_SECRET=your-github-client-secret
+# GITHUB_CALLBACK_URL=http://localhost:3001/auth/github/callback
 
-# OAuth - Google
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-GOOGLE_CALLBACK_URL=http://localhost:3001/auth/google/callback
+# OAuth - Google（未設定の場合、Google認証は無効になりUIからもボタンが非表示になります）
+# GOOGLE_CLIENT_ID=your-google-client-id
+# GOOGLE_CLIENT_SECRET=your-google-client-secret
+# GOOGLE_CALLBACK_URL=http://localhost:3001/auth/google/callback
 
 # ===========================================
 # フロントエンド
