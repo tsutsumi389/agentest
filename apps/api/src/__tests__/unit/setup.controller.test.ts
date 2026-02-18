@@ -49,6 +49,8 @@ import { AdminSetupController } from '../../controllers/admin/setup.controller.j
 function createMockReq(overrides: Partial<Request> = {}): Request {
   return {
     body: {},
+    ip: '127.0.0.1',
+    headers: { 'user-agent': 'test-agent' },
     ...overrides,
   } as Request;
 }
@@ -157,7 +159,7 @@ describe('AdminSetupController', () => {
         },
       });
 
-      // トランザクション内で監査ログが記録されること
+      // トランザクション内で監査ログが記録されること（ipAddress/userAgent含む）
       expect(mockTx.adminAuditLog.create).toHaveBeenCalledWith({
         data: {
           adminUserId: 'admin-uuid-1',
@@ -165,6 +167,8 @@ describe('AdminSetupController', () => {
           targetType: 'AdminUser',
           targetId: 'admin-uuid-1',
           details: { email: 'admin@example.com', name: 'Super Admin' },
+          ipAddress: '127.0.0.1',
+          userAgent: 'test-agent',
         },
       });
 

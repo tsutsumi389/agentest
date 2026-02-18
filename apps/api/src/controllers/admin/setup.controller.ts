@@ -52,6 +52,10 @@ export class AdminSetupController {
       // パスワードをハッシュ化（トランザクション前に実施）
       const passwordHash = await bcrypt.hash(password, 12);
 
+      // リクエスト情報を取得（監査ログ用）
+      const ipAddress = req.ip ?? null;
+      const userAgent = req.headers['user-agent'] ?? null;
+
       // トランザクションで存在チェック + 作成 + 監査ログを一括実行（レースコンディション防止）
       const adminUser = await prisma.$transaction(async (tx) => {
         const existingCount = await tx.adminUser.count({
@@ -80,6 +84,8 @@ export class AdminSetupController {
             targetType: 'AdminUser',
             targetId: user.id,
             details: { email, name },
+            ipAddress,
+            userAgent,
           },
         });
 

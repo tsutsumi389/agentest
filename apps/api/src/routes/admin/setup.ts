@@ -6,10 +6,10 @@ const router: Router = Router();
 const controller = new AdminSetupController();
 
 /**
- * セットアップ状態を取得（認証不要）
+ * セットアップ状態を取得（認証不要、レート制限: 30回/1分）
  * GET /admin/setup/status
  */
-router.get('/status', controller.getStatus);
+router.get('/status', rateLimiter({ max: 30, windowMs: 60 * 1000, routeId: 'admin-setup-status' }), controller.getStatus);
 
 /**
  * 初回セットアップ（認証不要、レート制限: 5回/15分）

@@ -56,16 +56,58 @@ export const judgmentStatusSchema = z.enum([
   JudgmentStatus.SKIPPED,
 ]);
 
+// パスワード要件の正規表現（フロントエンド・バックエンドで共通利用）
+export const PASSWORD_PATTERNS = {
+  uppercase: /[A-Z]/,
+  lowercase: /[a-z]/,
+  number: /[0-9]/,
+  symbol: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/,
+} as const;
+
+// パスワード最小文字数
+export const PASSWORD_MIN_LENGTH = 8;
+
+/**
+ * パスワード要件のチェック結果
+ */
+export interface PasswordRequirements {
+  minLength: boolean;
+  hasUppercase: boolean;
+  hasLowercase: boolean;
+  hasNumber: boolean;
+  hasSymbol: boolean;
+}
+
+/**
+ * パスワード要件をチェック
+ */
+export function checkPasswordRequirements(password: string): PasswordRequirements {
+  return {
+    minLength: password.length >= PASSWORD_MIN_LENGTH,
+    hasUppercase: PASSWORD_PATTERNS.uppercase.test(password),
+    hasLowercase: PASSWORD_PATTERNS.lowercase.test(password),
+    hasNumber: PASSWORD_PATTERNS.number.test(password),
+    hasSymbol: PASSWORD_PATTERNS.symbol.test(password),
+  };
+}
+
+/**
+ * すべてのパスワード要件を満たしているかチェック
+ */
+export function allPasswordRequirementsMet(requirements: PasswordRequirements): boolean {
+  return Object.values(requirements).every(Boolean);
+}
+
 // パスワード共通バリデーション
 // パスワード要件: 8文字以上100文字以内、大文字・小文字・数字・記号を含む
 export const passwordSchema = z
   .string()
-  .min(8, 'パスワードは8文字以上で入力してください')
+  .min(PASSWORD_MIN_LENGTH, 'パスワードは8文字以上で入力してください')
   .max(100, 'パスワードは100文字以内で入力してください')
-  .regex(/[A-Z]/, 'パスワードには大文字を含めてください')
-  .regex(/[a-z]/, 'パスワードには小文字を含めてください')
-  .regex(/[0-9]/, 'パスワードには数字を含めてください')
-  .regex(/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/, 'パスワードには記号を含めてください');
+  .regex(PASSWORD_PATTERNS.uppercase, 'パスワードには大文字を含めてください')
+  .regex(PASSWORD_PATTERNS.lowercase, 'パスワードには小文字を含めてください')
+  .regex(PASSWORD_PATTERNS.number, 'パスワードには数字を含めてください')
+  .regex(PASSWORD_PATTERNS.symbol, 'パスワードには記号を含めてください');
 
 // ユーザー新規登録（メール/パスワード）
 export const userRegisterSchema = z.object({

@@ -12,6 +12,7 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
+import { checkPasswordRequirements, allPasswordRequirementsMet } from '@agentest/shared';
 import { invitationApi, ApiError } from '../../lib/api';
 import type { AdminInvitationResponse } from '@agentest/shared/types';
 
@@ -29,37 +30,6 @@ function getRoleLabel(role: string): string {
     default:
       return role;
   }
-}
-
-/**
- * パスワード要件のチェック結果
- */
-interface PasswordRequirements {
-  minLength: boolean;
-  hasUppercase: boolean;
-  hasLowercase: boolean;
-  hasNumber: boolean;
-  hasSymbol: boolean;
-}
-
-/**
- * パスワード要件をチェック
- */
-function checkPasswordRequirements(password: string): PasswordRequirements {
-  return {
-    minLength: password.length >= 8,
-    hasUppercase: /[A-Z]/.test(password),
-    hasLowercase: /[a-z]/.test(password),
-    hasNumber: /[0-9]/.test(password),
-    hasSymbol: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password),
-  };
-}
-
-/**
- * すべての要件を満たしているかチェック
- */
-function allRequirementsMet(requirements: PasswordRequirements): boolean {
-  return Object.values(requirements).every(Boolean);
 }
 
 /**
@@ -86,7 +56,7 @@ export function AcceptInvitationPage() {
   const requirements = checkPasswordRequirements(password);
   const passwordsMatch = password === confirmPassword;
   const canSubmit =
-    allRequirementsMet(requirements) &&
+    allPasswordRequirementsMet(requirements) &&
     passwordsMatch &&
     password.length > 0 &&
     confirmPassword.length > 0;

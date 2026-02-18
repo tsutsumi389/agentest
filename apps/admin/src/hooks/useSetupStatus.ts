@@ -1,28 +1,19 @@
-import { useState, useEffect } from 'react';
-import { setupApi } from '../lib/api';
+import { useEffect } from 'react';
+import { useSetupStore } from '../stores/setup.store';
 
 /**
  * セットアップ状態を確認するカスタムフック
- * AdminUserが0件（セットアップ未完了）の場合に isSetupRequired: true を返す
+ * Zustandストアを使用し、API呼び出しは初回のみ実行される
  */
 export function useSetupStatus() {
-  const [setupCheckDone, setSetupCheckDone] = useState(false);
-  const [isSetupRequired, setIsSetupRequired] = useState(false);
+  const setupCheckDone = useSetupStore((state) => state.setupCheckDone);
+  const isSetupRequired = useSetupStore((state) => state.isSetupRequired);
+  const hasError = useSetupStore((state) => state.hasError);
+  const checkSetupStatus = useSetupStore((state) => state.checkSetupStatus);
 
   useEffect(() => {
-    const checkSetup = async () => {
-      try {
-        const { isSetupRequired } = await setupApi.getStatus();
-        setIsSetupRequired(isSetupRequired);
-      } catch {
-        // APIエラーの場合はセットアップ不要として続行（認証チェックで保護される）
-      } finally {
-        setSetupCheckDone(true);
-      }
-    };
+    checkSetupStatus();
+  }, [checkSetupStatus]);
 
-    checkSetup();
-  }, []);
-
-  return { setupCheckDone, isSetupRequired };
+  return { setupCheckDone, isSetupRequired, hasError };
 }

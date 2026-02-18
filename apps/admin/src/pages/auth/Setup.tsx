@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent } from 'react';
+import { useState, type FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router';
 import {
   Terminal,
@@ -10,39 +10,12 @@ import {
   CheckCircle,
   Eye,
   EyeOff,
+  RefreshCw,
 } from 'lucide-react';
+import { checkPasswordRequirements, allPasswordRequirementsMet } from '@agentest/shared';
 import { setupApi, ApiError } from '../../lib/api';
-
-/**
- * パスワード要件のチェック結果
- */
-interface PasswordRequirements {
-  minLength: boolean;
-  hasUppercase: boolean;
-  hasLowercase: boolean;
-  hasNumber: boolean;
-  hasSymbol: boolean;
-}
-
-/**
- * パスワード要件をチェック
- */
-function checkPasswordRequirements(password: string): PasswordRequirements {
-  return {
-    minLength: password.length >= 8,
-    hasUppercase: /[A-Z]/.test(password),
-    hasLowercase: /[a-z]/.test(password),
-    hasNumber: /[0-9]/.test(password),
-    hasSymbol: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(password),
-  };
-}
-
-/**
- * すべての要件を満たしているかチェック
- */
-function allRequirementsMet(requirements: PasswordRequirements): boolean {
-  return Object.values(requirements).every(Boolean);
-}
+import { useSetupStatus } from '../../hooks/useSetupStatus';
+import { useSetupStore } from '../../stores/setup.store';
 
 /**
  * 初回セットアップページ
@@ -50,10 +23,10 @@ function allRequirementsMet(requirements: PasswordRequirements): boolean {
  */
 export function SetupPage() {
   const navigate = useNavigate();
-
-  // セットアップ状態の確認
-  const [isCheckingStatus, setIsCheckingStatus] = useState(true);
-  const [isSetupRequired, setIsSetupRequired] = useState(false);
+  const { setupCheckDone, isSetupRequired, hasError } = useSetupStatus();
+  const checkSetupStatus = useSetupStore((state) => state.checkSetupStatus);
+  const markSetupComplete = useSetupStore((state) => state.markSetupComplete);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   // フォーム状態
   const [name, setName] = useState('');
@@ -72,32 +45,25 @@ export function SetupPage() {
   const canSubmit =
     name.trim().length > 0 &&
     email.trim().length > 0 &&
-    allRequirementsMet(requirements) &&
+    allPasswordRequirementsMet(requirements) &&
     passwordsMatch &&
     password.length > 0 &&
     confirmPassword.length > 0;
 
-  // セットアップ状態をチェック
-  useEffect(() => {
-    const checkStatus = async () => {
-      try {
-        const { isSetupRequired } = await setupApi.getStatus();
-        if (!isSetupRequired) {
-          // セットアップ済みならログインページへ
-          navigate('/login', { replace: true });
-          return;
-        }
-        setIsSetupRequired(true);
-      } catch {
-        // APIエラーの場合もセットアップ画面を表示（APIが利用できない場合のフォールバック）
-        setIsSetupRequired(true);
-      } finally {
-        setIsCheckingStatus(false);
-      }
-    };
+  // リトライ処理
+  const handleRetry = async () => {
+    setIsRetrying(true);
+    // ストアのチェック済みフラグをリセットして再チェック
+    useSetupStore.setState({ setupCheckDone: false, hasError: false });
+    await checkSetupStatus();
+    setIsRetrying(false);
+  };
 
-    checkStatus();
-  }, [navigate]);
+  // セットアップ済みならログインページへリダイレクト
+  if (setupCheckDone && !isSetupRequired && !hasError && !isSuccess) {
+    navigate('/login', { replace: true });
+    return null;
+  }
 
   // フォーム送信
   const handleSubmit = async (e: FormEvent) => {
@@ -110,6 +76,8 @@ export function SetupPage() {
 
     try {
       await setupApi.setup({ email, name: name.trim(), password });
+      // ストアの状態を更新（他コンポーネントに反映）
+      markSetupComplete();
       setIsSuccess(true);
     } catch (err) {
       if (err instanceof ApiError) {
@@ -131,7 +99,7 @@ export function SetupPage() {
   };
 
   // 読み込み中
-  if (isCheckingStatus) {
+  if (!setupCheckDone) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
         <div className="flex flex-col items-center gap-4">
@@ -142,9 +110,63 @@ export function SetupPage() {
     );
   }
 
-  // セットアップ不要（リダイレクト中）
-  if (!isSetupRequired) {
-    return null;
+  // APIエラー画面
+  if (hasError && !isSuccess) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+        <div className="w-full max-w-sm">
+          {/* ロゴ */}
+          <div className="flex flex-col items-center mb-8">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-10 h-10 rounded-lg bg-accent-muted flex items-center justify-center">
+                <Terminal className="w-6 h-6 text-accent" />
+              </div>
+              <span className="text-2xl font-bold text-foreground">
+                Agentest Admin
+              </span>
+            </div>
+          </div>
+
+          {/* エラーメッセージ */}
+          <div className="card p-6">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 rounded-full bg-danger-muted flex items-center justify-center mb-4">
+                <AlertCircle className="w-8 h-8 text-danger" />
+              </div>
+              <h1 className="text-xl font-semibold text-foreground mb-2">
+                サーバーに接続できません
+              </h1>
+              <p className="text-foreground-muted mb-6">
+                APIサーバーとの通信に失敗しました。<br />
+                サーバーが起動していることを確認してください。
+              </p>
+              <button
+                onClick={handleRetry}
+                className="btn btn-primary w-full"
+                disabled={isRetrying}
+              >
+                {isRetrying ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    再試行中...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="w-4 h-4" />
+                    再試行
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* フッター */}
+          <p className="text-xs text-foreground-subtle text-center mt-6">
+            &copy; {new Date().getFullYear()} Agentest. All rights reserved.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   // 成功画面
