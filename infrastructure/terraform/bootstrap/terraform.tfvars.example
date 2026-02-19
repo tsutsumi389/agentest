@@ -1,0 +1,9 @@
+# Bootstrap - Terraform 変数テンプレート
+# このファイルをコピーして terraform.tfvars を作成してください:
+#   cp terraform.tfvars.example terraform.tfvars
+
+# GCP プロジェクト ID
+project_id = "your-gcp-project-id"
+
+# GCP リージョン（デフォルト: asia-northeast1）
+# region = "asia-northeast1"

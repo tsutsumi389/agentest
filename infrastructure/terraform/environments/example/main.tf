@@ -1,4 +1,5 @@
-# Staging 環境 - 全モジュール統合
+# Example 環境 - 全モジュール統合
+# セルフホスト向けテンプレート。terraform.tfvars.example を参考に terraform.tfvars を作成してください。
 
 locals {
   environment   = var.environment
@@ -23,7 +24,7 @@ module "networking" {
   project_id             = var.project_id
   region                 = var.region
   prefix                 = local.prefix
-  connector_machine_type = "e2-micro"
+  connector_machine_type = "e2-micro" # スケールアップ: "e2-small" / "e2-medium"
 }
 
 # Cloud SQL: PostgreSQL 16
@@ -37,6 +38,7 @@ module "cloud_sql" {
   network_id                        = module.networking.network_id
   private_service_access_connection = module.networking.private_service_access_connection
 
+  # スケールアップ: tier = "db-custom-2-7680", availability_type = "REGIONAL", pitr_enabled = true
   tier                = "db-f1-micro"
   availability_type   = "ZONAL"
   disk_size_gb        = 10
@@ -57,6 +59,7 @@ module "memorystore" {
   network_id                        = module.networking.network_id
   private_service_access_connection = module.networking.private_service_access_connection
 
+  # スケールアップ: tier = "STANDARD_HA", memory_size_gb = 5
   tier           = "BASIC"
   memory_size_gb = 1
 }
@@ -123,10 +126,17 @@ module "cloud_run_api" {
     FRONTEND_URL        = "https://${var.app_domain}"
     ADMIN_FRONTEND_URL  = "https://${var.admin_domain}"
     CORS_ORIGIN         = "https://${var.app_domain},https://${var.admin_domain}"
-    GITHUB_CALLBACK_URL = "https://${var.app_domain}/api/auth/github/callback"
-    GOOGLE_CALLBACK_URL = "https://${var.app_domain}/api/auth/google/callback"
+    GITHUB_CALLBACK_URL        = "https://${var.app_domain}/api/auth/github/callback"
+    GOOGLE_CALLBACK_URL        = "https://${var.app_domain}/api/auth/google/callback"
+    STORAGE_BUCKET             = module.cloud_storage.bucket_name
+    REQUIRE_EMAIL_VERIFICATION = var.require_email_verification
+    SMTP_HOST                  = var.smtp_host
+    SMTP_PORT                  = tostring(var.smtp_port)
+    SMTP_FROM                  = var.smtp_from
+    SMTP_SECURE                = var.smtp_secure
   }
 
+  # 必須シークレット
   secret_env_vars = {
     DATABASE_URL         = "${local.secret_prefix}-DATABASE_URL"
     REDIS_URL            = "${local.secret_prefix}-REDIS_URL"
@@ -135,23 +145,14 @@ module "cloud_run_api" {
     INTERNAL_API_SECRET  = "${local.secret_prefix}-INTERNAL_API_SECRET"
     TOKEN_ENCRYPTION_KEY = "${local.secret_prefix}-TOKEN_ENCRYPTION_KEY"
     TOTP_ENCRYPTION_KEY  = "${local.secret_prefix}-TOTP_ENCRYPTION_KEY"
+    # OAuth プロバイダー（任意 - 使用するプロバイダーのみ設定）
     GITHUB_CLIENT_ID     = "${local.secret_prefix}-GITHUB_CLIENT_ID"
     GITHUB_CLIENT_SECRET = "${local.secret_prefix}-GITHUB_CLIENT_SECRET"
     GOOGLE_CLIENT_ID     = "${local.secret_prefix}-GOOGLE_CLIENT_ID"
     GOOGLE_CLIENT_SECRET = "${local.secret_prefix}-GOOGLE_CLIENT_SECRET"
-    STRIPE_SECRET_KEY      = "${local.secret_prefix}-STRIPE_SECRET_KEY"
-    STRIPE_WEBHOOK_SECRET  = "${local.secret_prefix}-STRIPE_WEBHOOK_SECRET"
-    STRIPE_PUBLISHABLE_KEY = "${local.secret_prefix}-STRIPE_PUBLISHABLE_KEY"
-    STRIPE_PRICE_PRO_MONTHLY  = "${local.secret_prefix}-STRIPE_PRICE_PRO_MONTHLY"
-    STRIPE_PRICE_PRO_YEARLY   = "${local.secret_prefix}-STRIPE_PRICE_PRO_YEARLY"
-    STRIPE_PRICE_TEAM_MONTHLY = "${local.secret_prefix}-STRIPE_PRICE_TEAM_MONTHLY"
-    STRIPE_PRICE_TEAM_YEARLY  = "${local.secret_prefix}-STRIPE_PRICE_TEAM_YEARLY"
-    SMTP_USER              = "${local.secret_prefix}-SMTP_USER"
-    SMTP_PASS              = "${local.secret_prefix}-SMTP_PASS"
-    MINIO_ENDPOINT         = "${local.secret_prefix}-MINIO_ENDPOINT"
-    MINIO_ACCESS_KEY       = "${local.secret_prefix}-MINIO_ACCESS_KEY"
-    MINIO_SECRET_KEY       = "${local.secret_prefix}-MINIO_SECRET_KEY"
-    MINIO_BUCKET           = "${local.secret_prefix}-MINIO_BUCKET"
+    # メール送信（任意 - SMTP を使用する場合のみ設定）
+    SMTP_USER = "${local.secret_prefix}-SMTP_USER"
+    SMTP_PASS = "${local.secret_prefix}-SMTP_PASS"
   }
 }
 
@@ -318,7 +319,7 @@ module "load_balancer" {
 # --- Phase 4: DB マイグレーション ---
 
 # API イメージを使用（Prisma CLI + マイグレーションファイルを含む）
-# デプロイ時に手動実行: gcloud run jobs execute agentest-db-migrate-staging --region asia-northeast1 --wait
+# デプロイ時に手動実行: gcloud run jobs execute <prefix>-db-migrate-<env> --region <region> --wait
 module "cloud_run_migration" {
   source = "../../modules/cloud-run-migration"
 
@@ -356,13 +357,12 @@ module "cloud_run_job" {
   vpc_connector_id                = module.networking.vpc_connector_id
 
   env_vars = {
-    NODE_ENV = "production"
+    NODE_ENV  = "production"
     LOG_LEVEL = "info"
   }
 
   secret_env_vars = {
-    DATABASE_URL      = "${local.secret_prefix}-DATABASE_URL"
-    REDIS_URL         = "${local.secret_prefix}-REDIS_URL"
-    STRIPE_SECRET_KEY = "${local.secret_prefix}-STRIPE_SECRET_KEY"
+    DATABASE_URL = "${local.secret_prefix}-DATABASE_URL"
+    REDIS_URL    = "${local.secret_prefix}-REDIS_URL"
   }
 }

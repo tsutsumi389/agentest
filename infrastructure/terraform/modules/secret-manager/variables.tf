@@ -10,7 +10,7 @@ variable "prefix" {
 }
 
 variable "environment" {
-  description = "環境名（staging / production）"
+  description = "環境名"
   type        = string
 }
 
@@ -29,19 +29,8 @@ variable "secret_ids" {
     "GITHUB_CLIENT_SECRET",
     "GOOGLE_CLIENT_ID",
     "GOOGLE_CLIENT_SECRET",
-    "STRIPE_SECRET_KEY",
-    "STRIPE_WEBHOOK_SECRET",
-    "STRIPE_PUBLISHABLE_KEY",
-    "STRIPE_PRICE_PRO_MONTHLY",
-    "STRIPE_PRICE_PRO_YEARLY",
-    "STRIPE_PRICE_TEAM_MONTHLY",
-    "STRIPE_PRICE_TEAM_YEARLY",
     "SMTP_USER",
     "SMTP_PASS",
-    "MINIO_ENDPOINT",
-    "MINIO_ACCESS_KEY",
-    "MINIO_SECRET_KEY",
-    "MINIO_BUCKET",
   ]
 }
 
@@ -66,19 +55,8 @@ variable "secret_access_map" {
       "GITHUB_CLIENT_SECRET",
       "GOOGLE_CLIENT_ID",
       "GOOGLE_CLIENT_SECRET",
-      "STRIPE_SECRET_KEY",
-      "STRIPE_WEBHOOK_SECRET",
-      "STRIPE_PUBLISHABLE_KEY",
-      "STRIPE_PRICE_PRO_MONTHLY",
-      "STRIPE_PRICE_PRO_YEARLY",
-      "STRIPE_PRICE_TEAM_MONTHLY",
-      "STRIPE_PRICE_TEAM_YEARLY",
       "SMTP_USER",
       "SMTP_PASS",
-      "MINIO_ENDPOINT",
-      "MINIO_ACCESS_KEY",
-      "MINIO_SECRET_KEY",
-      "MINIO_BUCKET",
     ]
     ws = [
       "DATABASE_URL",
@@ -96,7 +74,6 @@ variable "secret_access_map" {
     jobs = [
       "DATABASE_URL",
       "REDIS_URL",
-      "STRIPE_SECRET_KEY",
     ]
   }
 }

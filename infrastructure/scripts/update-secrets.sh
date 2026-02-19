@@ -1,22 +1,33 @@
 #!/bin/bash
 # シークレット値を更新するスクリプト
+#
+# 必須環境変数:
+#   PROJECT_ID    - GCP プロジェクト ID
+#   DATABASE_URL  - PostgreSQL 接続 URL
+#   REDIS_URL     - Redis 接続 URL
+#
+# オプション環境変数:
+#   PREFIX      - リソース名のプレフィックス（デフォルト: agentest）
+#   ENVIRONMENT - 環境名（デフォルト: production）
 set -e
 
-PROJECT_ID="agentest-staging"
-PREFIX="agentest-staging"
+PROJECT_ID="${PROJECT_ID:?PROJECT_ID 環境変数を設定してください}"
+PREFIX="${PREFIX:-agentest}"
+ENVIRONMENT="${ENVIRONMENT:-production}"
+DATABASE_URL="${DATABASE_URL:?DATABASE_URL 環境変数を設定してください}"
+REDIS_URL="${REDIS_URL:?REDIS_URL 環境変数を設定してください}"
 
-# ============================================
-# ここを書き換えてください
-# ============================================
-DB_PASSWORD="ここにterraform.tfvarsのdatabase_passwordを入力"
-# ============================================
+SECRET_PREFIX="${PREFIX}-${ENVIRONMENT}"
 
-# DB接続情報
-DATABASE_URL="postgresql://agentest:${DB_PASSWORD}@10.46.1.3:5432/agentest"
-
-# Redis接続情報
-REDIS_AUTH="ここにRedisの認証文字列を入力（gcloud redis instances get-auth-string で取得）"
-REDIS_URL="redis://:${REDIS_AUTH}@10.46.0.3:6379"
+echo ""
+echo "WARNING: このスクリプトは JWT/暗号化キーを新規生成して上書きします。"
+echo "既にサービスが稼働中の場合、既存のセッションやトークンが無効化されます。"
+echo ""
+read -p "続行しますか？ (y/N): " confirm
+if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+  echo "中止しました"
+  exit 0
+fi
 
 # JWT/暗号化キー（ランダム生成）
 JWT_ACCESS_SECRET=$(openssl rand -hex 32)
@@ -25,14 +36,15 @@ INTERNAL_API_SECRET=$(openssl rand -hex 32)
 TOKEN_ENCRYPTION_KEY=$(openssl rand -hex 32)
 TOTP_ENCRYPTION_KEY=$(openssl rand -hex 32)
 
-echo "=== 必須シークレットを更新 ==="
-
 update_secret() {
   local name=$1
   local value=$2
-  echo "Updating ${PREFIX}-${name}..."
-  echo -n "${value}" | gcloud secrets versions add "${PREFIX}-${name}" --project="${PROJECT_ID}" --data-file=-
+  echo "Updating ${SECRET_PREFIX}-${name}..."
+  echo -n "${value}" | gcloud secrets versions add "${SECRET_PREFIX}-${name}" --project="${PROJECT_ID}" --data-file=-
 }
+
+echo ""
+echo "=== 必須シークレットを更新 ==="
 
 update_secret "DATABASE_URL" "${DATABASE_URL}"
 update_secret "REDIS_URL" "${REDIS_URL}"
@@ -43,9 +55,56 @@ update_secret "TOKEN_ENCRYPTION_KEY" "${TOKEN_ENCRYPTION_KEY}"
 update_secret "TOTP_ENCRYPTION_KEY" "${TOTP_ENCRYPTION_KEY}"
 
 echo ""
+echo "=== オプションシークレットの設定 ==="
+echo ""
+
+# --- GitHub OAuth ---
+read -p "GitHub OAuth を設定しますか？ (y/N): " setup_github
+if [[ "$setup_github" == "y" || "$setup_github" == "Y" ]]; then
+  read -p "  GITHUB_CLIENT_ID: " github_client_id
+  read -sp "  GITHUB_CLIENT_SECRET: " github_client_secret
+  echo
+  if [[ -n "$github_client_id" && -n "$github_client_secret" ]]; then
+    update_secret "GITHUB_CLIENT_ID" "${github_client_id}"
+    update_secret "GITHUB_CLIENT_SECRET" "${github_client_secret}"
+    echo "  GitHub OAuth を設定しました"
+  else
+    echo "  スキップ（値が空です）"
+  fi
+fi
+
+# --- Google OAuth ---
+read -p "Google OAuth を設定しますか？ (y/N): " setup_google
+if [[ "$setup_google" == "y" || "$setup_google" == "Y" ]]; then
+  read -p "  GOOGLE_CLIENT_ID: " google_client_id
+  read -sp "  GOOGLE_CLIENT_SECRET: " google_client_secret
+  echo
+  if [[ -n "$google_client_id" && -n "$google_client_secret" ]]; then
+    update_secret "GOOGLE_CLIENT_ID" "${google_client_id}"
+    update_secret "GOOGLE_CLIENT_SECRET" "${google_client_secret}"
+    echo "  Google OAuth を設定しました"
+  else
+    echo "  スキップ（値が空です）"
+  fi
+fi
+
+# --- SMTP ---
+read -p "SMTP（メール送信）を設定しますか？ (y/N): " setup_smtp
+if [[ "$setup_smtp" == "y" || "$setup_smtp" == "Y" ]]; then
+  read -p "  SMTP_USER: " smtp_user
+  read -sp "  SMTP_PASS: " smtp_pass
+  echo
+  if [[ -n "$smtp_user" && -n "$smtp_pass" ]]; then
+    update_secret "SMTP_USER" "${smtp_user}"
+    update_secret "SMTP_PASS" "${smtp_pass}"
+    echo "  SMTP を設定しました"
+  else
+    echo "  スキップ（値が空です）"
+  fi
+fi
+
+echo ""
 echo "=== 完了 ==="
-echo "以下のシークレットは各サービスの準備ができたら別途設定してください："
-echo "  - GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET （GitHub OAuth）"
-echo "  - GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET （Google OAuth）"
-echo "  - STRIPE_* （Stripe決済）"
-echo "  - SMTP_USER / SMTP_PASS （メール送信）"
+echo ""
+echo "オプションシークレットは後からでも以下のコマンドで個別に設定できます:"
+echo "  echo -n 'VALUE' | gcloud secrets versions add ${SECRET_PREFIX}-SECRET_NAME --project=${PROJECT_ID} --data-file=-"

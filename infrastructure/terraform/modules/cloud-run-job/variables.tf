@@ -15,7 +15,7 @@ variable "prefix" {
 }
 
 variable "environment" {
-  description = "環境名（staging / production）"
+  description = "環境名"
   type        = string
 }
 
@@ -84,40 +84,15 @@ variable "schedules" {
     description = string
   }))
   default = {
-    plan-distribution-aggregation = {
-      cron        = "5 0 * * *"
-      job_name    = "plan-distribution-aggregation"
-      description = "プラン分布集計"
-    }
-    metrics-aggregation = {
-      cron        = "0 1 * * *"
-      job_name    = "metrics-aggregation"
-      description = "DAU/WAU/MAU メトリクス集計"
-    }
     history-cleanup = {
       cron        = "0 3 * * *"
       job_name    = "history-cleanup"
-      description = "FREE プランの古い履歴削除"
+      description = "古い履歴レコードの削除"
     }
     project-cleanup = {
       cron        = "0 4 * * *"
       job_name    = "project-cleanup"
       description = "ソフトデリート済みプロジェクトの物理削除"
-    }
-    webhook-retry = {
-      cron        = "0 * * * *"
-      job_name    = "webhook-retry"
-      description = "失敗した決済 Webhook の再処理"
-    }
-    payment-event-cleanup = {
-      cron        = "0 4 * * 0"
-      job_name    = "payment-event-cleanup"
-      description = "古い決済イベントの削除"
-    }
-    subscription-sync = {
-      cron        = "0 5 * * 0"
-      job_name    = "subscription-sync"
-      description = "Stripe との状態同期"
     }
   }
 }

@@ -1,19 +1,29 @@
 #!/bin/bash
 # 全サービスのDockerイメージをビルドしてArtifact Registryにプッシュするスクリプト
 # プッシュ後、ダイジェストを取得して terraform.tfvars のイメージを自動更新する
+#
+# 必須環境変数:
+#   PROJECT_ID    - GCP プロジェクト ID
+#   VITE_API_URL  - フロントエンド API URL（例: https://app.example.com）
+#   VITE_WS_URL   - フロントエンド WebSocket URL（例: wss://app.example.com）
+#
+# オプション環境変数:
+#   REGION        - GCP リージョン（デフォルト: asia-northeast1）
+#   TFVARS_FILE   - terraform.tfvars のパス
 set -e
 
-REGISTRY="asia-northeast1-docker.pkg.dev/agentest-staging/agentest-docker"
+PROJECT_ID="${PROJECT_ID:?PROJECT_ID 環境変数を設定してください}"
+REGION="${REGION:-asia-northeast1}"
+VITE_API_URL="${VITE_API_URL:?VITE_API_URL 環境変数を設定してください}"
+VITE_WS_URL="${VITE_WS_URL:?VITE_WS_URL 環境変数を設定してください}"
+
+REGISTRY="${REGION}-docker.pkg.dev/${PROJECT_ID}/agentest-docker"
 TAG="latest"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-TFVARS_FILE="${SCRIPT_DIR}/../terraform/environments/staging/terraform.tfvars"
+TFVARS_FILE="${TFVARS_FILE:-${SCRIPT_DIR}/../terraform/environments/example/terraform.tfvars}"
 
 # プロジェクトルートに移動（Docker ビルドコンテキストとして使用）
 cd "${SCRIPT_DIR}/../.."
-
-# フロントエンドのビルド時環境変数
-VITE_API_URL="https://app.staging.agentest.jp"
-VITE_WS_URL="wss://app.staging.agentest.jp"
 
 # Cloud Run 互換のイメージをビルド・プッシュするヘルパー関数
 # --provenance=false --sbom=false で OCI image index 形式を回避
@@ -40,11 +50,11 @@ get_digest() {
   gcloud artifacts docker images describe \
     "${REGISTRY}/${name}:${TAG}" \
     --format='get(image_summary.digest)' \
-    --project=agentest-staging
+    --project="${PROJECT_ID}"
 }
 
 echo "=== Artifact Registry への認証 ==="
-gcloud auth configure-docker asia-northeast1-docker.pkg.dev --quiet
+gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
 
 echo ""
 echo "=== API サーバー ==="
@@ -88,13 +98,14 @@ echo "  digest: ${JOBS_DIGEST}"
 echo ""
 echo "=== terraform.tfvars のイメージを更新 ==="
 if [ -f "${TFVARS_FILE}" ]; then
-  # 各イメージ変数をダイジェスト付きURIに置換
-  sed -i '' "s|^api_image.*|api_image   = \"${REGISTRY}/api@${API_DIGEST}\"|" "${TFVARS_FILE}"
-  sed -i '' "s|^ws_image.*|ws_image    = \"${REGISTRY}/ws@${WS_DIGEST}\"|" "${TFVARS_FILE}"
-  sed -i '' "s|^mcp_image.*|mcp_image   = \"${REGISTRY}/mcp@${MCP_DIGEST}\"|" "${TFVARS_FILE}"
-  sed -i '' "s|^web_image.*|web_image   = \"${REGISTRY}/web@${WEB_DIGEST}\"|" "${TFVARS_FILE}"
-  sed -i '' "s|^admin_image.*|admin_image = \"${REGISTRY}/admin@${ADMIN_DIGEST}\"|" "${TFVARS_FILE}"
-  sed -i '' "s|^jobs_image.*|jobs_image  = \"${REGISTRY}/jobs@${JOBS_DIGEST}\"|" "${TFVARS_FILE}"
+  # 各イメージ変数をダイジェスト付きURIに置換（macOS/Linux 両対応）
+  sed -i.bak "s|^api_image.*|api_image   = \"${REGISTRY}/api@${API_DIGEST}\"|" "${TFVARS_FILE}"
+  sed -i.bak "s|^ws_image.*|ws_image    = \"${REGISTRY}/ws@${WS_DIGEST}\"|" "${TFVARS_FILE}"
+  sed -i.bak "s|^mcp_image.*|mcp_image   = \"${REGISTRY}/mcp@${MCP_DIGEST}\"|" "${TFVARS_FILE}"
+  sed -i.bak "s|^web_image.*|web_image   = \"${REGISTRY}/web@${WEB_DIGEST}\"|" "${TFVARS_FILE}"
+  sed -i.bak "s|^admin_image.*|admin_image = \"${REGISTRY}/admin@${ADMIN_DIGEST}\"|" "${TFVARS_FILE}"
+  sed -i.bak "s|^jobs_image.*|jobs_image  = \"${REGISTRY}/jobs@${JOBS_DIGEST}\"|" "${TFVARS_FILE}"
+  rm -f "${TFVARS_FILE}.bak"
   echo "terraform.tfvars を更新しました"
 else
   echo "WARNING: ${TFVARS_FILE} が見つかりません"
@@ -114,6 +125,6 @@ echo "  admin_image = \"${REGISTRY}/admin@${ADMIN_DIGEST}\""
 echo "  jobs_image  = \"${REGISTRY}/jobs@${JOBS_DIGEST}\""
 echo ""
 echo "次のステップ:"
-echo "  1. terraform apply:  cd infrastructure/terraform/environments/staging && terraform apply"
-echo "  2. DB マイグレーション: gcloud run jobs execute agentest-db-migrate-staging --region asia-northeast1 --wait"
-echo "  3. サービス確認:     curl https://app.staging.agentest.jp/health"
+echo "  1. terraform apply:  cd infrastructure/terraform/environments/example && terraform apply"
+echo "  2. DB マイグレーション: gcloud run jobs execute <prefix>-db-migrate-<env> --region ${REGION} --wait"
+echo "  3. サービス確認:     curl ${VITE_API_URL}/health"

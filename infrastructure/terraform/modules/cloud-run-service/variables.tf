@@ -15,7 +15,7 @@ variable "prefix" {
 }
 
 variable "environment" {
-  description = "環境名（staging / production）"
+  description = "環境名"
   type        = string
 }
 

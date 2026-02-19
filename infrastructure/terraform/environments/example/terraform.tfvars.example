@@ -1,0 +1,49 @@
+# Agentest - Terraform 変数テンプレート
+# このファイルをコピーして terraform.tfvars を作成してください:
+#   cp terraform.tfvars.example terraform.tfvars
+
+# --- 必須設定 ---
+
+# GCP プロジェクト ID
+project_id = "your-gcp-project-id"
+
+# アプリケーション用ドメイン
+app_domain = "app.example.com"
+
+# 管理画面用ドメイン
+admin_domain = "admin.example.com"
+
+# データベースパスワード（openssl rand -base64 24 で生成推奨）
+# セキュリティ上、環境変数での指定を推奨: export TF_VAR_database_password="..."
+# database_password = ""
+
+# --- Docker イメージ ---
+# build-and-push.sh 実行後にダイジェスト付きURIが出力される
+api_image   = "REGION-docker.pkg.dev/PROJECT_ID/agentest-docker/api:latest"
+ws_image    = "REGION-docker.pkg.dev/PROJECT_ID/agentest-docker/ws:latest"
+mcp_image   = "REGION-docker.pkg.dev/PROJECT_ID/agentest-docker/mcp:latest"
+web_image   = "REGION-docker.pkg.dev/PROJECT_ID/agentest-docker/web:latest"
+admin_image = "REGION-docker.pkg.dev/PROJECT_ID/agentest-docker/admin:latest"
+jobs_image  = "REGION-docker.pkg.dev/PROJECT_ID/agentest-docker/jobs:latest"
+
+# --- アプリケーション設定 ---
+
+# メール認証を必須にするか（SMTP 未設定の場合は "false" を設定）
+# require_email_verification = "true"
+
+# SMTP 設定（メール送信を使用する場合）
+# smtp_host = "smtp.example.com"
+# smtp_port = 587
+# smtp_from = "noreply@example.com"
+# smtp_secure = "true"
+
+# --- インフラ設定（オプション） ---
+
+# GCP リージョン（デフォルト: asia-northeast1）
+# region = "asia-northeast1"
+
+# 環境名（デフォルト: production）
+# environment = "production"
+
+# リソース名のプレフィックス（デフォルト: agentest）
+# prefix = "agentest"
