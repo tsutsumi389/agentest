@@ -83,8 +83,11 @@ export function SetupPage() {
       setIsSuccess(true);
     } catch (err) {
       if (err instanceof ApiError) {
-        if (err.statusCode === 403) {
+        if (err.statusCode === 403 && err.code === 'AUTHORIZATION_ERROR') {
           setSubmitError('セットアップは既に完了しています。ログインページからログインしてください。');
+        } else if (err.statusCode === 403) {
+          // CSRF保護等によるブロック
+          setSubmitError('リクエストが拒否されました。ページを再読み込みして再度お試しください。');
         } else if (err.details) {
           // フィールドエラーの最初のメッセージを表示
           const firstError = Object.values(err.details).flat()[0];
