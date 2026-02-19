@@ -125,6 +125,14 @@ cp terraform.tfvars.example terraform.tfvars
 #   - app_domain: アプリ用ドメイン
 #   - admin_domain: 管理画面用ドメイン
 #   - *_image: ステップ3で出力されたダイジェスト付き URI
+#
+# SMTP を使用しない場合は以下も設定:
+#   - require_email_verification = "false"
+#
+# SMTP を使用する場合:
+#   - smtp_host = "smtp.example.com"
+#   - smtp_port = 587
+#   - smtp_from = "noreply@example.com"
 ```
 
 ### 5. Terraform Apply
@@ -145,8 +153,12 @@ terraform apply tfplan
 
 ### 6. シークレットの初期化と設定
 
-まず、Secret Manager に作成された全シークレット（13個）にプレースホルダー値を投入します。
-OAuth や SMTP を使用しない場合でも、Cloud Run サービスの起動に必要です。
+まず、Secret Manager に作成された全シークレット（13個）を初期化します。
+必須シークレット（7個）には placeholder 値、オプションシークレット（6個）には空文字が投入されます。
+
+> **重要:** OAuth のトグルは truthy チェック（`env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET`）です。
+> オプションシークレットに placeholder を入れると意図せず OAuth が有効化され認証エラーになります。
+> `init-secrets.sh` はオプションシークレットを空文字で初期化することでこの問題を回避します。
 
 ```bash
 cd infrastructure/scripts
@@ -160,6 +172,7 @@ export PROJECT_ID="YOUR_PROJECT_ID"
 ```
 
 次に、必須シークレット（DB接続、Redis接続、JWT/暗号化キー）の実際の値を設定します。
+OAuth や SMTP を使用する場合は、対話的に設定できます。
 
 ```bash
 # DB 接続情報の取得
@@ -171,7 +184,18 @@ export DATABASE_URL="postgresql://agentest:PASSWORD@CLOUD_SQL_IP:5432/agentest"
 export REDIS_URL="redis://:REDIS_AUTH@REDIS_HOST:6379"
 
 ./update-secrets.sh
+# → 必須シークレット設定後、GitHub OAuth / Google OAuth / SMTP の設定を対話的に選択
 ```
+
+#### SMTP なしでデプロイする場合
+
+メール送信機能なしでデプロイする場合は以下の設定が必要です:
+
+1. `terraform.tfvars` で `require_email_verification = "false"` を設定
+2. `init-secrets.sh` を実行（SMTP_USER / SMTP_PASS は空文字で初期化される）
+3. `update-secrets.sh` で SMTP 設定の対話プロンプトをスキップ（N を選択）
+
+この構成ではユーザー登録時のメール認証がスキップされ、OAuth またはメール＋パスワードで即座にログインできます。
 
 ### 7. DB マイグレーション
 

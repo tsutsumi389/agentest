@@ -126,9 +126,14 @@ module "cloud_run_api" {
     FRONTEND_URL        = "https://${var.app_domain}"
     ADMIN_FRONTEND_URL  = "https://${var.admin_domain}"
     CORS_ORIGIN         = "https://${var.app_domain},https://${var.admin_domain}"
-    GITHUB_CALLBACK_URL = "https://${var.app_domain}/api/auth/github/callback"
-    GOOGLE_CALLBACK_URL = "https://${var.app_domain}/api/auth/google/callback"
-    STORAGE_BUCKET      = module.cloud_storage.bucket_name
+    GITHUB_CALLBACK_URL        = "https://${var.app_domain}/api/auth/github/callback"
+    GOOGLE_CALLBACK_URL        = "https://${var.app_domain}/api/auth/google/callback"
+    STORAGE_BUCKET             = module.cloud_storage.bucket_name
+    REQUIRE_EMAIL_VERIFICATION = var.require_email_verification
+    SMTP_HOST                  = var.smtp_host
+    SMTP_PORT                  = tostring(var.smtp_port)
+    SMTP_FROM                  = var.smtp_from
+    SMTP_SECURE                = var.smtp_secure
   }
 
   # 必須シークレット

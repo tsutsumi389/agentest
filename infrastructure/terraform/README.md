@@ -92,6 +92,10 @@ export REDIS_URL="redis://:REDIS_AUTH@REDIS_HOST:6379"
 
 ### シークレット一覧（13個）
 
+#### 必須シークレット（7個）
+
+サービス起動に必要。`init-secrets.sh` で placeholder 初期化後、`update-secrets.sh` で実値を設定。
+
 | シークレット | 用途 | 設定タイミング |
 |------------|------|--------------|
 | DATABASE_URL | PostgreSQL 接続 | 初回デプロイ時 |
@@ -101,12 +105,31 @@ export REDIS_URL="redis://:REDIS_AUTH@REDIS_HOST:6379"
 | INTERNAL_API_SECRET | 内部 API 認証 | 初回デプロイ時（自動生成） |
 | TOKEN_ENCRYPTION_KEY | トークン暗号化 | 初回デプロイ時（自動生成） |
 | TOTP_ENCRYPTION_KEY | TOTP 暗号化 | 初回デプロイ時（自動生成） |
+
+#### オプションシークレット（6個）
+
+使用する機能に応じて設定。`init-secrets.sh` で空文字初期化（OAuth の truthy チェック対策）。
+
+| シークレット | 用途 | 設定タイミング |
+|------------|------|--------------|
 | GITHUB_CLIENT_ID | GitHub OAuth | GitHub OAuth 使用時 |
 | GITHUB_CLIENT_SECRET | GitHub OAuth | GitHub OAuth 使用時 |
 | GOOGLE_CLIENT_ID | Google OAuth | Google OAuth 使用時 |
 | GOOGLE_CLIENT_SECRET | Google OAuth | Google OAuth 使用時 |
 | SMTP_USER | メール送信 | SMTP 使用時 |
 | SMTP_PASS | メール送信 | SMTP 使用時 |
+
+### 環境変数（非シークレット）
+
+Cloud Run API サービスに設定される環境変数。Terraform 変数で値を制御。
+
+| 環境変数 | Terraform 変数 | デフォルト | 説明 |
+|---------|---------------|-----------|------|
+| REQUIRE_EMAIL_VERIFICATION | `require_email_verification` | `"true"` | メール認証必須化。SMTP 未設定時は `"false"` を推奨 |
+| SMTP_HOST | `smtp_host` | `""` | SMTP サーバーホスト（空の場合メール送信無効） |
+| SMTP_PORT | `smtp_port` | `587` | SMTP サーバーポート |
+| SMTP_FROM | `smtp_from` | `"noreply@agentest.local"` | 送信元メールアドレス |
+| SMTP_SECURE | `smtp_secure` | `"true"` | SMTP で TLS を使用するか |
 
 ## DNS 設定
 

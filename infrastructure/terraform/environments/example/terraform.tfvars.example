@@ -26,7 +26,18 @@ web_image   = "REGION-docker.pkg.dev/PROJECT_ID/agentest-docker/web:latest"
 admin_image = "REGION-docker.pkg.dev/PROJECT_ID/agentest-docker/admin:latest"
 jobs_image  = "REGION-docker.pkg.dev/PROJECT_ID/agentest-docker/jobs:latest"
 
-# --- オプション ---
+# --- アプリケーション設定 ---
+
+# メール認証を必須にするか（SMTP 未設定の場合は "false" を設定）
+# require_email_verification = "true"
+
+# SMTP 設定（メール送信を使用する場合）
+# smtp_host = "smtp.example.com"
+# smtp_port = 587
+# smtp_from = "noreply@example.com"
+# smtp_secure = "true"
+
+# --- インフラ設定（オプション） ---
 
 # GCP リージョン（デフォルト: asia-northeast1）
 # region = "asia-northeast1"
