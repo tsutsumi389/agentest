@@ -6,7 +6,7 @@
 
 ### GitHub Security Advisories（推奨）
 
-[GitHub Security Advisories](https://github.com/agentest/agentest/security/advisories/new) を使用して非公開で報告してください。
+[GitHub Security Advisories](https://github.com/tsutsumi389/agentest/security/advisories/new) を使用して非公開で報告してください。
 
 ### 報告に含める情報
 

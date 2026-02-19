@@ -21,7 +21,7 @@ Coding Agent（Claude Code, Codex CLI, GitHub Copilot, Gemini CLI 等）から�
 ### 起動
 
 ```bash
-git clone https://github.com/agentest/agentest.git
+git clone https://github.com/tsutsumi389/agentest.git
 cd agentest/docker
 docker compose up
 ```

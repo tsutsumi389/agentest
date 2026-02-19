@@ -82,7 +82,7 @@ docker compose exec dev pnpm --filter @agentest/api test
 
 ## Issue の報告
 
-バグ報告や機能要望は [GitHub Issues](https://github.com/agentest/agentest/issues) で受け付けています。
+バグ報告や機能要望は [GitHub Issues](https://github.com/tsutsumi389/agentest/issues) で受け付けています。
 
 - バグ報告: 再現手順、環境情報を記載
 - 機能要望: ユースケースと期待する動作を記載
