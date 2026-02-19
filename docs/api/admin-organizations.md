@@ -552,4 +552,4 @@ organization.members.forEach((member) => {
 - [管理者認証 API](./admin-auth.md)
 - [管理者ダッシュボード API](./admin-dashboard.md)
 - [管理者ユーザー管理 API](./admin-users.md)
-- [システム管理者機能要件](../requirements/admin-system.md)
+- [システム管理者機能](../architecture/features/admin-system.md)

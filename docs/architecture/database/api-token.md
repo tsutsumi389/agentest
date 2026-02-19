@@ -50,7 +50,6 @@ agentest_<32バイトのBase64URL>
 | `execute:tests` | テストの実行 |
 | `read:executions` | 実行結果の閲覧 |
 | `admin:org` | 組織の管理（メンバー招待等） |
-| `admin:billing` | 課金情報の管理 |
 
 ### 制約
 

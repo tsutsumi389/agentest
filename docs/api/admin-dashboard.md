@@ -25,19 +25,11 @@ Cookie: admin_session=<session_id>
   "data": {
     "users": {
       "total": 1234,
-      "byPlan": {
-        "free": 1000,
-        "pro": 234
-      },
       "newThisMonth": 45,
       "activeUsers": 567
     },
     "organizations": {
       "total": 89,
-      "byPlan": {
-        "team": 70,
-        "enterprise": 19
-      },
       "newThisMonth": 5,
       "activeOrgs": 42
     },
@@ -46,14 +38,6 @@ Cookie: admin_session=<session_id>
       "passCount": 14500,
       "failCount": 1000,
       "passRate": 93.5
-    },
-    "revenue": {
-      "mrr": 1234567,
-      "invoices": {
-        "paid": 156,
-        "pending": 12,
-        "failed": 3
-      }
     },
     "systemHealth": {
       "api": { "status": "healthy", "latency": 0 },
@@ -75,7 +59,6 @@ Cookie: admin_session=<session_id>
 | users | AdminDashboardUserStats | ユーザー統計 |
 | organizations | AdminDashboardOrgStats | 組織統計 |
 | executions | AdminDashboardExecutionStats | テスト実行統計 |
-| revenue | AdminDashboardRevenueStats | 収益統計 |
 | systemHealth | AdminDashboardSystemHealth | システムヘルス |
 | fetchedAt | string | 取得日時（ISO 8601形式） |
 
@@ -84,8 +67,6 @@ Cookie: admin_session=<session_id>
 | フィールド | 型 | 説明 |
 |-----------|------|------|
 | total | number | 総ユーザー数 |
-| byPlan.free | number | FREEプランユーザー数 |
-| byPlan.pro | number | PROプランユーザー数 |
 | newThisMonth | number | 当月新規ユーザー数 |
 | activeUsers | number | アクティブユーザー数（30日以内にログイン） |
 
@@ -94,8 +75,6 @@ Cookie: admin_session=<session_id>
 | フィールド | 型 | 説明 |
 |-----------|------|------|
 | total | number | 総組織数 |
-| byPlan.team | number | TEAMプラン組織数 |
-| byPlan.enterprise | number | ENTERPRISEプラン組織数 |
 | newThisMonth | number | 当月新規組織数 |
 | activeOrgs | number | アクティブ組織数（30日以内にテスト実行あり） |
 
@@ -107,15 +86,6 @@ Cookie: admin_session=<session_id>
 | passCount | number | 成功数 |
 | failCount | number | 失敗数 |
 | passRate | number | 成功率（%） |
-
-### AdminDashboardRevenueStats
-
-| フィールド | 型 | 説明 |
-|-----------|------|------|
-| mrr | number | 月間経常収益（円） |
-| invoices.paid | number | 支払済み請求書数 |
-| invoices.pending | number | 未払い請求書数 |
-| invoices.failed | number | 支払失敗請求書数 |
 
 ### AdminDashboardSystemHealth
 
@@ -174,4 +144,4 @@ console.log(data.systemHealth.database.status); // DBステータス
 ## 関連ドキュメント
 
 - [管理者認証 API](./admin-auth.md)
-- [システム管理者機能要件](../requirements/admin-system.md)
+- [システム管理者機能](../architecture/features/admin-system.md)

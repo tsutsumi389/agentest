@@ -111,10 +111,10 @@ graph LR
         Web[Web CDN]
     end
 
-    subgraph Managed Services
-        PG[(Cloud SQL)]
-        Redis[(Memorystore)]
-        Storage[(Cloud Storage)]
+    subgraph Data Services
+        PG[(PostgreSQL)]
+        Redis[(Redis)]
+        Storage[(Object Storage)]
     end
 
     LB --> API1

@@ -150,7 +150,7 @@ Cookie ベース認証のため、CORS は厳格に設定します。
 
 | 設定 | 値 | 説明 |
 |------|-----|------|
-| `Access-Control-Allow-Origin` | `https://app.agentest.io` | ワイルドカード禁止 |
+| `Access-Control-Allow-Origin` | 環境変数 `ALLOWED_ORIGINS` で指定 | ワイルドカード禁止 |
 | `Access-Control-Allow-Credentials` | `true` | Cookie 送信を許可 |
 | `Access-Control-Allow-Methods` | `GET, POST, PUT, DELETE, OPTIONS` | 許可する HTTP メソッド |
 | `Access-Control-Allow-Headers` | `Content-Type, X-Requested-With` | 許可するヘッダー |

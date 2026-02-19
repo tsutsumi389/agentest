@@ -325,13 +325,13 @@ setInterval(() => {
 **症状**: `429 Too Many Requests`
 
 **確認事項**:
-- レート制限はCloud Load Balancer + Cloud Armorのインフラ層で制御されています
-- GCPコンソールのCloud Armorポリシーでレート制限ルールを確認してください
+- レート制限は express-rate-limit ミドルウェアで制御されています
+- API サーバーの設定を確認してください
 
 **解決策**:
 1. リクエスト間隔を空ける
 2. バッチリクエストを使用
-3. Cloud Armorのレート制限ルールを調整（インフラ管理者に依頼）
+3. express-rate-limit の設定を調整
 
 ### 7.2 タイムアウト
 
@@ -362,17 +362,12 @@ docker compose logs -f api
 ```bash
 # GitHub Actions ログ確認
 gh run view RUN_ID --log
-
-# Cloud Build ログ確認
-gcloud builds log BUILD_ID
 ```
 
 **解決策**:
 ```bash
-# 手動デプロイ
-gcloud run deploy agentest-api \
-  --image=gcr.io/PROJECT/agentest-api:latest \
-  --region=asia-northeast1
+# Docker Compose で手動デプロイ
+docker compose up -d --build
 ```
 
 ### 8.2 メモリ不足
@@ -381,15 +376,17 @@ gcloud run deploy agentest-api \
 
 **確認事項**:
 ```bash
-# Cloud Run メトリクス確認
-gcloud monitoring metrics list --filter="metric.type=run.googleapis.com/container/memory"
+# コンテナのメモリ使用量確認
+docker stats
 ```
 
 **解決策**:
 ```bash
-# メモリ上限を増加
-gcloud run services update agentest-api \
-  --memory=1Gi
+# docker-compose.yml でメモリ上限を増加
+# deploy:
+#   resources:
+#     limits:
+#       memory: 1G
 ```
 
 ## 9. プロセスクラッシュ（未処理例外）
@@ -510,5 +507,3 @@ api:
 
 - [初回セットアップ](./getting-started.md)
 - [開発フロー](./development.md)
-- [Runbook](../operations/runbook.md)
-- [インシデント対応](../operations/incident-response.md)

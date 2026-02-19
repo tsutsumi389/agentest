@@ -21,13 +21,12 @@ Cookie: admin_session=<session_id>
 | パラメータ | 型 | デフォルト | 説明 |
 |-----------|-----|----------|------|
 | `q` | string | - | メール・名前で部分一致検索 |
-| `plan` | string | - | プラン（FREE,PRO）カンマ区切り |
 | `status` | enum | `active` | active / deleted / all |
 | `createdFrom` | datetime | - | 登録日From（ISO 8601形式） |
 | `createdTo` | datetime | - | 登録日To（ISO 8601形式） |
 | `page` | number | 1 | ページ番号 |
 | `limit` | number | 20 | 1ページあたり件数（max: 100） |
-| `sortBy` | enum | `createdAt` | createdAt / name / email / plan |
+| `sortBy` | enum | `createdAt` | createdAt / name / email |
 | `sortOrder` | enum | `desc` | asc / desc |
 
 #### レスポンス
@@ -42,7 +41,6 @@ Cookie: admin_session=<session_id>
       "email": "user@example.com",
       "name": "田中太郎",
       "avatarUrl": "https://example.com/avatar.png",
-      "plan": "PRO",
       "createdAt": "2024-01-15T12:00:00.000Z",
       "updatedAt": "2024-06-01T09:30:00.000Z",
       "deletedAt": null,
@@ -79,7 +77,6 @@ Cookie: admin_session=<session_id>
 | email | string | メールアドレス |
 | name | string | 表示名 |
 | avatarUrl | string \| null | アバター画像URL |
-| plan | `FREE` \| `PRO` | 契約プラン |
 | createdAt | string | 作成日時（ISO 8601形式） |
 | updatedAt | string | 更新日時（ISO 8601形式） |
 | deletedAt | string \| null | 削除日時（論理削除時のみ） |
@@ -115,7 +112,6 @@ interface AdminUserListItem {
   email: string;
   name: string;
   avatarUrl: string | null;
-  plan: 'FREE' | 'PRO';
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;
@@ -202,7 +198,7 @@ const filteredResponse = await fetch(`/api/v1/admin/users?${params}`, {
 
 const data = await filteredResponse.json();
 data.users.forEach((user) => {
-  console.log(`${user.name} (${user.email}) - ${user.plan}`);
+  console.log(`${user.name} (${user.email})`);
 });
 ```
 
@@ -237,7 +233,6 @@ Cookie: admin_session=<session_id>
     "email": "user@example.com",
     "name": "田中太郎",
     "avatarUrl": "https://example.com/avatar.png",
-    "plan": "PRO",
     "createdAt": "2024-01-15T12:00:00.000Z",
     "updatedAt": "2024-06-01T09:30:00.000Z",
     "deletedAt": null,
@@ -265,14 +260,6 @@ Cookie: admin_session=<session_id>
         "createdAt": "2024-01-15T12:00:00.000Z"
       }
     ],
-    "subscription": {
-      "plan": "PRO",
-      "status": "ACTIVE",
-      "billingCycle": "MONTHLY",
-      "currentPeriodStart": "2024-06-01T00:00:00.000Z",
-      "currentPeriodEnd": "2024-07-01T00:00:00.000Z",
-      "cancelAtPeriodEnd": false
-    },
     "recentAuditLogs": [
       {
         "id": "log_123",
@@ -323,7 +310,6 @@ Cookie: admin_session=<session_id>
 | email | string | メールアドレス |
 | name | string | 表示名 |
 | avatarUrl | string \| null | アバター画像URL |
-| plan | `FREE` \| `PRO` | 契約プラン |
 | createdAt | string | 作成日時（ISO 8601形式） |
 | updatedAt | string | 更新日時（ISO 8601形式） |
 | deletedAt | string \| null | 削除日時（論理削除時のみ） |
@@ -331,7 +317,6 @@ Cookie: admin_session=<session_id>
 | stats | AdminUserDetailStats | ユーザー統計情報 |
 | organizations | AdminUserOrganization[] | 所属組織一覧 |
 | oauthProviders | AdminUserOAuthProvider[] | OAuth連携プロバイダー一覧 |
-| subscription | AdminUserSubscription \| null | サブスクリプション情報 |
 | recentAuditLogs | AdminUserAuditLogEntry[] | 最近の監査ログ（10件） |
 
 ### AdminUserActivity
@@ -365,17 +350,6 @@ Cookie: admin_session=<session_id>
 |-----------|------|------|
 | provider | string | プロバイダー名（github, google等） |
 | createdAt | string | 連携日時（ISO 8601形式） |
-
-### AdminUserSubscription
-
-| フィールド | 型 | 説明 |
-|-----------|------|------|
-| plan | `FREE` \| `PRO` \| `TEAM` \| `ENTERPRISE` | サブスクリプションプラン |
-| status | `ACTIVE` \| `PAST_DUE` \| `CANCELED` \| `TRIALING` | ステータス |
-| billingCycle | `MONTHLY` \| `YEARLY` | 請求サイクル |
-| currentPeriodStart | string | 現在の期間開始日（ISO 8601形式） |
-| currentPeriodEnd | string | 現在の期間終了日（ISO 8601形式） |
-| cancelAtPeriodEnd | boolean | 期間終了時にキャンセル予定か |
 
 ### AdminUserAuditLogEntry
 
@@ -423,4 +397,4 @@ console.log(`最終アクティブ: ${user.activity.lastActiveAt}`);
 
 - [管理者認証 API](./admin-auth.md)
 - [管理者ダッシュボード API](./admin-dashboard.md)
-- [システム管理者機能要件](../requirements/admin-system.md)
+- [システム管理者機能](../architecture/features/admin-system.md)

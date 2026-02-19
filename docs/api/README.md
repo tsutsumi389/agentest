@@ -7,8 +7,7 @@ Agentest REST API のドキュメントです。
 | 環境 | URL |
 |-----|-----|
 | Development | `http://localhost:3001/api/v1` |
-| Staging | `https://staging-api.agentest.example.com/api/v1` |
-| Production | `https://api.agentest.example.com/api/v1` |
+| Production | `https://<your-domain>/api/v1` |
 
 ## 認証
 

@@ -197,6 +197,7 @@ Coding Agent が理解しやすい英語の文字列を使用。
 | `OrganizationRole` | OWNER, ADMIN, MEMBER | 組織内の権限 |
 | `ProjectRole` | ADMIN, WRITE, READ | プロジェクト内の権限 |
 | `NotificationType` | ORG_INVITATION, INVITATION_ACCEPTED, PROJECT_ADDED, REVIEW_COMMENT, TEST_COMPLETED, TEST_FAILED, SECURITY_ALERT | 通知種別 |
+
 | `AuditLogCategory` | AUTH, USER, ORGANIZATION, MEMBER, PROJECT, API_TOKEN | 監査ログカテゴリ |
 | `AdminRoleType` | SUPER_ADMIN, ADMIN, VIEWER | 管理者ロール |
 
@@ -364,4 +365,3 @@ docker compose exec api pnpm --filter @agentest/db prisma migrate deploy
 - [管理者認証](./admin-auth.md)
 - [システム全体像](../overview.md)
 - [API 設計方針](../api-design.md)
-- [ユーザー・オーガナイゼーション機能](../../requirements/user-organization.md)
