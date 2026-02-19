@@ -243,8 +243,7 @@ erDiagram
 
 ### 保持期間
 
-- 標準プラン: 90日間
-- エンタープライズプラン: 1年間
+- デフォルト: 90日間（`AUDIT_LOG_RETENTION_DAYS` 環境変数で設定可能）
 - 保持期間経過後はアーカイブストレージへ移動
 
 ## 権限
@@ -261,8 +260,7 @@ erDiagram
 |------|-----|------|
 | AUDIT_LOG_DEFAULT_LIMIT | 50 | デフォルト取得件数 |
 | AUDIT_LOG_MAX_LIMIT | 100 | 最大取得件数 |
-| RETENTION_DAYS_STANDARD | 90 | 標準保持期間（日） |
-| RETENTION_DAYS_ENTERPRISE | 365 | エンタープライズ保持期間（日） |
+| AUDIT_LOG_RETENTION_DAYS | 90 | 保持期間（日） |
 
 ## ログ詳細フォーマット
 

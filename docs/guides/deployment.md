@@ -1,217 +1,146 @@
 # デプロイ手順
 
-## 環境
+## 概要
 
-| 環境 | 用途 | URL |
-|-----|------|-----|
-| Development | ローカル開発 | localhost |
-| Staging | テスト・検証 | staging.agentest.example.com |
-| Production | 本番 | agentest.example.com |
+Agentest は Docker Compose を使用してセルフホスト環境にデプロイできます。
 
-## インフラ構成
+## 前提条件
 
-```
-┌─────────────────────────────────────────────────────────┐
-│                    Cloud Provider                        │
-├─────────────────────────────────────────────────────────┤
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────┐ │
-│  │ Cloud Run   │    │ Cloud SQL   │    │   Cloud     │ │
-│  │ (API/WS)    │    │ (PostgreSQL)│    │   Storage   │ │
-│  └─────────────┘    └─────────────┘    └─────────────┘ │
-│                                                         │
-│  ┌─────────────┐    ┌─────────────┐                    │
-│  │ Cloud CDN   │    │ Memorystore │                    │
-│  │ (Web/Admin) │    │ (Redis)     │                    │
-│  └─────────────┘    └─────────────┘                    │
-└─────────────────────────────────────────────────────────┘
-```
+- Docker および Docker Compose がインストール済み
+- 最低 2GB のメモリ
+- ポート 3000, 3001, 3002, 3003, 5432, 6379 が利用可能
 
-## デプロイフロー
+## クイックスタート
 
-```
-main ブランチへのマージ
-        │
-        ▼
-  GitHub Actions
-        │
-        ├── Lint & Test
-        │
-        ├── Build Docker Images
-        │
-        ├── Push to Container Registry
-        │
-        └── Deploy to Cloud Run
-```
-
-## 手動デプロイ（緊急時）
-
-### 1. Docker イメージのビルド
+### 1. リポジトリのクローン
 
 ```bash
-# API
-docker build -f docker/Dockerfile.api -t gcr.io/PROJECT_ID/agentest-api:latest .
-
-# Web
-docker build -f docker/Dockerfile.web --target production -t gcr.io/PROJECT_ID/agentest-web:latest .
+git clone https://github.com/agentest/agentest.git
+cd agentest
 ```
 
-### 2. イメージのプッシュ
+### 2. 環境変数の設定
 
 ```bash
-docker push gcr.io/PROJECT_ID/agentest-api:latest
-docker push gcr.io/PROJECT_ID/agentest-web:latest
+cp docker/.env.example docker/.env
 ```
 
-### 3. Cloud Run へのデプロイ
+主要な環境変数:
+
+| 変数名 | 必須 | 説明 |
+|--------|------|------|
+| `DATABASE_URL` | Yes | PostgreSQL 接続文字列 |
+| `REDIS_URL` | Yes | Redis 接続文字列 |
+| `JWT_SECRET` | Yes | JWT 署名キー（ランダム文字列） |
+| `TOKEN_ENCRYPTION_KEY` | Yes | OAuthトークン暗号化キー（32バイト以上） |
+| `TOTP_ENCRYPTION_KEY` | Yes | TOTP秘密鍵暗号化キー（64文字hex） |
+| `GITHUB_CLIENT_ID` | No | GitHub OAuth クライアント ID |
+| `GITHUB_CLIENT_SECRET` | No | GitHub OAuth シークレット |
+| `GOOGLE_CLIENT_ID` | No | Google OAuth クライアント ID |
+| `GOOGLE_CLIENT_SECRET` | No | Google OAuth シークレット |
+| `SMTP_HOST` | No | メールサーバー |
+| `SMTP_PORT` | No | SMTP ポート |
+| `SMTP_FROM` | No | 送信元アドレス |
+| `REQUIRE_EMAIL_VERIFICATION` | No | メール認証の要否（デフォルト: `true`、`false` でスキップ） |
+
+> **Note**: OAuth プロバイダーの環境変数が未設定の場合、該当のOAuth認証ボタンはUIから自動的に非表示になります。
+
+### 3. 起動
 
 ```bash
-gcloud run deploy agentest-api \
-  --image gcr.io/PROJECT_ID/agentest-api:latest \
-  --region asia-northeast1 \
-  --platform managed
+cd docker
+docker compose up -d
 ```
 
-## Cloud Run Jobs (バッチ処理)
-
-`apps/jobs` はバッチ処理用の Cloud Run Jobs アプリケーションです。
-Cloud Scheduler と連携して定期的なデータメンテナンスを実行します。
-
-### 1. Docker イメージのビルド
+### 4. マイグレーション
 
 ```bash
-docker build -f apps/jobs/Dockerfile -t gcr.io/PROJECT_ID/agentest-jobs:latest .
+docker compose exec dev pnpm --filter @agentest/db prisma migrate deploy
 ```
 
-### 2. イメージのプッシュ
+### 5. 初回セットアップ
+
+ブラウザで `http://localhost:3003` にアクセスし、管理者アカウントを作成します。
+
+## サービス構成
+
+| サービス | ポート | 説明 |
+|---------|--------|------|
+| Web App | 3000 | ユーザー向け SPA |
+| API | 3001 | REST API |
+| WebSocket | 3002 | リアルタイム通信 |
+| Admin App | 3003 | 管理画面 |
+| PostgreSQL | 5432 | データベース |
+| Redis | 6379 | キャッシュ / Pub/Sub |
+| MinIO | 9000/9001 | ファイルストレージ |
+| Mailpit | 8025 | メール確認（開発用） |
+
+## バッチジョブ
+
+`apps/jobs` はバッチ処理用アプリケーションです。cron やタスクスケジューラで定期実行します。
+
+### ジョブ一覧
+
+| ジョブ名 | 推奨スケジュール | 説明 |
+|---------|-----------------|------|
+| `history-cleanup` | 毎日 3:00 | 古い履歴の削除（30日超過） |
+| `project-cleanup` | 毎日 4:00 | ソフトデリート済みプロジェクトの物理削除 |
+
+### 手動実行
 
 ```bash
-docker push gcr.io/PROJECT_ID/agentest-jobs:latest
+docker compose exec dev JOB_NAME=history-cleanup pnpm --filter @agentest/jobs start
 ```
 
-### 3. Cloud Run Job の作成
+### cron 設定例
 
 ```bash
-gcloud run jobs create agentest-jobs \
-  --image gcr.io/PROJECT_ID/agentest-jobs:latest \
-  --region asia-northeast1 \
-  --task-timeout=30m \
-  --set-secrets=DATABASE_URL=DATABASE_URL:latest,REDIS_URL=REDIS_URL:latest \
-  --set-env-vars SMTP_HOST=smtp.sendgrid.net,SMTP_PORT=587,SMTP_FROM=noreply@agentest.io
+# crontab -e
+0 3 * * * cd /path/to/agentest/docker && docker compose exec -T dev JOB_NAME=history-cleanup pnpm --filter @agentest/jobs start
+0 4 * * * cd /path/to/agentest/docker && docker compose exec -T dev JOB_NAME=project-cleanup pnpm --filter @agentest/jobs start
 ```
-
-### 4. Cloud Scheduler 設定
-
-各ジョブのスケジュールを Cloud Scheduler で設定します。
-
-| ジョブ名 | cron 式 | 環境変数 |
-|---------|---------|---------|
-| history-cleanup | `0 3 * * *` (毎日 3:00 JST) | `JOB_NAME=history-cleanup` |
-| project-cleanup | `0 4 * * *` (毎日 4:00 JST) | `JOB_NAME=project-cleanup` |
-
-```bash
-# history-cleanup
-gcloud scheduler jobs create http agentest-history-cleanup \
-  --location=asia-northeast1 \
-  --schedule="0 3 * * *" \
-  --time-zone="Asia/Tokyo" \
-  --uri="https://asia-northeast1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/PROJECT_ID/jobs/agentest-jobs:run" \
-  --http-method=POST \
-  --oauth-service-account-email=SERVICE_ACCOUNT@PROJECT_ID.iam.gserviceaccount.com \
-  --message-body='{"overrides":{"containerOverrides":[{"env":[{"name":"JOB_NAME","value":"history-cleanup"}]}]}}'
-
-# project-cleanup
-gcloud scheduler jobs create http agentest-project-cleanup \
-  --location=asia-northeast1 \
-  --schedule="0 4 * * *" \
-  --time-zone="Asia/Tokyo" \
-  --uri="https://asia-northeast1-run.googleapis.com/apis/run.googleapis.com/v1/namespaces/PROJECT_ID/jobs/agentest-jobs:run" \
-  --http-method=POST \
-  --oauth-service-account-email=SERVICE_ACCOUNT@PROJECT_ID.iam.gserviceaccount.com \
-  --message-body='{"overrides":{"containerOverrides":[{"env":[{"name":"JOB_NAME","value":"project-cleanup"}]}]}}'
-```
-
-### 5. ジョブの更新
-
-```bash
-gcloud run jobs update agentest-jobs \
-  --image gcr.io/PROJECT_ID/agentest-jobs:latest \
-  --region asia-northeast1
-```
-
-### 6. 手動実行（動作確認）
-
-```bash
-gcloud run jobs execute agentest-jobs \
-  --region=asia-northeast1 \
-  --set-env-vars JOB_NAME=history-cleanup
-```
-
-詳細は [バッチジョブ運用ガイド](../operations/batch-jobs-runbook.md) を参照してください。
 
 ## マイグレーション
 
-本番環境のマイグレーションは慎重に実行：
-
 ```bash
-# 1. バックアップ取得
-gcloud sql backups create --instance=agentest-db
+# マイグレーション適用
+docker compose exec dev pnpm --filter @agentest/db prisma migrate deploy
 
-# 2. マイグレーション実行
-docker run --rm \
-  -e DATABASE_URL=$PRODUCTION_DATABASE_URL \
-  gcr.io/PROJECT_ID/agentest-api:latest \
-  pnpm --filter @agentest/db prisma migrate deploy
+# マイグレーション状態確認
+docker compose exec dev pnpm --filter @agentest/db prisma migrate status
 ```
 
-## ロールバック
-
-### アプリケーション
+## ビルド
 
 ```bash
-# 前のリビジョンに戻す
-gcloud run services update-traffic agentest-api \
-  --to-revisions=agentest-api-00001-abc=100
+docker compose exec dev pnpm build
 ```
+
+## バックアップ
 
 ### データベース
 
 ```bash
-# バックアップから復元
-gcloud sql backups restore BACKUP_ID \
-  --restore-instance=agentest-db
+# バックアップ
+docker compose exec db pg_dump -U agentest agentest > backup.sql
+
+# リストア
+docker compose exec -T db psql -U agentest agentest < backup.sql
 ```
 
-## 環境変数
+### MinIO
 
-本番環境の環境変数は Secret Manager で管理：
+MinIO のデータは Docker ボリュームに保存されています。ボリュームのバックアップを取得してください。
 
-```bash
-# シークレット作成
-echo -n "secret-value" | gcloud secrets create JWT_SECRET --data-file=-
+## セキュリティ推奨事項
 
-# Cloud Run から参照
-gcloud run services update agentest-api \
-  --set-secrets=JWT_SECRET=JWT_SECRET:latest
-```
-
-## モニタリング
-
-| 項目 | ツール |
-|-----|-------|
-| ログ | Cloud Logging |
-| メトリクス | Cloud Monitoring |
-| エラー追跡 | Sentry |
-| APM | Cloud Trace |
-
-## アラート設定
-
-| 条件 | 閾値 | 通知先 |
-|-----|------|-------|
-| エラー率 | > 1% | Slack |
-| レイテンシ | p99 > 1s | Slack |
-| CPU 使用率 | > 80% | Slack |
+- 本番環境では `JWT_SECRET`、`TOKEN_ENCRYPTION_KEY`、`TOTP_ENCRYPTION_KEY` に十分に強力なランダム値を使用してください
+- HTTPS を有効にしてください（リバースプロキシの利用を推奨）
+- `REQUIRE_EMAIL_VERIFICATION=true`（デフォルト）を本番環境で使用してください
+- 定期的にバックアップを取得してください
 
 ## 関連ドキュメント
 
 - [システム全体像](../architecture/overview.md)
 - [開発フロー](./development.md)
+- [トラブルシューティング](./troubleshooting.md)

@@ -603,4 +603,4 @@ console.log(message);
 - [管理者認証 API](./admin-auth.md)
 - [管理者ダッシュボード API](./admin-dashboard.md)
 - [管理者認証テーブル設計](../architecture/database/admin-auth.md)
-- [システム管理者機能要件](../requirements/admin-system.md)
+- [システム管理者機能](../architecture/features/admin-system.md)

@@ -47,7 +47,6 @@
   - GitHubログインボタン ※ GitHub OAuthが有効な場合のみ表示
   - Googleログインボタン ※ Google OAuthが有効な場合のみ表示
   - 「アカウントをお持ちでない場合は新規登録」リンク（→ `/register`）
-  - 利用規約・プライバシーポリシーへのリンク
 - **操作**
   - メール/パスワード入力 → ログインボタンクリック → 認証
   - OAuthボタンクリック → OAuthプロバイダーへリダイレクト
@@ -426,7 +425,6 @@ erDiagram
         boolean totpEnabled "2FA有効フラグ"
         int failedAttempts "ログイン失敗回数"
         timestamp lockedUntil "ロック解除日時"
-        enum plan
         timestamp createdAt
         timestamp updatedAt
         timestamp deletedAt

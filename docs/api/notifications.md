@@ -269,8 +269,6 @@
 | `REVIEW_COMMENT` | レビューコメント |
 | `TEST_COMPLETED` | テスト完了 |
 | `TEST_FAILED` | テスト失敗 |
-| `USAGE_ALERT` | 使用量アラート |
-| `BILLING` | 課金関連 |
 | `SECURITY_ALERT` | セキュリティ |
 
 ---
@@ -288,7 +286,7 @@
 | `TEST_COMPLETED` | `executionId` | `/executions/:executionId` |
 | `TEST_FAILED` | `executionId` | `/executions/:executionId` |
 
-`USAGE_ALERT`、`BILLING`、`SECURITY_ALERT` はナビゲーション対象外。
+`SECURITY_ALERT` はナビゲーション対象外。
 
 ---
 
