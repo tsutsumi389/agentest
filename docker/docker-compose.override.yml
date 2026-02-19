@@ -87,6 +87,7 @@ services:
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev-refresh-secret}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
       FRONTEND_URL: ${WEB_URL:-http://localhost:3000}
+      ADMIN_FRONTEND_URL: ${ADMIN_URL:-http://localhost:3003}
       API_PORT: 3001
       # GitHub OAuth
       GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID}
