@@ -1,0 +1,252 @@
+<mxfile host="app.diagrams.net" agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/144.0.0.0 Safari/537.36" version="29.4.0">
+  <diagram name="Agentest GCP Architecture" id="gcp-arch">
+    <mxGraphModel dx="1852" dy="1374" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="1600" pageHeight="1200" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="title" parent="1" style="text;html=1;fontSize=24;fontStyle=1;align=center;verticalAlign=middle;fillColor=none;strokeColor=none;fontColor=#1a73e8;" value="Agentest - GCP Architecture" vertex="1">
+          <mxGeometry height="50" width="500" x="400" y="-30" as="geometry" />
+        </mxCell>
+        <mxCell id="users" parent="1" style="shape=mxgraph.gcp2.cloud;fillColor=#F5F5F5;strokeColor=#BDBDBD;fontStyle=1;fontSize=13;" value="Users / Internet" vertex="1">
+          <mxGeometry height="80" width="160" x="570" y="40" as="geometry" />
+        </mxCell>
+        <mxCell id="dns" parent="1" style="shape=mxgraph.gcp2.dns;fillColor=#E8F0FE;strokeColor=#4285F4;fontSize=10;fontStyle=0;verticalAlign=middle;align=center;rounded=1;" value="DNS&#xa;app.example.com&#xa;admin.example.com" vertex="1">
+          <mxGeometry height="55" width="170" x="310" y="55" as="geometry" />
+        </mxCell>
+        <mxCell id="ssl" parent="1" style="shape=mxgraph.gcp2.certificate_manager;fillColor=#E8F0FE;strokeColor=#4285F4;fontSize=10;rounded=1;" value="Google Managed&#xa;SSL Certificates" vertex="1">
+          <mxGeometry height="55" width="160" x="820" y="55" as="geometry" />
+        </mxCell>
+        <mxCell id="e_users_lb" edge="1" parent="1" source="users" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#1a73e8;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="lb_group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_users_lb_label" connectable="0" parent="e_users_lb" style="edgeLabel;fontSize=10;fontColor=#1a73e8;" value="HTTPS" vertex="1">
+          <mxGeometry relative="1" x="-0.2" as="geometry">
+            <mxPoint as="offset" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="lb_group" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#E8F0FE;strokeColor=#4285F4;strokeWidth=2;arcSize=8;" value="" vertex="1">
+          <mxGeometry height="100" width="540" x="380" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="lb_title" parent="1" style="text;fontSize=13;fontStyle=1;fontColor=#1a73e8;align=left;verticalAlign=top;fillColor=none;strokeColor=none;" value="Cloud Load Balancing" vertex="1">
+          <mxGeometry height="20" width="200" x="395" y="175" as="geometry" />
+        </mxCell>
+        <mxCell id="lb" parent="1" style="shape=mxgraph.gcp2.load_balancing;fillColor=#4285F4;fontColor=#FFFFFF;strokeColor=none;fontSize=10;fontStyle=1;rounded=1;" value="HTTPS&#xa;Load Balancer" vertex="1">
+          <mxGeometry height="55" width="110" x="400" y="200" as="geometry" />
+        </mxCell>
+        <mxCell id="cdn" parent="1" style="rounded=1;fillColor=#4285F4;fontColor=#FFFFFF;strokeColor=none;fontSize=10;fontStyle=1;" value="Cloud CDN" vertex="1">
+          <mxGeometry height="40" width="100" x="530" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="armor" parent="1" style="rounded=1;fillColor=#EA4335;fontColor=#FFFFFF;strokeColor=none;fontSize=10;fontStyle=1;" value="Cloud Armor&#xa;(WAF / Rate Limit)" vertex="1">
+          <mxGeometry height="40" width="130" x="650" y="210" as="geometry" />
+        </mxCell>
+        <mxCell id="routing" parent="1" style="rounded=1;fillColor=#FBBC04;fontColor=#333333;strokeColor=none;fontSize=9;fontStyle=2;" value="Host-based Routing" vertex="1">
+          <mxGeometry height="30" width="110" x="800" y="215" as="geometry" />
+        </mxCell>
+        <mxCell id="vpc" parent="1" style="rounded=1;whiteSpace=wrap;fillColor=#F1F8E9;strokeColor=#33691E;strokeWidth=2;dashed=1;dashPattern=8 4;arcSize=5;" value="" vertex="1">
+          <mxGeometry height="570" width="1060" x="120" y="330" as="geometry" />
+        </mxCell>
+        <mxCell id="vpc_label" parent="1" style="text;fontSize=12;fontStyle=1;fontColor=#33691E;align=left;verticalAlign=top;fillColor=none;strokeColor=none;" value="VPC: agentest-vpc (10.0.0.0/20)" vertex="1">
+          <mxGeometry height="20" width="300" x="135" y="335" as="geometry" />
+        </mxCell>
+        <mxCell id="vpc_connector" parent="1" style="rounded=1;fillColor=#C8E6C9;strokeColor=#33691E;fontSize=9;fontStyle=0;verticalAlign=middle;align=center;" value="Serverless VPC&#xa;Connector&#xa;(10.8.0.0/28)" vertex="1">
+          <mxGeometry height="50" width="120" x="550" y="360" as="geometry" />
+        </mxCell>
+        <mxCell id="e_lb_vpc" edge="1" parent="1" source="lb_group" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#33691E;strokeWidth=2;exitX=0.5;exitY=1;entryX=0.5;entryY=0;" target="vpc_connector">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="cr_group" parent="1" style="rounded=1;fillColor=#E3F2FD;strokeColor=#1565C0;strokeWidth=1;arcSize=8;" value="" vertex="1">
+          <mxGeometry height="130" width="1010" x="145" y="440" as="geometry" />
+        </mxCell>
+        <mxCell id="cr_label" parent="1" style="text;fontSize=12;fontStyle=1;fontColor=#1565C0;align=left;verticalAlign=top;fillColor=none;strokeColor=none;" value="Cloud Run Services" vertex="1">
+          <mxGeometry height="20" width="180" x="160" y="445" as="geometry" />
+        </mxCell>
+        <mxCell id="web" parent="1" style="shape=mxgraph.gcp2.cloud_run;fillColor=#4285F4;fontColor=#FFFFFF;strokeColor=none;fontSize=10;fontStyle=1;rounded=1;" value="Web&#xa;(React SPA)&#xa;:80" vertex="1">
+          <mxGeometry height="70" width="120" x="170" y="475" as="geometry" />
+        </mxCell>
+        <mxCell id="web_scale" parent="1" style="text;fontSize=8;fontColor=#666666;fillColor=none;strokeColor=none;align=center;" value="0-5 inst" vertex="1">
+          <mxGeometry height="15" width="70" x="195" y="545" as="geometry" />
+        </mxCell>
+        <mxCell id="admin" parent="1" style="shape=mxgraph.gcp2.cloud_run;fillColor=#4285F4;fontColor=#FFFFFF;strokeColor=none;fontSize=10;fontStyle=1;rounded=1;" value="Admin&#xa;(React SPA)&#xa;:80" vertex="1">
+          <mxGeometry height="70" width="120" x="330" y="475" as="geometry" />
+        </mxCell>
+        <mxCell id="admin_scale" parent="1" style="text;fontSize=8;fontColor=#666666;fillColor=none;strokeColor=none;align=center;" value="0-2 inst" vertex="1">
+          <mxGeometry height="15" width="70" x="355" y="545" as="geometry" />
+        </mxCell>
+        <mxCell id="api" parent="1" style="shape=mxgraph.gcp2.cloud_run;fillColor=#0D652D;fontColor=#FFFFFF;strokeColor=none;fontSize=10;fontStyle=1;rounded=1;" value="API&#xa;(Express)&#xa;:3001" vertex="1">
+          <mxGeometry height="70" width="120" x="500" y="475" as="geometry" />
+        </mxCell>
+        <mxCell id="api_scale" parent="1" style="text;fontSize=8;fontColor=#666666;fillColor=none;strokeColor=none;align=center;" value="0-5 inst" vertex="1">
+          <mxGeometry height="15" width="70" x="525" y="545" as="geometry" />
+        </mxCell>
+        <mxCell id="ws" parent="1" style="shape=mxgraph.gcp2.cloud_run;fillColor=#0D652D;fontColor=#FFFFFF;strokeColor=none;fontSize=10;fontStyle=1;rounded=1;" value="WebSocket&#xa;:3002" vertex="1">
+          <mxGeometry height="70" width="120" x="670" y="475" as="geometry" />
+        </mxCell>
+        <mxCell id="ws_scale" parent="1" style="text;fontSize=8;fontColor=#666666;fillColor=none;strokeColor=none;align=center;" value="0-3 inst&#xa;session affinity" vertex="1">
+          <mxGeometry height="20" width="90" x="685" y="545" as="geometry" />
+        </mxCell>
+        <mxCell id="mcp" parent="1" style="shape=mxgraph.gcp2.cloud_run;fillColor=#0D652D;fontColor=#FFFFFF;strokeColor=none;fontSize=10;fontStyle=1;rounded=1;" value="MCP Server&#xa;:3004" vertex="1">
+          <mxGeometry height="70" width="120" x="840" y="475" as="geometry" />
+        </mxCell>
+        <mxCell id="mcp_scale" parent="1" style="text;fontSize=8;fontColor=#666666;fillColor=none;strokeColor=none;align=center;" value="0-3 inst" vertex="1">
+          <mxGeometry height="15" width="70" x="865" y="545" as="geometry" />
+        </mxCell>
+        <mxCell id="db_migrate" parent="1" style="shape=mxgraph.gcp2.cloud_run;fillColor=#7B1FA2;fontColor=#FFFFFF;strokeColor=none;fontSize=9;fontStyle=1;rounded=1;" value="DB Migrate&#xa;(Cloud Run Job)" vertex="1">
+          <mxGeometry height="55" width="130" x="1000" y="480" as="geometry" />
+        </mxCell>
+        <mxCell id="data_group" parent="1" style="rounded=1;fillColor=#FFF3E0;strokeColor=#E65100;strokeWidth=1;arcSize=8;" value="" vertex="1">
+          <mxGeometry height="130" width="620" x="145" y="610" as="geometry" />
+        </mxCell>
+        <mxCell id="data_label" parent="1" style="text;fontSize=12;fontStyle=1;fontColor=#E65100;align=left;verticalAlign=top;fillColor=none;strokeColor=none;" value="Data Layer (Private Service Access)" vertex="1">
+          <mxGeometry height="20" width="300" x="160" y="615" as="geometry" />
+        </mxCell>
+        <mxCell id="cloudsql" parent="1" style="shape=mxgraph.gcp2.cloud_sql;fillColor=#F4B400;fontColor=#333333;strokeColor=none;fontSize=10;fontStyle=1;rounded=1;" value="Cloud SQL&#xa;PostgreSQL 16&#xa;(db-f1-micro)" vertex="1">
+          <mxGeometry height="70" width="150" x="180" y="650" as="geometry" />
+        </mxCell>
+        <mxCell id="cloudsql_detail" parent="1" style="text;fontSize=8;fontColor=#666666;fillColor=none;strokeColor=none;align=center;" value="Private IP / PITR / Backup" vertex="1">
+          <mxGeometry height="15" width="140" x="185" y="720" as="geometry" />
+        </mxCell>
+        <mxCell id="redis" parent="1" style="shape=mxgraph.gcp2.memorystore;fillColor=#DB4437;fontColor=#FFFFFF;strokeColor=none;fontSize=10;fontStyle=1;rounded=1;" value="Memorystore&#xa;Redis 7.0&#xa;(1GB BASIC)" vertex="1">
+          <mxGeometry height="70" width="150" x="390" y="650" as="geometry" />
+        </mxCell>
+        <mxCell id="redis_detail" parent="1" style="text;fontSize=8;fontColor=#666666;fillColor=none;strokeColor=none;align=center;" value="AUTH / TLS / allkeys-lru" vertex="1">
+          <mxGeometry height="15" width="130" x="400" y="720" as="geometry" />
+        </mxCell>
+        <mxCell id="gcs" parent="1" style="shape=mxgraph.gcp2.cloud_storage;fillColor=#4285F4;fontColor=#FFFFFF;strokeColor=none;fontSize=10;fontStyle=1;rounded=1;" value="Cloud Storage&#xa;(GCS)&#xa;Files" vertex="1">
+          <mxGeometry height="70" width="150" x="590" y="650" as="geometry" />
+        </mxCell>
+        <mxCell id="e_api_sql" edge="1" parent="1" source="api" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#E65100;strokeWidth=1.5;entryX=0.5;entryY=0;exitX=0.3;exitY=1;" target="cloudsql">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_api_redis" edge="1" parent="1" source="api" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#E65100;strokeWidth=1.5;entryX=0.5;entryY=0;exitX=0.5;exitY=1;" target="redis">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_api_gcs" edge="1" parent="1" source="api" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#E65100;strokeWidth=1.5;entryX=0.5;entryY=0;exitX=0.7;exitY=1;" target="gcs">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ws_sql" edge="1" parent="1" source="ws" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#E65100;strokeWidth=1;dashed=1;entryX=0.7;entryY=0;exitX=0.3;exitY=1;" target="cloudsql">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_ws_redis" edge="1" parent="1" source="ws" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#E65100;strokeWidth=1;dashed=1;entryX=0.7;entryY=0;exitX=0.7;exitY=1;" target="redis">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_mcp_sql" edge="1" parent="1" source="mcp" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#E65100;strokeWidth=1;dashed=1;entryX=0.9;entryY=0;exitX=0.5;exitY=1;" target="cloudsql">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="900" y="600" />
+              <mxPoint x="315" y="600" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="e_mcp_redis" edge="1" parent="1" source="mcp" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#E65100;strokeWidth=1;dashed=1;entryX=0.9;entryY=0;exitX=0.7;exitY=1;" target="redis">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="924" y="595" />
+              <mxPoint x="525" y="595" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="jobs_group" parent="1" style="rounded=1;fillColor=#F3E5F5;strokeColor=#7B1FA2;strokeWidth=1;arcSize=8;" value="" vertex="1">
+          <mxGeometry height="130" width="355" x="800" y="610" as="geometry" />
+        </mxCell>
+        <mxCell id="jobs_label" parent="1" style="text;fontSize=12;fontStyle=1;fontColor=#7B1FA2;align=left;verticalAlign=top;fillColor=none;strokeColor=none;" value="Batch Processing" vertex="1">
+          <mxGeometry height="20" width="180" x="815" y="615" as="geometry" />
+        </mxCell>
+        <mxCell id="scheduler" parent="1" style="shape=mxgraph.gcp2.cloud_scheduler;fillColor=#7B1FA2;fontColor=#FFFFFF;strokeColor=none;fontSize=10;fontStyle=1;rounded=1;" value="Cloud Scheduler&#xa;(Cron)" vertex="1">
+          <mxGeometry height="60" width="130" x="820" y="650" as="geometry" />
+        </mxCell>
+        <mxCell id="scheduler_detail" parent="1" style="text;fontSize=8;fontColor=#666666;fillColor=none;strokeColor=none;align=center;" value="03:00 history-cleanup&#xa;04:00 project-cleanup" vertex="1">
+          <mxGeometry height="20" width="130" x="820" y="710" as="geometry" />
+        </mxCell>
+        <mxCell id="jobs" parent="1" style="shape=mxgraph.gcp2.cloud_run;fillColor=#7B1FA2;fontColor=#FFFFFF;strokeColor=none;fontSize=10;fontStyle=1;rounded=1;" value="Cloud Run Jobs&#xa;(Batch)" vertex="1">
+          <mxGeometry height="60" width="130" x="1000" y="650" as="geometry" />
+        </mxCell>
+        <mxCell id="e_sched_jobs" edge="1" parent="1" source="scheduler" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#7B1FA2;strokeWidth=1.5;fontSize=8;fontColor=#7B1FA2;" target="jobs" value="HTTP POST">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_jobs_sql" edge="1" parent="1" source="jobs" style="edgeStyle=orthogonalEdgeStyle;strokeColor=#E65100;strokeWidth=1;dashed=1;exitX=0;exitY=0.5;entryX=1;entryY=0.5;" target="cloudsql">
+          <mxGeometry relative="1" as="geometry">
+            <Array as="points">
+              <mxPoint x="780" y="680" />
+              <mxPoint x="780" y="685" />
+            </Array>
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="support_group" parent="1" style="rounded=1;fillColor=#ECEFF1;strokeColor=#607D8B;strokeWidth=1;arcSize=8;" value="" vertex="1">
+          <mxGeometry height="100" width="1010" x="145" y="780" as="geometry" />
+        </mxCell>
+        <mxCell id="support_label" parent="1" style="text;fontSize=12;fontStyle=1;fontColor=#607D8B;align=left;verticalAlign=top;fillColor=none;strokeColor=none;" value="Supporting Services" vertex="1">
+          <mxGeometry height="20" width="200" x="160" y="785" as="geometry" />
+        </mxCell>
+        <mxCell id="secrets" parent="1" style="shape=mxgraph.gcp2.secret_manager;fillColor=#607D8B;fontColor=#FFFFFF;strokeColor=none;fontSize=10;fontStyle=1;rounded=1;" value="Secret Manager&#xa;(13 secrets)" vertex="1">
+          <mxGeometry height="55" width="140" x="170" y="812" as="geometry" />
+        </mxCell>
+        <mxCell id="registry" parent="1" style="shape=mxgraph.gcp2.artifact_registry;fillColor=#607D8B;fontColor=#FFFFFF;strokeColor=none;fontSize=10;fontStyle=1;rounded=1;" value="Artifact Registry&#xa;Docker Images" vertex="1">
+          <mxGeometry height="55" width="150" x="360" y="812" as="geometry" />
+        </mxCell>
+        <mxCell id="iam" parent="1" style="shape=mxgraph.gcp2.iam;fillColor=#607D8B;fontColor=#FFFFFF;strokeColor=none;fontSize=10;fontStyle=1;rounded=1;" value="IAM&#xa;7 Service Accounts&#xa;Least Privilege" vertex="1">
+          <mxGeometry height="55" width="150" x="560" y="812" as="geometry" />
+        </mxCell>
+        <mxCell id="logging" parent="1" style="shape=mxgraph.gcp2.cloud_logging;fillColor=#607D8B;fontColor=#FFFFFF;strokeColor=none;fontSize=10;fontStyle=1;rounded=1;" value="Cloud Logging&#xa;&amp; Monitoring" vertex="1">
+          <mxGeometry height="55" width="150" x="760" y="812" as="geometry" />
+        </mxCell>
+        <mxCell id="terraform" parent="1" style="rounded=1;fillColor=#607D8B;fontColor=#FFFFFF;strokeColor=none;fontSize=10;fontStyle=1;" value="Terraform&#xa;IaC&#xa;(GCS Backend)" vertex="1">
+          <mxGeometry height="55" width="140" x="960" y="812" as="geometry" />
+        </mxCell>
+        <mxCell id="routing_box" parent="1" style="rounded=1;fillColor=#FFFDE7;strokeColor=#F9A825;strokeWidth=1;arcSize=6;" value="" vertex="1">
+          <mxGeometry height="180" width="280" x="-170" y="170" as="geometry" />
+        </mxCell>
+        <mxCell id="routing_title" parent="1" style="text;fontSize=11;fontStyle=1;fontColor=#F57F17;align=left;verticalAlign=top;fillColor=none;strokeColor=none;" value="Host-based Routing Rules" vertex="1">
+          <mxGeometry height="20" width="250" x="-155" y="175" as="geometry" />
+        </mxCell>
+        <mxCell id="routing_detail" parent="1" style="text;fontSize=9;fontColor=#555555;align=left;verticalAlign=top;fillColor=none;strokeColor=none;fontFamily=Courier New;spacingLeft=5;spacingTop=5;" value="app.example.com:&#xa;  /api/*        → API&#xa;  /ws, /ws/*    → WebSocket&#xa;  /mcp, /mcp/*  → MCP Server&#xa;  /*            → Web (SPA)&#xa;&#xa;admin.example.com:&#xa;  /admin/auth/* → API&#xa;  /api/admin/*  → API&#xa;  /*            → Admin (SPA)" vertex="1">
+          <mxGeometry height="150" width="260" x="-160" y="195" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_box" parent="1" style="rounded=1;fillColor=#FAFAFA;strokeColor=#BDBDBD;strokeWidth=1;arcSize=6;" value="" vertex="1">
+          <mxGeometry height="140" width="280" x="-170" y="380" as="geometry" />
+        </mxCell>
+        <mxCell id="legend_title" parent="1" style="text;fontSize=11;fontStyle=1;fontColor=#333333;align=left;verticalAlign=top;fillColor=none;strokeColor=none;" value="Legend" vertex="1">
+          <mxGeometry height="20" width="100" x="-155" y="385" as="geometry" />
+        </mxCell>
+        <mxCell id="leg1" parent="1" style="rounded=1;fillColor=#4285F4;strokeColor=none;" value="" vertex="1">
+          <mxGeometry height="12" width="20" x="-150" y="415" as="geometry" />
+        </mxCell>
+        <mxCell id="leg1t" parent="1" style="text;fontSize=9;fillColor=none;strokeColor=none;" value="Frontend (Static SPA)" vertex="1">
+          <mxGeometry height="18" width="150" x="-125" y="412" as="geometry" />
+        </mxCell>
+        <mxCell id="leg2" parent="1" style="rounded=1;fillColor=#0D652D;strokeColor=none;" value="" vertex="1">
+          <mxGeometry height="12" width="20" x="-150" y="435" as="geometry" />
+        </mxCell>
+        <mxCell id="leg2t" parent="1" style="text;fontSize=9;fillColor=none;strokeColor=none;" value="Backend (VPC Connector)" vertex="1">
+          <mxGeometry height="18" width="160" x="-125" y="432" as="geometry" />
+        </mxCell>
+        <mxCell id="leg3" parent="1" style="rounded=1;fillColor=#7B1FA2;strokeColor=none;" value="" vertex="1">
+          <mxGeometry height="12" width="20" x="-150" y="455" as="geometry" />
+        </mxCell>
+        <mxCell id="leg3t" parent="1" style="text;fontSize=9;fillColor=none;strokeColor=none;" value="Batch / Jobs" vertex="1">
+          <mxGeometry height="18" width="100" x="-125" y="452" as="geometry" />
+        </mxCell>
+        <mxCell id="leg4" parent="1" style="rounded=1;fillColor=#F4B400;strokeColor=none;" value="" vertex="1">
+          <mxGeometry height="12" width="20" x="-150" y="475" as="geometry" />
+        </mxCell>
+        <mxCell id="leg4t" parent="1" style="text;fontSize=9;fillColor=none;strokeColor=none;" value="Data Store" vertex="1">
+          <mxGeometry height="18" width="100" x="-125" y="472" as="geometry" />
+        </mxCell>
+        <mxCell id="leg5" parent="1" style="rounded=1;fillColor=#607D8B;strokeColor=none;" value="" vertex="1">
+          <mxGeometry height="12" width="20" x="-150" y="495" as="geometry" />
+        </mxCell>
+        <mxCell id="leg5t" parent="1" style="text;fontSize=9;fillColor=none;strokeColor=none;" value="Supporting Services" vertex="1">
+          <mxGeometry height="18" width="130" x="-125" y="492" as="geometry" />
+        </mxCell>
+        <mxCell id="armor_box" parent="1" style="rounded=1;fillColor=#FFEBEE;strokeColor=#C62828;strokeWidth=1;arcSize=6;" value="" vertex="1">
+          <mxGeometry height="100" width="280" x="-170" y="550" as="geometry" />
+        </mxCell>
+        <mxCell id="armor_title" parent="1" style="text;fontSize=11;fontStyle=1;fontColor=#C62828;align=left;verticalAlign=top;fillColor=none;strokeColor=none;" value="Cloud Armor Rules" vertex="1">
+          <mxGeometry height="20" width="200" x="-155" y="555" as="geometry" />
+        </mxCell>
+        <mxCell id="armor_detail" parent="1" style="text;fontSize=9;fontColor=#555555;align=left;verticalAlign=top;fillColor=none;strokeColor=none;fontFamily=Courier New;spacingLeft=5;spacingTop=5;" value="P1000: Auth rate limit&#xa;         10 req/min/IP → 10min ban&#xa;P2000: API rate limit&#xa;         100 req/min/IP → 429&#xa;Default: Allow all" vertex="1">
+          <mxGeometry height="70" width="260" x="-160" y="575" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
