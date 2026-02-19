@@ -133,7 +133,8 @@ terraform plan -detailed-exitcode
 ## バッチジョブ手動実行
 
 ```bash
-gcloud run jobs execute agentest-jobs-production \
-  --region=asia-northeast1 \
+# <PREFIX> と <ENVIRONMENT> は terraform.tfvars の設定値に置き換えてください
+gcloud run jobs execute <PREFIX>-jobs-<ENVIRONMENT> \
+  --region=<REGION> \
   --update-env-vars JOB_NAME=history-cleanup
 ```

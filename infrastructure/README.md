@@ -143,17 +143,30 @@ terraform plan -out=tfplan
 terraform apply tfplan
 ```
 
-### 6. シークレットの設定
+### 6. シークレットの初期化と設定
+
+まず、Secret Manager に作成された全シークレット（13個）にプレースホルダー値を投入します。
+OAuth や SMTP を使用しない場合でも、Cloud Run サービスの起動に必要です。
 
 ```bash
 cd infrastructure/scripts
 
+export PROJECT_ID="YOUR_PROJECT_ID"
+# prefix/environment をデフォルトから変更した場合は以下も設定
+# export PREFIX="agentest"
+# export ENVIRONMENT="production"
+
+./init-secrets.sh
+```
+
+次に、必須シークレット（DB接続、Redis接続、JWT/暗号化キー）の実際の値を設定します。
+
+```bash
 # DB 接続情報の取得
 # Cloud SQL プライベート IP: terraform output -raw cloud_sql_private_ip
 # Redis ホスト: terraform output -raw redis_host
-# Redis 認証文字列: gcloud redis instances get-auth-string <prefix>-redis-<env> --region <region>
+# Redis 認証文字列: gcloud redis instances get-auth-string <PREFIX>-redis-<ENVIRONMENT> --region <REGION>
 
-export PROJECT_ID="YOUR_PROJECT_ID"
 export DATABASE_URL="postgresql://agentest:PASSWORD@CLOUD_SQL_IP:5432/agentest"
 export REDIS_URL="redis://:REDIS_AUTH@REDIS_HOST:6379"
 
@@ -163,8 +176,10 @@ export REDIS_URL="redis://:REDIS_AUTH@REDIS_HOST:6379"
 ### 7. DB マイグレーション
 
 ```bash
-gcloud run jobs execute agentest-db-migrate-production \
-  --region=asia-northeast1 \
+# <PREFIX> と <ENVIRONMENT> は terraform.tfvars の設定値に置き換えてください
+# デフォルト: agentest-db-migrate-production
+gcloud run jobs execute <PREFIX>-db-migrate-<ENVIRONMENT> \
+  --region=<REGION> \
   --wait
 ```
 
@@ -246,8 +261,9 @@ terraform apply
 ### バッチジョブの手動実行
 
 ```bash
-gcloud run jobs execute agentest-jobs-production \
-  --region=asia-northeast1 \
+# <PREFIX> と <ENVIRONMENT> は terraform.tfvars の設定値に置き換えてください
+gcloud run jobs execute <PREFIX>-jobs-<ENVIRONMENT> \
+  --region=<REGION> \
   --update-env-vars JOB_NAME=history-cleanup
 ```
 
@@ -258,11 +274,9 @@ gcloud run jobs execute agentest-jobs-production \
 ```bash
 cd infrastructure/terraform/environments/example
 
-# deletion_protection を false に設定（main.tf で設定済みの場合はスキップ）
-terraform apply -var="database_password=dummy"
-
 # 全リソース削除
-terraform destroy
+# database_password は destroy 時にも必要（値は任意）
+terraform destroy -var="database_password=unused"
 
 # Bootstrap リソースの削除（任意）
 cd ../../bootstrap

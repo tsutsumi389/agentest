@@ -19,6 +19,16 @@ REDIS_URL="${REDIS_URL:?REDIS_URL 環境変数を設定してください}"
 
 SECRET_PREFIX="${PREFIX}-${ENVIRONMENT}"
 
+echo ""
+echo "WARNING: このスクリプトは JWT/暗号化キーを新規生成して上書きします。"
+echo "既にサービスが稼働中の場合、既存のセッションやトークンが無効化されます。"
+echo ""
+read -p "続行しますか？ (y/N): " confirm
+if [[ "$confirm" != "y" && "$confirm" != "Y" ]]; then
+  echo "中止しました"
+  exit 0
+fi
+
 # JWT/暗号化キー（ランダム生成）
 JWT_ACCESS_SECRET=$(openssl rand -hex 32)
 JWT_REFRESH_SECRET=$(openssl rand -hex 32)
