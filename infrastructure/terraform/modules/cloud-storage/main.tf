@@ -1,4 +1,4 @@
-# Cloud Storage (GCS) - MinIO 代替
+# Cloud Storage (GCS) - ファイルストレージ
 
 resource "google_storage_bucket" "main" {
   name     = "${var.prefix}-storage-${var.environment}"

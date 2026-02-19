@@ -2,6 +2,8 @@
 
 GCP インフラを Terraform で管理するための構成。
 
+デプロイ手順の詳細は [infrastructure/README.md](../README.md) を参照してください。
+
 ## ディレクトリ構造
 
 ```
@@ -19,8 +21,7 @@ terraform/
     load-balancer/            # Cloud LB + CDN + Cloud Armor + SSL
     iam/                      # サービスアカウント + IAM
   environments/
-    staging/                  # staging 環境
-    production/               # production 環境
+    example/                  # デプロイ用テンプレート環境
 ```
 
 ## 前提条件
@@ -34,8 +35,9 @@ terraform/
 ```bash
 cd bootstrap
 
-# terraform.tfvars を編集して project_id を設定
-vim terraform.tfvars
+# terraform.tfvars を作成
+cp terraform.tfvars.example terraform.tfvars
+# terraform.tfvars の project_id を編集
 
 terraform init
 terraform plan
@@ -50,10 +52,8 @@ terraform apply
 
 ### 1. バックエンド設定
 
-各環境ディレクトリの `backend.tf` で GCS バケット名を設定:
-
 ```bash
-cd environments/staging  # または production
+cd environments/example
 
 # terraform init 時にバケット名を指定
 terraform init -backend-config="bucket=YOUR_PROJECT_ID-tfstate"
@@ -61,15 +61,13 @@ terraform init -backend-config="bucket=YOUR_PROJECT_ID-tfstate"
 
 ### 2. 変数設定
 
-`terraform.tfvars` のコメントを外して値を設定するか、環境変数で指定:
-
 ```bash
-export TF_VAR_project_id="agentest-staging"
+# テンプレートからコピー
+cp terraform.tfvars.example terraform.tfvars
+# terraform.tfvars を編集
+
+# データベースパスワードは環境変数で指定推奨
 export TF_VAR_database_password="$(openssl rand -base64 24)"
-export TF_VAR_app_domain="app.staging.agentest.example.com"
-export TF_VAR_admin_domain="admin.staging.agentest.example.com"
-export TF_VAR_api_image="asia-northeast1-docker.pkg.dev/PROJECT_ID/agentest-docker/agentest-api:latest"
-# ... 他のイメージも同様
 ```
 
 ### 3. プランと適用
@@ -84,43 +82,39 @@ terraform apply tfplan
 Terraform でシークレットの「箱」を作成した後、値は `gcloud` で手動投入:
 
 ```bash
-# シークレットの値を設定
-echo -n "YOUR_SECRET_VALUE" | gcloud secrets versions add \
-  agentest-staging-JWT_ACCESS_SECRET --data-file=-
-
-# 全シークレットの一括設定例
-for secret in DATABASE_URL REDIS_URL JWT_ACCESS_SECRET JWT_REFRESH_SECRET \
-  INTERNAL_API_SECRET TOKEN_ENCRYPTION_KEY TOTP_ENCRYPTION_KEY \
-  GITHUB_CLIENT_ID GITHUB_CLIENT_SECRET GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET \
-  STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET STRIPE_PUBLISHABLE_KEY \
-  STRIPE_PRICE_PRO_MONTHLY STRIPE_PRICE_PRO_YEARLY \
-  STRIPE_PRICE_TEAM_MONTHLY STRIPE_PRICE_TEAM_YEARLY \
-  SMTP_USER SMTP_PASS; do
-  echo "Set value for agentest-staging-${secret}:"
-  read -s value
-  echo -n "$value" | gcloud secrets versions add "agentest-staging-${secret}" --data-file=-
-done
+# ヘルパースクリプトで一括設定
+cd ../../scripts
+export PROJECT_ID="YOUR_PROJECT_ID"
+export DATABASE_URL="postgresql://agentest:PASSWORD@CLOUD_SQL_IP:5432/agentest"
+export REDIS_URL="redis://:REDIS_AUTH@REDIS_HOST:6379"
+./update-secrets.sh
 ```
 
-## 環境差分
+### シークレット一覧（13個）
 
-| リソース | staging | production |
-|---------|---------|------------|
-| Cloud SQL tier | db-f1-micro | db-custom-2-7680 |
-| Cloud SQL HA | ZONAL | REGIONAL |
-| Cloud SQL PITR | 無効 | 有効 |
-| Redis tier | BASIC (1GB) | STANDARD_HA (5GB) |
-| Cloud Run min_instances | 0 | 1 |
-| VPC Connector | e2-micro | e2-small |
-| deletion_protection | false | true |
+| シークレット | 用途 | 設定タイミング |
+|------------|------|--------------|
+| DATABASE_URL | PostgreSQL 接続 | 初回デプロイ時 |
+| REDIS_URL | Redis 接続 | 初回デプロイ時 |
+| JWT_ACCESS_SECRET | アクセストークン署名 | 初回デプロイ時（自動生成） |
+| JWT_REFRESH_SECRET | リフレッシュトークン署名 | 初回デプロイ時（自動生成） |
+| INTERNAL_API_SECRET | 内部 API 認証 | 初回デプロイ時（自動生成） |
+| TOKEN_ENCRYPTION_KEY | トークン暗号化 | 初回デプロイ時（自動生成） |
+| TOTP_ENCRYPTION_KEY | TOTP 暗号化 | 初回デプロイ時（自動生成） |
+| GITHUB_CLIENT_ID | GitHub OAuth | GitHub OAuth 使用時 |
+| GITHUB_CLIENT_SECRET | GitHub OAuth | GitHub OAuth 使用時 |
+| GOOGLE_CLIENT_ID | Google OAuth | Google OAuth 使用時 |
+| GOOGLE_CLIENT_SECRET | Google OAuth | Google OAuth 使用時 |
+| SMTP_USER | メール送信 | SMTP 使用時 |
+| SMTP_PASS | メール送信 | SMTP 使用時 |
 
 ## DNS 設定
 
 `terraform output lb_ip_address` で取得した IP アドレスを DNS に設定:
 
 ```
-app.agentest.example.com    A  <LB_IP>
-admin.agentest.example.com  A  <LB_IP>
+app.example.com    A  <LB_IP>
+admin.example.com  A  <LB_IP>
 ```
 
 ## 運用コマンド
@@ -132,10 +126,6 @@ terraform state list
 # 特定リソースの詳細
 terraform state show module.cloud_sql.google_sql_database_instance.main
 
-# リソースの再作成（注意: データ損失の可能性）
-terraform taint module.cloud_run_api.google_cloud_run_v2_service.main
-terraform apply
-
 # ドリフト検出
 terraform plan -detailed-exitcode
 ```
@@ -143,7 +133,7 @@ terraform plan -detailed-exitcode
 ## バッチジョブ手動実行
 
 ```bash
-gcloud run jobs execute agentest-jobs-staging \
+gcloud run jobs execute agentest-jobs-production \
   --region=asia-northeast1 \
   --update-env-vars JOB_NAME=history-cleanup
 ```

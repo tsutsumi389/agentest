@@ -23,12 +23,12 @@ variable "prefix" {
 
 # --- ドメイン設定 ---
 variable "app_domain" {
-  description = "アプリケーション用ドメイン"
+  description = "アプリケーション用ドメイン（例: app.example.com）"
   type        = string
 }
 
 variable "admin_domain" {
-  description = "管理画面用ドメイン"
+  description = "管理画面用ドメイン（例: admin.example.com）"
   type        = string
 }
 

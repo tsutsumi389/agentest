@@ -1,6 +1,19 @@
 #!/bin/bash
 # シークレットにプレースホルダー値を投入するスクリプト
-PROJECT_ID="agentest-staging"
+#
+# 必須環境変数:
+#   PROJECT_ID  - GCP プロジェクト ID
+#
+# オプション環境変数:
+#   PREFIX      - リソース名のプレフィックス（デフォルト: agentest）
+#   ENVIRONMENT - 環境名（デフォルト: production）
+set -e
+
+PROJECT_ID="${PROJECT_ID:?PROJECT_ID 環境変数を設定してください}"
+PREFIX="${PREFIX:-agentest}"
+ENVIRONMENT="${ENVIRONMENT:-production}"
+
+SECRET_PREFIX="${PREFIX}-${ENVIRONMENT}"
 
 SECRETS=(
   DATABASE_URL
@@ -14,20 +27,13 @@ SECRETS=(
   GITHUB_CLIENT_SECRET
   GOOGLE_CLIENT_ID
   GOOGLE_CLIENT_SECRET
-  STRIPE_SECRET_KEY
-  STRIPE_WEBHOOK_SECRET
-  STRIPE_PUBLISHABLE_KEY
-  STRIPE_PRICE_PRO_MONTHLY
-  STRIPE_PRICE_PRO_YEARLY
-  STRIPE_PRICE_TEAM_MONTHLY
-  STRIPE_PRICE_TEAM_YEARLY
   SMTP_USER
   SMTP_PASS
 )
 
 for SECRET in "${SECRETS[@]}"; do
-  echo "Setting agentest-staging-${SECRET}..."
-  echo "placeholder" | gcloud secrets versions add "agentest-staging-${SECRET}" \
+  echo "Setting ${SECRET_PREFIX}-${SECRET}..."
+  echo "placeholder" | gcloud secrets versions add "${SECRET_PREFIX}-${SECRET}" \
     --project="${PROJECT_ID}" --data-file=-
 done
 
