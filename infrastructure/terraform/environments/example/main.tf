@@ -78,14 +78,11 @@ module "cloud_storage" {
   ]
 }
 
-# Artifact Registry: Docker リポジトリ
-module "artifact_registry" {
-  source = "../../modules/artifact-registry"
-
-  project_id  = var.project_id
-  region      = var.region
-  prefix      = local.prefix
-  environment = local.environment
+# Artifact Registry: bootstrap で作成済みのリポジトリを参照
+data "google_artifact_registry_repository" "docker" {
+  repository_id = "${local.prefix}-docker"
+  project       = var.project_id
+  location      = var.region
 }
 
 # --- Phase 2: シークレット + Cloud Run ---

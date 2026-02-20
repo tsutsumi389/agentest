@@ -57,6 +57,7 @@ e2e/playwright-report/
 *.tfvars
 *.tfvars.json
 .terraform.lock.hcl
+tfplan
 
 # OS files
 Thumbs.db

@@ -101,6 +101,12 @@ resource "google_compute_url_map" "main" {
       service = google_compute_backend_service.services["api"].id
     }
 
+    # admin フロントエンドからの API リクエスト（VITE_API_URL 経由）
+    path_rule {
+      paths   = ["/admin/*"]
+      service = google_compute_backend_service.services["api"].id
+    }
+
     path_rule {
       paths   = ["/ws", "/ws/*"]
       service = google_compute_backend_service.services["ws"].id
@@ -117,7 +123,7 @@ resource "google_compute_url_map" "main" {
     default_service = google_compute_backend_service.services["admin"].id
 
     path_rule {
-      paths   = ["/admin/auth/*", "/api/admin/*"]
+      paths   = ["/admin/*", "/api/admin/*"]
       service = google_compute_backend_service.services["api"].id
     }
   }

@@ -66,7 +66,7 @@ gcloud auth application-default login
 
 ### 2. Bootstrap（初回のみ）
 
-tfstate 保存用の GCS バケットと必要な GCP API を有効化します。
+tfstate 保存用の GCS バケット、必要な GCP API の有効化、Artifact Registry（Docker リポジトリ）を作成します。
 
 ```bash
 cd infrastructure/terraform/bootstrap
@@ -116,20 +116,28 @@ cp terraform.tfvars.example terraform.tfvars
 #   - smtp_from = "noreply@example.com"
 ```
 
-### 5. Terraform Apply
+### 5. Terraform Apply（Phase 1: 基盤インフラ）
+
+Secret Manager、IAM、ネットワーク、Cloud SQL、Memorystore などの基盤リソースを先に作成します。
+Cloud Run サービスはシークレットの値が必要なため、Phase 2 で作成します。
 
 ```bash
+cd infrastructure/terraform/environments/example
+
 # データベースパスワードを環境変数で設定
 export TF_VAR_database_password="$(openssl rand -base64 24)"
 
 # バックエンド初期化（tfstate の GCS バケットを指定）
 terraform init -backend-config="bucket=YOUR_PROJECT_ID-tfstate"
 
-# プランの確認
-terraform plan -out=tfplan
-
-# 適用
-terraform apply tfplan
+# Phase 1: 基盤リソースのみ作成
+terraform apply \
+  -target=module.iam \
+  -target=module.networking \
+  -target=module.cloud_sql \
+  -target=module.memorystore \
+  -target=module.cloud_storage \
+  -target=module.secret_manager
 ```
 
 ### 6. シークレットの初期化と設定
@@ -162,7 +170,7 @@ OAuth や SMTP を使用する場合は、対話的に設定できます。
 # Redis 認証文字列: gcloud redis instances get-auth-string <PREFIX>-redis-<ENVIRONMENT> --region <REGION>
 
 export DATABASE_URL="postgresql://agentest:PASSWORD@CLOUD_SQL_IP:5432/agentest"
-export REDIS_URL="redis://:REDIS_AUTH@REDIS_HOST:6379"
+export REDIS_URL="rediss://:REDIS_AUTH@REDIS_HOST:6378"
 
 ./update-secrets.sh
 # → 必須シークレット設定後、GitHub OAuth / Google OAuth / SMTP の設定を対話的に選択
@@ -176,9 +184,20 @@ export REDIS_URL="redis://:REDIS_AUTH@REDIS_HOST:6379"
 2. `init-secrets.sh` を実行（SMTP_USER / SMTP_PASS は空文字で初期化される）
 3. `update-secrets.sh` で SMTP 設定の対話プロンプトをスキップ（N を選択）
 
+### 7. Terraform Apply（Phase 2: Cloud Run サービス）
+
+シークレットの値が設定された状態で、残りのリソース（Cloud Run サービス、Load Balancer 等）を作成します。
+
+```bash
+cd infrastructure/terraform/environments/example
+
+# 全リソースを適用（Phase 1 で作成済みのリソースはスキップされる）
+terraform apply
+```
+
 この構成ではユーザー登録時のメール認証がスキップされ、OAuth またはメール＋パスワードで即座にログインできます。
 
-### 7. DB マイグレーション
+### 8. DB マイグレーション
 
 ```bash
 # <PREFIX> と <ENVIRONMENT> は terraform.tfvars の設定値に置き換えてください
@@ -188,7 +207,7 @@ gcloud run jobs execute <PREFIX>-db-migrate-<ENVIRONMENT> \
   --wait
 ```
 
-### 8. DNS 設定
+### 9. DNS 設定
 
 ロードバランサーの IP アドレスを DNS に設定します。
 
@@ -204,12 +223,12 @@ app.example.com    A  <LB_IP>
 admin.example.com  A  <LB_IP>
 ```
 
-### 9. SSL 証明書のプロビジョニング
+### 10. SSL 証明書のプロビジョニング
 
 DNS 設定後、Google マネージド SSL 証明書が自動的にプロビジョニングされます。
 完了まで 15〜30 分程度かかります。
 
-### 10. 動作確認
+### 11. 動作確認
 
 ```bash
 # API ヘルスチェック

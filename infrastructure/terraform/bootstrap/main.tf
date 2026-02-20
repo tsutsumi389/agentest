@@ -71,3 +71,15 @@ resource "google_project_service" "apis" {
 
   disable_on_destroy = false
 }
+
+# Artifact Registry - Docker イメージリポジトリ
+# build-and-push.sh の前に存在している必要があるため bootstrap で作成
+resource "google_artifact_registry_repository" "docker" {
+  repository_id = "agentest-docker"
+  project       = var.project_id
+  location      = var.region
+  format        = "DOCKER"
+  description   = "Agentest Docker images"
+
+  depends_on = [google_project_service.apis]
+}
