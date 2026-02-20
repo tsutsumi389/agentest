@@ -170,7 +170,7 @@ OAuth や SMTP を使用する場合は、対話的に設定できます。
 # Redis 認証文字列: gcloud redis instances get-auth-string <PREFIX>-redis-<ENVIRONMENT> --region <REGION>
 
 export DATABASE_URL="postgresql://agentest:PASSWORD@CLOUD_SQL_IP:5432/agentest"
-export REDIS_URL="rediss://:REDIS_AUTH@REDIS_HOST:6379"
+export REDIS_URL="rediss://:REDIS_AUTH@REDIS_HOST:6378"
 
 ./update-secrets.sh
 # → 必須シークレット設定後、GitHub OAuth / Google OAuth / SMTP の設定を対話的に選択
