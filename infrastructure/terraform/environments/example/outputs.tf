@@ -15,7 +15,7 @@ output "redis_host" {
 
 output "artifact_registry_url" {
   description = "Docker イメージプッシュ先 URL"
-  value       = module.artifact_registry.repository_url
+  value       = "${var.region}-docker.pkg.dev/${var.project_id}/${data.google_artifact_registry_repository.docker.repository_id}"
 }
 
 output "storage_bucket" {

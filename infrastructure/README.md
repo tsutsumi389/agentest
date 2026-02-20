@@ -66,7 +66,7 @@ gcloud auth application-default login
 
 ### 2. Bootstrap（初回のみ）
 
-tfstate 保存用の GCS バケットと必要な GCP API を有効化します。
+tfstate 保存用の GCS バケット、必要な GCP API の有効化、Artifact Registry（Docker リポジトリ）を作成します。
 
 ```bash
 cd infrastructure/terraform/bootstrap
