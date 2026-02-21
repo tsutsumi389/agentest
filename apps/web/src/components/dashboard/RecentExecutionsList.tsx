@@ -101,7 +101,7 @@ function ExecutionItem({ execution }: { execution: RecentExecutionItem }) {
 
   return (
     <Link
-      to={`/projects/${execution.projectId}/executions/${execution.executionId}`}
+      to={`/executions/${execution.executionId}`}
       className="block p-4 hover:bg-background-tertiary transition-colors"
     >
       {/* プロジェクト名 / テストスイート名 */}
