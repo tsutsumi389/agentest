@@ -44,6 +44,20 @@ Claude Code 等の MCP クライアントで以下のように設定します:
 {
   "mcpServers": {
     "agentest": {
+      "url": "http://localhost:3001/mcp"
+    }
+  }
+}
+```
+
+OAuth 2.1 に対応した MCP クライアント（Claude Code, Claude Desktop 等）の場合、初回接続時にブラウザで認証が行われるため、API キーの設定は不要です。
+
+OAuth 2.1 に対応していない MCP クライアントの場合は、API キーをヘッダーに設定してください:
+
+```json
+{
+  "mcpServers": {
+    "agentest": {
       "url": "http://localhost:3001/mcp",
       "headers": {
         "X-API-Key": "<your-api-key>"
