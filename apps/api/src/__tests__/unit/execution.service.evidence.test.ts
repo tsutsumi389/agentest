@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type * as UploadConfig from '../../config/upload.js';
 import { NotFoundError, BadRequestError } from '@agentest/shared';
 
 // vi.hoistedを使用してモック関数を事前定義
@@ -60,7 +61,7 @@ vi.mock('@agentest/db', () => ({
 
 // validateMagicBytes のモック
 vi.mock('../../config/upload.js', async (importOriginal) => {
-  const original = await importOriginal<typeof import('../../config/upload.js')>();
+  const original = await importOriginal<typeof UploadConfig>();
   return {
     ...original,
     validateMagicBytes: vi.fn().mockResolvedValue(undefined),

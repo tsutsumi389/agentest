@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import type { wsClient as WsClientType } from '../ws.js';
 
 // ブラウザのWebSocketをモック
 const mockWsInstances: MockWsInstance[] = [];
@@ -50,7 +51,7 @@ vi.stubGlobal('WebSocket', Object.assign(createMockWsClass(), {
 vi.stubGlobal('import', { meta: { env: { VITE_WS_URL: 'ws://test:3002' } } });
 
 describe('WebSocketClient', () => {
-  let wsClient: (typeof import('../ws.js'))['wsClient'];
+  let wsClient: typeof WsClientType;
 
   beforeEach(async () => {
     vi.useFakeTimers();

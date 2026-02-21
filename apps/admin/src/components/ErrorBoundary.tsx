@@ -28,7 +28,6 @@ export class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
     // 開発環境のみエラーログを出力
     if (import.meta.env.DEV) {
-      // eslint-disable-next-line no-console
       console.error('エラーバウンダリでエラーをキャッチ:', error, errorInfo);
     }
   }

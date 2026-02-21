@@ -170,6 +170,7 @@ export function TestSuiteForm({
           projectId,
           name: trimmedName,
           description: trimmedDescription || undefined,
+          status,
         });
 
         // 前提条件がある場合は並列で追加
@@ -194,7 +195,7 @@ export function TestSuiteForm({
         const groupId = crypto.randomUUID();
 
         // 基本情報の更新
-        const updates: { name?: string; description?: string; status?: string; groupId?: string } = {};
+        const updates: { name?: string; description?: string; status?: 'DRAFT' | 'ACTIVE' | 'ARCHIVED'; groupId?: string } = {};
         if (trimmedName !== (testSuite?.name || '')) {
           updates.name = trimmedName;
         }
