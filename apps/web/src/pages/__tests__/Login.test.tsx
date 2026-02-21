@@ -252,6 +252,25 @@ describe('LoginPage', () => {
       });
     });
 
+    it('ログイン失敗後にパスワード入力欄がクリアされる', async () => {
+      mockAuthApi.login.mockRejectedValue(new Error('メールアドレスまたはパスワードが正しくありません'));
+
+      renderLoginPage();
+
+      const passwordInput = screen.getByLabelText('パスワード');
+      fireEvent.change(screen.getByLabelText('メールアドレス'), {
+        target: { value: 'test@example.com' },
+      });
+      fireEvent.change(passwordInput, {
+        target: { value: 'wrongpass' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'ログイン' }));
+
+      await waitFor(() => {
+        expect(passwordInput).toHaveValue('');
+      });
+    });
+
     it('送信中はボタンがdisabledになる', async () => {
       // resolveしないPromiseで送信中状態を維持
       mockAuthApi.login.mockReturnValue(new Promise(() => {}));

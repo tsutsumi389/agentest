@@ -98,6 +98,7 @@ export function LoginPage() {
       }
       const message = err instanceof Error ? err.message : 'ログインに失敗しました';
       setError(message);
+      setPassword('');
       setIsSubmitting(false);
     }
   };
