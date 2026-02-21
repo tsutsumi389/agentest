@@ -1005,10 +1005,10 @@ export const projectsApi = {
 // ============================================
 
 export const testSuitesApi = {
-  create: (data: { projectId: string; name: string; description?: string }) =>
+  create: (data: { projectId: string; name: string; description?: string; status?: 'DRAFT' | 'ACTIVE' | 'ARCHIVED' }) =>
     api.post<{ testSuite: TestSuite }>('/api/test-suites', data),
   getById: (testSuiteId: string) => api.get<{ testSuite: TestSuite }>(`/api/test-suites/${testSuiteId}`),
-  update: (testSuiteId: string, data: { name?: string; description?: string; status?: string; groupId?: string }) =>
+  update: (testSuiteId: string, data: { name?: string; description?: string; status?: 'DRAFT' | 'ACTIVE' | 'ARCHIVED'; groupId?: string }) =>
     api.patch<{ testSuite: TestSuite }>(`/api/test-suites/${testSuiteId}`, data),
   delete: (testSuiteId: string, options?: { groupId?: string }) =>
     api.delete<void>(`/api/test-suites/${testSuiteId}`, options),

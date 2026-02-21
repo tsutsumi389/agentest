@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { z } from 'zod';
+import type { z } from 'zod';
 
 const { mockLogger } = vi.hoisted(() => {
   const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn(), fatal: vi.fn(), child: vi.fn() };

@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
+import type * as UploadConfig from '../../config/upload.js';
 import request from 'supertest';
 import type { Express } from 'express';
 import { prisma } from '@agentest/db';
@@ -36,7 +37,7 @@ vi.mock('@agentest/storage', () => ({
 
 // マジックバイト検証をモック（統合テストではAPI層のテストに集中するため）
 vi.mock('../../config/upload.js', async (importOriginal) => {
-  const original = await importOriginal<typeof import('../../config/upload.js')>();
+  const original = await importOriginal<typeof UploadConfig>();
   return {
     ...original,
     validateMagicBytes: vi.fn().mockResolvedValue(undefined),
