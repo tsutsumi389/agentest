@@ -6,6 +6,8 @@ tools:
   - mcp__agentest__search_test_suite
   - mcp__agentest__get_test_suite
   - mcp__agentest__get_test_case
+  - mcp__agentest__search_project
+  - mcp__agentest__get_project
   - mcp__agentest__create_execution
   - mcp__agentest__get_execution
   - mcp__agentest__update_execution_precondition_result
@@ -68,14 +70,28 @@ get_test_case でテストケース詳細を取得
 
 ### ステップ2: テスト実行の準備
 
+**事前確認（必須）**: `agent-browser` コマンドが使用可能か確認する：
+```bash
+agent-browser --version
+```
+- 成功（バージョンが表示）→ 以降のブラウザ操作はすべてagent-browserで実行する
+- エラー（コマンドが見つからない等）→ Playwright にフォールバックする
+
 1. `get_test_suite(testSuiteId)` を呼び出してスイート情報を取得
    - スイートの前提条件一覧を確認
    - テストケース一覧（ID・タイトル）を取得
 
-2. `create_execution(testSuiteId, environmentId?)` を呼び出して実行を開始
+2. **環境の確定（必須）**: `environmentId` がユーザーから指定されていない場合、以下のフローで確認する：
+   - `get_test_suite` の結果からプロジェクトIDを取得し、`get_project(projectId)` を呼び出す
+   - プロジェクトの環境一覧（`environments`）を確認する
+   - 環境が1件のみ → その環境を自動的に使用する
+   - 環境が複数件 → **ユーザーに確認する**（環境名・baseURLを提示して選択を求める）
+   - 環境が0件 → **実行を中断する**。ユーザーに「プロジェクトに実行環境が登録されていません。agentestの管理画面でプロジェクトに環境（baseURL等）を登録してください。」とメッセージを表示して終了する
+
+3. `create_execution(testSuiteId, environmentId?)` を呼び出して実行を開始
    - 返却された `executionId` を保持
 
-3. `get_execution(executionId)` を呼び出して結果行のIDを取得
+4. `get_execution(executionId)` を呼び出して結果行のIDを取得
    - `preconditionResults` - スイートレベルの前提条件結果のID一覧
    - `stepResults` - 各ステップの結果ID一覧
    - `expectedResults` - 各期待結果のID一覧
@@ -99,9 +115,10 @@ get_test_case でテストケース詳細を取得
 
 #### 4c. ステップの実行
 
-各ステップをブラウザで実行する：
+各ステップを **Agent Browser で実行すること（必須）**。
+事前確認でagent-browserが利用不可と判明した場合のみPlaywrightにフォールバックする。
 
-**Agent Browser（推奨）を使用する場合**:
+**Agent Browser を使用する（デフォルト）**:
 ```bash
 # URLを開く
 agent-browser open <URL>
@@ -122,7 +139,7 @@ agent-browser scroll @e3 down
 agent-browser screenshot -o /tmp/screenshot.png
 ```
 
-**Playwright（フォールバック）を使用する場合**:
+**Playwright（フォールバック・agent-browser利用不可時のみ）**:
 ```bash
 npx playwright test
 ```
@@ -167,6 +184,7 @@ npx playwright test
 - **ステップが実行できない**: SKIPPEDとして記録し、理由をnoteに記載
 - **ブラウザ操作エラー**: FAILとして記録し、エラー詳細をnoteに記載
 - **MCPツールエラー**: エラー内容をユーザーに報告して実行を中断
+- **agent-browserが利用不可**: Playwrightにフォールバックし、noteにその旨を記録する
 
 ---
 
