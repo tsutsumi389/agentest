@@ -25,6 +25,11 @@ vi.mock('@agentest/db', () => ({
   },
 }));
 
+// エンリッチメントをパススルーにモック（リポジトリ単体テストでは不要）
+vi.mock('../../repositories/review-comment-enrichment.js', () => ({
+  enrichCommentsWithTargetName: vi.fn((comments: unknown) => Promise.resolve(comments)),
+}));
+
 describe('ReviewCommentRepository', () => {
   let repository: ReviewCommentRepository;
 

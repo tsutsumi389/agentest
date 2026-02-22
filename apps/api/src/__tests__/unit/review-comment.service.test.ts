@@ -5,9 +5,11 @@ import { NotFoundError, AuthorizationError, BadRequestError } from '@agentest/sh
 const mockPrisma = vi.hoisted(() => ({
   testSuite: {
     findFirst: vi.fn(),
+    findMany: vi.fn(),
   },
   testCase: {
     findFirst: vi.fn(),
+    findMany: vi.fn(),
   },
   projectMember: {
     findUnique: vi.fn(),
@@ -67,6 +69,9 @@ describe('ReviewCommentService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     service = new ReviewCommentService();
+    // エンリッチメント用デフォルト（空配列を返す）
+    mockPrisma.testCase.findMany.mockResolvedValue([]);
+    mockPrisma.testSuite.findMany.mockResolvedValue([]);
   });
 
   describe('findById', () => {
@@ -87,7 +92,7 @@ describe('ReviewCommentService', () => {
 
       const result = await service.findById(TEST_COMMENT_ID);
 
-      expect(result).toEqual(mockComment);
+      expect(result).toEqual({ ...mockComment, targetName: null });
       expect(mockPrisma.reviewComment.findUnique).toHaveBeenCalledWith({
         where: { id: TEST_COMMENT_ID },
         include: expect.any(Object),
@@ -408,7 +413,9 @@ describe('ReviewCommentService', () => {
         offset: 0,
       });
 
-      expect(result.items).toEqual(mockComments);
+      expect(result.items).toEqual(
+        mockComments.map((c) => ({ ...c, targetName: null }))
+      );
       expect(result.total).toBe(2);
     });
 
