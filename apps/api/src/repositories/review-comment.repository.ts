@@ -1,4 +1,5 @@
 import { prisma, type ReviewStatus, type ReviewTargetType, type ReviewTargetField, type Prisma } from '@agentest/db';
+import { enrichCommentsWithTargetName } from './review-comment-enrichment.js';
 
 /**
  * レビューコメント検索オプション
@@ -44,10 +45,13 @@ export class ReviewCommentRepository {
    * IDでレビューコメントを検索
    */
   async findById(id: string) {
-    return prisma.reviewComment.findUnique({
+    const comment = await prisma.reviewComment.findUnique({
       where: { id },
       include: commentInclude,
     });
+    if (!comment) return null;
+    const [enriched] = await enrichCommentsWithTargetName([comment]);
+    return enriched;
   }
 
   /**
@@ -77,7 +81,7 @@ export class ReviewCommentRepository {
     }
 
     // 検索実行
-    const [items, total] = await Promise.all([
+    const [rawItems, total] = await Promise.all([
       prisma.reviewComment.findMany({
         where,
         include: commentInclude,
@@ -88,6 +92,7 @@ export class ReviewCommentRepository {
       prisma.reviewComment.count({ where }),
     ]);
 
+    const items = await enrichCommentsWithTargetName(rawItems);
     return { items, total };
   }
 
@@ -105,7 +110,7 @@ export class ReviewCommentRepository {
     authorAgentSessionId?: string;
     content: string;
   }) {
-    return prisma.reviewComment.create({
+    const comment = await prisma.reviewComment.create({
       data: {
         reviewId: data.reviewId,
         targetType: data.targetType,
@@ -119,28 +124,34 @@ export class ReviewCommentRepository {
       },
       include: commentInclude,
     });
+    const [enriched] = await enrichCommentsWithTargetName([comment]);
+    return enriched;
   }
 
   /**
    * レビューコメントを更新
    */
   async update(id: string, data: { content: string }) {
-    return prisma.reviewComment.update({
+    const comment = await prisma.reviewComment.update({
       where: { id },
       data: { content: data.content },
       include: commentInclude,
     });
+    const [enriched] = await enrichCommentsWithTargetName([comment]);
+    return enriched;
   }
 
   /**
    * レビューコメントのステータスを更新
    */
   async updateStatus(id: string, status: ReviewStatus) {
-    return prisma.reviewComment.update({
+    const comment = await prisma.reviewComment.update({
       where: { id },
       data: { status },
       include: commentInclude,
     });
+    const [enriched] = await enrichCommentsWithTargetName([comment]);
+    return enriched;
   }
 
   /**

@@ -149,10 +149,13 @@ export function CommentCard({ comment }: CommentCardProps) {
     <div className="border border-border rounded-lg overflow-hidden">
       {/* ヘッダー */}
       <div className="flex items-center justify-between px-3 py-2 bg-background-secondary">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <ReviewStatusBadge status={comment.status} showLabel={false} />
-          <span className="text-xs text-foreground-muted">
+          <span className="text-xs text-foreground-muted truncate">
             {TARGET_FIELD_LABELS[comment.targetField]}
+            {comment.targetType === 'CASE' && comment.targetName && (
+              <> - {comment.targetName}</>
+            )}
           </span>
         </div>
       </div>
@@ -175,6 +178,13 @@ export function CommentCard({ comment }: CommentCardProps) {
             </span>
           </div>
         </div>
+
+        {/* 対象アイテムの原文スナップショット */}
+        {comment.targetItemContent && (
+          <div className="mb-3 p-2 bg-background-tertiary rounded border-l-2 border-accent">
+            <MarkdownPreview content={comment.targetItemContent} />
+          </div>
+        )}
 
         {/* コメント内容 */}
         <div className="text-sm">

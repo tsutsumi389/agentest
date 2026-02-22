@@ -189,6 +189,9 @@ export function ReviewCommentItem({
           <ReviewStatusBadge status={comment.status} showLabel={false} />
           <span className="text-xs text-foreground-muted truncate">
             {TARGET_FIELD_LABELS[comment.targetField]}
+            {comment.targetType === 'CASE' && comment.targetName && (
+              <> - {comment.targetName}</>
+            )}
           </span>
         </div>
         <div className="flex items-center gap-1">

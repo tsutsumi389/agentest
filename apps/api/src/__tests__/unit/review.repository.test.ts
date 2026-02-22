@@ -34,6 +34,12 @@ vi.mock('@agentest/db', () => ({
   },
 }));
 
+// エンリッチメントをパススルーにモック（リポジトリ単体テストでは不要）
+vi.mock('../../repositories/review-comment-enrichment.js', () => ({
+  enrichReviewWithTargetNames: vi.fn((review: unknown) => Promise.resolve(review)),
+  enrichCommentsWithTargetName: vi.fn((comments: unknown) => Promise.resolve(comments)),
+}));
+
 import { ReviewRepository } from '../../repositories/review.repository.js';
 
 // テスト用固定ID

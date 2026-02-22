@@ -85,6 +85,7 @@ export interface ReviewCommentWithReplies extends ReviewComment {
   agentSession: ReviewAgentSession | null;
   replies: ReviewReply[];
   _count: { replies: number };
+  targetName: string | null;
 }
 
 /**
