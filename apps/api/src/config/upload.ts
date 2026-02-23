@@ -11,7 +11,7 @@ export const ALLOWED_MIME_TYPES = [
   'image/png',
   'image/gif',
   'image/webp',
-  'image/svg+xml',
+  // image/svg+xml は除外: XSSリスク（SVGにJavaScriptを埋め込める）
   'image/bmp',
   // 動画
   'video/mp4',
@@ -38,7 +38,6 @@ export const TEXT_BASED_MIME_TYPES = new Set([
   'text/plain',
   'text/csv',
   'application/json',
-  'image/svg+xml',
 ]);
 
 /**
@@ -96,6 +95,28 @@ export async function validateMagicBytes(
       'ファイルの内容が宣言されたMIMEタイプと一致しません'
     );
   }
+}
+
+/**
+ * ファイル名をサニタイズ（S3キーインジェクション対策）
+ *
+ * パス区切り文字、制御文字、危険な文字を除去し、安全なファイル名を返す。
+ */
+export function sanitizeFileName(fileName: string): string {
+  // パス区切り文字を除去
+  let sanitized = fileName.replace(/[/\\]/g, '_');
+  // 制御文字・シェルメタ文字を除去（英数字、ハイフン、アンダースコア、ドット、スペースのみ許可）
+  sanitized = sanitized.replace(/[^\w.\- ]/g, '_');
+  // 連続するアンダースコアを1つに
+  sanitized = sanitized.replace(/_+/g, '_');
+  // 先頭・末尾のアンダースコア/スペースを除去
+  sanitized = sanitized.replace(/^[_ ]+|[_ ]+$/g, '');
+  // ダブルドット対策
+  if (!sanitized || sanitized === '.' || sanitized === '..') {
+    return 'unnamed_file';
+  }
+  // 長さ制限（200文字）
+  return sanitized.slice(0, 200);
 }
 
 /**

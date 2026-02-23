@@ -22,6 +22,7 @@ import { updateExecutionExpectedResultTool } from './update-execution-expected-r
 import { deleteTestSuiteTool } from './delete-test-suite.js';
 import { deleteTestCaseTool } from './delete-test-case.js';
 import { uploadExecutionEvidenceTool } from './upload-execution-evidence.js';
+import { confirmEvidenceUploadTool } from './confirm-evidence-upload.js';
 
 const logger = baseLogger.child({ module: 'tools' });
 
@@ -148,6 +149,7 @@ export function registerTools(server: McpServer): void {
 
   // エビデンスアップロードツールを登録
   toolRegistry.register(uploadExecutionEvidenceTool);
+  toolRegistry.register(confirmEvidenceUploadTool);
 
   const tools = toolRegistry.getAll();
 

@@ -531,21 +531,12 @@ describe('MCP実行ツール統合テスト', () => {
   });
 
   describe('upload_execution_evidence', () => {
-    it('エビデンスファイルを正常にアップロードできる', async () => {
+    it('presigned URLを取得して構造化データを返す', async () => {
       const mockResponse = {
-        evidence: {
-          id: TEST_EVIDENCE_ID,
-          expectedResultId: TEST_EXPECTED_RESULT_ID,
-          fileName: 'screenshot.png',
-          fileUrl: 'https://storage.example.com/evidences/screenshot.png',
-          fileType: 'image/png',
-          fileSize: 12345,
-          description: 'ログイン画面のスクリーンショット',
-          uploadedByUserId: testUser.id,
-          createdAt: '2025-01-01T00:00:00.000Z',
-        },
+        evidenceId: TEST_EVIDENCE_ID,
+        uploadUrl: 'https://minio.example.com/presigned-put-url',
       };
-      mockApiClientPostMultipart.mockResolvedValueOnce(mockResponse);
+      mockApiClientPost.mockResolvedValueOnce(mockResponse);
 
       const response = await callMcpTool(app, sessionId, 'upload_execution_evidence', {
         executionId: TEST_EXECUTION_ID,
@@ -559,25 +550,19 @@ describe('MCP実行ツール統合テスト', () => {
       expect(result.isError).toBeUndefined();
 
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.evidence.id).toBe(TEST_EVIDENCE_ID);
-      expect(parsed.evidence.fileName).toBe('screenshot.png');
-      expect(parsed.evidence.fileType).toBe('image/png');
-      expect(parsed.evidence.description).toBe('ログイン画面のスクリーンショット');
+      expect(parsed.evidenceId).toBe(TEST_EVIDENCE_ID);
+      expect(parsed.uploadUrl).toBe('https://minio.example.com/presigned-put-url');
+      expect(parsed.filePath).toBe('/tmp/screenshot.png');
+      expect(parsed.contentType).toBe('image/png');
+      expect(parsed.message).toContain('presigned URL');
 
-      // filePathからファイルを読み取ったこと
-      expect(mockFsReadFile).toHaveBeenCalledWith('/tmp/screenshot.png');
+      // ファイルアクセスしないこと
+      expect(mockFsReadFile).not.toHaveBeenCalled();
 
-      // postMultipartが正しく呼ばれたこと
-      expect(mockApiClientPostMultipart).toHaveBeenCalledWith(
-        `/internal/api/executions/${TEST_EXECUTION_ID}/expected-results/${TEST_EXPECTED_RESULT_ID}/evidences`,
-        {
-          file: {
-            buffer: Buffer.from('test-image-data'),
-            fileName: 'screenshot.png',
-            mimeType: 'image/png',
-          },
-          fields: { description: 'ログイン画面のスクリーンショット' },
-        },
+      // JSON POSTで送信されること（multipartではない）
+      expect(mockApiClientPost).toHaveBeenCalledWith(
+        `/internal/api/executions/${TEST_EXECUTION_ID}/expected-results/${TEST_EXPECTED_RESULT_ID}/evidences/upload-url`,
+        { fileName: 'screenshot.png', fileType: 'image/png', description: 'ログイン画面のスクリーンショット' },
         { userId: testUser.id }
       );
     });

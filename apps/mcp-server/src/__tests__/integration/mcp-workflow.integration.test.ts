@@ -816,8 +816,8 @@ describe('MCPワークフロー統合テスト', () => {
     it('エビデンスアップロード失敗後に再試行して成功できる', async () => {
       const sessionId = await initializeMcpSession(app, { projectId: testProject.id });
 
-      // 1回目: ストレージエラー
-      mockApiClientPostMultipart.mockRejectedValueOnce(
+      // 1回目: APIエラー
+      mockApiClientPost.mockRejectedValueOnce(
         new Error('Internal API error: 503 - Storage service unavailable')
       );
 
@@ -832,19 +832,10 @@ describe('MCPワークフロー統合テスト', () => {
       expect(failedResult.isError).toBe(true);
       expect(failedResult.content[0].text).toContain('エラー');
 
-      // 2回目: ストレージ復旧後に再試行
-      mockApiClientPostMultipart.mockResolvedValueOnce({
-        evidence: {
-          id: TEST_EVIDENCE_ID,
-          expectedResultId: TEST_EXPECTED_RESULT_ID,
-          fileName: 'evidence.png',
-          fileUrl: 'https://storage.example.com/evidences/evidence.png',
-          fileType: 'image/png',
-          fileSize: 5678,
-          description: 'テストエビデンス',
-          uploadedByUserId: testUser.id,
-          createdAt: '2025-01-01T00:00:00.000Z',
-        },
+      // 2回目: 復旧後に再試行（presigned URL方式）
+      mockApiClientPost.mockResolvedValueOnce({
+        evidenceId: TEST_EVIDENCE_ID,
+        uploadUrl: 'https://minio.example.com/presigned-put-url',
       });
 
       const retryResponse = await callMcpTool(app, sessionId, 'upload_execution_evidence', {
@@ -858,7 +849,8 @@ describe('MCPワークフロー統合テスト', () => {
       const retryResult = parseToolResult(retryResponse);
       expect(retryResult.isError).toBeUndefined();
       const parsed = JSON.parse(retryResult.content[0].text);
-      expect(parsed.evidence.fileName).toBe('evidence.png');
+      expect(parsed.evidenceId).toBe(TEST_EVIDENCE_ID);
+      expect(parsed.uploadUrl).toBeTruthy();
     });
 
     it('連続したエラーの後でもセッションが破壊されず回復できる', async () => {

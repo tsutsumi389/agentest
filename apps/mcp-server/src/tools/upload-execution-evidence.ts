@@ -1,4 +1,3 @@
-import fs from 'node:fs/promises';
 import nodePath from 'node:path';
 import mime from 'mime-types';
 import { z } from 'zod';
@@ -20,26 +19,29 @@ export const uploadExecutionEvidenceInputSchema = z.object({
 type UploadExecutionEvidenceInput = z.infer<typeof uploadExecutionEvidenceInputSchema>;
 
 /**
- * レスポンス型
+ * presigned URLレスポンス型
  */
-interface UploadExecutionEvidenceResponse {
-  evidence: {
-    id: string;
-    expectedResultId: string;
-    fileName: string;
-    fileUrl: string;
-    fileType: string;
-    fileSize: number;
-    description: string | null;
-    uploadedByUserId: string;
-    createdAt: string;
-  };
+interface UploadUrlResponse {
+  evidenceId: string;
+  uploadUrl: string;
+}
+
+/**
+ * ツールの返却型（構造化データ）
+ */
+interface UploadExecutionEvidenceResult {
+  evidenceId: string;
+  uploadUrl: string;
+  filePath: string;
+  contentType: string;
+  confirmEndpoint: string;
+  message: string;
 }
 
 /**
  * ハンドラー
  */
-const uploadExecutionEvidenceHandler: ToolHandler<UploadExecutionEvidenceInput, UploadExecutionEvidenceResponse> = async (input, context) => {
+const uploadExecutionEvidenceHandler: ToolHandler<UploadExecutionEvidenceInput, UploadExecutionEvidenceResult> = async (input, context) => {
   const { userId } = context;
 
   if (!userId) {
@@ -48,45 +50,34 @@ const uploadExecutionEvidenceHandler: ToolHandler<UploadExecutionEvidenceInput, 
 
   const { executionId, expectedResultId, filePath, description } = input;
 
-  // ファイルサイズの事前チェック（100MB上限、API側と同じ）
-  const MAX_UPLOAD_SIZE = 100 * 1024 * 1024;
-  let fileBuffer: Buffer;
-  try {
-    const fileStats = await fs.stat(filePath);
-    if (fileStats.size > MAX_UPLOAD_SIZE) {
-      throw new Error(`ファイルサイズが上限（${MAX_UPLOAD_SIZE / 1024 / 1024}MB）を超えています`);
-    }
-    fileBuffer = await fs.readFile(filePath);
-  } catch (error) {
-    const nodeError = error as NodeJS.ErrnoException;
-    if (nodeError.code === 'ENOENT') {
-      throw new Error(`ファイルが見つかりません: ${filePath} - パスを確認してください`);
-    }
-    if (nodeError.code === 'EACCES') {
-      throw new Error(`ファイルへのアクセス権がありません: ${filePath}`);
-    }
-    throw error;
-  }
-
+  // ファイル名・MIMEタイプをパスから推測（ファイルアクセスは不要）
   const fileName = input.fileName || nodePath.basename(filePath);
   const fileType = input.fileType || mime.lookup(filePath) || 'application/octet-stream';
 
-  // multipart/form-data で Internal API に送信
-  const fields: Record<string, string> = {};
-  if (description) {
-    fields.description = description;
-  }
-
-  const response = await apiClient.postMultipart<UploadExecutionEvidenceResponse>(
-    `/internal/api/executions/${executionId}/expected-results/${expectedResultId}/evidences`,
-    {
-      file: { buffer: fileBuffer, fileName, mimeType: fileType },
-      fields,
-    },
+  // presigned URL取得（JSON POST）
+  const response = await apiClient.post<UploadUrlResponse>(
+    `/internal/api/executions/${executionId}/expected-results/${expectedResultId}/evidences/upload-url`,
+    { fileName, fileType, description },
     { userId }
   );
 
-  return response;
+  // 構造化データを返却（curlコマンドは構築しない = コマンドインジェクション対策）
+  return {
+    evidenceId: response.evidenceId,
+    uploadUrl: response.uploadUrl,
+    filePath,
+    contentType: fileType,
+    confirmEndpoint: `/internal/api/executions/${executionId}/evidences/${response.evidenceId}/confirm`,
+    message: [
+      'presigned URLが生成されました。以下の手順でアップロードを完了してください:',
+      '',
+      '1. curlでファイルをアップロード:',
+      `   curl -X PUT -H 'Content-Type: ${fileType}' --upload-file '${filePath}' '${response.uploadUrl}'`,
+      '',
+      '2. アップロード確認:',
+      `   confirm_evidence_upload(executionId="${executionId}", evidenceId="${response.evidenceId}")`,
+    ].join('\n'),
+  };
 };
 
 /**
@@ -94,7 +85,13 @@ const uploadExecutionEvidenceHandler: ToolHandler<UploadExecutionEvidenceInput, 
  */
 export const uploadExecutionEvidenceTool: ToolDefinition<UploadExecutionEvidenceInput> = {
   name: 'upload_execution_evidence',
-  description: `テスト実行の期待結果にエビデンスファイルをアップロードします。
+  description: `テスト実行の期待結果にエビデンスファイルをアップロードするためのpresigned URLを生成します。
+
+【3ステップフロー】
+1. このツールを呼び出してpresigned URLを取得
+2. レスポンスの uploadUrl, filePath, contentType を使ってcurlを構築・実行:
+   curl -X PUT -H 'Content-Type: {contentType}' --upload-file '{filePath}' '{uploadUrl}'
+3. confirm_evidence_upload ツールでアップロード完了を確認
 
 必須: executionId, expectedResultId, filePath
 オプション: fileName（省略時はパスから自動検出）, fileType（省略時は拡張子から自動検出）, description
@@ -105,12 +102,7 @@ export const uploadExecutionEvidenceTool: ToolDefinition<UploadExecutionEvidence
 - 音声: audio/mp3, audio/wav
 - ドキュメント: application/pdf, text/plain, application/json
 
-制限: 1つの期待結果あたり最大10件までアップロード可能。
-
-返却情報: アップロードされたエビデンス情報（ID・ファイルURL・サイズ等）。
-
-使用場面: テスト結果の証拠（スクリーンショット、画面録画、ログファイル等）を記録する際に使用します。
-ワークフロー: update_execution_expected_resultで結果を判定した後 → このツールでエビデンスを添付。`,
+制限: 1つの期待結果あたり最大10件までアップロード可能。presigned URLは5分間有効。`,
   inputSchema: uploadExecutionEvidenceInputSchema,
   handler: uploadExecutionEvidenceHandler,
 };

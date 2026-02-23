@@ -7,6 +7,7 @@ import {
   TEXT_BASED_MIME_TYPES,
   MIME_EQUIVALENCES,
   validateMagicBytes,
+  sanitizeFileName,
 } from '../../config/upload.js';
 
 // file-type モジュールのモック
@@ -50,7 +51,11 @@ describe('upload設定', () => {
       expect(TEXT_BASED_MIME_TYPES.has('text/plain')).toBe(true);
       expect(TEXT_BASED_MIME_TYPES.has('text/csv')).toBe(true);
       expect(TEXT_BASED_MIME_TYPES.has('application/json')).toBe(true);
-      expect(TEXT_BASED_MIME_TYPES.has('image/svg+xml')).toBe(true);
+    });
+
+    it('image/svg+xmlは許可MIMEタイプに含まれない（XSSリスク対策）', () => {
+      expect(ALLOWED_MIME_TYPES).not.toContain('image/svg+xml');
+      expect(TEXT_BASED_MIME_TYPES.has('image/svg+xml')).toBe(false);
     });
 
     it('MIME_EQUIVALENCESに等価マッピングが定義されている', () => {
@@ -133,13 +138,6 @@ describe('upload設定', () => {
       expect(mockFileTypeFromBuffer).not.toHaveBeenCalled();
     });
 
-    it('テキスト系ファイル（image/svg+xml）はマジックバイト検証をスキップする', async () => {
-      const svgBuffer = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"></svg>');
-
-      await expect(validateMagicBytes(svgBuffer, 'image/svg+xml')).resolves.toBeUndefined();
-      expect(mockFileTypeFromBuffer).not.toHaveBeenCalled();
-    });
-
     it('MIMEタイプ偽装（PNG宣言だが中身はJPEG）はエラーになる', async () => {
       const jpegBuffer = Buffer.from([0xff, 0xd8, 0xff, 0xe0]);
       mockFileTypeFromBuffer.mockResolvedValue({ ext: 'jpg', mime: 'image/jpeg' });
@@ -172,6 +170,49 @@ describe('upload設定', () => {
       mockFileTypeFromBuffer.mockResolvedValue({ ext: 'avi', mime: 'video/vnd.avi' as any });
 
       await expect(validateMagicBytes(aviBuffer, 'video/x-msvideo')).resolves.toBeUndefined();
+    });
+  });
+
+  describe('sanitizeFileName', () => {
+    it('通常のファイル名はそのまま返す', () => {
+      expect(sanitizeFileName('screenshot.png')).toBe('screenshot.png');
+      expect(sanitizeFileName('test-file_01.jpg')).toBe('test-file_01.jpg');
+    });
+
+    it('パス区切り文字をアンダースコアに置換する', () => {
+      expect(sanitizeFileName('path/to/file.png')).toBe('path_to_file.png');
+      expect(sanitizeFileName('path\\to\\file.png')).toBe('path_to_file.png');
+    });
+
+    it('制御文字・シェルメタ文字をアンダースコアに置換する', () => {
+      expect(sanitizeFileName('file;rm -rf.png')).toBe('file_rm -rf.png');
+      expect(sanitizeFileName('file$(cmd).png')).toBe('file_cmd_.png');
+      expect(sanitizeFileName('file&&echo.png')).toBe('file_echo.png');
+      expect(sanitizeFileName('file|cat.png')).toBe('file_cat.png');
+    });
+
+    it('連続するアンダースコアを1つにまとめる', () => {
+      expect(sanitizeFileName('a___b.png')).toBe('a_b.png');
+    });
+
+    it('先頭・末尾のアンダースコア/スペースを除去する', () => {
+      expect(sanitizeFileName('_file.png_')).toBe('file.png');
+      expect(sanitizeFileName(' file.png ')).toBe('file.png');
+    });
+
+    it('ダブルドットは unnamed_file を返す', () => {
+      expect(sanitizeFileName('..')).toBe('unnamed_file');
+      expect(sanitizeFileName('.')).toBe('unnamed_file');
+    });
+
+    it('空文字は unnamed_file を返す', () => {
+      expect(sanitizeFileName('')).toBe('unnamed_file');
+    });
+
+    it('200文字を超えるファイル名は切り詰める', () => {
+      const longName = 'a'.repeat(250) + '.png';
+      const result = sanitizeFileName(longName);
+      expect(result.length).toBeLessThanOrEqual(200);
     });
   });
 });

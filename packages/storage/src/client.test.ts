@@ -37,7 +37,7 @@ vi.mock('@aws-sdk/s3-request-presigner', () => ({
 }));
 
 // モック設定後にインポート
-import { StorageClient, createStorageClient, type StorageConfig } from './client.js';
+import { StorageClient, createStorageClient, createPublicStorageClient, type StorageConfig } from './client.js';
 import {
   PutObjectCommand,
   GetObjectCommand,
@@ -698,5 +698,82 @@ describe('createStorageClient', () => {
         })
       );
     });
+  });
+});
+
+describe('createPublicStorageClient', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('MINIO_PUBLIC_ENDPOINTが設定されている場合はそのエンドポイントを使用する', () => {
+    const env = {
+      MINIO_PUBLIC_ENDPOINT: 'http://localhost:9002',
+      MINIO_ACCESS_KEY: 'my-key',
+      MINIO_SECRET_KEY: 'my-secret',
+      MINIO_BUCKET: 'my-bucket',
+    } as unknown as NodeJS.ProcessEnv;
+
+    createPublicStorageClient(env);
+
+    expect(mockS3Client).toHaveBeenCalledWith(
+      expect.objectContaining({
+        endpoint: 'http://localhost:9002',
+      })
+    );
+  });
+
+  it('MINIO_PUBLIC_ENDPOINTが未設定の場合は通常のクライアントにフォールバックする', () => {
+    const env = {
+      MINIO_ENDPOINT: 'http://minio:9000',
+      MINIO_ACCESS_KEY: 'my-key',
+      MINIO_SECRET_KEY: 'my-secret',
+      MINIO_BUCKET: 'my-bucket',
+    } as unknown as NodeJS.ProcessEnv;
+
+    createPublicStorageClient(env);
+
+    expect(mockS3Client).toHaveBeenCalledWith(
+      expect.objectContaining({
+        endpoint: 'http://minio:9000',
+      })
+    );
+  });
+
+  it('httpsプロトコルのURLを許可する', () => {
+    const env = {
+      MINIO_PUBLIC_ENDPOINT: 'https://s3.amazonaws.com',
+      MINIO_ACCESS_KEY: 'my-key',
+      MINIO_SECRET_KEY: 'my-secret',
+      MINIO_BUCKET: 'my-bucket',
+    } as unknown as NodeJS.ProcessEnv;
+
+    expect(() => createPublicStorageClient(env)).not.toThrow();
+  });
+
+  it('不正なプロトコルのURLを拒否する（SSRF対策）', () => {
+    const env = {
+      MINIO_PUBLIC_ENDPOINT: 'ftp://malicious.com',
+      MINIO_ACCESS_KEY: 'my-key',
+      MINIO_SECRET_KEY: 'my-secret',
+      MINIO_BUCKET: 'my-bucket',
+    } as unknown as NodeJS.ProcessEnv;
+
+    expect(() => createPublicStorageClient(env)).toThrow(
+      'MINIO_PUBLIC_ENDPOINT must use http or https protocol'
+    );
+  });
+
+  it('不正なURLを拒否する', () => {
+    const env = {
+      MINIO_PUBLIC_ENDPOINT: 'not-a-url',
+      MINIO_ACCESS_KEY: 'my-key',
+      MINIO_SECRET_KEY: 'my-secret',
+      MINIO_BUCKET: 'my-bucket',
+    } as unknown as NodeJS.ProcessEnv;
+
+    expect(() => createPublicStorageClient(env)).toThrow(
+      'MINIO_PUBLIC_ENDPOINT is not a valid URL'
+    );
   });
 });

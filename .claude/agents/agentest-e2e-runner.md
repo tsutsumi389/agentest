@@ -150,8 +150,15 @@ agent-browser screenshot /tmp/screenshot.png
 # スクリーンショットを撮影
 agent-browser screenshot /tmp/evidence_{testCaseIndex}_{expectedResultIndex}.png
 
-# エビデンスをアップロード
+# Step 1: presigned URL取得（構造化データが返される）
 upload_execution_evidence(executionId, expectedResultId, filePath, description)
+# → { evidenceId, uploadUrl, filePath, contentType, message } が返る
+
+# Step 2: レスポンスの uploadUrl, filePath, contentType を使ってcurlを構築・実行
+curl -X PUT -H 'Content-Type: {contentType}' --upload-file '{filePath}' '{uploadUrl}'
+
+# Step 3: アップロード確認（ファイルサイズ更新）
+confirm_evidence_upload(executionId, evidenceId)
 ```
 
 ### ステップ5: 実行サマリーの報告

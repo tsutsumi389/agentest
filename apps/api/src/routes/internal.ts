@@ -1287,6 +1287,111 @@ router.post('/executions/:executionId/expected-results/:expectedResultId/evidenc
 });
 
 /**
+ * エビデンスアップロードURL生成リクエストボディのスキーマ
+ */
+const createEvidenceUploadUrlBodySchema = z.object({
+  fileName: z.string().min(1).max(255),
+  fileType: z.string().min(1),
+  description: z.string().max(2000).optional(),
+});
+
+/**
+ * POST /internal/api/executions/:executionId/expected-results/:expectedResultId/evidences/upload-url
+ * エビデンスアップロード用presigned URLを生成
+ */
+router.post('/executions/:executionId/expected-results/:expectedResultId/evidences/upload-url', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { executionId, expectedResultId } = req.params;
+
+    // userIdクエリ検証
+    const userIdResult = userIdQuerySchema.safeParse(req.query);
+    if (!userIdResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid query parameters',
+        details: userIdResult.error.flatten(),
+      });
+      return;
+    }
+
+    const { userId } = userIdResult.data;
+
+    // ボディ検証
+    const bodyResult = createEvidenceUploadUrlBodySchema.safeParse(req.body);
+    if (!bodyResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid request body',
+        details: bodyResult.error.flatten(),
+      });
+      return;
+    }
+
+    // 書き込み権限チェック
+    const canWrite = await authService.canWriteToExecution(userId, executionId);
+    if (!canWrite) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access denied or execution is not in progress',
+      });
+      return;
+    }
+
+    const { fileName, fileType, description } = bodyResult.data;
+
+    const result = await executionService.createEvidenceUploadUrl(
+      executionId,
+      expectedResultId,
+      userId,
+      { fileName, fileType, description }
+    );
+
+    res.status(201).json(result);
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * POST /internal/api/executions/:executionId/evidences/:evidenceId/confirm
+ * エビデンスアップロード完了を確認
+ */
+router.post('/executions/:executionId/evidences/:evidenceId/confirm', async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { executionId, evidenceId } = req.params;
+
+    // userIdクエリ検証
+    const userIdResult = userIdQuerySchema.safeParse(req.query);
+    if (!userIdResult.success) {
+      res.status(400).json({
+        error: 'Bad Request',
+        message: 'Invalid query parameters',
+        details: userIdResult.error.flatten(),
+      });
+      return;
+    }
+
+    const { userId } = userIdResult.data;
+
+    // 書き込み権限チェック
+    const canWrite = await authService.canWriteToExecution(userId, executionId);
+    if (!canWrite) {
+      res.status(403).json({
+        error: 'Forbidden',
+        message: 'Access denied or execution is not in progress',
+      });
+      return;
+    }
+
+    const result = await executionService.confirmEvidenceUpload(executionId, evidenceId, userId);
+
+    res.json({ evidenceId, fileSize: result.fileSize });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
  * APIトークン検証リクエストボディのスキーマ
  */
 const validateApiTokenBodySchema = z.object({

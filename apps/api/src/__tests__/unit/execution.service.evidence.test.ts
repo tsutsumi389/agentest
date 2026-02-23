@@ -9,20 +9,26 @@ const {
   mockStorageUpload,
   mockStorageDelete,
   mockStorageGetDownloadUrl,
+  mockStorageGetMetadata,
+  mockPublicStorageGetUploadUrl,
   mockExpectedResultFindFirst,
   mockEvidenceCreate,
   mockEvidenceDelete,
   mockEvidenceFindFirst,
+  mockEvidenceUpdate,
 } = vi.hoisted(() => ({
   mockFindById: vi.fn(),
   mockFindByIdWithDetails: vi.fn(),
   mockStorageUpload: vi.fn(),
   mockStorageDelete: vi.fn(),
   mockStorageGetDownloadUrl: vi.fn(),
+  mockStorageGetMetadata: vi.fn(),
+  mockPublicStorageGetUploadUrl: vi.fn(),
   mockExpectedResultFindFirst: vi.fn(),
   mockEvidenceCreate: vi.fn(),
   mockEvidenceDelete: vi.fn(),
   mockEvidenceFindFirst: vi.fn(),
+  mockEvidenceUpdate: vi.fn(),
 }));
 
 // ExecutionRepository のモック
@@ -39,6 +45,10 @@ vi.mock('@agentest/storage', () => ({
     upload: mockStorageUpload,
     delete: mockStorageDelete,
     getDownloadUrl: mockStorageGetDownloadUrl,
+    getMetadata: mockStorageGetMetadata,
+  }),
+  createPublicStorageClient: vi.fn().mockReturnValue({
+    getUploadUrl: mockPublicStorageGetUploadUrl,
   }),
 }));
 
@@ -55,6 +65,7 @@ vi.mock('@agentest/db', () => ({
       create: mockEvidenceCreate,
       delete: mockEvidenceDelete,
       findFirst: mockEvidenceFindFirst,
+      update: mockEvidenceUpdate,
     },
   },
 }));
@@ -318,5 +329,215 @@ describe('ExecutionService - Evidence', () => {
       );
     });
 
+  });
+
+  describe('createEvidenceUploadUrl', () => {
+    it('presigned URLとevidenceIdを返す', async () => {
+      const mockExecution = createMockExecution();
+      const mockExpectedResult = {
+        id: TEST_EXPECTED_RESULT_ID,
+        executionId: TEST_EXECUTION_ID,
+        evidences: [],
+      };
+      const mockEvidence = {
+        id: TEST_EVIDENCE_ID,
+        expectedResultId: TEST_EXPECTED_RESULT_ID,
+      };
+
+      mockFindById.mockResolvedValue(mockExecution);
+      mockExpectedResultFindFirst.mockResolvedValue(mockExpectedResult);
+      mockPublicStorageGetUploadUrl.mockResolvedValue('https://minio.example.com/presigned-url');
+      mockEvidenceCreate.mockResolvedValue(mockEvidence);
+
+      const result = await service.createEvidenceUploadUrl(
+        TEST_EXECUTION_ID,
+        TEST_EXPECTED_RESULT_ID,
+        TEST_USER_ID,
+        { fileName: 'screenshot.png', fileType: 'image/png', description: 'テスト' }
+      );
+
+      expect(result.evidenceId).toBe(TEST_EVIDENCE_ID);
+      expect(result.uploadUrl).toBe('https://minio.example.com/presigned-url');
+      expect(mockPublicStorageGetUploadUrl).toHaveBeenCalledWith(
+        expect.stringMatching(/^evidences\//),
+        { expiresIn: 300, contentType: 'image/png' }
+      );
+      expect(mockEvidenceCreate).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          expectedResultId: TEST_EXPECTED_RESULT_ID,
+          fileName: 'screenshot.png',
+          fileType: 'image/png',
+          fileSize: BigInt(0),
+          description: 'テスト',
+          uploadedByUserId: TEST_USER_ID,
+        }),
+      });
+    });
+
+    it('実行が存在しない場合はNotFoundErrorを投げる', async () => {
+      mockFindById.mockResolvedValue(null);
+
+      await expect(
+        service.createEvidenceUploadUrl(TEST_EXECUTION_ID, TEST_EXPECTED_RESULT_ID, TEST_USER_ID, {
+          fileName: 'test.png',
+          fileType: 'image/png',
+        })
+      ).rejects.toThrow(NotFoundError);
+    });
+
+    it('期待結果が存在しない場合はNotFoundErrorを投げる', async () => {
+      mockFindById.mockResolvedValue(createMockExecution());
+      mockExpectedResultFindFirst.mockResolvedValue(null);
+
+      await expect(
+        service.createEvidenceUploadUrl(TEST_EXECUTION_ID, TEST_EXPECTED_RESULT_ID, TEST_USER_ID, {
+          fileName: 'test.png',
+          fileType: 'image/png',
+        })
+      ).rejects.toThrow(NotFoundError);
+    });
+
+    it('許可されていないMIMEタイプはBadRequestErrorを投げる', async () => {
+      mockFindById.mockResolvedValue(createMockExecution());
+      mockExpectedResultFindFirst.mockResolvedValue({
+        id: TEST_EXPECTED_RESULT_ID,
+        executionId: TEST_EXECUTION_ID,
+        evidences: [],
+      });
+
+      await expect(
+        service.createEvidenceUploadUrl(TEST_EXECUTION_ID, TEST_EXPECTED_RESULT_ID, TEST_USER_ID, {
+          fileName: 'malware.exe',
+          fileType: 'application/x-executable',
+        })
+      ).rejects.toThrow(BadRequestError);
+    });
+
+    it('エビデンス上限（アクティブカウント）に達している場合はBadRequestErrorを投げる', async () => {
+      mockFindById.mockResolvedValue(createMockExecution());
+      const recentDate = new Date();
+      mockExpectedResultFindFirst.mockResolvedValue({
+        id: TEST_EXPECTED_RESULT_ID,
+        executionId: TEST_EXECUTION_ID,
+        evidences: Array(10).fill({ id: 'e', fileSize: BigInt(100), createdAt: recentDate }),
+      });
+
+      await expect(
+        service.createEvidenceUploadUrl(TEST_EXECUTION_ID, TEST_EXPECTED_RESULT_ID, TEST_USER_ID, {
+          fileName: 'test.png',
+          fileType: 'image/png',
+        })
+      ).rejects.toThrow('エビデンスの上限');
+    });
+
+    it('古いPENDINGレコード（10分超）はカウントから除外する', async () => {
+      mockFindById.mockResolvedValue(createMockExecution());
+      // 15分前の fileSize:0 レコードが10件 → orphanなのでカウントされない
+      const oldDate = new Date(Date.now() - 15 * 60 * 1000);
+      mockExpectedResultFindFirst.mockResolvedValue({
+        id: TEST_EXPECTED_RESULT_ID,
+        executionId: TEST_EXECUTION_ID,
+        evidences: Array(10).fill({ id: 'e', fileSize: BigInt(0), createdAt: oldDate }),
+      });
+      mockPublicStorageGetUploadUrl.mockResolvedValue('https://presigned-url');
+      mockEvidenceCreate.mockResolvedValue({ id: TEST_EVIDENCE_ID });
+
+      // エラーにならずに成功する
+      const result = await service.createEvidenceUploadUrl(
+        TEST_EXECUTION_ID, TEST_EXPECTED_RESULT_ID, TEST_USER_ID,
+        { fileName: 'test.png', fileType: 'image/png' }
+      );
+
+      expect(result.evidenceId).toBe(TEST_EVIDENCE_ID);
+    });
+
+    it('ファイル名をサニタイズしてS3キーに使用する', async () => {
+      mockFindById.mockResolvedValue(createMockExecution());
+      mockExpectedResultFindFirst.mockResolvedValue({
+        id: TEST_EXPECTED_RESULT_ID,
+        executionId: TEST_EXECUTION_ID,
+        evidences: [],
+      });
+      mockPublicStorageGetUploadUrl.mockResolvedValue('https://presigned-url');
+      mockEvidenceCreate.mockResolvedValue({ id: TEST_EVIDENCE_ID });
+
+      await service.createEvidenceUploadUrl(
+        TEST_EXECUTION_ID, TEST_EXPECTED_RESULT_ID, TEST_USER_ID,
+        { fileName: '../../../etc/passwd', fileType: 'image/png' }
+      );
+
+      // サニタイズされたファイル名がS3キーに含まれること（パス区切り文字が除去されている）
+      const callArgs = mockPublicStorageGetUploadUrl.mock.calls[0];
+      const s3Key = callArgs[0] as string;
+      // S3キーのフォーマット: evidences/{executionId}/{expectedResultId}/{UUID}_{sanitizedFileName}
+      expect(s3Key).toMatch(/^evidences\//);
+      // ファイル名部分にスラッシュが含まれないこと
+      const fileNamePart = s3Key.split('/').pop()!;
+      expect(fileNamePart).not.toContain('/');
+      expect(fileNamePart).not.toContain('\\');
+    });
+  });
+
+  describe('confirmEvidenceUpload', () => {
+    it('S3メタデータからファイルサイズを取得して更新する', async () => {
+      mockFindById.mockResolvedValue(createMockExecution());
+      mockEvidenceFindFirst.mockResolvedValue({
+        id: TEST_EVIDENCE_ID,
+        fileUrl: 'evidences/xxx/yyy/uuid_test.png',
+        expectedResult: { executionId: TEST_EXECUTION_ID },
+      });
+      mockStorageGetMetadata.mockResolvedValue({
+        contentLength: 12345,
+        contentType: 'image/png',
+      });
+      mockEvidenceUpdate.mockResolvedValue({
+        id: TEST_EVIDENCE_ID,
+        fileSize: BigInt(12345),
+      });
+
+      const result = await service.confirmEvidenceUpload(
+        TEST_EXECUTION_ID,
+        TEST_EVIDENCE_ID,
+        TEST_USER_ID
+      );
+
+      expect(result.fileSize).toBe(12345);
+      expect(mockStorageGetMetadata).toHaveBeenCalledWith('evidences/xxx/yyy/uuid_test.png');
+      expect(mockEvidenceUpdate).toHaveBeenCalledWith({
+        where: { id: TEST_EVIDENCE_ID },
+        data: { fileSize: BigInt(12345) },
+      });
+    });
+
+    it('実行が存在しない場合はNotFoundErrorを投げる', async () => {
+      mockFindById.mockResolvedValue(null);
+
+      await expect(
+        service.confirmEvidenceUpload(TEST_EXECUTION_ID, TEST_EVIDENCE_ID, TEST_USER_ID)
+      ).rejects.toThrow(NotFoundError);
+    });
+
+    it('エビデンスが存在しない場合はNotFoundErrorを投げる', async () => {
+      mockFindById.mockResolvedValue(createMockExecution());
+      mockEvidenceFindFirst.mockResolvedValue(null);
+
+      await expect(
+        service.confirmEvidenceUpload(TEST_EXECUTION_ID, TEST_EVIDENCE_ID, TEST_USER_ID)
+      ).rejects.toThrow(NotFoundError);
+    });
+
+    it('S3にファイルが存在しない場合はBadRequestErrorを投げる', async () => {
+      mockFindById.mockResolvedValue(createMockExecution());
+      mockEvidenceFindFirst.mockResolvedValue({
+        id: TEST_EVIDENCE_ID,
+        fileUrl: 'evidences/xxx/yyy/uuid_test.png',
+        expectedResult: { executionId: TEST_EXECUTION_ID },
+      });
+      mockStorageGetMetadata.mockResolvedValue(null);
+
+      await expect(
+        service.confirmEvidenceUpload(TEST_EXECUTION_ID, TEST_EVIDENCE_ID, TEST_USER_ID)
+      ).rejects.toThrow(BadRequestError);
+    });
   });
 });
