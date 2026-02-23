@@ -70,13 +70,6 @@ get_test_case でテストケース詳細を取得
 
 ### ステップ2: テスト実行の準備
 
-**事前確認（必須）**: `agent-browser` コマンドが使用可能か確認する：
-```bash
-agent-browser --version
-```
-- 成功（バージョンが表示）→ 以降のブラウザ操作はすべてagent-browserで実行する
-- エラー（コマンドが見つからない等）→ Playwright にフォールバックする
-
 1. `get_test_suite(testSuiteId)` を呼び出してスイート情報を取得
    - スイートの前提条件一覧を確認
    - テストケース一覧（ID・タイトル）を取得
@@ -116,9 +109,8 @@ agent-browser --version
 #### 4c. ステップの実行
 
 各ステップを **Agent Browser で実行すること（必須）**。
-事前確認でagent-browserが利用不可と判明した場合のみPlaywrightにフォールバックする。
 
-**Agent Browser を使用する（デフォルト）**:
+**Agent Browser を使用する**:
 ```bash
 # URLを開く
 agent-browser open <URL>
@@ -137,11 +129,6 @@ agent-browser scroll @e3 down
 
 # スクリーンショットを保存
 agent-browser screenshot -o /tmp/screenshot.png
-```
-
-**Playwright（フォールバック・agent-browser利用不可時のみ）**:
-```bash
-npx playwright test
 ```
 
 各ステップ実行後に記録：
@@ -184,8 +171,6 @@ npx playwright test
 - **ステップが実行できない**: SKIPPEDとして記録し、理由をnoteに記載
 - **ブラウザ操作エラー**: FAILとして記録し、エラー詳細をnoteに記載
 - **MCPツールエラー**: エラー内容をユーザーに報告して実行を中断
-- **agent-browserが利用不可**: Playwrightにフォールバックし、noteにその旨を記録する
-
 ---
 
 ## 実行例
