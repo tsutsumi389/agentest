@@ -10,7 +10,7 @@ import { TestCaseService } from '../services/test-case.service.js';
 import { ExecutionService } from '../services/execution.service.js';
 import { ApiTokenService } from '../services/api-token.service.js';
 import { EditLockService } from '../services/edit-lock.service.js';
-import { isAllowedMimeType, MAX_FILE_SIZE } from '../config/upload.js';
+import { evidenceUpload } from '../config/upload.js';
 
 const router: RouterType = Router();
 const userService = new UserService();
@@ -1207,20 +1207,10 @@ router.delete('/test-cases/:testCaseId', async (req: Request, res: Response, nex
 });
 
 /**
- * エビデンスアップロードリクエストボディのスキーマ（Base64形式）
- */
-const uploadEvidenceBodySchema = z.object({
-  fileName: z.string().min(1).max(255),
-  fileData: z.string().min(1), // Base64エンコードされたデータ
-  fileType: z.string().min(1),
-  description: z.string().max(2000).optional(),
-});
-
-/**
  * POST /internal/api/executions/:executionId/expected-results/:expectedResultId/evidences
- * エビデンスをアップロード（Base64形式）
+ * エビデンスをアップロード（multipart/form-data形式）
  */
-router.post('/executions/:executionId/expected-results/:expectedResultId/evidences', async (req: Request, res: Response, next: NextFunction) => {
+router.post('/executions/:executionId/expected-results/:expectedResultId/evidences', evidenceUpload.single('file'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { executionId, expectedResultId } = req.params;
 
@@ -1237,18 +1227,14 @@ router.post('/executions/:executionId/expected-results/:expectedResultId/evidenc
 
     const { userId } = userIdResult.data;
 
-    // ボディ検証
-    const bodyResult = uploadEvidenceBodySchema.safeParse(req.body);
-    if (!bodyResult.success) {
+    // ファイルの存在チェック
+    if (!req.file) {
       res.status(400).json({
         error: 'Bad Request',
-        message: 'Invalid request body',
-        details: bodyResult.error.flatten(),
+        message: 'ファイルが添付されていません',
       });
       return;
     }
-
-    const { fileName, fileData, fileType, description } = bodyResult.data;
 
     // 書き込み権限チェック（実行がIN_PROGRESSかつテストスイートへの書き込み権限）
     const canWrite = await authService.canWriteToExecution(userId, executionId);
@@ -1260,57 +1246,24 @@ router.post('/executions/:executionId/expected-results/:expectedResultId/evidenc
       return;
     }
 
-    // MIMEタイプ検証
-    if (!isAllowedMimeType(fileType)) {
+    // description検証
+    const descriptionSchema = z.string().max(2000).optional();
+    const descriptionResult = descriptionSchema.safeParse(req.body.description);
+    if (!descriptionResult.success) {
       res.status(400).json({
         error: 'Bad Request',
-        message: '許可されていないファイル形式です',
+        message: 'descriptionが不正です（最大2000文字）',
       });
       return;
     }
-
-    // Base64形式の事前検証（Buffer.fromは不正な文字を無視するため明示的にチェック）
-    const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
-    if (!base64Regex.test(fileData)) {
-      res.status(400).json({
-        error: 'Bad Request',
-        message: '不正なBase64データです',
-      });
-      return;
-    }
-
-    // Base64デコード
-    const buffer = Buffer.from(fileData, 'base64');
-
-    // ファイルサイズ検証
-    if (buffer.length > MAX_FILE_SIZE) {
-      res.status(400).json({
-        error: 'Bad Request',
-        message: `ファイルサイズが上限（${MAX_FILE_SIZE / 1024 / 1024}MB）を超えています`,
-      });
-      return;
-    }
-
-    // Express.Multer.File形式に変換
-    const file: Express.Multer.File = {
-      fieldname: 'file',
-      originalname: fileName,
-      encoding: 'base64',
-      mimetype: fileType,
-      buffer,
-      size: buffer.length,
-      stream: undefined as never,
-      destination: '',
-      filename: '',
-      path: '',
-    };
+    const description = descriptionResult.data;
 
     // エビデンスアップロード
     const evidence = await executionService.uploadEvidence(
       executionId,
       expectedResultId,
       userId,
-      file,
+      req.file,
       description
     );
 

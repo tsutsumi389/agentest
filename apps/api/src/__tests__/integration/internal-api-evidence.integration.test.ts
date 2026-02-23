@@ -44,8 +44,8 @@ vi.mock('../../config/upload.js', async (importOriginal) => {
   };
 });
 
-// テスト用Base64データ（1x1ピクセルのPNG画像）
-const TEST_BASE64_PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+// テスト用PNGバッファ（1x1ピクセルのPNG画像）
+const TEST_PNG_BUFFER = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64');
 
 describe('Internal API Evidence Upload Integration Tests', () => {
   let app: Express;
@@ -122,11 +122,7 @@ describe('Internal API Evidence Upload Integration Tests', () => {
           .post(`/internal/api/executions/${execution.id}/expected-results/${expectedResultResult.id}/evidences`)
           .query({ userId: testUser.id })
           .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
-          .send({
-            fileName: 'screenshot.png',
-            fileData: TEST_BASE64_PNG,
-            fileType: 'image/png',
-          });
+          .attach('file', TEST_PNG_BUFFER, { filename: 'screenshot.png', contentType: 'image/png' });
 
         expect(response.status).toBe(201);
         expect(response.body).toHaveProperty('evidence');
@@ -142,12 +138,8 @@ describe('Internal API Evidence Upload Integration Tests', () => {
           .post(`/internal/api/executions/${execution.id}/expected-results/${expectedResultResult.id}/evidences`)
           .query({ userId: testUser.id })
           .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
-          .send({
-            fileName: 'error_screen.png',
-            fileData: TEST_BASE64_PNG,
-            fileType: 'image/png',
-            description: 'エラー画面のスクリーンショット',
-          });
+          .attach('file', TEST_PNG_BUFFER, { filename: 'error_screen.png', contentType: 'image/png' })
+          .field('description', 'エラー画面のスクリーンショット');
 
         expect(response.status).toBe(201);
         expect(response.body.evidence.description).toBe('エラー画面のスクリーンショット');
@@ -158,11 +150,7 @@ describe('Internal API Evidence Upload Integration Tests', () => {
           .post(`/internal/api/executions/${execution.id}/expected-results/${expectedResultResult.id}/evidences`)
           .query({ userId: testUser.id })
           .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
-          .send({
-            fileName: 'photo.jpg',
-            fileData: TEST_BASE64_PNG, // テスト用なのでPNGデータを使用
-            fileType: 'image/jpeg',
-          });
+          .attach('file', TEST_PNG_BUFFER, { filename: 'photo.jpg', contentType: 'image/jpeg' });
 
         expect(response.status).toBe(201);
         expect(response.body.evidence.fileType).toBe('image/jpeg');
@@ -173,11 +161,7 @@ describe('Internal API Evidence Upload Integration Tests', () => {
           .post(`/internal/api/executions/${execution.id}/expected-results/${expectedResultResult.id}/evidences`)
           .query({ userId: testUser.id })
           .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
-          .send({
-            fileName: 'report.pdf',
-            fileData: TEST_BASE64_PNG, // テスト用
-            fileType: 'application/pdf',
-          });
+          .attach('file', TEST_PNG_BUFFER, { filename: 'report.pdf', contentType: 'application/pdf' });
 
         expect(response.status).toBe(201);
         expect(response.body.evidence.fileType).toBe('application/pdf');
@@ -189,11 +173,7 @@ describe('Internal API Evidence Upload Integration Tests', () => {
           .post(`/internal/api/executions/${execution.id}/expected-results/${expectedResultResult.id}/evidences`)
           .query({ userId: testUser.id })
           .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
-          .send({
-            fileName: 'screenshot1.png',
-            fileData: TEST_BASE64_PNG,
-            fileType: 'image/png',
-          });
+          .attach('file', TEST_PNG_BUFFER, { filename: 'screenshot1.png', contentType: 'image/png' });
 
         expect(response1.status).toBe(201);
 
@@ -202,11 +182,7 @@ describe('Internal API Evidence Upload Integration Tests', () => {
           .post(`/internal/api/executions/${execution.id}/expected-results/${expectedResultResult.id}/evidences`)
           .query({ userId: testUser.id })
           .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
-          .send({
-            fileName: 'screenshot2.png',
-            fileData: TEST_BASE64_PNG,
-            fileType: 'image/png',
-          });
+          .attach('file', TEST_PNG_BUFFER, { filename: 'screenshot2.png', contentType: 'image/png' });
 
         expect(response2.status).toBe(201);
         expect(response2.body.evidence.id).not.toBe(response1.body.evidence.id);
@@ -218,11 +194,7 @@ describe('Internal API Evidence Upload Integration Tests', () => {
         const response = await request(app)
           .post(`/internal/api/executions/${execution.id}/expected-results/${expectedResultResult.id}/evidences`)
           .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
-          .send({
-            fileName: 'screenshot.png',
-            fileData: TEST_BASE64_PNG,
-            fileType: 'image/png',
-          });
+          .attach('file', TEST_PNG_BUFFER, { filename: 'screenshot.png', contentType: 'image/png' });
 
         expect(response.status).toBe(400);
       });
@@ -234,59 +206,29 @@ describe('Internal API Evidence Upload Integration Tests', () => {
           .post(`/internal/api/executions/${execution.id}/expected-results/${expectedResultResult.id}/evidences`)
           .query({ userId: anotherUser.id })
           .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
-          .send({
-            fileName: 'screenshot.png',
-            fileData: TEST_BASE64_PNG,
-            fileType: 'image/png',
-          });
+          .attach('file', TEST_PNG_BUFFER, { filename: 'screenshot.png', contentType: 'image/png' });
 
         expect(response.status).toBe(403);
       });
-
 
       it('許可されていないMIMEタイプは400を返す', async () => {
         const response = await request(app)
           .post(`/internal/api/executions/${execution.id}/expected-results/${expectedResultResult.id}/evidences`)
           .query({ userId: testUser.id })
           .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
-          .send({
-            fileName: 'malicious.exe',
-            fileData: TEST_BASE64_PNG,
-            fileType: 'application/x-executable',
-          });
+          .attach('file', TEST_PNG_BUFFER, { filename: 'malicious.exe', contentType: 'application/x-executable' });
 
         expect(response.status).toBe(400);
-        expect(response.body.message).toContain('許可されていないファイル形式');
       });
 
-      it('不正なBase64データは400を返す', async () => {
+      it('ファイル未添付は400を返す', async () => {
         const response = await request(app)
           .post(`/internal/api/executions/${execution.id}/expected-results/${expectedResultResult.id}/evidences`)
           .query({ userId: testUser.id })
-          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
-          .send({
-            fileName: 'screenshot.png',
-            fileData: '!!!invalid-base64!!!',
-            fileType: 'image/png',
-          });
-
-        // 正規表現でBase64形式を事前検証するため400エラーを返す
-        expect(response.status).toBe(400);
-        expect(response.body.message).toContain('Base64');
-      });
-
-      it('fileNameが空の場合は400を返す', async () => {
-        const response = await request(app)
-          .post(`/internal/api/executions/${execution.id}/expected-results/${expectedResultResult.id}/evidences`)
-          .query({ userId: testUser.id })
-          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
-          .send({
-            fileName: '',
-            fileData: TEST_BASE64_PNG,
-            fileType: 'image/png',
-          });
+          .set('X-Internal-API-Key', env.INTERNAL_API_SECRET);
 
         expect(response.status).toBe(400);
+        expect(response.body.message).toContain('ファイルが添付されていません');
       });
 
       it('存在しない実行IDは404を返す', async () => {
@@ -296,11 +238,7 @@ describe('Internal API Evidence Upload Integration Tests', () => {
           .post(`/internal/api/executions/${nonExistentId}/expected-results/${expectedResultResult.id}/evidences`)
           .query({ userId: testUser.id })
           .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
-          .send({
-            fileName: 'screenshot.png',
-            fileData: TEST_BASE64_PNG,
-            fileType: 'image/png',
-          });
+          .attach('file', TEST_PNG_BUFFER, { filename: 'screenshot.png', contentType: 'image/png' });
 
         // 403か404のどちらかが返される（権限チェックが先に行われる可能性がある）
         expect([403, 404]).toContain(response.status);
@@ -313,11 +251,7 @@ describe('Internal API Evidence Upload Integration Tests', () => {
           .post(`/internal/api/executions/${execution.id}/expected-results/${nonExistentId}/evidences`)
           .query({ userId: testUser.id })
           .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
-          .send({
-            fileName: 'screenshot.png',
-            fileData: TEST_BASE64_PNG,
-            fileType: 'image/png',
-          });
+          .attach('file', TEST_PNG_BUFFER, { filename: 'screenshot.png', contentType: 'image/png' });
 
         expect(response.status).toBe(404);
       });
@@ -326,11 +260,7 @@ describe('Internal API Evidence Upload Integration Tests', () => {
         const response = await request(app)
           .post(`/internal/api/executions/${execution.id}/expected-results/${expectedResultResult.id}/evidences`)
           .query({ userId: testUser.id })
-          .send({
-            fileName: 'screenshot.png',
-            fileData: TEST_BASE64_PNG,
-            fileType: 'image/png',
-          });
+          .attach('file', TEST_PNG_BUFFER, { filename: 'screenshot.png', contentType: 'image/png' });
 
         // 内部APIミドルウェアは401または403を返す
         expect([401, 403]).toContain(response.status);
@@ -343,11 +273,7 @@ describe('Internal API Evidence Upload Integration Tests', () => {
             .post(`/internal/api/executions/${execution.id}/expected-results/${expectedResultResult.id}/evidences`)
             .query({ userId: testUser.id })
             .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
-            .send({
-              fileName: `screenshot${i}.png`,
-              fileData: TEST_BASE64_PNG,
-              fileType: 'image/png',
-            });
+            .attach('file', TEST_PNG_BUFFER, { filename: `screenshot${i}.png`, contentType: 'image/png' });
 
           expect(response.status).toBe(201);
         }
@@ -357,11 +283,7 @@ describe('Internal API Evidence Upload Integration Tests', () => {
           .post(`/internal/api/executions/${execution.id}/expected-results/${expectedResultResult.id}/evidences`)
           .query({ userId: testUser.id })
           .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
-          .send({
-            fileName: 'screenshot11.png',
-            fileData: TEST_BASE64_PNG,
-            fileType: 'image/png',
-          });
+          .attach('file', TEST_PNG_BUFFER, { filename: 'screenshot11.png', contentType: 'image/png' });
 
         expect(response.status).toBe(400);
         // エラーメッセージに「上限」が含まれることを確認

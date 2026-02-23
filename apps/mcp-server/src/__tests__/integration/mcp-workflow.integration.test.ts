@@ -58,17 +58,29 @@ vi.mock('@agentest/db', async (importOriginal) => {
   };
 });
 
+// fs/promisesモック（upload_execution_evidenceで使用）
+const mockFsReadFile = vi.fn().mockResolvedValue(Buffer.from('test-image-data'));
+const mockFsStat = vi.fn().mockResolvedValue({ size: 100 });
+vi.mock('node:fs/promises', () => ({
+  default: {
+    readFile: (...args: unknown[]) => mockFsReadFile(...args),
+    stat: (...args: unknown[]) => mockFsStat(...args),
+  },
+}));
+
 // apiClientモック
 const mockApiClientGet = vi.fn();
 const mockApiClientPost = vi.fn();
 const mockApiClientPatch = vi.fn();
 const mockApiClientDelete = vi.fn();
+const mockApiClientPostMultipart = vi.fn();
 
 vi.mock('../../clients/api-client.js', () => ({
   apiClient: {
     get: (...args: unknown[]) => mockApiClientGet(...args),
     post: (...args: unknown[]) => mockApiClientPost(...args),
     patch: (...args: unknown[]) => mockApiClientPatch(...args),
+    postMultipart: (...args: unknown[]) => mockApiClientPostMultipart(...args),
     delete: (...args: unknown[]) => mockApiClientDelete(...args),
   },
   checkLockStatus: vi.fn().mockResolvedValue(undefined),
@@ -804,19 +816,15 @@ describe('MCPワークフロー統合テスト', () => {
     it('エビデンスアップロード失敗後に再試行して成功できる', async () => {
       const sessionId = await initializeMcpSession(app, { projectId: testProject.id });
 
-      const testFileData = Buffer.from('test-evidence-data').toString('base64');
-
       // 1回目: ストレージエラー
-      mockApiClientPost.mockRejectedValueOnce(
+      mockApiClientPostMultipart.mockRejectedValueOnce(
         new Error('Internal API error: 503 - Storage service unavailable')
       );
 
       const failedResponse = await callMcpTool(app, sessionId, 'upload_execution_evidence', {
         executionId: TEST_EXECUTION_ID,
         expectedResultId: TEST_EXPECTED_RESULT_ID,
-        fileName: 'evidence.png',
-        fileData: testFileData,
-        fileType: 'image/png',
+        filePath: '/tmp/evidence.png',
         description: 'テストエビデンス',
       }, 2);
 
@@ -825,7 +833,7 @@ describe('MCPワークフロー統合テスト', () => {
       expect(failedResult.content[0].text).toContain('エラー');
 
       // 2回目: ストレージ復旧後に再試行
-      mockApiClientPost.mockResolvedValueOnce({
+      mockApiClientPostMultipart.mockResolvedValueOnce({
         evidence: {
           id: TEST_EVIDENCE_ID,
           expectedResultId: TEST_EXPECTED_RESULT_ID,
@@ -842,9 +850,7 @@ describe('MCPワークフロー統合テスト', () => {
       const retryResponse = await callMcpTool(app, sessionId, 'upload_execution_evidence', {
         executionId: TEST_EXECUTION_ID,
         expectedResultId: TEST_EXPECTED_RESULT_ID,
-        fileName: 'evidence.png',
-        fileData: testFileData,
-        fileType: 'image/png',
+        filePath: '/tmp/evidence.png',
         description: 'テストエビデンス',
       }, 3);
 

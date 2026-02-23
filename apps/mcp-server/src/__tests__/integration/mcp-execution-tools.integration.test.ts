@@ -57,16 +57,28 @@ vi.mock('@agentest/db', async (importOriginal) => {
   };
 });
 
+// fs/promisesモック（upload_execution_evidenceで使用）
+const mockFsReadFile = vi.fn().mockResolvedValue(Buffer.from('test-image-data'));
+const mockFsStat = vi.fn().mockResolvedValue({ size: 100 });
+vi.mock('node:fs/promises', () => ({
+  default: {
+    readFile: (...args: unknown[]) => mockFsReadFile(...args),
+    stat: (...args: unknown[]) => mockFsStat(...args),
+  },
+}));
+
 // apiClientモック
 const mockApiClientGet = vi.fn();
 const mockApiClientPost = vi.fn();
 const mockApiClientPatch = vi.fn();
+const mockApiClientPostMultipart = vi.fn();
 
 vi.mock('../../clients/api-client.js', () => ({
   apiClient: {
     get: (...args: unknown[]) => mockApiClientGet(...args),
     post: (...args: unknown[]) => mockApiClientPost(...args),
     patch: (...args: unknown[]) => mockApiClientPatch(...args),
+    postMultipart: (...args: unknown[]) => mockApiClientPostMultipart(...args),
     delete: vi.fn(),
   },
   checkLockStatus: vi.fn().mockResolvedValue(undefined),
@@ -533,17 +545,12 @@ describe('MCP実行ツール統合テスト', () => {
           createdAt: '2025-01-01T00:00:00.000Z',
         },
       };
-      mockApiClientPost.mockResolvedValueOnce(mockResponse);
-
-      // Base64エンコードされたテストデータ
-      const testFileData = Buffer.from('test-image-data').toString('base64');
+      mockApiClientPostMultipart.mockResolvedValueOnce(mockResponse);
 
       const response = await callMcpTool(app, sessionId, 'upload_execution_evidence', {
         executionId: TEST_EXECUTION_ID,
         expectedResultId: TEST_EXPECTED_RESULT_ID,
-        fileName: 'screenshot.png',
-        fileData: testFileData,
-        fileType: 'image/png',
+        filePath: '/tmp/screenshot.png',
         description: 'ログイン画面のスクリーンショット',
       });
 
@@ -557,13 +564,19 @@ describe('MCP実行ツール統合テスト', () => {
       expect(parsed.evidence.fileType).toBe('image/png');
       expect(parsed.evidence.description).toBe('ログイン画面のスクリーンショット');
 
-      expect(mockApiClientPost).toHaveBeenCalledWith(
+      // filePathからファイルを読み取ったこと
+      expect(mockFsReadFile).toHaveBeenCalledWith('/tmp/screenshot.png');
+
+      // postMultipartが正しく呼ばれたこと
+      expect(mockApiClientPostMultipart).toHaveBeenCalledWith(
         `/internal/api/executions/${TEST_EXECUTION_ID}/expected-results/${TEST_EXPECTED_RESULT_ID}/evidences`,
         {
-          fileName: 'screenshot.png',
-          fileData: testFileData,
-          fileType: 'image/png',
-          description: 'ログイン画面のスクリーンショット',
+          file: {
+            buffer: Buffer.from('test-image-data'),
+            fileName: 'screenshot.png',
+            mimeType: 'image/png',
+          },
+          fields: { description: 'ログイン画面のスクリーンショット' },
         },
         { userId: testUser.id }
       );

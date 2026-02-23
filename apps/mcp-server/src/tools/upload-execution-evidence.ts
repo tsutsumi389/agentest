@@ -1,3 +1,6 @@
+import fs from 'node:fs/promises';
+import nodePath from 'node:path';
+import mime from 'mime-types';
 import { z } from 'zod';
 import type { ToolHandler, ToolDefinition } from './index.js';
 import { apiClient } from '../clients/api-client.js';
@@ -8,9 +11,9 @@ import { apiClient } from '../clients/api-client.js';
 export const uploadExecutionEvidenceInputSchema = z.object({
   executionId: z.string().uuid().describe('テスト実行のID。create_executionで取得したIDを指定'),
   expectedResultId: z.string().uuid().describe('エビデンスを添付する期待結果のID。get_executionのexpectedResultsから取得'),
-  fileName: z.string().min(1).max(255).describe('アップロードするファイル名（拡張子含む、1-255文字）。例: screenshot.png'),
-  fileData: z.string().min(1).describe('ファイルのBase64エンコード文字列。バイナリデータをBase64に変換して指定'),
-  fileType: z.string().min(1).describe('ファイルのMIMEタイプ。例: image/png, image/jpeg, video/mp4, application/pdf'),
+  filePath: z.string().min(1).describe('アップロードするファイルのローカルパス。例: /tmp/screenshot.png'),
+  fileName: z.string().min(1).max(255).optional().describe('ファイル名（省略時はfilePathから自動検出）。例: screenshot.png'),
+  fileType: z.string().min(1).optional().describe('MIMEタイプ（省略時は拡張子から自動検出）。例: image/png'),
   description: z.string().max(2000).optional().describe('エビデンスの説明（最大2000文字）。何を示すエビデンスかを記載'),
 });
 
@@ -43,12 +46,43 @@ const uploadExecutionEvidenceHandler: ToolHandler<UploadExecutionEvidenceInput, 
     throw new Error('認証されていません');
   }
 
-  const { executionId, expectedResultId, fileName, fileData, fileType, description } = input;
+  const { executionId, expectedResultId, filePath, description } = input;
 
-  // 内部APIを呼び出し
-  const response = await apiClient.post<UploadExecutionEvidenceResponse>(
+  // ファイルサイズの事前チェック（100MB上限、API側と同じ）
+  const MAX_UPLOAD_SIZE = 100 * 1024 * 1024;
+  let fileBuffer: Buffer;
+  try {
+    const fileStats = await fs.stat(filePath);
+    if (fileStats.size > MAX_UPLOAD_SIZE) {
+      throw new Error(`ファイルサイズが上限（${MAX_UPLOAD_SIZE / 1024 / 1024}MB）を超えています`);
+    }
+    fileBuffer = await fs.readFile(filePath);
+  } catch (error) {
+    const nodeError = error as NodeJS.ErrnoException;
+    if (nodeError.code === 'ENOENT') {
+      throw new Error(`ファイルが見つかりません: ${filePath} - パスを確認してください`);
+    }
+    if (nodeError.code === 'EACCES') {
+      throw new Error(`ファイルへのアクセス権がありません: ${filePath}`);
+    }
+    throw error;
+  }
+
+  const fileName = input.fileName || nodePath.basename(filePath);
+  const fileType = input.fileType || mime.lookup(filePath) || 'application/octet-stream';
+
+  // multipart/form-data で Internal API に送信
+  const fields: Record<string, string> = {};
+  if (description) {
+    fields.description = description;
+  }
+
+  const response = await apiClient.postMultipart<UploadExecutionEvidenceResponse>(
     `/internal/api/executions/${executionId}/expected-results/${expectedResultId}/evidences`,
-    { fileName, fileData, fileType, description },
+    {
+      file: { buffer: fileBuffer, fileName, mimeType: fileType },
+      fields,
+    },
     { userId }
   );
 
@@ -62,8 +96,8 @@ export const uploadExecutionEvidenceTool: ToolDefinition<UploadExecutionEvidence
   name: 'upload_execution_evidence',
   description: `テスト実行の期待結果にエビデンスファイルをアップロードします。
 
-必須: executionId, expectedResultId, fileName, fileData, fileType
-オプション: description
+必須: executionId, expectedResultId, filePath
+オプション: fileName（省略時はパスから自動検出）, fileType（省略時は拡張子から自動検出）, description
 
 対応形式:
 - 画像: image/jpeg, image/png, image/gif, image/webp
