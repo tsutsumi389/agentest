@@ -169,6 +169,127 @@ describe('InternalApiClient', () => {
     });
   });
 
+  describe('postMultipart', () => {
+    it('FormDataでファイルとフィールドを送信する', async () => {
+      const mockResponse = { evidence: { id: 'test-id' } };
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockResponse),
+      } as Response);
+
+      const client = new InternalApiClient();
+      const result = await client.postMultipart<typeof mockResponse>(
+        '/internal/api/test',
+        {
+          file: {
+            buffer: Buffer.from('test-data'),
+            fileName: 'test.png',
+            mimeType: 'image/png',
+          },
+          fields: { description: 'テスト説明' },
+        }
+      );
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+      const [url, options] = fetchSpy.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe('http://api:3001/internal/api/test');
+      expect(options.method).toBe('POST');
+
+      // Content-Typeは設定しない（fetchがmultipart boundaryを自動設定）
+      const headers = options.headers as Record<string, string>;
+      expect(headers['X-Internal-API-Key']).toBe('test-internal-api-secret-32characters');
+      expect(headers['Content-Type']).toBeUndefined();
+
+      // bodyがFormDataであること
+      expect(options.body).toBeInstanceOf(FormData);
+
+      expect(result).toEqual(mockResponse);
+    });
+
+    it('fieldsなしでファイルのみ送信できる', async () => {
+      const mockResponse = { evidence: { id: 'test-id' } };
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockResponse),
+      } as Response);
+
+      const client = new InternalApiClient();
+      await client.postMultipart('/internal/api/test', {
+        file: {
+          buffer: Buffer.from('test-data'),
+          fileName: 'test.png',
+          mimeType: 'image/png',
+        },
+      });
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      const [, options] = fetchSpy.mock.calls[0] as [string, RequestInit];
+      expect(options.body).toBeInstanceOf(FormData);
+    });
+
+    it('クエリパラメータを付与できる', async () => {
+      fetchSpy.mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({}),
+      } as Response);
+
+      const client = new InternalApiClient();
+      await client.postMultipart(
+        '/internal/api/test',
+        {
+          file: {
+            buffer: Buffer.from('test-data'),
+            fileName: 'test.png',
+            mimeType: 'image/png',
+          },
+        },
+        { userId: 'user-123' }
+      );
+
+      const [url] = fetchSpy.mock.calls[0] as [string, RequestInit];
+      expect(url).toContain('userId=user-123');
+    });
+
+    it('APIエラー時にエラーをスローする', async () => {
+      fetchSpy.mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        json: () => Promise.resolve({ message: 'Not found' }),
+      } as Response);
+
+      const client = new InternalApiClient();
+      await expect(
+        client.postMultipart('/internal/api/test', {
+          file: {
+            buffer: Buffer.from('test-data'),
+            fileName: 'test.png',
+            mimeType: 'image/png',
+          },
+        })
+      ).rejects.toThrow('Internal API error: 404 - Not found');
+    });
+
+    it('レスポンスJSONパース失敗時もエラーメッセージを返す', async () => {
+      fetchSpy.mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        json: () => Promise.reject(new Error('Parse error')),
+      } as Response);
+
+      const client = new InternalApiClient();
+      await expect(
+        client.postMultipart('/internal/api/test', {
+          file: {
+            buffer: Buffer.from('test-data'),
+            fileName: 'test.png',
+            mimeType: 'image/png',
+          },
+        })
+      ).rejects.toThrow('Internal API error: 500 - Unknown error');
+    });
+  });
+
   describe('シングルトンインスタンス', () => {
     it('apiClientがエクスポートされている', () => {
       expect(apiClient).toBeDefined();

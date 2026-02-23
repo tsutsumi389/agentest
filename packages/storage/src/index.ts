@@ -1,6 +1,7 @@
 export {
   StorageClient,
   createStorageClient,
+  createPublicStorageClient,
   type StorageConfig,
   type UploadOptions,
   type UploadResult,

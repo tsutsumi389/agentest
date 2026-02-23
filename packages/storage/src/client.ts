@@ -294,6 +294,42 @@ function getRequiredEnvVar(
 }
 
 /**
+ * 公開エンドポイント用のストレージクライアントを作成
+ *
+ * MinIOのpresigned URLの署名にはエンドポイントのホスト名が含まれる。
+ * コンテナ内では http://minio:9000 だが、ホストからは http://localhost:9002。
+ * 署名のホスト名が異なると無効になるため、公開エンドポイント用の別インスタンスが必要。
+ *
+ * MINIO_PUBLIC_ENDPOINT未設定時は通常のクライアントにフォールバック。
+ */
+export function createPublicStorageClient(env: NodeJS.ProcessEnv = process.env): StorageClient {
+  const publicEndpoint = env.MINIO_PUBLIC_ENDPOINT;
+  if (!publicEndpoint) {
+    return createStorageClient(env);
+  }
+
+  // URLバリデーション（SSRF対策）
+  try {
+    const url = new URL(publicEndpoint);
+    if (!['http:', 'https:'].includes(url.protocol)) {
+      throw new Error('MINIO_PUBLIC_ENDPOINT must use http or https protocol');
+    }
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error(`MINIO_PUBLIC_ENDPOINT is not a valid URL: ${publicEndpoint}`);
+    }
+    throw error;
+  }
+
+  return new StorageClient({
+    endpoint: publicEndpoint,
+    accessKeyId: getRequiredEnvVar(env, 'MINIO_ACCESS_KEY', 'MINIO_ROOT_USER', 'agentest'),
+    secretAccessKey: getRequiredEnvVar(env, 'MINIO_SECRET_KEY', 'MINIO_ROOT_PASSWORD', 'agentest123'),
+    bucket: getRequiredEnvVar(env, 'MINIO_BUCKET', undefined, 'agentest'),
+  });
+}
+
+/**
  * 環境変数からストレージクライアントを作成
  */
 export function createStorageClient(env: NodeJS.ProcessEnv = process.env): StorageClient {

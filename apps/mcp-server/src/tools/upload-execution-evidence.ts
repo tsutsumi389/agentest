@@ -1,3 +1,5 @@
+import nodePath from 'node:path';
+import mime from 'mime-types';
 import { z } from 'zod';
 import type { ToolHandler, ToolDefinition } from './index.js';
 import { apiClient } from '../clients/api-client.js';
@@ -8,51 +10,74 @@ import { apiClient } from '../clients/api-client.js';
 export const uploadExecutionEvidenceInputSchema = z.object({
   executionId: z.string().uuid().describe('テスト実行のID。create_executionで取得したIDを指定'),
   expectedResultId: z.string().uuid().describe('エビデンスを添付する期待結果のID。get_executionのexpectedResultsから取得'),
-  fileName: z.string().min(1).max(255).describe('アップロードするファイル名（拡張子含む、1-255文字）。例: screenshot.png'),
-  fileData: z.string().min(1).describe('ファイルのBase64エンコード文字列。バイナリデータをBase64に変換して指定'),
-  fileType: z.string().min(1).describe('ファイルのMIMEタイプ。例: image/png, image/jpeg, video/mp4, application/pdf'),
+  filePath: z.string().min(1).describe('アップロードするファイルのローカルパス。例: /tmp/screenshot.png'),
+  fileName: z.string().min(1).max(255).optional().describe('ファイル名（省略時はfilePathから自動検出）。例: screenshot.png'),
+  fileType: z.string().min(1).optional().describe('MIMEタイプ（省略時は拡張子から自動検出）。例: image/png'),
   description: z.string().max(2000).optional().describe('エビデンスの説明（最大2000文字）。何を示すエビデンスかを記載'),
 });
 
 type UploadExecutionEvidenceInput = z.infer<typeof uploadExecutionEvidenceInputSchema>;
 
 /**
- * レスポンス型
+ * presigned URLレスポンス型
  */
-interface UploadExecutionEvidenceResponse {
-  evidence: {
-    id: string;
-    expectedResultId: string;
-    fileName: string;
-    fileUrl: string;
-    fileType: string;
-    fileSize: number;
-    description: string | null;
-    uploadedByUserId: string;
-    createdAt: string;
-  };
+interface UploadUrlResponse {
+  evidenceId: string;
+  uploadUrl: string;
+}
+
+/**
+ * ツールの返却型（構造化データ）
+ */
+interface UploadExecutionEvidenceResult {
+  evidenceId: string;
+  uploadUrl: string;
+  filePath: string;
+  contentType: string;
+  confirmEndpoint: string;
+  message: string;
 }
 
 /**
  * ハンドラー
  */
-const uploadExecutionEvidenceHandler: ToolHandler<UploadExecutionEvidenceInput, UploadExecutionEvidenceResponse> = async (input, context) => {
+const uploadExecutionEvidenceHandler: ToolHandler<UploadExecutionEvidenceInput, UploadExecutionEvidenceResult> = async (input, context) => {
   const { userId } = context;
 
   if (!userId) {
     throw new Error('認証されていません');
   }
 
-  const { executionId, expectedResultId, fileName, fileData, fileType, description } = input;
+  const { executionId, expectedResultId, filePath, description } = input;
 
-  // 内部APIを呼び出し
-  const response = await apiClient.post<UploadExecutionEvidenceResponse>(
-    `/internal/api/executions/${executionId}/expected-results/${expectedResultId}/evidences`,
-    { fileName, fileData, fileType, description },
+  // ファイル名・MIMEタイプをパスから推測（ファイルアクセスは不要）
+  const fileName = input.fileName || nodePath.basename(filePath);
+  const fileType = input.fileType || mime.lookup(filePath) || 'application/octet-stream';
+
+  // presigned URL取得（JSON POST）
+  const response = await apiClient.post<UploadUrlResponse>(
+    `/internal/api/executions/${executionId}/expected-results/${expectedResultId}/evidences/upload-url`,
+    { fileName, fileType, description },
     { userId }
   );
 
-  return response;
+  // 構造化データを返却（curlコマンドは構築しない = コマンドインジェクション対策）
+  return {
+    evidenceId: response.evidenceId,
+    uploadUrl: response.uploadUrl,
+    filePath,
+    contentType: fileType,
+    confirmEndpoint: `/internal/api/executions/${executionId}/evidences/${response.evidenceId}/confirm`,
+    message: [
+      'presigned URLが生成されました。以下の手順でアップロードを完了してください:',
+      '',
+      '1. curlでファイルをアップロード:',
+      `   curl -X PUT -H 'Content-Type: ${fileType}' --upload-file '${filePath}' '${response.uploadUrl}'`,
+      '',
+      '2. アップロード確認:',
+      `   confirm_evidence_upload(executionId="${executionId}", evidenceId="${response.evidenceId}")`,
+    ].join('\n'),
+  };
 };
 
 /**
@@ -60,10 +85,16 @@ const uploadExecutionEvidenceHandler: ToolHandler<UploadExecutionEvidenceInput, 
  */
 export const uploadExecutionEvidenceTool: ToolDefinition<UploadExecutionEvidenceInput> = {
   name: 'upload_execution_evidence',
-  description: `テスト実行の期待結果にエビデンスファイルをアップロードします。
+  description: `テスト実行の期待結果にエビデンスファイルをアップロードするためのpresigned URLを生成します。
 
-必須: executionId, expectedResultId, fileName, fileData, fileType
-オプション: description
+【3ステップフロー】
+1. このツールを呼び出してpresigned URLを取得
+2. レスポンスの uploadUrl, filePath, contentType を使ってcurlを構築・実行:
+   curl -X PUT -H 'Content-Type: {contentType}' --upload-file '{filePath}' '{uploadUrl}'
+3. confirm_evidence_upload ツールでアップロード完了を確認
+
+必須: executionId, expectedResultId, filePath
+オプション: fileName（省略時はパスから自動検出）, fileType（省略時は拡張子から自動検出）, description
 
 対応形式:
 - 画像: image/jpeg, image/png, image/gif, image/webp
@@ -71,12 +102,7 @@ export const uploadExecutionEvidenceTool: ToolDefinition<UploadExecutionEvidence
 - 音声: audio/mp3, audio/wav
 - ドキュメント: application/pdf, text/plain, application/json
 
-制限: 1つの期待結果あたり最大10件までアップロード可能。
-
-返却情報: アップロードされたエビデンス情報（ID・ファイルURL・サイズ等）。
-
-使用場面: テスト結果の証拠（スクリーンショット、画面録画、ログファイル等）を記録する際に使用します。
-ワークフロー: update_execution_expected_resultで結果を判定した後 → このツールでエビデンスを添付。`,
+制限: 1つの期待結果あたり最大10件までアップロード可能。presigned URLは5分間有効。`,
   inputSchema: uploadExecutionEvidenceInputSchema,
   handler: uploadExecutionEvidenceHandler,
 };

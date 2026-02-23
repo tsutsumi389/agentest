@@ -83,6 +83,7 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-agentest}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-agentest123}
       MINIO_BUCKET: ${MINIO_BUCKET:-agentest}
+      MINIO_PUBLIC_ENDPOINT: http://localhost:${MINIO_API_EXTERNAL_PORT:-9002}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev-access-secret}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-dev-refresh-secret}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}

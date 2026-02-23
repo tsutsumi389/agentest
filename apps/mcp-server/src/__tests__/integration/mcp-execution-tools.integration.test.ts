@@ -57,16 +57,28 @@ vi.mock('@agentest/db', async (importOriginal) => {
   };
 });
 
+// fs/promisesモック（upload_execution_evidenceで使用）
+const mockFsReadFile = vi.fn().mockResolvedValue(Buffer.from('test-image-data'));
+const mockFsStat = vi.fn().mockResolvedValue({ size: 100 });
+vi.mock('node:fs/promises', () => ({
+  default: {
+    readFile: (...args: unknown[]) => mockFsReadFile(...args),
+    stat: (...args: unknown[]) => mockFsStat(...args),
+  },
+}));
+
 // apiClientモック
 const mockApiClientGet = vi.fn();
 const mockApiClientPost = vi.fn();
 const mockApiClientPatch = vi.fn();
+const mockApiClientPostMultipart = vi.fn();
 
 vi.mock('../../clients/api-client.js', () => ({
   apiClient: {
     get: (...args: unknown[]) => mockApiClientGet(...args),
     post: (...args: unknown[]) => mockApiClientPost(...args),
     patch: (...args: unknown[]) => mockApiClientPatch(...args),
+    postMultipart: (...args: unknown[]) => mockApiClientPostMultipart(...args),
     delete: vi.fn(),
   },
   checkLockStatus: vi.fn().mockResolvedValue(undefined),
@@ -519,31 +531,17 @@ describe('MCP実行ツール統合テスト', () => {
   });
 
   describe('upload_execution_evidence', () => {
-    it('エビデンスファイルを正常にアップロードできる', async () => {
+    it('presigned URLを取得して構造化データを返す', async () => {
       const mockResponse = {
-        evidence: {
-          id: TEST_EVIDENCE_ID,
-          expectedResultId: TEST_EXPECTED_RESULT_ID,
-          fileName: 'screenshot.png',
-          fileUrl: 'https://storage.example.com/evidences/screenshot.png',
-          fileType: 'image/png',
-          fileSize: 12345,
-          description: 'ログイン画面のスクリーンショット',
-          uploadedByUserId: testUser.id,
-          createdAt: '2025-01-01T00:00:00.000Z',
-        },
+        evidenceId: TEST_EVIDENCE_ID,
+        uploadUrl: 'https://minio.example.com/presigned-put-url',
       };
       mockApiClientPost.mockResolvedValueOnce(mockResponse);
-
-      // Base64エンコードされたテストデータ
-      const testFileData = Buffer.from('test-image-data').toString('base64');
 
       const response = await callMcpTool(app, sessionId, 'upload_execution_evidence', {
         executionId: TEST_EXECUTION_ID,
         expectedResultId: TEST_EXPECTED_RESULT_ID,
-        fileName: 'screenshot.png',
-        fileData: testFileData,
-        fileType: 'image/png',
+        filePath: '/tmp/screenshot.png',
         description: 'ログイン画面のスクリーンショット',
       });
 
@@ -552,19 +550,19 @@ describe('MCP実行ツール統合テスト', () => {
       expect(result.isError).toBeUndefined();
 
       const parsed = JSON.parse(result.content[0].text);
-      expect(parsed.evidence.id).toBe(TEST_EVIDENCE_ID);
-      expect(parsed.evidence.fileName).toBe('screenshot.png');
-      expect(parsed.evidence.fileType).toBe('image/png');
-      expect(parsed.evidence.description).toBe('ログイン画面のスクリーンショット');
+      expect(parsed.evidenceId).toBe(TEST_EVIDENCE_ID);
+      expect(parsed.uploadUrl).toBe('https://minio.example.com/presigned-put-url');
+      expect(parsed.filePath).toBe('/tmp/screenshot.png');
+      expect(parsed.contentType).toBe('image/png');
+      expect(parsed.message).toContain('presigned URL');
 
+      // ファイルアクセスしないこと
+      expect(mockFsReadFile).not.toHaveBeenCalled();
+
+      // JSON POSTで送信されること（multipartではない）
       expect(mockApiClientPost).toHaveBeenCalledWith(
-        `/internal/api/executions/${TEST_EXECUTION_ID}/expected-results/${TEST_EXPECTED_RESULT_ID}/evidences`,
-        {
-          fileName: 'screenshot.png',
-          fileData: testFileData,
-          fileType: 'image/png',
-          description: 'ログイン画面のスクリーンショット',
-        },
+        `/internal/api/executions/${TEST_EXECUTION_ID}/expected-results/${TEST_EXPECTED_RESULT_ID}/evidences/upload-url`,
+        { fileName: 'screenshot.png', fileType: 'image/png', description: 'ログイン画面のスクリーンショット' },
         { userId: testUser.id }
       );
     });

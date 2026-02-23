@@ -1,9 +1,9 @@
 import { prisma, type PreconditionStatus, type StepStatus, type JudgmentStatus } from '@agentest/db';
 import { NotFoundError, BadRequestError } from '@agentest/shared';
-import { createStorageClient, type StorageClient } from '@agentest/storage';
+import { createStorageClient, createPublicStorageClient, type StorageClient } from '@agentest/storage';
 import { randomUUID } from 'node:crypto';
 import { ExecutionRepository } from '../repositories/execution.repository.js';
-import { MAX_EVIDENCES_PER_RESULT, validateMagicBytes } from '../config/upload.js';
+import { MAX_EVIDENCES_PER_RESULT, isAllowedMimeType, sanitizeFileName, validateMagicBytes } from '../config/upload.js';
 import { publishDashboardUpdated } from '../lib/redis-publisher.js';
 import { notificationService } from './notification.service.js';
 import { logger as baseLogger } from '../utils/logger.js';
@@ -24,6 +24,7 @@ export interface ExecutorContext {
 export class ExecutionService {
   private executionRepo = new ExecutionRepository();
   private _storage: StorageClient | null = null;
+  private _publicStorage: StorageClient | null = null;
 
   /** ストレージクライアントを遅延初期化（MINIO_*環境変数が未設定でも起動可能にする） */
   private get storage(): StorageClient {
@@ -31,6 +32,14 @@ export class ExecutionService {
       this._storage = createStorageClient();
     }
     return this._storage;
+  }
+
+  /** 公開エンドポイント用ストレージクライアント（presigned URL生成用） */
+  private get publicStorage(): StorageClient {
+    if (!this._publicStorage) {
+      this._publicStorage = createPublicStorageClient();
+    }
+    return this._publicStorage;
   }
 
   /**
@@ -414,5 +423,113 @@ export class ExecutionService {
     return this.storage.getDownloadUrl(evidence.fileUrl, {
       expiresIn: 3600, // 1時間
     });
+  }
+
+  /**
+   * エビデンスアップロード用presigned URLを生成
+   */
+  async createEvidenceUploadUrl(
+    executionId: string,
+    expectedResultId: string,
+    userId: string,
+    params: { fileName: string; fileType: string; description?: string }
+  ): Promise<{ evidenceId: string; uploadUrl: string }> {
+    await this.findById(executionId);
+
+    const expectedResult = await prisma.executionExpectedResult.findFirst({
+      where: {
+        id: expectedResultId,
+        executionId,
+      },
+      include: {
+        evidences: true,
+      },
+    });
+
+    if (!expectedResult) {
+      throw new NotFoundError('ExecutionExpectedResult', expectedResultId);
+    }
+
+    // orphan対策: 10分以上前のfileSize: 0レコードをカウントから除外
+    const PENDING_EVIDENCE_EXPIRY_MS = 10 * 60 * 1000;
+    const pendingCutoff = new Date(Date.now() - PENDING_EVIDENCE_EXPIRY_MS);
+
+    const activeEvidenceCount = expectedResult.evidences.filter(
+      (e) => e.fileSize > 0n || e.createdAt > pendingCutoff
+    ).length;
+
+    if (activeEvidenceCount >= MAX_EVIDENCES_PER_RESULT) {
+      throw new BadRequestError(`エビデンスの上限（${MAX_EVIDENCES_PER_RESULT}件）に達しています`);
+    }
+
+    // MIMEタイプチェック
+    if (!isAllowedMimeType(params.fileType)) {
+      throw new BadRequestError('許可されていないファイル形式です');
+    }
+
+    // ファイル名サニタイズ
+    const sanitizedFileName = sanitizeFileName(params.fileName);
+    const fileKey = `evidences/${executionId}/${expectedResultId}/${randomUUID()}_${sanitizedFileName}`;
+
+    // presigned URL生成（5分有効）
+    const uploadUrl = await this.publicStorage.getUploadUrl(fileKey, {
+      expiresIn: 300,
+      contentType: params.fileType,
+    });
+
+    // DBレコード作成（fileSize: 0 = アップロード未完了）
+    const evidence = await prisma.executionEvidence.create({
+      data: {
+        expectedResultId,
+        fileName: params.fileName,
+        fileUrl: fileKey,
+        fileType: params.fileType,
+        fileSize: BigInt(0),
+        description: params.description,
+        uploadedByUserId: userId,
+      },
+    });
+
+    return { evidenceId: evidence.id, uploadUrl };
+  }
+
+  /**
+   * エビデンスアップロード完了を確認（S3メタデータからファイルサイズを取得・更新）
+   */
+  async confirmEvidenceUpload(
+    executionId: string,
+    evidenceId: string,
+    _userId: string
+  ): Promise<{ fileSize: number }> {
+    await this.findById(executionId);
+
+    const evidence = await prisma.executionEvidence.findFirst({
+      where: {
+        id: evidenceId,
+        expectedResult: {
+          executionId,
+        },
+      },
+    });
+
+    if (!evidence) {
+      throw new NotFoundError('ExecutionEvidence', evidenceId);
+    }
+
+    // S3メタデータを取得してファイルの存在を確認
+    const metadata = await this.storage.getMetadata(evidence.fileUrl);
+    if (!metadata) {
+      throw new BadRequestError('ファイルがアップロードされていません。presigned URLを使ってアップロードしてから確認してください');
+    }
+
+    const fileSize = metadata.contentLength ?? 0;
+
+    // fileSizeを更新
+    await prisma.executionEvidence.update({
+      where: { id: evidenceId },
+      data: { fileSize: BigInt(fileSize) },
+    });
+
+    return { fileSize };
   }
 }

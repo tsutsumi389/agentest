@@ -109,6 +109,52 @@ export class InternalApiClient {
   }
 
   /**
+   * multipart/form-dataでPOSTリクエストを送信
+   */
+  async postMultipart<T>(
+    path: string,
+    data: {
+      file: { buffer: Buffer; fileName: string; mimeType: string };
+      fields?: Record<string, string>;
+    },
+    params?: Record<string, string>
+  ): Promise<T> {
+    const url = new URL(path, this.baseUrl);
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        if (v !== undefined) {
+          url.searchParams.set(k, v);
+        }
+      });
+    }
+
+    const formData = new FormData();
+    const blob = new Blob([data.file.buffer], { type: data.file.mimeType });
+    formData.append('file', blob, data.file.fileName);
+
+    if (data.fields) {
+      Object.entries(data.fields).forEach(([k, v]) => {
+        formData.append(k, v);
+      });
+    }
+
+    const res = await fetch(url.toString(), {
+      method: 'POST',
+      headers: {
+        'X-Internal-API-Key': this.apiKey,
+      },
+      body: formData,
+    });
+
+    if (!res.ok) {
+      const error = (await res.json().catch(() => ({}))) as { message?: string };
+      throw new Error(`Internal API error: ${res.status} - ${error.message || 'Unknown error'}`);
+    }
+
+    return res.json() as T;
+  }
+
+  /**
    * DELETEリクエストを送信
    */
   async delete<T>(path: string, params?: Record<string, string>): Promise<T> {

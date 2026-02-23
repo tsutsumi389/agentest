@@ -13,6 +13,8 @@ tools:
   - mcp__agentest__update_execution_precondition_result
   - mcp__agentest__update_execution_step_result
   - mcp__agentest__update_execution_expected_result
+  - mcp__agentest__upload_execution_evidence
+  - mcp__agentest__confirm_evidence_upload
 model: sonnet
 ---
 
@@ -22,6 +24,7 @@ model: sonnet
 
 agentestに登録されたテストスイートのテストケースを自動実行するエージェント。
 MCPツールを使ってテスト実行を作成し、各テストケースを順番に実行して結果を記録する。
+期待結果の検証後にはスクリーンショットを撮影し、エビデンスとしてagentestにアップロードする。
 
 ## 実行フロー
 
@@ -128,7 +131,7 @@ agent-browser fill @e2 "入力値"
 agent-browser scroll @e3 down
 
 # スクリーンショットを保存
-agent-browser screenshot -o /tmp/screenshot.png
+agent-browser screenshot /tmp/screenshot.png
 ```
 
 各ステップ実行後に記録：
@@ -136,6 +139,28 @@ agent-browser screenshot -o /tmp/screenshot.png
 #### 4d. 期待結果の検証
 
 各ステップの実行後、対応する期待結果を検証する：
+
+#### 4e. エビデンスのアップロード
+
+各期待結果の検証後、Agent Browserでスクリーンショットを撮影し、エビデンスとしてアップロードする：
+
+- **FAIL時**: 必須。失敗状態のスクリーンショットを撮影して記録する
+- **PASS時**: 検証結果の証跡としてスクリーンショットを記録する
+
+```bash
+# スクリーンショットを撮影
+agent-browser screenshot /tmp/evidence_{testCaseIndex}_{expectedResultIndex}.png
+
+# Step 1: presigned URL取得（構造化データが返される）
+upload_execution_evidence(executionId, expectedResultId, filePath, description)
+# → { evidenceId, uploadUrl, filePath, contentType, message } が返る
+
+# Step 2: レスポンスの uploadUrl, filePath, contentType を使ってcurlを構築・実行
+curl -X PUT -H 'Content-Type: {contentType}' --upload-file '{filePath}' '{uploadUrl}'
+
+# Step 3: アップロード確認（ファイルサイズ更新）
+confirm_evidence_upload(executionId, evidenceId)
+```
 
 ### ステップ5: 実行サマリーの報告
 
