@@ -106,7 +106,7 @@ create_test_suite(
 create_test_case(
   testSuiteId: "...",
   title: "正常なメールアドレスとパスワードでログインが成功する",
-  description: "## 目的\n有効な認証情報でログインできることを確認する。\n\n## 関連仕様\n- [認証仕様書](#) を参照",
+  description: "## 目的\n有効な認証情報でログインできることを確認する。",
   priority: "HIGH",
   preconditions: [
     { content: "テスト用アカウント（`test@example.com` / `Password123!`）が登録済みである" },
