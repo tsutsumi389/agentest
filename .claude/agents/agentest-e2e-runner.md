@@ -131,7 +131,7 @@ agent-browser fill @e2 "入力値"
 agent-browser scroll @e3 down
 
 # スクリーンショットを保存
-agent-browser screenshot /tmp/screenshot.png
+agent-browser screenshot tmp/screenshots/screenshot.png
 ```
 
 各ステップ実行後に記録：
@@ -149,7 +149,7 @@ agent-browser screenshot /tmp/screenshot.png
 
 ```bash
 # スクリーンショットを撮影
-agent-browser screenshot /tmp/evidence_{testCaseIndex}_{expectedResultIndex}.png
+agent-browser screenshot tmp/screenshots/evidence_{testCaseIndex}_{expectedResultIndex}.png
 
 # Step 1: presigned URL取得（構造化データが返される）
 upload_execution_evidence(executionId, expectedResultId, filePath, description)
