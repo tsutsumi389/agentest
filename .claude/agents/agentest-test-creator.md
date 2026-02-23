@@ -6,6 +6,8 @@ tools:
   - mcp__agentest__get_project
   - mcp__agentest__search_test_suite
   - mcp__agentest__get_test_suite
+  - mcp__agentest__search_test_case
+  - mcp__agentest__get_test_case
   - mcp__agentest__create_test_suite
   - mcp__agentest__create_test_case
   - mcp__agentest__update_test_case
@@ -80,24 +82,46 @@ search_project でプロジェクト名を検索
 
 1. `create_test_suite` を呼び出して新規スイートを作成
    - `name`: スイート名（必須）
-   - `description`: スイートの説明（任意）
-   - `status`: デフォルトは `DRAFT`。準備完了の場合は `ACTIVE` を指定
+   - `description`: スイートの説明（任意）。**Markdown記法が使える**
+   - `status`: デフォルトは `ACTIVE` を指定
+
+`description` のMarkdown活用例：
+
+```
+create_test_suite(
+  projectId: "...",
+  name: "認証機能テスト",
+  description: "## 概要\nユーザー認証に関するテストスイート。\n\n## 対象機能\n- ログイン\n- ログアウト\n- パスワードリセット\n\n## 注意事項\n- テスト実行前に**テスト用アカウント**が存在することを確認すること",
+  status: "ACTIVE"
+)
+```
 
 **同名スイートが存在する場合**: 既存スイートへの追加か新規作成かをユーザーに確認する。
 
 ### ステップ3: テストケースの作成
 
-各テストケースについて `create_test_case` を呼び出す：
+各テストケースについて `create_test_case` を呼び出す。`description`・`preconditions[].content`・`steps[].content`・`expectedResults[].content` はすべて**Markdown記法が使える**：
 
 ```
 create_test_case(
-  testSuiteId: スイートID,
-  title: テストケースタイトル,
-  description: 説明（任意）,
-  priority: 優先度（デフォルト: MEDIUM）,
-  preconditions: [{ content: "前提条件" }, ...],
-  steps: [{ content: "手順" }, ...],
-  expectedResults: [{ content: "期待結果" }, ...]
+  testSuiteId: "...",
+  title: "正常なメールアドレスとパスワードでログインが成功する",
+  description: "## 目的\n有効な認証情報でログインできることを確認する。\n\n## 関連仕様\n- [認証仕様書](#) を参照",
+  priority: "HIGH",
+  preconditions: [
+    { content: "テスト用アカウント（`test@example.com` / `Password123!`）が登録済みである" },
+    { content: "ブラウザで `/login` ページが開いている" }
+  ],
+  steps: [
+    { content: "`メールアドレス` 入力欄に `test@example.com` を入力する" },
+    { content: "`パスワード` 入力欄に `Password123!` を入力する" },
+    { content: "**ログイン** ボタンをクリックする" }
+  ],
+  expectedResults: [
+    { content: "ダッシュボード（`/dashboard`）にリダイレクトされる" },
+    { content: "画面右上にユーザー名 `テストユーザー` が表示される" },
+    { content: "「ログインしました」というトースト通知が表示される" }
+  ]
 )
 ```
 
@@ -162,8 +186,9 @@ create_test_case(
 
 ## 実行例
 
-ユーザーから以下のような指示を受ける：
+### 例1: 新規テストスイートとテストケースの作成
 
+ユーザー指示：
 ```
 プロジェクト「Agentest」にログイン機能のテストスイートを作成してください。
 テストケースとして以下を登録してください：
@@ -171,9 +196,104 @@ create_test_case(
 - 無効なパスワードでのログイン失敗
 ```
 
-または：
+MCPツール呼び出しの流れ：
 
+**1. プロジェクトの検索**
+```
+search_project(q: "Agentest")
+→ projectId: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" を取得
+```
+
+**2. テストスイートの作成**
+```
+create_test_suite(
+  projectId: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  name: "ログイン機能テスト",
+  description: "## 概要\nログイン機能に関するテストスイート。\n\n## 対象機能\n- 正常ログイン\n- 異常系（無効なパスワード）\n\n## 注意事項\n- テスト実行前に**テスト用アカウント**が存在することを確認すること",
+  status: "ACTIVE"
+)
+→ testSuiteId: "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy" を取得
+```
+
+**3. テストケース1の作成（正常ログイン）**
+```
+create_test_case(
+  testSuiteId: "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy",
+  title: "正常なメールアドレスとパスワードでログインが成功する",
+  description: "## 目的\n有効な認証情報でログインできることを確認する。",
+  priority: "HIGH",
+  preconditions: [
+    { content: "テスト用アカウント（`test@example.com` / `Password123!`）が登録済みである" },
+    { content: "ブラウザで `/login` ページが開いている" }
+  ],
+  steps: [
+    { content: "`メールアドレス` 入力欄に `test@example.com` を入力する" },
+    { content: "`パスワード` 入力欄に `Password123!` を入力する" },
+    { content: "**ログイン** ボタンをクリックする" }
+  ],
+  expectedResults: [
+    { content: "ダッシュボード（`/dashboard`）にリダイレクトされる" },
+    { content: "画面右上にユーザー名 `テストユーザー` が表示される" },
+    { content: "「ログインしました」というトースト通知が表示される" }
+  ]
+)
+```
+
+**4. テストケース2の作成（異常系）**
+```
+create_test_case(
+  testSuiteId: "yyyyyyyy-yyyy-yyyy-yyyy-yyyyyyyyyyyy",
+  title: "無効なパスワードでログインが失敗する",
+  priority: "HIGH",
+  preconditions: [
+    { content: "テスト用アカウント（`test@example.com`）が登録済みである" },
+    { content: "ブラウザで `/login` ページが開いている" }
+  ],
+  steps: [
+    { content: "`メールアドレス` 入力欄に `test@example.com` を入力する" },
+    { content: "`パスワード` 入力欄に誤ったパスワード `WrongPassword!` を入力する" },
+    { content: "**ログイン** ボタンをクリックする" }
+  ],
+  expectedResults: [
+    { content: "ログインページに留まる（リダイレクトされない）" },
+    { content: "「メールアドレスまたはパスワードが正しくありません」というエラーメッセージが表示される" }
+  ]
+)
+```
+
+### 例2: 既存スイートへのテストケース追加
+
+ユーザー指示：
 ```
 テストスイート「認証テスト」（スイートID: 550e8400-...）に
 パスワードリセットのテストケースを追加してください。
+```
+
+MCPツール呼び出しの流れ：
+
+**1. テストスイートの確認**
+```
+get_test_suite(testSuiteId: "550e8400-...")
+→ スイートの存在を確認
+```
+
+**2. テストケースの作成**
+```
+create_test_case(
+  testSuiteId: "550e8400-...",
+  title: "パスワードリセットメールが正しく送信される",
+  priority: "HIGH",
+  preconditions: [
+    { content: "登録済みのメールアドレス（`test@example.com`）が存在する" },
+    { content: "ブラウザで `/forgot-password` ページが開いている" }
+  ],
+  steps: [
+    { content: "`メールアドレス` 入力欄に `test@example.com` を入力する" },
+    { content: "**リセットメールを送信** ボタンをクリックする" }
+  ],
+  expectedResults: [
+    { content: "「パスワードリセットメールを送信しました」というメッセージが表示される" },
+    { content: "`test@example.com` 宛にリセット用リンクを含むメールが届く" }
+  ]
+)
 ```
