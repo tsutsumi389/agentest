@@ -772,6 +772,7 @@ export interface ExecutionEvidence {
   fileType: string;
   fileSize: string; // BigIntはstringとして受け取る
   description: string | null;
+  downloadUrl: string | null;
   createdAt: string;
 }
 

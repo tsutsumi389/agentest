@@ -62,14 +62,32 @@ export class ExecutionService {
       throw new NotFoundError('Execution', executionId);
     }
 
-    // エビデンスのfileSizeをBigIntからnumberに変換（JSONシリアライズのため）
-    const expectedResults = execution.expectedResults.map((result) => ({
-      ...result,
-      evidences: result.evidences.map((evidence) => ({
-        ...evidence,
-        fileSize: Number(evidence.fileSize),
-      })),
-    }));
+    // エビデンスのfileSizeをBigIntからnumberに変換し、downloadUrlを付与
+    const expectedResults = await Promise.all(
+      execution.expectedResults.map(async (result) => ({
+        ...result,
+        evidences: await Promise.all(
+          result.evidences.map(async (evidence) => {
+            // アップロード完了済み（fileSize > 0）のみURL生成
+            let downloadUrl: string | null = null;
+            if (evidence.fileSize > 0n) {
+              try {
+                downloadUrl = await this.publicStorage.getDownloadUrl(evidence.fileUrl, {
+                  expiresIn: 3600, // 1時間
+                });
+              } catch {
+                downloadUrl = null;
+              }
+            }
+            return {
+              ...evidence,
+              fileSize: Number(evidence.fileSize),
+              downloadUrl,
+            };
+          })
+        ),
+      }))
+    );
 
     return {
       ...execution,
@@ -420,7 +438,7 @@ export class ExecutionService {
       throw new NotFoundError('ExecutionEvidence', evidenceId);
     }
 
-    return this.storage.getDownloadUrl(evidence.fileUrl, {
+    return this.publicStorage.getDownloadUrl(evidence.fileUrl, {
       expiresIn: 3600, // 1時間
     });
   }

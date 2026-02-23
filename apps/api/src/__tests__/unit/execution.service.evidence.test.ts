@@ -11,6 +11,7 @@ const {
   mockStorageGetDownloadUrl,
   mockStorageGetMetadata,
   mockPublicStorageGetUploadUrl,
+  mockPublicStorageGetDownloadUrl,
   mockExpectedResultFindFirst,
   mockEvidenceCreate,
   mockEvidenceDelete,
@@ -24,6 +25,7 @@ const {
   mockStorageGetDownloadUrl: vi.fn(),
   mockStorageGetMetadata: vi.fn(),
   mockPublicStorageGetUploadUrl: vi.fn(),
+  mockPublicStorageGetDownloadUrl: vi.fn(),
   mockExpectedResultFindFirst: vi.fn(),
   mockEvidenceCreate: vi.fn(),
   mockEvidenceDelete: vi.fn(),
@@ -49,6 +51,7 @@ vi.mock('@agentest/storage', () => ({
   }),
   createPublicStorageClient: vi.fn().mockReturnValue({
     getUploadUrl: mockPublicStorageGetUploadUrl,
+    getDownloadUrl: mockPublicStorageGetDownloadUrl,
   }),
 }));
 
@@ -304,11 +307,11 @@ describe('ExecutionService - Evidence', () => {
 
       mockFindById.mockResolvedValue(mockExecution);
       mockEvidenceFindFirst.mockResolvedValue(mockEvidence);
-      mockStorageGetDownloadUrl.mockResolvedValue(expectedUrl);
+      mockPublicStorageGetDownloadUrl.mockResolvedValue(expectedUrl);
 
       const result = await service.getEvidenceDownloadUrl(TEST_EXECUTION_ID, TEST_EVIDENCE_ID);
 
-      expect(mockStorageGetDownloadUrl).toHaveBeenCalledWith(mockEvidence.fileUrl, { expiresIn: 3600 });
+      expect(mockPublicStorageGetDownloadUrl).toHaveBeenCalledWith(mockEvidence.fileUrl, { expiresIn: 3600 });
       expect(result).toBe(expectedUrl);
     });
 
@@ -538,6 +541,88 @@ describe('ExecutionService - Evidence', () => {
       await expect(
         service.confirmEvidenceUpload(TEST_EXECUTION_ID, TEST_EVIDENCE_ID, TEST_USER_ID)
       ).rejects.toThrow(BadRequestError);
+    });
+  });
+
+  describe('findByIdWithDetails - downloadUrl', () => {
+    it('アップロード完了済みエビデンスにdownloadUrlを付与する', async () => {
+      const expectedUrl = 'https://localhost:9002/signed-url';
+      mockFindByIdWithDetails.mockResolvedValue({
+        id: TEST_EXECUTION_ID,
+        expectedResults: [
+          {
+            id: TEST_EXPECTED_RESULT_ID,
+            evidences: [
+              {
+                id: TEST_EVIDENCE_ID,
+                fileUrl: 'evidences/xxx/yyy/uuid_test.png',
+                fileSize: BigInt(1024),
+                fileType: 'image/png',
+              },
+            ],
+          },
+        ],
+      });
+      mockPublicStorageGetDownloadUrl.mockResolvedValue(expectedUrl);
+
+      const result = await service.findByIdWithDetails(TEST_EXECUTION_ID);
+
+      const evidence = result.expectedResults[0].evidences[0];
+      expect(evidence.downloadUrl).toBe(expectedUrl);
+      expect(mockPublicStorageGetDownloadUrl).toHaveBeenCalledWith(
+        'evidences/xxx/yyy/uuid_test.png',
+        { expiresIn: 3600 }
+      );
+    });
+
+    it('fileSize=0（未アップロード）のエビデンスにはdownloadUrlをnullにする', async () => {
+      mockFindByIdWithDetails.mockResolvedValue({
+        id: TEST_EXECUTION_ID,
+        expectedResults: [
+          {
+            id: TEST_EXPECTED_RESULT_ID,
+            evidences: [
+              {
+                id: TEST_EVIDENCE_ID,
+                fileUrl: 'evidences/xxx/yyy/uuid_test.png',
+                fileSize: BigInt(0),
+                fileType: 'image/png',
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await service.findByIdWithDetails(TEST_EXECUTION_ID);
+
+      const evidence = result.expectedResults[0].evidences[0];
+      expect(evidence.downloadUrl).toBeNull();
+      expect(mockPublicStorageGetDownloadUrl).not.toHaveBeenCalled();
+    });
+
+    it('URL生成失敗時はdownloadUrlをnullにする', async () => {
+      mockFindByIdWithDetails.mockResolvedValue({
+        id: TEST_EXECUTION_ID,
+        expectedResults: [
+          {
+            id: TEST_EXPECTED_RESULT_ID,
+            evidences: [
+              {
+                id: TEST_EVIDENCE_ID,
+                fileUrl: 'evidences/xxx/yyy/uuid_test.png',
+                fileSize: BigInt(1024),
+                fileType: 'image/png',
+              },
+            ],
+          },
+        ],
+      });
+      mockPublicStorageGetDownloadUrl.mockRejectedValue(new Error('Storage error'));
+
+      const result = await service.findByIdWithDetails(TEST_EXECUTION_ID);
+
+      const evidence = result.expectedResults[0].evidences[0];
+      expect(evidence.downloadUrl).toBeNull();
     });
   });
 });

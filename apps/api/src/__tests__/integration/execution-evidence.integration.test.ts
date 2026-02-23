@@ -37,6 +37,9 @@ vi.mock('@agentest/storage', () => ({
     delete: mockStorageDelete,
     getDownloadUrl: mockStorageGetDownloadUrl,
   }),
+  createPublicStorageClient: vi.fn().mockReturnValue({
+    getDownloadUrl: mockStorageGetDownloadUrl,
+  }),
 }));
 
 // マジックバイト検証をモック（統合テストではストレージ層のテストに集中するため）
