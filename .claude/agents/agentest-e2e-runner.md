@@ -14,6 +14,7 @@ tools:
   - mcp__agentest__update_execution_step_result
   - mcp__agentest__update_execution_expected_result
   - mcp__agentest__upload_execution_evidence
+  - mcp__agentest__confirm_evidence_upload
 model: sonnet
 ---
 
