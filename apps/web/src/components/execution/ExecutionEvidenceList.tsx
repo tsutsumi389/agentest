@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   File,
   FileImage,
@@ -76,6 +77,31 @@ function isImageFile(fileType: string): boolean {
 }
 
 /**
+ * 画像サムネイルコンポーネント
+ * 読み込み失敗時はアイコンにフォールバック
+ */
+function ImageThumbnail({ src, alt }: { src: string; alt: string }) {
+  const [hasError, setHasError] = useState(false);
+
+  if (hasError) {
+    return (
+      <div className="w-full h-full flex items-center justify-center">
+        <FileImage className="w-4 h-4 text-foreground-muted" />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className="w-full h-full object-cover"
+      onError={() => setHasError(true)}
+    />
+  );
+}
+
+/**
  * 実行エビデンス一覧コンポーネント
  */
 export function ExecutionEvidenceList({
@@ -115,10 +141,13 @@ export function ExecutionEvidenceList({
               {/* アイコン/サムネイル */}
               {isImage ? (
                 <div className="w-8 h-8 rounded overflow-hidden bg-background-tertiary flex-shrink-0">
-                  {/* サムネイル表示（MinIOからの署名付きURLが必要なので、fileUrlは使用しない） */}
-                  <div className="w-full h-full flex items-center justify-center">
-                    <FileImage className="w-4 h-4 text-foreground-muted" />
-                  </div>
+                  {evidence.downloadUrl ? (
+                    <ImageThumbnail src={evidence.downloadUrl} alt={evidence.fileName} />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center">
+                      <FileImage className="w-4 h-4 text-foreground-muted" />
+                    </div>
+                  )}
                 </div>
               ) : (
                 <FileIcon className="w-5 h-5 text-foreground-muted flex-shrink-0" />
