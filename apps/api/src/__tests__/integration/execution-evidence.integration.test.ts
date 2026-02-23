@@ -25,10 +25,11 @@ let mockAuthUser: { id: string; email: string } | null = null;
 let mockExecutionRole: string | null = null;
 
 // vi.hoistedを使用してモック関数を事前定義
-const { mockStorageUpload, mockStorageDelete, mockStorageGetDownloadUrl } = vi.hoisted(() => ({
+const { mockStorageUpload, mockStorageDelete, mockStorageGetDownloadUrl, mockPublicStorageGetDownloadUrl } = vi.hoisted(() => ({
   mockStorageUpload: vi.fn().mockResolvedValue({ key: 'test-key', url: 'https://example.com/test', size: 1024 }),
   mockStorageDelete: vi.fn().mockResolvedValue(undefined),
-  mockStorageGetDownloadUrl: vi.fn().mockResolvedValue('https://minio.example.com/signed-url'),
+  mockStorageGetDownloadUrl: vi.fn().mockResolvedValue('https://internal-minio:9000/signed-url'),
+  mockPublicStorageGetDownloadUrl: vi.fn().mockResolvedValue('https://localhost:9002/signed-url'),
 }));
 
 vi.mock('@agentest/storage', () => ({
@@ -38,7 +39,7 @@ vi.mock('@agentest/storage', () => ({
     getDownloadUrl: mockStorageGetDownloadUrl,
   }),
   createPublicStorageClient: vi.fn().mockReturnValue({
-    getDownloadUrl: mockStorageGetDownloadUrl,
+    getDownloadUrl: mockPublicStorageGetDownloadUrl,
   }),
 }));
 
@@ -337,8 +338,8 @@ describe('Execution Evidence API Integration Tests', () => {
       const response = await request(app).get(`/api/executions/${execution.id}/evidences/${evidence.id}/download-url`);
 
       expect(response.status).toBe(200);
-      expect(response.body.downloadUrl).toBe('https://minio.example.com/signed-url');
-      expect(mockStorageGetDownloadUrl).toHaveBeenCalledWith('evidences/test.png', { expiresIn: 3600 });
+      expect(response.body.downloadUrl).toBe('https://localhost:9002/signed-url');
+      expect(mockPublicStorageGetDownloadUrl).toHaveBeenCalledWith('evidences/test.png', { expiresIn: 3600 });
     });
 
     it('WRITE権限でもダウンロードできる', async () => {

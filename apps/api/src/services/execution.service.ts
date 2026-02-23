@@ -75,7 +75,8 @@ export class ExecutionService {
                 downloadUrl = await this.publicStorage.getDownloadUrl(evidence.fileUrl, {
                   expiresIn: 3600, // 1時間
                 });
-              } catch {
+              } catch (error) {
+                logger.warn({ err: error, evidenceId: evidence.id, fileUrl: evidence.fileUrl }, 'エビデンスのダウンロードURL生成に失敗しました');
                 downloadUrl = null;
               }
             }
