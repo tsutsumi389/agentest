@@ -6,9 +6,15 @@ GitHub Issue: #262
 
 MCPサーバー（`apps/mcp-server`）のセッションがインメモリ `Map` に保持されているため、以下のシナリオでセッションが消滅し、クライアント（Claude Code）が `-32600` エラーで復旧できない。
 
-- `tsx watch` によるホットリロード（開発中のコード変更の都度）
+**開発環境:**
+- `tsx watch` によるホットリロード（コード変更の都度）
 - Dockerコンテナの再起動
-- サーバープロセスのクラッシュ
+
+**本番環境（Cloud Run）:**
+- オートスケールによるインスタンス増減
+- リクエストが別インスタンスにルーティングされる
+- スケールインによるインスタンス停止
+- コールドスタート時のセッション不在
 
 ### エラーメッセージ
 
@@ -30,45 +36,96 @@ MCPサーバー（`apps/mcp-server`）のセッションがインメモリ `Map`
 const transports = new Map<string, StreamableHTTPServerTransport>();
 ```
 
-`StreamableHTTPServerTransport` インスタンスはシリアライズ不可（SDK制約）のため、サーバー再起動後のセッション復旧は不可能。クライアントに「再初期化が必要」と明確に伝え、サーバー側を適切にクリーンアップする仕組みを構築する。
+`StreamableHTTPServerTransport` インスタンスはシリアライズ不可（SDK制約）のため、インスタンス間でのセッション共有やサーバー再起動後のセッション復旧は不可能。
 
 ---
 
-## Phase 1: 短期対策（エラー改善 + 再起動検知）
+## アーキテクチャ
+
+### セッション3層モデル
+
+| 層 | 保存先 | データ | 寿命 | 用途 |
+|---|--------|--------|------|------|
+| **MCPトランスポート** | インメモリ Map | `StreamableHTTPServerTransport` | プロセス生存中 | SDK必須。リクエスト処理に不可欠。シリアライズ不可 |
+| **セッションルーティング** | Redis | セッション→インスタンスIDマッピング + メタデータ | TTL 180秒 | どのインスタンスがセッションを保持しているか判定 |
+| **AgentSession** | PostgreSQL（既存） | ステータス, ハートビート, プロジェクト紐付け | 永続 | ビジネスロジック。エージェント活動の追跡 |
+
+### エラー判定フロー
+
+```
+リクエスト受信 (インスタンスA)
+  ├─ インメモリにセッションあり → 正常処理
+  └─ インメモリにセッションなし
+       └─ Redis参照
+            ├─ Redisにもなし → "session_not_found"
+            ├─ Redisにあり & 同じインスタンスID → "server_restarted"
+            └─ Redisにあり & 別のインスタンスID
+                 ├─ そのインスタンスが生存 → "wrong_instance"
+                 └─ そのインスタンスが死亡 → "instance_terminated"
+```
+
+### Cloud Run セッションアフィニティ
+
+Cloud Runの `sessionAffinity: true` を有効にし、同一クライアントのリクエストを同一インスタンスにルーティングする。ただしベストエフォートのため、Redis層での検知は必須。
+
+---
+
+## Phase 1: 短期対策（エラー改善 + マルチインスタンス対応基盤）
 
 ### Step 1-1: サーバーインスタンスID管理の導入
 
 **ファイル**: `apps/mcp-server/src/lib/server-instance.ts` (新規)
 
-サーバープロセス起動ごとに一意のインスタンスIDを生成し、Redisに登録する。前回のインスタンスIDと比較することで再起動を検知する。
+プロセス起動ごとに一意のインスタンスIDを生成し、Redisに登録する。インスタンスの生存確認にも使用。
 
 ```typescript
 import { randomUUID } from 'crypto';
 import { getRedisClient } from './redis.js';
 
 const SERVER_INSTANCE_ID = randomUUID();
-const REDIS_KEY = 'mcp:server:instance-id';
-const REDIS_PREVIOUS_KEY = 'mcp:server:previous-instance-id';
+const REDIS_KEY_PREFIX = 'mcp:instance:';
+const INSTANCE_TTL_SECONDS = 120; // 2分（ハートビート間隔30秒の4倍）
 
 export function getServerInstanceId(): string {
   return SERVER_INSTANCE_ID;
 }
 
-export async function registerServerInstance(): Promise<string | null> {
+/**
+ * インスタンスをRedisに登録
+ * 定期的にTTLを延長することで生存を表明する
+ */
+export async function registerServerInstance(): Promise<void> {
   const redis = getRedisClient();
-  if (!redis) return null;
+  if (!redis) return;
+  await redis.setex(
+    `${REDIS_KEY_PREFIX}${SERVER_INSTANCE_ID}`,
+    INSTANCE_TTL_SECONDS,
+    JSON.stringify({ startedAt: new Date().toISOString() })
+  );
+}
 
-  const previousId = await redis.get(REDIS_KEY);
-  if (previousId) {
-    await redis.set(REDIS_PREVIOUS_KEY, previousId);
-  }
-  await redis.setex(REDIS_KEY, 3600, SERVER_INSTANCE_ID);
-  return previousId;
+/**
+ * インスタンスのTTLを延長（ハートビートで呼び出し）
+ */
+export async function refreshInstanceHeartbeat(): Promise<void> {
+  const redis = getRedisClient();
+  if (!redis) return;
+  await redis.expire(`${REDIS_KEY_PREFIX}${SERVER_INSTANCE_ID}`, INSTANCE_TTL_SECONDS);
+}
+
+/**
+ * 指定インスタンスが生存しているか確認
+ */
+export async function isInstanceAlive(instanceId: string): Promise<boolean> {
+  const redis = getRedisClient();
+  if (!redis) return false;
+  const exists = await redis.exists(`${REDIS_KEY_PREFIX}${instanceId}`);
+  return exists === 1;
 }
 ```
 
 **依存**: なし
-**リスク**: Low（Redis未設定時はnullを返してフォールバック）
+**リスク**: Low（Redis未設定時はフォールバック）
 
 ---
 
@@ -76,35 +133,34 @@ export async function registerServerInstance(): Promise<string | null> {
 
 **ファイル**: `apps/mcp-server/src/lib/session-store.ts` (新規)
 
-`McpSessionData` をRedisに永続化する。既存の `token-cache.ts` パターンに準拠。
+セッション→インスタンスIDのマッピングとメタデータをRedisに保存する。既存の `token-cache.ts` パターンに準拠。
 
 ```typescript
-import { getRedisClient } from './redis.js';
-import { getServerInstanceId } from './server-instance.js';
-import type { McpSessionData } from '../transport/streamable-http.js';
-
 const KEY_PREFIX = 'mcp:session:';
-const INSTANCE_SESSIONS_KEY = 'mcp:instance-sessions:';
 const SESSION_TTL_SECONDS = 180; // ハートビートタイムアウト(60s)の3倍
+
+interface StoredSessionData {
+  userId: string;
+  instanceId: string;
+  createdAt: string;
+}
 ```
 
 提供する関数:
 
 | 関数 | 説明 |
 |------|------|
-| `saveSessionToRedis(sessionId, data)` | セッションメタデータ + サーバーインスタンスIDをRedisに保存 |
-| `getSessionFromRedis(sessionId)` | セッションメタデータを取得 |
-| `deleteSessionFromRedis(sessionId)` | セッションメタデータを削除 |
-| `refreshSessionTtl(sessionId)` | セッションのTTLを延長 |
-| `getInstanceSessionIds(instanceId)` | インスタンス別セッションID一覧を取得 |
-| `deleteInstanceSessions(instanceId)` | インスタンスの全セッションを一括削除 |
+| `saveSession(sessionId, data)` | セッションメタデータ + インスタンスIDをRedisに保存 |
+| `getSession(sessionId)` | セッションメタデータを取得（インスタンスID含む） |
+| `deleteSession(sessionId)` | セッションメタデータを削除 |
+| `refreshSessionTtl(sessionId)` | セッションのTTLを延長（リクエスト毎） |
 
 **依存**: Step 1-1
-**リスク**: Low（Redis未接続時は各関数が即returnし、インメモリMapで現行動作を維持）
+**リスク**: Low（Redis未接続時は各関数が即returnし、現行動作を維持）
 
 ---
 
-### Step 1-3: エラーレスポンスの改善とRedis連携
+### Step 1-3: エラーレスポンスの改善とマルチインスタンス対応
 
 **ファイル**: `apps/mcp-server/src/transport/streamable-http.ts` (変更)
 
@@ -112,115 +168,70 @@ const SESSION_TTL_SECONDS = 180; // ハートビートタイムアウト(60s)の
 
 1. **セッション作成時**: Redisへメタデータを保存
 2. **セッション削除時**: Redisからもメタデータを削除
-3. **無効セッションIDのリクエスト時**: Redisを参照して原因を区別
+3. **リクエスト処理時**: RedisセッションTTLを延長
+4. **無効セッションIDのリクエスト時**: Redisを参照して原因を区別
 
 #### エラーレスポンスの改善
 
-**変更前**（原因不明の一律エラー）:
+全パターンに `data.reinitialize: true` を付与し、クライアントの自動再接続の足がかりとする。
 
-```json
-{
-  "error": {
-    "code": -32600,
-    "message": "セッションが見つかりません。initializeリクエストから開始してください。"
-  }
-}
-```
-
-**変更後**（原因を区別、再初期化フラグ付き）:
-
-サーバー再起動の場合:
-```json
-{
-  "error": {
-    "code": -32600,
-    "message": "セッションが無効です。サーバーが再起動されたため、initializeリクエストから再開してください。",
-    "data": { "reason": "server_restarted", "reinitialize": true }
-  }
-}
-```
-
-セッション不明の場合:
-```json
-{
-  "error": {
-    "code": -32600,
-    "message": "セッションが見つかりません。initializeリクエストから開始してください。",
-    "data": { "reason": "session_not_found", "reinitialize": true }
-  }
-}
-```
+| 原因 | `data.reason` | メッセージ |
+|------|--------------|-----------|
+| セッション不明 | `session_not_found` | セッションが見つかりません。initializeリクエストから開始してください。 |
+| プロセス再起動 | `server_restarted` | セッションが無効です。サーバーが再起動されたため、再初期化してください。 |
+| 別インスタンスが保持 | `wrong_instance` | セッションは別のインスタンスに存在します。再初期化してください。 |
+| インスタンス停止 | `instance_terminated` | セッションを保持していたインスタンスが停止しました。再初期化してください。 |
 
 #### 判定ロジック
 
-```
-リクエスト受信
-  ├─ transports.has(sessionId) → 正常処理
-  └─ transports.has(sessionId) === false
-       ├─ Redis にメタデータあり → "server_restarted"（Redisからも削除）
-       └─ Redis にもなし → "session_not_found"
+```typescript
+async function resolveSessionError(
+  sessionId: string | undefined,
+  body: JsonRpcRequest,
+  res: Response
+): Promise<void> {
+  let reason = 'session_not_found';
+  let message = 'セッションが見つかりません。initializeリクエストから開始してください。';
+
+  if (sessionId) {
+    const stored = await getSession(sessionId);
+    if (stored) {
+      if (stored.instanceId === getServerInstanceId()) {
+        // 同じインスタンスなのにインメモリにない → プロセス再起動
+        reason = 'server_restarted';
+        message = 'セッションが無効です。サーバーが再起動されたため、再初期化してください。';
+      } else if (await isInstanceAlive(stored.instanceId)) {
+        // 別インスタンスが生きている → ルーティングミス
+        reason = 'wrong_instance';
+        message = 'セッションは別のインスタンスに存在します。再初期化してください。';
+      } else {
+        // 別インスタンスが死んでいる → スケールイン
+        reason = 'instance_terminated';
+        message = 'セッションを保持していたインスタンスが停止しました。再初期化してください。';
+      }
+      // 使えないセッションをRedisから削除
+      await deleteSession(sessionId);
+    }
+  }
+
+  res.status(400).json({
+    jsonrpc: '2.0',
+    error: {
+      code: -32600,
+      message,
+      data: { reason, reinitialize: true },
+    },
+    id: body?.id ?? null,
+  });
+}
 ```
 
-**依存**: Step 1-2
+**依存**: Step 1-1, Step 1-2
 **リスク**: Medium（`error.data` はJSON-RPCオプショナルフィールドなので既存パースを破壊しない）
 
 ---
 
-### Step 1-4: サーバー起動時の孤立セッションクリーンアップ
-
-**ファイル**: `apps/mcp-server/src/services/heartbeat.service.ts` (変更)
-
-`HeartbeatService` に `cleanupOrphanedSessions(previousInstanceId)` メソッドを追加。
-
-```typescript
-async cleanupOrphanedSessions(previousInstanceId: string | null): Promise<void> {
-  if (!previousInstanceId) return;
-
-  // 1. 前回インスタンスのRedisセッション一覧を取得・削除
-  const orphanedSessionIds = await getInstanceSessionIds(previousInstanceId);
-  if (orphanedSessionIds.length > 0) {
-    await deleteInstanceSessions(previousInstanceId);
-  }
-
-  // 2. DB上のタイムアウトセッションも処理
-  await agentSessionService.processTimedOutSessions();
-}
-```
-
-**依存**: Step 1-2
-**リスク**: Low（既存の `processTimedOutSessions` を再利用）
-
----
-
-### Step 1-5: サーバー起動シーケンスの更新
-
-**ファイル**: `apps/mcp-server/src/index.ts` (変更)
-
-`main()` 関数にインスタンスID登録と孤立セッションクリーンアップを追加。
-
-```typescript
-async function main() {
-  await prisma.$connect();
-
-  // サーバーインスタンスID登録（再起動検知）
-  const previousInstanceId = await registerServerInstance();
-
-  const app = createApp();
-
-  // 前回インスタンスの孤立セッションをクリーンアップ
-  await heartbeatService.cleanupOrphanedSessions(previousInstanceId);
-
-  heartbeatService.start();
-  // ... (以降は既存コード)
-}
-```
-
-**依存**: Step 1-1, Step 1-4
-**リスク**: Low
-
----
-
-### Step 1-6: `deleteSession` / `cleanupAllSessions` のRedis連動
+### Step 1-4: `deleteSession` / `cleanupAllSessions` のRedis連動
 
 **ファイル**: `apps/mcp-server/src/transport/streamable-http.ts` (変更)
 
@@ -231,13 +242,62 @@ async function main() {
 
 ---
 
-## Phase 2: 中期対策（監視強化 + 復旧高度化）
+### Step 1-5: HeartbeatServiceの拡張
+
+**ファイル**: `apps/mcp-server/src/services/heartbeat.service.ts` (変更)
+
+定期チェックに以下を追加:
+
+1. **インスタンスTTL延長**: `refreshInstanceHeartbeat()` を呼び出し、自インスタンスの生存をRedisに表明
+2. **孤立セッションクリーンアップ**: DB上のACTIVEセッションでインスタンスが死亡しているものを検知・処理
+
+```typescript
+private async checkTimeouts(): Promise<void> {
+  // 既存: DBのタイムアウトセッション処理
+  await agentSessionService.processTimedOutSessions();
+
+  // 追加: 自インスタンスの生存表明
+  await refreshInstanceHeartbeat();
+}
+```
+
+**依存**: Step 1-1
+**リスク**: Low
+
+---
+
+### Step 1-6: サーバー起動シーケンスの更新
+
+**ファイル**: `apps/mcp-server/src/index.ts` (変更)
+
+`main()` 関数にインスタンス登録を追加。
+
+```typescript
+async function main() {
+  await prisma.$connect();
+
+  // サーバーインスタンスをRedisに登録
+  await registerServerInstance();
+
+  const app = createApp();
+
+  heartbeatService.start();
+  // ... (以降は既存コード)
+}
+```
+
+**依存**: Step 1-1
+**リスク**: Low
+
+---
+
+## Phase 2: 中期対策（監視強化 + 運用改善）
 
 ### Step 2-1: ヘルスチェックエンドポイントの拡張
 
 **ファイル**: `apps/mcp-server/src/app.ts` (変更)
 
-`/health` にサーバーインスタンスIDとアクティブセッション数を追加。
+`/health` にインスタンスIDとアクティブセッション数を追加。
 
 ```json
 {
@@ -253,22 +313,11 @@ async function main() {
 
 ---
 
-### Step 2-2: RedisセッションTTLのハートビート連動更新
+### Step 2-2: 再初期化時のセッション引き継ぎログ
 
 **ファイル**: `apps/mcp-server/src/transport/streamable-http.ts` (変更)
 
-既存セッションへのリクエスト処理時に `refreshSessionTtl()` を呼び出し、RedisのTTLをハートビートに連動して延長する。
-
-**依存**: Step 1-2, Step 1-3
-**リスク**: Low
-
----
-
-### Step 2-3: 再初期化時のセッション引き継ぎログ
-
-**ファイル**: `apps/mcp-server/src/transport/streamable-http.ts` (変更)
-
-`initialize` リクエストで `mcp-session-id` ヘッダーが付いている場合（再初期化）、前回セッション情報をログに記録する。
+`initialize` リクエスト時に `mcp-session-id` ヘッダーが付いている場合（再初期化）、前回セッション情報をログに記録。
 
 ```typescript
 if (sessionId) {
@@ -284,7 +333,31 @@ if (sessionId) {
 
 ---
 
-### Step 2-4: HeartbeatServiceにインメモリ-DB整合性チェックを追加
+### Step 2-3: Cloud Runセッションアフィニティ設定
+
+**ファイル**: Cloud Run サービス設定（IaC / コンソール）
+
+```yaml
+# Cloud Run service.yaml
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: agentest-mcp
+spec:
+  template:
+    metadata:
+      annotations:
+        run.googleapis.com/sessionAffinity: "true"
+```
+
+セッションアフィニティを有効にし、同一クライアントからのリクエストを同一インスタンスにルーティング（ベストエフォート）。
+
+**依存**: なし
+**リスク**: Low（ベストエフォートのため、Phase 1のRedis層が必須の補完）
+
+---
+
+### Step 2-4: HeartbeatServiceにインメモリ-Redis整合性チェックを追加
 
 **ファイル**: `apps/mcp-server/src/services/heartbeat.service.ts` (変更)
 
@@ -298,16 +371,28 @@ if (sessionId) {
 ## Redisキー設計
 
 ```
-mcp:server:instance-id                → 現在のサーバーインスタンスID (STRING, TTL: 1h)
-mcp:server:previous-instance-id       → 前回のサーバーインスタンスID (STRING, TTL: 1h)
-mcp:session:{sessionId}               → セッションメタデータ JSON (STRING, TTL: 180s)
-mcp:instance-sessions:{instanceId}    → セッションIDの集合 (SET, TTL: 180s)
+mcp:instance:{instanceId}            → インスタンス情報 (STRING, TTL: 120s, ハートビートで延長)
+mcp:session:{sessionId}              → セッションメタデータ JSON (STRING, TTL: 180s, リクエスト毎に延長)
+```
+
+格納データ:
+
+```jsonc
+// mcp:instance:{instanceId}
+{ "startedAt": "2026-02-24T12:00:00.000Z" }
+
+// mcp:session:{sessionId}
+{
+  "userId": "user-uuid",
+  "instanceId": "instance-uuid",
+  "createdAt": "2026-02-24T12:00:00.000Z"
+}
 ```
 
 既存キー（変更なし）:
 ```
-mcp:token:oauth:{hash}                → OAuthトークンキャッシュ
-mcp:token:apikey:{hash}               → APIキーキャッシュ
+mcp:token:oauth:{hash}               → OAuthトークンキャッシュ
+mcp:token:apikey:{hash}              → APIキーキャッシュ
 ```
 
 ---
@@ -318,21 +403,22 @@ mcp:token:apikey:{hash}               → APIキーキャッシュ
 
 | テストファイル | テスト対象 |
 |---------------|-----------|
-| `__tests__/unit/lib/server-instance.test.ts` (新規) | インスタンスID生成、Redis登録、前回ID取得、Redis未設定時のフォールバック |
-| `__tests__/unit/lib/session-store.test.ts` (新規) | save/get/delete/refresh/getInstanceIds/deleteInstance、Redis未設定時のフォールバック |
-| `__tests__/unit/services/heartbeat.service.test.ts` (既存に追加) | `cleanupOrphanedSessions` のテスト |
+| `__tests__/unit/lib/server-instance.test.ts` (新規) | インスタンスID生成、Redis登録/延長、生存確認、Redis未設定時のフォールバック |
+| `__tests__/unit/lib/session-store.test.ts` (新規) | save/get/delete/refreshTtl、Redis未設定時のフォールバック |
+| `__tests__/unit/transport/streamable-http.test.ts` (新規) | `resolveSessionError` の4パターン判定（session_not_found / server_restarted / wrong_instance / instance_terminated） |
+| `__tests__/unit/services/heartbeat.service.test.ts` (既存に追加) | `refreshInstanceHeartbeat` がチェック時に呼ばれること |
 
 ### 統合テスト
 
 | テストファイル | テスト対象 |
 |---------------|-----------|
-| `__tests__/integration/mcp-auth-session.integration.test.ts` (既存に追加) | 無効セッションIDのエラーレスポンスに `data.reinitialize: true` が含まれること |
+| `__tests__/integration/mcp-auth-session.integration.test.ts` (既存に追加) | 無効セッションIDのエラーレスポンスに `data.reinitialize: true` と `data.reason` が含まれること |
 
 ### 手動テスト
 
 1. MCPセッション確立後にコード変更 → tsx watch再起動 → `server_restarted` エラーが返ること
-2. 再度 `initialize` リクエスト → 新しいセッションが正常確立されること
-3. DB上のAgentSessionが起動時にクリーンアップされること
+2. 再度 `initialize` → 新しいセッションが正常確立されること
+3. `/health` でインスタンスIDとアクティブセッション数が表示されること
 
 ---
 
@@ -342,16 +428,18 @@ mcp:token:apikey:{hash}               → APIキーキャッシュ
 |--------|------|------|------|
 | Redis未設定環境での動作 | Phase 1の一部機能が無効 | Medium | 全Redis操作にnullチェック。インメモリMapフォールバックで現行動作維持 |
 | エラーレスポンス形式変更 | 既存クライアントへの影響 | Low | `error.data` はJSON-RPCオプショナルフィールド。既存の `code`/`message` は不変 |
-| Redisメモリ肥大 | Redisメモリ枯渇 | Low | TTL 180秒で自動失効 + シャットダウン時に削除 |
-| 起動時クリーンアップのDB負荷 | 起動が遅くなる | Low | 既存の1回のクエリで処理 |
+| Redisメモリ肥大 | Redisメモリ枯渇 | Low | TTL 120-180秒で自動失効 + シャットダウン時に削除 |
+| `isInstanceAlive` のRedis往復遅延 | エラーレスポンスの遅延 | Low | セッション不在時のみ発生（異常系）。正常系に影響なし |
+| Cloud Runセッションアフィニティ不完全 | `wrong_instance` エラーの発生 | Medium | Redis層で検知し明確なエラーを返す。クライアントは再初期化で復旧可能 |
 
 ---
 
 ## 成功基準
 
 - [ ] 再起動後の古いセッションに `data.reason: 'server_restarted'` が返る
+- [ ] 別インスタンスへのリクエストに `data.reason: 'wrong_instance'` または `instance_terminated` が返る
+- [ ] 全エラーレスポンスに `data.reinitialize: true` が含まれる
 - [ ] 再 `initialize` で新セッションが正常確立される
-- [ ] DB孤立セッションが起動時に即座にクリーンアップされる
 - [ ] Redis未設定環境で現行動作を維持
 - [ ] `/health` でインスタンスIDとアクティブセッション数を確認可能
 - [ ] 新規ユニットテストが全てパス
@@ -361,7 +449,7 @@ mcp:token:apikey:{hash}               → APIキーキャッシュ
 
 ## 実装順序
 
-**Phase 1**: Step 1-1 → 1-2 → 1-3 → 1-6 → 1-4 → 1-5
+**Phase 1**: Step 1-1 → 1-2 → 1-3 → 1-4 → 1-5 → 1-6
 
 **Phase 2**: Step 2-1 → 2-2 → 2-3 → 2-4
 
@@ -370,4 +458,5 @@ mcp:token:apikey:{hash}               → APIキーキャッシュ
 ## 備考
 
 - Claude Code側の自動再接続は現時点ではスコープ外。`data.reinitialize: true` フィールドは将来の自動再接続実装の足がかりとなる
+- Cloud Run セッションアフィニティはベストエフォート。Redis層での検知が必須の補完となる
 - 開発環境でのhot reload自体を抑制する方法（`tsx --watch --ignore` パターン）も別途検討に値する
