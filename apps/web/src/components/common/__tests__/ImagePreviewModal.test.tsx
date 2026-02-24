@@ -57,6 +57,18 @@ describe('ImagePreviewModal', () => {
     expect(defaultProps.onClose).not.toHaveBeenCalled();
   });
 
+  it('画像読み込み失敗時にフォールバック表示される', () => {
+    render(<ImagePreviewModal {...defaultProps} />);
+
+    const img = screen.getByRole('img');
+    fireEvent.error(img);
+
+    // フォールバックメッセージが表示される
+    expect(screen.getByText('画像を読み込めませんでした')).toBeInTheDocument();
+    // 元の画像要素は非表示
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+  });
+
   it('モーダルが開いている間、背景スクロールが無効化される', () => {
     const { unmount } = render(<ImagePreviewModal {...defaultProps} />);
 

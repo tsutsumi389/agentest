@@ -382,7 +382,8 @@ export function ExecutionPage() {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(blobUrl);
+      // ブラウザがBlobデータを読み取る時間を確保してから解放
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
     } catch {
       toast.error('ダウンロードに失敗しました');
     } finally {

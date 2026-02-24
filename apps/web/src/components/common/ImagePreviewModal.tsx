@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 
 interface ImagePreviewModalProps {
@@ -24,6 +24,12 @@ export function ImagePreviewModal({
 }: ImagePreviewModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const [hasError, setHasError] = useState(false);
+
+  // imageUrl変更時にエラー状態をリセット
+  useEffect(() => {
+    setHasError(false);
+  }, [imageUrl]);
 
   // ESCキーでモーダルを閉じる + フォーカストラップ + 背景スクロール無効化
   useEffect(() => {
@@ -96,11 +102,18 @@ export function ImagePreviewModal({
         </button>
 
         {/* 画像 */}
-        <img
-          src={imageUrl}
-          alt={fileName}
-          className="max-w-[90vw] max-h-[85vh] object-contain rounded"
-        />
+        {hasError ? (
+          <div className="flex items-center justify-center w-64 h-64 bg-background-secondary rounded">
+            <p className="text-sm text-foreground-muted">画像を読み込めませんでした</p>
+          </div>
+        ) : (
+          <img
+            src={imageUrl}
+            alt={fileName}
+            className="max-w-[90vw] max-h-[85vh] object-contain rounded"
+            onError={() => setHasError(true)}
+          />
+        )}
 
         {/* ファイル名 */}
         <p className="mt-2 text-sm text-white/80">{fileName}</p>

@@ -89,7 +89,6 @@ export function ExecutionExpectedResultList({
 
           // 結果が見つからない場合（データ不整合）
           if (!result) {
-            console.error(`Expected result not found for snapshot ID: ${expectedResult.id}`);
             return (
               <div key={expectedResult.id} className="flex gap-3 py-3 border-b border-border last:border-b-0">
                 <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-background-tertiary text-foreground-muted text-xs font-medium">
@@ -149,6 +148,7 @@ export function ExecutionExpectedResultList({
                         )
                       }
                       className="mt-2 flex items-center gap-1 text-xs text-foreground-muted hover:text-foreground transition-colors"
+                      aria-expanded={openUploadResultId === result.id}
                     >
                       <Plus className="w-3 h-3" />
                       エビデンスを追加
