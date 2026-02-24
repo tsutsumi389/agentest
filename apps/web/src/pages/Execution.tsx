@@ -365,9 +365,23 @@ export function ExecutionPage() {
     try {
       setDownloadingEvidenceId(evidenceId);
       const { downloadUrl } = await executionsApi.getEvidenceDownloadUrl(executionId!, evidenceId);
-      window.open(downloadUrl, '_blank');
+      const evidence = execution?.expectedResults
+        .flatMap((r) => r.evidences)
+        .find((e) => e.id === evidenceId);
+      const fileName = evidence?.fileName ?? 'download';
+      // クロスオリジンURLではdownload属性が無視されるため、Blob経由でダウンロード
+      const response = await fetch(downloadUrl);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
     } catch {
-      toast.error('ダウンロードURLの取得に失敗しました');
+      toast.error('ダウンロードに失敗しました');
     } finally {
       setDownloadingEvidenceId(null);
     }
