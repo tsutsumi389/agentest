@@ -144,13 +144,15 @@ export function ExecutionEvidenceList({
             >
               {/* アイコン/サムネイル */}
               {isImage ? (
-                <div
+                <button
+                  type="button"
                   className="w-16 h-16 rounded overflow-hidden bg-background-tertiary flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
                   onClick={() => {
                     if (evidence.downloadUrl) {
                       setPreviewImage({ url: evidence.downloadUrl, fileName: evidence.fileName });
                     }
                   }}
+                  aria-label={`${evidence.fileName}をプレビュー`}
                 >
                   {evidence.downloadUrl ? (
                     <ImageThumbnail src={evidence.downloadUrl} alt={evidence.fileName} />
@@ -159,7 +161,7 @@ export function ExecutionEvidenceList({
                       <FileImage className="w-4 h-4 text-foreground-muted" />
                     </div>
                   )}
-                </div>
+                </button>
               ) : (
                 <FileIcon className="w-5 h-5 text-foreground-muted flex-shrink-0" />
               )}

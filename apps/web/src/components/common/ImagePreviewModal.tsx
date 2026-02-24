@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 
 interface ImagePreviewModalProps {
@@ -22,16 +22,38 @@ export function ImagePreviewModal({
   fileName,
   onClose,
 }: ImagePreviewModalProps) {
-  // ESCキーでモーダルを閉じる + 背景スクロール無効化
+  const modalRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  // ESCキーでモーダルを閉じる + フォーカストラップ + 背景スクロール無効化
   useEffect(() => {
     if (!isOpen) return;
 
     const originalOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
 
+    // フォーカスを閉じるボタンに移動
+    closeButtonRef.current?.focus();
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         onClose();
+      }
+      // フォーカストラップ
+      if (e.key === 'Tab' && modalRef.current) {
+        const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
+          'button:not([disabled])'
+        );
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey && document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement?.focus();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement?.focus();
+        }
       }
     };
 
@@ -55,11 +77,16 @@ export function ImagePreviewModal({
 
       {/* コンテンツ */}
       <div
+        ref={modalRef}
         className="relative flex flex-col items-center"
+        role="dialog"
+        aria-modal="true"
+        aria-label={fileName}
         onClick={(e) => e.stopPropagation()}
       >
         {/* 閉じるボタン */}
         <button
+          ref={closeButtonRef}
           type="button"
           onClick={onClose}
           className="absolute -top-10 right-0 p-1 text-white/70 hover:text-white transition-colors"

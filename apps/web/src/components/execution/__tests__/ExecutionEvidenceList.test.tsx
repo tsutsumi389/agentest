@@ -58,9 +58,9 @@ describe('ExecutionEvidenceList', () => {
     it('画像サムネイルが w-16 h-16 で表示される', () => {
       render(<ExecutionEvidenceList {...defaultProps} />);
 
-      // サムネイルコンテナが w-16 h-16 クラスを持つことを確認
-      const thumbnailContainer = screen.getByRole('img').closest('div');
-      expect(thumbnailContainer).toHaveClass('w-16', 'h-16');
+      // サムネイルコンテナ（button）が w-16 h-16 クラスを持つことを確認
+      const thumbnailButton = screen.getByLabelText('screenshot.pngをプレビュー');
+      expect(thumbnailButton).toHaveClass('w-16', 'h-16');
     });
   });
 
@@ -71,9 +71,9 @@ describe('ExecutionEvidenceList', () => {
       // モーダルが初期状態で表示されていないことを確認
       expect(screen.queryByTestId('image-preview-modal')).not.toBeInTheDocument();
 
-      // サムネイルをクリック
-      const thumbnail = screen.getByRole('img');
-      fireEvent.click(thumbnail);
+      // サムネイルボタンをクリック
+      const thumbnailButton = screen.getByLabelText('screenshot.pngをプレビュー');
+      fireEvent.click(thumbnailButton);
 
       // モーダルが表示される
       expect(screen.getByTestId('image-preview-modal')).toBeInTheDocument();
@@ -84,8 +84,8 @@ describe('ExecutionEvidenceList', () => {
     it('モーダルを閉じることができる', () => {
       render(<ExecutionEvidenceList {...defaultProps} />);
 
-      // サムネイルクリックでモーダルを開く
-      fireEvent.click(screen.getByRole('img'));
+      // サムネイルボタンクリックでモーダルを開く
+      fireEvent.click(screen.getByLabelText('screenshot.pngをプレビュー'));
       expect(screen.getByTestId('image-preview-modal')).toBeInTheDocument();
 
       // モーダルを閉じる
@@ -93,11 +93,11 @@ describe('ExecutionEvidenceList', () => {
       expect(screen.queryByTestId('image-preview-modal')).not.toBeInTheDocument();
     });
 
-    it('サムネイルに cursor-pointer クラスがある', () => {
+    it('サムネイルボタンに cursor-pointer クラスがある', () => {
       render(<ExecutionEvidenceList {...defaultProps} />);
 
-      const thumbnailContainer = screen.getByRole('img').closest('div');
-      expect(thumbnailContainer).toHaveClass('cursor-pointer');
+      const thumbnailButton = screen.getByLabelText('screenshot.pngをプレビュー');
+      expect(thumbnailButton).toHaveClass('cursor-pointer');
     });
   });
 
