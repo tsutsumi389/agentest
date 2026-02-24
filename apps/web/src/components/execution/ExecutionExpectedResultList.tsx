@@ -1,4 +1,5 @@
-import { Target } from 'lucide-react';
+import { useState } from 'react';
+import { Target, Plus } from 'lucide-react';
 import type {
   ExecutionTestCaseExpectedResultSnapshot,
   ExecutionExpectedResult,
@@ -60,6 +61,9 @@ export function ExecutionExpectedResultList({
   onEvidenceDelete,
   onEvidenceDownload,
 }: ExecutionExpectedResultListProps) {
+  // アップロード領域の展開状態を管理
+  const [openUploadResultId, setOpenUploadResultId] = useState<string | null>(null);
+
   // 期待結果がない場合は何も表示しない
   if (expectedResults.length === 0) {
     return null;
@@ -85,7 +89,6 @@ export function ExecutionExpectedResultList({
 
           // 結果が見つからない場合（データ不整合）
           if (!result) {
-            console.error(`Expected result not found for snapshot ID: ${expectedResult.id}`);
             return (
               <div key={expectedResult.id} className="flex gap-3 py-3 border-b border-border last:border-b-0">
                 <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-background-tertiary text-foreground-muted text-xs font-medium">
@@ -134,13 +137,30 @@ export function ExecutionExpectedResultList({
                   onDownload={onEvidenceDownload}
                 />
 
-                {/* エビデンスアップロード（編集可能時のみ） */}
+                {/* エビデンスアップロード（編集可能時のみ、折りたたみ式） */}
                 {isEditable && (
-                  <ExecutionEvidenceUpload
-                    currentCount={result.evidences.length}
-                    isUploading={isUploading}
-                    onUpload={(file, description) => onEvidenceUpload(result.id, file, description)}
-                  />
+                  <>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setOpenUploadResultId(
+                          openUploadResultId === result.id ? null : result.id
+                        )
+                      }
+                      className="mt-2 flex items-center gap-1 text-xs text-foreground-muted hover:text-foreground transition-colors"
+                      aria-expanded={openUploadResultId === result.id}
+                    >
+                      <Plus className="w-3 h-3" />
+                      エビデンスを追加
+                    </button>
+                    {openUploadResultId === result.id && (
+                      <ExecutionEvidenceUpload
+                        currentCount={result.evidences.length}
+                        isUploading={isUploading}
+                        onUpload={(file, description) => onEvidenceUpload(result.id, file, description)}
+                      />
+                    )}
+                  </>
                 )}
               </div>
             </div>

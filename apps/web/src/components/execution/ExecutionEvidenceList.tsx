@@ -12,6 +12,7 @@ import {
   Paperclip,
 } from 'lucide-react';
 import type { ExecutionEvidence } from '../../lib/api';
+import { ImagePreviewModal } from '../common/ImagePreviewModal';
 
 interface ExecutionEvidenceListProps {
   /** エビデンス一覧 */
@@ -112,6 +113,9 @@ export function ExecutionEvidenceList({
   onDelete,
   onDownload,
 }: ExecutionEvidenceListProps) {
+  // 画像プレビューモーダルの状態
+  const [previewImage, setPreviewImage] = useState<{ url: string; fileName: string } | null>(null);
+
   // エビデンスがない場合は何も表示しない
   if (evidences.length === 0) {
     return null;
@@ -140,7 +144,16 @@ export function ExecutionEvidenceList({
             >
               {/* アイコン/サムネイル */}
               {isImage ? (
-                <div className="w-8 h-8 rounded overflow-hidden bg-background-tertiary flex-shrink-0">
+                <button
+                  type="button"
+                  className="w-16 h-16 rounded overflow-hidden bg-background-tertiary flex-shrink-0 cursor-pointer hover:opacity-80 transition-opacity"
+                  onClick={() => {
+                    if (evidence.downloadUrl) {
+                      setPreviewImage({ url: evidence.downloadUrl, fileName: evidence.fileName });
+                    }
+                  }}
+                  aria-label={`${evidence.fileName}をプレビュー`}
+                >
                   {evidence.downloadUrl ? (
                     <ImageThumbnail src={evidence.downloadUrl} alt={evidence.fileName} />
                   ) : (
@@ -148,7 +161,7 @@ export function ExecutionEvidenceList({
                       <FileImage className="w-4 h-4 text-foreground-muted" />
                     </div>
                   )}
-                </div>
+                </button>
               ) : (
                 <FileIcon className="w-5 h-5 text-foreground-muted flex-shrink-0" />
               )}
@@ -213,6 +226,14 @@ export function ExecutionEvidenceList({
           );
         })}
       </div>
+
+      {/* 画像プレビューモーダル */}
+      <ImagePreviewModal
+        isOpen={previewImage !== null}
+        imageUrl={previewImage?.url ?? ''}
+        fileName={previewImage?.fileName ?? ''}
+        onClose={() => setPreviewImage(null)}
+      />
     </div>
   );
 }
