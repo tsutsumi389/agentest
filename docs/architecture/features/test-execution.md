@@ -131,12 +131,19 @@
 #### エビデンス表示
 
 - **表示要素**
+  - サムネイル（画像ファイルは64x64pxサムネイル表示、非画像はファイルアイコン表示）
   - ファイル名
   - ファイルサイズ
   - アップロード日時
-  - ダウンロードボタン
+  - ダウンロードボタン（Blob経由でファイルダウンロード、ローディング表示付き）
   - 削除ボタン（実行中のみ）
+- **画像プレビューモーダル**（ImagePreviewModal）
+  - サムネイルクリックで拡大表示
+  - ESCキー / 背景クリックで閉じる
+  - フォーカストラップ（モーダル内でタブキー操作を維持）
+  - 画像読み込みエラー時のフォールバック表示
 - **アップロード**
+  - アップロード領域はデフォルト非表示、「エビデンスを追加」ボタンで展開するトグル方式
   - ドラッグ&ドロップ対応
   - クリックしてファイル選択
   - アップロード中はローディング表示
@@ -289,8 +296,9 @@ sequenceDiagram
     B->>B: 権限確認（READ以上）
     B->>S: 署名付きURL生成（1時間有効）
     B->>F: ダウンロードURL
-    F->>U: 新しいタブでURLを開く
-    U->>S: ファイルダウンロード
+    F->>S: fetch でファイル取得（Blob）
+    F->>F: Blob URL生成、aタグで自動ダウンロード
+    F->>U: ファイル保存ダイアログ
 ```
 
 ## データモデル
@@ -882,6 +890,7 @@ agentest/
 | リスト | ExecutionExpectedResultList | `apps/web/src/components/execution/ExecutionExpectedResultList.tsx` | 期待結果一覧 |
 | エビデンス | ExecutionEvidenceList | `apps/web/src/components/execution/ExecutionEvidenceList.tsx` | エビデンス一覧・削除・ダウンロード |
 | エビデンス | ExecutionEvidenceUpload | `apps/web/src/components/execution/ExecutionEvidenceUpload.tsx` | ドラッグ&ドロップアップロード |
+| 共通 | ImagePreviewModal | `apps/web/src/components/common/ImagePreviewModal.tsx` | 画像プレビューモーダル（ESC閉じ、フォーカストラップ、エラーハンドリング） |
 | UI部品 | ExecutionResultItem | `apps/web/src/components/execution/ExecutionResultItem.tsx` | 結果項目（番号・内容・ステータス・実施者情報） |
 | UI部品 | StatusButton | `apps/web/src/components/execution/StatusButton.tsx` | ステータス変更ドロップダウン |
 | PiP | PipPortal | `apps/web/src/components/execution/PipPortal.tsx` | PiPウィンドウへのポータル |
