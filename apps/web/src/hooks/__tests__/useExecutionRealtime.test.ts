@@ -33,8 +33,10 @@ function createTestQueryClient() {
 
 // テスト用ラッパー
 function createWrapper(queryClient: QueryClient) {
-  return ({ children }: { children: React.ReactNode }) =>
-    createElement(QueryClientProvider, { client: queryClient }, children);
+  function Wrapper({ children }: { children: React.ReactNode }) {
+    return createElement(QueryClientProvider, { client: queryClient }, children);
+  }
+  return Wrapper;
 }
 
 // 型安全なハンドラ取得ヘルパー
