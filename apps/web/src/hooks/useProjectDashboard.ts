@@ -51,9 +51,11 @@ export function useProjectDashboard(options: UseProjectDashboardOptions): UsePro
   /**
    * ダッシュボードデータを取得
    */
-  const fetchDashboard = useCallback(async () => {
+  const fetchDashboard = useCallback(async (isBackground = false) => {
     try {
-      setIsLoading(true);
+      if (!isBackground) {
+        setIsLoading(true);
+      }
       setError(null);
 
       const params = environmentId || stableLabelIds.length > 0
@@ -65,7 +67,9 @@ export function useProjectDashboard(options: UseProjectDashboardOptions): UsePro
     } catch {
       setError('ダッシュボードの取得に失敗しました');
     } finally {
-      setIsLoading(false);
+      if (!isBackground) {
+        setIsLoading(false);
+      }
     }
   }, [projectId, environmentId, stableLabelIds]);
 
@@ -96,7 +100,7 @@ export function useProjectDashboard(options: UseProjectDashboardOptions): UsePro
 
     // 新しいタイマーを設定
     debounceTimerRef.current = setTimeout(() => {
-      fetchDashboard();
+      fetchDashboard(true);
     }, DEBOUNCE_DELAY_MS);
   }, [fetchDashboard]);
 
