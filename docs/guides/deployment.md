@@ -69,6 +69,7 @@ docker compose exec dev pnpm --filter @agentest/db prisma migrate deploy
 | Web App | 3000 | ユーザー向け SPA |
 | API | 3001 | REST API |
 | WebSocket | 3002 | リアルタイム通信 |
+| MCP Server | 3004 | MCP Protocol サーバー |
 | Admin App | 3003 | 管理画面 |
 | PostgreSQL | 5432 | データベース |
 | Redis | 6379 | キャッシュ / Pub/Sub |
@@ -131,6 +132,43 @@ docker compose exec -T db psql -U agentest agentest < backup.sql
 ### MinIO
 
 MinIO のデータは Docker ボリュームに保存されています。ボリュームのバックアップを取得してください。
+
+## MCP Server の運用考慮事項
+
+### セッションアフィニティ
+
+MCP サーバーのセッションはインメモリに保持されるため、マルチインスタンス環境ではセッションアフィニティの設定を推奨する。
+
+**Cloud Run の場合:**
+
+```yaml
+# Cloud Run service.yaml
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: agentest-mcp
+spec:
+  template:
+    metadata:
+      annotations:
+        run.googleapis.com/sessionAffinity: "true"
+```
+
+> **Note**: セッションアフィニティはベストエフォートのため、Redis によるセッションルーティング情報が必須の補完となる。ルーティングミスが発生しても、クライアントに障害原因を通知し再初期化を促すことで復旧可能。
+
+### Redis セッションキーの運用
+
+MCP サーバーは以下の Redis キーを使用してセッションルーティング情報を管理する。
+
+| キー | TTL | 説明 |
+|------|-----|------|
+| `mcp:instance:{instanceId}` | 120秒 | サーバーインスタンスの生存情報。ハートビート（30秒間隔）で TTL を延長 |
+| `mcp:session:{sessionId}` | 180秒 | セッションメタデータ。MCP リクエスト毎に TTL を延長 |
+
+運用上の注意点:
+- TTL による自動失効のため、明示的なクリーンアップは通常不要
+- グレースフルシャットダウン時に全セッションの Redis データが削除される
+- Redis 未設定環境ではセッションルーティング機能が無効になるが、基本的な動作は維持される
 
 ## セキュリティ推奨事項
 

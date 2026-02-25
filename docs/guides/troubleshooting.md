@@ -501,6 +501,59 @@ api:
     LOG_PRETTY: "true"
 ```
 
+## 12. MCPセッションエラー
+
+### 12.1 セッション再初期化エラー
+
+**症状**: MCP クライアント（Claude Code 等）が `-32600` エラーを受け取り、セッションが無効になる
+
+MCP サーバーはセッション消失の原因を判定し、エラーレスポンスの `data.reason` に理由を含める。
+
+| `data.reason` | 原因 | 対応方法 |
+|--------------|------|----------|
+| `session_not_found` | セッション情報がRedisにも存在しない | クライアントから `initialize` リクエストを再送信 |
+| `server_restarted` | 同一マシンでサーバーが再起動された（開発環境のhot reload等） | クライアントから `initialize` リクエストを再送信 |
+| `wrong_instance` | リクエストが別のインスタンスにルーティングされた | セッションアフィニティ設定を確認。クライアントは `initialize` で再接続 |
+| `instance_terminated` | セッションを保持していたインスタンスが停止した（スケールイン等） | クライアントから `initialize` リクエストを再送信 |
+
+全エラーレスポンスに `data.reinitialize: true` が含まれるため、クライアントは `initialize` から再接続することで復旧可能。
+
+**確認コマンド**:
+```bash
+# MCP サーバーのログでセッションエラーを確認
+docker compose logs mcp-server 2>&1 | grep -E "セッションが見つかりません|再起動|別のインスタンス|停止しました"
+
+# ヘルスチェックでインスタンス情報を確認
+curl http://localhost:3004/health
+# => {"status":"ok","service":"mcp-server","instanceId":"...","activeSessions":3}
+```
+
+### 12.2 Redis セッション情報の不整合
+
+**症状**: セッションが存在するはずなのにエラーになる、ヘルスチェックのセッション数が実態と合わない
+
+**確認コマンド**:
+```bash
+# ヘルスチェックでインメモリセッション数を確認
+curl http://localhost:3004/health
+
+# Redis のセッションキーを確認
+docker compose exec redis redis-cli -a agentest KEYS "mcp:session:*"
+
+# Redis のインスタンスキーを確認
+docker compose exec redis redis-cli -a agentest KEYS "mcp:instance:*"
+
+# 特定セッションの詳細を確認
+docker compose exec redis redis-cli -a agentest GET "mcp:session:{sessionId}"
+
+# 特定インスタンスの詳細を確認
+docker compose exec redis redis-cli -a agentest GET "mcp:instance:{instanceId}"
+```
+
+**解決策**:
+1. インメモリとRedisのセッション数に差がある場合は、TTL失効待ち（最大180秒）で自然解消される
+2. 即座に解消したい場合は MCP サーバーを再起動する（グレースフルシャットダウンで Redis データがクリーンアップされる）
+
 ---
 
 ## 関連ドキュメント

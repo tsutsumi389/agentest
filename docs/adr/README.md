@@ -33,6 +33,7 @@
 | [0001](./0001-use-pnpm.md) | pnpm の採用 | 採用 |
 | [0002](./0002-monorepo.md) | モノレポ構成の採用 | 採用 |
 | [0003](./0003-docker-dev.md) | 完全 Docker 開発の採用 | 採用 |
+| [0004](./0004-mcp-session-resilience.md) | MCP セッション再起動耐性 | 採用 |
 
 ## 新しい ADR の追加
 
