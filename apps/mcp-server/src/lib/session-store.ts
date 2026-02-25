@@ -54,7 +54,17 @@ export async function getSession(sessionId: string): Promise<StoredSessionData |
   try {
     const data = await redis.get(`${KEY_PREFIX}${sessionId}`);
     if (!data) return null;
-    return JSON.parse(data) as StoredSessionData;
+    const parsed = JSON.parse(data);
+    // Redisデータ破損に備えた最低限のフィールド存在チェック
+    if (
+      typeof parsed?.userId !== 'string' ||
+      typeof parsed?.instanceId !== 'string' ||
+      typeof parsed?.machineId !== 'string'
+    ) {
+      logger.warn({ sessionId }, 'セッションデータのフォーマットが不正です');
+      return null;
+    }
+    return parsed as StoredSessionData;
   } catch (error) {
     logger.error({ err: error }, 'セッションメタデータの取得に失敗');
     return null;

@@ -132,6 +132,24 @@ describe('session-store', () => {
       expect(result).toBeNull();
       expect(mockLogger.error).toHaveBeenCalled();
     });
+
+    it('不正なJSONの場合はnullを返しエラーログを出力', async () => {
+      mockRedis.get.mockResolvedValue('not-valid-json');
+
+      const result = await getSession('session-123');
+
+      expect(result).toBeNull();
+      expect(mockLogger.error).toHaveBeenCalled();
+    });
+
+    it('フィールドが欠けたデータの場合はnullを返し警告ログを出力', async () => {
+      mockRedis.get.mockResolvedValue(JSON.stringify({ userId: 'user-1' }));
+
+      const result = await getSession('session-123');
+
+      expect(result).toBeNull();
+      expect(mockLogger.warn).toHaveBeenCalled();
+    });
   });
 
   describe('deleteSession', () => {
