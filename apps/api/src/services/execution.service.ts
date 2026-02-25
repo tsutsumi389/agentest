@@ -5,6 +5,12 @@ import { randomUUID } from 'node:crypto';
 import { ExecutionRepository } from '../repositories/execution.repository.js';
 import { MAX_EVIDENCES_PER_RESULT, isAllowedMimeType, sanitizeFileName, validateMagicBytes } from '../config/upload.js';
 import { publishDashboardUpdated } from '../lib/redis-publisher.js';
+import {
+  publishExecutionPreconditionUpdated,
+  publishExecutionStepUpdated,
+  publishExecutionExpectedResultUpdated,
+  publishExecutionEvidenceAdded,
+} from '../lib/execution-events.js';
 import { notificationService } from './notification.service.js';
 import { logger as baseLogger } from '../utils/logger.js';
 
@@ -138,6 +144,15 @@ export class ExecutionService {
     // ダッシュボード更新イベント発行
     await publishDashboardUpdated(execution.testSuite.projectId, 'execution', executionId);
 
+    // 実行チャンネルへの前提条件更新イベント発行
+    await publishExecutionPreconditionUpdated({
+      executionId,
+      resultId: preconditionResultId,
+      snapshotPreconditionId: result.executionSuitePreconditionId ?? result.executionCasePreconditionId ?? '',
+      status: data.status,
+      note: data.note ?? null,
+    });
+
     return updated;
   }
 
@@ -183,6 +198,16 @@ export class ExecutionService {
     // ダッシュボード更新イベント発行
     await publishDashboardUpdated(execution.testSuite.projectId, 'execution', executionId);
 
+    // 実行チャンネルへのステップ更新イベント発行
+    await publishExecutionStepUpdated({
+      executionId,
+      resultId: stepResultId,
+      snapshotTestCaseId: result.executionTestCaseId ?? '',
+      snapshotStepId: result.executionStepId,
+      status: data.status,
+      note: data.note ?? null,
+    });
+
     return updated;
   }
 
@@ -227,6 +252,16 @@ export class ExecutionService {
 
     // ダッシュボード更新イベント発行
     await publishDashboardUpdated(execution.testSuite.projectId, 'execution', executionId);
+
+    // 実行チャンネルへの期待結果更新イベント発行
+    await publishExecutionExpectedResultUpdated({
+      executionId,
+      resultId: expectedResultId,
+      snapshotTestCaseId: result.executionTestCaseId ?? '',
+      snapshotExpectedResultId: result.executionExpectedResultId,
+      status: data.status,
+      note: data.note ?? null,
+    });
 
     // テスト完了通知の送信チェック（失敗しても期待結果の更新は成功させる）
     try {
@@ -547,6 +582,18 @@ export class ExecutionService {
     await prisma.executionEvidence.update({
       where: { id: evidenceId },
       data: { fileSize: BigInt(fileSize) },
+    });
+
+    // 実行チャンネルへのエビデンス追加イベント発行
+    await publishExecutionEvidenceAdded({
+      executionId,
+      expectedResultId: evidence.expectedResultId,
+      evidence: {
+        id: evidence.id,
+        fileName: evidence.fileName,
+        fileUrl: evidence.fileUrl,
+        fileType: evidence.fileType,
+      },
     });
 
     return { fileSize };
