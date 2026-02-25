@@ -32,6 +32,13 @@ vi.mock('../../../services/agent-session.service.js', () => ({
   },
 }));
 
+// server-instanceのモック
+const mockRefreshInstanceHeartbeat = vi.hoisted(() => vi.fn());
+
+vi.mock('../../../lib/server-instance.js', () => ({
+  refreshInstanceHeartbeat: mockRefreshInstanceHeartbeat,
+}));
+
 // モック設定後にインポート
 import { heartbeatService } from '../../../services/heartbeat.service.js';
 
@@ -94,6 +101,17 @@ describe('HeartbeatService', () => {
       expect(mockLogger.warn).toHaveBeenCalledWith(
         'ハートビートサービスは既に起動しています'
       );
+    });
+
+    it('チェック時にrefreshInstanceHeartbeatを呼び出す', async () => {
+      mockAgentSessionService.processTimedOutSessions.mockResolvedValue(0);
+      mockRefreshInstanceHeartbeat.mockResolvedValue(undefined);
+
+      heartbeatService.start(1000);
+
+      await vi.runOnlyPendingTimersAsync();
+
+      expect(mockRefreshInstanceHeartbeat).toHaveBeenCalled();
     });
 
     it('タイムアウトチェックでエラーが発生してもクラッシュしない', async () => {

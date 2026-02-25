@@ -4,6 +4,7 @@ import { prisma } from '@agentest/db';
 import { cleanupAllSessions } from './transport/streamable-http.js';
 import { heartbeatService } from './services/heartbeat.service.js';
 import { closeRedis } from './lib/redis.js';
+import { registerServerInstance } from './lib/server-instance.js';
 import { registerProcessHandlers, type ShutdownFn } from '@agentest/shared';
 import { logger } from './utils/logger.js';
 
@@ -32,6 +33,9 @@ async function main() {
     process.exit(1);
   }
 
+  // サーバーインスタンスをRedisに登録
+  await registerServerInstance();
+
   const app = createApp();
 
   // ハートビートサービス起動
@@ -57,8 +61,8 @@ async function main() {
     // ハートビートサービス停止
     heartbeatService.stop();
 
-    // MCPセッションをクリーンアップ
-    cleanupAllSessions();
+    // MCPセッションをクリーンアップ（Redis削除を待つ）
+    await cleanupAllSessions();
     logger.info('MCPセッションをクリーンアップしました');
 
     server.close(async () => {

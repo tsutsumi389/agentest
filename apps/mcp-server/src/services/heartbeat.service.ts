@@ -1,4 +1,5 @@
 import { agentSessionService, SESSION_CONFIG } from './agent-session.service.js';
+import { refreshInstanceHeartbeat } from '../lib/server-instance.js';
 import { logger as baseLogger } from '../utils/logger.js';
 
 const logger = baseLogger.child({ module: 'heartbeat' });
@@ -55,6 +56,9 @@ class HeartbeatService {
   private async checkTimeouts(): Promise<void> {
     // ログ出力はagentSessionService.processTimedOutSessions()内で行われる
     await agentSessionService.processTimedOutSessions();
+
+    // 自インスタンスの生存をRedisに表明
+    await refreshInstanceHeartbeat();
   }
 
   /**

@@ -5,6 +5,13 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import type { McpServer } from '../server.js';
 import type { RequestContext } from '../types/context.js';
 import { logger as baseLogger } from '../utils/logger.js';
+import { getMachineId, isInstanceAlive } from '../lib/server-instance.js';
+import {
+  saveSession as saveSessionToStore,
+  getSession,
+  deleteSession as deleteSessionFromStore,
+  refreshSessionTtl,
+} from '../lib/session-store.js';
 
 const logger = baseLogger.child({ module: 'streamable-http' });
 
@@ -25,8 +32,8 @@ interface JsonRpcRequest {
 }
 
 // セッションIDをキーとしたトランスポートの管理
-// TODO: Phase 2でハートビートベースのセッションタイムアウトを実装
-// TODO: 複数インスタンス対応時はRedis/DBベースのセッションストアへ移行
+// StreamableHTTPServerTransportはシリアライズ不可のためインメモリ管理が必須
+// セッションメタデータ（ルーティング情報）はRedisのsession-storeに別途保存
 const transports = new Map<string, StreamableHTTPServerTransport>();
 
 /**
@@ -93,6 +100,9 @@ async function handlePost(
     const transport = transports.get(sessionId)!;
     const data = sessionData.get(sessionId);
 
+    // RedisセッションTTLを延長（ベストエフォート、レスポンスをブロックしない）
+    void refreshSessionTtl(sessionId);
+
     // AsyncLocalStorageでコンテキストを設定してリクエストを処理
     const context: RequestContext = {
       sessionId,
@@ -118,15 +128,21 @@ async function handlePost(
     transports.set(newSessionId, transport);
 
     // セッションデータを保存（ユーザー情報を保持）
+    const userId = req.user?.id || '';
     sessionData.set(newSessionId, {
-      userId: req.user?.id || '',
+      userId,
       agentSession: req.agentSession,
     });
+
+    // Redisにセッションメタデータを保存
+    await saveSessionToStore(newSessionId, { userId });
 
     // セッション終了時にクリーンアップ
     transport.onclose = () => {
       transports.delete(newSessionId);
       sessionData.delete(newSessionId);
+      // Redisからも削除（ベストエフォート、エラーは内部でハンドル）
+      void deleteSessionFromStore(newSessionId);
       logger.info({ sessionId: newSessionId }, 'MCPセッション終了');
     };
 
@@ -146,15 +162,8 @@ async function handlePost(
     return;
   }
 
-  // セッションIDがない、または無効な場合
-  res.status(400).json({
-    jsonrpc: '2.0',
-    error: {
-      code: -32600,
-      message: 'セッションが見つかりません。initializeリクエストから開始してください。',
-    },
-    id: body?.id ?? null,
-  });
+  // セッションIDがない、または無効な場合 → 原因を判定して詳細なエラーを返す
+  await resolveSessionError(sessionId, body, res);
 }
 
 /**
@@ -216,6 +225,49 @@ export function getSessionData(sessionId: string): McpSessionData | undefined {
 }
 
 /**
+ * セッション不在時のエラー原因を判定して適切なレスポンスを返す
+ */
+export async function resolveSessionError(
+  sessionId: string | undefined,
+  body: JsonRpcRequest | null,
+  res: Response,
+): Promise<void> {
+  let reason = 'session_not_found';
+  let message = 'セッションが見つかりません。initializeリクエストから開始してください。';
+
+  if (sessionId) {
+    const stored = await getSession(sessionId);
+    if (stored) {
+      if (stored.machineId === getMachineId()) {
+        // 同じマシンだがインメモリにない → プロセス再起動（開発環境のhot reload等）
+        reason = 'server_restarted';
+        message = 'セッションが無効です。サーバーが再起動されたため、再初期化してください。';
+      } else if (await isInstanceAlive(stored.instanceId)) {
+        // 別マシンのインスタンスが生きている → ルーティングミス
+        reason = 'wrong_instance';
+        message = 'セッションは別のインスタンスに存在します。再初期化してください。';
+      } else {
+        // 別マシンのインスタンスが死んでいる → スケールイン
+        reason = 'instance_terminated';
+        message = 'セッションを保持していたインスタンスが停止しました。再初期化してください。';
+      }
+      // 使えないセッションをRedisから削除
+      await deleteSessionFromStore(sessionId);
+    }
+  }
+
+  res.status(400).json({
+    jsonrpc: '2.0',
+    error: {
+      code: -32600,
+      message,
+      data: { reason, reinitialize: true },
+    },
+    id: body?.id ?? null,
+  });
+}
+
+/**
  * セッションを削除（クリーンアップ用）
  * @param sessionId 削除するセッションID
  */
@@ -230,19 +282,25 @@ export function deleteSession(sessionId: string): void {
   }
   transports.delete(sessionId);
   sessionData.delete(sessionId);
+  // Redisからも削除（ベストエフォート）
+  void deleteSessionFromStore(sessionId);
 }
 
 /**
  * すべてのセッションをクリーンアップ
+ * シャットダウン時はRedis削除を待つ
  */
-export function cleanupAllSessions(): void {
+export async function cleanupAllSessions(): Promise<void> {
+  const deletePromises: Promise<void>[] = [];
   for (const [sessionId, transport] of transports) {
     try {
       transport.close();
     } catch (error) {
       logger.error({ err: error, sessionId }, 'セッションのクリーンアップエラー');
     }
+    deletePromises.push(deleteSessionFromStore(sessionId));
   }
+  await Promise.allSettled(deletePromises);
   transports.clear();
   sessionData.clear();
 }
