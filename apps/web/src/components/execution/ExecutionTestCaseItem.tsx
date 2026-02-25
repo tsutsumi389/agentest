@@ -121,16 +121,16 @@ export function ExecutionTestCaseItem({
           {index}
         </span>
 
-        {/* タイトル */}
-        <span className="flex-1 min-w-0 text-sm font-medium text-foreground truncate">
-          {testCase.title}
-        </span>
-
         {/* 優先度バッジ */}
         <span
           className={`flex-shrink-0 px-2 py-0.5 text-xs font-medium rounded ${priorityColors[testCase.priority] || priorityColors.MEDIUM}`}
         >
           {priorityLabels[testCase.priority] || testCase.priority}
+        </span>
+
+        {/* タイトル */}
+        <span className="flex-1 min-w-0 text-sm font-medium text-foreground truncate" title={testCase.title}>
+          {testCase.title}
         </span>
 
         {/* 進捗サマリー */}

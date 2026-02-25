@@ -138,14 +138,14 @@ export function ExecutionTestCaseDetailPanel({
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-3 mb-2">
-              <h2 className="text-xl font-bold text-foreground truncate">
-                {testCase.title}
-              </h2>
               <span
                 className={`flex-shrink-0 px-2 py-0.5 text-xs font-medium rounded ${priorityColors[testCase.priority] || priorityColors.MEDIUM}`}
               >
                 {priorityLabels[testCase.priority] || testCase.priority}
               </span>
+              <h2 className="text-xl font-bold text-foreground truncate" title={testCase.title}>
+                {testCase.title}
+              </h2>
             </div>
             {testCase.description && (
               <MarkdownPreview content={testCase.description} className="text-sm text-foreground-muted" />
