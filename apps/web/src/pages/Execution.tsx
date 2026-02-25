@@ -12,6 +12,7 @@ import {
 import { toast } from '../stores/toast';
 import { usePageSidebar } from '../components/Layout';
 import { usePictureInPicture } from '../hooks/usePictureInPicture';
+import { useExecutionRealtime } from '../hooks/useExecutionRealtime';
 import { ExecutionSidebar } from '../components/execution/ExecutionSidebar';
 import { ExecutionOverviewPanel } from '../components/execution/ExecutionOverviewPanel';
 import { ExecutionTestCaseDetailPanel } from '../components/execution/ExecutionTestCaseDetailPanel';
@@ -33,6 +34,9 @@ export function ExecutionPage() {
     width: 450,
     height: 650,
   });
+
+  // WebSocketによるリアルタイム更新を購読
+  useExecutionRealtime(executionId);
 
   // URLパラメータから選択中のテストケースIDを取得
   const selectedTestCaseId = searchParams.get('testCase');

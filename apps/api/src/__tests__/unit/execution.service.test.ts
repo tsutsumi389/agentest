@@ -24,6 +24,14 @@ vi.mock('../../lib/redis-publisher.js', () => ({
   publishDashboardUpdated: vi.fn(),
 }));
 
+// execution-eventsのモック
+vi.mock('../../lib/execution-events.js', () => ({
+  publishExecutionPreconditionUpdated: vi.fn(),
+  publishExecutionStepUpdated: vi.fn(),
+  publishExecutionExpectedResultUpdated: vi.fn(),
+  publishExecutionEvidenceAdded: vi.fn(),
+}));
+
 // prismaのモック
 vi.mock('@agentest/db', () => ({
   prisma: {
