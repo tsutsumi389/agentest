@@ -35,7 +35,28 @@ const mockServerInstance = vi.hoisted(() => ({
 
 vi.mock('../../../lib/server-instance.js', () => mockServerInstance);
 
-import { resolveSessionError } from '../../../transport/streamable-http.js';
+import { resolveSessionError, logReinitialize } from '../../../transport/streamable-http.js';
+
+describe('logReinitialize', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('前回セッションIDがある場合はログを記録する', () => {
+    logReinitialize('old-session-id', 'new-session-id');
+
+    expect(mockLogger.info).toHaveBeenCalledWith(
+      { oldSessionId: 'old-session-id', newSessionId: 'new-session-id' },
+      'クライアントが再初期化しました（前回セッションから復帰）'
+    );
+  });
+
+  it('前回セッションIDがない場合はログを記録しない', () => {
+    logReinitialize(undefined, 'new-session-id');
+
+    expect(mockLogger.info).not.toHaveBeenCalled();
+  });
+});
 
 describe('resolveSessionError', () => {
   let mockRes: {

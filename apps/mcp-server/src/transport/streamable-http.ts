@@ -120,6 +120,10 @@ async function handlePost(
   const body = req.body as JsonRpcRequest;
   if (body?.method === 'initialize') {
     const newSessionId = randomUUID();
+
+    // 再初期化（前回セッションIDヘッダー付き）の場合はログ記録
+    logReinitialize(sessionId, newSessionId);
+
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => newSessionId,
     });
@@ -213,6 +217,22 @@ async function handleDelete(
  */
 export function getActiveSessionCount(): number {
   return transports.size;
+}
+
+/**
+ * 再初期化時のログを記録
+ * initializeリクエストで前回セッションIDが付いている場合に呼び出す
+ */
+export function logReinitialize(
+  oldSessionId: string | undefined,
+  newSessionId: string,
+): void {
+  if (oldSessionId) {
+    logger.info(
+      { oldSessionId, newSessionId },
+      'クライアントが再初期化しました（前回セッションから復帰）',
+    );
+  }
 }
 
 /**

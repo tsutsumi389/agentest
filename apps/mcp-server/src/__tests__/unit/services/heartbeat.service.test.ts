@@ -39,6 +39,13 @@ vi.mock('../../../lib/server-instance.js', () => ({
   refreshInstanceHeartbeat: mockRefreshInstanceHeartbeat,
 }));
 
+// streamable-httpのモック（getActiveSessionCountのみ必要）
+const mockGetActiveSessionCount = vi.hoisted(() => vi.fn(() => 0));
+
+vi.mock('../../../transport/streamable-http.js', () => ({
+  getActiveSessionCount: mockGetActiveSessionCount,
+}));
+
 // モック設定後にインポート
 import { heartbeatService } from '../../../services/heartbeat.service.js';
 
@@ -112,6 +119,21 @@ describe('HeartbeatService', () => {
       await vi.runOnlyPendingTimersAsync();
 
       expect(mockRefreshInstanceHeartbeat).toHaveBeenCalled();
+    });
+
+    it('チェック時にインメモリセッション数をdebugログに出力', async () => {
+      mockAgentSessionService.processTimedOutSessions.mockResolvedValue(0);
+      mockRefreshInstanceHeartbeat.mockResolvedValue(undefined);
+      mockGetActiveSessionCount.mockReturnValue(3);
+
+      heartbeatService.start(1000);
+
+      await vi.runOnlyPendingTimersAsync();
+
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        { activeSessions: 3 },
+        'インメモリセッション状態'
+      );
     });
 
     it('タイムアウトチェックでエラーが発生してもクラッシュしない', async () => {

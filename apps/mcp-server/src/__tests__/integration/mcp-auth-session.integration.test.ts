@@ -106,10 +106,14 @@ describe('MCP Auth & Session Integration Tests', () => {
       const response = await request(app).get('/health');
 
       expect(response.status).toBe(200);
-      expect(response.body).toEqual({
+      expect(response.body).toMatchObject({
         status: 'ok',
         service: 'mcp-server',
       });
+      // Phase 2: インスタンスIDとアクティブセッション数が含まれること
+      expect(response.body.instanceId).toBeDefined();
+      expect(typeof response.body.instanceId).toBe('string');
+      expect(typeof response.body.activeSessions).toBe('number');
     });
   });
 

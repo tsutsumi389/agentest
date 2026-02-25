@@ -1,5 +1,6 @@
 import { agentSessionService, SESSION_CONFIG } from './agent-session.service.js';
 import { refreshInstanceHeartbeat } from '../lib/server-instance.js';
+import { getActiveSessionCount } from '../transport/streamable-http.js';
 import { logger as baseLogger } from '../utils/logger.js';
 
 const logger = baseLogger.child({ module: 'heartbeat' });
@@ -59,6 +60,12 @@ class HeartbeatService {
 
     // 自インスタンスの生存をRedisに表明
     await refreshInstanceHeartbeat();
+
+    // インメモリセッション数を記録（運用監視用）
+    logger.debug(
+      { activeSessions: getActiveSessionCount() },
+      'インメモリセッション状態',
+    );
   }
 
   /**

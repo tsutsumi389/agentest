@@ -7,9 +7,10 @@ import { errorHandler } from './middleware/error-handler.js';
 import { mcpAuthenticate } from './middleware/mcp-auth.middleware.js';
 import { mcpHybridAuthenticate } from './middleware/oauth-auth.middleware.js';
 import { agentSession, recordHeartbeat } from './middleware/agent-session.middleware.js';
-import { createMcpHandler } from './transport/streamable-http.js';
+import { createMcpHandler, getActiveSessionCount } from './transport/streamable-http.js';
 import { createMcpServer } from './server.js';
 import oauthMetadataRoutes from './routes/oauth-metadata.js';
+import { getServerInstanceId } from './lib/server-instance.js';
 
 /**
  * Expressアプリケーションを作成・設定
@@ -47,9 +48,14 @@ export function createApp(): Express {
   // クッキーパーサー
   app.use(cookieParser());
 
-  // ヘルスチェック
+  // ヘルスチェック（インスタンスIDとアクティブセッション数を含む）
   app.get('/health', (_req, res) => {
-    res.json({ status: 'ok', service: 'mcp-server' });
+    res.json({
+      status: 'ok',
+      service: 'mcp-server',
+      instanceId: getServerInstanceId(),
+      activeSessions: getActiveSessionCount(),
+    });
   });
 
   // OAuth 2.1 Protected Resource Metadata (RFC 9728)
