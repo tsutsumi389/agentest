@@ -23,7 +23,7 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
     labelIds: selectedLabelIds,
   });
 
-  if (isLoading) {
+  if (isLoading && !stats) {
     return (
       <div className="text-foreground-muted">読み込み中...</div>
     );
