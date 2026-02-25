@@ -101,13 +101,14 @@ export function TestSuiteHeader({
           // テストケース選択時: タイトル + アクションボタン（テストスイートと同じ構造）
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <h1 className="text-lg font-semibold text-foreground truncate max-w-[300px]">
-                {selectedTestCase.title}
-              </h1>
               {/* 優先度バッジ */}
               <span className={`px-2 py-0.5 text-xs font-medium rounded ${PRIORITY_COLORS[selectedTestCase.priority]}`}>
                 {PRIORITY_LABELS[selectedTestCase.priority]}
               </span>
+              <h1 className="text-lg font-semibold text-foreground truncate max-w-[300px]"
+                  title={selectedTestCase.title}>
+                {selectedTestCase.title}
+              </h1>
               {/* ステータスバッジ（アクティブは通常状態のため非表示） */}
               {selectedTestCase.status !== 'ACTIVE' && (
                 <span className={`px-2 py-0.5 text-xs font-medium rounded ${STATUS_COLORS[selectedTestCase.status]}`}>
