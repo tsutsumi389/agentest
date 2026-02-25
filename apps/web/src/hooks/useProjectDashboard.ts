@@ -43,31 +43,47 @@ export function useProjectDashboard(options: UseProjectDashboardOptions): UsePro
   const [error, setError] = useState<string | null>(null);
 
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // リクエストIDでレースコンディションを防止
+  const requestIdRef = useRef(0);
 
   // labelIdsの依存を安定化（配列の参照が変わらないようにする）
   const labelIdsKey = labelIds.join(',');
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- labelIdsKeyで比較を安定化
   const stableLabelIds = useMemo(() => labelIds, [labelIdsKey]);
 
   /**
    * ダッシュボードデータを取得
+   * バックグラウンドフェッチ時はローディング状態を変更せず、失敗時も既存エラーを保持する
    */
   const fetchDashboard = useCallback(async (isBackground = false) => {
+    const currentRequestId = ++requestIdRef.current;
+
     try {
       if (!isBackground) {
         setIsLoading(true);
+        setError(null);
       }
-      setError(null);
 
       const params = environmentId || stableLabelIds.length > 0
         ? { environmentId, labelIds: stableLabelIds }
         : undefined;
 
       const response = await projectsApi.getDashboard(projectId, params);
+
+      // 古いリクエストの結果を無視する
+      if (currentRequestId !== requestIdRef.current) return;
+
       setStats(response.dashboard);
+      // バックグラウンドフェッチ成功時もエラーをクリア
+      setError(null);
     } catch {
-      setError('ダッシュボードの取得に失敗しました');
-    } finally {
+      if (currentRequestId !== requestIdRef.current) return;
+      // バックグラウンドフェッチ失敗時は既存のエラー状態を保持する
       if (!isBackground) {
+        setError('ダッシュボードの取得に失敗しました');
+      }
+    } finally {
+      if (currentRequestId === requestIdRef.current && !isBackground) {
         setIsLoading(false);
       }
     }
