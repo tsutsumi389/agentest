@@ -1771,6 +1771,50 @@ export const labelsApi = {
 };
 
 // ============================================
+// MCPセッションAPI
+// ============================================
+
+export type AgentSessionStatus = 'ACTIVE' | 'IDLE' | 'ENDED' | 'TIMEOUT';
+export type SessionSource = 'agent' | 'oauth';
+
+export interface AgentSessionItem {
+  id: string;
+  source: SessionSource;
+  projectId: string | null;
+  projectName: string | null;
+  clientId: string;
+  clientName: string | null;
+  status: AgentSessionStatus;
+  startedAt: string;
+  lastHeartbeat: string;
+  endedAt: string | null;
+}
+
+export interface AgentSessionListResponse {
+  data: AgentSessionItem[];
+  meta: { total: number; page: number; limit: number };
+}
+
+export const agentSessionsApi = {
+  // セッション一覧を取得
+  list: (params?: { status?: string; page?: number; limit?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.status) query.set('status', params.status);
+    if (params?.page !== undefined) query.set('page', String(params.page));
+    if (params?.limit !== undefined) query.set('limit', String(params.limit));
+    const queryString = query.toString();
+    return api.get<AgentSessionListResponse>(
+      `/api/agent-sessions${queryString ? `?${queryString}` : ''}`
+    );
+  },
+  // セッションを終了
+  end: (sessionId: string, source?: SessionSource) =>
+    api.delete<{ data: { success: boolean } }>(
+      `/api/agent-sessions/${sessionId}${source ? `?source=${source}` : ''}`
+    ),
+};
+
+// ============================================
 // 通知API
 // ============================================
 
