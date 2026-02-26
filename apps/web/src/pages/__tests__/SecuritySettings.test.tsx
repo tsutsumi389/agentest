@@ -624,4 +624,137 @@ describe('SecuritySettings - パスワード管理', () => {
       expect(screen.queryByText('Google')).not.toBeInTheDocument();
     });
   });
+
+  describe('アクティブセッション表示上限', () => {
+    // 複数セッションを生成するヘルパー
+    function createSessions(count: number) {
+      const sessions = [
+        {
+          id: 'session-current',
+          userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120',
+          ipAddress: '127.0.0.1',
+          lastActiveAt: new Date().toISOString(),
+          isCurrent: true,
+        },
+      ];
+      for (let i = 1; i < count; i++) {
+        sessions.push({
+          id: `session-${i}`,
+          userAgent: `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/${100 + i}`,
+          ipAddress: `192.168.1.${i}`,
+          lastActiveAt: new Date(Date.now() - i * 3600000).toISOString(),
+          isCurrent: false,
+        });
+      }
+      return sessions;
+    }
+
+    function setupSessionMocks(sessionCount: number) {
+      mockPasswordApi.getStatus.mockResolvedValue({ hasPassword: false });
+      mockAccountsApi.list.mockResolvedValue({ data: [] });
+      mockSessionsApi.list.mockResolvedValue({ data: createSessions(sessionCount) });
+      mockApiTokensApi.list.mockResolvedValue({ tokens: [] });
+    }
+
+    it('セッション数が5件以下の場合、「すべて表示」ボタンが表示されない', async () => {
+      setupSessionMocks(5);
+      renderSecuritySettings();
+
+      await waitFor(() => {
+        expect(screen.getByText(/現在のセッション/)).toBeInTheDocument();
+      });
+
+      expect(screen.queryByText(/件のセッションを表示/)).not.toBeInTheDocument();
+    });
+
+    it('セッション数が6件以上の場合、最初は5件のみ表示される', async () => {
+      setupSessionMocks(8);
+      renderSecuritySettings();
+
+      await waitFor(() => {
+        expect(screen.getByText(/現在のセッション/)).toBeInTheDocument();
+      });
+
+      // 「他 3 件のセッションを表示」ボタンが表示される
+      expect(screen.getByText('他 3 件のセッションを表示')).toBeInTheDocument();
+    });
+
+    it('「すべて表示」ボタンをクリックすると全セッションが表示される', async () => {
+      setupSessionMocks(8);
+      renderSecuritySettings();
+
+      await waitFor(() => {
+        expect(screen.getByText('他 3 件のセッションを表示')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('他 3 件のセッションを表示'));
+
+      // ボタンが消える
+      await waitFor(() => {
+        expect(screen.queryByText(/件のセッションを表示/)).not.toBeInTheDocument();
+      });
+    });
+
+    it('セッション削除後に件数が5件以下になると展開状態がリセットされる', async () => {
+      setupSessionMocks(6);
+      mockSessionsApi.revoke.mockResolvedValue({});
+      renderSecuritySettings();
+
+      await waitFor(() => {
+        expect(screen.getByText('他 1 件のセッションを表示')).toBeInTheDocument();
+      });
+
+      // 全セッション表示
+      fireEvent.click(screen.getByText('他 1 件のセッションを表示'));
+
+      await waitFor(() => {
+        expect(screen.queryByText(/件のセッションを表示/)).not.toBeInTheDocument();
+      });
+
+      // 非現在セッションのログアウトボタンをクリック
+      const logoutButtons = screen.getAllByText('ログアウト');
+      fireEvent.click(logoutButtons[0]);
+
+      // 確認ダイアログの「終了する」ボタンをクリック
+      await waitFor(() => {
+        expect(screen.getByText('終了する')).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText('終了する'));
+
+      // セッション削除後、5件以下になるので展開状態がリセット
+      await waitFor(() => {
+        expect(mockSessionsApi.revoke).toHaveBeenCalled();
+      });
+    });
+
+    it('「他のすべてのセッションを終了」後に展開状態がリセットされる', async () => {
+      setupSessionMocks(8);
+      mockSessionsApi.revokeOthers.mockResolvedValue({ data: { revokedCount: 7 } });
+      renderSecuritySettings();
+
+      await waitFor(() => {
+        expect(screen.getByText('他 3 件のセッションを表示')).toBeInTheDocument();
+      });
+
+      // 全セッション表示
+      fireEvent.click(screen.getByText('他 3 件のセッションを表示'));
+
+      // 「他のすべてのセッションを終了」をクリック
+      await waitFor(() => {
+        expect(screen.getByText('他のすべてのセッションを終了')).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByText('他のすべてのセッションを終了'));
+
+      // 確認ダイアログの「終了する」をクリック
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: '終了する' })).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole('button', { name: '終了する' }));
+
+      // 全セッション終了後、展開ボタンは表示されない
+      await waitFor(() => {
+        expect(screen.queryByText(/件のセッションを表示/)).not.toBeInTheDocument();
+      });
+    });
+  });
 });
