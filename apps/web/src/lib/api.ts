@@ -1775,11 +1775,13 @@ export const labelsApi = {
 // ============================================
 
 export type AgentSessionStatus = 'ACTIVE' | 'IDLE' | 'ENDED' | 'TIMEOUT';
+export type SessionSource = 'agent' | 'oauth';
 
 export interface AgentSessionItem {
   id: string;
-  projectId: string;
-  projectName: string;
+  source: SessionSource;
+  projectId: string | null;
+  projectName: string | null;
   clientId: string;
   clientName: string | null;
   status: AgentSessionStatus;

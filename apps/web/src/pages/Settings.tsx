@@ -1807,11 +1807,25 @@ function McpSessionItem({
             </span>
           </div>
           <div className="text-sm text-foreground-muted mt-0.5">
-            <span>{session.projectName}</span>
-            <span className="mx-2">&middot;</span>
+            {session.projectName && (
+              <>
+                <span>{session.projectName}</span>
+                <span className="mx-2">&middot;</span>
+              </>
+            )}
+            {session.source === 'oauth' && (
+              <>
+                <span>OAuth</span>
+                <span className="mx-2">&middot;</span>
+              </>
+            )}
             <span>開始: {formatRelativeTime(session.startedAt)}</span>
-            <span className="mx-2">&middot;</span>
-            <span>最終通信: {formatRelativeTime(session.lastHeartbeat)}</span>
+            {session.source === 'agent' && (
+              <>
+                <span className="mx-2">&middot;</span>
+                <span>最終通信: {formatRelativeTime(session.lastHeartbeat)}</span>
+              </>
+            )}
           </div>
         </div>
       </div>

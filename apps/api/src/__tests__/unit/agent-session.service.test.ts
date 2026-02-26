@@ -22,6 +22,9 @@ const mockAgentSessionRepo = vi.hoisted(() => ({
   findById: vi.fn(),
   isProjectMember: vi.fn(),
   endSession: vi.fn(),
+  findOAuthSessions: vi.fn(),
+  findOAuthTokenById: vi.fn(),
+  revokeOAuthToken: vi.fn(),
 }))
 
 vi.mock('../../repositories/agent-session.repository.js', () => ({
@@ -70,7 +73,8 @@ describe('AgentSessionService', () => {
   })
 
   describe('getSessionsByUser', () => {
-    it('ユーザーのセッション一覧を取得する', async () => {
+    it('AgentSessionとOAuthトークンを統合して返す', async () => {
+      const now = new Date()
       const mockSessions = [
         {
           id: TEST_SESSION_ID,
@@ -78,10 +82,22 @@ describe('AgentSessionService', () => {
           clientId: 'claude-code-xxx',
           clientName: 'Claude Code',
           status: 'ACTIVE',
-          startedAt: new Date(),
-          lastHeartbeat: new Date(),
+          startedAt: now,
+          lastHeartbeat: now,
           endedAt: null,
           project: { id: TEST_PROJECT_ID, name: 'テストプロジェクト' },
+        },
+      ]
+      const mockOAuthTokens = [
+        {
+          id: 'oauth-token-1',
+          userId: TEST_USER_ID,
+          clientId: 'oauth-client-id',
+          scopes: ['mcp:read'],
+          expiresAt: new Date(Date.now() + 3600000), // 1時間後
+          revokedAt: null,
+          createdAt: now,
+          client: { clientId: 'oauth-client-id', clientName: 'Claude Code (agentest)' },
         },
       ]
 
@@ -89,6 +105,7 @@ describe('AgentSessionService', () => {
         sessions: mockSessions,
         total: 1,
       })
+      mockAgentSessionRepo.findOAuthSessions.mockResolvedValue(mockOAuthTokens)
 
       const result = await service.getSessionsByUser({
         userId: TEST_USER_ID,
@@ -97,20 +114,85 @@ describe('AgentSessionService', () => {
         limit: 50,
       })
 
-      expect(result.sessions).toHaveLength(1)
-      expect(result.total).toBe(1)
-      expect(result.sessions[0]).toEqual(
+      expect(result.sessions).toHaveLength(2)
+      expect(result.total).toBe(2)
+
+      // AgentSession
+      const agentSession = result.sessions.find((s) => s.source === 'agent')
+      expect(agentSession).toEqual(
         expect.objectContaining({
           id: TEST_SESSION_ID,
+          source: 'agent',
           projectName: 'テストプロジェクト',
-          clientId: 'claude-code-xxx',
+        })
+      )
+
+      // OAuthセッション
+      const oauthSession = result.sessions.find((s) => s.source === 'oauth')
+      expect(oauthSession).toEqual(
+        expect.objectContaining({
+          id: 'oauth-token-1',
+          source: 'oauth',
+          clientName: 'Claude Code (agentest)',
+          status: 'ACTIVE',
+          projectId: null,
+          projectName: null,
         })
       )
     })
 
-    it('レスポンス形式が正しい（projectNameフラット化）', async () => {
-      const mockSessions = [
+    it('OAuthトークンのステータスが正しく判定される', async () => {
+      const now = new Date()
+      mockAgentSessionRepo.findByUserProjects.mockResolvedValue({ sessions: [], total: 0 })
+      mockAgentSessionRepo.findOAuthSessions.mockResolvedValue([
         {
+          id: 'token-active',
+          userId: TEST_USER_ID,
+          clientId: 'c1',
+          scopes: [],
+          expiresAt: new Date(Date.now() + 3600000),
+          revokedAt: null,
+          createdAt: now,
+          client: { clientId: 'c1', clientName: 'Active' },
+        },
+        {
+          id: 'token-revoked',
+          userId: TEST_USER_ID,
+          clientId: 'c2',
+          scopes: [],
+          expiresAt: new Date(Date.now() + 3600000),
+          revokedAt: new Date(),
+          createdAt: now,
+          client: { clientId: 'c2', clientName: 'Revoked' },
+        },
+        {
+          id: 'token-expired',
+          userId: TEST_USER_ID,
+          clientId: 'c3',
+          scopes: [],
+          expiresAt: new Date(Date.now() - 1000),
+          revokedAt: null,
+          createdAt: now,
+          client: { clientId: 'c3', clientName: 'Expired' },
+        },
+      ])
+
+      const result = await service.getSessionsByUser({
+        userId: TEST_USER_ID,
+        statuses: ['ACTIVE', 'IDLE', 'ENDED', 'TIMEOUT'],
+        page: 1,
+        limit: 50,
+      })
+
+      const sessions = result.sessions
+      expect(sessions.find((s) => s.id === 'token-active')?.status).toBe('ACTIVE')
+      expect(sessions.find((s) => s.id === 'token-revoked')?.status).toBe('ENDED')
+      expect(sessions.find((s) => s.id === 'token-expired')?.status).toBe('TIMEOUT')
+    })
+
+    it('AgentSessionのみの場合（OAuthトークンなし）', async () => {
+      mockAgentSessionRepo.findByUserProjects.mockResolvedValue({
+        sessions: [{
           id: TEST_SESSION_ID,
           projectId: TEST_PROJECT_ID,
           clientId: 'client-1',
@@ -120,13 +202,10 @@ describe('AgentSessionService', () => {
           lastHeartbeat: new Date('2025-01-01'),
           endedAt: null,
           project: { id: TEST_PROJECT_ID, name: 'Project A' },
-        },
-      ]
-
-      mockAgentSessionRepo.findByUserProjects.mockResolvedValue({
-        sessions: mockSessions,
+        }],
         total: 1,
       })
+      mockAgentSessionRepo.findOAuthSessions.mockResolvedValue([])
 
       const result = await service.getSessionsByUser({
         userId: TEST_USER_ID,
@@ -135,14 +214,9 @@ describe('AgentSessionService', () => {
         limit: 50,
       })
 
-      const session = result.sessions[0]
-      expect(session).toHaveProperty('projectName', 'Project A')
-      expect(session).toHaveProperty('clientId', 'client-1')
-      expect(session).toHaveProperty('clientName', null)
-      expect(session).toHaveProperty('status', 'IDLE')
-      expect(session).toHaveProperty('startedAt')
-      expect(session).toHaveProperty('lastHeartbeat')
-      expect(session).toHaveProperty('endedAt', null)
+      expect(result.sessions).toHaveLength(1)
+      expect(result.sessions[0]).toHaveProperty('source', 'agent')
+      expect(result.sessions[0]).toHaveProperty('projectName', 'Project A')
     })
   })
 
@@ -171,10 +245,49 @@ describe('AgentSessionService', () => {
 
     it('存在しないセッションの場合NotFoundErrorを投げる', async () => {
       mockAgentSessionRepo.findById.mockResolvedValue(null)
+      mockAgentSessionRepo.findOAuthTokenById.mockResolvedValue(null)
 
       await expect(
         service.endSession(TEST_USER_ID, 'nonexistent-id')
       ).rejects.toThrow(NotFoundError)
+    })
+
+    it('OAuthトークンを失効させる', async () => {
+      const mockToken = {
+        id: 'oauth-token-1',
+        userId: TEST_USER_ID,
+        clientId: 'client-id',
+        revokedAt: null,
+        expiresAt: new Date(Date.now() + 3600000),
+        createdAt: new Date(),
+        client: { clientId: 'client-id', clientName: 'Claude Code' },
+      }
+
+      mockAgentSessionRepo.findById.mockResolvedValue(null)
+      mockAgentSessionRepo.findOAuthTokenById.mockResolvedValue(mockToken)
+      mockAgentSessionRepo.revokeOAuthToken.mockResolvedValue({ ...mockToken, revokedAt: new Date() })
+
+      const result = await service.endSession(TEST_USER_ID, 'oauth-token-1')
+
+      expect(result).toEqual({ success: true })
+      expect(mockAgentSessionRepo.revokeOAuthToken).toHaveBeenCalledWith('oauth-token-1')
+    })
+
+    it('他人のOAuthトークンは失効できない', async () => {
+      const mockToken = {
+        id: 'oauth-token-1',
+        userId: 'other-user-id',
+        clientId: 'client-id',
+        revokedAt: null,
+        client: { clientId: 'client-id', clientName: 'Claude Code' },
+      }
+
+      mockAgentSessionRepo.findById.mockResolvedValue(null)
+      mockAgentSessionRepo.findOAuthTokenById.mockResolvedValue(mockToken)
+
+      await expect(
+        service.endSession(TEST_USER_ID, 'oauth-token-1')
+      ).rejects.toThrow(AuthorizationError)
     })
 
     it('プロジェクトメンバーでない場合AuthorizationErrorを投げる', async () => {

@@ -8,11 +8,15 @@ const logger = baseLogger.child({ module: 'agent-session' })
 const VALID_STATUSES: AgentSessionStatus[] = ['ACTIVE', 'IDLE', 'ENDED', 'TIMEOUT']
 const DEFAULT_STATUSES: AgentSessionStatus[] = ['ACTIVE', 'IDLE']
 
+// セッション種別
+export type SessionSource = 'agent' | 'oauth'
+
 // API レスポンス用の型
 export interface AgentSessionInfo {
   id: string
-  projectId: string
-  projectName: string
+  source: SessionSource
+  projectId: string | null
+  projectName: string | null
   clientId: string
   clientName: string | null
   status: AgentSessionStatus
@@ -45,20 +49,22 @@ export class AgentSessionService {
     return parsed.length > 0 ? parsed : DEFAULT_STATUSES
   }
 
-  // ユーザーのセッション一覧を取得する
+  // ユーザーのセッション一覧を取得する（AgentSession + OAuthトークン統合）
   async getSessionsByUser(params: GetSessionsParams): Promise<{ sessions: AgentSessionInfo[]; total: number }> {
     const { userId, statuses, page, limit } = params
 
-    const result = await this.agentSessionRepo.findByUserProjects({
-      userId,
-      statuses,
-      page,
-      limit,
-    })
+    const includeEnded = statuses.includes('ENDED') || statuses.includes('TIMEOUT')
 
-    // DBモデルからAPI用DTOに変換（projectNameをフラット化）
-    const sessions: AgentSessionInfo[] = result.sessions.map((session) => ({
+    // AgentSessionとOAuthトークンを並列取得
+    const [agentResult, oauthTokens] = await Promise.all([
+      this.agentSessionRepo.findByUserProjects({ userId, statuses, page: 1, limit: 1000 }),
+      this.agentSessionRepo.findOAuthSessions({ userId, includeRevoked: includeEnded }),
+    ])
+
+    // AgentSessionをDTO変換
+    const agentSessions: AgentSessionInfo[] = agentResult.sessions.map((session) => ({
       id: session.id,
+      source: 'agent' as SessionSource,
       projectId: session.projectId,
       projectName: session.project.name,
       clientId: session.clientId,
@@ -69,15 +75,60 @@ export class AgentSessionService {
       endedAt: session.endedAt,
     }))
 
-    return { sessions, total: result.total }
+    // OAuthトークンをMCPセッション形式に変換
+    const now = new Date()
+    const oauthSessions: AgentSessionInfo[] = oauthTokens.map((token) => {
+      let status: AgentSessionStatus
+      if (token.revokedAt) {
+        status = 'ENDED'
+      } else if (token.expiresAt < now) {
+        status = 'TIMEOUT'
+      } else {
+        status = 'ACTIVE'
+      }
+
+      return {
+        id: token.id,
+        source: 'oauth' as SessionSource,
+        projectId: null,
+        projectName: null,
+        clientId: token.client.clientId,
+        clientName: token.client.clientName,
+        status,
+        startedAt: token.createdAt,
+        lastHeartbeat: token.createdAt,
+        endedAt: token.revokedAt,
+      }
+    })
+
+    // 統合してステータスフィルタ適用
+    const allSessions = [...agentSessions, ...oauthSessions]
+      .filter((s) => statuses.includes(s.status))
+      .sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime())
+
+    const total = allSessions.length
+    const paged = allSessions.slice((page - 1) * limit, page * limit)
+
+    return { sessions: paged, total }
   }
 
-  // セッションを終了する
-  async endSession(userId: string, sessionId: string): Promise<{ success: boolean }> {
-    // セッション存在確認
+  // セッションを終了する（AgentSessionまたはOAuthトークン）
+  async endSession(userId: string, sessionId: string, source?: SessionSource): Promise<{ success: boolean }> {
+    // OAuthトークンの場合
+    if (source === 'oauth') {
+      return this.endOAuthSession(userId, sessionId)
+    }
+
+    // AgentSessionの場合（デフォルト）
     const session = await this.agentSessionRepo.findById(sessionId)
+
+    // AgentSessionが見つからなければOAuthトークンとして試行
     if (!session) {
-      throw new NotFoundError('AgentSession', sessionId)
+      const oauthToken = await this.agentSessionRepo.findOAuthTokenById(sessionId)
+      if (oauthToken) {
+        return this.endOAuthSession(userId, sessionId)
+      }
+      throw new NotFoundError('Session', sessionId)
     }
 
     // プロジェクトメンバーチェック
@@ -93,6 +144,29 @@ export class AgentSessionService {
 
     await this.agentSessionRepo.endSession(sessionId)
     logger.info({ sessionId, userId }, 'MCPセッションを終了しました')
+
+    return { success: true }
+  }
+
+  // OAuthトークンを失効させる
+  private async endOAuthSession(userId: string, tokenId: string): Promise<{ success: boolean }> {
+    const token = await this.agentSessionRepo.findOAuthTokenById(tokenId)
+    if (!token) {
+      throw new NotFoundError('OAuthToken', tokenId)
+    }
+
+    // 本人のトークンか確認
+    if (token.userId !== userId) {
+      throw new AuthorizationError('このセッションを終了する権限がありません')
+    }
+
+    // 既に失効済み
+    if (token.revokedAt) {
+      throw new ValidationError('このセッションは既に終了しています')
+    }
+
+    await this.agentSessionRepo.revokeOAuthToken(tokenId)
+    logger.info({ tokenId, userId }, 'OAuthトークンを失効しました')
 
     return { success: true }
   }
