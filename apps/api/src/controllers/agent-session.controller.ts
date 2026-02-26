@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express'
 import { AuthenticationError, ValidationError } from '@agentest/shared'
+import { uuidSchema } from '@agentest/shared/validators'
 import { AgentSessionService } from '../services/agent-session.service.js'
 
 export class AgentSessionController {
@@ -39,12 +40,12 @@ export class AgentSessionController {
         throw new AuthenticationError('認証が必要です')
       }
 
-      const { sessionId } = req.params
-      if (!sessionId) {
-        throw new ValidationError('セッションIDが必要です')
+      const parseResult = uuidSchema.safeParse(req.params.sessionId)
+      if (!parseResult.success) {
+        throw new ValidationError('無効なセッションIDです')
       }
 
-      const result = await this.agentSessionService.endSession(req.user.id, sessionId)
+      const result = await this.agentSessionService.endSession(req.user.id, parseResult.data)
       res.json({ data: result })
     } catch (error) {
       next(error)

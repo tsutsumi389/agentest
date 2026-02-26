@@ -1,4 +1,4 @@
-import { prisma, type AgentSessionStatus } from '@agentest/db'
+import type { AgentSessionStatus } from '@agentest/db'
 import { NotFoundError, AuthorizationError, ValidationError } from '@agentest/shared'
 import { AgentSessionRepository } from '../repositories/agent-session.repository.js'
 import { logger as baseLogger } from '../utils/logger.js'
@@ -81,10 +81,8 @@ export class AgentSessionService {
     }
 
     // プロジェクトメンバーチェック
-    const member = await prisma.projectMember.findFirst({
-      where: { projectId: session.projectId, userId },
-    })
-    if (!member) {
+    const isMember = await this.agentSessionRepo.isProjectMember(session.projectId, userId)
+    if (!isMember) {
       throw new AuthorizationError('このセッションを終了する権限がありません')
     }
 

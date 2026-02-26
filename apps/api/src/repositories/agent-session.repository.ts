@@ -51,6 +51,14 @@ export class AgentSessionRepository {
     })
   }
 
+  // プロジェクトメンバーかどうかを確認
+  async isProjectMember(projectId: string, userId: string): Promise<boolean> {
+    const member = await prisma.projectMember.findFirst({
+      where: { projectId, userId },
+    })
+    return member !== null
+  }
+
   // セッション終了
   async endSession(id: string) {
     return prisma.agentSession.update({

@@ -1652,9 +1652,8 @@ function McpSessionSettings() {
       const response = await agentSessionsApi.list({ status, limit: 100 });
       setSessions(response.data);
     } catch (error) {
-      if (error instanceof ApiError) {
-        toast.error(`セッションの取得に失敗しました: ${error.message}`);
-      }
+      const message = error instanceof ApiError ? error.message : '予期しないエラーが発生しました';
+      toast.error(`セッションの取得に失敗しました: ${message}`);
     } finally {
       setIsLoading(false);
     }
@@ -1669,7 +1668,7 @@ function McpSessionSettings() {
       setEndingSessionId(sessionId);
       await agentSessionsApi.end(sessionId);
 
-      // 楽観的更新: ステータスをENDEDに変更
+      // ローカルステート更新: ステータスをENDEDに変更
       setSessions((prev) =>
         prev.map((s) =>
           s.id === sessionId
@@ -1679,9 +1678,8 @@ function McpSessionSettings() {
       );
       toast.success('セッションを終了しました');
     } catch (error) {
-      if (error instanceof ApiError) {
-        toast.error(`セッションの終了に失敗しました: ${error.message}`);
-      }
+      const message = error instanceof ApiError ? error.message : '予期しないエラーが発生しました';
+      toast.error(`セッションの終了に失敗しました: ${message}`);
       // 失敗時はリフェッチ
       fetchSessions();
     } finally {

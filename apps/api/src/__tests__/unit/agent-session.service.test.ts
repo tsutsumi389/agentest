@@ -20,22 +20,12 @@ vi.mock('../../utils/logger.js', () => ({ logger: mockLogger }))
 const mockAgentSessionRepo = vi.hoisted(() => ({
   findByUserProjects: vi.fn(),
   findById: vi.fn(),
+  isProjectMember: vi.fn(),
   endSession: vi.fn(),
 }))
 
 vi.mock('../../repositories/agent-session.repository.js', () => ({
   AgentSessionRepository: vi.fn().mockImplementation(() => mockAgentSessionRepo),
-}))
-
-// ProjectMember検索用のPrismaモック
-const mockPrismaProjectMember = vi.hoisted(() => ({
-  findFirst: vi.fn(),
-}))
-
-vi.mock('@agentest/db', () => ({
-  prisma: {
-    projectMember: mockPrismaProjectMember,
-  },
 }))
 
 import { AgentSessionService } from '../../services/agent-session.service.js'
@@ -166,7 +156,7 @@ describe('AgentSessionService', () => {
       }
 
       mockAgentSessionRepo.findById.mockResolvedValue(mockSession)
-      mockPrismaProjectMember.findFirst.mockResolvedValue({ id: 'member-1' })
+      mockAgentSessionRepo.isProjectMember.mockResolvedValue(true)
       mockAgentSessionRepo.endSession.mockResolvedValue({
         ...mockSession,
         status: 'ENDED',
@@ -196,7 +186,7 @@ describe('AgentSessionService', () => {
       }
 
       mockAgentSessionRepo.findById.mockResolvedValue(mockSession)
-      mockPrismaProjectMember.findFirst.mockResolvedValue(null)
+      mockAgentSessionRepo.isProjectMember.mockResolvedValue(false)
 
       await expect(
         service.endSession(TEST_USER_ID, TEST_SESSION_ID)
@@ -212,7 +202,7 @@ describe('AgentSessionService', () => {
       }
 
       mockAgentSessionRepo.findById.mockResolvedValue(mockSession)
-      mockPrismaProjectMember.findFirst.mockResolvedValue({ id: 'member-1' })
+      mockAgentSessionRepo.isProjectMember.mockResolvedValue(true)
 
       await expect(
         service.endSession(TEST_USER_ID, TEST_SESSION_ID)
@@ -228,7 +218,7 @@ describe('AgentSessionService', () => {
       }
 
       mockAgentSessionRepo.findById.mockResolvedValue(mockSession)
-      mockPrismaProjectMember.findFirst.mockResolvedValue({ id: 'member-1' })
+      mockAgentSessionRepo.isProjectMember.mockResolvedValue(true)
 
       await expect(
         service.endSession(TEST_USER_ID, TEST_SESSION_ID)

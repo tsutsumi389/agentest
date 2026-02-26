@@ -146,6 +146,15 @@ describe('AgentSessionController', () => {
       expect(mockNext).toHaveBeenCalledWith(expect.any(ValidationError))
     })
 
+    it('sessionIdが無効なUUID形式の場合ValidationErrorをnextに渡す', async () => {
+      const req = mockRequest({ params: { sessionId: 'not-a-uuid' } }) as Request
+      const res = mockResponse() as Response
+
+      await controller.endSession(req, res, mockNext)
+
+      expect(mockNext).toHaveBeenCalledWith(expect.any(ValidationError))
+    })
+
     it('未認証の場合AuthenticationErrorをnextに渡す', async () => {
       const req = mockRequest({ user: undefined, params: { sessionId: TEST_SESSION_ID } }) as Request
       const res = mockResponse() as Response

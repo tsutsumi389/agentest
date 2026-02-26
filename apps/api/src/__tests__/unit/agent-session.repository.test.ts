@@ -4,6 +4,7 @@ import type { AgentSessionStatus } from '@agentest/db'
 // Prisma モック
 const mockPrismaProjectMember = vi.hoisted(() => ({
   findMany: vi.fn(),
+  findFirst: vi.fn(),
 }))
 
 const mockPrismaAgentSession = vi.hoisted(() => ({
@@ -151,6 +152,27 @@ describe('AgentSessionRepository', () => {
       const result = await repository.findById('nonexistent-id')
 
       expect(result).toBeNull()
+    })
+  })
+
+  describe('isProjectMember', () => {
+    it('プロジェクトメンバーの場合trueを返す', async () => {
+      mockPrismaProjectMember.findFirst.mockResolvedValue({ id: 'member-1' })
+
+      const result = await repository.isProjectMember(TEST_PROJECT_ID, TEST_USER_ID)
+
+      expect(result).toBe(true)
+      expect(mockPrismaProjectMember.findFirst).toHaveBeenCalledWith({
+        where: { projectId: TEST_PROJECT_ID, userId: TEST_USER_ID },
+      })
+    })
+
+    it('プロジェクトメンバーでない場合falseを返す', async () => {
+      mockPrismaProjectMember.findFirst.mockResolvedValue(null)
+
+      const result = await repository.isProjectMember(TEST_PROJECT_ID, TEST_USER_ID)
+
+      expect(result).toBe(false)
     })
   })
 
