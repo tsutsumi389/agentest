@@ -531,11 +531,20 @@ function ConfirmDialog({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-modal flex items-center justify-center">
+    <div
+      className="fixed inset-0 z-modal flex items-center justify-center"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="confirm-dialog-title"
+      onKeyDown={(e) => {
+        if (e.key === 'Escape' && !isLoading) onCancel();
+      }}
+    >
       {/* オーバーレイ */}
       <div
         className="absolute inset-0 bg-black/50"
         onClick={onCancel}
+        role="presentation"
       />
       {/* ダイアログ */}
       <div className="relative bg-background border border-border rounded-lg shadow-lg max-w-md w-full mx-4 p-6">
@@ -544,7 +553,7 @@ function ConfirmDialog({
             <AlertTriangle className="w-5 h-5 text-warning" />
           </div>
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+            <h3 id="confirm-dialog-title" className="text-lg font-semibold text-foreground">{title}</h3>
             <p className="text-sm text-foreground-muted mt-1">{message}</p>
           </div>
           <button
@@ -1642,7 +1651,7 @@ function McpSessionSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [showAllSessions, setShowAllSessions] = useState(false);
   const [endingSessionId, setEndingSessionId] = useState<string | null>(null);
-  const [confirmDialog, setConfirmDialog] = useState<{ sessionId: string; clientName: string } | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ sessionId: string; clientName: string; source: 'agent' | 'oauth' } | null>(null);
   const [includeEnded, setIncludeEnded] = useState(false);
 
   const fetchSessions = useCallback(async () => {
@@ -1663,10 +1672,10 @@ function McpSessionSettings() {
     fetchSessions();
   }, [fetchSessions]);
 
-  const handleEndSession = async (sessionId: string) => {
+  const handleEndSession = async (sessionId: string, source?: 'agent' | 'oauth') => {
     try {
       setEndingSessionId(sessionId);
-      await agentSessionsApi.end(sessionId);
+      await agentSessionsApi.end(sessionId, source);
 
       // ローカルステート更新: ステータスをENDEDに変更
       setSessions((prev) =>
@@ -1736,6 +1745,7 @@ function McpSessionSettings() {
                 onEnd={(id) => setConfirmDialog({
                   sessionId: id,
                   clientName: session.clientName || session.clientId,
+                  source: session.source,
                 })}
                 isEnding={endingSessionId === session.id}
               />
@@ -1768,7 +1778,7 @@ function McpSessionSettings() {
         title="MCPセッションを終了"
         message={`${confirmDialog?.clientName || ''} のセッションを終了しますか？実行中の処理が中断される可能性があります。`}
         confirmLabel="終了する"
-        onConfirm={() => confirmDialog && handleEndSession(confirmDialog.sessionId)}
+        onConfirm={() => confirmDialog && handleEndSession(confirmDialog.sessionId, confirmDialog.source)}
         onCancel={() => setConfirmDialog(null)}
         isLoading={endingSessionId !== null}
       />
@@ -1834,9 +1844,10 @@ function McpSessionItem({
           className="btn btn-ghost btn-sm text-danger hover:bg-danger-subtle"
           onClick={() => onEnd(session.id)}
           disabled={isEnding}
+          aria-label={`${session.clientName || session.clientId} のセッションを終了`}
         >
           {isEnding ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
+            <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
           ) : (
             '終了'
           )}

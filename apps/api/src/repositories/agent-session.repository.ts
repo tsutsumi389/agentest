@@ -1,4 +1,4 @@
-import { prisma, type AgentSessionStatus } from '@agentest/db'
+import { prisma, type AgentSessionStatus, type Prisma } from '@agentest/db'
 
 export interface FindByUserProjectsParams {
   userId: string
@@ -68,7 +68,7 @@ export class AgentSessionRepository {
   async findOAuthSessions(params: FindOAuthSessionsParams) {
     const { userId, includeRevoked } = params
 
-    const where: Record<string, unknown> = { userId }
+    const where: Prisma.OAuthAccessTokenWhereInput = { userId }
     if (!includeRevoked) {
       where.revokedAt = null
       where.expiresAt = { gt: new Date() }

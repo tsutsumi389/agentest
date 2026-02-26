@@ -1,7 +1,9 @@
 import type { Request, Response, NextFunction } from 'express'
 import { AuthenticationError, ValidationError } from '@agentest/shared'
 import { uuidSchema } from '@agentest/shared/validators'
-import { AgentSessionService } from '../services/agent-session.service.js'
+import { AgentSessionService, type SessionSource } from '../services/agent-session.service.js'
+
+const VALID_SOURCES: SessionSource[] = ['agent', 'oauth']
 
 export class AgentSessionController {
   private agentSessionService = new AgentSessionService()
@@ -45,7 +47,12 @@ export class AgentSessionController {
         throw new ValidationError('無効なセッションIDです')
       }
 
-      const result = await this.agentSessionService.endSession(req.user.id, parseResult.data)
+      const sourceParam = req.query.source as string | undefined
+      const source = sourceParam && VALID_SOURCES.includes(sourceParam as SessionSource)
+        ? (sourceParam as SessionSource)
+        : undefined
+
+      const result = await this.agentSessionService.endSession(req.user.id, parseResult.data, source)
       res.json({ data: result })
     } catch (error) {
       next(error)

@@ -1808,8 +1808,10 @@ export const agentSessionsApi = {
     );
   },
   // セッションを終了
-  end: (sessionId: string) =>
-    api.delete<{ data: { success: boolean } }>(`/api/agent-sessions/${sessionId}`),
+  end: (sessionId: string, source?: SessionSource) =>
+    api.delete<{ data: { success: boolean } }>(
+      `/api/agent-sessions/${sessionId}${source ? `?source=${source}` : ''}`
+    ),
 };
 
 // ============================================

@@ -8,6 +8,10 @@ const logger = baseLogger.child({ module: 'agent-session' })
 const VALID_STATUSES: AgentSessionStatus[] = ['ACTIVE', 'IDLE', 'ENDED', 'TIMEOUT']
 const DEFAULT_STATUSES: AgentSessionStatus[] = ['ACTIVE', 'IDLE']
 
+// 2つのデータソース（AgentSession + OAuthToken）を統合してからページネーションするため、
+// まずは全件取得する必要がある。上限はパフォーマンス保護のため設定。
+const MAX_MERGE_LIMIT = 1000
+
 // セッション種別
 export type SessionSource = 'agent' | 'oauth'
 
@@ -57,9 +61,13 @@ export class AgentSessionService {
 
     // AgentSessionとOAuthトークンを並列取得
     const [agentResult, oauthTokens] = await Promise.all([
-      this.agentSessionRepo.findByUserProjects({ userId, statuses, page: 1, limit: 1000 }),
+      this.agentSessionRepo.findByUserProjects({ userId, statuses, page: 1, limit: MAX_MERGE_LIMIT }),
       this.agentSessionRepo.findOAuthSessions({ userId, includeRevoked: includeEnded }),
     ])
+
+    if (agentResult.total > MAX_MERGE_LIMIT) {
+      logger.warn({ userId, total: agentResult.total, limit: MAX_MERGE_LIMIT }, 'セッション数が統合上限を超えています')
+    }
 
     // AgentSessionをDTO変換
     const agentSessions: AgentSessionInfo[] = agentResult.sessions.map((session) => ({

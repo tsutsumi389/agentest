@@ -123,7 +123,7 @@ describe('AgentSessionController', () => {
 
   describe('endSession', () => {
     it('セッションを終了する', async () => {
-      const req = mockRequest({ params: { sessionId: TEST_SESSION_ID } }) as Request
+      const req = mockRequest({ params: { sessionId: TEST_SESSION_ID }, query: {} }) as Request
       const res = mockResponse() as Response
 
       mockAgentSessionService.endSession.mockResolvedValue({ success: true })
@@ -133,7 +133,38 @@ describe('AgentSessionController', () => {
       expect(res.json).toHaveBeenCalledWith({ data: { success: true } })
       expect(mockAgentSessionService.endSession).toHaveBeenCalledWith(
         TEST_USER_ID,
-        TEST_SESSION_ID
+        TEST_SESSION_ID,
+        undefined
+      )
+    })
+
+    it('sourceパラメータをServiceに渡す', async () => {
+      const req = mockRequest({ params: { sessionId: TEST_SESSION_ID }, query: { source: 'oauth' } }) as Request
+      const res = mockResponse() as Response
+
+      mockAgentSessionService.endSession.mockResolvedValue({ success: true })
+
+      await controller.endSession(req, res, mockNext)
+
+      expect(mockAgentSessionService.endSession).toHaveBeenCalledWith(
+        TEST_USER_ID,
+        TEST_SESSION_ID,
+        'oauth'
+      )
+    })
+
+    it('無効なsourceパラメータは無視する', async () => {
+      const req = mockRequest({ params: { sessionId: TEST_SESSION_ID }, query: { source: 'invalid' } }) as Request
+      const res = mockResponse() as Response
+
+      mockAgentSessionService.endSession.mockResolvedValue({ success: true })
+
+      await controller.endSession(req, res, mockNext)
+
+      expect(mockAgentSessionService.endSession).toHaveBeenCalledWith(
+        TEST_USER_ID,
+        TEST_SESSION_ID,
+        undefined
       )
     })
 

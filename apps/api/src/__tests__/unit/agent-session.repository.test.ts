@@ -14,10 +14,17 @@ const mockPrismaAgentSession = vi.hoisted(() => ({
   update: vi.fn(),
 }))
 
+const mockPrismaOAuthAccessToken = vi.hoisted(() => ({
+  findMany: vi.fn(),
+  findUnique: vi.fn(),
+  update: vi.fn(),
+}))
+
 vi.mock('@agentest/db', () => ({
   prisma: {
     projectMember: mockPrismaProjectMember,
     agentSession: mockPrismaAgentSession,
+    oAuthAccessToken: mockPrismaOAuthAccessToken,
   },
 }))
 
@@ -194,6 +201,104 @@ describe('AgentSessionRepository', () => {
           status: 'ENDED',
           endedAt: expect.any(Date),
         },
+      })
+    })
+  })
+
+  describe('findOAuthSessions', () => {
+    it('ユーザーの有効なOAuthトークンを取得する', async () => {
+      const now = new Date()
+      const mockTokens = [
+        {
+          id: 'token-1',
+          userId: TEST_USER_ID,
+          clientId: 'client-1',
+          expiresAt: new Date(Date.now() + 3600000),
+          revokedAt: null,
+          createdAt: now,
+          client: { clientId: 'client-1', clientName: 'Claude Code' },
+        },
+      ]
+      mockPrismaOAuthAccessToken.findMany.mockResolvedValue(mockTokens)
+
+      const result = await repository.findOAuthSessions({
+        userId: TEST_USER_ID,
+        includeRevoked: false,
+      })
+
+      expect(result).toHaveLength(1)
+      expect(result[0].client.clientName).toBe('Claude Code')
+      expect(mockPrismaOAuthAccessToken.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            userId: TEST_USER_ID,
+            revokedAt: null,
+            expiresAt: { gt: expect.any(Date) },
+          },
+        })
+      )
+    })
+
+    it('includeRevoked=trueの場合、失効済みも含む', async () => {
+      mockPrismaOAuthAccessToken.findMany.mockResolvedValue([])
+
+      await repository.findOAuthSessions({
+        userId: TEST_USER_ID,
+        includeRevoked: true,
+      })
+
+      expect(mockPrismaOAuthAccessToken.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId: TEST_USER_ID },
+        })
+      )
+    })
+  })
+
+  describe('findOAuthTokenById', () => {
+    it('IDでOAuthトークンを取得する', async () => {
+      const mockToken = {
+        id: 'token-1',
+        userId: TEST_USER_ID,
+        clientId: 'client-1',
+        client: { clientId: 'client-1', clientName: 'Claude Code' },
+      }
+      mockPrismaOAuthAccessToken.findUnique.mockResolvedValue(mockToken)
+
+      const result = await repository.findOAuthTokenById('token-1')
+
+      expect(result).toEqual(mockToken)
+      expect(mockPrismaOAuthAccessToken.findUnique).toHaveBeenCalledWith({
+        where: { id: 'token-1' },
+        include: {
+          client: { select: { clientId: true, clientName: true } },
+        },
+      })
+    })
+
+    it('存在しないIDの場合nullを返す', async () => {
+      mockPrismaOAuthAccessToken.findUnique.mockResolvedValue(null)
+
+      const result = await repository.findOAuthTokenById('nonexistent-id')
+
+      expect(result).toBeNull()
+    })
+  })
+
+  describe('revokeOAuthToken', () => {
+    it('トークンを失効状態に更新する', async () => {
+      const now = new Date()
+      mockPrismaOAuthAccessToken.update.mockResolvedValue({
+        id: 'token-1',
+        revokedAt: now,
+      })
+
+      const result = await repository.revokeOAuthToken('token-1')
+
+      expect(result.revokedAt).toEqual(now)
+      expect(mockPrismaOAuthAccessToken.update).toHaveBeenCalledWith({
+        where: { id: 'token-1' },
+        data: { revokedAt: expect.any(Date) },
       })
     })
   })

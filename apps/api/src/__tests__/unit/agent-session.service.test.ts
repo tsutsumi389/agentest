@@ -190,6 +190,26 @@ describe('AgentSessionService', () => {
       expect(sessions.find((s) => s.id === 'token-expired')?.status).toBe('TIMEOUT')
     })
 
+    it('セッション数が上限を超えた場合に警告ログを出す', async () => {
+      mockAgentSessionRepo.findByUserProjects.mockResolvedValue({
+        sessions: [],
+        total: 1500,
+      })
+      mockAgentSessionRepo.findOAuthSessions.mockResolvedValue([])
+
+      await service.getSessionsByUser({
+        userId: TEST_USER_ID,
+        statuses: ['ACTIVE', 'IDLE'],
+        page: 1,
+        limit: 50,
+      })
+
+      expect(mockLogger.warn).toHaveBeenCalledWith(
+        { userId: TEST_USER_ID, total: 1500, limit: 1000 },
+        'セッション数が統合上限を超えています'
+      )
+    })
+
     it('AgentSessionのみの場合（OAuthトークンなし）', async () => {
       mockAgentSessionRepo.findByUserProjects.mockResolvedValue({
         sessions: [{
