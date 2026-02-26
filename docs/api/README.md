@@ -149,6 +149,15 @@ Authorization: Bearer <access_token>
 
 → [セッション API 詳細](./sessions.md)
 
+### MCPセッション管理
+
+| メソッド | パス | 説明 |
+|---------|------|------|
+| GET | `/agent-sessions` | MCPセッション一覧取得 |
+| DELETE | `/agent-sessions/:sessionId` | MCPセッション終了 |
+
+→ [MCPセッション API 詳細](./agent-sessions.md)
+
 ### OAuth 連携管理
 
 | メソッド | パス | 説明 |
