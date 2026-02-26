@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useSearchParams, useLocation } from 'react-router';
 import { User, Bell, Shield, Key, Loader2, Monitor, Smartphone, Tablet, X, AlertTriangle, Github, Link2, Unlink, Plus, Copy, Check, Trash2, Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '../stores/auth';
@@ -642,6 +642,9 @@ const OAUTH_PROVIDERS = [
   { id: 'google' as const, name: 'Google', icon: GoogleIcon },
 ];
 
+// セッション一覧の初期表示件数
+const INITIAL_SESSION_DISPLAY_COUNT = 5;
+
 /**
  * セキュリティ設定
  */
@@ -654,6 +657,7 @@ function SecuritySettings() {
     (p) => enabledProviders[p.id]
   );
   const showOAuthSection = isOAuthEnabled();
+  const [showAllSessions, setShowAllSessions] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [isLoadingSessions, setIsLoadingSessions] = useState(true);
@@ -735,6 +739,10 @@ function SecuritySettings() {
       await sessionsApi.revoke(sessionId);
       toast.success('セッションを終了しました');
       setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+      // 削除後のセッション数が表示上限以下ならば展開状態をリセット
+      if (sessions.length - 1 <= INITIAL_SESSION_DISPLAY_COUNT) {
+        setShowAllSessions(false);
+      }
     } catch (error) {
       if (error instanceof ApiError) {
         toast.error(error.message);
@@ -755,6 +763,7 @@ function SecuritySettings() {
       const count = response.data.revokedCount;
       toast.success(`${count}件のセッションを終了しました`);
       setSessions((prev) => prev.filter((s) => s.isCurrent));
+      setShowAllSessions(false);
     } catch (error) {
       if (error instanceof ApiError) {
         toast.error(error.message);
@@ -876,6 +885,16 @@ function SecuritySettings() {
   };
 
   const otherSessionsCount = sessions.filter((s) => !s.isCurrent).length;
+
+  // 現在のセッションを先頭にソートし、表示件数を制限
+  const sortedSessions = useMemo(
+    () => [...sessions].sort((a, b) => (a.isCurrent ? -1 : b.isCurrent ? 1 : 0)),
+    [sessions]
+  );
+  const displayedSessions = showAllSessions
+    ? sortedSessions
+    : sortedSessions.slice(0, INITIAL_SESSION_DISPLAY_COUNT);
+  const hiddenSessionCount = sessions.length - INITIAL_SESSION_DISPLAY_COUNT;
 
   return (
     <div className="space-y-6">
@@ -1128,17 +1147,22 @@ function SecuritySettings() {
           </p>
         ) : (
           <div className="space-y-3">
-            {/* 現在のセッションを先頭に表示 */}
-            {sessions
-              .sort((a, b) => (a.isCurrent ? -1 : b.isCurrent ? 1 : 0))
-              .map((session) => (
-                <SessionItem
-                  key={session.id}
-                  session={session}
-                  onRevoke={(id) => openConfirmDialog('session', { sessionId: id })}
-                  isRevoking={revokingSessionId === session.id}
-                />
-              ))}
+            {displayedSessions.map((session) => (
+              <SessionItem
+                key={session.id}
+                session={session}
+                onRevoke={(id) => openConfirmDialog('session', { sessionId: id })}
+                isRevoking={revokingSessionId === session.id}
+              />
+            ))}
+            {!showAllSessions && hiddenSessionCount > 0 && (
+              <button
+                className="btn btn-ghost btn-sm w-full mt-3"
+                onClick={() => setShowAllSessions(true)}
+              >
+                他 {hiddenSessionCount} 件のセッションを表示
+              </button>
+            )}
           </div>
         )}
       </div>
