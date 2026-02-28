@@ -399,6 +399,28 @@ describe('TestCaseSidebar', () => {
     });
   });
 
+  describe('テストケース名のツールチップ', () => {
+    it('テストケース名のspanにtitle属性が設定されている', () => {
+      renderWithProviders(<TestCaseSidebar {...defaultProps} />);
+
+      const loginTest = screen.getByText('ログインテスト');
+      expect(loginTest).toHaveAttribute('title', 'ログインテスト');
+    });
+
+    it('長いタイトルでもtitleに全文が含まれる', () => {
+      const longTitle = 'これはとても長いテストケース名で、サイドバーの幅では表示しきれないほどの長さがあります';
+      renderWithProviders(
+        <TestCaseSidebar
+          {...defaultProps}
+          testCases={[createTestCase({ id: 'tc-long', title: longTitle, orderKey: 'a' })]}
+        />
+      );
+
+      const testCaseSpan = screen.getByText(longTitle);
+      expect(testCaseSpan).toHaveAttribute('title', longTitle);
+    });
+  });
+
   describe('件数表示', () => {
     it('フッターに表示中のテストケース件数を表示する', () => {
       renderWithProviders(<TestCaseSidebar {...defaultProps} />);

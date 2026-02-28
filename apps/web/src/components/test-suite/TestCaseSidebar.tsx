@@ -176,7 +176,7 @@ function SortableTestCaseItem({
       )}
 
       {/* タイトル */}
-      <span className="text-sm truncate flex-1">
+      <span className="text-sm truncate flex-1" title={testCase.title}>
         {testCase.title}
       </span>
 
