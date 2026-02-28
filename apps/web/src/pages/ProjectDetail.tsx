@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { projectsApi, usersApi, labelsApi, type Project, type TestSuite, type TestSuiteSearchParams, type ProjectMemberRole, type Label } from '../lib/api';
 import { TestSuiteSearchFilter } from '../components/test-suite/TestSuiteSearchFilter';
+import { ProgressBar } from '../components/ui/ProgressBar';
 import { useAuth } from '../hooks/useAuth';
 import { ProjectOverviewTab } from '../components/project/ProjectOverviewTab';
 import { ProjectSettingsTab, type SettingsSection } from '../components/project/ProjectSettingsTab';
@@ -512,9 +513,12 @@ function TestSuiteRow({ suite }: { suite: TestSuite }) {
           </div>
           <div className="flex items-center gap-3 text-sm text-foreground-muted">
             <span>{suite._count?.testCases || 0} テストケース</span>
-            {/* 最終実行結果表示（環境名 + 判定結果カウント） */}
+            {/* 最終実行結果表示（環境名 + プログレスバー + 合格率 + 判定結果カウント） */}
             {!isDeleted && suite.lastExecution && (() => {
               const { environment, judgmentCounts } = suite.lastExecution;
+              const total = judgmentCounts.PASS + judgmentCounts.FAIL + judgmentCounts.PENDING + judgmentCounts.SKIPPED;
+              const completedTotal = judgmentCounts.PASS + judgmentCounts.FAIL + judgmentCounts.SKIPPED;
+              const passRate = completedTotal > 0 ? Math.round((judgmentCounts.PASS / completedTotal) * 100) : 0;
               return (
                 <>
                   <span className="text-foreground-subtle">•</span>
@@ -524,6 +528,18 @@ function TestSuiteRow({ suite }: { suite: TestSuite }) {
                         {environment.name}
                       </span>
                     )}
+                    <span className="w-24">
+                      <ProgressBar
+                        passed={judgmentCounts.PASS}
+                        failed={judgmentCounts.FAIL}
+                        skipped={judgmentCounts.SKIPPED}
+                        total={total}
+                        size="sm"
+                      />
+                    </span>
+                    <span className="text-foreground-muted text-xs font-medium">
+                      {passRate}%
+                    </span>
                     {/* 判定結果カウント（0件は非表示） */}
                     {judgmentDisplayOrder.map((status) => {
                       const count = judgmentCounts[status];
