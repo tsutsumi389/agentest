@@ -177,6 +177,7 @@
   - 実行者
   - 環境名
   - 結果サマリー（PASS/FAIL/SKIPPED/PENDING）
+  - 合格率ラベル（`PASS数/完了数 (合格率%)`形式、PENDING除外で算出、completedTotal > 0 の場合のみ表示）
   - 詳細リンク
 - **フィルタリング**
   - 日付範囲（作成日基準）

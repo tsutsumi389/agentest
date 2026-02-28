@@ -363,10 +363,14 @@ export function ExecutionHistoryList({ testSuiteId, projectId }: ExecutionHistor
 /**
  * 実行履歴アイテム
  */
-function ExecutionItem({ execution }: { execution: Execution }) {
+export function ExecutionItem({ execution }: { execution: Execution }) {
   // judgmentCountsから値を取得
   const counts = execution.judgmentCounts || { PASS: 0, FAIL: 0, PENDING: 0, SKIPPED: 0 };
   const total = counts.PASS + counts.FAIL + counts.PENDING + counts.SKIPPED;
+
+  // 合格率を計算（PENDING は除外）
+  const completedTotal = counts.PASS + counts.FAIL + counts.SKIPPED;
+  const passRate = completedTotal > 0 ? Math.round((counts.PASS / completedTotal) * 100) : 0;
 
   return (
     <Link
@@ -404,16 +408,23 @@ function ExecutionItem({ execution }: { execution: Execution }) {
         </span>
       </div>
 
-      {/* 期待結果の状況バー */}
+      {/* 期待結果の状況バー + 合格率ラベル */}
       {total > 0 && (
-        <div className="flex-1 min-w-0 max-w-48">
-          <ProgressBar
-            passed={counts.PASS}
-            failed={counts.FAIL}
-            skipped={counts.SKIPPED}
-            total={total}
-            size="sm"
-          />
+        <div className="flex items-center gap-2 flex-1 min-w-0 max-w-64">
+          <div className="flex-1 min-w-0">
+            <ProgressBar
+              passed={counts.PASS}
+              failed={counts.FAIL}
+              skipped={counts.SKIPPED}
+              total={total}
+              size="sm"
+            />
+          </div>
+          {completedTotal > 0 && (
+            <span className="text-xs text-foreground-muted font-code shrink-0" data-testid="pass-rate-label">
+              {counts.PASS}/{completedTotal} ({passRate}%)
+            </span>
+          )}
         </div>
       )}
 
