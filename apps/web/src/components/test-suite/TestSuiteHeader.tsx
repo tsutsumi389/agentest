@@ -2,6 +2,7 @@ import { Play, Pencil, FileText, History, MessageSquare, Settings, Copy } from '
 import type { TestSuite, ProjectMemberRole, Label } from '../../lib/api';
 import { PRIORITY_COLORS, PRIORITY_LABELS, STATUS_COLORS, STATUS_LABELS } from '../../lib/constants';
 import { LabelBadgeList } from '../ui/LabelBadge';
+import { Breadcrumb, type BreadcrumbItem } from '../ui/Breadcrumb';
 
 /**
  * テストスイート用タブ定義
@@ -60,6 +61,9 @@ interface TestSuiteHeaderProps {
   onCopyTestCase?: () => void;
   // ラベル
   labels?: Label[];
+  // パンくずリスト用プロジェクト情報
+  projectId?: string;
+  projectName?: string;
 }
 
 /**
@@ -86,6 +90,9 @@ export function TestSuiteHeader({
   onCopyTestCase,
   // ラベル
   labels,
+  // パンくずリスト用プロジェクト情報
+  projectId,
+  projectName,
 }: TestSuiteHeaderProps) {
   // 編集権限チェック
   const canEdit = currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'WRITE';
@@ -93,8 +100,32 @@ export function TestSuiteHeader({
   // テストケース選択中かどうか
   const isTestCaseMode = !!selectedTestCase;
 
+  // パンくずリストアイテムを構築
+  const breadcrumbItems: BreadcrumbItem[] | null = (() => {
+    if (!projectId || !projectName) return null;
+    const items: BreadcrumbItem[] = [
+      { label: projectName, href: `/projects/${projectId}?tab=suites` },
+    ];
+    if (selectedTestCase) {
+      // テストケース選択時: プロジェクト > テストスイート（リンク） > テストケース
+      items.push({ label: testSuite.name, href: `/test-suites/${testSuite.id}` });
+      items.push({ label: selectedTestCase.title });
+    } else {
+      // テストスイート表示時: プロジェクト > テストスイート
+      items.push({ label: testSuite.name });
+    }
+    return items;
+  })();
+
   return (
     <div className="border-b border-border bg-background-secondary">
+      {/* パンくずリスト */}
+      {breadcrumbItems && (
+        <div className="px-4 pt-3 pb-0">
+          <Breadcrumb items={breadcrumbItems} showHome={false} />
+        </div>
+      )}
+
       {/* ヘッダー1行目: タイトル + アクションボタン */}
       <div className="px-4 py-3">
         {isTestCaseMode ? (
