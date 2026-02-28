@@ -13,6 +13,7 @@ import {
 import { projectsApi, usersApi, labelsApi, type Project, type TestSuite, type TestSuiteSearchParams, type ProjectMemberRole, type Label } from '../lib/api';
 import { TestSuiteSearchFilter } from '../components/test-suite/TestSuiteSearchFilter';
 import { ProgressBar } from '../components/ui/ProgressBar';
+import { TestSuiteRowSkeleton } from '../components/test-suite/TestSuiteRowSkeleton';
 import { useAuth } from '../hooks/useAuth';
 import { ProjectOverviewTab } from '../components/project/ProjectOverviewTab';
 import { ProjectSettingsTab, type SettingsSection } from '../components/project/ProjectSettingsTab';
@@ -320,9 +321,7 @@ function TestSuiteListContent({
       </div>
 
       {isLoadingSuites ? (
-        <div className="p-8 text-center text-foreground-muted">
-          読み込み中...
-        </div>
+        <TestSuiteRowSkeleton count={5} />
       ) : testSuites.length === 0 ? (
         <div className="p-8 text-center">
           <FileText className="w-12 h-12 text-foreground-subtle mx-auto mb-3" />

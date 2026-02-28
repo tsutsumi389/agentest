@@ -219,3 +219,36 @@ describe('ProjectDetailPage - TestSuiteRow プログレスバー', () => {
     expect(await screen.findByText('100%')).toBeInTheDocument();
   });
 });
+
+describe('ProjectDetailPage - ローディング表示', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+
+    mockedProjectsApi.getById.mockResolvedValue({
+      project: {
+        id: 'proj-1',
+        name: 'テストプロジェクト',
+        description: 'テスト用',
+        organizationId: null,
+        createdAt: '2024-01-01T00:00:00Z',
+        updatedAt: '2024-01-01T00:00:00Z',
+      },
+    });
+    mockedProjectsApi.getMembers.mockResolvedValue({
+      members: [{ id: 'member-1', projectId: 'proj-1', userId: 'user-1', role: 'OWNER', addedAt: '2024-01-01T00:00:00Z', user: mockUser }],
+    });
+    mockedUsersApi.getProjects.mockResolvedValue({ projects: [] });
+    mockedLabelsApi.getByProject.mockResolvedValue({ labels: [] });
+  });
+
+  it('テストスイート読み込み中にスケルトン行が表示される', async () => {
+    // searchTestSuitesを未解決Promiseにしてローディング状態を維持
+    mockedProjectsApi.searchTestSuites.mockReturnValue(new Promise(() => {}));
+
+    renderWithProviders();
+
+    // スケルトン行が表示されることを確認
+    const skeletonItems = await screen.findAllByTestId('test-suite-row-skeleton-item');
+    expect(skeletonItems.length).toBeGreaterThan(0);
+  });
+});

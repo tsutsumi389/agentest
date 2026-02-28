@@ -32,6 +32,7 @@ import {
 import { useQueryClient } from '@tanstack/react-query';
 import { testSuitesApi, testCasesApi, ApiError, type TestCase, type ProjectMemberRole } from '../../lib/api';
 import { toast } from '../../stores/toast';
+import { TestCaseSidebarSkeleton } from './TestCaseSidebarSkeleton';
 
 /** ステータスフィルタの種類 */
 export type TestCaseFilter = 'active' | 'draft' | 'archived' | 'deleted';
@@ -451,9 +452,7 @@ export function TestCaseSidebar({
       {/* テストケース一覧 */}
       <div className="flex-1 overflow-y-auto p-2">
         {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-5 h-5 animate-spin text-foreground-muted" />
-          </div>
+          <TestCaseSidebarSkeleton count={5} />
         ) : filteredTestCases.length === 0 ? (
           <div className="text-center py-8">
             {isDeletedFilter ? (
