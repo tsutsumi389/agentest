@@ -118,6 +118,19 @@ describe('TestSuiteHeader - パンくずリスト', () => {
     expect(lastItem).toHaveTextContent('ログインフォームの表示');
   });
 
+  it('パンくずリストにホームリンクが表示されない', () => {
+    renderWithRouter(
+      <TestSuiteHeader
+        {...defaultProps}
+        projectId="proj-1"
+        projectName="テストプロジェクト"
+      />
+    );
+
+    const breadcrumb = screen.getByRole('navigation', { name: 'パンくずリスト' });
+    expect(breadcrumb).not.toHaveTextContent('ホーム');
+  });
+
   it('projectNameが未指定の場合、パンくずリストが表示されない', () => {
     renderWithRouter(
       <TestSuiteHeader {...defaultProps} />

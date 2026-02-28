@@ -58,6 +58,7 @@ export function TestSuiteNewPage() {
     <div className="space-y-4">
       {/* パンくずリスト */}
       <Breadcrumb
+        showHome={false}
         items={[
           { label: project?.name || '読み込み中...', href: `/projects/${projectId}?tab=suites` },
           { label: '新規テストスイート作成' },

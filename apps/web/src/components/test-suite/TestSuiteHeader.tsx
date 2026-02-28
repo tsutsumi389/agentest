@@ -122,7 +122,7 @@ export function TestSuiteHeader({
       {/* パンくずリスト */}
       {breadcrumbItems && (
         <div className="px-4 pt-3 pb-0">
-          <Breadcrumb items={breadcrumbItems} />
+          <Breadcrumb items={breadcrumbItems} showHome={false} />
         </div>
       )}
 
