@@ -1,9 +1,9 @@
 import { useCallback } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router';
+import { useSearchParams, useNavigate } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
-import { ChevronRight } from 'lucide-react';
 import { projectsApi } from '../lib/api';
 import { TestSuiteForm } from '../components/test-suite/TestSuiteForm';
+import { Breadcrumb } from '../components/ui/Breadcrumb';
 
 /**
  * テストスイート新規作成ページ
@@ -57,13 +57,12 @@ export function TestSuiteNewPage() {
   return (
     <div className="space-y-4">
       {/* パンくずリスト */}
-      <nav className="flex items-center gap-1 text-sm text-foreground-muted">
-        <Link to={`/projects/${projectId}?tab=suites`} className="hover:text-foreground transition-colors">
-          {project?.name || '読み込み中...'}
-        </Link>
-        <ChevronRight className="w-4 h-4" />
-        <span className="text-foreground">新規テストスイート作成</span>
-      </nav>
+      <Breadcrumb
+        items={[
+          { label: project?.name || '読み込み中...', href: `/projects/${projectId}?tab=suites` },
+          { label: '新規テストスイート作成' },
+        ]}
+      />
 
       {/* フォーム */}
       <div className="card min-h-[500px] max-h-[calc(100vh-200px)] overflow-hidden">

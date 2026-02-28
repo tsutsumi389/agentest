@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Calendar } from 'lucide-react';
 import { testSuitesApi, projectsApi, labelsApi, type TestCase, type TestSuite, type ProjectMemberRole, type ReviewCommentWithReplies, type Label } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
+import { useCurrentProject } from '../hooks/useCurrentProject';
 import { usePageSidebar } from '../components/Layout';
 import { useTestSuiteRealtime } from '../hooks/useTestSuiteRealtime';
 import { useTestCaseRealtime } from '../hooks/useTestCaseRealtime';
@@ -35,6 +36,7 @@ export function TestSuiteCasesPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { user } = useAuth();
+  const { project } = useCurrentProject();
   const { setSidebarContent } = usePageSidebar();
   const navigate = useNavigate();
   const [isStartExecutionModalOpen, setIsStartExecutionModalOpen] = useState(false);
@@ -351,6 +353,9 @@ export function TestSuiteCasesPage() {
             onCopyTestCase={() => setIsCopyModalOpen(true)}
             // ラベル
             labels={suiteLabels}
+            // パンくずリスト用プロジェクト情報
+            projectId={project?.id}
+            projectName={project?.name}
           />
         )}
 
