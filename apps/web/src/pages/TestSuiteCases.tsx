@@ -2,7 +2,9 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useSearchParams, useNavigate, Link } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Calendar } from 'lucide-react';
-import { testSuitesApi, projectsApi, labelsApi, type TestCase, type TestSuite, type ProjectMemberRole, type ReviewCommentWithReplies, type Label } from '../lib/api';
+import { testSuitesApi, projectsApi, labelsApi, type TestCase, type TestSuite, type ProjectMemberRole, type ReviewCommentWithReplies, type Label, type Execution } from '../lib/api';
+import { formatDateTime, formatRelativeTime } from '../lib/date';
+import { ProgressBar } from '../components/ui/ProgressBar';
 import { useAuth } from '../hooks/useAuth';
 import { useCurrentProject } from '../hooks/useCurrentProject';
 import { usePageSidebar } from '../components/Layout';
@@ -482,11 +484,11 @@ export function TestSuiteCasesPage() {
 interface OverviewTabProps {
   testSuiteId: string;
   description: string | null;
-  executions: { id: string; createdAt: string }[];
+  executions: Execution[];
   currentRole: 'OWNER' | ProjectMemberRole | undefined;
 }
 
-function OverviewTab({
+export function OverviewTab({
   testSuiteId,
   description,
   executions,
@@ -549,20 +551,58 @@ function OverviewTab({
           </div>
         ) : (
           <div className="divide-y divide-border">
-            {executions.map((execution) => (
-              <Link
-                key={execution.id}
-                to={`/executions/${execution.id}`}
-                className="block p-4 hover:bg-background-tertiary transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-foreground-muted" />
-                  <span className="text-sm text-foreground">
-                    {new Date(execution.createdAt).toLocaleString('ja-JP')}
-                  </span>
-                </div>
-              </Link>
-            ))}
+            {executions.map((execution) => {
+              // judgmentCountsから値を取得
+              const counts = execution.judgmentCounts || { PASS: 0, FAIL: 0, PENDING: 0, SKIPPED: 0 };
+              const total = counts.PASS + counts.FAIL + counts.PENDING + counts.SKIPPED;
+              const completedTotal = counts.PASS + counts.FAIL + counts.SKIPPED;
+              const passRate = completedTotal > 0 ? Math.round((counts.PASS / completedTotal) * 100) : 0;
+
+              return (
+                <Link
+                  key={execution.id}
+                  to={`/executions/${execution.id}`}
+                  className="block p-4 hover:bg-background-tertiary transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4 text-foreground-muted shrink-0" />
+                    <span
+                      className="text-sm text-foreground shrink-0"
+                      title={formatDateTime(execution.createdAt)}
+                    >
+                      {formatRelativeTime(execution.createdAt)}
+                    </span>
+
+                    {/* 環境名バッジ */}
+                    {execution.environment && (
+                      <span className="px-2 py-0.5 text-xs font-medium rounded bg-background-tertiary text-foreground-muted shrink-0">
+                        {execution.environment.name}
+                      </span>
+                    )}
+
+                    {/* プログレスバー + 合格率ラベル */}
+                    {execution.judgmentCounts && total > 0 && (
+                      <div className="flex items-center gap-2 flex-1 min-w-0 max-w-48">
+                        <div className="flex-1 min-w-0">
+                          <ProgressBar
+                            passed={counts.PASS}
+                            failed={counts.FAIL}
+                            skipped={counts.SKIPPED}
+                            total={total}
+                            size="sm"
+                          />
+                        </div>
+                        {completedTotal > 0 && (
+                          <span className="text-xs text-foreground-muted font-code shrink-0" data-testid="pass-rate-label">
+                            {counts.PASS}/{completedTotal} ({passRate}%)
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>
