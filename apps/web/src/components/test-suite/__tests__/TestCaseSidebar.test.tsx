@@ -428,4 +428,13 @@ describe('TestCaseSidebar', () => {
       expect(screen.getByText('2 件')).toBeInTheDocument();
     });
   });
+
+  describe('ローディング表示', () => {
+    it('isLoading=trueでスケルトンが表示される', () => {
+      renderWithProviders(<TestCaseSidebar {...defaultProps} isLoading={true} />);
+
+      const skeletonItems = screen.getAllByTestId('test-case-sidebar-skeleton-item');
+      expect(skeletonItems.length).toBeGreaterThan(0);
+    });
+  });
 });
