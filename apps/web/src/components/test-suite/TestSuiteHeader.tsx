@@ -1,4 +1,5 @@
-import { Play, Pencil, FileText, History, MessageSquare, Settings, Copy } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Play, Pencil, FileText, History, MessageSquare, Settings, Copy, MoreVertical, Archive, CheckCircle2, Loader2 } from 'lucide-react';
 import type { TestSuite, ProjectMemberRole, Label } from '../../lib/api';
 import { PRIORITY_COLORS, PRIORITY_LABELS, STATUS_COLORS, STATUS_LABELS } from '../../lib/constants';
 import { LabelBadgeList } from '../ui/LabelBadge';
@@ -46,6 +47,9 @@ interface TestSuiteHeaderProps {
   onStartExecution: () => void;
   onEdit?: () => void;
   isExecutionPending?: boolean;
+  // ステータス変更
+  onStatusChange?: (status: 'ACTIVE' | 'ARCHIVED') => void;
+  isStatusChangePending?: boolean;
   // テストスイートタブ関連のprops
   currentTab?: TabType;
   onTabChange?: (tab: TabType) => void;
@@ -78,6 +82,8 @@ export function TestSuiteHeader({
   onStartExecution,
   onEdit,
   isExecutionPending = false,
+  onStatusChange,
+  isStatusChangePending = false,
   currentTab = 'overview',
   onTabChange,
   hasSelectedTestCase = false,
@@ -119,14 +125,26 @@ export function TestSuiteHeader({
 
   return (
     <div className="border-b border-border bg-background-secondary">
-      {/* パンくずリスト */}
+      {/* パンくずリスト + 3点リーダーメニュー */}
       {breadcrumbItems && (
-        <div className="px-4 pt-3 pb-0">
+        <div className="px-4 pt-3 pb-0 flex items-center justify-between">
           <Breadcrumb items={breadcrumbItems} showHome={false} />
+          {/* 3点リーダーメニュー（テストスイート表示時・作成モード以外） */}
+          {!isTestCaseMode && !isCreateMode && (
+            <TestSuiteActionMenu
+              canEdit={canEdit}
+              onEdit={onEdit}
+              onStartExecution={onStartExecution}
+              isExecutionDisabled={isExecutionPending || testCaseCount === 0}
+              suiteStatus={testSuite.status}
+              onStatusChange={onStatusChange}
+              isStatusChangePending={isStatusChangePending}
+            />
+          )}
         </div>
       )}
 
-      {/* ヘッダー1行目: タイトル + アクションボタン */}
+      {/* ヘッダー1行目: タイトル */}
       <div className="px-4 py-3">
         {isTestCaseMode ? (
           // テストケース選択時: タイトル + アクションボタン（テストスイートと同じ構造）
@@ -178,40 +196,20 @@ export function TestSuiteHeader({
             </div>
           </div>
         ) : (
-          // テストスイート表示時: タイトル + アクションボタン
-          <div className="flex items-center justify-between">
-            {/* テストスイート名とラベル */}
-            <div className="flex items-center gap-3">
-              <h1 className="text-lg font-semibold text-foreground">
-                {testSuite.name}
-              </h1>
-              {/* ラベルバッジ */}
-              {labels && labels.length > 0 && (
-                <LabelBadgeList labels={labels} emptyText="" />
-              )}
-            </div>
-            {/* アクションボタン（作成モード時は非表示） */}
-            {!isCreateMode && (
-              <div className="flex items-center gap-2">
-                {canEdit && onEdit && (
-                  <button
-                    onClick={onEdit}
-                    className="btn btn-secondary btn-sm"
-                    title="テストスイートを編集"
-                  >
-                    <Pencil className="w-4 h-4" />
-                    編集
-                  </button>
-                )}
-                <button
-                  onClick={onStartExecution}
-                  disabled={isExecutionPending || testCaseCount === 0}
-                  className="btn btn-primary btn-sm"
-                >
-                  <Play className="w-4 h-4" />
-                  実行開始
-                </button>
-              </div>
+          // テストスイート表示時: タイトル + ステータスバッジ + ラベル
+          <div className="flex items-center gap-3">
+            <h1 className="text-lg font-semibold text-foreground">
+              {testSuite.name}
+            </h1>
+            {/* ステータスバッジ（ARCHIVED時のみ表示） */}
+            {testSuite.status === 'ARCHIVED' && (
+              <span className={`px-2 py-0.5 text-xs font-medium rounded ${STATUS_COLORS[testSuite.status]}`}>
+                {STATUS_LABELS[testSuite.status]}
+              </span>
+            )}
+            {/* ラベルバッジ */}
+            {labels && labels.length > 0 && (
+              <LabelBadgeList labels={labels} emptyText="" />
             )}
           </div>
         )}
@@ -275,6 +273,145 @@ export function TestSuiteHeader({
           </nav>
         )}
       </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * テストスイートの3点リーダーアクションメニュー
+ */
+interface TestSuiteActionMenuProps {
+  canEdit: boolean;
+  onEdit?: () => void;
+  onStartExecution: () => void;
+  isExecutionDisabled: boolean;
+  suiteStatus: TestSuite['status'];
+  onStatusChange?: (status: 'ACTIVE' | 'ARCHIVED') => void;
+  isStatusChangePending: boolean;
+}
+
+function TestSuiteActionMenu({
+  canEdit,
+  onEdit,
+  onStartExecution,
+  isExecutionDisabled,
+  suiteStatus,
+  onStatusChange,
+  isStatusChangePending,
+}: TestSuiteActionMenuProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // ドロップダウン外クリック・ESCキーで閉じる
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
+
+  const isArchived = suiteStatus === 'ARCHIVED';
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="p-1.5 text-foreground-muted hover:text-foreground hover:bg-background-tertiary rounded transition-colors"
+        disabled={isStatusChangePending}
+        aria-label="テストスイート操作メニュー"
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
+      >
+        {isStatusChangePending ? (
+          <Loader2 className="w-5 h-5 animate-spin" />
+        ) : (
+          <MoreVertical className="w-5 h-5" />
+        )}
+      </button>
+
+      {isOpen && (
+        <div
+          className="absolute right-0 top-full mt-1 w-48 bg-background border border-border rounded-lg shadow-lg py-1 z-dropdown"
+          role="menu"
+        >
+          {/* 編集 */}
+          {canEdit && onEdit && (
+            <button
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-background-tertiary transition-colors"
+              onClick={() => {
+                onEdit();
+                setIsOpen(false);
+              }}
+              role="menuitem"
+            >
+              <Pencil className="w-4 h-4" />
+              編集
+            </button>
+          )}
+
+          {/* 実行開始 */}
+          <button
+            className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-background-tertiary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={() => {
+              onStartExecution();
+              setIsOpen(false);
+            }}
+            disabled={isExecutionDisabled}
+            role="menuitem"
+          >
+            <Play className="w-4 h-4" />
+            実行開始
+          </button>
+
+          {/* セパレーター + ステータス切り替え */}
+          {canEdit && onStatusChange && (
+            <>
+              <div className="border-t border-border my-1" />
+              {isArchived ? (
+                <button
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-background-tertiary transition-colors"
+                  onClick={() => {
+                    onStatusChange('ACTIVE');
+                    setIsOpen(false);
+                  }}
+                  role="menuitem"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  アクティブにする
+                </button>
+              ) : (
+                <button
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-background-tertiary transition-colors"
+                  onClick={() => {
+                    onStatusChange('ARCHIVED');
+                    setIsOpen(false);
+                  }}
+                  role="menuitem"
+                >
+                  <Archive className="w-4 h-4" />
+                  アーカイブにする
+                </button>
+              )}
+            </>
+          )}
+        </div>
       )}
     </div>
   );

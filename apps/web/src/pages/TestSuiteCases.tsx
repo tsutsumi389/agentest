@@ -211,6 +211,22 @@ export function TestSuiteCasesPage() {
 
   const suiteLabels = labelsData?.labels || [];
 
+  // テストスイートのステータス変更
+  const statusChangeMutation = useMutation({
+    mutationFn: (status: 'ACTIVE' | 'ARCHIVED') =>
+      testSuitesApi.update(testSuiteId!, { status }),
+    onSuccess: (data) => {
+      queryClient.setQueryData(['test-suite', testSuiteId], { testSuite: data.testSuite });
+      // プロジェクト一覧のキャッシュも無効化
+      queryClient.invalidateQueries({ queryKey: ['test-suites'] });
+      const label = data.testSuite.status === 'ARCHIVED' ? 'アーカイブ' : 'アクティブ';
+      toast.success(`テストスイートを${label}に変更しました`);
+    },
+    onError: () => {
+      toast.error('ステータスの変更に失敗しました');
+    },
+  });
+
   // 実行開始（環境なしの直接実行用）
   const startExecutionMutation = useMutation({
     mutationFn: () => testSuitesApi.startExecution(testSuiteId!),
@@ -343,6 +359,8 @@ export function TestSuiteCasesPage() {
             onStartExecution={handleStartExecution}
             onEdit={() => setIsEditMode(true)}
             isExecutionPending={startExecutionMutation.isPending}
+            onStatusChange={statusChangeMutation.mutate}
+            isStatusChangePending={statusChangeMutation.isPending}
             currentTab={currentTab}
             onTabChange={handleTabChange}
             hasSelectedTestCase={!!selectedTestCaseId}
