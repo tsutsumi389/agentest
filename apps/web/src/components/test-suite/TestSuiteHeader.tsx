@@ -63,6 +63,9 @@ interface TestSuiteHeaderProps {
   onTestCaseTabChange?: (tab: TestCaseTabType) => void;
   onEditTestCase?: () => void;
   onCopyTestCase?: () => void;
+  // ステータス遷移: DRAFT -> ACTIVE, ACTIVE <-> ARCHIVED（DRAFTへの戻しはサポートしない）
+  onTestCaseStatusChange?: (status: 'ACTIVE' | 'ARCHIVED') => void;
+  isTestCaseStatusChangePending?: boolean;
   // ラベル
   labels?: Label[];
   // パンくずリスト用プロジェクト情報
@@ -94,6 +97,8 @@ export function TestSuiteHeader({
   onTestCaseTabChange,
   onEditTestCase,
   onCopyTestCase,
+  onTestCaseStatusChange,
+  isTestCaseStatusChangePending = false,
   // ラベル
   labels,
   // パンくずリスト用プロジェクト情報
@@ -129,17 +134,28 @@ export function TestSuiteHeader({
       {breadcrumbItems && (
         <div className="px-4 pt-3 pb-0 flex items-center justify-between">
           <Breadcrumb items={breadcrumbItems} showHome={false} />
-          {/* 3点リーダーメニュー（テストスイート表示時・作成モード以外） */}
-          {!isTestCaseMode && !isCreateMode && (
-            <TestSuiteActionMenu
-              canEdit={canEdit}
-              onEdit={onEdit}
-              onStartExecution={onStartExecution}
-              isExecutionDisabled={isExecutionPending || testCaseCount === 0}
-              suiteStatus={testSuite.status}
-              onStatusChange={onStatusChange}
-              isStatusChangePending={isStatusChangePending}
-            />
+          {/* 3点リーダーメニュー（作成モード以外） */}
+          {!isCreateMode && (
+            isTestCaseMode ? (
+              <TestCaseActionMenu
+                canEdit={canEdit}
+                onEdit={onEditTestCase}
+                onCopy={onCopyTestCase}
+                testCaseStatus={selectedTestCase.status}
+                onStatusChange={onTestCaseStatusChange}
+                isStatusChangePending={isTestCaseStatusChangePending}
+              />
+            ) : (
+              <TestSuiteActionMenu
+                canEdit={canEdit}
+                onEdit={onEdit}
+                onStartExecution={onStartExecution}
+                isExecutionDisabled={isExecutionPending || testCaseCount === 0}
+                suiteStatus={testSuite.status}
+                onStatusChange={onStatusChange}
+                isStatusChangePending={isStatusChangePending}
+              />
+            )
           )}
         </div>
       )}
@@ -147,53 +163,28 @@ export function TestSuiteHeader({
       {/* ヘッダー1行目: タイトル */}
       <div className="px-4 py-3">
         {isTestCaseMode ? (
-          // テストケース選択時: タイトル + アクションボタン（テストスイートと同じ構造）
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {/* 優先度バッジ */}
-              <span className={`px-2 py-0.5 text-xs font-medium rounded ${PRIORITY_COLORS[selectedTestCase.priority]}`}>
-                {PRIORITY_LABELS[selectedTestCase.priority]}
+          // テストケース選択時: タイトル + バッジ
+          <div className="flex items-center gap-2">
+            {/* 優先度バッジ */}
+            <span className={`px-2 py-0.5 text-xs font-medium rounded ${PRIORITY_COLORS[selectedTestCase.priority]}`}>
+              {PRIORITY_LABELS[selectedTestCase.priority]}
+            </span>
+            <h1 className="text-lg font-semibold text-foreground truncate max-w-[300px]"
+                title={selectedTestCase.title}>
+              {selectedTestCase.title}
+            </h1>
+            {/* ステータスバッジ（アクティブは通常状態のため非表示） */}
+            {selectedTestCase.status !== 'ACTIVE' && (
+              <span className={`px-2 py-0.5 text-xs font-medium rounded ${STATUS_COLORS[selectedTestCase.status]}`}>
+                {STATUS_LABELS[selectedTestCase.status]}
               </span>
-              <h1 className="text-lg font-semibold text-foreground truncate max-w-[300px]"
-                  title={selectedTestCase.title}>
-                {selectedTestCase.title}
-              </h1>
-              {/* ステータスバッジ（アクティブは通常状態のため非表示） */}
-              {selectedTestCase.status !== 'ACTIVE' && (
-                <span className={`px-2 py-0.5 text-xs font-medium rounded ${STATUS_COLORS[selectedTestCase.status]}`}>
-                  {STATUS_LABELS[selectedTestCase.status]}
-                </span>
-              )}
-              {/* 削除予定バッジ */}
-              {selectedTestCase.deletedAt && (
-                <span className="px-2 py-0.5 text-xs font-medium rounded bg-danger/20 text-danger">
-                  削除予定
-                </span>
-              )}
-            </div>
-            {/* アクションボタン */}
-            <div className="flex items-center gap-2">
-              {canEdit && onEditTestCase && (
-                <button
-                  onClick={onEditTestCase}
-                  className="btn btn-secondary btn-sm"
-                  title="テストケースを編集"
-                >
-                  <Pencil className="w-4 h-4" />
-                  編集
-                </button>
-              )}
-              {canEdit && onCopyTestCase && (
-                <button
-                  onClick={onCopyTestCase}
-                  className="btn btn-secondary btn-sm"
-                  title="テストケースをコピー"
-                >
-                  <Copy className="w-4 h-4" />
-                  コピー
-                </button>
-              )}
-            </div>
+            )}
+            {/* 削除予定バッジ */}
+            {selectedTestCase.deletedAt && (
+              <span className="px-2 py-0.5 text-xs font-medium rounded bg-danger/20 text-danger">
+                削除予定
+              </span>
+            )}
           </div>
         ) : (
           // テストスイート表示時: タイトル + ステータスバッジ + ラベル
@@ -397,6 +388,151 @@ function TestSuiteActionMenu({
                   アクティブにする
                 </button>
               ) : (
+                <button
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-background-tertiary transition-colors"
+                  onClick={() => {
+                    onStatusChange('ARCHIVED');
+                    setIsOpen(false);
+                  }}
+                  role="menuitem"
+                >
+                  <Archive className="w-4 h-4" />
+                  アーカイブにする
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * テストケースの3点リーダーアクションメニュー
+ */
+interface TestCaseActionMenuProps {
+  canEdit: boolean;
+  onEdit?: () => void;
+  onCopy?: () => void;
+  testCaseStatus: string;
+  onStatusChange?: (status: 'ACTIVE' | 'ARCHIVED') => void;
+  isStatusChangePending: boolean;
+}
+
+function TestCaseActionMenu({
+  canEdit,
+  onEdit,
+  onCopy,
+  testCaseStatus,
+  onStatusChange,
+  isStatusChangePending,
+}: TestCaseActionMenuProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // ドロップダウン外クリック・ESCキーで閉じる
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen]);
+
+  const isActive = testCaseStatus === 'ACTIVE';
+
+  // メニュー項目がない場合は何も表示しない
+  const hasMenuItems = (canEdit && onEdit) || (canEdit && onCopy) || (canEdit && onStatusChange);
+  if (!hasMenuItems) return null;
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="p-1.5 text-foreground-muted hover:text-foreground hover:bg-background-tertiary rounded transition-colors"
+        disabled={isStatusChangePending}
+        aria-label="テストケース操作メニュー"
+        aria-expanded={isOpen}
+        aria-haspopup="menu"
+      >
+        {isStatusChangePending ? (
+          <Loader2 className="w-5 h-5 animate-spin" />
+        ) : (
+          <MoreVertical className="w-5 h-5" />
+        )}
+      </button>
+
+      {isOpen && (
+        <div
+          className="absolute right-0 top-full mt-1 w-48 bg-background border border-border rounded-lg shadow-lg py-1 z-dropdown"
+          role="menu"
+        >
+          {/* 編集 */}
+          {canEdit && onEdit && (
+            <button
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-background-tertiary transition-colors"
+              onClick={() => {
+                onEdit();
+                setIsOpen(false);
+              }}
+              role="menuitem"
+            >
+              <Pencil className="w-4 h-4" />
+              編集
+            </button>
+          )}
+
+          {/* コピー */}
+          {canEdit && onCopy && (
+            <button
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-background-tertiary transition-colors"
+              onClick={() => {
+                onCopy();
+                setIsOpen(false);
+              }}
+              role="menuitem"
+            >
+              <Copy className="w-4 h-4" />
+              コピー
+            </button>
+          )}
+
+          {/* セパレーター + ステータス切り替え */}
+          {canEdit && onStatusChange && (
+            <>
+              <div className="border-t border-border my-1" />
+              {/* アクティブでない場合（DRAFT/ARCHIVED）→「アクティブにする」を表示 */}
+              {!isActive && (
+                <button
+                  className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-background-tertiary transition-colors"
+                  onClick={() => {
+                    onStatusChange('ACTIVE');
+                    setIsOpen(false);
+                  }}
+                  role="menuitem"
+                >
+                  <CheckCircle2 className="w-4 h-4" />
+                  アクティブにする
+                </button>
+              )}
+              {/* アクティブの場合→「アーカイブにする」を表示 */}
+              {isActive && (
                 <button
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm text-foreground hover:bg-background-tertiary transition-colors"
                   onClick={() => {
