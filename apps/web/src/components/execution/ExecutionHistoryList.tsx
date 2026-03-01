@@ -368,9 +368,8 @@ export function ExecutionItem({ execution }: { execution: Execution }) {
   const counts = execution.judgmentCounts || { PASS: 0, FAIL: 0, PENDING: 0, SKIPPED: 0 };
   const total = counts.PASS + counts.FAIL + counts.PENDING + counts.SKIPPED;
 
-  // 合格率を計算（PENDING は除外）
-  const completedTotal = counts.PASS + counts.FAIL + counts.SKIPPED;
-  const passRate = completedTotal > 0 ? Math.round((counts.PASS / completedTotal) * 100) : 0;
+  // 合格率を計算（PENDING も分母に含める）
+  const passRate = total > 0 ? Math.round((counts.PASS / total) * 100) : 0;
 
   return (
     <Link
@@ -420,11 +419,9 @@ export function ExecutionItem({ execution }: { execution: Execution }) {
               size="sm"
             />
           </div>
-          {completedTotal > 0 && (
-            <span className="text-xs text-foreground-muted font-code shrink-0" data-testid="pass-rate-label">
-              {counts.PASS}/{completedTotal} ({passRate}%)
-            </span>
-          )}
+          <span className="text-xs text-foreground-muted font-code shrink-0" data-testid="pass-rate-label">
+            {counts.PASS}/{total} ({passRate}%)
+          </span>
         </div>
       )}
 

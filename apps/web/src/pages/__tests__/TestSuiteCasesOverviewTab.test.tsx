@@ -99,10 +99,10 @@ describe('OverviewTab 実行履歴サマリー', () => {
     expect(screen.queryByTestId('progress-bar')).toBeNull();
   });
 
-  it('合格率ラベル: PASS:3, FAIL:2, SKIPPED:2 → "3/7 (43%)"', () => {
+  it('合格率ラベル: PASS:3, FAIL:2, PENDING:1, SKIPPED:2 → "3/8 (38%)"', () => {
     renderOverviewTab([createExecution()]);
     const label = screen.getByTestId('pass-rate-label');
-    expect(label).toHaveTextContent('3/7 (43%)');
+    expect(label).toHaveTextContent('3/8 (38%)');
   });
 
   it('合格率ラベル: 全件PASS → "5/5 (100%)"', () => {
@@ -114,13 +114,13 @@ describe('OverviewTab 実行履歴サマリー', () => {
     expect(screen.getByTestId('pass-rate-label')).toHaveTextContent('5/5 (100%)');
   });
 
-  it('合格率ラベル: 全件PENDING → ラベル非表示', () => {
+  it('合格率ラベル: 全件PENDING → "0/5 (0%)"', () => {
     renderOverviewTab([
       createExecution({
         judgmentCounts: { PASS: 0, FAIL: 0, PENDING: 5, SKIPPED: 0 },
       }),
     ]);
-    expect(screen.queryByTestId('pass-rate-label')).toBeNull();
+    expect(screen.getByTestId('pass-rate-label')).toHaveTextContent('0/5 (0%)');
   });
 
   it('judgmentCounts が undefined → ProgressBar・ラベル非表示', () => {
