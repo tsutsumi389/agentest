@@ -47,10 +47,10 @@ describe('ExecutionItem 合格率ラベル', () => {
     vi.clearAllMocks();
   });
 
-  it('PASS:3, FAIL:2, PENDING:1, SKIPPED:2 のとき "3/7 (43%)" を表示する', () => {
+  it('PASS:3, FAIL:2, PENDING:1, SKIPPED:2 のとき "3/8 (38%)" を表示する', () => {
     renderItem(createExecution());
     const label = screen.getByTestId('pass-rate-label');
-    expect(label).toHaveTextContent('3/7 (43%)');
+    expect(label).toHaveTextContent('3/8 (38%)');
   });
 
   it('total === 0 のときラベルを表示しない', () => {
@@ -71,13 +71,13 @@ describe('ExecutionItem 合格率ラベル', () => {
     expect(screen.getByTestId('pass-rate-label')).toHaveTextContent('5/5 (100%)');
   });
 
-  it('全件 PENDING（completedTotal === 0）のときラベルを表示しない', () => {
+  it('全件 PENDING のとき "0/5 (0%)" を表示する', () => {
     renderItem(
       createExecution({
         judgmentCounts: { PASS: 0, FAIL: 0, PENDING: 5, SKIPPED: 0 },
       }),
     );
-    expect(screen.queryByTestId('pass-rate-label')).toBeNull();
+    expect(screen.getByTestId('pass-rate-label')).toHaveTextContent('0/5 (0%)');
   });
 
   it('全件 FAIL のとき "0/3 (0%)" を表示する', () => {
