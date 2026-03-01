@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useMemo } from 'react';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
 import {
   testSuitesApi,
@@ -17,12 +17,11 @@ import {
 import { MarkdownEditor } from '../common/markdown';
 
 /**
- * ステータスオプション
+ * ステータストグルオプション（下書き/アクティブ）
  */
-const STATUS_OPTIONS = [
+const STATUS_TOGGLE_OPTIONS = [
   { value: 'DRAFT', label: '下書き' },
   { value: 'ACTIVE', label: 'アクティブ' },
-  { value: 'ARCHIVED', label: 'アーカイブ' },
 ] as const;
 
 /**
@@ -30,6 +29,28 @@ const STATUS_OPTIONS = [
  */
 const MAX_NAME_LENGTH = 100;
 const MAX_DESCRIPTION_LENGTH = 500;
+
+// プラットフォーム判定
+const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform);
+
+/**
+ * 文字数カウンター（80%超えで表示、90%で警告色、100%で危険色）
+ */
+function CharacterCounter({ current, max }: { current: number; max: number }) {
+  if (current < max * 0.8) return null;
+
+  const colorClass = current >= max
+    ? 'text-danger'
+    : current >= max * 0.9
+      ? 'text-warning'
+      : 'text-foreground-muted';
+
+  return (
+    <p className={`text-xs mt-1 ${colorClass}`}>
+      {current}/{max}文字
+    </p>
+  );
+}
 
 interface TestSuiteFormProps {
   /** フォームモード */
@@ -73,10 +94,13 @@ export function TestSuiteForm({
     })) || []
   );
 
-  // セクションの展開状態
+  // セクションの展開状態（新規作成時は折りたたみ）
   const [expandedSections, setExpandedSections] = useState({
-    preconditions: true,
+    preconditions: !isCreateMode,
   });
+
+  // 名前フィールドのref（オートフォーカス用）
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   // 保存処理の状態
   const [isSaving, setIsSaving] = useState(false);
@@ -115,6 +139,13 @@ export function TestSuiteForm({
 
   // キャンセル確認ダイアログの状態
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+
+  // 名前フィールドにオートフォーカス
+  useEffect(() => {
+    requestAnimationFrame(() => {
+      nameInputRef.current?.focus();
+    });
+  }, []);
 
   // ブラウザの閉じる/リロード警告
   useEffect(() => {
@@ -170,7 +201,7 @@ export function TestSuiteForm({
           projectId,
           name: trimmedName,
           description: trimmedDescription || undefined,
-          status,
+          status, // 新規作成時はDRAFTデフォルト（UIでは非表示）
         });
 
         // 前提条件がある場合は並列で追加
@@ -306,6 +337,17 @@ export function TestSuiteForm({
     [preconditions]
   );
 
+  // Ctrl/Cmd+Enter でフォーム送信
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLFormElement>) => {
+      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        e.currentTarget.requestSubmit();
+      }
+    },
+    []
+  );
+
   // セクション展開/折りたたみのトグル
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
@@ -315,13 +357,15 @@ export function TestSuiteForm({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col h-full">
-      {/* ヘッダー */}
-      <div className="flex-shrink-0 p-4 border-b border-border">
-        <h2 className="text-lg font-semibold text-foreground">
-          {isCreateMode ? '新規テストスイート作成' : 'テストスイート編集'}
-        </h2>
-      </div>
+    <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="flex flex-col h-full">
+      {/* ヘッダー（編集モードのみ表示） */}
+      {!isCreateMode && (
+        <div className="flex-shrink-0 p-4 border-b border-border">
+          <h2 className="text-lg font-semibold text-foreground">
+            テストスイート編集
+          </h2>
+        </div>
+      )}
 
       {/* フォーム本体 */}
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
@@ -331,6 +375,7 @@ export function TestSuiteForm({
             名前 <span className="text-danger">*</span>
           </label>
           <input
+            ref={nameInputRef}
             id="suite-name"
             type="text"
             value={name}
@@ -339,9 +384,7 @@ export function TestSuiteForm({
             placeholder="テストスイートの名前"
             maxLength={MAX_NAME_LENGTH}
           />
-          <p className="text-xs text-foreground-muted mt-1">
-            {name.length}/{MAX_NAME_LENGTH}文字
-          </p>
+          <CharacterCounter current={name.length} max={MAX_NAME_LENGTH} />
         </div>
 
         {/* 説明 */}
@@ -356,28 +399,36 @@ export function TestSuiteForm({
             placeholder="テストスイートの説明を入力...（Markdown対応）"
             rows={3}
           />
-          <p className="text-xs text-foreground-muted mt-1">
-            {description.length}/{MAX_DESCRIPTION_LENGTH}文字
-          </p>
+          <CharacterCounter current={description.length} max={MAX_DESCRIPTION_LENGTH} />
         </div>
 
-        {/* ステータス */}
+        {/* ステータス（ARCHIVEDの場合はトグル無効） */}
         <div>
-          <label htmlFor="suite-status" className="block text-sm font-medium text-foreground mb-1">
+          <label className="block text-sm font-medium text-foreground mb-1">
             ステータス
           </label>
-          <select
-            id="suite-status"
-            value={status}
-            onChange={(e) => setStatus(e.target.value as typeof status)}
-            className="input"
-          >
-            {STATUS_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          {!isCreateMode && status === 'ARCHIVED' ? (
+            <p className="text-sm text-foreground-muted">アーカイブ</p>
+          ) : (
+            <div className="inline-flex rounded-md border border-border" role="radiogroup" aria-label="ステータス">
+              {STATUS_TOGGLE_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={status === option.value}
+                  onClick={() => setStatus(option.value)}
+                  className={`px-4 py-1.5 text-sm font-medium transition-colors first:rounded-l-md last:rounded-r-md ${
+                    status === option.value
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-background text-foreground-muted hover:text-foreground hover:bg-background-hover'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* 前提条件 */}
@@ -417,7 +468,10 @@ export function TestSuiteForm({
               {isCreateMode ? '作成中...' : '保存中...'}
             </>
           ) : (
-            isCreateMode ? '作成' : '保存'
+            <>
+              {isCreateMode ? '作成' : '保存'}
+              <kbd className="ml-1.5 text-xs opacity-60">{isMac ? '⌘' : 'Ctrl+'}↵</kbd>
+            </>
           )}
         </button>
       </div>

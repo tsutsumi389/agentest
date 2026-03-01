@@ -66,7 +66,7 @@ export function TestSuiteNewPage() {
       />
 
       {/* フォーム */}
-      <div className="card min-h-[500px] max-h-[calc(100vh-200px)] overflow-hidden">
+      <div className="card max-w-2xl mx-auto">
         <TestSuiteForm
           mode="create"
           projectId={projectId}
