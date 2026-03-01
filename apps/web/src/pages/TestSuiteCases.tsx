@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useSearchParams, useNavigate, Link } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Calendar } from 'lucide-react';
-import { testSuitesApi, projectsApi, labelsApi, type TestCase, type TestSuite, type ProjectMemberRole, type ReviewCommentWithReplies, type Label, type Execution } from '../lib/api';
+import { testSuitesApi, testCasesApi, projectsApi, labelsApi, type TestCase, type TestSuite, type ProjectMemberRole, type ReviewCommentWithReplies, type Label, type Execution } from '../lib/api';
 import { formatDateTime, formatRelativeTime } from '../lib/date';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import { useAuth } from '../hooks/useAuth';
@@ -227,6 +227,22 @@ export function TestSuiteCasesPage() {
     },
   });
 
+  // テストケースのステータス変更
+  const testCaseStatusChangeMutation = useMutation({
+    mutationFn: ({ testCaseId, status }: { testCaseId: string; status: 'ACTIVE' | 'ARCHIVED' }) =>
+      testCasesApi.update(testCaseId, { status }),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
+      queryClient.invalidateQueries({ queryKey: ['test-case', data.testCase.id] });
+      queryClient.invalidateQueries({ queryKey: ['test-case-details', data.testCase.id] });
+      const label = data.testCase.status === 'ARCHIVED' ? 'アーカイブ' : 'アクティブ';
+      toast.success(`テストケースを${label}に変更しました`);
+    },
+    onError: () => {
+      toast.error('ステータスの変更に失敗しました');
+    },
+  });
+
   // 実行開始（環境なしの直接実行用）
   const startExecutionMutation = useMutation({
     mutationFn: () => testSuitesApi.startExecution(testSuiteId!),
@@ -371,6 +387,12 @@ export function TestSuiteCasesPage() {
             onTestCaseTabChange={handleTestCaseTabChange}
             onEditTestCase={() => setIsTestCaseEditMode(true)}
             onCopyTestCase={() => setIsCopyModalOpen(true)}
+            onTestCaseStatusChange={(status) => {
+              if (selectedTestCaseId) {
+                testCaseStatusChangeMutation.mutate({ testCaseId: selectedTestCaseId, status });
+              }
+            }}
+            isTestCaseStatusChangePending={testCaseStatusChangeMutation.isPending}
             // ラベル
             labels={suiteLabels}
             // パンくずリスト用プロジェクト情報
