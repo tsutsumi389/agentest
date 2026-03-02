@@ -28,6 +28,14 @@ const PRIORITY_OPTIONS = [
   { value: 'LOW', label: '低' },
 ] as const;
 
+/**
+ * ステータストグルオプション（下書き/アクティブ）
+ */
+const STATUS_TOGGLE_OPTIONS = [
+  { value: 'DRAFT', label: '下書き' },
+  { value: 'ACTIVE', label: 'アクティブ' },
+] as const;
+
 
 interface TestCaseFormProps {
   /** フォームモード */
@@ -575,30 +583,34 @@ export function TestCaseForm({
           </select>
         </div>
 
-        {/* 下書きとして保存（ARCHIVEDの場合は表示のみ） */}
-        {status === 'ARCHIVED' ? (
-          <div className="flex items-center gap-2">
-            <span className="px-2 py-1 text-xs font-medium rounded bg-foreground-muted/20 text-foreground-muted">
-              アーカイブ済み
-            </span>
-            <span className="text-xs text-foreground-muted">
-              ステータスは設定タブから変更できます
-            </span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="case-draft"
-              checked={status === 'DRAFT'}
-              onChange={(e) => setStatus(e.target.checked ? 'DRAFT' : 'ACTIVE')}
-              className="w-4 h-4 rounded border-border text-accent focus:ring-accent"
-            />
-            <label htmlFor="case-draft" className="text-sm text-foreground">
-              下書きとして保存
-            </label>
-          </div>
-        )}
+        {/* ステータス（ARCHIVEDの場合はトグル無効） */}
+        <div>
+          <label className="block text-sm font-medium text-foreground mb-1">
+            ステータス
+          </label>
+          {status === 'ARCHIVED' ? (
+            <p className="text-sm text-foreground-muted">アーカイブ</p>
+          ) : (
+            <div className="inline-flex rounded-md border border-border" role="radiogroup" aria-label="ステータス">
+              {STATUS_TOGGLE_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={status === option.value}
+                  onClick={() => setStatus(option.value)}
+                  className={`px-4 py-1.5 text-sm font-medium transition-colors first:rounded-l-md last:rounded-r-md ${
+                    status === option.value
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-background text-foreground-muted hover:text-foreground hover:bg-background-hover'
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* 前提条件 */}
         <DynamicListSection
