@@ -409,8 +409,8 @@ export function ExecutionItem({ execution }: { execution: Execution }) {
 
       {/* 期待結果の状況バー + 合格率ラベル */}
       {total > 0 && (
-        <div className="flex items-center gap-2 flex-1 min-w-0 max-w-64">
-          <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <div className="w-32">
             <ProgressBar
               passed={counts.PASS}
               failed={counts.FAIL}
@@ -419,7 +419,7 @@ export function ExecutionItem({ execution }: { execution: Execution }) {
               size="sm"
             />
           </div>
-          <span className="text-xs text-foreground-muted font-code shrink-0" data-testid="pass-rate-label">
+          <span className="text-xs text-foreground-muted font-code shrink-0 whitespace-nowrap" data-testid="pass-rate-label">
             {counts.PASS}/{total} ({passRate}%)
           </span>
         </div>
