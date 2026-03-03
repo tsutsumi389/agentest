@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useCallback, useMemo, useEffect } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -17,6 +17,7 @@ import { TestSuiteRowSkeleton } from '../components/test-suite/TestSuiteRowSkele
 import { useAuth } from '../hooks/useAuth';
 import { ProjectOverviewTab } from '../components/project/ProjectOverviewTab';
 import { ProjectSettingsTab, type SettingsSection } from '../components/project/ProjectSettingsTab';
+import { useTestSuiteFilterParams } from '../hooks/useTestSuiteFilterParams';
 
 /**
  * プロジェクト詳細ページ
@@ -25,22 +26,11 @@ import { ProjectSettingsTab, type SettingsSection } from '../components/project/
 // タブ型定義
 type ProjectTab = 'overview' | 'suites' | 'settings';
 
-/**
- * デフォルトの検索パラメータ
- */
-const DEFAULT_SEARCH_PARAMS: TestSuiteSearchParams = {
-  limit: 20,
-  offset: 0,
-  status: 'ACTIVE',
-  sortBy: 'updatedAt',
-  sortOrder: 'desc',
-};
-
 export function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const { user } = useAuth();
   const [urlSearchParams, setUrlSearchParams] = useSearchParams();
-  const [suiteSearchParams, setSuiteSearchParams] = useState<TestSuiteSearchParams>(DEFAULT_SEARCH_PARAMS);
+  const { filters: suiteSearchParams, setFilters: setSuiteSearchParams, currentPage, setPage: handlePageChange } = useTestSuiteFilterParams(urlSearchParams, setUrlSearchParams);
   const queryClient = useQueryClient();
 
   // URLクエリパラメータからタブ状態を取得
@@ -129,24 +119,10 @@ export function ProjectDetailPage() {
     }
   }, [currentTab, currentRole, isAdmin, handleTabChange]);
 
-  // フィルタ変更ハンドラ
-  const handleFiltersChange = useCallback((newFilters: TestSuiteSearchParams) => {
-    setSuiteSearchParams(newFilters);
-  }, []);
-
   // ページネーション計算
   const limit = suiteSearchParams.limit || 20;
   const offset = suiteSearchParams.offset || 0;
-  const currentPage = Math.floor(offset / limit) + 1;
   const totalPages = totalCount ? Math.ceil(totalCount / limit) : 1;
-
-  // ページ変更ハンドラ
-  const handlePageChange = useCallback((page: number) => {
-    setSuiteSearchParams((prev) => ({
-      ...prev,
-      offset: (page - 1) * (prev.limit || 20),
-    }));
-  }, []);
 
   // プロジェクト更新後のコールバック
   const handleProjectUpdated = useCallback((updated: Project) => {
@@ -244,7 +220,7 @@ export function ProjectDetailPage() {
           testSuites={testSuites}
           isLoadingSuites={isLoadingSuites}
           suiteSearchParams={suiteSearchParams}
-          onFiltersChange={handleFiltersChange}
+          onFiltersChange={setSuiteSearchParams}
           totalCount={totalCount}
           isAdmin={isAdmin}
           labels={labels}
@@ -316,7 +292,6 @@ function TestSuiteListContent({
           totalCount={totalCount}
           isAdmin={isAdmin}
           labels={labels}
-          defaultFilters={DEFAULT_SEARCH_PARAMS}
         />
       </div>
 
