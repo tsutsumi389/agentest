@@ -1,9 +1,9 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
-import { Search, X, ChevronDown, Check } from 'lucide-react';
+import { Search, X, ChevronDown, Check, ArrowUpDown, Tag } from 'lucide-react';
 import type { TestSuiteSearchParams, Label } from '../../lib/api';
 
 /**
- * ステータスオプション
+ * ステータスオプション（トグルボタングループ用）
  */
 const STATUS_OPTIONS = [
   { value: '', label: 'すべて' },
@@ -13,89 +13,76 @@ const STATUS_OPTIONS = [
 ] as const;
 
 /**
- * ソートオプション
+ * ソート統合オプション（フィールド + 順序を1つに統合）
  */
-const SORT_OPTIONS = [
-  { value: 'updatedAt', label: '更新日時' },
-  { value: 'createdAt', label: '作成日時' },
-  { value: 'name', label: '名前' },
-] as const;
-
-/**
- * ソート順序オプション
- */
-const SORT_ORDER_OPTIONS = [
-  { value: 'desc', label: '降順' },
-  { value: 'asc', label: '昇順' },
+const SORT_COMBINED_OPTIONS = [
+  { value: 'updatedAt-desc', label: '更新日(新しい順)', sortBy: 'updatedAt' as const, sortOrder: 'desc' as const },
+  { value: 'updatedAt-asc', label: '更新日(古い順)', sortBy: 'updatedAt' as const, sortOrder: 'asc' as const },
+  { value: 'createdAt-desc', label: '作成日(新しい順)', sortBy: 'createdAt' as const, sortOrder: 'desc' as const },
+  { value: 'createdAt-asc', label: '作成日(古い順)', sortBy: 'createdAt' as const, sortOrder: 'asc' as const },
+  { value: 'name-asc', label: '名前(A→Z)', sortBy: 'name' as const, sortOrder: 'asc' as const },
+  { value: 'name-desc', label: '名前(Z→A)', sortBy: 'name' as const, sortOrder: 'desc' as const },
 ] as const;
 
 interface TestSuiteSearchFilterProps {
-  /**
-   * 現在のフィルタ値
-   */
+  /** 現在のフィルタ値 */
   filters: TestSuiteSearchParams;
-  /**
-   * フィルタ変更時のコールバック
-   */
+  /** フィルタ変更時のコールバック */
   onFiltersChange: (filters: TestSuiteSearchParams) => void;
-  /**
-   * 検索結果の総件数（表示用）
-   */
+  /** 検索結果の総件数（表示用） */
   totalCount?: number;
-  /**
-   * 管理者権限があるか（削除済み表示用）
-   */
+  /** 管理者権限があるか（削除済み表示用） */
   isAdmin?: boolean;
-  /**
-   * プロジェクトのラベル一覧
-   */
+  /** プロジェクトのラベル一覧 */
   labels?: Label[];
-  /**
-   * デフォルトのフィルタ値（クリア時に使用）
-   */
-  defaultFilters?: TestSuiteSearchParams;
 }
 
 /**
  * テストスイート検索・フィルタコンポーネント
  *
- * インラインフィルター形式:
- * - 検索ボックス、ステータスフィルタ、ラベルフィルタが常に表示
- * - 並び順と削除済み表示オプションも常に表示
- * - 選択中のラベルがバッジで表示される
+ * コンパクト1行レイアウト:
+ * [検索] [すべて|下書き|有効|アーカイブ] [ラベル(N)] [ソート] [□削除済み] N件
  */
-// デフォルトのフィルタ値
-const DEFAULT_FILTERS: TestSuiteSearchParams = {
-  limit: 20,
-  offset: 0,
-  status: 'ACTIVE',
-  sortBy: 'updatedAt',
-  sortOrder: 'desc',
-};
-
 export function TestSuiteSearchFilter({
   filters,
   onFiltersChange,
   totalCount,
   isAdmin = false,
   labels = [],
-  defaultFilters = DEFAULT_FILTERS,
 }: TestSuiteSearchFilterProps) {
   const [searchInput, setSearchInput] = useState(filters.q || '');
-  const [isStatusOpen, setIsStatusOpen] = useState(false);
   const [isLabelOpen, setIsLabelOpen] = useState(false);
-  const statusRef = useRef<HTMLDivElement>(null);
+  const [isSortOpen, setIsSortOpen] = useState(false);
+  const [labelSearchQuery, setLabelSearchQuery] = useState('');
   const labelRef = useRef<HTMLDivElement>(null);
+  const sortRef = useRef<HTMLDivElement>(null);
+  const labelSearchInputRef = useRef<HTMLInputElement>(null);
 
   // 最新のfiltersをrefで保持（デバウンス処理で使用）
   const filtersRef = useRef(filters);
   filtersRef.current = filters;
 
-  // 選択されているラベルを取得
+  // ブラウザバック/フォワード等で外部からfilters.qが変更された場合に同期
+  useEffect(() => {
+    setSearchInput(filters.q || '');
+  }, [filters.q]);
+
+  // 選択されているラベル
   const selectedLabels = useMemo(() => {
     if (!filters.labelIds?.length) return [];
     return labels.filter((label) => filters.labelIds?.includes(label.id));
   }, [labels, filters.labelIds]);
+
+  // ラベル検索フィルタリング
+  const filteredLabels = useMemo(() => {
+    if (!labelSearchQuery) return labels;
+    const query = labelSearchQuery.toLowerCase();
+    return labels.filter((label) => label.name.toLowerCase().includes(query));
+  }, [labels, labelSearchQuery]);
+
+  // 現在のソート値
+  const currentSortValue = `${filters.sortBy || 'updatedAt'}-${filters.sortOrder || 'desc'}`;
+  const currentSortLabel = SORT_COMBINED_OPTIONS.find((o) => o.value === currentSortValue)?.label || '更新日(新しい順)';
 
   // 検索入力のデバウンス
   useEffect(() => {
@@ -110,11 +97,12 @@ export function TestSuiteSearchFilter({
   // 外側クリックでドロップダウンを閉じる
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (statusRef.current && !statusRef.current.contains(event.target as Node)) {
-        setIsStatusOpen(false);
-      }
       if (labelRef.current && !labelRef.current.contains(event.target as Node)) {
         setIsLabelOpen(false);
+        setLabelSearchQuery('');
+      }
+      if (sortRef.current && !sortRef.current.contains(event.target as Node)) {
+        setIsSortOpen(false);
       }
     }
     document.addEventListener('mousedown', handleClickOutside);
@@ -125,14 +113,23 @@ export function TestSuiteSearchFilter({
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
-        setIsStatusOpen(false);
         setIsLabelOpen(false);
+        setIsSortOpen(false);
+        setLabelSearchQuery('');
       }
     }
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // ラベルドロップダウンを開いたとき、検索入力にフォーカス
+  useEffect(() => {
+    if (isLabelOpen) {
+      labelSearchInputRef.current?.focus();
+    }
+  }, [isLabelOpen]);
+
+  // ステータストグル（1クリック切り替え）
   const handleStatusChange = useCallback(
     (status: string) => {
       onFiltersChange({
@@ -140,29 +137,23 @@ export function TestSuiteSearchFilter({
         status: status ? (status as 'DRAFT' | 'ACTIVE' | 'ARCHIVED') : undefined,
         offset: 0,
       });
-      setIsStatusOpen(false);
     },
     [filters, onFiltersChange]
   );
 
-  const handleSortChange = useCallback(
-    (sortBy: string) => {
-      onFiltersChange({
-        ...filters,
-        sortBy: sortBy as 'name' | 'createdAt' | 'updatedAt',
-        offset: 0,
-      });
-    },
-    [filters, onFiltersChange]
-  );
-
-  const handleSortOrderChange = useCallback(
-    (sortOrder: string) => {
-      onFiltersChange({
-        ...filters,
-        sortOrder: sortOrder as 'asc' | 'desc',
-        offset: 0,
-      });
+  // ソート変更（統合ドロップダウン）
+  const handleSortCombinedChange = useCallback(
+    (value: string) => {
+      const option = SORT_COMBINED_OPTIONS.find((o) => o.value === value);
+      if (option) {
+        onFiltersChange({
+          ...filters,
+          sortBy: option.sortBy,
+          sortOrder: option.sortOrder,
+          offset: 0,
+        });
+      }
+      setIsSortOpen(false);
     },
     [filters, onFiltersChange]
   );
@@ -190,225 +181,191 @@ export function TestSuiteSearchFilter({
     [filters, onFiltersChange]
   );
 
-  // ラベルを削除
-  const removeLabel = useCallback(
-    (labelId: string) => {
-      const currentIds = filters.labelIds || [];
-      const newIds = currentIds.filter((id) => id !== labelId);
-      onFiltersChange({
-        ...filters,
-        labelIds: newIds.length > 0 ? newIds : undefined,
-        offset: 0,
-      });
-    },
-    [filters, onFiltersChange]
-  );
-
-  // すべてクリア
-  const clearAllFilters = useCallback(() => {
-    setSearchInput('');
+  // ラベル選択をすべてクリア
+  const clearLabelSelection = useCallback(() => {
     onFiltersChange({
-      ...defaultFilters,
-      limit: filters.limit,
+      ...filters,
+      labelIds: undefined,
       offset: 0,
     });
-  }, [filters.limit, defaultFilters, onFiltersChange]);
-
-  // 現在のステータス表示ラベル
-  const currentStatusLabel = STATUS_OPTIONS.find((o) => o.value === (filters.status || ''))?.label || 'すべて';
-
-  // フィルタがデフォルトと異なるかどうか
-  const hasActiveFilters = Boolean(
-    filters.q ||
-    (filters.labelIds && filters.labelIds.length > 0) ||
-    filters.status !== defaultFilters.status ||
-    filters.includeDeleted
-  );
+  }, [filters, onFiltersChange]);
 
   return (
-    <div className="flex flex-col gap-3">
-      {/* 1行目: 検索、ステータス、ラベル */}
-      <div className="flex items-center gap-3 flex-wrap">
-        {/* 検索ボックス */}
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-muted" />
-          <input
-            type="text"
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            placeholder="テストスイートを検索..."
-            className="input pl-10 pr-8 w-full"
-            aria-label="テストスイートを検索"
-          />
-          {searchInput && (
-            <button
-              onClick={() => setSearchInput('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-foreground-muted hover:text-foreground"
-              aria-label="検索をクリア"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
-
-        {/* ステータスドロップダウン */}
-        <div className="relative" ref={statusRef}>
+    <div className="flex items-center gap-2 flex-wrap text-xs">
+      {/* 検索ボックス */}
+      <div className="relative flex-1 min-w-[180px] max-w-[300px]">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-foreground-muted" />
+        <input
+          type="text"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder="テストスイートを検索..."
+          className="input pl-8 pr-7 py-1.5 w-full text-xs"
+          aria-label="テストスイートを検索"
+        />
+        {searchInput && (
           <button
-            onClick={() => setIsStatusOpen(!isStatusOpen)}
-            className={`btn btn-secondary min-w-[140px] justify-between ${
-              filters.status && filters.status !== 'ACTIVE' ? 'border-accent' : ''
-            }`}
-            aria-expanded={isStatusOpen}
-            aria-haspopup="listbox"
-            aria-label="ステータスでフィルタ"
+            onClick={() => setSearchInput('')}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-foreground-muted hover:text-foreground"
+            aria-label="検索をクリア"
           >
-            <span>ステータス: {currentStatusLabel}</span>
-            <ChevronDown className={`w-4 h-4 transition-transform ${isStatusOpen ? 'rotate-180' : ''}`} />
+            <X className="w-3.5 h-3.5" />
           </button>
-          {isStatusOpen && (
-            <div className="absolute left-0 mt-1 w-40 card py-1 z-dropdown animate-fade-in" role="listbox">
-              {STATUS_OPTIONS.map((option) => (
-                <button
-                  key={option.value}
-                  onClick={() => handleStatusChange(option.value)}
-                  className={`w-full px-3 py-2 text-left text-sm hover:bg-background-tertiary transition-colors flex items-center justify-between ${
-                    (filters.status || '') === option.value ? 'bg-background-tertiary' : ''
-                  }`}
-                  role="option"
-                  aria-selected={(filters.status || '') === option.value}
-                >
-                  <span>{option.label}</span>
-                  {(filters.status || '') === option.value && <Check className="w-4 h-4 text-accent" />}
-                </button>
-              ))}
+        )}
+      </div>
+
+      {/* ステータストグルボタングループ */}
+      <div className="inline-flex rounded-md border border-border overflow-hidden" role="radiogroup" aria-label="ステータス">
+        {STATUS_OPTIONS.map((option) => {
+          const isActive = (filters.status || '') === option.value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              role="radio"
+              aria-checked={isActive}
+              onClick={() => handleStatusChange(option.value)}
+              className={`px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                isActive
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-background text-foreground-muted hover:text-foreground hover:bg-background-hover'
+              }`}
+            >
+              {option.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ラベルドロップダウン（検索機能付き） */}
+      {labels.length > 0 && (
+        <div className="relative" ref={labelRef}>
+          <button
+            onClick={() => setIsLabelOpen(!isLabelOpen)}
+            className={`inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-md border transition-colors ${
+              selectedLabels.length > 0
+                ? 'border-accent text-accent bg-background'
+                : 'border-border text-foreground-muted bg-background hover:text-foreground hover:bg-background-hover'
+            }`}
+            aria-expanded={isLabelOpen}
+            aria-haspopup="listbox"
+            aria-label="ラベルでフィルタ"
+          >
+            <Tag className="w-3.5 h-3.5" />
+            <span>ラベル{selectedLabels.length > 0 && ` (${selectedLabels.length})`}</span>
+            <ChevronDown className={`w-3 h-3 transition-transform ${isLabelOpen ? 'rotate-180' : ''}`} />
+          </button>
+          {isLabelOpen && (
+            <div className="absolute left-0 mt-1 w-56 card z-dropdown animate-fade-in overflow-hidden" role="listbox">
+              {/* ラベル検索入力 */}
+              <div className="p-2 border-b border-border">
+                <input
+                  ref={labelSearchInputRef}
+                  type="text"
+                  value={labelSearchQuery}
+                  onChange={(e) => setLabelSearchQuery(e.target.value)}
+                  placeholder="ラベルを検索..."
+                  className="w-full px-2 py-1 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-accent"
+                />
+              </div>
+              {/* ラベル一覧 */}
+              <div className="overflow-y-auto max-h-48 py-1">
+                {filteredLabels.length === 0 ? (
+                  <div className="px-3 py-2 text-xs text-foreground-muted">一致するラベルがありません</div>
+                ) : (
+                  filteredLabels.map((label) => {
+                    const isSelected = filters.labelIds?.includes(label.id);
+                    return (
+                      <button
+                        key={label.id}
+                        onClick={() => toggleLabel(label.id)}
+                        className={`w-full px-3 py-1.5 text-left text-xs hover:bg-background-tertiary transition-colors flex items-center gap-2 ${
+                          isSelected ? 'bg-background-tertiary' : ''
+                        }`}
+                        role="option"
+                        aria-selected={isSelected}
+                      >
+                        <span
+                          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: label.color }}
+                        />
+                        <span className="flex-1 truncate">{label.name}</span>
+                        {isSelected && <Check className="w-3.5 h-3.5 text-accent flex-shrink-0" />}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+              {/* 選択件数とクリア */}
+              {selectedLabels.length > 0 && (
+                <div className="px-3 py-2 border-t border-border flex items-center justify-between">
+                  <span className="text-xs text-foreground-muted">{selectedLabels.length}件選択中</span>
+                  <button
+                    onClick={clearLabelSelection}
+                    className="text-xs text-foreground-muted hover:text-foreground"
+                  >
+                    クリア
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
+      )}
 
-        {/* ラベルドロップダウン */}
-        {labels.length > 0 && (
-          <div className="relative" ref={labelRef}>
-            <button
-              onClick={() => setIsLabelOpen(!isLabelOpen)}
-              className={`btn btn-secondary min-w-[100px] justify-between ${
-                selectedLabels.length > 0 ? 'border-accent' : ''
-              }`}
-              aria-expanded={isLabelOpen}
-              aria-haspopup="listbox"
-              aria-label="ラベルでフィルタ"
-            >
-              <span>ラベル{selectedLabels.length > 0 && ` (${selectedLabels.length})`}</span>
-              <ChevronDown className={`w-4 h-4 transition-transform ${isLabelOpen ? 'rotate-180' : ''}`} />
-            </button>
-            {isLabelOpen && (
-              <div className="absolute left-0 mt-1 w-56 card py-1 z-dropdown animate-fade-in max-h-60 overflow-y-auto" role="listbox">
-                {labels.map((label) => {
-                  const isSelected = filters.labelIds?.includes(label.id);
-                  return (
-                    <button
-                      key={label.id}
-                      onClick={() => toggleLabel(label.id)}
-                      className={`w-full px-3 py-2 text-left text-sm hover:bg-background-tertiary transition-colors flex items-center gap-2 ${
-                        isSelected ? 'bg-background-tertiary' : ''
-                      }`}
-                      role="option"
-                      aria-selected={isSelected}
-                    >
-                      <span
-                        className="w-3 h-3 rounded-full flex-shrink-0"
-                        style={{ backgroundColor: label.color }}
-                      />
-                      <span className="flex-1 truncate">{label.name}</span>
-                      {isSelected && <Check className="w-4 h-4 text-accent flex-shrink-0" />}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+      {/* ソート統合ドロップダウン */}
+      <div className="relative" ref={sortRef}>
+        <button
+          onClick={() => setIsSortOpen(!isSortOpen)}
+          className={`inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-md border border-border transition-colors ${
+            currentSortValue !== 'updatedAt-desc'
+              ? 'text-accent border-accent bg-background'
+              : 'text-foreground-muted bg-background hover:text-foreground hover:bg-background-hover'
+          }`}
+          aria-expanded={isSortOpen}
+          aria-haspopup="listbox"
+          aria-label="並び順"
+        >
+          <ArrowUpDown className="w-3.5 h-3.5" />
+          <span>{currentSortLabel}</span>
+          <ChevronDown className={`w-3 h-3 transition-transform ${isSortOpen ? 'rotate-180' : ''}`} />
+        </button>
+        {isSortOpen && (
+          <div className="absolute left-0 mt-1 w-48 card py-1 z-dropdown animate-fade-in" role="listbox">
+            {SORT_COMBINED_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                onClick={() => handleSortCombinedChange(option.value)}
+                className={`w-full px-3 py-1.5 text-left text-xs hover:bg-background-tertiary transition-colors flex items-center justify-between ${
+                  currentSortValue === option.value ? 'bg-background-tertiary' : ''
+                }`}
+                role="option"
+                aria-selected={currentSortValue === option.value}
+              >
+                <span>{option.label}</span>
+                {currentSortValue === option.value && <Check className="w-3.5 h-3.5 text-accent" />}
+              </button>
+            ))}
           </div>
         )}
       </div>
 
-      {/* 2行目: 並び順、削除済み表示、件数 */}
-      <div className="flex items-center gap-3 flex-wrap text-sm">
-        <span className="text-foreground-muted">並び順:</span>
-        <select
-          value={filters.sortBy || 'updatedAt'}
-          onChange={(e) => handleSortChange(e.target.value)}
-          className="input py-1 px-2 text-sm w-auto"
-          aria-label="並び順"
-        >
-          {SORT_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <select
-          value={filters.sortOrder || 'desc'}
-          onChange={(e) => handleSortOrderChange(e.target.value)}
-          className="input py-1 px-2 text-sm w-20"
-          aria-label="順序"
-        >
-          {SORT_ORDER_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+      {/* 削除済み表示（管理者のみ） */}
+      {isAdmin && (
+        <label className="flex items-center gap-1.5 cursor-pointer text-xs">
+          <input
+            type="checkbox"
+            checked={filters.includeDeleted || false}
+            onChange={(e) => handleIncludeDeletedChange(e.target.checked)}
+            className="w-3.5 h-3.5 rounded border-border bg-background-secondary text-accent focus:ring-accent"
+          />
+          <span className="text-foreground-muted">削除済み</span>
+        </label>
+      )}
 
-        {/* 削除済み表示（管理者のみ） */}
-        {isAdmin && (
-          <label className="flex items-center gap-2 cursor-pointer ml-2">
-            <input
-              type="checkbox"
-              checked={filters.includeDeleted || false}
-              onChange={(e) => handleIncludeDeletedChange(e.target.checked)}
-              className="w-4 h-4 rounded border-border bg-background-secondary text-accent focus:ring-accent"
-            />
-            <span className="text-foreground-muted">削除済みも表示</span>
-          </label>
-        )}
-
-        {/* 件数表示 */}
-        {totalCount !== undefined && (
-          <span className="text-foreground-muted ml-auto">{totalCount}件のテストスイート</span>
-        )}
-      </div>
-
-      {/* 選択中のラベル表示 */}
-      {selectedLabels.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-border">
-          <span className="text-sm text-foreground-muted">選択中:</span>
-          {selectedLabels.map((label) => (
-            <span
-              key={label.id}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium"
-              style={{
-                backgroundColor: `${label.color}20`,
-                color: label.color,
-                border: `1px solid ${label.color}40`,
-              }}
-            >
-              {label.name}
-              <button
-                onClick={() => removeLabel(label.id)}
-                className="hover:opacity-70"
-                aria-label={`${label.name}ラベルを解除`}
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </span>
-          ))}
-          {hasActiveFilters && (
-            <button
-              onClick={clearAllFilters}
-              className="text-sm text-foreground-muted hover:text-foreground ml-auto"
-            >
-              すべてクリア
-            </button>
-          )}
-        </div>
+      {/* 件数表示 */}
+      {totalCount !== undefined && (
+        <span className="text-foreground-muted ml-auto text-xs whitespace-nowrap">{totalCount}件</span>
       )}
     </div>
   );
