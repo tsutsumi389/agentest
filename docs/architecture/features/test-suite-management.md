@@ -14,21 +14,33 @@
 | TS-004 | 変更履歴 | テストスイートの変更履歴を表示 | 実装済 |
 | TS-006 | 論理削除・復元 | テストスイートを論理削除（30日猶予期間）、復元 | 実装済 |
 | TS-007 | 検索 | 名前・前提条件内容でテストスイートを検索 | 実装済 |
-| TS-008 | フィルタ | ステータス・作成者・日付でフィルタリング | 実装済 |
+| TS-008 | フィルタ | ステータス・ラベルでフィルタリング（URLパラメータ連動） | 実装済 |
 | TS-009 | ラベル管理 | テストスイートへのラベル付与・管理 | 実装済 |
 
 ## 画面仕様
 
 ### テストスイート一覧画面（プロジェクト詳細内）
 
-- **URL**: `/projects/{projectId}`
+- **URL**: `/projects/{projectId}?tab=suites`
+- **フィルターバー**（コンパクト1行レイアウト、`flex-wrap`対応）
+  ```
+  [🔍 検索...] [すべて|下書き|有効|アーカイブ] [🏷 ラベル(N) ▾] [↕ 更新日(新しい順) ▾] [□削除済み]  N件
+  ```
+  - **検索ボックス**: 名前・前提条件内容でデバウンス検索（300ms）、`flex-1 min-w-[180px] max-w-[300px]`
+  - **ステータス**: トグルボタングループ（セグメントコントロール）、1クリック切り替え
+    - すべて / 下書き(DRAFT) / 有効(ACTIVE) / アーカイブ(ARCHIVED)
+    - デフォルト: 有効(ACTIVE)
+  - **ラベル**: 検索機能付きドロップダウン
+    - ドロップダウン先頭に検索入力フィールド
+    - 選択済み件数 + クリアボタンをドロップダウン内に表示
+    - ボタンテキスト: `ラベル (N)` （N=選択件数、0件時は省略）
+  - **ソート**: 統合ドロップダウン（6つの組合せ）
+    - 更新日(新しい順) / 更新日(古い順) / 作成日(新しい順) / 作成日(古い順) / 名前(A→Z) / 名前(Z→A)
+    - デフォルト: 更新日(新しい順)
+  - **削除済み**: チェックボックス（管理者のみ表示）
+  - **件数表示**: 右端に `N件` を表示
+  - **URLパラメータ連動**: `useTestSuiteFilterParams`フックにより、フィルター状態がURLに反映（リロード/共有/ブラウザバック対応）
 - **表示要素**
-  - 検索ボックス（名前・前提条件内容で検索）
-  - フィルター
-    - ステータス（DRAFT/ACTIVE/ARCHIVED）
-    - 作成者
-    - 作成日範囲
-    - 削除済み含む
   - テストスイートカード一覧
     - テストスイート名
     - ラベル（色付きバッジ、複数表示可）
@@ -46,7 +58,7 @@
 - **操作**
   - テストスイートカードクリック → テストスイート詳細へ遷移
   - 作成ボタン → テストスイート新規作成ページへ遷移（`/test-suites/new?projectId={projectId}`）
-  - 検索 → リアルタイムフィルタリング
+  - フィルター操作 → デバウンス検索 + URLパラメータ更新（`replace: true`でブラウザ履歴を汚さない）
 
 ### テストスイート作成ページ
 
@@ -315,15 +327,19 @@ sequenceDiagram
 sequenceDiagram
     participant U as ユーザー
     participant F as フロントエンド
+    participant H as useTestSuiteFilterParams
     participant B as バックエンド
     participant DB as データベース
 
-    U->>F: 検索条件を入力
-    F->>F: デバウンス処理（300ms）
-    F->>B: GET /api/projects/{id}/test-suites?q=...&status=...
+    U->>F: 検索条件を入力/変更
+    F->>H: フィルター更新
+    H->>H: URLパラメータを更新（replace: true）
+    H->>F: 新しいフィルター値を返却
+    F->>F: デバウンス処理（300ms、テキスト検索時のみ）
+    F->>B: GET /api/projects/{id}/test-suites?q=...&status=...&labelIds=...
     B->>B: 権限確認（READ以上）
     B->>DB: 条件に合うテストスイートを検索
-    Note over DB: 名前部分一致<br/>前提条件内容検索<br/>ステータスフィルタ<br/>日付範囲フィルタ
+    Note over DB: 名前部分一致<br/>前提条件内容検索<br/>ステータスフィルタ<br/>ラベルフィルタ
     B->>F: 検索結果（ページネーション付き）
     F->>U: 結果一覧を表示
 ```
@@ -368,6 +384,8 @@ sequenceDiagram
 | ファイル | 説明 |
 |----------|------|
 | `apps/web/src/hooks/useTestSuiteRealtime.ts` | テストスイートリアルタイム更新フック |
+| `apps/web/src/hooks/useTestSuiteFilterParams.ts` | URL↔フィルター双方向同期フック |
+| `apps/web/src/components/test-suite/TestSuiteSearchFilter.tsx` | 検索・フィルタUIコンポーネント |
 | `apps/web/src/pages/TestSuiteCases.tsx` | フック統合 |
 
 ### バックエンド実装
@@ -508,8 +526,11 @@ after:  ["a", "b", "c"]  （b を新規生成）
 - READ以上のロールがあれば検索可能
 - 名前は部分一致検索
 - 前提条件内容も検索対象（OR条件）
-- ステータス、作成者、日付範囲でフィルタ可能
+- ステータス、ラベルでフィルタ可能
 - 削除済みテストスイートはincludeDeleted=trueで含める
+- フィルター状態はURLパラメータに連動（`useTestSuiteFilterParams`フック）
+  - リロード/共有/ブラウザバックでフィルター状態が維持される
+  - デフォルト値と同じ場合はURLパラメータを省略
 
 ### 履歴管理
 
@@ -595,20 +616,32 @@ after:  ["a", "b", "c"]  （b を新規生成）
 |----------|------|------|------|
 | GET | /api/projects/:id/test-suites | テストスイート一覧・検索 | READ以上 |
 
-#### 検索クエリパラメータ
+#### 検索クエリパラメータ（API）
 
 | パラメータ | 型 | 説明 | デフォルト |
 |-----------|-----|------|-----------|
 | q | string | 検索キーワード（名前・前提条件内容） | - |
 | status | enum | ステータスフィルタ | - |
-| createdBy | uuid | 作成者ID | - |
-| from | datetime | 作成日開始 | - |
-| to | datetime | 作成日終了 | - |
+| labelIds | string | ラベルIDフィルタ（カンマ区切りUUID配列） | - |
 | limit | number | 取得件数（1-100） | 20 |
 | offset | number | オフセット | 0 |
-| sortBy | enum | ソート項目（name/createdAt/updatedAt） | createdAt |
+| sortBy | enum | ソート項目（name/createdAt/updatedAt） | updatedAt |
 | sortOrder | enum | ソート順（asc/desc） | desc |
 | includeDeleted | boolean | 削除済みを含む | false |
+
+#### フロントエンドURLパラメータマッピング
+
+`useTestSuiteFilterParams`フックがフロントエンドのURLパラメータとAPI検索パラメータを双方向変換する。デフォルト値と同じ場合はURLパラメータを省略する。
+
+| URLパラメータ | APIパラメータ | 説明 | デフォルト（URL省略） |
+|--------------|-------------|------|---------------------|
+| `q` | `q` | テキスト検索 | なし |
+| `status` | `status` | ステータス（空文字=すべて） | `ACTIVE` |
+| `labels` | `labelIds` | ラベルID（カンマ区切り） | なし |
+| `sort` | `sortBy` | ソートフィールド | `updatedAt` |
+| `order` | `sortOrder` | ソート順 | `desc` |
+| `deleted` | `includeDeleted` | 削除済み含む（`true`のみ） | `false` |
+| `page` | `offset`（変換） | ページ番号（1始まり） | `1` |
 
 ## リクエスト・レスポンス仕様
 
