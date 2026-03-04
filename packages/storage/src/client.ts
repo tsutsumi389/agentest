@@ -4,6 +4,8 @@ import {
   GetObjectCommand,
   DeleteObjectCommand,
   HeadObjectCommand,
+  HeadBucketCommand,
+  CreateBucketCommand,
   ListObjectsV2Command,
   CopyObjectCommand,
   NotFound,
@@ -93,6 +95,17 @@ export class StorageClient {
       },
       forcePathStyle: config.forcePathStyle ?? true,
     });
+  }
+
+  /**
+   * バケットが存在しない場合は作成する
+   */
+  async ensureBucket(): Promise<void> {
+    try {
+      await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
+    } catch {
+      await this.client.send(new CreateBucketCommand({ Bucket: this.bucket }));
+    }
   }
 
   /**

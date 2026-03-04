@@ -101,12 +101,13 @@ export async function validateMagicBytes(
  * ファイル名をサニタイズ（S3キーインジェクション対策）
  *
  * パス区切り文字、制御文字、危険な文字を除去し、安全なファイル名を返す。
+ * Unicode文字（日本語等）は許可する。
  */
 export function sanitizeFileName(fileName: string): string {
   // パス区切り文字を除去
   let sanitized = fileName.replace(/[/\\]/g, '_');
-  // 制御文字・シェルメタ文字を除去（英数字、ハイフン、アンダースコア、ドット、スペースのみ許可）
-  sanitized = sanitized.replace(/[^\w.\- ]/g, '_');
+  // 制御文字・シェルメタ文字を除去（Unicode文字、英数字、ハイフン、アンダースコア、ドット、スペースを許可）
+  sanitized = sanitized.replace(/[^\p{L}\p{N}.\-_ ]/gu, '_');
   // 連続するアンダースコアを1つに
   sanitized = sanitized.replace(/_+/g, '_');
   // 先頭・末尾のアンダースコア/スペースを除去
