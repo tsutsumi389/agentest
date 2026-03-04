@@ -51,10 +51,10 @@ services:
       retries: 5
 
   # RustFS (S3互換ストレージ)
-  minio:
+  rustfs:
     <<: *env-file
     image: rustfs/rustfs:latest
-    container_name: agentest-minio
+    container_name: agentest-rustfs
     restart: unless-stopped
     environment:
       RUSTFS_ACCESS_KEY: ${MINIO_ROOT_USER:-agentest}
@@ -63,7 +63,7 @@ services:
       RUSTFS_CONSOLE_ADDRESS: "0.0.0.0:9001"
       RUSTFS_CONSOLE_ENABLE: "true"
     volumes:
-      - minio_data:/data
+      - rustfs_data:/data
     ports:
       - "${MINIO_API_EXTERNAL_PORT:-9000}:9000"
       - "${MINIO_CONSOLE_EXTERNAL_PORT:-9001}:9001"
@@ -89,7 +89,7 @@ services:
       NODE_ENV: production
       DATABASE_URL: postgresql://${DB_USER:-agentest}:${DB_PASSWORD:-agentest}@db:5432/${DB_NAME:-agentest}
       REDIS_URL: redis://:${REDIS_PASSWORD:-agentest}@redis:6379
-      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ENDPOINT: http://rustfs:9000
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-agentest}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-agentest123}
       MINIO_BUCKET: ${MINIO_BUCKET:-agentest}
@@ -106,7 +106,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      minio:
+      rustfs:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
@@ -207,7 +207,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  minio_data:
+  rustfs_data:
 
 networks:
   default:
