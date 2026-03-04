@@ -408,8 +408,12 @@ export class ExecutionService {
     // マジックバイト検証（ファイル内容とMIMEタイプの一致を確認）
     await validateMagicBytes(file.buffer, file.mimetype);
 
-    // MinIOへのアップロード
-    const fileKey = `evidences/${executionId}/${expectedResultId}/${randomUUID()}_${file.originalname}`;
+    // multerのoriginalnameはLatin-1でデコードされるため、UTF-8に変換
+    const originalName = Buffer.from(file.originalname, 'latin1').toString('utf-8');
+    const sanitizedName = sanitizeFileName(originalName);
+
+    // ストレージへのアップロード（S3キーにはサニタイズ済みファイル名を使用）
+    const fileKey = `evidences/${executionId}/${expectedResultId}/${randomUUID()}_${sanitizedName}`;
     await this.storage.upload(fileKey, file.buffer, {
       contentType: file.mimetype,
     });
@@ -417,7 +421,7 @@ export class ExecutionService {
     return prisma.executionEvidence.create({
       data: {
         expectedResultId,
-        fileName: file.originalname,
+        fileName: originalName,
         fileUrl: fileKey,
         fileType: file.mimetype,
         fileSize: BigInt(file.size),
