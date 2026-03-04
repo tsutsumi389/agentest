@@ -214,5 +214,16 @@ describe('upload設定', () => {
       const result = sanitizeFileName(longName);
       expect(result.length).toBeLessThanOrEqual(200);
     });
+
+    it('日本語ファイル名を保持する', () => {
+      expect(sanitizeFileName('スクリーンショット.png')).toBe('スクリーンショット.png');
+      expect(sanitizeFileName('テスト結果_2024.pdf')).toBe('テスト結果_2024.pdf');
+      expect(sanitizeFileName('画面キャプチャ 01.jpg')).toBe('画面キャプチャ 01.jpg');
+    });
+
+    it('日本語ファイル名でも危険な文字は除去する', () => {
+      expect(sanitizeFileName('テスト;rm -rf.png')).toBe('テスト_rm -rf.png');
+      expect(sanitizeFileName('画面/キャプチャ.png')).toBe('画面_キャプチャ.png');
+    });
   });
 });

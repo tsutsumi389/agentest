@@ -1,6 +1,7 @@
 import { createApp } from './app.js';
 import { env } from './config/env.js';
 import { prisma } from '@agentest/db';
+import { createStorageClient } from '@agentest/storage';
 import { startLockCleanupJob, stopLockCleanupJob } from './jobs/lock-cleanup.job.js';
 import { closeRedisPublisher } from './lib/redis-publisher.js';
 import { registerProcessHandlers, type ShutdownFn } from '@agentest/shared';
@@ -29,6 +30,15 @@ async function main() {
   } catch (error) {
     logger.fatal({ err: error }, 'データベース接続エラー');
     process.exit(1);
+  }
+
+  // ストレージバケットの初期化
+  try {
+    const storage = createStorageClient();
+    await storage.ensureBucket();
+    logger.info('ストレージバケットを確認しました');
+  } catch (error) {
+    logger.warn({ err: error }, 'ストレージバケットの初期化に失敗しました（後で再試行されます）');
   }
 
   const app = createApp();
