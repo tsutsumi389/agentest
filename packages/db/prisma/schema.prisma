@@ -113,7 +113,6 @@ enum NotificationType {
   REVIEW_COMMENT
   TEST_COMPLETED
   TEST_FAILED
-  SECURITY_ALERT
 }
 
 enum AuditLogCategory {

@@ -55,18 +55,6 @@ describe('NotificationItem', () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it('SECURITY_ALERT クリックでナビゲーションしない', () => {
-    const notification = createMockNotification({
-      type: 'SECURITY_ALERT',
-      data: { someKey: 'value' },
-    });
-    renderItem({ notification });
-
-    fireEvent.click(screen.getByText('テスト通知'));
-
-    expect(mockNavigate).not.toHaveBeenCalled();
-  });
-
   it('未読通知クリックで onMarkAsRead が呼ばれる', () => {
     const notification = createMockNotification({ readAt: null });
     renderItem({ notification });

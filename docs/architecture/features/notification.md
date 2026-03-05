@@ -168,7 +168,6 @@ erDiagram
 | `REVIEW_COMMENT` | レビューコメント | コメント・返信追加時 |
 | `TEST_COMPLETED` | テスト完了 | テスト実行完了時 |
 | `TEST_FAILED` | テスト失敗 | テスト実行失敗時 |
-| `SECURITY_ALERT` | セキュリティ | 異常ログイン検知等 |
 
 ### 通知クリック時のナビゲーション先
 
@@ -182,7 +181,6 @@ erDiagram
 | `REVIEW_COMMENT` | `testSuiteId` | `/test-suites/:testSuiteId` |
 | `TEST_COMPLETED` | `executionId` | `/executions/:executionId` |
 | `TEST_FAILED` | `executionId` | `/executions/:executionId` |
-| `SECURITY_ALERT` | - | ナビゲーションなし |
 
 **ナビゲーションしない条件**:
 - `data` が `null` の場合

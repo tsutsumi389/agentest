@@ -121,7 +121,6 @@ export const NotificationType = {
   REVIEW_COMMENT: 'REVIEW_COMMENT',
   TEST_COMPLETED: 'TEST_COMPLETED',
   TEST_FAILED: 'TEST_FAILED',
-  SECURITY_ALERT: 'SECURITY_ALERT',
 } as const;
 export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
 

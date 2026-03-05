@@ -269,7 +269,6 @@
 | `REVIEW_COMMENT` | レビューコメント |
 | `TEST_COMPLETED` | テスト完了 |
 | `TEST_FAILED` | テスト失敗 |
-| `SECURITY_ALERT` | セキュリティ |
 
 ---
 
@@ -285,8 +284,6 @@
 | `REVIEW_COMMENT` | `testSuiteId` | `/test-suites/:testSuiteId` |
 | `TEST_COMPLETED` | `executionId` | `/executions/:executionId` |
 | `TEST_FAILED` | `executionId` | `/executions/:executionId` |
-
-`SECURITY_ALERT` はナビゲーション対象外。
 
 ---
 

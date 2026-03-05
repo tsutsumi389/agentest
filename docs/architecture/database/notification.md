@@ -32,7 +32,6 @@
 | `REVIEW_COMMENT` | レビューコメント | ON |
 | `TEST_COMPLETED` | テスト実行完了 | ON |
 | `TEST_FAILED` | テスト実行失敗 | ON |
-| `SECURITY_ALERT` | セキュリティアラート | ON |
 
 ### 追加データ構造
 
@@ -55,7 +54,6 @@ enum NotificationType {
   REVIEW_COMMENT
   TEST_COMPLETED
   TEST_FAILED
-  SECURITY_ALERT
 }
 
 model Notification {
