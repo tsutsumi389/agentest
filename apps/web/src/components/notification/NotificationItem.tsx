@@ -10,7 +10,6 @@ import {
   MessageSquare,
   CheckCircle,
   XCircle,
-  Shield,
   X,
 } from 'lucide-react';
 import type { Notification, NotificationType } from '../../lib/api';
@@ -39,8 +38,6 @@ function getNotificationIcon(type: NotificationType) {
       return <CheckCircle className="w-5 h-5 text-success" />;
     case 'TEST_FAILED':
       return <XCircle className="w-5 h-5 text-error" />;
-    case 'SECURITY_ALERT':
-      return <Shield className="w-5 h-5 text-error" />;
     default:
       return <Mail className="w-5 h-5 text-foreground-muted" />;
   }

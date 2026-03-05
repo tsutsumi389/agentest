@@ -196,7 +196,7 @@ Coding Agent が理解しやすい英語の文字列を使用。
 | `LockTargetType` | SUITE, CASE | ロック対象種別 |
 | `OrganizationRole` | OWNER, ADMIN, MEMBER | 組織内の権限 |
 | `ProjectRole` | ADMIN, WRITE, READ | プロジェクト内の権限 |
-| `NotificationType` | ORG_INVITATION, INVITATION_ACCEPTED, PROJECT_ADDED, REVIEW_COMMENT, TEST_COMPLETED, TEST_FAILED, SECURITY_ALERT | 通知種別 |
+| `NotificationType` | ORG_INVITATION, INVITATION_ACCEPTED, PROJECT_ADDED, REVIEW_COMMENT, TEST_COMPLETED, TEST_FAILED | 通知種別 |
 
 | `AuditLogCategory` | AUTH, USER, ORGANIZATION, MEMBER, PROJECT, API_TOKEN | 監査ログカテゴリ |
 | `AdminRoleType` | SUPER_ADMIN, ADMIN, VIEWER | 管理者ロール |

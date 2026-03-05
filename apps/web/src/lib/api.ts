@@ -1825,8 +1825,7 @@ export type NotificationType =
   | 'PROJECT_ADDED'
   | 'REVIEW_COMMENT'
   | 'TEST_COMPLETED'
-  | 'TEST_FAILED'
-  | 'SECURITY_ALERT';
+  | 'TEST_FAILED';
 
 /** 通知 */
 export interface Notification {

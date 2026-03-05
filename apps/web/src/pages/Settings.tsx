@@ -279,7 +279,6 @@ function NotificationSettings() {
     REVIEW_COMMENT: { label: 'レビューコメント', description: 'レビューにコメントがついたとき' },
     TEST_COMPLETED: { label: 'テスト完了', description: 'テスト実行が完了したとき' },
     TEST_FAILED: { label: 'テスト失敗', description: 'テスト実行が失敗したとき' },
-    SECURITY_ALERT: { label: 'セキュリティ', description: 'セキュリティに関する重要な通知' },
   };
 
   // 初期データ取得

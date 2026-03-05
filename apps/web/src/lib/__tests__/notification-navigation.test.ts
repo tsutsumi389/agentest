@@ -112,16 +112,6 @@ describe('getNotificationNavigationPath', () => {
     });
   });
 
-  describe('ナビゲーションなしのタイプ', () => {
-    it('SECURITY_ALERT は null を返す', () => {
-      const notification = createMockNotification({
-        type: 'SECURITY_ALERT',
-        data: { someKey: 'value' },
-      });
-      expect(getNotificationNavigationPath(notification)).toBeNull();
-    });
-  });
-
   describe('data が null の場合', () => {
     it.each([
       'ORG_INVITATION',
@@ -130,7 +120,6 @@ describe('getNotificationNavigationPath', () => {
       'REVIEW_COMMENT',
       'TEST_COMPLETED',
       'TEST_FAILED',
-      'SECURITY_ALERT',
     ] as const)('%s で data: null の場合、null を返す', (type) => {
       const notification = createMockNotification({ type, data: null });
       expect(getNotificationNavigationPath(notification)).toBeNull();
