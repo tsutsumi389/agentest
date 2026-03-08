@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { Link } from 'react-router';
 import { Mail, Lock, Loader2, AlertCircle, AlertTriangle } from 'lucide-react';
 import { useAdminAuth } from '../../hooks/useAdminAuth';
 
@@ -149,6 +150,16 @@ export function LoginForm() {
           'ログイン'
         )}
       </button>
+
+      {/* パスワードリセットリンク */}
+      <div className="text-center">
+        <Link
+          to="/forgot-password"
+          className="text-sm text-foreground-muted hover:text-foreground transition-colors"
+        >
+          パスワードをお忘れですか？
+        </Link>
+      </div>
     </form>
   );
 }
