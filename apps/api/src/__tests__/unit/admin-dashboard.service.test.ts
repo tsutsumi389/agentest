@@ -13,15 +13,6 @@ vi.mock('@agentest/db', () => ({
     executionExpectedResult: {
       groupBy: vi.fn(),
     },
-    $queryRaw: vi.fn(),
-  },
-}));
-
-// envをモック
-vi.mock('../../config/env.js', () => ({
-  env: {
-    REDIS_URL: undefined,
-    S3_ENDPOINT: undefined,
   },
 }));
 
@@ -29,7 +20,6 @@ vi.mock('../../config/env.js', () => ({
 vi.mock('../../lib/redis-store.js', () => ({
   getAdminDashboardCache: vi.fn(),
   setAdminDashboardCache: vi.fn(),
-  getRedisClient: vi.fn(() => null), // 未設定状態をシミュレート
 }));
 
 import { AdminDashboardService } from '../../services/admin/admin-dashboard.service.js';
@@ -50,12 +40,6 @@ describe('AdminDashboardService', () => {
         users: { total: 100, newThisMonth: 10, activeUsers: 50 },
         organizations: { total: 20, newThisMonth: 2, activeOrgs: 10 },
         executions: { totalThisMonth: 500, passCount: 400, failCount: 100, passRate: 80 },
-        systemHealth: {
-          api: { status: 'healthy', latency: 0 },
-          database: { status: 'healthy', latency: 5 },
-          redis: { status: 'not_configured' },
-          minio: { status: 'not_configured' },
-        },
         fetchedAt: '2024-01-01T00:00:00.000Z',
       };
 
@@ -77,14 +61,12 @@ describe('AdminDashboardService', () => {
       vi.mocked(prisma.user.count).mockResolvedValue(100);
       vi.mocked(prisma.organization.count).mockResolvedValue(20);
       vi.mocked(prisma.executionExpectedResult.groupBy).mockResolvedValue([]);
-      vi.mocked(prisma.$queryRaw).mockResolvedValue([{ '?column?': 1 }]);
 
       const result = await service.getDashboard();
 
       expect(result.users).toBeDefined();
       expect(result.organizations).toBeDefined();
       expect(result.executions).toBeDefined();
-      expect(result.systemHealth).toBeDefined();
       expect(result.fetchedAt).toBeDefined();
 
       expect(setAdminDashboardCache).toHaveBeenCalledTimes(1);
@@ -104,7 +86,6 @@ describe('AdminDashboardService', () => {
       // 他のモック
       vi.mocked(prisma.organization.count).mockResolvedValue(0);
       vi.mocked(prisma.executionExpectedResult.groupBy).mockResolvedValue([]);
-      vi.mocked(prisma.$queryRaw).mockResolvedValue([{ '?column?': 1 }]);
 
       const result = await service.getDashboard();
 
@@ -130,7 +111,6 @@ describe('AdminDashboardService', () => {
         .mockResolvedValueOnce(30);  // activeOrgs
 
       vi.mocked(prisma.executionExpectedResult.groupBy).mockResolvedValue([]);
-      vi.mocked(prisma.$queryRaw).mockResolvedValue([{ '?column?': 1 }]);
 
       const result = await service.getDashboard();
 
@@ -147,7 +127,6 @@ describe('AdminDashboardService', () => {
 
       vi.mocked(prisma.user.count).mockResolvedValue(0);
       vi.mocked(prisma.organization.count).mockResolvedValue(0);
-      vi.mocked(prisma.$queryRaw).mockResolvedValue([{ '?column?': 1 }]);
 
       // 実行結果のモック: 80 PASS, 20 FAIL
       vi.mocked(prisma.executionExpectedResult.groupBy).mockResolvedValue([
@@ -165,31 +144,12 @@ describe('AdminDashboardService', () => {
       expect(result.executions.passRate).toBe(80); // 80 / (80 + 20) * 100
     });
 
-    it('システムヘルスが正しく返される', async () => {
-      vi.mocked(getAdminDashboardCache).mockResolvedValue(null);
-      vi.mocked(setAdminDashboardCache).mockResolvedValue(true);
-
-      vi.mocked(prisma.user.count).mockResolvedValue(0);
-      vi.mocked(prisma.organization.count).mockResolvedValue(0);
-      vi.mocked(prisma.executionExpectedResult.groupBy).mockResolvedValue([]);
-      vi.mocked(prisma.$queryRaw).mockResolvedValue([{ '?column?': 1 }]);
-
-      const result = await service.getDashboard();
-
-      expect(result.systemHealth.api.status).toBe('healthy');
-      expect(result.systemHealth.database.status).toBe('healthy');
-      // Redis/MinIOは未設定なのでnot_configured
-      expect(result.systemHealth.redis.status).toBe('not_configured');
-      expect(result.systemHealth.minio.status).toBe('not_configured');
-    });
-
     it('判定済み結果がない場合は成功率が0になる', async () => {
       vi.mocked(getAdminDashboardCache).mockResolvedValue(null);
       vi.mocked(setAdminDashboardCache).mockResolvedValue(true);
 
       vi.mocked(prisma.user.count).mockResolvedValue(0);
       vi.mocked(prisma.organization.count).mockResolvedValue(0);
-      vi.mocked(prisma.$queryRaw).mockResolvedValue([{ '?column?': 1 }]);
 
       // PASSもFAILもない場合
       vi.mocked(prisma.executionExpectedResult.groupBy).mockResolvedValue([

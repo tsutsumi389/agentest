@@ -1,7 +1,6 @@
 import { RefreshCw } from 'lucide-react';
 import { useAdminDashboard } from '../hooks/useAdminDashboard';
 import {
-  SystemHealthCard,
   UserStatsCard,
   OrgStatsCard,
   ExecutionStatsCard,
@@ -57,17 +56,11 @@ export function Dashboard() {
               読み込み中...
             </div>
           ) : stats ? (
-            <>
-              {/* システムヘルス */}
-              <SystemHealthCard health={stats.systemHealth} />
-
-              {/* 統計カード */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <UserStatsCard stats={stats.users} />
-                <OrgStatsCard stats={stats.organizations} />
-                <ExecutionStatsCard stats={stats.executions} />
-              </div>
-            </>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <UserStatsCard stats={stats.users} />
+              <OrgStatsCard stats={stats.organizations} />
+              <ExecutionStatsCard stats={stats.executions} />
+            </div>
           ) : (
             <div className="text-center text-foreground-muted py-12">
               データを取得できませんでした

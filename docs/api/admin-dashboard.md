@@ -6,7 +6,7 @@
 
 ### GET /admin/dashboard
 
-システム全体の統計情報とヘルスステータスを取得する。
+システム全体の統計情報を取得する。
 
 #### 認証
 
@@ -39,12 +39,6 @@ Cookie: admin_session=<session_id>
       "failCount": 1000,
       "passRate": 93.5
     },
-    "systemHealth": {
-      "api": { "status": "healthy", "latency": 0 },
-      "database": { "status": "healthy", "latency": 5 },
-      "redis": { "status": "healthy", "latency": 2 },
-      "minio": { "status": "healthy", "latency": 10 }
-    },
     "fetchedAt": "2024-01-15T12:00:00.000Z"
   }
 }
@@ -59,7 +53,6 @@ Cookie: admin_session=<session_id>
 | users | AdminDashboardUserStats | ユーザー統計 |
 | organizations | AdminDashboardOrgStats | 組織統計 |
 | executions | AdminDashboardExecutionStats | テスト実行統計 |
-| systemHealth | AdminDashboardSystemHealth | システムヘルス |
 | fetchedAt | string | 取得日時（ISO 8601形式） |
 
 ### AdminDashboardUserStats
@@ -86,23 +79,6 @@ Cookie: admin_session=<session_id>
 | passCount | number | 成功数 |
 | failCount | number | 失敗数 |
 | passRate | number | 成功率（%） |
-
-### AdminDashboardSystemHealth
-
-| フィールド | 型 | 説明 |
-|-----------|------|------|
-| api | SystemHealthStatus | API サーバー |
-| database | SystemHealthStatus | PostgreSQL データベース |
-| redis | SystemHealthStatus | Redis キャッシュ |
-| minio | SystemHealthStatus | MinIO オブジェクトストレージ |
-
-### SystemHealthStatus
-
-| フィールド | 型 | 説明 |
-|-----------|------|------|
-| status | string | `healthy` / `unhealthy` / `not_configured` |
-| latency | number | レイテンシ（ミリ秒） |
-| error | string | エラーメッセージ（unhealthy時のみ） |
 
 ## エラーコード
 
@@ -138,7 +114,6 @@ const response = await fetch('/api/v1/admin/dashboard', {
 
 const { data } = await response.json();
 console.log(data.users.total); // ユーザー総数
-console.log(data.systemHealth.database.status); // DBステータス
 ```
 
 ## 関連ドキュメント
