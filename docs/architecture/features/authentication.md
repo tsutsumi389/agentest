@@ -835,6 +835,8 @@ sequenceDiagram
 | ADM-AUTH-004 | 2FA 検証 | ログイン時の 2FA 検証 | 実装済 |
 | ADM-AUTH-005 | セッション延長 | セッション有効期限を延長 | 実装済 |
 | ADM-AUTH-006 | アカウントロック | 失敗回数超過でロック | 実装済 |
+| ADM-AUTH-007 | パスワードリセット要求 | リセット用メールを送信（メール列挙防止対応） | 実装済 |
+| ADM-AUTH-008 | パスワードリセット実行 | トークンを使用して新しいパスワードを設定 | 実装済 |
 
 ### 管理者ログインフロー
 
@@ -905,12 +907,62 @@ sequenceDiagram
     end
 ```
 
+### 管理者パスワードリセットフロー
+
+```mermaid
+sequenceDiagram
+    participant A as 管理者
+    participant F as Admin App
+    participant B as API
+    participant DB as データベース
+    participant Mail as メールサービス
+
+    A->>F: パスワードリセット画面アクセス
+    F->>A: メールアドレス入力フォーム表示
+    A->>F: メールアドレス入力
+    F->>B: POST /admin/auth/password-reset/request
+    B->>DB: メールアドレスでユーザー検索
+
+    alt ユーザーが存在
+        B->>B: リセットトークン生成（32バイトランダム）
+        B->>DB: 既存の未使用トークンを無効化
+        B->>DB: トークンハッシュ保存（SHA-256、有効期限1時間）
+        B->>DB: 監査ログ記録（PASSWORD_RESET_REQUESTED）
+        B->>Mail: リセットメール送信
+    end
+
+    B->>F: 200 送信しました（常に同じレスポンス）
+    F->>A: 送信完了メッセージ表示
+
+    Note over A,Mail: 管理者がメールのリンクをクリック
+
+    A->>F: /reset-password/:token にアクセス
+    F->>A: 新しいパスワード入力フォーム表示
+    A->>F: 新しいパスワード入力
+    F->>B: POST /admin/auth/password-reset/reset
+
+    B->>DB: トークンハッシュで検索・検証
+    alt トークンが無効または期限切れ
+        B->>F: 400 ADMIN_INVALID_RESET_TOKEN
+        F->>A: エラーメッセージ表示
+    else トークンが有効
+        B->>B: bcryptでパスワードハッシュ化
+        B->>DB: パスワード更新 + 失敗回数リセット + ロック解除
+        B->>DB: トークンを使用済みにマーク
+        B->>DB: 全セッション無効化
+        B->>DB: 監査ログ記録（PASSWORD_RESET_COMPLETED）
+        B->>F: 200 リセット成功
+        F->>A: 完了メッセージ + ログイン画面へのリンク
+    end
+```
+
 ### 管理者認証データモデル
 
 ```mermaid
 erDiagram
     AdminUser ||--o{ AdminSession : "has"
     AdminUser ||--o{ AdminAuditLog : "has"
+    AdminUser ||--o{ AdminPasswordResetToken : "has"
 
     AdminUser {
         uuid id PK
@@ -950,6 +1002,15 @@ erDiagram
         string user_agent
         timestamp created_at
     }
+
+    AdminPasswordResetToken {
+        uuid id PK
+        uuid admin_user_id FK
+        string token_hash UK
+        timestamp expires_at
+        timestamp used_at
+        timestamp created_at
+    }
 ```
 
 ### 管理者認証ビジネスルール
@@ -973,6 +1034,17 @@ erDiagram
 - セッショントークン: 32バイトの暗号的に安全なランダム値
 - DB には SHA-256 ハッシュのみ保存（生トークンは Cookie にのみ保持）
 
+#### パスワードリセット
+
+- リセットトークン: 32バイトのランダム値（hex形式）
+- DB にはトークンの SHA-256 ハッシュのみ保存
+- 有効期限: 1時間
+- 使用済みトークンは再利用不可（`usedAt` でマーク）
+- 新規発行時、同一ユーザーの既存未使用トークンを無効化
+- リセット実行時、全セッションを無効化
+- リセット実行時、失敗回数リセットとアカウントロック解除を同時実行
+- リセット要求はユーザー不存在でも常に同じレスポンスを返す（メール列挙防止）
+
 #### 2FA（TOTP）
 
 - RFC 6238 準拠
@@ -989,6 +1061,9 @@ erDiagram
 | セッションハイジャック | HttpOnly Cookie、Secure、SameSite=Strict |
 | TOTP シークレット | AES-256-GCM 暗号化保存 |
 | 監査証跡 | 全認証イベントをログ記録 |
+| パスワードリセット | トークンSHA-256ハッシュ保存、1時間有効、1回限り使用 |
+| リセット時全セッション無効化 | パスワードリセット成功時に全セッションを無効化 |
+| メール列挙防止 | リセット要求は存在しないメールでも同一レスポンスを返す |
 
 ## 関連機能
 

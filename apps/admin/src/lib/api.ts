@@ -409,6 +409,24 @@ export const systemAdminApi = {
 };
 
 // ============================================
+// パスワードリセットAPI（認証不要）
+// ============================================
+
+export const passwordResetApi = {
+  /**
+   * パスワードリセット要求
+   */
+  requestReset: (email: string) =>
+    api.post<{ message: string }>('/admin/auth/password-reset/request', { email }),
+
+  /**
+   * パスワードリセット実行
+   */
+  resetPassword: (token: string, password: string) =>
+    api.post<{ message: string }>('/admin/auth/password-reset/reset', { token, password }),
+};
+
+// ============================================
 // 招待API（認証不要）
 // ============================================
 

@@ -1,11 +1,29 @@
 import { Router } from 'express';
 import { AdminAuthController } from '../../controllers/admin/auth.controller.js';
 import { AdminTotpController } from '../../controllers/admin/totp.controller.js';
+import { AdminPasswordResetController } from '../../controllers/admin/password-reset.controller.js';
 import { requireAdminAuth } from '../../middleware/require-admin-role.js';
 
 const router: Router = Router();
 const controller = new AdminAuthController();
 const totpController = new AdminTotpController();
+const passwordResetController = new AdminPasswordResetController();
+
+// ==================== パスワードリセット（認証不要） ====================
+
+/**
+ * パスワードリセット要求
+ * POST /admin/auth/password-reset/request
+ */
+router.post('/password-reset/request', passwordResetController.requestReset);
+
+/**
+ * パスワードリセット実行
+ * POST /admin/auth/password-reset/reset
+ */
+router.post('/password-reset/reset', passwordResetController.resetPassword);
+
+// ==================== 認証エンドポイント ====================
 
 /**
  * ログイン

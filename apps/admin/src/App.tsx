@@ -11,6 +11,8 @@ import { SystemAdminDetail } from './pages/SystemAdminDetail';
 import { LoginPage } from './pages/auth/Login';
 import { TwoFactorAuthPage } from './pages/auth/TwoFactorAuth';
 import { AcceptInvitationPage } from './pages/auth/AcceptInvitation';
+import { ForgotPasswordPage } from './pages/auth/ForgotPassword';
+import { ResetPasswordPage } from './pages/auth/ResetPassword';
 import { SetupPage } from './pages/auth/Setup';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { AuthGuard, AdminLayout } from './components/layout';
@@ -41,6 +43,8 @@ export function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/2fa" element={<TwoFactorAuthPage />} />
           <Route path="/invitation/:token" element={<AcceptInvitationPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password/:token" element={<ResetPasswordPage />} />
 
           {/* 認証必須（AdminLayout内にネスト） */}
           <Route
