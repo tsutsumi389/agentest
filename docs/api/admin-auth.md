@@ -24,6 +24,8 @@
 | POST | `/admin/auth/2fa/enable` | 2FA 有効化 |
 | POST | `/admin/auth/2fa/verify` | 2FA 検証 |
 | POST | `/admin/auth/2fa/disable` | 2FA 無効化 |
+| POST | `/admin/auth/password-reset/request` | パスワードリセット要求 |
+| POST | `/admin/auth/password-reset/reset` | パスワードリセット実行 |
 
 ---
 
@@ -172,6 +174,88 @@ Cookie に `admin_session` が必要。
   }
 }
 ```
+
+---
+
+## パスワードリセット エンドポイント
+
+### パスワードリセット要求
+
+```
+POST /admin/auth/password-reset/request
+```
+
+パスワードリセット用のメールを送信。セキュリティのため、メールアドレスが存在しない場合でも同一のレスポンスを返す（メール列挙防止）。
+
+**Request:**
+
+```json
+{
+  "email": "admin@example.com"
+}
+```
+
+| パラメータ | 必須 | 型 | 説明 |
+|-----------|------|-----|------|
+| `email` | Yes | string | メールアドレス |
+
+**Response:**
+
+```json
+{
+  "data": {
+    "message": "メールアドレスが登録されている場合、パスワードリセット用のメールを送信しました"
+  }
+}
+```
+
+**Note:** 成功・失敗に関わらず常に同じレスポンスを返す。
+
+**Errors:**
+
+| コード | HTTP | 説明 |
+|-------|------|------|
+| `VALIDATION_ERROR` | 400 | メールアドレスの形式が無効 |
+
+---
+
+### パスワードリセット実行
+
+```
+POST /admin/auth/password-reset/reset
+```
+
+リセットトークンを使用して新しいパスワードを設定。成功時、全セッションが無効化される。
+
+**Request:**
+
+```json
+{
+  "token": "reset-token-string",
+  "password": "NewPassword123!"
+}
+```
+
+| パラメータ | 必須 | 型 | 説明 |
+|-----------|------|-----|------|
+| `token` | Yes | string | リセットトークン |
+| `password` | Yes | string | 新しいパスワード（8文字以上、大文字・小文字・数字・記号を各1文字以上） |
+
+**Response:**
+
+```json
+{
+  "data": {
+    "message": "パスワードが正常にリセットされました。新しいパスワードでログインしてください"
+  }
+}
+```
+
+**Errors:**
+
+| コード | HTTP | 説明 |
+|-------|------|------|
+| `ADMIN_INVALID_RESET_TOKEN` | 400 | リセットトークンが無効、使用済み、または期限切れ |
 
 ---
 
@@ -381,6 +465,7 @@ Set-Cookie: admin_session=<token>; HttpOnly; Secure; SameSite=Strict; Path=/admi
 | `ADMIN_INVALID_TEMP_TOKEN` | 400 | 一時トークンが無効 |
 | `ADMIN_2FA_NOT_SETUP` | 400 | 2FA がセットアップされていない |
 | `ADMIN_2FA_ALREADY_ENABLED` | 400 | 2FA は既に有効 |
+| `ADMIN_INVALID_RESET_TOKEN` | 400 | リセットトークンが無効、使用済み、または期限切れ |
 
 ---
 
@@ -390,6 +475,7 @@ Set-Cookie: admin_session=<token>; HttpOnly; Secure; SameSite=Strict; Path=/admi
 |---------------|------|
 | `/admin/auth/login` | 5回 / 15分（IP単位） |
 | `/admin/auth/2fa/verify` | 5回 / 15分（IP単位） |
+| `/admin/auth/password-reset/request` | 5回 / 15分（IP単位） |
 | その他 | 100回 / 15分 |
 
 制限超過時は `429 Too Many Requests` を返却。
@@ -432,6 +518,25 @@ const meResponse = await fetch('/admin/auth/me', {
   credentials: 'include'
 });
 const { data: adminUser } = await meResponse.json();
+
+// パスワードリセット要求
+await fetch('/admin/auth/password-reset/request', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    email: 'admin@example.com'
+  })
+});
+
+// パスワードリセット実行
+await fetch('/admin/auth/password-reset/reset', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    token: 'reset-token-from-email',
+    password: 'NewPassword123!'
+  })
+});
 
 // ログアウト
 await fetch('/admin/auth/logout', {

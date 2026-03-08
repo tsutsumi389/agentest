@@ -57,6 +57,8 @@ Authorization: Bearer <access_token>
 | POST | `/admin/auth/2fa/enable` | 2FA 有効化 |
 | POST | `/admin/auth/2fa/verify` | 2FA 検証 |
 | POST | `/admin/auth/2fa/disable` | 2FA 無効化 |
+| POST | `/admin/auth/password-reset/request` | パスワードリセット要求 |
+| POST | `/admin/auth/password-reset/reset` | パスワードリセット実行 |
 
 → [管理者認証 API 詳細](./admin-auth.md)
 

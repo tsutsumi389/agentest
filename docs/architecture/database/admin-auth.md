@@ -12,6 +12,7 @@
 | `AdminSession` | 管理者セッション |
 | `AdminAuditLog` | 管理者監査ログ |
 | `AdminInvitation` | 管理者招待 |
+| `AdminPasswordResetToken` | パスワードリセットトークン |
 
 ## AdminUser
 
@@ -132,6 +133,8 @@ CREATE INDEX idx_admin_audit_logs_created ON "admin_audit_logs"("created_at");
 | `ADMIN_USER_UNLOCK` | アカウントロック解除 |
 | `ADMIN_USER_RESET_2FA` | 2FA リセット |
 | `ADMIN_INVITATION_ACCEPTED` | 招待受諾 |
+| `PASSWORD_RESET_REQUESTED` | パスワードリセット要求 |
+| `PASSWORD_RESET_COMPLETED` | パスワードリセット完了 |
 
 ## AdminInvitation
 
@@ -170,6 +173,43 @@ CREATE INDEX idx_admin_invitations_email ON "admin_invitations"("email");
 | トークン長 | 32 バイトの暗号的に安全なランダム値 |
 | 重複制約 | 同一メールアドレスへの未受諾招待は 1 件のみ |
 
+## AdminPasswordResetToken
+
+パスワードリセットトークンを管理するテーブル。
+
+### カラム定義
+
+| カラム | 型 | NULL | 説明 |
+|--------|-----|------|------|
+| `id` | UUID | NO | 主キー |
+| `admin_user_id` | UUID | NO | 管理者ユーザー ID（FK） |
+| `token_hash` | VARCHAR(64) | NO | トークンの SHA-256 ハッシュ値（hex、64文字、一意） |
+| `expires_at` | TIMESTAMP | NO | 有効期限 |
+| `used_at` | TIMESTAMP | YES | 使用日時 |
+| `created_at` | TIMESTAMP | NO | 作成日時 |
+
+### インデックス
+
+```sql
+CREATE INDEX idx_admin_password_reset_tokens_user_id ON "admin_password_reset_tokens"("admin_user_id");
+CREATE UNIQUE INDEX idx_admin_password_reset_tokens_token_hash ON "admin_password_reset_tokens"("token_hash");
+CREATE INDEX idx_admin_password_reset_tokens_expires ON "admin_password_reset_tokens"("expires_at");
+```
+
+### 外部キー
+
+- `admin_user_id` → `admin_users.id`（CASCADE DELETE）
+
+### トークン仕様
+
+| 項目 | 値 |
+|------|-----|
+| トークン形式 | 32 バイトの暗号的に安全なランダム値（hex形式） |
+| DB保存方式 | SHA-256 ハッシュのみ保存（生トークンはメールにのみ記載） |
+| 有効期限 | 1 時間 |
+| 使用回数 | 1 回限り（使用後は `used_at` に日時を記録） |
+| 既存トークン | 新規発行時に同一ユーザーの未使用トークンを使用済みにマーク |
+
 ## AdminRoleType
 
 管理者のロールを定義する ENUM。
@@ -198,6 +238,7 @@ erDiagram
     AdminUser ||--o{ AdminSession : "has"
     AdminUser ||--o{ AdminAuditLog : "has"
     AdminUser ||--o{ AdminInvitation : "invites"
+    AdminUser ||--o{ AdminPasswordResetToken : "has"
 
     AdminUser {
         uuid id PK
@@ -247,6 +288,15 @@ erDiagram
         uuid invited_by_id FK
         timestamp accepted_at
         timestamp expires_at
+        timestamp created_at
+    }
+
+    AdminPasswordResetToken {
+        uuid id PK
+        uuid admin_user_id FK
+        string token_hash UK
+        timestamp expires_at
+        timestamp used_at
         timestamp created_at
     }
 ```
