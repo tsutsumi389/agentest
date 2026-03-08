@@ -4,14 +4,10 @@ import type {
   AdminDashboardUserStats,
   AdminDashboardOrgStats,
   AdminDashboardExecutionStats,
-  AdminDashboardSystemHealth,
-  SystemHealthStatus,
 } from '@agentest/shared';
-import { env } from '../../config/env.js';
 import {
   getAdminDashboardCache,
   setAdminDashboardCache,
-  getRedisClient,
 } from '../../lib/redis-store.js';
 
 // 定数
@@ -33,19 +29,17 @@ export class AdminDashboardService {
     }
 
     // 並列でデータを取得
-    const [users, organizations, executions, systemHealth] =
+    const [users, organizations, executions] =
       await Promise.all([
         this.getUserStats(),
         this.getOrgStats(),
         this.getExecutionStats(),
-        this.getSystemHealth(),
       ]);
 
     const stats: AdminDashboardStats = {
       users,
       organizations,
       executions,
-      systemHealth,
       fetchedAt: new Date().toISOString(),
     };
 
@@ -188,90 +182,5 @@ export class AdminDashboardService {
       failCount,
       passRate,
     };
-  }
-
-  /**
-   * システムヘルスを取得
-   */
-  private async getSystemHealth(): Promise<AdminDashboardSystemHealth> {
-    const [api, database, redis, minio] = await Promise.all([
-      this.checkApiHealth(),
-      this.checkDatabaseHealth(),
-      this.checkRedisHealth(),
-      this.checkMinioHealth(),
-    ]);
-
-    return {
-      api,
-      database,
-      redis,
-      minio,
-    };
-  }
-
-  /**
-   * APIヘルスチェック
-   */
-  private async checkApiHealth(): Promise<SystemHealthStatus> {
-    // APIは稼働中（このコードが実行されているので）
-    return { status: 'healthy', latency: 0 };
-  }
-
-  /**
-   * データベースヘルスチェック
-   */
-  private async checkDatabaseHealth(): Promise<SystemHealthStatus> {
-    const start = Date.now();
-    try {
-      await prisma.$queryRaw`SELECT 1`;
-      return { status: 'healthy', latency: Date.now() - start };
-    } catch (error) {
-      return { status: 'unhealthy', error: (error as Error).message };
-    }
-  }
-
-  /**
-   * Redisヘルスチェック
-   * 共有インスタンスを使用してコネクション漏れを防ぐ
-   */
-  private async checkRedisHealth(): Promise<SystemHealthStatus> {
-    const redis = getRedisClient();
-    if (!redis) {
-      return { status: 'not_configured' };
-    }
-
-    const start = Date.now();
-    try {
-      await redis.ping();
-      return { status: 'healthy', latency: Date.now() - start };
-    } catch (error) {
-      return { status: 'unhealthy', error: (error as Error).message };
-    }
-  }
-
-  /**
-   * MinIOヘルスチェック
-   */
-  private async checkMinioHealth(): Promise<SystemHealthStatus> {
-    if (!env.S3_ENDPOINT) {
-      return { status: 'not_configured' };
-    }
-
-    const start = Date.now();
-    try {
-      // MinIOのヘルスエンドポイントにリクエスト
-      const response = await fetch(`${env.S3_ENDPOINT}/minio/health/live`, {
-        method: 'GET',
-        signal: AbortSignal.timeout(5000), // 5秒タイムアウト
-      });
-
-      if (response.ok) {
-        return { status: 'healthy', latency: Date.now() - start };
-      } else {
-        return { status: 'unhealthy', error: `HTTP ${response.status}` };
-      }
-    } catch (error) {
-      return { status: 'unhealthy', error: (error as Error).message };
-    }
   }
 }

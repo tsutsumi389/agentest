@@ -3,36 +3,6 @@
  */
 
 // ============================================
-// システムヘルスステータス
-// ============================================
-
-/**
- * システムコンポーネントのヘルスステータス
- */
-export interface SystemHealthStatus {
-  /** ステータス */
-  status: 'healthy' | 'unhealthy' | 'not_configured';
-  /** レイテンシ（ミリ秒） */
-  latency?: number;
-  /** エラーメッセージ */
-  error?: string;
-}
-
-/**
- * システムヘルス情報
- */
-export interface AdminDashboardSystemHealth {
-  /** API */
-  api: SystemHealthStatus;
-  /** データベース */
-  database: SystemHealthStatus;
-  /** Redis */
-  redis: SystemHealthStatus;
-  /** MinIO（オブジェクトストレージ） */
-  minio: SystemHealthStatus;
-}
-
-// ============================================
 // ユーザー統計
 // ============================================
 
@@ -96,8 +66,6 @@ export interface AdminDashboardStats {
   organizations: AdminDashboardOrgStats;
   /** テスト実行統計 */
   executions: AdminDashboardExecutionStats;
-  /** システムヘルス */
-  systemHealth: AdminDashboardSystemHealth;
   /** 取得日時（ISO 8601形式） */
   fetchedAt: string;
 }

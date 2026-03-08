@@ -69,7 +69,7 @@ describe('Admin Dashboard API Integration Tests', () => {
       expect(response.body).toHaveProperty('users');
       expect(response.body).toHaveProperty('organizations');
       expect(response.body).toHaveProperty('executions');
-      expect(response.body).toHaveProperty('systemHealth');
+      expect(response.body).not.toHaveProperty('systemHealth');
       expect(response.body).toHaveProperty('fetchedAt');
     });
 
@@ -180,23 +180,6 @@ describe('Admin Dashboard API Integration Tests', () => {
       expect(response.body.executions.passCount).toBe(1);
       expect(response.body.executions.failCount).toBe(1);
       expect(response.body.executions.passRate).toBe(50);
-    });
-
-    it('システムヘルスにAPIとデータベースが含まれる', async () => {
-      const response = await request(app)
-        .get('/admin/dashboard')
-        .set('Cookie', `admin_session=${rawSessionToken}`);
-
-      expect(response.status).toBe(200);
-      expect(response.body.systemHealth.api.status).toBe('healthy');
-      expect(response.body.systemHealth.database.status).toBe('healthy');
-      // Redis/MinIOはnot_configuredの場合もある
-      expect(['healthy', 'unhealthy', 'not_configured']).toContain(
-        response.body.systemHealth.redis.status
-      );
-      expect(['healthy', 'unhealthy', 'not_configured']).toContain(
-        response.body.systemHealth.minio.status
-      );
     });
 
     it('fetchedAtがISO 8601形式で返される', async () => {
