@@ -9,7 +9,6 @@ import {
   ConflictError,
   BusinessError,
   LockConflictError,
-  RateLimitError,
   InternalError,
   ServiceUnavailableError,
   isAppError,
@@ -195,16 +194,6 @@ describe('LockConflictError', () => {
         expiresAt: '2024-01-01T12:00:00.000Z',
       },
     });
-  });
-});
-
-describe('RateLimitError', () => {
-  it('リトライまでの秒数を含んで生成できる', () => {
-    const error = new RateLimitError(60);
-
-    expect(error.statusCode).toBe(429);
-    expect(error.code).toBe('RATE_LIMIT_EXCEEDED');
-    expect(error.retryAfter).toBe(60);
   });
 });
 

@@ -32,66 +32,6 @@ export interface ResultDistribution {
   pending: number;
 }
 
-/** 失敗中テストの項目 */
-export interface FailingTestItem {
-  /** テストケースID */
-  testCaseId: string;
-  /** テストケースタイトル */
-  title: string;
-  /** テストスイートID */
-  testSuiteId: string;
-  /** テストスイート名 */
-  testSuiteName: string;
-  /** 最終実行日時 */
-  lastExecutedAt: Date | string;
-  /** 連続失敗回数 */
-  consecutiveFailures: number;
-}
-
-/** 長期未実行テストの項目 */
-export interface LongNotExecutedItem {
-  /** テストケースID */
-  testCaseId: string;
-  /** テストケースタイトル */
-  title: string;
-  /** テストスイートID */
-  testSuiteId: string;
-  /** テストスイート名 */
-  testSuiteName: string;
-  /** 最終実行日時（null: 一度も実行されていない） */
-  lastExecutedAt: Date | string | null;
-  /** 未実行日数 */
-  daysSinceLastExecution: number | null;
-}
-
-/** 不安定なテストの項目 */
-export interface FlakyTestItem {
-  /** テストケースID */
-  testCaseId: string;
-  /** テストケースタイトル */
-  title: string;
-  /** テストスイートID */
-  testSuiteId: string;
-  /** テストスイート名 */
-  testSuiteName: string;
-  /** 過去10回の成功率（50-90%） */
-  passRate: number;
-  /** 過去10回の実行数 */
-  totalExecutions: number;
-}
-
-/**
- * @deprecated 要注意テスト一覧（テストケース単位）。ExecutionStatusSuitesを使用してください。
- */
-export interface AttentionRequired {
-  /** 失敗中テスト */
-  failingTests: FailingTestItem[];
-  /** 長期未実行テスト */
-  longNotExecuted: LongNotExecutedItem[];
-  /** 不安定なテスト */
-  flakyTests: FlakyTestItem[];
-}
-
 // ============================================================
 // テスト実行状況（テストスイート単位）
 // ============================================================
@@ -217,10 +157,6 @@ export interface ProjectDashboardStats {
   summary: ProjectDashboardSummary;
   /** 実行結果の分布 */
   resultDistribution: ResultDistribution;
-  /**
-   * @deprecated 要注意テスト一覧（テストケース単位）。executionStatusSuitesを使用してください。
-   */
-  attentionRequired: AttentionRequired;
   /** テスト実行状況（テストスイート単位） */
   executionStatusSuites: ExecutionStatusSuites;
   /** 最近の活動 */

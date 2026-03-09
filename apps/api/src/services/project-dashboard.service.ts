@@ -4,10 +4,6 @@ import type {
   ProjectDashboardStats,
   ProjectDashboardSummary,
   ResultDistribution,
-  AttentionRequired,
-  FailingTestItem,
-  LongNotExecutedItem,
-  FlakyTestItem,
   RecentActivityItem,
   DashboardFilterParams,
   ExecutionStatusSuites,
@@ -20,17 +16,8 @@ import type {
 
 // 統計対象の日数
 const STATS_DAYS = 30;
-// 長期未実行とみなす日数
-const LONG_NOT_EXECUTED_DAYS = 30;
-// 不安定テスト判定用の実行回数
-const FLAKY_EXECUTION_COUNT = 10;
-// 不安定テストの成功率下限・上限
-const FLAKY_PASS_RATE_MIN = 50;
-const FLAKY_PASS_RATE_MAX = 90;
 // 最近の活動取得件数
 const RECENT_ACTIVITIES_LIMIT = 10;
-// 要注意テストの取得件数
-const ATTENTION_LIMIT = 10;
 // テスト実行状況のデフォルト取得件数
 const EXECUTION_STATUS_DEFAULT_LIMIT = 10;
 
@@ -55,11 +42,10 @@ export class ProjectDashboardService {
     const filteredTestSuiteIds = await this.getFilteredTestSuiteIds(projectId, filters);
 
     // 並行してデータを取得
-    const [summary, resultDistribution, attentionRequired, executionStatusSuites, recentActivities] =
+    const [summary, resultDistribution, executionStatusSuites, recentActivities] =
       await Promise.all([
         this.getSummary(projectId, filteredTestSuiteIds),
         this.getResultDistribution(projectId, filteredTestSuiteIds, filters?.environmentId),
-        this.getAttentionRequired(projectId, filteredTestSuiteIds, filters?.environmentId),
         this.getExecutionStatusSuites(projectId, filteredTestSuiteIds, filters?.environmentId),
         this.getRecentActivities(projectId, filteredTestSuiteIds, filters?.environmentId),
       ]);
@@ -67,7 +53,6 @@ export class ProjectDashboardService {
     return {
       summary,
       resultDistribution,
-      attentionRequired,
       executionStatusSuites,
       recentActivities,
     };
@@ -78,9 +63,9 @@ export class ProjectDashboardService {
    *
    * フィルターの設計意図:
    * - ラベルフィルター: テストスイート自体をフィルタリング（TestSuiteLabelを通じて）
-   *   → サマリー（テスト数）、要注意テスト、最近の活動すべてに適用
+   *   → サマリー（テスト数）、実行状況、最近の活動すべてに適用
    * - 環境フィルター: 実行データのみをフィルタリング（ExecutionのenvironmentId）
-   *   → 実行結果分布、要注意テスト、最近の活動に適用
+   *   → 実行結果分布、実行状況、最近の活動に適用
    *   → サマリー（テスト数）には適用しない（テストの定義数は環境に依存しないため）
    */
   private async getFilteredTestSuiteIds(
@@ -206,383 +191,6 @@ export class ProjectDashboardService {
     }
 
     return distribution;
-  }
-
-  /**
-   * 要注意テスト一覧を取得
-   */
-  private async getAttentionRequired(
-    projectId: string,
-    filteredTestSuiteIds?: string[],
-    environmentId?: string
-  ): Promise<AttentionRequired> {
-    const [failingTests, longNotExecuted, flakyTests] = await Promise.all([
-      this.getFailingTests(projectId, filteredTestSuiteIds, environmentId),
-      this.getLongNotExecutedTests(projectId, filteredTestSuiteIds, environmentId),
-      this.getFlakyTests(projectId, filteredTestSuiteIds, environmentId),
-    ]);
-
-    return {
-      failingTests,
-      longNotExecuted,
-      flakyTests,
-    };
-  }
-
-  /**
-   * 失敗中テスト（最新の実行でFAIL）を取得
-   * N+1クエリを回避するため、一括でデータを取得してJavaScriptで処理
-   */
-  private async getFailingTests(
-    projectId: string,
-    filteredTestSuiteIds?: string[],
-    environmentId?: string
-  ): Promise<FailingTestItem[]> {
-    // テストスイートのwhere条件を構築
-    const testSuiteWhere = filteredTestSuiteIds
-      ? { id: { in: filteredTestSuiteIds }, projectId, deletedAt: null }
-      : { projectId, deletedAt: null };
-
-    // プロジェクト内の全テストケースを取得
-    const testCases = await prisma.testCase.findMany({
-      where: {
-        testSuite: testSuiteWhere,
-        deletedAt: null,
-      },
-      select: {
-        id: true,
-        title: true,
-        testSuite: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-    });
-
-    if (testCases.length === 0) {
-      return [];
-    }
-
-    const testCaseIds = testCases.map((tc) => tc.id);
-
-    // 全テストケースの実行結果を一括取得
-    const allExpectedResults = await prisma.executionExpectedResult.findMany({
-      where: {
-        executionTestCase: {
-          originalTestCaseId: { in: testCaseIds },
-        },
-        execution: {
-          ...(environmentId && { environmentId }),
-        },
-      },
-      select: {
-        status: true,
-        executionTestCase: {
-          select: {
-            originalTestCaseId: true,
-          },
-        },
-        execution: {
-          select: {
-            createdAt: true,
-          },
-        },
-      },
-      orderBy: {
-        execution: {
-          createdAt: 'desc',
-        },
-      },
-    });
-
-    // テストケースIDごとに実行結果をグループ化
-    const resultsByTestCase = new Map<
-      string,
-      Array<{ status: string; createdAt: Date }>
-    >();
-
-    for (const result of allExpectedResults) {
-      const testCaseId = result.executionTestCase.originalTestCaseId;
-      if (!resultsByTestCase.has(testCaseId)) {
-        resultsByTestCase.set(testCaseId, []);
-      }
-      resultsByTestCase.get(testCaseId)!.push({
-        status: result.status,
-        createdAt: result.execution.createdAt,
-      });
-    }
-
-    // 失敗中テストを抽出
-    const failingTests: FailingTestItem[] = [];
-
-    for (const testCase of testCases) {
-      const results = resultsByTestCase.get(testCase.id);
-      if (!results || results.length === 0) continue;
-
-      // 最新の結果がFAILかチェック
-      const latestResult = results[0];
-      if (latestResult.status !== 'FAIL') continue;
-
-      // 連続失敗回数を計算（最大10回分）
-      let consecutiveFailures = 0;
-      for (let i = 0; i < Math.min(results.length, 10); i++) {
-        if (results[i].status === 'FAIL') {
-          consecutiveFailures++;
-        } else {
-          break;
-        }
-      }
-
-      failingTests.push({
-        testCaseId: testCase.id,
-        title: testCase.title,
-        testSuiteId: testCase.testSuite.id,
-        testSuiteName: testCase.testSuite.name,
-        lastExecutedAt: latestResult.createdAt,
-        consecutiveFailures,
-      });
-    }
-
-    // 連続失敗回数でソートして上位N件を返す
-    return failingTests
-      .sort((a, b) => b.consecutiveFailures - a.consecutiveFailures)
-      .slice(0, ATTENTION_LIMIT);
-  }
-
-  /**
-   * 長期未実行テスト（30日以上未実行）を取得
-   * N+1クエリを回避するため、一括でデータを取得してJavaScriptで処理
-   */
-  private async getLongNotExecutedTests(
-    projectId: string,
-    filteredTestSuiteIds?: string[],
-    environmentId?: string
-  ): Promise<LongNotExecutedItem[]> {
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - LONG_NOT_EXECUTED_DAYS);
-    const now = new Date();
-
-    // テストスイートのwhere条件を構築
-    const testSuiteWhere = filteredTestSuiteIds
-      ? { id: { in: filteredTestSuiteIds }, projectId, deletedAt: null }
-      : { projectId, deletedAt: null };
-
-    // プロジェクト内の全テストケースを取得
-    const testCases = await prisma.testCase.findMany({
-      where: {
-        testSuite: testSuiteWhere,
-        deletedAt: null,
-      },
-      select: {
-        id: true,
-        title: true,
-        createdAt: true,
-        testSuite: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-    });
-
-    if (testCases.length === 0) {
-      return [];
-    }
-
-    const testCaseIds = testCases.map((tc) => tc.id);
-
-    // 全テストケースの最新実行日時を一括取得
-    const latestExecutions = await prisma.executionExpectedResult.findMany({
-      where: {
-        executionTestCase: {
-          originalTestCaseId: { in: testCaseIds },
-        },
-        execution: {
-          ...(environmentId && { environmentId }),
-        },
-      },
-      select: {
-        executionTestCase: {
-          select: {
-            originalTestCaseId: true,
-          },
-        },
-        execution: {
-          select: {
-            createdAt: true,
-          },
-        },
-      },
-      orderBy: {
-        execution: {
-          createdAt: 'desc',
-        },
-      },
-    });
-
-    // テストケースIDごとに最新の実行日時を取得
-    const lastExecutedByTestCase = new Map<string, Date | null>();
-    for (const result of latestExecutions) {
-      const testCaseId = result.executionTestCase.originalTestCaseId;
-      // 最初に見つかったものが最新（orderByでソート済み）
-      if (!lastExecutedByTestCase.has(testCaseId)) {
-        lastExecutedByTestCase.set(testCaseId, result.execution.createdAt);
-      }
-    }
-
-    // 長期未実行テストを抽出
-    const longNotExecuted: LongNotExecutedItem[] = [];
-
-    for (const testCase of testCases) {
-      const lastExecutedAt = lastExecutedByTestCase.get(testCase.id) ?? null;
-      const isLongNotExecuted = lastExecutedAt === null || lastExecutedAt < thirtyDaysAgo;
-
-      if (isLongNotExecuted) {
-        let daysSinceLastExecution: number | null = null;
-        if (lastExecutedAt) {
-          daysSinceLastExecution = Math.floor(
-            (now.getTime() - lastExecutedAt.getTime()) / (1000 * 60 * 60 * 24)
-          );
-        }
-
-        longNotExecuted.push({
-          testCaseId: testCase.id,
-          title: testCase.title,
-          testSuiteId: testCase.testSuite.id,
-          testSuiteName: testCase.testSuite.name,
-          lastExecutedAt,
-          daysSinceLastExecution,
-        });
-      }
-    }
-
-    // 未実行日数でソートして上位N件を返す（nullは先頭、その後未実行日数降順）
-    return longNotExecuted
-      .sort((a, b) => {
-        if (a.daysSinceLastExecution === null && b.daysSinceLastExecution === null) return 0;
-        if (a.daysSinceLastExecution === null) return -1;
-        if (b.daysSinceLastExecution === null) return 1;
-        return b.daysSinceLastExecution - a.daysSinceLastExecution;
-      })
-      .slice(0, ATTENTION_LIMIT);
-  }
-
-  /**
-   * 不安定なテスト（過去10回の成功率50-90%）を取得
-   * N+1クエリを回避するため、一括でデータを取得してJavaScriptで処理
-   */
-  private async getFlakyTests(
-    projectId: string,
-    filteredTestSuiteIds?: string[],
-    environmentId?: string
-  ): Promise<FlakyTestItem[]> {
-    // テストスイートのwhere条件を構築
-    const testSuiteWhere = filteredTestSuiteIds
-      ? { id: { in: filteredTestSuiteIds }, projectId, deletedAt: null }
-      : { projectId, deletedAt: null };
-
-    // プロジェクト内の全テストケースを取得
-    const testCases = await prisma.testCase.findMany({
-      where: {
-        testSuite: testSuiteWhere,
-        deletedAt: null,
-      },
-      select: {
-        id: true,
-        title: true,
-        testSuite: {
-          select: {
-            id: true,
-            name: true,
-          },
-        },
-      },
-    });
-
-    if (testCases.length === 0) {
-      return [];
-    }
-
-    const testCaseIds = testCases.map((tc) => tc.id);
-
-    // 全テストケースの実行結果を一括取得
-    const allExpectedResults = await prisma.executionExpectedResult.findMany({
-      where: {
-        executionTestCase: {
-          originalTestCaseId: { in: testCaseIds },
-        },
-        execution: {
-          ...(environmentId && { environmentId }),
-        },
-      },
-      select: {
-        status: true,
-        executionTestCase: {
-          select: {
-            originalTestCaseId: true,
-          },
-        },
-        execution: {
-          select: {
-            createdAt: true,
-          },
-        },
-      },
-      orderBy: {
-        execution: {
-          createdAt: 'desc',
-        },
-      },
-    });
-
-    // テストケースIDごとに実行結果をグループ化（最大10件）
-    const resultsByTestCase = new Map<string, string[]>();
-
-    for (const result of allExpectedResults) {
-      const testCaseId = result.executionTestCase.originalTestCaseId;
-      if (!resultsByTestCase.has(testCaseId)) {
-        resultsByTestCase.set(testCaseId, []);
-      }
-      const results = resultsByTestCase.get(testCaseId)!;
-      // 最大FLAKY_EXECUTION_COUNT件まで
-      if (results.length < FLAKY_EXECUTION_COUNT) {
-        results.push(result.status);
-      }
-    }
-
-    // 不安定テストを抽出
-    const flakyTests: FlakyTestItem[] = [];
-
-    for (const testCase of testCases) {
-      const results = resultsByTestCase.get(testCase.id);
-      if (!results || results.length < 3) continue; // 最低3回の実行が必要
-
-      const passCount = results.filter((r) => r === 'PASS').length;
-      const passRate = Math.round((passCount / results.length) * 100);
-
-      if (passRate >= FLAKY_PASS_RATE_MIN && passRate <= FLAKY_PASS_RATE_MAX) {
-        flakyTests.push({
-          testCaseId: testCase.id,
-          title: testCase.title,
-          testSuiteId: testCase.testSuite.id,
-          testSuiteName: testCase.testSuite.name,
-          passRate,
-          totalExecutions: results.length,
-        });
-      }
-    }
-
-    // 成功率でソートして上位N件を返す（50%に近いほど不安定）
-    return flakyTests
-      .sort((a, b) => {
-        const aDiff = Math.abs(a.passRate - 50);
-        const bDiff = Math.abs(b.passRate - 50);
-        return aDiff - bDiff;
-      })
-      .slice(0, ATTENTION_LIMIT);
   }
 
   /**

@@ -1,0 +1,89 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "workspaces": {
+    "apps/api": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"],
+      "ignore": ["src/**/*.test.ts", "src/__tests__/**"]
+    },
+    "apps/web": {
+      "entry": ["src/main.tsx"],
+      "project": ["src/**/*.{ts,tsx}"],
+      "ignore": ["src/**/*.test.{ts,tsx}"]
+    },
+    "apps/admin": {
+      "entry": ["src/main.tsx"],
+      "project": ["src/**/*.{ts,tsx}"],
+      "ignore": ["src/**/*.test.{ts,tsx}"]
+    },
+    "apps/jobs": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"],
+      "ignore": ["src/**/*.test.ts"]
+    },
+    "apps/mcp-server": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"],
+      "ignore": ["src/**/*.test.ts", "src/apps/**"],
+      "vite": false
+    },
+    "apps/ws": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"],
+      "ignore": ["src/**/*.test.ts"]
+    },
+    "packages/shared": {
+      "entry": [
+        "src/index.ts",
+        "src/types/index.ts",
+        "src/errors/index.ts",
+        "src/validators/index.ts",
+        "src/config/index.ts",
+        "src/process/index.ts",
+        "src/logger/index.ts"
+      ],
+      "project": ["src/**/*.ts"],
+      "ignore": ["src/**/*.test.ts"]
+    },
+    "packages/auth": {
+      "entry": ["src/index.ts", "src/middleware.ts"],
+      "project": ["src/**/*.ts"],
+      "ignore": ["src/**/*.test.ts"]
+    },
+    "packages/db": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"],
+      "ignore": ["prisma/**"]
+    },
+    "packages/storage": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"],
+      "ignore": ["src/**/*.test.ts"]
+    },
+    "packages/ui": {
+      "entry": ["src/index.ts", "src/components/*.tsx"],
+      "project": ["src/**/*.{ts,tsx}"],
+      "ignore": ["src/**/*.test.{ts,tsx}"]
+    },
+    "packages/ws-types": {
+      "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts"]
+    }
+  },
+  "ignore": [
+    "e2e/**"
+  ],
+  "ignoreDependencies": [
+    "prettier",
+    "autoprefixer",
+    "postcss",
+    "tailwindcss",
+    "pino-pretty",
+    "@vitest/coverage-v8",
+    "@prisma/client",
+    "vite-plugin-singlefile"
+  ],
+  "ignoreBinaries": [
+    "playwright"
+  ]
+}

@@ -16,6 +16,7 @@
     "typecheck": "turbo run typecheck",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "knip": "knip",
     "clean": "turbo run clean && rm -rf node_modules",
     "test:e2e": "cd e2e && npx playwright test"
   },
@@ -27,6 +28,7 @@
     "eslint-plugin-react-hooks": "^5.1.0",
     "globals": "^15.13.0",
     "prettier": "^3.4.0",
+    "knip": "^5.0.0",
     "turbo": "^2.3.0",
     "typescript": "^5.7.0",
     "typescript-eslint": "^8.17.0"

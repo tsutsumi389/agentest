@@ -181,9 +181,6 @@ describe('Project Dashboard API Integration Tests', () => {
         skipped: 0,
         pending: 0,
       });
-      expect(dashboard.attentionRequired.failingTests).toEqual([]);
-      expect(dashboard.attentionRequired.longNotExecuted).toEqual([]);
-      expect(dashboard.attentionRequired.flakyTests).toEqual([]);
       expect(dashboard.recentActivities).toEqual([]);
     });
 
@@ -258,105 +255,6 @@ describe('Project Dashboard API Integration Tests', () => {
 
       expect(response.body.dashboard.resultDistribution.pass).toBe(1);
       expect(response.body.dashboard.resultDistribution.fail).toBe(1);
-    });
-
-    it('失敗中テスト一覧を取得', async () => {
-      const testSuite = await createTestSuite(project.id, { name: 'Suite 1' });
-      const testCase = await createTestCase(testSuite.id, { title: 'Failing Test' });
-      const expectedResult = await prisma.testCaseExpectedResult.create({
-        data: { testCaseId: testCase.id, content: 'Expected', orderKey: 'a' },
-      });
-
-      const env = await prisma.projectEnvironment.create({
-        data: {
-          projectId: project.id,
-          name: 'Test Env',
-          isDefault: true,
-          sortOrder: 0,
-        },
-      });
-
-      // 2回失敗した実行を作成
-      for (let i = 0; i < 2; i++) {
-        const execution = await prisma.execution.create({
-          data: {
-            testSuiteId: testSuite.id,
-            environmentId: env.id,
-          },
-        });
-        const execTestSuite = await createTestExecutionTestSuite(execution.id, testSuite.id);
-        const execTestCase = await createTestExecutionTestCase(execTestSuite.id, testCase.id);
-        const execExpectedResult = await createTestExecutionTestCaseExpectedResult(
-          execTestCase.id,
-          expectedResult.id
-        );
-        await createTestExecutionExpectedResult(execution.id, execTestCase.id, execExpectedResult.id, { status: 'FAIL' });
-      }
-
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/dashboard`)
-        .expect(200);
-
-      expect(response.body.dashboard.attentionRequired.failingTests.length).toBeGreaterThan(0);
-      expect(response.body.dashboard.attentionRequired.failingTests[0].consecutiveFailures).toBe(2);
-    });
-
-    it('長期未実行テスト一覧を取得', async () => {
-      const testSuite = await createTestSuite(project.id);
-      await createTestCase(testSuite.id, { title: 'Never Executed Test' });
-
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/dashboard`)
-        .expect(200);
-
-      // 一度も実行されていないテストは長期未実行
-      expect(response.body.dashboard.attentionRequired.longNotExecuted.length).toBe(1);
-    });
-
-    it('不安定テスト一覧を取得', async () => {
-      const testSuite = await createTestSuite(project.id);
-      const testCase = await createTestCase(testSuite.id, { title: 'Flaky Test' });
-      const expectedResult = await prisma.testCaseExpectedResult.create({
-        data: { testCaseId: testCase.id, content: 'Expected', orderKey: 'a' },
-      });
-
-      const env = await prisma.projectEnvironment.create({
-        data: {
-          projectId: project.id,
-          name: 'Test Env',
-          isDefault: true,
-          sortOrder: 0,
-        },
-      });
-
-      // 10回の実行を作成（5回PASS、5回FAIL = 50%）
-      for (let i = 0; i < 10; i++) {
-        const execution = await prisma.execution.create({
-          data: {
-            testSuiteId: testSuite.id,
-            environmentId: env.id,
-          },
-        });
-        const execTestSuite = await createTestExecutionTestSuite(execution.id, testSuite.id);
-        const execTestCase = await createTestExecutionTestCase(execTestSuite.id, testCase.id);
-        const execExpectedResult = await createTestExecutionTestCaseExpectedResult(
-          execTestCase.id,
-          expectedResult.id
-        );
-        await createTestExecutionExpectedResult(
-          execution.id,
-          execTestCase.id,
-          execExpectedResult.id,
-          { status: i % 2 === 0 ? 'PASS' : 'FAIL' }
-        );
-      }
-
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/dashboard`)
-        .expect(200);
-
-      expect(response.body.dashboard.attentionRequired.flakyTests.length).toBe(1);
-      expect(response.body.dashboard.attentionRequired.flakyTests[0].passRate).toBe(50);
     });
 
     it('最近の活動一覧を取得', async () => {
@@ -434,51 +332,6 @@ describe('Project Dashboard API Integration Tests', () => {
       expect(response.body.dashboard.resultDistribution.pass).toBe(0);
     });
 
-    it('ちょうど30日前未実行は長期未実行に含まれる', async () => {
-      const testSuite = await createTestSuite(project.id);
-      const testCase = await createTestCase(testSuite.id, { title: 'Old Execution Test' });
-      const expectedResult = await prisma.testCaseExpectedResult.create({
-        data: { testCaseId: testCase.id, content: 'Expected', orderKey: 'a' },
-      });
-
-      const env = await prisma.projectEnvironment.create({
-        data: {
-          projectId: project.id,
-          name: 'Test Env',
-          isDefault: true,
-          sortOrder: 0,
-        },
-      });
-
-      // 30日前の実行を作成
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-
-      const execution = await prisma.execution.create({
-        data: {
-          testSuiteId: testSuite.id,
-          environmentId: env.id,
-          createdAt: thirtyDaysAgo,
-        },
-      });
-
-      const execTestSuite = await createTestExecutionTestSuite(execution.id, testSuite.id);
-      const execTestCase = await createTestExecutionTestCase(execTestSuite.id, testCase.id);
-      const execExpectedResult = await createTestExecutionTestCaseExpectedResult(
-        execTestCase.id,
-        expectedResult.id
-      );
-      await createTestExecutionExpectedResult(execution.id, execTestCase.id, execExpectedResult.id, { status: 'PASS' });
-
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/dashboard`)
-        .expect(200);
-
-      // 30日前の実行は長期未実行に含まれる
-      const longNotExecuted = response.body.dashboard.attentionRequired.longNotExecuted;
-      expect(longNotExecuted.length).toBe(1);
-      expect(longNotExecuted[0].title).toBe('Old Execution Test');
-    });
   });
 
   // ============================================================
