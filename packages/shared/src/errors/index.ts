@@ -126,15 +126,6 @@ export class LockConflictError extends AppError {
   }
 }
 
-export class RateLimitError extends AppError {
-  public readonly retryAfter: number;
-
-  constructor(retryAfter: number) {
-    super(429, 'RATE_LIMIT_EXCEEDED', 'Too many requests');
-    this.retryAfter = retryAfter;
-  }
-}
-
 export class InternalError extends AppError {
   constructor(message = 'Internal server error') {
     super(500, 'INTERNAL_ERROR', message, false);
