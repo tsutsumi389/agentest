@@ -132,7 +132,10 @@ export class AdminTotpController {
 
       // セッションをTOTP検証済みとしてマーク
       if (req.adminSession) {
-        await setAdminTotpVerified(req.adminSession.id);
+        const stored = await setAdminTotpVerified(req.adminSession.id);
+        if (!stored) {
+          throw new Error('TOTP検証済み状態の保存に失敗しました');
+        }
       }
 
       res.json({

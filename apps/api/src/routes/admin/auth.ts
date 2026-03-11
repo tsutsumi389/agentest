@@ -4,7 +4,6 @@ import { AdminProfileController } from '../../controllers/admin/profile.controll
 import { AdminTotpController } from '../../controllers/admin/totp.controller.js';
 import { AdminPasswordResetController } from '../../controllers/admin/password-reset.controller.js';
 import { requireAdminAuth, requireAdminAuthSkipTotp } from '../../middleware/require-admin-role.js';
-import { rateLimiter } from '../../middleware/rate-limiter.js';
 import { csrfProtection } from '../../middleware/csrf.middleware.js';
 
 const router: Router = Router();
@@ -22,23 +21,13 @@ const csrf = csrfProtection();
  * パスワードリセット要求
  * POST /admin/auth/password-reset/request
  */
-router.post(
-  '/password-reset/request',
-  csrf,
-  rateLimiter({ max: 3, windowMs: 60_000, routeId: 'admin-pw-reset-req' }),
-  passwordResetController.requestReset
-);
+router.post('/password-reset/request', csrf, passwordResetController.requestReset);
 
 /**
  * パスワードリセット実行
  * POST /admin/auth/password-reset/reset
  */
-router.post(
-  '/password-reset/reset',
-  csrf,
-  rateLimiter({ max: 5, windowMs: 60_000, routeId: 'admin-pw-reset' }),
-  passwordResetController.resetPassword
-);
+router.post('/password-reset/reset', csrf, passwordResetController.resetPassword);
 
 // ==================== 認証エンドポイント ====================
 
@@ -46,12 +35,7 @@ router.post(
  * ログイン
  * POST /admin/auth/login
  */
-router.post(
-  '/login',
-  csrf,
-  rateLimiter({ max: 5, windowMs: 60_000, routeId: 'admin-login' }),
-  controller.login
-);
+router.post('/login', csrf, controller.login);
 
 /**
  * ログアウト
@@ -63,8 +47,9 @@ router.post('/logout', csrf, requireAdminAuthSkipTotp(), controller.logout);
 /**
  * 現在の管理者情報を取得
  * GET /admin/auth/me
+ * 読み取り専用のためTOTP検証スキップ（リロード時の認証状態確認に必要）
  */
-router.get('/me', requireAdminAuth(), controller.me);
+router.get('/me', requireAdminAuthSkipTotp(), controller.me);
 
 /**
  * セッション延長
@@ -111,13 +96,7 @@ router.post('/2fa/enable', csrf, requireAdminAuth(), totpController.enable);
  * ログイン後の2要素認証検証
  * TOTP検証前のセッションでもアクセス可能
  */
-router.post(
-  '/2fa/verify',
-  csrf,
-  requireAdminAuthSkipTotp(),
-  rateLimiter({ max: 5, windowMs: 60_000, routeId: 'admin-2fa-verify' }),
-  totpController.verify
-);
+router.post('/2fa/verify', csrf, requireAdminAuthSkipTotp(), totpController.verify);
 
 /**
  * 2FA無効化

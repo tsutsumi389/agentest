@@ -94,8 +94,13 @@ export function requireAdminAuth() {
 /**
  * 認証のみのミドルウェア（TOTP検証スキップ）
  *
- * 2FA検証エンドポイントやログアウトなど、
- * TOTP検証前にアクセスが必要なエンドポイント用
+ * TOTP検証前にアクセスが必要なエンドポイント用。
+ * セキュリティ上の理由から使用箇所を限定すること。
+ *
+ * 使用エンドポイント:
+ * - POST /admin/auth/logout（TOTP検証前でもログアウト可能）
+ * - POST /admin/auth/2fa/verify（TOTP検証そのもの）
+ * - GET /admin/auth/me（読み取り専用、リロード時の認証状態確認）
  */
 export function requireAdminAuthSkipTotp() {
   return requireAdminRole({ skipTotpCheck: true });
