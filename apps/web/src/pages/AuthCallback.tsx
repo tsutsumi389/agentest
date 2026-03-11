@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useAuthStore } from '../stores/auth';
+import { getSafeRedirect } from '../lib/url';
 
 /**
  * OAuth認証コールバックページ
@@ -15,10 +16,11 @@ export function AuthCallbackPage() {
       await initialize();
 
       // sessionStorageからリダイレクト先を取得（招待ページ等からの遷移用）
-      const redirectTo = sessionStorage.getItem('auth_redirect');
+      const rawRedirect = sessionStorage.getItem('auth_redirect');
       sessionStorage.removeItem('auth_redirect');
 
-      navigate(redirectTo || '/dashboard', { replace: true });
+      // 内部パスのみ許可（オープンリダイレクト防止）
+      navigate(getSafeRedirect(rawRedirect), { replace: true });
     };
 
     handleCallback();

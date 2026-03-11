@@ -2,6 +2,7 @@ import { useSearchParams, Navigate } from 'react-router';
 import { Shield, AlertCircle, Check, X } from 'lucide-react';
 import { AgentestLogo } from '../components/ui/AgentestLogo';
 import { useAuthStore } from '../stores/auth';
+import { api } from '../lib/api';
 import { useState } from 'react';
 
 /**
@@ -58,6 +59,7 @@ export function OAuthConsentPage() {
   const { isAuthenticated, isLoading } = useAuthStore();
   const [searchParams] = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   // URLパラメータから情報を取得
   const clientId = searchParams.get('client_id') || '';
@@ -69,10 +71,10 @@ export function OAuthConsentPage() {
   const codeChallengeMethod = searchParams.get('code_challenge_method') || '';
   const resource = searchParams.get('resource') || '';
 
-  // 未認証の場合はログインページへリダイレクト
+  // 未認証の場合はログインページへリダイレクト（パス+クエリのみ使用し、オープンリダイレクト防止）
   if (!isAuthenticated && !isLoading) {
-    const currentUrl = window.location.href;
-    return <Navigate to={`/login?redirect=${encodeURIComponent(currentUrl)}`} replace />;
+    const currentPath = window.location.pathname + window.location.search;
+    return <Navigate to={`/login?redirect=${encodeURIComponent(currentPath)}`} replace />;
   }
 
   // ローディング中
@@ -87,51 +89,34 @@ export function OAuthConsentPage() {
   // スコープをパース
   const scopes = scope.split(' ').filter(Boolean);
 
-  const apiUrl = import.meta.env.VITE_API_URL || '';
-
-  // 同意を送信
+  // 同意を送信（apiクライアント経由でCSRF保護を適用）
   const handleSubmit = async (approved: boolean) => {
     setIsSubmitting(true);
+    setError('');
 
     try {
-      const response = await fetch(`${apiUrl}/oauth/authorize/consent`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({
-          client_id: clientId,
-          redirect_uri: redirectUri,
-          scope,
-          state,
-          code_challenge: codeChallenge,
-          code_challenge_method: codeChallengeMethod,
-          resource,
-          approved,
-        }),
+      const data = await api.post<{ redirect_url: string }>('/oauth/authorize/consent', {
+        client_id: clientId,
+        redirect_uri: redirectUri,
+        scope,
+        state,
+        code_challenge: codeChallenge,
+        code_challenge_method: codeChallengeMethod,
+        resource,
+        approved,
       });
 
-      const data = await response.json();
-
-      // 成功時はredirect_urlにリダイレクト
-      if (response.ok && data.redirect_url) {
+      // 成功時はサーバーが返すredirect_urlにリダイレクト
+      // サーバー側でredirect_uriの検証済みのため、サーバーが返すURLを使用する
+      if (data.redirect_url) {
         window.location.href = data.redirect_url;
         return;
       }
-
-      // エラーの場合
-      if (!response.ok) {
-        console.error('Consent error:', data);
-        // エラー時もリダイレクト
-        const errorUrl = new URL(redirectUri);
-        errorUrl.searchParams.set('error', data.error || 'server_error');
-        errorUrl.searchParams.set('error_description', data.error_description || 'An error occurred');
-        if (state) errorUrl.searchParams.set('state', state);
-        window.location.href = errorUrl.toString();
-      }
-    } catch (error) {
-      console.error('Consent submission error:', error);
+    } catch (err) {
+      // エラー時はクライアント側のredirectUriではなく、画面にエラー表示する
+      // クライアントから渡されたredirectUriをそのまま使うとオープンリダイレクト脆弱性になるため
+      const message = err instanceof Error ? err.message : '同意処理中にエラーが発生しました';
+      setError(message);
       setIsSubmitting(false);
     }
   };
@@ -160,6 +145,13 @@ export function OAuthConsentPage() {
               </p>
             </div>
           </div>
+
+          {/* エラー表示 */}
+          {error && (
+            <div role="alert" className="mb-4 text-sm text-error bg-error/10 border border-error/20 rounded-md px-3 py-2">
+              {error}
+            </div>
+          )}
 
           {/* 警告 */}
           <div className="flex items-start gap-2 p-3 mb-6 bg-warning/10 border border-warning/20 rounded-md">

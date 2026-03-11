@@ -5,19 +5,8 @@ import { GoogleIcon } from '../components/ui/GoogleIcon';
 import { useAuthStore } from '../stores/auth';
 import { useConfigStore } from '../stores/config';
 import { authApi, ApiError } from '../lib/api';
-import { useEffect, useState } from 'react';
-
-/**
- * リダイレクト先が外部オリジンかどうかを判定
- */
-function isExternalUrl(url: string): boolean {
-  try {
-    const parsedUrl = new URL(url, window.location.origin);
-    return parsedUrl.origin !== window.location.origin;
-  } catch {
-    return false;
-  }
-}
+import { useState } from 'react';
+import { getSafeRedirect } from '../lib/url';
 
 /**
  * ログインページ
@@ -37,27 +26,18 @@ export function LoginPage() {
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // リダイレクト先を取得（認証後に戻る先）
-  const redirectTo = searchParams.get('redirect');
-
-  // 既にログイン済みで外部オリジンへのリダイレクトが必要な場合
-  useEffect(() => {
-    if (isAuthenticated && !isLoading && redirectTo && isExternalUrl(redirectTo)) {
-      window.location.href = redirectTo;
-    }
-  }, [isAuthenticated, isLoading, redirectTo]);
+  // リダイレクト先を取得（認証後に戻る先、外部URLはブロック）
+  const rawRedirect = searchParams.get('redirect');
+  const redirectTo = getSafeRedirect(rawRedirect);
 
   // 既にログイン済みの場合はリダイレクト先またはダッシュボードにリダイレクト
   if (isAuthenticated && !isLoading) {
-    // 外部オリジンの場合はuseEffectで処理するので、ここではnullを返す
-    if (redirectTo && isExternalUrl(redirectTo)) {
-      return null;
-    }
-    return <Navigate to={redirectTo || '/dashboard'} replace />;
+    return <Navigate to={redirectTo} replace />;
   }
 
   // リダイレクト先をsessionStorageに保存（OAuth認証後に使用）
-  if (redirectTo) {
+  if (rawRedirect) {
+    // 安全な内部パスのみ保存する
     sessionStorage.setItem('auth_redirect', redirectTo);
   }
 
@@ -82,14 +62,15 @@ export function LoginPage() {
       // 2FA有効ユーザー: 2FA検証ページへ遷移
       if (response.requires2FA) {
         set2FARequired(response.twoFactorToken);
-        const params = redirectTo ? `?redirect=${encodeURIComponent(redirectTo)}` : '';
+        // 安全な内部パスのみ2FA検証後のリダイレクト先として引き継ぐ
+        const params = rawRedirect ? `?redirect=${encodeURIComponent(redirectTo)}` : '';
         navigate(`/2fa/verify${params}`, { replace: true });
         return;
       }
 
       // 2FA無効ユーザー: 従来通りダッシュボードへ遷移
       setUser(response.user);
-      navigate(redirectTo || '/dashboard', { replace: true });
+      navigate(redirectTo, { replace: true });
     } catch (err) {
       // メール未確認エラーの場合はメール確認ページへリダイレクト
       if (err instanceof ApiError && err.code === 'EMAIL_NOT_VERIFIED') {
