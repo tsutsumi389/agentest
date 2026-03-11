@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { AuthenticationError, ValidationError } from '@agentest/shared';
 import { AdminTotpService } from '../../services/admin/admin-totp.service.js';
 import { extractClientInfo } from '../../middleware/session.middleware.js';
+import { setAdminTotpVerified } from '../../lib/redis-store.js';
 
 // TOTPコードのバリデーション（6桁の数字）
 const totpCodeSchema = z.object({
@@ -128,6 +129,11 @@ export class AdminTotpController {
         clientInfo.ipAddress,
         clientInfo.userAgent
       );
+
+      // セッションをTOTP検証済みとしてマーク
+      if (req.adminSession) {
+        await setAdminTotpVerified(req.adminSession.id);
+      }
 
       res.json({
         message: '2要素認証に成功しました',

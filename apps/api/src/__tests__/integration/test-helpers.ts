@@ -1,6 +1,7 @@
 import { prisma } from '@agentest/db';
 import type { Prisma } from '@agentest/db';
 import { randomUUID, createHash } from 'crypto';
+import { clearRateLimitKeys } from '../../lib/redis-store.js';
 
 /**
  * テスト用トークンハッシュ生成（SHA-256 hex、64文字）
@@ -203,6 +204,9 @@ export async function createTestAuditLog(
  * テストデータをクリーンアップ
  */
 export async function cleanupTestData() {
+  // Redisのレート制限キーをクリア
+  await clearRateLimitKeys();
+
   // 外部キー制約を考慮した順序で削除
   // 管理者関連
   await prisma.adminAuditLog.deleteMany({});

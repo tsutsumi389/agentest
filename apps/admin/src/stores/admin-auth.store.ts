@@ -143,9 +143,8 @@ export const useAdminAuthStore = create<AdminAuthState>((set) => ({
   logout: async () => {
     try {
       await adminAuthApi.logout();
-    } catch (error) {
-      // エラーが発生してもローカル状態はクリア
-      console.error('ログアウトエラー:', error);
+    } catch {
+      // エラーが発生してもローカル状態はクリア（ログアウト失敗は無視）
     } finally {
       set({
         admin: null,

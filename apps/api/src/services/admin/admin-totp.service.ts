@@ -11,6 +11,7 @@ import {
   markTotpCodeUsed,
   isTotpCodeUsed,
 } from '../../lib/redis-store.js';
+import { encryptTotpSecret, decryptTotpSecret } from '../../lib/totp-crypto.js';
 
 // アプリケーション名（QRコードに表示される）
 const APP_NAME = 'Agentest Admin';
@@ -131,8 +132,8 @@ export class AdminTotpService {
       throw new ValidationError('TOTPコードが正しくありません');
     }
 
-    // DBに秘密鍵を保存
-    await this.userRepo.enableTotp(adminUserId, tempSecret);
+    // DBに秘密鍵を暗号化して保存
+    await this.userRepo.enableTotp(adminUserId, encryptTotpSecret(tempSecret));
 
     // Redisの一時データを削除
     await deleteTotpSetupSecret(adminUserId);
@@ -187,8 +188,9 @@ export class AdminTotpService {
       throw new AuthenticationError('2要素認証が設定されていません');
     }
 
-    // TOTPコードを検証（前後1ステップの時間許容幅）
-    const isValid = verifySync({ secret, token: code }).valid;
+    // 暗号化された秘密鍵を復号してTOTPコードを検証
+    const decryptedSecret = decryptTotpSecret(secret);
+    const isValid = verifySync({ secret: decryptedSecret, token: code }).valid;
 
     if (!isValid) {
       await this.auditLogService.log({

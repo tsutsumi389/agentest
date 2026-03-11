@@ -3,6 +3,17 @@ import { AdminRoleType } from '@agentest/db';
 import { AuthenticationError, AuthorizationError } from '@agentest/shared';
 import { AdminSessionService } from '../services/admin/admin-session.service.js';
 import { adminAuthConfig } from '../config/auth.js';
+import { isAdminTotpVerified } from '../lib/redis-store.js';
+
+/**
+ * 管理者認証ミドルウェアのオプション
+ */
+interface AdminAuthOptions {
+  /** 必要な管理者ロールの配列。空の場合は認証のみ。 */
+  roles?: AdminRoleType[];
+  /** TOTP検証チェックをスキップする（2FA検証エンドポイント用） */
+  skipTotpCheck?: boolean;
+}
 
 /**
  * ロールベース認可ミドルウェア
@@ -10,11 +21,13 @@ import { adminAuthConfig } from '../config/auth.js';
  * クッキーからセッショントークンを取得し、有効なセッションであれば
  * req.adminUserとreq.adminSessionを設定。
  * さらに指定されたロール権限を持っているかチェック。
+ * TOTP有効ユーザーの場合、TOTP検証済みフラグもチェック。
  *
- * @param roles - 必要な管理者ロールの配列。空の場合は認証のみ。
- *                SUPER_ADMINは全権限を持つ。
+ * @param options - 認証オプション
  */
-export function requireAdminRole(roles: AdminRoleType[] = []) {
+export function requireAdminRole(options: AdminAuthOptions = {}) {
+  const { roles = [], skipTotpCheck = false } = options;
+
   // ミドルウェア生成時に1回だけインスタンス化（リクエストごとではない）
   const sessionService = new AdminSessionService();
 
@@ -41,6 +54,14 @@ export function requireAdminRole(roles: AdminRoleType[] = []) {
         expiresAt: session.expiresAt,
       };
 
+      // TOTP検証チェック（2FAバイパス対策）
+      if (!skipTotpCheck && session.adminUser.totpEnabled) {
+        const verified = await isAdminTotpVerified(session.id);
+        if (!verified) {
+          throw new AuthenticationError('2要素認証の検証が必要です');
+        }
+      }
+
       // ロール権限チェック
       if (roles.length > 0) {
         const userRole = session.adminUser.role as AdminRoleType;
@@ -64,12 +85,18 @@ export function requireAdminRole(roles: AdminRoleType[] = []) {
 }
 
 /**
- * 認証のみのミドルウェア（ロールチェックなし）
- *
- * クッキーからセッショントークンを取得し、有効なセッションであれば
- * req.adminUserとreq.adminSessionを設定。
- * ロールチェックは行わない。
+ * 認証のみのミドルウェア（ロールチェックなし、TOTP検証必須）
  */
 export function requireAdminAuth() {
-  return requireAdminRole([]);
+  return requireAdminRole();
+}
+
+/**
+ * 認証のみのミドルウェア（TOTP検証スキップ）
+ *
+ * 2FA検証エンドポイントやログアウトなど、
+ * TOTP検証前にアクセスが必要なエンドポイント用
+ */
+export function requireAdminAuthSkipTotp() {
+  return requireAdminRole({ skipTotpCheck: true });
 }

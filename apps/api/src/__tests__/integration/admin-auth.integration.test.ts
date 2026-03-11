@@ -38,6 +38,7 @@ describe('Admin Auth API Integration Tests', () => {
     it('正しい認証情報でログインできる', async () => {
       const response = await request(app)
         .post('/admin/auth/login')
+        .set('Origin', 'http://localhost:5174')
         .send({
           email: 'admin@example.com',
           password: testPassword,
@@ -53,6 +54,7 @@ describe('Admin Auth API Integration Tests', () => {
     it('セッションクッキーが設定される', async () => {
       const response = await request(app)
         .post('/admin/auth/login')
+        .set('Origin', 'http://localhost:5174')
         .send({
           email: 'admin@example.com',
           password: testPassword,
@@ -73,6 +75,7 @@ describe('Admin Auth API Integration Tests', () => {
     it('セッションがDBに作成される', async () => {
       await request(app)
         .post('/admin/auth/login')
+        .set('Origin', 'http://localhost:5174')
         .send({
           email: 'admin@example.com',
           password: testPassword,
@@ -89,6 +92,7 @@ describe('Admin Auth API Integration Tests', () => {
     it('監査ログが記録される', async () => {
       await request(app)
         .post('/admin/auth/login')
+        .set('Origin', 'http://localhost:5174')
         .send({
           email: 'admin@example.com',
           password: testPassword,
@@ -107,6 +111,7 @@ describe('Admin Auth API Integration Tests', () => {
     it('不正パスワードで401エラー', async () => {
       const response = await request(app)
         .post('/admin/auth/login')
+        .set('Origin', 'http://localhost:5174')
         .send({
           email: 'admin@example.com',
           password: 'wrong-password',
@@ -121,6 +126,7 @@ describe('Admin Auth API Integration Tests', () => {
       for (let i = 0; i < 5; i++) {
         await request(app)
           .post('/admin/auth/login')
+          .set('Origin', 'http://localhost:5174')
           .send({
             email: 'admin@example.com',
             password: 'wrong-password',
@@ -148,6 +154,7 @@ describe('Admin Auth API Integration Tests', () => {
 
       const response = await request(app)
         .post('/admin/auth/login')
+        .set('Origin', 'http://localhost:5174')
         .send({
           email: 'admin@example.com',
           password: testPassword,
@@ -169,6 +176,7 @@ describe('Admin Auth API Integration Tests', () => {
 
       const response = await request(app)
         .post('/admin/auth/login')
+        .set('Origin', 'http://localhost:5174')
         .send({
           email: 'admin@example.com',
           password: testPassword,
@@ -181,6 +189,7 @@ describe('Admin Auth API Integration Tests', () => {
     it('メール形式不正で400エラー', async () => {
       const response = await request(app)
         .post('/admin/auth/login')
+        .set('Origin', 'http://localhost:5174')
         .send({
           email: 'invalid-email',
           password: testPassword,
@@ -192,6 +201,7 @@ describe('Admin Auth API Integration Tests', () => {
     it('存在しないユーザーで401エラー', async () => {
       const response = await request(app)
         .post('/admin/auth/login')
+        .set('Origin', 'http://localhost:5174')
         .send({
           email: 'nonexistent@example.com',
           password: testPassword,
@@ -209,6 +219,7 @@ describe('Admin Auth API Integration Tests', () => {
       // ログインしてセッショントークンを取得
       const loginResponse = await request(app)
         .post('/admin/auth/login')
+        .set('Origin', 'http://localhost:5174')
         .send({
           email: 'admin@example.com',
           password: testPassword,
@@ -225,6 +236,7 @@ describe('Admin Auth API Integration Tests', () => {
     it('ログアウトに成功する', async () => {
       const response = await request(app)
         .post('/admin/auth/logout')
+        .set('Origin', 'http://localhost:5174')
         .set('Cookie', sessionCookie);
 
       expect(response.status).toBe(200);
@@ -234,6 +246,7 @@ describe('Admin Auth API Integration Tests', () => {
     it('セッションが失効する', async () => {
       await request(app)
         .post('/admin/auth/logout')
+        .set('Origin', 'http://localhost:5174')
         .set('Cookie', sessionCookie);
 
       const session = await prisma.adminSession.findFirst({
@@ -246,6 +259,7 @@ describe('Admin Auth API Integration Tests', () => {
     it('クッキーがクリアされる', async () => {
       const response = await request(app)
         .post('/admin/auth/logout')
+        .set('Origin', 'http://localhost:5174')
         .set('Cookie', sessionCookie);
 
       expect(response.status).toBe(200);
@@ -260,7 +274,7 @@ describe('Admin Auth API Integration Tests', () => {
     });
 
     it('未認証の場合は401エラー', async () => {
-      const response = await request(app).post('/admin/auth/logout');
+      const response = await request(app).post('/admin/auth/logout').set('Origin', 'http://localhost:5174');
 
       expect(response.status).toBe(401);
     });
@@ -273,6 +287,7 @@ describe('Admin Auth API Integration Tests', () => {
       // ログインしてセッショントークンを取得
       const loginResponse = await request(app)
         .post('/admin/auth/login')
+        .set('Origin', 'http://localhost:5174')
         .send({
           email: 'admin@example.com',
           password: testPassword,
@@ -344,6 +359,7 @@ describe('Admin Auth API Integration Tests', () => {
       // ログインしてセッショントークンを取得
       const loginResponse = await request(app)
         .post('/admin/auth/login')
+        .set('Origin', 'http://localhost:5174')
         .send({
           email: 'admin@example.com',
           password: testPassword,
@@ -359,6 +375,7 @@ describe('Admin Auth API Integration Tests', () => {
     it('セッション延長に成功する', async () => {
       const response = await request(app)
         .post('/admin/auth/refresh')
+        .set('Origin', 'http://localhost:5174')
         .set('Cookie', sessionCookie);
 
       expect(response.status).toBe(200);
@@ -379,6 +396,7 @@ describe('Admin Auth API Integration Tests', () => {
 
       const response = await request(app)
         .post('/admin/auth/refresh')
+        .set('Origin', 'http://localhost:5174')
         .set('Cookie', sessionCookie);
 
       expect(response.status).toBe(401);
@@ -386,7 +404,7 @@ describe('Admin Auth API Integration Tests', () => {
     });
 
     it('未認証の場合は401エラー', async () => {
-      const response = await request(app).post('/admin/auth/refresh');
+      const response = await request(app).post('/admin/auth/refresh').set('Origin', 'http://localhost:5174');
 
       expect(response.status).toBe(401);
     });

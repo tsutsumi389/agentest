@@ -10,6 +10,9 @@ import {
 } from './test-helpers.js';
 import { createApp } from '../../app.js';
 
+// テスト用のOriginヘッダー（CSRF保護対策）
+const ADMIN_ORIGIN = 'http://localhost:5174';
+
 describe('Admin TOTP API Integration Tests', () => {
   let app: Express;
   let testAdminUser: Awaited<ReturnType<typeof createTestAdminUser>>;
@@ -39,6 +42,7 @@ describe('Admin TOTP API Integration Tests', () => {
     // ログインしてセッションクッキーを取得
     const loginResponse = await request(app)
       .post('/admin/auth/login')
+      .set('Origin', ADMIN_ORIGIN)
       .send({
         email: 'admin@example.com',
         password: testPassword,
@@ -55,6 +59,7 @@ describe('Admin TOTP API Integration Tests', () => {
     it('TOTPセットアップ情報を取得できる', async () => {
       const response = await request(app)
         .post('/admin/auth/2fa/setup')
+        .set('Origin', ADMIN_ORIGIN)
         .set('Cookie', sessionCookie);
 
       expect(response.status).toBe(200);
@@ -69,6 +74,7 @@ describe('Admin TOTP API Integration Tests', () => {
     it('監査ログが記録される', async () => {
       await request(app)
         .post('/admin/auth/2fa/setup')
+        .set('Origin', ADMIN_ORIGIN)
         .set('Cookie', sessionCookie);
 
       const logs = await prisma.adminAuditLog.findMany({
@@ -82,7 +88,9 @@ describe('Admin TOTP API Integration Tests', () => {
     });
 
     it('未認証の場合は401エラー', async () => {
-      const response = await request(app).post('/admin/auth/2fa/setup');
+      const response = await request(app)
+        .post('/admin/auth/2fa/setup')
+        .set('Origin', ADMIN_ORIGIN);
 
       expect(response.status).toBe(401);
     });
@@ -93,6 +101,7 @@ describe('Admin TOTP API Integration Tests', () => {
       // セットアップ
       const setupResponse = await request(app)
         .post('/admin/auth/2fa/setup')
+        .set('Origin', ADMIN_ORIGIN)
         .set('Cookie', sessionCookie);
 
       const { secret } = setupResponse.body;
@@ -103,30 +112,35 @@ describe('Admin TOTP API Integration Tests', () => {
       // 有効化
       const response = await request(app)
         .post('/admin/auth/2fa/enable')
+        .set('Origin', ADMIN_ORIGIN)
         .set('Cookie', sessionCookie)
         .send({ code: validCode });
 
       expect(response.status).toBe(200);
       expect(response.body.message).toBe('2要素認証が有効になりました');
 
-      // DBで確認
+      // DBで確認（暗号化されて保存されるため、平文とは一致しない）
       const user = await prisma.adminUser.findUnique({
         where: { id: testAdminUser.id },
       });
 
       expect(user?.totpEnabled).toBe(true);
-      expect(user?.totpSecret).toBe(secret);
+      expect(user?.totpSecret).toBeDefined();
+      expect(user?.totpSecret).not.toBe(secret); // 暗号化されているため平文とは異なる
+      expect(user?.totpSecret).toMatch(/^enc:v1:/); // 暗号化プレフィックスを確認
     });
 
     it('監査ログが記録される', async () => {
       const setupResponse = await request(app)
         .post('/admin/auth/2fa/setup')
+        .set('Origin', ADMIN_ORIGIN)
         .set('Cookie', sessionCookie);
 
       const validCode = generateSync({ secret: setupResponse.body.secret });
 
       await request(app)
         .post('/admin/auth/2fa/enable')
+        .set('Origin', ADMIN_ORIGIN)
         .set('Cookie', sessionCookie)
         .send({ code: validCode });
 
@@ -144,11 +158,13 @@ describe('Admin TOTP API Integration Tests', () => {
       // セットアップ
       await request(app)
         .post('/admin/auth/2fa/setup')
+        .set('Origin', ADMIN_ORIGIN)
         .set('Cookie', sessionCookie);
 
       // 不正なコード
       const response = await request(app)
         .post('/admin/auth/2fa/enable')
+        .set('Origin', ADMIN_ORIGIN)
         .set('Cookie', sessionCookie)
         .send({ code: '000000' });
 
@@ -158,6 +174,7 @@ describe('Admin TOTP API Integration Tests', () => {
     it('セットアップなしで有効化しようとすると400エラー', async () => {
       const response = await request(app)
         .post('/admin/auth/2fa/enable')
+        .set('Origin', ADMIN_ORIGIN)
         .set('Cookie', sessionCookie)
         .send({ code: '123456' });
 
@@ -168,6 +185,7 @@ describe('Admin TOTP API Integration Tests', () => {
     it('コード形式が不正な場合は400エラー', async () => {
       const response = await request(app)
         .post('/admin/auth/2fa/enable')
+        .set('Origin', ADMIN_ORIGIN)
         .set('Cookie', sessionCookie)
         .send({ code: '12345' }); // 5桁
 
@@ -177,6 +195,7 @@ describe('Admin TOTP API Integration Tests', () => {
     it('未認証の場合は401エラー', async () => {
       const response = await request(app)
         .post('/admin/auth/2fa/enable')
+        .set('Origin', ADMIN_ORIGIN)
         .send({ code: '123456' });
 
       expect(response.status).toBe(401);
@@ -190,6 +209,7 @@ describe('Admin TOTP API Integration Tests', () => {
       // TOTPを有効化
       const setupResponse = await request(app)
         .post('/admin/auth/2fa/setup')
+        .set('Origin', ADMIN_ORIGIN)
         .set('Cookie', sessionCookie);
 
       totpSecret = setupResponse.body.secret;
@@ -197,17 +217,18 @@ describe('Admin TOTP API Integration Tests', () => {
 
       await request(app)
         .post('/admin/auth/2fa/enable')
+        .set('Origin', ADMIN_ORIGIN)
         .set('Cookie', sessionCookie)
         .send({ code: validCode });
     });
 
     it('正しいコードで検証成功', async () => {
       // 新しいコードを生成（有効化時に使用したコードは使用済み）
-      // 少し待つか、異なるタイムステップのコードを使用
       const validCode = generateSync({ secret: totpSecret });
 
       const response = await request(app)
         .post('/admin/auth/2fa/verify')
+        .set('Origin', ADMIN_ORIGIN)
         .set('Cookie', sessionCookie)
         .send({ code: validCode });
 
@@ -221,6 +242,7 @@ describe('Admin TOTP API Integration Tests', () => {
 
       await request(app)
         .post('/admin/auth/2fa/verify')
+        .set('Origin', ADMIN_ORIGIN)
         .set('Cookie', sessionCookie)
         .send({ code: validCode });
 
@@ -237,6 +259,7 @@ describe('Admin TOTP API Integration Tests', () => {
     it('不正なコードで401エラー', async () => {
       const response = await request(app)
         .post('/admin/auth/2fa/verify')
+        .set('Origin', ADMIN_ORIGIN)
         .set('Cookie', sessionCookie)
         .send({ code: '000000' });
 
@@ -249,6 +272,7 @@ describe('Admin TOTP API Integration Tests', () => {
       // 1回目は成功
       const response1 = await request(app)
         .post('/admin/auth/2fa/verify')
+        .set('Origin', ADMIN_ORIGIN)
         .set('Cookie', sessionCookie)
         .send({ code: validCode });
 
@@ -257,6 +281,7 @@ describe('Admin TOTP API Integration Tests', () => {
       // 2回目は同じコードでリプレイ攻撃として拒否
       const response2 = await request(app)
         .post('/admin/auth/2fa/verify')
+        .set('Origin', ADMIN_ORIGIN)
         .set('Cookie', sessionCookie)
         .send({ code: validCode });
 
@@ -286,6 +311,7 @@ describe('Admin TOTP API Integration Tests', () => {
 
       const response = await request(app)
         .post('/admin/auth/2fa/verify')
+        .set('Origin', ADMIN_ORIGIN)
         .set('Cookie', sessionCookie)
         .send({ code: '123456' });
 
@@ -295,6 +321,7 @@ describe('Admin TOTP API Integration Tests', () => {
     it('未認証の場合は401エラー', async () => {
       const response = await request(app)
         .post('/admin/auth/2fa/verify')
+        .set('Origin', ADMIN_ORIGIN)
         .send({ code: '123456' });
 
       expect(response.status).toBe(401);
@@ -306,19 +333,31 @@ describe('Admin TOTP API Integration Tests', () => {
       // TOTPを有効化
       const setupResponse = await request(app)
         .post('/admin/auth/2fa/setup')
+        .set('Origin', ADMIN_ORIGIN)
         .set('Cookie', sessionCookie);
 
-      const validCode = generateSync({ secret: setupResponse.body.secret });
+      const totpSecret = setupResponse.body.secret;
+      const validCode = generateSync({ secret: totpSecret });
 
       await request(app)
         .post('/admin/auth/2fa/enable')
+        .set('Origin', ADMIN_ORIGIN)
         .set('Cookie', sessionCookie)
         .send({ code: validCode });
+
+      // TOTP検証を完了（requireAdminAuthでTOTP検証済みが必要なため）
+      const verifyCode = generateSync({ secret: totpSecret });
+      await request(app)
+        .post('/admin/auth/2fa/verify')
+        .set('Origin', ADMIN_ORIGIN)
+        .set('Cookie', sessionCookie)
+        .send({ code: verifyCode });
     });
 
     it('正しいパスワードでTOTPを無効化できる', async () => {
       const response = await request(app)
         .post('/admin/auth/2fa/disable')
+        .set('Origin', ADMIN_ORIGIN)
         .set('Cookie', sessionCookie)
         .send({ password: testPassword });
 
@@ -337,6 +376,7 @@ describe('Admin TOTP API Integration Tests', () => {
     it('監査ログが記録される', async () => {
       await request(app)
         .post('/admin/auth/2fa/disable')
+        .set('Origin', ADMIN_ORIGIN)
         .set('Cookie', sessionCookie)
         .send({ password: testPassword });
 
@@ -353,6 +393,7 @@ describe('Admin TOTP API Integration Tests', () => {
     it('不正なパスワードで401エラー', async () => {
       const response = await request(app)
         .post('/admin/auth/2fa/disable')
+        .set('Origin', ADMIN_ORIGIN)
         .set('Cookie', sessionCookie)
         .send({ password: 'wrong-password' });
 
@@ -362,6 +403,7 @@ describe('Admin TOTP API Integration Tests', () => {
     it('パスワードが空の場合は400エラー', async () => {
       const response = await request(app)
         .post('/admin/auth/2fa/disable')
+        .set('Origin', ADMIN_ORIGIN)
         .set('Cookie', sessionCookie)
         .send({ password: '' });
 
@@ -371,6 +413,7 @@ describe('Admin TOTP API Integration Tests', () => {
     it('未認証の場合は401エラー', async () => {
       const response = await request(app)
         .post('/admin/auth/2fa/disable')
+        .set('Origin', ADMIN_ORIGIN)
         .send({ password: testPassword });
 
       expect(response.status).toBe(401);
@@ -382,6 +425,7 @@ describe('Admin TOTP API Integration Tests', () => {
       // 1. セットアップ
       const setupResponse = await request(app)
         .post('/admin/auth/2fa/setup')
+        .set('Origin', ADMIN_ORIGIN)
         .set('Cookie', sessionCookie);
 
       expect(setupResponse.status).toBe(200);
@@ -391,6 +435,7 @@ describe('Admin TOTP API Integration Tests', () => {
       const enableCode = generateSync({ secret });
       const enableResponse = await request(app)
         .post('/admin/auth/2fa/enable')
+        .set('Origin', ADMIN_ORIGIN)
         .set('Cookie', sessionCookie)
         .send({ code: enableCode });
 
@@ -400,6 +445,7 @@ describe('Admin TOTP API Integration Tests', () => {
       const verifyCode = generateSync({ secret });
       const verifyResponse = await request(app)
         .post('/admin/auth/2fa/verify')
+        .set('Origin', ADMIN_ORIGIN)
         .set('Cookie', sessionCookie)
         .send({ code: verifyCode });
 
@@ -409,6 +455,7 @@ describe('Admin TOTP API Integration Tests', () => {
       // 4. 無効化
       const disableResponse = await request(app)
         .post('/admin/auth/2fa/disable')
+        .set('Origin', ADMIN_ORIGIN)
         .set('Cookie', sessionCookie)
         .send({ password: testPassword });
 

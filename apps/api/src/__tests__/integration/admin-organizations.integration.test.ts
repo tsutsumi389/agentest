@@ -48,6 +48,7 @@ describe('Admin Organizations API Integration Tests', () => {
     // ログインしてセッションを取得
     const loginResponse = await request(app)
       .post('/admin/auth/login')
+      .set('Origin', 'http://localhost:5174')
       .send({
         email: 'admin@example.com',
         password: testPassword,

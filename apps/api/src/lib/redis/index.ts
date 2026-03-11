@@ -5,6 +5,8 @@ export {
   deleteTotpSetupSecret,
   markTotpCodeUsed,
   isTotpCodeUsed,
+  setAdminTotpVerified,
+  isAdminTotpVerified,
   setUserTotpSetupSecret,
   getUserTotpSetupSecret,
   deleteUserTotpSetupSecret,

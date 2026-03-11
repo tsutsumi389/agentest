@@ -56,6 +56,14 @@ const mockRedisStore = vi.hoisted(() => ({
 
 vi.mock('../../lib/redis-store.js', () => mockRedisStore);
 
+// totp-crypto のモック（暗号化・復号をパススルー）
+const mockTotpCrypto = vi.hoisted(() => ({
+  encryptTotpSecret: vi.fn((secret: string) => `encrypted:${secret}`),
+  decryptTotpSecret: vi.fn((encrypted: string) => encrypted.replace('encrypted:', '')),
+}));
+
+vi.mock('../../lib/totp-crypto.js', () => mockTotpCrypto);
+
 // モック設定後にインポート
 import { AdminTotpService } from '../../services/admin/admin-totp.service.js';
 import bcrypt from 'bcryptjs';
@@ -121,7 +129,8 @@ describe('AdminTotpService', () => {
       await service.enableTotp(adminUserId, code, '127.0.0.1', 'Test Browser');
 
       expect(mockOtplib.verifySync).toHaveBeenCalledWith({ secret: tempSecret, token: code });
-      expect(mockUserRepo.enableTotp).toHaveBeenCalledWith(adminUserId, tempSecret);
+      expect(mockTotpCrypto.encryptTotpSecret).toHaveBeenCalledWith(tempSecret);
+      expect(mockUserRepo.enableTotp).toHaveBeenCalledWith(adminUserId, `encrypted:${tempSecret}`);
       expect(mockRedisStore.deleteTotpSetupSecret).toHaveBeenCalledWith(adminUserId);
       expect(mockAuditLogService.log).toHaveBeenCalledWith({
         adminUserId,

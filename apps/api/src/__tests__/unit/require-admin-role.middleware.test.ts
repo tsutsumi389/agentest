@@ -4,23 +4,31 @@ import { AdminRoleType } from '@agentest/db';
 import { AuthenticationError, AuthorizationError } from '@agentest/shared';
 
 // AdminSessionService のモック（vi.hoistedを使用）
-const mockSessionService = vi.hoisted(() => ({
-  generateToken: vi.fn(),
-  createSession: vi.fn(),
-  validateSession: vi.fn(),
-  refreshSession: vi.fn(),
-  revokeSession: vi.fn(),
-  updateActivity: vi.fn(),
+const { mockSessionService, mockIsAdminTotpVerified } = vi.hoisted(() => ({
+  mockSessionService: {
+    generateToken: vi.fn(),
+    createSession: vi.fn(),
+    validateSession: vi.fn(),
+    refreshSession: vi.fn(),
+    revokeSession: vi.fn(),
+    updateActivity: vi.fn(),
+  },
+  mockIsAdminTotpVerified: vi.fn(),
 }));
 
 vi.mock('../../services/admin/admin-session.service.js', () => ({
   AdminSessionService: vi.fn().mockImplementation(() => mockSessionService),
 }));
 
+vi.mock('../../lib/redis-store.js', () => ({
+  isAdminTotpVerified: mockIsAdminTotpVerified,
+}));
+
 // ミドルウェアのインポートはモック設定後
 import {
   requireAdminRole,
   requireAdminAuth,
+  requireAdminAuthSkipTotp,
 } from '../../middleware/require-admin-role.js';
 
 // モックリクエスト・レスポンス・ネクスト
@@ -177,7 +185,7 @@ describe('requireAdminRole ミドルウェア', () => {
       const res = createMockRes();
       const next = createMockNext();
 
-      const middleware = requireAdminRole([AdminRoleType.ADMIN]);
+      const middleware = requireAdminRole({ roles: [AdminRoleType.ADMIN] });
       await middleware(req, res, next);
 
       expect(next).toHaveBeenCalledWith();
@@ -206,7 +214,7 @@ describe('requireAdminRole ミドルウェア', () => {
       const next = createMockNext();
 
       // ADMIN権限を要求しても、SUPER_ADMINは通過できる
-      const middleware = requireAdminRole([AdminRoleType.ADMIN]);
+      const middleware = requireAdminRole({ roles: [AdminRoleType.ADMIN] });
       await middleware(req, res, next);
 
       expect(next).toHaveBeenCalledWith();
@@ -235,7 +243,7 @@ describe('requireAdminRole ミドルウェア', () => {
       const next = createMockNext();
 
       // ADMIN権限を要求するが、VIEWERしか持っていない
-      const middleware = requireAdminRole([AdminRoleType.ADMIN]);
+      const middleware = requireAdminRole({ roles: [AdminRoleType.ADMIN] });
       await middleware(req, res, next);
 
       expect(next).toHaveBeenCalledWith(expect.any(AuthorizationError));
@@ -266,7 +274,7 @@ describe('requireAdminRole ミドルウェア', () => {
       const next = createMockNext();
 
       // 空のロール配列
-      const middleware = requireAdminRole([]);
+      const middleware = requireAdminRole({ roles: [] });
       await middleware(req, res, next);
 
       expect(next).toHaveBeenCalledWith();
@@ -295,7 +303,7 @@ describe('requireAdminRole ミドルウェア', () => {
       const next = createMockNext();
 
       // SUPER_ADMINまたはADMINを要求
-      const middleware = requireAdminRole([AdminRoleType.SUPER_ADMIN, AdminRoleType.ADMIN]);
+      const middleware = requireAdminRole({ roles: [AdminRoleType.SUPER_ADMIN, AdminRoleType.ADMIN] });
       await middleware(req, res, next);
 
       expect(next).toHaveBeenCalledWith();
@@ -310,7 +318,7 @@ describe('requireAdminRole ミドルウェア', () => {
       const res = createMockRes();
       const next = createMockNext();
 
-      const middleware = requireAdminRole([AdminRoleType.ADMIN]);
+      const middleware = requireAdminRole({ roles: [AdminRoleType.ADMIN] });
       await middleware(req, res, next);
 
       expect(next).toHaveBeenCalledWith(expect.any(AuthenticationError));
@@ -325,7 +333,7 @@ describe('requireAdminRole ミドルウェア', () => {
       const res = createMockRes();
       const next = createMockNext();
 
-      const middleware = requireAdminRole([AdminRoleType.ADMIN]);
+      const middleware = requireAdminRole({ roles: [AdminRoleType.ADMIN] });
       await middleware(req, res, next);
 
       expect(next).toHaveBeenCalledWith(expect.any(AuthenticationError));
@@ -355,7 +363,7 @@ describe('requireAdminRole ミドルウェア', () => {
       const res = createMockRes();
       const next = createMockNext();
 
-      const middleware = requireAdminRole([]);
+      const middleware = requireAdminRole({ roles: [] });
       await middleware(req, res, next);
 
       expect(mockSessionService.updateActivity).toHaveBeenCalledWith('session-1');
@@ -383,10 +391,130 @@ describe('requireAdminRole ミドルウェア', () => {
       const res = createMockRes();
       const next = createMockNext();
 
-      const middleware = requireAdminRole([]);
+      const middleware = requireAdminRole({ roles: [] });
       await middleware(req, res, next);
 
       // updateActivityが失敗してもnextは呼ばれる
+      expect(next).toHaveBeenCalledWith();
+    });
+  });
+
+  describe('TOTP検証チェック', () => {
+    it('TOTP有効ユーザーで検証済みの場合は許可される', async () => {
+      const mockSession = {
+        id: 'session-1',
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        adminUser: {
+          id: 'admin-1',
+          email: 'admin@example.com',
+          name: 'Test Admin',
+          role: AdminRoleType.ADMIN,
+          totpEnabled: true,
+        },
+      };
+      mockSessionService.validateSession.mockResolvedValue(mockSession);
+      mockSessionService.updateActivity.mockResolvedValue(undefined);
+      mockIsAdminTotpVerified.mockResolvedValue(true);
+
+      const req = createMockReq({
+        cookies: { admin_session: 'valid-token' },
+      });
+      const res = createMockRes();
+      const next = createMockNext();
+
+      const middleware = requireAdminAuth();
+      await middleware(req, res, next);
+
+      expect(mockIsAdminTotpVerified).toHaveBeenCalledWith('session-1');
+      expect(next).toHaveBeenCalledWith();
+    });
+
+    it('TOTP有効ユーザーで未検証の場合はAuthenticationError', async () => {
+      const mockSession = {
+        id: 'session-1',
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        adminUser: {
+          id: 'admin-1',
+          email: 'admin@example.com',
+          name: 'Test Admin',
+          role: AdminRoleType.ADMIN,
+          totpEnabled: true,
+        },
+      };
+      mockSessionService.validateSession.mockResolvedValue(mockSession);
+      mockIsAdminTotpVerified.mockResolvedValue(false);
+
+      const req = createMockReq({
+        cookies: { admin_session: 'valid-token' },
+      });
+      const res = createMockRes();
+      const next = createMockNext();
+
+      const middleware = requireAdminAuth();
+      await middleware(req, res, next);
+
+      expect(next).toHaveBeenCalledWith(expect.any(AuthenticationError));
+      const error = (next as ReturnType<typeof vi.fn>).mock.calls[0][0];
+      expect(error.message).toBe('2要素認証の検証が必要です');
+    });
+
+    it('skipTotpCheck=trueの場合、TOTP未検証でも許可される', async () => {
+      const mockSession = {
+        id: 'session-1',
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        adminUser: {
+          id: 'admin-1',
+          email: 'admin@example.com',
+          name: 'Test Admin',
+          role: AdminRoleType.ADMIN,
+          totpEnabled: true,
+        },
+      };
+      mockSessionService.validateSession.mockResolvedValue(mockSession);
+      mockSessionService.updateActivity.mockResolvedValue(undefined);
+
+      const req = createMockReq({
+        cookies: { admin_session: 'valid-token' },
+      });
+      const res = createMockRes();
+      const next = createMockNext();
+
+      const middleware = requireAdminAuthSkipTotp();
+      await middleware(req, res, next);
+
+      expect(mockIsAdminTotpVerified).not.toHaveBeenCalled();
+      expect(next).toHaveBeenCalledWith();
+    });
+
+    it('TOTP無効ユーザーの場合、TOTP検証チェックはスキップされる', async () => {
+      const mockSession = {
+        id: 'session-1',
+        createdAt: new Date(),
+        expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+        adminUser: {
+          id: 'admin-1',
+          email: 'admin@example.com',
+          name: 'Test Admin',
+          role: AdminRoleType.ADMIN,
+          totpEnabled: false,
+        },
+      };
+      mockSessionService.validateSession.mockResolvedValue(mockSession);
+      mockSessionService.updateActivity.mockResolvedValue(undefined);
+
+      const req = createMockReq({
+        cookies: { admin_session: 'valid-token' },
+      });
+      const res = createMockRes();
+      const next = createMockNext();
+
+      const middleware = requireAdminAuth();
+      await middleware(req, res, next);
+
+      expect(mockIsAdminTotpVerified).not.toHaveBeenCalled();
       expect(next).toHaveBeenCalledWith();
     });
   });

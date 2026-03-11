@@ -40,6 +40,7 @@ export const KEY_PREFIX = {
   ADMIN_AUDIT_LOGS: 'admin:audit-logs:',
   SYSTEM_ADMINS: 'admin:system-admins:',
   SYSTEM_ADMIN_DETAIL: 'admin:system-admin:detail:',
+  ADMIN_TOTP_VERIFIED: 'admin:totp-verified:',
 } as const;
 
 // Redis未設定時の警告メッセージ（開発環境用）

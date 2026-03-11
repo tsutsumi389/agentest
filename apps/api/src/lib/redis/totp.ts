@@ -143,6 +143,60 @@ export async function isTotpCodeUsed(
 }
 
 // ============================================
+// 管理者TOTP検証済みフラグ（2FAバイパス対策）
+// ============================================
+
+// セッション最大有効期間（8時間）に合わせたTTL
+const TOTP_VERIFIED_TTL = 8 * 60 * 60;
+
+/**
+ * 管理者セッションをTOTP検証済みとしてマーク
+ * @param sessionId 管理者セッションID
+ */
+export async function setAdminTotpVerified(
+  sessionId: string
+): Promise<boolean> {
+  requireRedisInProduction();
+
+  const redis = getRedisClient();
+  if (!redis) {
+    return false;
+  }
+
+  try {
+    const key = `${KEY_PREFIX.ADMIN_TOTP_VERIFIED}${sessionId}`;
+    await redis.setex(key, TOTP_VERIFIED_TTL, '1');
+    return true;
+  } catch (error) {
+    logger.error({ err: error, sessionId }, '管理者TOTP検証済みフラグの設定に失敗');
+    return false;
+  }
+}
+
+/**
+ * 管理者セッションがTOTP検証済みかどうかを確認
+ * @param sessionId 管理者セッションID
+ */
+export async function isAdminTotpVerified(
+  sessionId: string
+): Promise<boolean> {
+  const redis = getRedisClient();
+  if (!redis) {
+    // Redis未設定時はfalseを返す（安全側: TOTP検証を要求）
+    return false;
+  }
+
+  try {
+    const key = `${KEY_PREFIX.ADMIN_TOTP_VERIFIED}${sessionId}`;
+    const result = await redis.exists(key);
+    return result === 1;
+  } catch (error) {
+    logger.error({ err: error, sessionId }, '管理者TOTP検証済み確認に失敗');
+    return false;
+  }
+}
+
+// ============================================
 // ユーザーTOTP関連
 // ============================================
 

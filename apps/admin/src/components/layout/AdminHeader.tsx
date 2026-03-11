@@ -24,8 +24,8 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
     try {
       await logout();
       navigate('/login');
-    } catch (error) {
-      console.error('ログアウトに失敗しました', error);
+    } catch {
+      // ログアウト失敗時はボタンを再度有効化
       setIsLoggingOut(false);
     }
   };
