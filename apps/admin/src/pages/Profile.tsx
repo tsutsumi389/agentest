@@ -246,7 +246,7 @@ function TwoFactorSection({ totpEnabled }: { totpEnabled: boolean }) {
 
 function TwoFactorDisabled() {
   const [step, setStep] = useState<'idle' | 'setup' | 'verify'>('idle');
-  const [qrData, setQrData] = useState<{ qrCodeUrl: string; secret: string } | null>(null);
+  const [qrData, setQrData] = useState<{ qrCodeDataUrl: string; secret: string } | null>(null);
   const [code, setCode] = useState('');
   const { mutate: setup, isLoading: isSettingUp, error: setupError } = useSetup2FA();
   const { mutate: enable, isLoading: isEnabling, error: enableError } = useEnable2FA();
@@ -304,7 +304,7 @@ function TwoFactorDisabled() {
       {qrData && (
         <div className="space-y-3">
           <div className="bg-white p-4 rounded-lg inline-block">
-            <img src={qrData.qrCodeUrl} alt="2FA QRコード" className="w-48 h-48" />
+            <img src={qrData.qrCodeDataUrl} alt="2FA QRコード" className="w-48 h-48" />
           </div>
           <div>
             <p className="text-xs text-foreground-muted mb-1">手動入力用シークレットキー:</p>

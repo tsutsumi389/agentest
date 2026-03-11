@@ -212,7 +212,7 @@ export const adminProfileApi = {
    * 2FAセットアップ開始
    */
   setup2FA: () =>
-    api.post<{ qrCodeUrl: string; secret: string }>('/admin/auth/2fa/setup'),
+    api.post<{ qrCodeDataUrl: string; secret: string }>('/admin/auth/2fa/setup'),
 
   /**
    * 2FA有効化
