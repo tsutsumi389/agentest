@@ -177,6 +177,74 @@ export class AdminAuthService {
   }
 
   /**
+   * プロフィール更新（名前変更）
+   */
+  async updateProfile(
+    adminUserId: string,
+    name: string,
+    ipAddress?: string,
+    userAgent?: string
+  ) {
+    const updated = await this.userRepo.updateName(adminUserId, name);
+
+    await this.auditLogService.log({
+      adminUserId,
+      action: 'PROFILE_UPDATED',
+      details: { name },
+      ipAddress,
+      userAgent,
+    });
+
+    return updated;
+  }
+
+  /**
+   * パスワード変更（現在のパスワード検証付き）
+   */
+  async changePassword(
+    adminUserId: string,
+    currentPassword: string,
+    newPassword: string,
+    ipAddress?: string,
+    userAgent?: string,
+    currentSessionId?: string
+  ): Promise<void> {
+    const user = await this.userRepo.findByIdWithPassword(adminUserId);
+    if (!user) {
+      throw new AuthenticationError('認証情報が無効です');
+    }
+
+    // 現在のパスワードを検証
+    const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isValid) {
+      await this.auditLogService.log({
+        adminUserId,
+        action: 'PASSWORD_CHANGE_FAILED',
+        details: { reason: 'invalid_current_password' },
+        ipAddress,
+        userAgent,
+      });
+      throw new AuthenticationError('現在のパスワードが正しくありません');
+    }
+
+    // 新しいパスワードをハッシュ化して更新
+    const passwordHash = await bcrypt.hash(newPassword, BCRYPT_ROUNDS);
+    await this.userRepo.updatePassword(adminUserId, passwordHash);
+
+    // 現在のセッション以外を全て失効
+    if (currentSessionId) {
+      await this.sessionService.revokeAllSessionsExcept(adminUserId, currentSessionId);
+    }
+
+    await this.auditLogService.log({
+      adminUserId,
+      action: 'PASSWORD_CHANGED',
+      ipAddress,
+      userAgent,
+    });
+  }
+
+  /**
    * セッション延長処理
    */
   async refreshSession(

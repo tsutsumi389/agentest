@@ -165,6 +165,13 @@ export class AdminSessionService {
   }
 
   /**
+   * 指定セッション以外の全セッションを失効（パスワード変更時用）
+   */
+  async revokeAllSessionsExcept(adminUserId: string, excludeSessionId: string): Promise<void> {
+    await this.sessionRepo.revokeAllByUserIdExcept(adminUserId, excludeSessionId);
+  }
+
+  /**
    * セッションの最終活動時刻を更新
    */
   async updateActivity(sessionId: string): Promise<void> {

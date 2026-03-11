@@ -132,6 +132,33 @@ export class AdminUserRepository {
   }
 
   /**
+   * 名前を更新
+   */
+  async updateName(id: string, name: string) {
+    return prisma.adminUser.update({
+      where: { id },
+      data: { name },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        totpEnabled: true,
+      },
+    });
+  }
+
+  /**
+   * パスワードハッシュを更新
+   */
+  async updatePassword(id: string, passwordHash: string): Promise<void> {
+    await prisma.adminUser.update({
+      where: { id },
+      data: { passwordHash },
+    });
+  }
+
+  /**
    * TOTP秘密鍵を取得（検証用）
    * @param id 管理者ユーザーID
    * @returns TOTP秘密鍵またはnull

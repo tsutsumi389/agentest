@@ -8,6 +8,7 @@ import { OrganizationDetail } from './pages/OrganizationDetail';
 import { AuditLogs } from './pages/AuditLogs';
 import { SystemAdmins } from './pages/SystemAdmins';
 import { SystemAdminDetail } from './pages/SystemAdminDetail';
+import { Profile } from './pages/Profile';
 import { LoginPage } from './pages/auth/Login';
 import { TwoFactorAuthPage } from './pages/auth/TwoFactorAuth';
 import { AcceptInvitationPage } from './pages/auth/AcceptInvitation';
@@ -62,6 +63,7 @@ export function App() {
             <Route path="/audit-logs" element={<AuditLogs />} />
             <Route path="/system-admins" element={<SystemAdmins />} />
             <Route path="/system-admins/:id" element={<SystemAdminDetail />} />
+            <Route path="/profile" element={<Profile />} />
           </Route>
 
           {/* その他のルートはダッシュボードにリダイレクト */}

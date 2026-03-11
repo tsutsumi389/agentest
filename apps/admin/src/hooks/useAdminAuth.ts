@@ -15,6 +15,7 @@ export function useAdminAuth() {
   const login = useAdminAuthStore((state) => state.login);
   const verify2FA = useAdminAuthStore((state) => state.verify2FA);
   const logout = useAdminAuthStore((state) => state.logout);
+  const updateAdmin = useAdminAuthStore((state) => state.updateAdmin);
   const clearError = useAdminAuthStore((state) => state.clearError);
 
   return {
@@ -30,6 +31,7 @@ export function useAdminAuth() {
     login,
     verify2FA,
     logout,
+    updateAdmin,
     clearError,
   };
 }

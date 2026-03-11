@@ -25,6 +25,8 @@ interface AdminAuthState {
   verify2FA: (code: string) => Promise<void>;
   /** ログアウト */
   logout: () => Promise<void>;
+  /** 管理者情報を更新 */
+  updateAdmin: (admin: AdminUser) => void;
   /** エラーをクリア */
   clearError: () => void;
 }
@@ -152,6 +154,13 @@ export const useAdminAuthStore = create<AdminAuthState>((set) => ({
         error: null,
       });
     }
+  },
+
+  /**
+   * 管理者情報を更新（プロフィール変更後にストアを同期）
+   */
+  updateAdmin: (admin: AdminUser) => {
+    set({ admin });
   },
 
   /**

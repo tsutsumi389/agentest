@@ -70,12 +70,19 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
             </nav>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-foreground-muted hidden sm:inline">
-              {admin?.name ?? '管理者'}
-            </span>
-            <div className="w-8 h-8 rounded-full bg-accent-muted flex items-center justify-center">
-              <span className="text-sm font-medium text-accent">A</span>
-            </div>
+            <Link
+              to="/profile"
+              className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+            >
+              <span className="text-sm text-foreground-muted hidden sm:inline">
+                {admin?.name ?? '管理者'}
+              </span>
+              <div className="w-8 h-8 rounded-full bg-accent-muted flex items-center justify-center">
+                <span className="text-sm font-medium text-accent">
+                  {admin?.name?.charAt(0).toUpperCase() ?? 'A'}
+                </span>
+              </div>
+            </Link>
             <button
               onClick={handleLogout}
               disabled={isLoggingOut}
