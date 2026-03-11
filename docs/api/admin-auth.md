@@ -24,6 +24,8 @@
 | POST | `/admin/auth/2fa/enable` | 2FA 有効化 |
 | POST | `/admin/auth/2fa/verify` | 2FA 検証 |
 | POST | `/admin/auth/2fa/disable` | 2FA 無効化 |
+| PATCH | `/admin/auth/profile` | プロフィール更新 |
+| PUT | `/admin/auth/password` | パスワード変更 |
 | POST | `/admin/auth/password-reset/request` | パスワードリセット要求 |
 | POST | `/admin/auth/password-reset/reset` | パスワードリセット実行 |
 
@@ -174,6 +176,99 @@ Cookie に `admin_session` が必要。
   }
 }
 ```
+
+---
+
+## プロフィール エンドポイント
+
+### プロフィール更新
+
+```
+PATCH /admin/auth/profile
+```
+
+表示名を更新。
+
+**Headers:**
+
+Cookie に `admin_session` が必要。
+
+**Request:**
+
+```json
+{
+  "name": "新しい名前"
+}
+```
+
+| パラメータ | 必須 | 型 | 説明 |
+|-----------|------|-----|------|
+| `name` | Yes | string | 表示名（1-100文字、前後の空白はトリムされる） |
+
+**Response:**
+
+```json
+{
+  "data": {
+    "admin": {
+      "id": "uuid-1234",
+      "email": "admin@example.com",
+      "name": "新しい名前",
+      "role": "ADMIN",
+      "totpEnabled": true,
+      "createdAt": "2024-01-01T00:00:00Z"
+    }
+  }
+}
+```
+
+**監査ログ:** `PROFILE_UPDATED`
+
+---
+
+### パスワード変更
+
+```
+PUT /admin/auth/password
+```
+
+現在のパスワードを検証した上で新しいパスワードに変更。成功時、現在のセッション以外の全セッションが無効化される。
+
+**Headers:**
+
+Cookie に `admin_session` が必要。
+
+**Request:**
+
+```json
+{
+  "currentPassword": "OldPassword123!",
+  "newPassword": "NewPassword456!"
+}
+```
+
+| パラメータ | 必須 | 型 | 説明 |
+|-----------|------|-----|------|
+| `currentPassword` | Yes | string | 現在のパスワード |
+| `newPassword` | Yes | string | 新しいパスワード（8文字以上、大文字・小文字・数字・記号を各1文字以上） |
+
+**Response:**
+
+```json
+{
+  "data": {
+    "message": "パスワードを変更しました"
+  }
+}
+```
+
+**Errors:**
+
+| コード | HTTP | 説明 |
+|-------|------|------|
+| `ADMIN_INVALID_CREDENTIALS` | 401 | 現在のパスワードが無効 |
+
+**監査ログ:** 成功時 `PASSWORD_CHANGED`、失敗時 `PASSWORD_CHANGE_FAILED`
 
 ---
 
@@ -535,6 +630,28 @@ await fetch('/admin/auth/password-reset/reset', {
   body: JSON.stringify({
     token: 'reset-token-from-email',
     password: 'NewPassword123!'
+  })
+});
+
+// プロフィール更新
+const profileResponse = await fetch('/admin/auth/profile', {
+  method: 'PATCH',
+  headers: { 'Content-Type': 'application/json' },
+  credentials: 'include',
+  body: JSON.stringify({
+    name: '新しい名前'
+  })
+});
+const { data: { admin } } = await profileResponse.json();
+
+// パスワード変更
+await fetch('/admin/auth/password', {
+  method: 'PUT',
+  headers: { 'Content-Type': 'application/json' },
+  credentials: 'include',
+  body: JSON.stringify({
+    currentPassword: 'OldPassword123!',
+    newPassword: 'NewPassword456!'
   })
 });
 
