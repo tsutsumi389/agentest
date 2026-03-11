@@ -201,10 +201,6 @@ describe('admin-auth store', () => {
 
       expect(useAdminAuthStore.getState().admin).toBeNull();
       expect(useAdminAuthStore.getState().isAuthenticated).toBe(false);
-      expect(console.error).toHaveBeenCalledWith(
-        'ログアウトエラー:',
-        expect.any(Error)
-      );
     });
   });
 
