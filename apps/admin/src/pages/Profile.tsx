@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Loader2, Check, AlertCircle, Shield, ShieldOff, QrCode } from 'lucide-react';
+import { checkPasswordRequirements, allPasswordRequirementsMet } from '@agentest/shared/validators';
 import { useAdminAuth } from '../hooks/useAdminAuth';
 import {
   useUpdateProfile,
@@ -110,8 +111,10 @@ function PasswordSection() {
   const [success, setSuccess] = useState(false);
   const { mutate, isLoading, error } = useChangePassword();
 
+  const passwordRequirements = checkPasswordRequirements(newPassword);
+  const isPasswordStrong = allPasswordRequirementsMet(passwordRequirements);
   const passwordMismatch = confirmPassword !== '' && newPassword !== confirmPassword;
-  const canSubmit = currentPassword !== '' && newPassword !== '' && confirmPassword !== '' && !passwordMismatch;
+  const canSubmit = currentPassword !== '' && isPasswordStrong && confirmPassword === newPassword;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -159,9 +162,29 @@ function PasswordSection() {
             autoComplete="new-password"
             required
           />
-          <p className="text-xs text-foreground-muted mt-1">
-            8文字以上、大文字・小文字・数字・記号を含む
-          </p>
+          {newPassword === '' ? (
+            <p className="text-xs text-foreground-muted mt-1">
+              8文字以上、大文字・小文字・数字・記号を含む
+            </p>
+          ) : (
+            <ul className="text-xs mt-1 space-y-0.5">
+              <li className={passwordRequirements.minLength ? 'text-success' : 'text-error'}>
+                {passwordRequirements.minLength ? '✓' : '×'} 8文字以上
+              </li>
+              <li className={passwordRequirements.hasUppercase ? 'text-success' : 'text-error'}>
+                {passwordRequirements.hasUppercase ? '✓' : '×'} 大文字を含む
+              </li>
+              <li className={passwordRequirements.hasLowercase ? 'text-success' : 'text-error'}>
+                {passwordRequirements.hasLowercase ? '✓' : '×'} 小文字を含む
+              </li>
+              <li className={passwordRequirements.hasNumber ? 'text-success' : 'text-error'}>
+                {passwordRequirements.hasNumber ? '✓' : '×'} 数字を含む
+              </li>
+              <li className={passwordRequirements.hasSymbol ? 'text-success' : 'text-error'}>
+                {passwordRequirements.hasSymbol ? '✓' : '×'} 記号を含む
+              </li>
+            </ul>
+          )}
         </div>
         <div>
           <label htmlFor="confirmPassword" className="block text-sm font-medium text-foreground-muted mb-1">

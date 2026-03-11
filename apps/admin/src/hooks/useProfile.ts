@@ -84,16 +84,16 @@ export function useEnable2FA() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const updateAdmin = useAdminAuthStore((state) => state.updateAdmin);
-  const admin = useAdminAuthStore((state) => state.admin);
 
   const mutate = async (code: string) => {
     setIsLoading(true);
     setError(null);
     try {
       await adminProfileApi.enable2FA(code);
-      // ストアの2FA状態を更新
-      if (admin) {
-        updateAdmin({ ...admin, totpEnabled: true });
+      // ストアの最新状態を取得して2FA状態を更新
+      const currentAdmin = useAdminAuthStore.getState().admin;
+      if (currentAdmin) {
+        updateAdmin({ ...currentAdmin, totpEnabled: true });
       }
     } catch (e) {
       const apiError = e instanceof ApiError ? e : new ApiError(500, 'UNKNOWN_ERROR', '2FA有効化に失敗しました');
@@ -114,16 +114,16 @@ export function useDisable2FA() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const updateAdmin = useAdminAuthStore((state) => state.updateAdmin);
-  const admin = useAdminAuthStore((state) => state.admin);
 
   const mutate = async (password: string) => {
     setIsLoading(true);
     setError(null);
     try {
       await adminProfileApi.disable2FA(password);
-      // ストアの2FA状態を更新
-      if (admin) {
-        updateAdmin({ ...admin, totpEnabled: false });
+      // ストアの最新状態を取得して2FA状態を更新
+      const currentAdmin = useAdminAuthStore.getState().admin;
+      if (currentAdmin) {
+        updateAdmin({ ...currentAdmin, totpEnabled: false });
       }
     } catch (e) {
       const apiError = e instanceof ApiError ? e : new ApiError(500, 'UNKNOWN_ERROR', '2FA無効化に失敗しました');
