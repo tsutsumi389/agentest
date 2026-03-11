@@ -118,6 +118,12 @@ const api = {
 
   post: <T>(endpoint: string, body?: unknown, options?: RequestOptions) =>
     request<T>(endpoint, { ...options, method: 'POST', body }),
+
+  patch: <T>(endpoint: string, body?: unknown, options?: RequestOptions) =>
+    request<T>(endpoint, { ...options, method: 'PATCH', body }),
+
+  put: <T>(endpoint: string, body?: unknown, options?: RequestOptions) =>
+    request<T>(endpoint, { ...options, method: 'PUT', body }),
 };
 
 // ============================================
@@ -183,6 +189,42 @@ export const adminAuthApi = {
    */
   refresh: () =>
     api.post<{ expiresAt: string }>('/admin/auth/refresh'),
+};
+
+// ============================================
+// 管理者プロフィールAPI
+// ============================================
+
+export const adminProfileApi = {
+  /**
+   * プロフィール更新（名前変更）
+   */
+  updateProfile: (data: { name: string }) =>
+    api.patch<{ admin: AdminUser }>('/admin/auth/profile', data),
+
+  /**
+   * パスワード変更
+   */
+  changePassword: (data: { currentPassword: string; newPassword: string }) =>
+    api.put<{ message: string }>('/admin/auth/password', data),
+
+  /**
+   * 2FAセットアップ開始
+   */
+  setup2FA: () =>
+    api.post<{ qrCodeDataUrl: string; secret: string }>('/admin/auth/2fa/setup'),
+
+  /**
+   * 2FA有効化
+   */
+  enable2FA: (code: string) =>
+    api.post<{ message: string }>('/admin/auth/2fa/enable', { code }),
+
+  /**
+   * 2FA無効化
+   */
+  disable2FA: (password: string) =>
+    api.post<{ message: string }>('/admin/auth/2fa/disable', { password }),
 };
 
 // ============================================

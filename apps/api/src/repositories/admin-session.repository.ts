@@ -114,6 +114,20 @@ export class AdminSessionRepository {
   }
 
   /**
+   * 指定セッション以外の全セッションを失効（パスワード変更時用）
+   */
+  async revokeAllByUserIdExcept(adminUserId: string, excludeSessionId: string) {
+    return prisma.adminSession.updateMany({
+      where: {
+        adminUserId,
+        revokedAt: null,
+        id: { not: excludeSessionId },
+      },
+      data: { revokedAt: new Date() },
+    });
+  }
+
+  /**
    * 期限切れセッションを削除（クリーンアップ用）
    * 監査目的で30日間保持後に削除
    */

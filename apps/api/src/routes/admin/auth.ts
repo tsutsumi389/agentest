@@ -1,11 +1,13 @@
 import { Router } from 'express';
 import { AdminAuthController } from '../../controllers/admin/auth.controller.js';
+import { AdminProfileController } from '../../controllers/admin/profile.controller.js';
 import { AdminTotpController } from '../../controllers/admin/totp.controller.js';
 import { AdminPasswordResetController } from '../../controllers/admin/password-reset.controller.js';
 import { requireAdminAuth } from '../../middleware/require-admin-role.js';
 
 const router: Router = Router();
 const controller = new AdminAuthController();
+const profileController = new AdminProfileController();
 const totpController = new AdminTotpController();
 const passwordResetController = new AdminPasswordResetController();
 
@@ -48,6 +50,20 @@ router.get('/me', requireAdminAuth(), controller.me);
  * POST /admin/auth/refresh
  */
 router.post('/refresh', requireAdminAuth(), controller.refresh);
+
+// ==================== プロフィール ====================
+
+/**
+ * プロフィール更新（名前変更）
+ * PATCH /admin/auth/profile
+ */
+router.patch('/profile', requireAdminAuth(), profileController.updateProfile);
+
+/**
+ * パスワード変更
+ * PUT /admin/auth/password
+ */
+router.put('/password', requireAdminAuth(), profileController.changePassword);
 
 // ==================== 2FA (TOTP) エンドポイント ====================
 
