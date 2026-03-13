@@ -6,7 +6,7 @@ Coding Agent（Claude Code等）から使うテスト管理ツール（OSS）。
 
 - **Frontend**: React 19, React Router 7, Tailwind
 - **Backend**: Express 5, Prisma, PostgreSQL
-- **Infra**: Redis, MinIO, Docker（完全Docker開発）
+- **Infra**: Redis, RustFS, Docker（完全Docker開発）
 
 ## コマンド
 
