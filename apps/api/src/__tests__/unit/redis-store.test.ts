@@ -336,11 +336,23 @@ describe('redis-store', () => {
     });
 
     it('SCANでパターンマッチし全キャッシュを無効化する', async () => {
-      mockRedis.scan.mockResolvedValue(['0', ['admin:organizations:key1', 'admin:organizations:key2']]);
+      mockRedis.scan.mockResolvedValue([
+        '0',
+        ['admin:organizations:key1', 'admin:organizations:key2'],
+      ]);
       const result = await invalidateAdminOrganizationsCache();
       expect(result).toBe(true);
-      expect(mockRedis.scan).toHaveBeenCalledWith('0', 'MATCH', 'admin:organizations:*', 'COUNT', 100);
-      expect(mockRedis.del).toHaveBeenCalledWith('admin:organizations:key1', 'admin:organizations:key2');
+      expect(mockRedis.scan).toHaveBeenCalledWith(
+        '0',
+        'MATCH',
+        'admin:organizations:*',
+        'COUNT',
+        100
+      );
+      expect(mockRedis.del).toHaveBeenCalledWith(
+        'admin:organizations:key1',
+        'admin:organizations:key2'
+      );
     });
 
     it('SCANが複数イテレーションに分かれる場合も全キーを収集して削除する', async () => {
@@ -350,9 +362,26 @@ describe('redis-store', () => {
       const result = await invalidateAdminOrganizationsCache();
       expect(result).toBe(true);
       expect(mockRedis.scan).toHaveBeenCalledTimes(2);
-      expect(mockRedis.scan).toHaveBeenNthCalledWith(1, '0', 'MATCH', 'admin:organizations:*', 'COUNT', 100);
-      expect(mockRedis.scan).toHaveBeenNthCalledWith(2, '5', 'MATCH', 'admin:organizations:*', 'COUNT', 100);
-      expect(mockRedis.del).toHaveBeenCalledWith('admin:organizations:key1', 'admin:organizations:key2');
+      expect(mockRedis.scan).toHaveBeenNthCalledWith(
+        1,
+        '0',
+        'MATCH',
+        'admin:organizations:*',
+        'COUNT',
+        100
+      );
+      expect(mockRedis.scan).toHaveBeenNthCalledWith(
+        2,
+        '5',
+        'MATCH',
+        'admin:organizations:*',
+        'COUNT',
+        100
+      );
+      expect(mockRedis.del).toHaveBeenCalledWith(
+        'admin:organizations:key1',
+        'admin:organizations:key2'
+      );
     });
 
     it('キャッシュキーが0件の場合はdelを呼ばない', async () => {
@@ -420,7 +449,13 @@ describe('redis-store', () => {
     it('SCANでパターンマッチし全キャッシュを無効化する', async () => {
       mockRedis.scan.mockResolvedValue(['0', ['admin:system-admins:key1']]);
       await invalidateSystemAdminsCache();
-      expect(mockRedis.scan).toHaveBeenCalledWith('0', 'MATCH', 'admin:system-admins:*', 'COUNT', 100);
+      expect(mockRedis.scan).toHaveBeenCalledWith(
+        '0',
+        'MATCH',
+        'admin:system-admins:*',
+        'COUNT',
+        100
+      );
     });
   });
 

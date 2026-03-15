@@ -1,9 +1,5 @@
 import { api } from './client.js';
-import type {
-  Session,
-  RevokeSessionsResult,
-  Account,
-} from './types.js';
+import type { Session, RevokeSessionsResult, Account } from './types.js';
 
 // ============================================
 // セッションAPI
@@ -53,8 +49,6 @@ export const passwordApi = {
     api.post<{ message: string }>(`/api/users/${userId}/password`, data),
 
   // パスワードを変更
-  changePassword: (
-    userId: string,
-    data: { currentPassword: string; newPassword: string },
-  ) => api.put<{ message: string }>(`/api/users/${userId}/password`, data),
+  changePassword: (userId: string, data: { currentPassword: string; newPassword: string }) =>
+    api.put<{ message: string }>(`/api/users/${userId}/password`, data),
 };

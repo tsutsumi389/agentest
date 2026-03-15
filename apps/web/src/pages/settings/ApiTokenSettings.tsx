@@ -1,5 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Key, Loader2, X, AlertTriangle, Plus, Copy, Check, Trash2, Eye, EyeOff } from 'lucide-react';
+import {
+  Key,
+  Loader2,
+  X,
+  AlertTriangle,
+  Plus,
+  Copy,
+  Check,
+  Trash2,
+  Eye,
+  EyeOff,
+} from 'lucide-react';
 import { toast } from '../../stores/toast';
 import { ApiError, apiTokensApi, type ApiToken, type CreatedApiToken } from '../../lib/api';
 
@@ -54,11 +65,7 @@ function ConfirmDialog({
       }}
     >
       {/* オーバーレイ */}
-      <div
-        className="absolute inset-0 bg-black/50"
-        onClick={onCancel}
-        role="presentation"
-      />
+      <div className="absolute inset-0 bg-black/50" onClick={onCancel} role="presentation" />
       {/* ダイアログ */}
       <div className="relative bg-background border border-border rounded-lg shadow-lg max-w-md w-full mx-4 p-6">
         <div className="flex items-start gap-4">
@@ -66,7 +73,9 @@ function ConfirmDialog({
             <AlertTriangle className="w-5 h-5 text-warning" />
           </div>
           <div className="flex-1">
-            <h3 id="confirm-dialog-title" className="text-lg font-semibold text-foreground">{title}</h3>
+            <h3 id="confirm-dialog-title" className="text-lg font-semibold text-foreground">
+              {title}
+            </h3>
             <p className="text-sm text-foreground-muted mt-1">{message}</p>
           </div>
           <button
@@ -78,18 +87,10 @@ function ConfirmDialog({
           </button>
         </div>
         <div className="flex justify-end gap-2 mt-6">
-          <button
-            className="btn btn-ghost"
-            onClick={onCancel}
-            disabled={isLoading}
-          >
+          <button className="btn btn-ghost" onClick={onCancel} disabled={isLoading}>
             キャンセル
           </button>
-          <button
-            className="btn btn-danger"
-            onClick={onConfirm}
-            disabled={isLoading}
-          >
+          <button className="btn btn-danger" onClick={onConfirm} disabled={isLoading}>
             {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
             {confirmLabel}
           </button>
@@ -102,13 +103,7 @@ function ConfirmDialog({
 /**
  * 新規作成されたトークン表示
  */
-function NewTokenDisplay({
-  token,
-  onClose,
-}: {
-  token: CreatedApiToken;
-  onClose: () => void;
-}) {
+function NewTokenDisplay({ token, onClose }: { token: CreatedApiToken; onClose: () => void }) {
   const [copied, setCopied] = useState(false);
   const [showToken, setShowToken] = useState(false);
 
@@ -130,10 +125,7 @@ function NewTokenDisplay({
           <Key className="w-5 h-5 text-success" />
           <span className="font-medium text-success">トークンが作成されました</span>
         </div>
-        <button
-          onClick={onClose}
-          className="text-foreground-muted hover:text-foreground"
-        >
+        <button onClick={onClose} className="text-foreground-muted hover:text-foreground">
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -151,16 +143,8 @@ function NewTokenDisplay({
         >
           {showToken ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
         </button>
-        <button
-          onClick={handleCopy}
-          className="btn btn-ghost btn-sm"
-          title="コピー"
-        >
-          {copied ? (
-            <Check className="w-4 h-4 text-success" />
-          ) : (
-            <Copy className="w-4 h-4" />
-          )}
+        <button onClick={handleCopy} className="btn btn-ghost btn-sm" title="コピー">
+          {copied ? <Check className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
         </button>
       </div>
     </div>
@@ -182,21 +166,23 @@ function TokenItem({
   isRevoked?: boolean;
 }) {
   return (
-    <div className={`flex items-center justify-between p-4 rounded-lg border ${
-      isRevoked ? 'border-border bg-background-tertiary' : 'border-border bg-background-secondary'
-    }`}>
+    <div
+      className={`flex items-center justify-between p-4 rounded-lg border ${
+        isRevoked ? 'border-border bg-background-tertiary' : 'border-border bg-background-secondary'
+      }`}
+    >
       <div className="flex items-center gap-4">
-        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-          isRevoked ? 'bg-background text-foreground-subtle' : 'bg-accent-subtle text-accent'
-        }`}>
+        <div
+          className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+            isRevoked ? 'bg-background text-foreground-subtle' : 'bg-accent-subtle text-accent'
+          }`}
+        >
           <Key className="w-5 h-5" />
         </div>
         <div>
           <div className="flex items-center gap-2">
             <span className="font-medium text-foreground">{token.name}</span>
-            {isRevoked && (
-              <span className="badge badge-ghost text-xs">失効済み</span>
-            )}
+            {isRevoked && <span className="badge badge-ghost text-xs">失効済み</span>}
           </div>
           <div className="text-sm text-foreground-muted mt-0.5 flex items-center gap-2">
             <code className="text-xs bg-background-tertiary px-1.5 py-0.5 rounded">
@@ -297,9 +283,7 @@ function CreateTokenModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              有効期限
-            </label>
+            <label className="block text-sm font-medium text-foreground mb-1">有効期限</label>
             <div className="flex items-center gap-4">
               <select
                 value={expiresInDays}
@@ -327,19 +311,10 @@ function CreateTokenModal({
           </div>
 
           <div className="flex justify-end gap-2 pt-4">
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={onClose}
-              disabled={isCreating}
-            >
+            <button type="button" className="btn btn-ghost" onClick={onClose} disabled={isCreating}>
               キャンセル
             </button>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={isCreating || !name.trim()}
-            >
+            <button type="submit" className="btn btn-primary" disabled={isCreating || !name.trim()}>
               {isCreating && <Loader2 className="w-4 h-4 animate-spin" />}
               作成
             </button>
@@ -360,7 +335,9 @@ export function ApiTokenSettings() {
   const [revokingTokenId, setRevokingTokenId] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newlyCreatedToken, setNewlyCreatedToken] = useState<CreatedApiToken | null>(null);
-  const [confirmDialog, setConfirmDialog] = useState<{ tokenId: string; tokenName: string } | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ tokenId: string; tokenName: string } | null>(
+    null
+  );
 
   // トークン一覧を取得
   const fetchTokens = useCallback(async () => {
@@ -409,9 +386,9 @@ export function ApiTokenSettings() {
     try {
       await apiTokensApi.revoke(tokenId);
       toast.success('APIトークンを失効しました');
-      setTokens((prev) => prev.map((t) =>
-        t.id === tokenId ? { ...t, revokedAt: new Date().toISOString() } : t
-      ));
+      setTokens((prev) =>
+        prev.map((t) => (t.id === tokenId ? { ...t, revokedAt: new Date().toISOString() } : t))
+      );
     } catch (error) {
       if (error instanceof ApiError) {
         toast.error(error.message);
@@ -440,10 +417,7 @@ export function ApiTokenSettings() {
               MCPサーバーやCI/CDパイプラインからアクセスするためのAPIトークンを管理します。
             </p>
           </div>
-          <button
-            className="btn btn-primary"
-            onClick={() => setShowCreateModal(true)}
-          >
+          <button className="btn btn-primary" onClick={() => setShowCreateModal(true)}>
             <Plus className="w-4 h-4" />
             新しいトークンを生成
           </button>
@@ -451,10 +425,7 @@ export function ApiTokenSettings() {
 
         {/* 新規作成されたトークン表示 */}
         {newlyCreatedToken && (
-          <NewTokenDisplay
-            token={newlyCreatedToken}
-            onClose={() => setNewlyCreatedToken(null)}
-          />
+          <NewTokenDisplay token={newlyCreatedToken} onClose={() => setNewlyCreatedToken(null)} />
         )}
 
         {/* トークン一覧 */}
@@ -486,11 +457,7 @@ export function ApiTokenSettings() {
           <h3 className="text-sm font-medium text-foreground-muted mb-4">失効済みトークン</h3>
           <div className="space-y-3 opacity-60">
             {revokedTokens.map((token) => (
-              <TokenItem
-                key={token.id}
-                token={token}
-                isRevoked
-              />
+              <TokenItem key={token.id} token={token} isRevoked />
             ))}
           </div>
         </div>

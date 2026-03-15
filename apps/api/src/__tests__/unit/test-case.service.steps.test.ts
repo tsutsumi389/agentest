@@ -3,18 +3,54 @@ import { NotFoundError, BadRequestError } from '@agentest/shared';
 
 // トランザクション内モック
 const mockTx = vi.hoisted(() => ({
-  testCasePrecondition: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
-  testCaseStep: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
-  testCaseExpectedResult: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
+  testCasePrecondition: {
+    findFirst: vi.fn(),
+    findMany: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
+  testCaseStep: {
+    findFirst: vi.fn(),
+    findMany: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
+  testCaseExpectedResult: {
+    findFirst: vi.fn(),
+    findMany: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
   testCaseHistory: { create: vi.fn() },
   testCase: { findUnique: vi.fn(), update: vi.fn() },
   user: { findUnique: vi.fn() },
 }));
 
 const mockPrisma = vi.hoisted(() => ({
-  testCasePrecondition: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
-  testCaseStep: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
-  testCaseExpectedResult: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
+  testCasePrecondition: {
+    findMany: vi.fn(),
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
+  testCaseStep: {
+    findMany: vi.fn(),
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
+  testCaseExpectedResult: {
+    findMany: vi.fn(),
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
   testCaseHistory: { create: vi.fn() },
   testCase: { findUnique: vi.fn(), update: vi.fn() },
   $transaction: vi.fn((fn: (tx: typeof mockTx) => Promise<unknown>) => fn(mockTx)),
@@ -38,7 +74,12 @@ vi.mock('../../lib/redis-publisher.js', () => ({ publishDashboardUpdated: vi.fn(
 vi.mock('../../lib/events.js', () => ({ publishTestCaseUpdated: vi.fn() }));
 
 import { TestCaseService } from '../../services/test-case.service.js';
-import { TEST_USER_ID, TEST_CASE_ID, STEP_ID, createMockTestCase } from './test-case.service.test-helpers.js';
+import {
+  TEST_USER_ID,
+  TEST_CASE_ID,
+  STEP_ID,
+  createMockTestCase,
+} from './test-case.service.test-helpers.js';
 
 describe('TestCaseService（ステップCRUD）', () => {
   let service: TestCaseService;
@@ -54,9 +95,7 @@ describe('TestCaseService（ステップCRUD）', () => {
 
   describe('getSteps', () => {
     it('ステップ一覧を取得できる', async () => {
-      const mockItems = [
-        { id: 's1', content: 'ステップ1', orderKey: '00001' },
-      ];
+      const mockItems = [{ id: 's1', content: 'ステップ1', orderKey: '00001' }];
       mockPrisma.testCaseStep.findMany.mockResolvedValue(mockItems);
 
       const result = await service.getSteps(TEST_CASE_ID);
@@ -77,7 +116,12 @@ describe('TestCaseService（ステップCRUD）', () => {
 
   describe('addStep', () => {
     it('ステップを追加できる', async () => {
-      const mockCreated = { id: STEP_ID, content: '新ステップ', orderKey: '00001', testCaseId: TEST_CASE_ID };
+      const mockCreated = {
+        id: STEP_ID,
+        content: '新ステップ',
+        orderKey: '00001',
+        testCaseId: TEST_CASE_ID,
+      };
       mockTx.testCaseStep.findFirst.mockResolvedValue(null);
       mockTx.testCaseStep.create.mockResolvedValue(mockCreated);
 
@@ -89,7 +133,11 @@ describe('TestCaseService（ステップCRUD）', () => {
 
     it('既存ステップがある場合はorderKeyを自動計算する', async () => {
       mockTx.testCaseStep.findFirst.mockResolvedValue({ orderKey: '00005' });
-      mockTx.testCaseStep.create.mockResolvedValue({ id: STEP_ID, content: 'ステップ', orderKey: '00006' });
+      mockTx.testCaseStep.create.mockResolvedValue({
+        id: STEP_ID,
+        content: 'ステップ',
+        orderKey: '00006',
+      });
 
       await service.addStep(TEST_CASE_ID, TEST_USER_ID, { content: 'ステップ' });
 
@@ -100,7 +148,11 @@ describe('TestCaseService（ステップCRUD）', () => {
 
     it('STEP_ADD履歴を記録する', async () => {
       mockTx.testCaseStep.findFirst.mockResolvedValue(null);
-      mockTx.testCaseStep.create.mockResolvedValue({ id: STEP_ID, content: 'ステップ', orderKey: '00001' });
+      mockTx.testCaseStep.create.mockResolvedValue({
+        id: STEP_ID,
+        content: 'ステップ',
+        orderKey: '00001',
+      });
 
       await service.addStep(TEST_CASE_ID, TEST_USER_ID, { content: 'ステップ' });
 
@@ -122,9 +174,15 @@ describe('TestCaseService（ステップCRUD）', () => {
         orderKey: '00001',
         testCaseId: TEST_CASE_ID,
       });
-      mockTx.testCaseStep.update.mockResolvedValue({ id: STEP_ID, content: '新ステップ', orderKey: '00001' });
+      mockTx.testCaseStep.update.mockResolvedValue({
+        id: STEP_ID,
+        content: '新ステップ',
+        orderKey: '00001',
+      });
 
-      const result = await service.updateStep(TEST_CASE_ID, STEP_ID, TEST_USER_ID, { content: '新ステップ' });
+      const result = await service.updateStep(TEST_CASE_ID, STEP_ID, TEST_USER_ID, {
+        content: '新ステップ',
+      });
 
       expect(result).toEqual(expect.objectContaining({ content: '新ステップ' }));
     });
@@ -161,7 +219,9 @@ describe('TestCaseService（ステップCRUD）', () => {
         testCaseId: TEST_CASE_ID,
       });
 
-      const result = await service.updateStep(TEST_CASE_ID, STEP_ID, TEST_USER_ID, { content: '同じ' });
+      const result = await service.updateStep(TEST_CASE_ID, STEP_ID, TEST_USER_ID, {
+        content: '同じ',
+      });
 
       expect(result.content).toBe('同じ');
       expect(mockPrisma.$transaction).not.toHaveBeenCalled();
@@ -242,9 +302,9 @@ describe('TestCaseService（ステップCRUD）', () => {
     it('ステップが存在しない場合はNotFoundErrorを投げる', async () => {
       mockPrisma.testCaseStep.findFirst.mockResolvedValue(null);
 
-      await expect(
-        service.deleteStep(TEST_CASE_ID, STEP_ID, TEST_USER_ID)
-      ).rejects.toThrow(NotFoundError);
+      await expect(service.deleteStep(TEST_CASE_ID, STEP_ID, TEST_USER_ID)).rejects.toThrow(
+        NotFoundError
+      );
     });
   });
 
@@ -254,12 +314,10 @@ describe('TestCaseService（ステップCRUD）', () => {
         { id: 's1', content: 'ステップ1', orderKey: '00001' },
         { id: 's2', content: 'ステップ2', orderKey: '00002' },
       ];
-      mockPrisma.testCaseStep.findMany
-        .mockResolvedValueOnce(existing)
-        .mockResolvedValueOnce([
-          { id: 's2', content: 'ステップ2', orderKey: '00001' },
-          { id: 's1', content: 'ステップ1', orderKey: '00002' },
-        ]);
+      mockPrisma.testCaseStep.findMany.mockResolvedValueOnce(existing).mockResolvedValueOnce([
+        { id: 's2', content: 'ステップ2', orderKey: '00001' },
+        { id: 's1', content: 'ステップ1', orderKey: '00002' },
+      ]);
 
       const result = await service.reorderSteps(TEST_CASE_ID, ['s2', 's1'], TEST_USER_ID);
 
@@ -272,9 +330,7 @@ describe('TestCaseService（ステップCRUD）', () => {
         { id: 's1', content: 'ステップ1', orderKey: '00001' },
         { id: 's2', content: 'ステップ2', orderKey: '00002' },
       ];
-      mockPrisma.testCaseStep.findMany
-        .mockResolvedValueOnce(existing)
-        .mockResolvedValueOnce([]);
+      mockPrisma.testCaseStep.findMany.mockResolvedValueOnce(existing).mockResolvedValueOnce([]);
 
       await service.reorderSteps(TEST_CASE_ID, ['s2', 's1'], TEST_USER_ID);
 
@@ -292,9 +348,7 @@ describe('TestCaseService（ステップCRUD）', () => {
     });
 
     it('順序が同じ場合は更新をスキップする', async () => {
-      const existing = [
-        { id: 's1', content: 'ステップ1', orderKey: '00001' },
-      ];
+      const existing = [{ id: 's1', content: 'ステップ1', orderKey: '00001' }];
       mockPrisma.testCaseStep.findMany.mockResolvedValue(existing);
 
       const result = await service.reorderSteps(TEST_CASE_ID, ['s1'], TEST_USER_ID);
@@ -309,9 +363,9 @@ describe('TestCaseService（ステップCRUD）', () => {
         { id: 's2', content: 'ステップ2', orderKey: '00002' },
       ]);
 
-      await expect(
-        service.reorderSteps(TEST_CASE_ID, ['s1', 's1'], TEST_USER_ID)
-      ).rejects.toThrow(BadRequestError);
+      await expect(service.reorderSteps(TEST_CASE_ID, ['s1', 's1'], TEST_USER_ID)).rejects.toThrow(
+        BadRequestError
+      );
     });
 
     it('件数不一致の場合はBadRequestErrorを投げる', async () => {
@@ -320,9 +374,9 @@ describe('TestCaseService（ステップCRUD）', () => {
         { id: 's2', content: 'ステップ2', orderKey: '00002' },
       ]);
 
-      await expect(
-        service.reorderSteps(TEST_CASE_ID, ['s1'], TEST_USER_ID)
-      ).rejects.toThrow(BadRequestError);
+      await expect(service.reorderSteps(TEST_CASE_ID, ['s1'], TEST_USER_ID)).rejects.toThrow(
+        BadRequestError
+      );
     });
 
     it('存在しないIDの場合はNotFoundErrorを投げる', async () => {
@@ -330,9 +384,9 @@ describe('TestCaseService（ステップCRUD）', () => {
         { id: 's1', content: 'ステップ1', orderKey: '00001' },
       ]);
 
-      await expect(
-        service.reorderSteps(TEST_CASE_ID, ['s-unknown'], TEST_USER_ID)
-      ).rejects.toThrow(NotFoundError);
+      await expect(service.reorderSteps(TEST_CASE_ID, ['s-unknown'], TEST_USER_ID)).rejects.toThrow(
+        NotFoundError
+      );
     });
   });
 });

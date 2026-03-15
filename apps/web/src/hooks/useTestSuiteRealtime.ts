@@ -2,7 +2,11 @@ import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { wsClient } from '../lib/ws';
 import { Channels } from '@agentest/ws-types';
-import type { TestSuiteUpdatedEvent, TestCaseUpdatedEvent, ExecutionStartedEvent } from '@agentest/ws-types';
+import type {
+  TestSuiteUpdatedEvent,
+  TestCaseUpdatedEvent,
+  ExecutionStartedEvent,
+} from '@agentest/ws-types';
 
 /**
  * テストスイートのリアルタイム更新を購読するフック

@@ -14,7 +14,10 @@ vi.mock('../../../clients/api-client.js', () => ({
 }));
 
 // モック設定後にインポート
-import { deleteTestSuiteTool, deleteTestSuiteInputSchema } from '../../../tools/delete-test-suite.js';
+import {
+  deleteTestSuiteTool,
+  deleteTestSuiteInputSchema,
+} from '../../../tools/delete-test-suite.js';
 
 // テスト用の固定UUID
 const TEST_USER_ID = '11111111-1111-1111-1111-111111111111';
@@ -50,9 +53,11 @@ describe('deleteTestSuiteTool', () => {
     });
 
     it('無効なUUIDはエラー', () => {
-      expect(() => deleteTestSuiteInputSchema.parse({
-        testSuiteId: 'invalid-uuid',
-      })).toThrow();
+      expect(() =>
+        deleteTestSuiteInputSchema.parse({
+          testSuiteId: 'invalid-uuid',
+        })
+      ).toThrow();
     });
   });
 

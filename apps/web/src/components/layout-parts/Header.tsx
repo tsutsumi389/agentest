@@ -1,11 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
-import {
-  Menu,
-  Settings,
-  LogOut,
-  ChevronDown,
-} from 'lucide-react';
+import { Menu, Settings, LogOut, ChevronDown } from 'lucide-react';
 import { AgentestLogo } from '../ui/AgentestLogo';
 import { useAuthStore } from '../../stores/auth';
 import { useCurrentProject } from '../../hooks/useCurrentProject';
@@ -35,10 +30,7 @@ export function Header({ onMenuClick }: HeaderProps) {
           </button>
           <div className="flex items-center gap-2">
             {/* ロゴ: 常にダッシュボードへ */}
-            <Link
-              to="/dashboard"
-              className="text-accent hover:text-accent-hover transition-colors"
-            >
+            <Link to="/dashboard" className="text-accent hover:text-accent-hover transition-colors">
               <AgentestLogo className="w-6 h-6" />
             </Link>
 
@@ -109,10 +101,7 @@ function UserDropdown() {
   // 外部クリックで閉じる
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target as Node)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setIsOpen(false);
       }
     }
@@ -151,11 +140,7 @@ function UserDropdown() {
         aria-haspopup="true"
       >
         {user?.avatarUrl ? (
-          <img
-            src={user.avatarUrl}
-            alt={user.name}
-            className="w-8 h-8 rounded-full"
-          />
+          <img src={user.avatarUrl} alt={user.name} className="w-8 h-8 rounded-full" />
         ) : (
           <div className="w-8 h-8 rounded-full bg-accent-subtle flex items-center justify-center">
             <span className="text-sm font-medium text-accent">
@@ -172,12 +157,8 @@ function UserDropdown() {
         <div className="absolute right-0 mt-2 w-56 bg-background-secondary border border-border rounded-lg shadow-lg overflow-hidden">
           {/* ユーザー情報 */}
           <div className="px-4 py-3 border-b border-border">
-            <p className="text-sm font-medium text-foreground truncate">
-              {user?.name}
-            </p>
-            <p className="text-xs text-foreground-muted truncate">
-              {user?.email}
-            </p>
+            <p className="text-sm font-medium text-foreground truncate">{user?.name}</p>
+            <p className="text-xs text-foreground-muted truncate">{user?.email}</p>
           </div>
 
           {/* メニュー項目 */}

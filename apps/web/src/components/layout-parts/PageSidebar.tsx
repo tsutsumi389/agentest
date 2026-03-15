@@ -28,13 +28,7 @@ export function PageSidebar({ children, width = 'md' }: PageSidebarProps) {
 /**
  * サイドバーセクション
  */
-export function SidebarSection({
-  title,
-  children,
-}: {
-  title?: string;
-  children: ReactNode;
-}) {
+export function SidebarSection({ title, children }: { title?: string; children: ReactNode }) {
   return (
     <div className="p-4">
       {title && (

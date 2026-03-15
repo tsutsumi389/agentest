@@ -13,14 +13,10 @@ export function OrganizationProjectsSection({ projects }: OrganizationProjectsSe
   return (
     <div className="bg-background-secondary border border-border rounded-lg">
       <div className="px-4 py-3 border-b border-border">
-        <h2 className="text-sm font-medium text-foreground">
-          プロジェクト一覧（最新10件）
-        </h2>
+        <h2 className="text-sm font-medium text-foreground">プロジェクト一覧（最新10件）</h2>
       </div>
       {projects.length === 0 ? (
-        <div className="px-4 py-8 text-center text-foreground-muted">
-          プロジェクトはありません
-        </div>
+        <div className="px-4 py-8 text-center text-foreground-muted">プロジェクトはありません</div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -46,9 +42,7 @@ export function OrganizationProjectsSection({ projects }: OrganizationProjectsSe
                   {/* プロジェクト名 */}
                   <td className="px-4 py-3">
                     <div>
-                      <div className="text-sm font-medium text-foreground">
-                        {project.name}
-                      </div>
+                      <div className="text-sm font-medium text-foreground">{project.name}</div>
                       {project.description && (
                         <div className="text-xs text-foreground-muted truncate max-w-xs">
                           {project.description}

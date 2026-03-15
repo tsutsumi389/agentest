@@ -27,9 +27,7 @@ export function ProgressBar({
 }: ProgressBarProps) {
   // 0除算を防止
   if (total === 0) {
-    return (
-      <div className="h-2 bg-background-tertiary rounded-full" />
-    );
+    return <div className="h-2 bg-background-tertiary rounded-full" />;
   }
 
   const passedPercent = (passed / total) * 100;

@@ -40,11 +40,7 @@ const defaultProps = {
 describe('TestSuiteHeader - パンくずリスト', () => {
   it('projectNameとprojectIdが渡された時、パンくずリストが表示される', () => {
     renderWithRouter(
-      <TestSuiteHeader
-        {...defaultProps}
-        projectId="proj-1"
-        projectName="テストプロジェクト"
-      />
+      <TestSuiteHeader {...defaultProps} projectId="proj-1" projectName="テストプロジェクト" />
     );
 
     const breadcrumb = screen.getByRole('navigation', { name: 'パンくずリスト' });
@@ -53,11 +49,7 @@ describe('TestSuiteHeader - パンくずリスト', () => {
 
   it('パンくずリストにプロジェクト名が表示される', () => {
     renderWithRouter(
-      <TestSuiteHeader
-        {...defaultProps}
-        projectId="proj-1"
-        projectName="テストプロジェクト"
-      />
+      <TestSuiteHeader {...defaultProps} projectId="proj-1" projectName="テストプロジェクト" />
     );
 
     expect(screen.getByText('テストプロジェクト')).toBeInTheDocument();
@@ -65,11 +57,7 @@ describe('TestSuiteHeader - パンくずリスト', () => {
 
   it('プロジェクト名がプロジェクト詳細ページへのリンクになっている', () => {
     renderWithRouter(
-      <TestSuiteHeader
-        {...defaultProps}
-        projectId="proj-1"
-        projectName="テストプロジェクト"
-      />
+      <TestSuiteHeader {...defaultProps} projectId="proj-1" projectName="テストプロジェクト" />
     );
 
     const projectLink = screen.getByText('テストプロジェクト').closest('a');
@@ -78,11 +66,7 @@ describe('TestSuiteHeader - パンくずリスト', () => {
 
   it('テストスイート名が現在ページとして表示される', () => {
     renderWithRouter(
-      <TestSuiteHeader
-        {...defaultProps}
-        projectId="proj-1"
-        projectName="テストプロジェクト"
-      />
+      <TestSuiteHeader {...defaultProps} projectId="proj-1" projectName="テストプロジェクト" />
     );
 
     // パンくずリスト内でテストスイート名がaria-current="page"を持つ
@@ -120,11 +104,7 @@ describe('TestSuiteHeader - パンくずリスト', () => {
 
   it('パンくずリストにホームリンクが表示されない', () => {
     renderWithRouter(
-      <TestSuiteHeader
-        {...defaultProps}
-        projectId="proj-1"
-        projectName="テストプロジェクト"
-      />
+      <TestSuiteHeader {...defaultProps} projectId="proj-1" projectName="テストプロジェクト" />
     );
 
     const breadcrumb = screen.getByRole('navigation', { name: 'パンくずリスト' });
@@ -132,9 +112,7 @@ describe('TestSuiteHeader - パンくずリスト', () => {
   });
 
   it('projectNameが未指定の場合、パンくずリストが表示されない', () => {
-    renderWithRouter(
-      <TestSuiteHeader {...defaultProps} />
-    );
+    renderWithRouter(<TestSuiteHeader {...defaultProps} />);
 
     expect(screen.queryByRole('navigation', { name: 'パンくずリスト' })).not.toBeInTheDocument();
   });

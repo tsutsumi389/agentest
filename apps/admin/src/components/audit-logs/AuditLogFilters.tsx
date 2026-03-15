@@ -130,9 +130,7 @@ export function AuditLogFilters({
             <input
               type="date"
               value={endDate ? endDate.split('T')[0] : ''}
-              onChange={(e) =>
-                onEndDateChange(e.target.value ? `${e.target.value}T23:59:59Z` : '')
-              }
+              onChange={(e) => onEndDateChange(e.target.value ? `${e.target.value}T23:59:59Z` : '')}
               className="px-2 py-1 text-sm bg-background-secondary border border-border rounded text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
             />
           </div>

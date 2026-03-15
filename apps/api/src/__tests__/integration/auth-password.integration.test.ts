@@ -46,7 +46,12 @@ vi.mock('@agentest/auth', () => ({
   optionalAuth: () => (_req: any, _res: any, next: any) => next(),
   requireOrgRole: () => (_req: any, _res: any, next: any) => next(),
   requireProjectRole: () => (_req: any, _res: any, next: any) => next(),
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn().mockImplementation(() => createMockTokens()),
@@ -108,13 +113,11 @@ describe('Auth Password API Integration Tests', () => {
 
   describe('POST /api/auth/register', () => {
     it('新規ユーザーを登録できる', async () => {
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send({
-          email: 'newuser@example.com',
-          password: VALID_PASSWORD,
-          name: 'New User',
-        });
+      const response = await request(app).post('/api/auth/register').send({
+        email: 'newuser@example.com',
+        password: VALID_PASSWORD,
+        name: 'New User',
+      });
 
       expect(response.status).toBe(201);
       expect(response.body.user).toBeDefined();
@@ -123,13 +126,11 @@ describe('Auth Password API Integration Tests', () => {
     });
 
     it('ユーザーがDBに作成される', async () => {
-      await request(app)
-        .post('/api/auth/register')
-        .send({
-          email: 'dbcheck@example.com',
-          password: VALID_PASSWORD,
-          name: 'DB Check User',
-        });
+      await request(app).post('/api/auth/register').send({
+        email: 'dbcheck@example.com',
+        password: VALID_PASSWORD,
+        name: 'DB Check User',
+      });
 
       const user = await prisma.user.findFirst({
         where: { email: 'dbcheck@example.com' },
@@ -140,13 +141,11 @@ describe('Auth Password API Integration Tests', () => {
     });
 
     it('パスワードがbcryptでハッシュ化される', async () => {
-      await request(app)
-        .post('/api/auth/register')
-        .send({
-          email: 'hash@example.com',
-          password: VALID_PASSWORD,
-          name: 'Hash User',
-        });
+      await request(app).post('/api/auth/register').send({
+        email: 'hash@example.com',
+        password: VALID_PASSWORD,
+        name: 'Hash User',
+      });
 
       const user = await prisma.user.findFirst({
         where: { email: 'hash@example.com' },
@@ -159,16 +158,14 @@ describe('Auth Password API Integration Tests', () => {
     });
 
     it('メール確認トークンがDBに作成される（セッション/リフレッシュトークンは作成されない）', async () => {
-      await request(app)
-        .post('/api/auth/register')
-        .send({
-          email: 'session@example.com',
-          password: VALID_PASSWORD,
-          name: 'Session User',
-        });
+      await request(app).post('/api/auth/register').send({
+        email: 'session@example.com',
+        password: VALID_PASSWORD,
+        name: 'Session User',
+      });
 
       // 非同期メール送信を待つ
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       const user = await prisma.user.findFirst({
         where: { email: 'session@example.com' },
@@ -193,13 +190,11 @@ describe('Auth Password API Integration Tests', () => {
     });
 
     it('クッキーは設定されない（メール確認が必要）', async () => {
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send({
-          email: 'cookie@example.com',
-          password: VALID_PASSWORD,
-          name: 'Cookie User',
-        });
+      const response = await request(app).post('/api/auth/register').send({
+        email: 'cookie@example.com',
+        password: VALID_PASSWORD,
+        name: 'Cookie User',
+      });
 
       const cookies = response.headers['set-cookie'];
       // クッキーは設定されない
@@ -207,80 +202,71 @@ describe('Auth Password API Integration Tests', () => {
     });
 
     it('メールアドレスが重複する場合は409エラー', async () => {
-      await createTestUser({ email: 'existing@example.com', passwordHash: await bcrypt.hash(VALID_PASSWORD, 12) });
+      await createTestUser({
+        email: 'existing@example.com',
+        passwordHash: await bcrypt.hash(VALID_PASSWORD, 12),
+      });
 
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send({
-          email: 'existing@example.com',
-          password: VALID_PASSWORD,
-          name: 'Duplicate User',
-        });
+      const response = await request(app).post('/api/auth/register').send({
+        email: 'existing@example.com',
+        password: VALID_PASSWORD,
+        name: 'Duplicate User',
+      });
 
       expect(response.status).toBe(409);
       expect(response.body.error.code).toBe('CONFLICT');
     });
 
     it('メールアドレスが大文字でも小文字に正規化される', async () => {
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send({
-          email: 'UPPER@EXAMPLE.COM',
-          password: VALID_PASSWORD,
-          name: 'Upper User',
-        });
+      const response = await request(app).post('/api/auth/register').send({
+        email: 'UPPER@EXAMPLE.COM',
+        password: VALID_PASSWORD,
+        name: 'Upper User',
+      });
 
       expect(response.status).toBe(201);
       expect(response.body.user.email).toBe('upper@example.com');
     });
 
     it('パスワードが短すぎる場合はバリデーションエラー', async () => {
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send({
-          email: 'short@example.com',
-          password: 'Aa1!',
-          name: 'Short Password User',
-        });
+      const response = await request(app).post('/api/auth/register').send({
+        email: 'short@example.com',
+        password: 'Aa1!',
+        name: 'Short Password User',
+      });
 
       expect(response.status).toBe(400);
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
     });
 
     it('パスワードに大文字がない場合はバリデーションエラー', async () => {
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send({
-          email: 'noupper@example.com',
-          password: 'testpass1!',
-          name: 'No Upper User',
-        });
+      const response = await request(app).post('/api/auth/register').send({
+        email: 'noupper@example.com',
+        password: 'testpass1!',
+        name: 'No Upper User',
+      });
 
       expect(response.status).toBe(400);
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
     });
 
     it('名前が空の場合はバリデーションエラー', async () => {
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send({
-          email: 'noname@example.com',
-          password: VALID_PASSWORD,
-          name: '',
-        });
+      const response = await request(app).post('/api/auth/register').send({
+        email: 'noname@example.com',
+        password: VALID_PASSWORD,
+        name: '',
+      });
 
       expect(response.status).toBe(400);
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
     });
 
     it('メールアドレスが不正な場合はバリデーションエラー', async () => {
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send({
-          email: 'not-an-email',
-          password: VALID_PASSWORD,
-          name: 'Invalid Email User',
-        });
+      const response = await request(app).post('/api/auth/register').send({
+        email: 'not-an-email',
+        password: VALID_PASSWORD,
+        name: 'Invalid Email User',
+      });
 
       expect(response.status).toBe(400);
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
@@ -301,12 +287,10 @@ describe('Auth Password API Integration Tests', () => {
     });
 
     it('正しい認証情報でログインできる', async () => {
-      const response = await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: 'login@example.com',
-          password: testPassword,
-        });
+      const response = await request(app).post('/api/auth/login').send({
+        email: 'login@example.com',
+        password: testPassword,
+      });
 
       expect(response.status).toBe(200);
       expect(response.body.user).toBeDefined();
@@ -316,12 +300,10 @@ describe('Auth Password API Integration Tests', () => {
     });
 
     it('ログイン成功時にクッキーが設定される', async () => {
-      const response = await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: 'login@example.com',
-          password: testPassword,
-        });
+      const response = await request(app).post('/api/auth/login').send({
+        email: 'login@example.com',
+        password: testPassword,
+      });
 
       const cookies = response.headers['set-cookie'];
       expect(cookies).toBeDefined();
@@ -333,12 +315,10 @@ describe('Auth Password API Integration Tests', () => {
     });
 
     it('ログイン成功時にセッションとリフレッシュトークンがDBに作成される', async () => {
-      await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: 'login@example.com',
-          password: testPassword,
-        });
+      await request(app).post('/api/auth/login').send({
+        email: 'login@example.com',
+        password: testPassword,
+      });
 
       const sessions = await prisma.session.findMany({
         where: { userId: testUser.id },
@@ -352,24 +332,20 @@ describe('Auth Password API Integration Tests', () => {
     });
 
     it('パスワード不一致で401エラー', async () => {
-      const response = await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: 'login@example.com',
-          password: 'WrongPass1!',
-        });
+      const response = await request(app).post('/api/auth/login').send({
+        email: 'login@example.com',
+        password: 'WrongPass1!',
+      });
 
       expect(response.status).toBe(401);
       expect(response.body.error.code).toBe('AUTHENTICATION_ERROR');
     });
 
     it('存在しないメールアドレスで401エラー', async () => {
-      const response = await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: 'nonexistent@example.com',
-          password: testPassword,
-        });
+      const response = await request(app).post('/api/auth/login').send({
+        email: 'nonexistent@example.com',
+        password: testPassword,
+      });
 
       expect(response.status).toBe(401);
       expect(response.body.error.code).toBe('AUTHENTICATION_ERROR');
@@ -381,12 +357,10 @@ describe('Auth Password API Integration Tests', () => {
         name: 'OAuth Only User',
       });
 
-      const response = await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: 'oauth-only@example.com',
-          password: testPassword,
-        });
+      const response = await request(app).post('/api/auth/login').send({
+        email: 'oauth-only@example.com',
+        password: testPassword,
+      });
 
       expect(response.status).toBe(401);
       expect(response.body.error.code).toBe('AUTHENTICATION_ERROR');
@@ -395,21 +369,17 @@ describe('Auth Password API Integration Tests', () => {
     it('5回連続失敗でアカウントロック', async () => {
       // 5回失敗させる
       for (let i = 0; i < 5; i++) {
-        await request(app)
-          .post('/api/auth/login')
-          .send({
-            email: 'login@example.com',
-            password: 'WrongPass1!',
-          });
+        await request(app).post('/api/auth/login').send({
+          email: 'login@example.com',
+          password: 'WrongPass1!',
+        });
       }
 
       // 6回目は正しいパスワードでもロック
-      const response = await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: 'login@example.com',
-          password: testPassword,
-        });
+      const response = await request(app).post('/api/auth/login').send({
+        email: 'login@example.com',
+        password: testPassword,
+      });
 
       expect(response.status).toBe(401);
       expect(response.body.error.message).toContain('ロック');
@@ -430,12 +400,10 @@ describe('Auth Password API Integration Tests', () => {
         },
       });
 
-      const response = await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: 'login@example.com',
-          password: testPassword,
-        });
+      const response = await request(app).post('/api/auth/login').send({
+        email: 'login@example.com',
+        password: testPassword,
+      });
 
       expect(response.status).toBe(200);
       expect(response.body.user.id).toBe(testUser.id);
@@ -449,33 +417,27 @@ describe('Auth Password API Integration Tests', () => {
     it('ログイン成功で失敗回数がリセットされる', async () => {
       // 3回失敗させる
       for (let i = 0; i < 3; i++) {
-        await request(app)
-          .post('/api/auth/login')
-          .send({
-            email: 'login@example.com',
-            password: 'WrongPass1!',
-          });
+        await request(app).post('/api/auth/login').send({
+          email: 'login@example.com',
+          password: 'WrongPass1!',
+        });
       }
 
       // 正しいパスワードでログイン
-      await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: 'login@example.com',
-          password: testPassword,
-        });
+      await request(app).post('/api/auth/login').send({
+        email: 'login@example.com',
+        password: testPassword,
+      });
 
       const user = await prisma.user.findUnique({ where: { id: testUser.id } });
       expect(user!.failedAttempts).toBe(0);
     });
 
     it('メールアドレスが空の場合はバリデーションエラー', async () => {
-      const response = await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: '',
-          password: testPassword,
-        });
+      const response = await request(app).post('/api/auth/login').send({
+        email: '',
+        password: testPassword,
+      });
 
       expect(response.status).toBe(400);
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
@@ -487,12 +449,10 @@ describe('Auth Password API Integration Tests', () => {
         data: { deletedAt: new Date() },
       });
 
-      const response = await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: 'login@example.com',
-          password: testPassword,
-        });
+      const response = await request(app).post('/api/auth/login').send({
+        email: 'login@example.com',
+        password: testPassword,
+      });
 
       expect(response.status).toBe(401);
       expect(response.body.error.code).toBe('AUTHENTICATION_ERROR');
@@ -588,12 +548,10 @@ describe('Auth Password API Integration Tests', () => {
     });
 
     it('有効なトークンでパスワードリセットできる', async () => {
-      const response = await request(app)
-        .post('/api/auth/reset-password')
-        .send({
-          token: rawToken,
-          password: VALID_PASSWORD_2,
-        });
+      const response = await request(app).post('/api/auth/reset-password').send({
+        token: rawToken,
+        password: VALID_PASSWORD_2,
+      });
 
       expect(response.status).toBe(200);
       expect(response.body.message).toContain('リセット');
@@ -605,12 +563,10 @@ describe('Auth Password API Integration Tests', () => {
     });
 
     it('リセット後にトークンが使用済みになる', async () => {
-      await request(app)
-        .post('/api/auth/reset-password')
-        .send({
-          token: rawToken,
-          password: VALID_PASSWORD_2,
-        });
+      await request(app).post('/api/auth/reset-password').send({
+        token: rawToken,
+        password: VALID_PASSWORD_2,
+      });
 
       const tokens = await prisma.passwordResetToken.findMany({
         where: { userId: testUser.id },
@@ -623,12 +579,10 @@ describe('Auth Password API Integration Tests', () => {
       await createTestSession(testUser.id);
       await createTestRefreshToken(testUser.id);
 
-      await request(app)
-        .post('/api/auth/reset-password')
-        .send({
-          token: rawToken,
-          password: VALID_PASSWORD_2,
-        });
+      await request(app).post('/api/auth/reset-password').send({
+        token: rawToken,
+        password: VALID_PASSWORD_2,
+      });
 
       // 全セッションが無効化されている
       const sessions = await prisma.session.findMany({
@@ -652,12 +606,10 @@ describe('Auth Password API Integration Tests', () => {
         },
       });
 
-      await request(app)
-        .post('/api/auth/reset-password')
-        .send({
-          token: rawToken,
-          password: VALID_PASSWORD_2,
-        });
+      await request(app).post('/api/auth/reset-password').send({
+        token: rawToken,
+        password: VALID_PASSWORD_2,
+      });
 
       const user = await prisma.user.findUnique({ where: { id: testUser.id } });
       expect(user!.failedAttempts).toBe(0);
@@ -665,12 +617,10 @@ describe('Auth Password API Integration Tests', () => {
     });
 
     it('無効なトークンで400エラー', async () => {
-      const response = await request(app)
-        .post('/api/auth/reset-password')
-        .send({
-          token: 'invalid-token',
-          password: VALID_PASSWORD_2,
-        });
+      const response = await request(app).post('/api/auth/reset-password').send({
+        token: 'invalid-token',
+        password: VALID_PASSWORD_2,
+      });
 
       expect(response.status).toBe(400);
       expect(response.body.error.code).toBe('BAD_REQUEST');
@@ -683,12 +633,10 @@ describe('Auth Password API Integration Tests', () => {
         data: { usedAt: new Date() },
       });
 
-      const response = await request(app)
-        .post('/api/auth/reset-password')
-        .send({
-          token: rawToken,
-          password: VALID_PASSWORD_2,
-        });
+      const response = await request(app).post('/api/auth/reset-password').send({
+        token: rawToken,
+        password: VALID_PASSWORD_2,
+      });
 
       expect(response.status).toBe(400);
       expect(response.body.error.message).toContain('使用');
@@ -701,36 +649,30 @@ describe('Auth Password API Integration Tests', () => {
         data: { expiresAt: new Date(Date.now() - 1000) },
       });
 
-      const response = await request(app)
-        .post('/api/auth/reset-password')
-        .send({
-          token: rawToken,
-          password: VALID_PASSWORD_2,
-        });
+      const response = await request(app).post('/api/auth/reset-password').send({
+        token: rawToken,
+        password: VALID_PASSWORD_2,
+      });
 
       expect(response.status).toBe(400);
       expect(response.body.error.message).toContain('期限');
     });
 
     it('パスワードが弱い場合はバリデーションエラー', async () => {
-      const response = await request(app)
-        .post('/api/auth/reset-password')
-        .send({
-          token: rawToken,
-          password: 'weak',
-        });
+      const response = await request(app).post('/api/auth/reset-password').send({
+        token: rawToken,
+        password: 'weak',
+      });
 
       expect(response.status).toBe(400);
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
     });
 
     it('トークンが空の場合はバリデーションエラー', async () => {
-      const response = await request(app)
-        .post('/api/auth/reset-password')
-        .send({
-          token: '',
-          password: VALID_PASSWORD_2,
-        });
+      const response = await request(app).post('/api/auth/reset-password').send({
+        token: '',
+        password: VALID_PASSWORD_2,
+      });
 
       expect(response.status).toBe(400);
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
@@ -749,13 +691,11 @@ describe('Auth Password API Integration Tests', () => {
     });
 
     it('クッキーが設定される', async () => {
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send({
-          email: 'skip-verify@example.com',
-          password: VALID_PASSWORD,
-          name: 'Skip Verify User',
-        });
+      const response = await request(app).post('/api/auth/register').send({
+        email: 'skip-verify@example.com',
+        password: VALID_PASSWORD,
+        name: 'Skip Verify User',
+      });
 
       expect(response.status).toBe(201);
       const cookies = response.headers['set-cookie'];
@@ -768,13 +708,11 @@ describe('Auth Password API Integration Tests', () => {
     });
 
     it('emailVerified: true でDB保存される', async () => {
-      await request(app)
-        .post('/api/auth/register')
-        .send({
-          email: 'verified-direct@example.com',
-          password: VALID_PASSWORD,
-          name: 'Verified Direct User',
-        });
+      await request(app).post('/api/auth/register').send({
+        email: 'verified-direct@example.com',
+        password: VALID_PASSWORD,
+        name: 'Verified Direct User',
+      });
 
       const user = await prisma.user.findFirst({
         where: { email: 'verified-direct@example.com' },
@@ -784,13 +722,11 @@ describe('Auth Password API Integration Tests', () => {
     });
 
     it('EmailVerificationToken が作成されない', async () => {
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send({
-          email: 'no-token@example.com',
-          password: VALID_PASSWORD,
-          name: 'No Token User',
-        });
+      const response = await request(app).post('/api/auth/register').send({
+        email: 'no-token@example.com',
+        password: VALID_PASSWORD,
+        name: 'No Token User',
+      });
 
       expect(response.status).toBe(201);
 
@@ -806,25 +742,21 @@ describe('Auth Password API Integration Tests', () => {
     it('emailService.send が呼ばれない', async () => {
       const { emailService } = await import('../../services/email.service.js');
 
-      await request(app)
-        .post('/api/auth/register')
-        .send({
-          email: 'no-email@example.com',
-          password: VALID_PASSWORD,
-          name: 'No Email User',
-        });
+      await request(app).post('/api/auth/register').send({
+        email: 'no-email@example.com',
+        password: VALID_PASSWORD,
+        name: 'No Email User',
+      });
 
       expect(emailService.send).not.toHaveBeenCalled();
     });
 
     it('セッションが作成される', async () => {
-      await request(app)
-        .post('/api/auth/register')
-        .send({
-          email: 'session-skip@example.com',
-          password: VALID_PASSWORD,
-          name: 'Session Skip User',
-        });
+      await request(app).post('/api/auth/register').send({
+        email: 'session-skip@example.com',
+        password: VALID_PASSWORD,
+        name: 'Session Skip User',
+      });
 
       const user = await prisma.user.findFirst({
         where: { email: 'session-skip@example.com' },
@@ -841,13 +773,11 @@ describe('Auth Password API Integration Tests', () => {
     });
 
     it('レスポンスに emailVerificationSkipped: true を含む', async () => {
-      const response = await request(app)
-        .post('/api/auth/register')
-        .send({
-          email: 'skipped-flag@example.com',
-          password: VALID_PASSWORD,
-          name: 'Skipped Flag User',
-        });
+      const response = await request(app).post('/api/auth/register').send({
+        email: 'skipped-flag@example.com',
+        password: VALID_PASSWORD,
+        name: 'Skipped Flag User',
+      });
 
       expect(response.status).toBe(201);
       expect(response.body.emailVerificationSkipped).toBe(true);
@@ -858,24 +788,20 @@ describe('Auth Password API Integration Tests', () => {
   describe('完全フロー: 登録 → メール確認 → ログイン → パスワードリセット', () => {
     it('ユーザー登録後にメール確認し、ログインでき、リセット後に新パスワードでログインできる', async () => {
       // 1. 登録
-      const registerRes = await request(app)
-        .post('/api/auth/register')
-        .send({
-          email: 'flow@example.com',
-          password: VALID_PASSWORD,
-          name: 'Flow User',
-        });
+      const registerRes = await request(app).post('/api/auth/register').send({
+        email: 'flow@example.com',
+        password: VALID_PASSWORD,
+        name: 'Flow User',
+      });
       expect(registerRes.status).toBe(201);
       expect(registerRes.body.message).toBeDefined();
       const userId = registerRes.body.user.id;
 
       // 1.5 メール確認前はログインできない
-      const preVerifyLoginRes = await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: 'flow@example.com',
-          password: VALID_PASSWORD,
-        });
+      const preVerifyLoginRes = await request(app).post('/api/auth/login').send({
+        email: 'flow@example.com',
+        password: VALID_PASSWORD,
+      });
       expect(preVerifyLoginRes.status).toBe(401);
       expect(preVerifyLoginRes.body.error.code).toBe('EMAIL_NOT_VERIFIED');
 
@@ -886,12 +812,10 @@ describe('Auth Password API Integration Tests', () => {
       });
 
       // 2. ログイン
-      const loginRes = await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: 'flow@example.com',
-          password: VALID_PASSWORD,
-        });
+      const loginRes = await request(app).post('/api/auth/login').send({
+        email: 'flow@example.com',
+        password: VALID_PASSWORD,
+      });
       expect(loginRes.status).toBe(200);
 
       // 3. リセットトークン作成
@@ -905,30 +829,24 @@ describe('Auth Password API Integration Tests', () => {
       });
 
       // 4. パスワードリセット
-      const resetRes = await request(app)
-        .post('/api/auth/reset-password')
-        .send({
-          token: rawToken,
-          password: VALID_PASSWORD_2,
-        });
+      const resetRes = await request(app).post('/api/auth/reset-password').send({
+        token: rawToken,
+        password: VALID_PASSWORD_2,
+      });
       expect(resetRes.status).toBe(200);
 
       // 5. 旧パスワードではログインできない
-      const oldLoginRes = await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: 'flow@example.com',
-          password: VALID_PASSWORD,
-        });
+      const oldLoginRes = await request(app).post('/api/auth/login').send({
+        email: 'flow@example.com',
+        password: VALID_PASSWORD,
+      });
       expect(oldLoginRes.status).toBe(401);
 
       // 6. 新パスワードでログインできる
-      const newLoginRes = await request(app)
-        .post('/api/auth/login')
-        .send({
-          email: 'flow@example.com',
-          password: VALID_PASSWORD_2,
-        });
+      const newLoginRes = await request(app).post('/api/auth/login').send({
+        email: 'flow@example.com',
+        password: VALID_PASSWORD_2,
+      });
       expect(newLoginRes.status).toBe(200);
     });
   });

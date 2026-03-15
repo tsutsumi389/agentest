@@ -51,9 +51,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 <AlertTriangle className="w-8 h-8 text-danger" />
               </div>
             </div>
-            <h1 className="text-xl font-semibold text-foreground mb-2">
-              エラーが発生しました
-            </h1>
+            <h1 className="text-xl font-semibold text-foreground mb-2">エラーが発生しました</h1>
             <p className="text-foreground-muted mb-6">
               予期しないエラーが発生しました。ページを再読み込みするか、しばらくしてから再度お試しください。
             </p>

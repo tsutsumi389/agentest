@@ -5,7 +5,12 @@ import type { ExecutionEvidence } from '../../../lib/api';
 
 // ImagePreviewModal のモック
 vi.mock('../../common/ImagePreviewModal', () => ({
-  ImagePreviewModal: ({ isOpen, imageUrl, fileName, onClose }: {
+  ImagePreviewModal: ({
+    isOpen,
+    imageUrl,
+    fileName,
+    onClose,
+  }: {
     isOpen: boolean;
     imageUrl: string;
     fileName: string;
@@ -15,7 +20,9 @@ vi.mock('../../common/ImagePreviewModal', () => ({
       <div data-testid="image-preview-modal">
         <span data-testid="preview-image-url">{imageUrl}</span>
         <span data-testid="preview-file-name">{fileName}</span>
-        <button data-testid="close-preview" onClick={onClose}>閉じる</button>
+        <button data-testid="close-preview" onClick={onClose}>
+          閉じる
+        </button>
       </div>
     ) : null,
 }));
@@ -48,9 +55,7 @@ describe('ExecutionEvidenceList', () => {
   });
 
   it('エビデンスがない場合は何も表示しない', () => {
-    const { container } = render(
-      <ExecutionEvidenceList {...defaultProps} evidences={[]} />
-    );
+    const { container } = render(<ExecutionEvidenceList {...defaultProps} evidences={[]} />);
     expect(container.firstChild).toBeNull();
   });
 
@@ -77,7 +82,9 @@ describe('ExecutionEvidenceList', () => {
 
       // モーダルが表示される
       expect(screen.getByTestId('image-preview-modal')).toBeInTheDocument();
-      expect(screen.getByTestId('preview-image-url')).toHaveTextContent('https://example.com/screenshot.png');
+      expect(screen.getByTestId('preview-image-url')).toHaveTextContent(
+        'https://example.com/screenshot.png'
+      );
       expect(screen.getByTestId('preview-file-name')).toHaveTextContent('screenshot.png');
     });
 
@@ -110,9 +117,7 @@ describe('ExecutionEvidenceList', () => {
         downloadUrl: null,
       });
 
-      render(
-        <ExecutionEvidenceList {...defaultProps} evidences={[textEvidence]} />
-      );
+      render(<ExecutionEvidenceList {...defaultProps} evidences={[textEvidence]} />);
 
       // サムネイル画像が存在しない
       expect(screen.queryByRole('img')).not.toBeInTheDocument();

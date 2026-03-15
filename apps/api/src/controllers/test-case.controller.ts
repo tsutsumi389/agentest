@@ -152,7 +152,12 @@ export class TestCaseController {
     try {
       const { testCaseId } = req.params;
       const { groupId, ...data } = addPreconditionSchema.parse(req.body);
-      const precondition = await this.testCaseService.addPrecondition(testCaseId, req.user!.id, data, groupId);
+      const precondition = await this.testCaseService.addPrecondition(
+        testCaseId,
+        req.user!.id,
+        data,
+        groupId
+      );
 
       res.status(201).json({ precondition });
     } catch (error) {
@@ -167,7 +172,13 @@ export class TestCaseController {
     try {
       const { testCaseId, preconditionId } = req.params;
       const { groupId, ...data } = updateContentSchema.parse(req.body);
-      const precondition = await this.testCaseService.updatePrecondition(testCaseId, preconditionId, req.user!.id, data, groupId);
+      const precondition = await this.testCaseService.updatePrecondition(
+        testCaseId,
+        preconditionId,
+        req.user!.id,
+        data,
+        groupId
+      );
 
       res.json({ precondition });
     } catch (error) {
@@ -183,7 +194,12 @@ export class TestCaseController {
       const { testCaseId, preconditionId } = req.params;
       // DELETEリクエストでもボディからgroupIdを取得できるようにする
       const { groupId } = z.object({ groupId: z.string().uuid().optional() }).parse(req.body ?? {});
-      await this.testCaseService.deletePrecondition(testCaseId, preconditionId, req.user!.id, groupId);
+      await this.testCaseService.deletePrecondition(
+        testCaseId,
+        preconditionId,
+        req.user!.id,
+        groupId
+      );
 
       res.status(204).send();
     } catch (error) {
@@ -198,7 +214,12 @@ export class TestCaseController {
     try {
       const { testCaseId } = req.params;
       const { preconditionIds, groupId } = reorderPreconditionsSchema.parse(req.body);
-      const preconditions = await this.testCaseService.reorderPreconditions(testCaseId, preconditionIds, req.user!.id, groupId);
+      const preconditions = await this.testCaseService.reorderPreconditions(
+        testCaseId,
+        preconditionIds,
+        req.user!.id,
+        groupId
+      );
 
       res.json({ preconditions });
     } catch (error) {
@@ -242,7 +263,13 @@ export class TestCaseController {
     try {
       const { testCaseId, stepId } = req.params;
       const { groupId, ...data } = updateContentSchema.parse(req.body);
-      const step = await this.testCaseService.updateStep(testCaseId, stepId, req.user!.id, data, groupId);
+      const step = await this.testCaseService.updateStep(
+        testCaseId,
+        stepId,
+        req.user!.id,
+        data,
+        groupId
+      );
 
       res.json({ step });
     } catch (error) {
@@ -273,7 +300,12 @@ export class TestCaseController {
     try {
       const { testCaseId } = req.params;
       const { stepIds, groupId } = reorderStepsSchema.parse(req.body);
-      const steps = await this.testCaseService.reorderSteps(testCaseId, stepIds, req.user!.id, groupId);
+      const steps = await this.testCaseService.reorderSteps(
+        testCaseId,
+        stepIds,
+        req.user!.id,
+        groupId
+      );
 
       res.json({ steps });
     } catch (error) {
@@ -302,7 +334,12 @@ export class TestCaseController {
     try {
       const { testCaseId } = req.params;
       const { groupId, ...data } = addExpectedResultSchema.parse(req.body);
-      const expectedResult = await this.testCaseService.addExpectedResult(testCaseId, req.user!.id, data, groupId);
+      const expectedResult = await this.testCaseService.addExpectedResult(
+        testCaseId,
+        req.user!.id,
+        data,
+        groupId
+      );
 
       res.status(201).json({ expectedResult });
     } catch (error) {
@@ -317,7 +354,13 @@ export class TestCaseController {
     try {
       const { testCaseId, expectedResultId } = req.params;
       const { groupId, ...data } = updateContentSchema.parse(req.body);
-      const expectedResult = await this.testCaseService.updateExpectedResult(testCaseId, expectedResultId, req.user!.id, data, groupId);
+      const expectedResult = await this.testCaseService.updateExpectedResult(
+        testCaseId,
+        expectedResultId,
+        req.user!.id,
+        data,
+        groupId
+      );
 
       res.json({ expectedResult });
     } catch (error) {
@@ -333,7 +376,12 @@ export class TestCaseController {
       const { testCaseId, expectedResultId } = req.params;
       // DELETEリクエストでもボディからgroupIdを取得できるようにする
       const { groupId } = z.object({ groupId: z.string().uuid().optional() }).parse(req.body ?? {});
-      await this.testCaseService.deleteExpectedResult(testCaseId, expectedResultId, req.user!.id, groupId);
+      await this.testCaseService.deleteExpectedResult(
+        testCaseId,
+        expectedResultId,
+        req.user!.id,
+        groupId
+      );
 
       res.status(204).send();
     } catch (error) {
@@ -344,11 +392,20 @@ export class TestCaseController {
   /**
    * 期待結果並び替え
    */
-  reorderExpectedResults = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  reorderExpectedResults = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const { testCaseId } = req.params;
       const { expectedResultIds, groupId } = reorderExpectedResultsSchema.parse(req.body);
-      const expectedResults = await this.testCaseService.reorderExpectedResults(testCaseId, expectedResultIds, req.user!.id, groupId);
+      const expectedResults = await this.testCaseService.reorderExpectedResults(
+        testCaseId,
+        expectedResultIds,
+        req.user!.id,
+        groupId
+      );
 
       res.json({ expectedResults });
     } catch (error) {

@@ -72,7 +72,11 @@ class WebSocketClient {
         // 認証エラー時は再接続を停止（期限切れトークンでの無限ループを防止）
         if (data.type === 'error' && 'code' in data) {
           const code = (data as { code: string }).code;
-          if (code === 'AUTHENTICATION_FAILED' || code === 'AUTH_TIMEOUT' || code === 'TOO_MANY_ATTEMPTS') {
+          if (
+            code === 'AUTHENTICATION_FAILED' ||
+            code === 'AUTH_TIMEOUT' ||
+            code === 'TOO_MANY_ATTEMPTS'
+          ) {
             this.token = null;
             this.useCookieAuth = false;
           }
@@ -175,7 +179,10 @@ class WebSocketClient {
    * メッセージハンドラを登録
    * @template T - イベントの型（ServerEventのサブタイプ）
    */
-  on<T extends ServerEvent = ServerEvent>(eventType: string, handler: (event: T) => void): () => void {
+  on<T extends ServerEvent = ServerEvent>(
+    eventType: string,
+    handler: (event: T) => void
+  ): () => void {
     if (!this.messageHandlers.has(eventType)) {
       this.messageHandlers.set(eventType, new Set());
     }

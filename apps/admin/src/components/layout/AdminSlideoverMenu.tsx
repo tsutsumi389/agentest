@@ -96,9 +96,7 @@ export function AdminSlideoverMenu({ isOpen, onClose }: AdminSlideoverMenuProps)
 
           {/* フッター */}
           <div className="p-4 border-t border-border">
-            <p className="text-xs text-foreground-muted text-center">
-              Agentest 管理パネル
-            </p>
+            <p className="text-xs text-foreground-muted text-center">Agentest 管理パネル</p>
           </div>
         </div>
       </aside>

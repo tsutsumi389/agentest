@@ -4,10 +4,7 @@ import type {
   ExecutionStepResult,
   StepResultStatus,
 } from '../../lib/api';
-import {
-  stepResultStatusOptions,
-  getStepStatusConfig,
-} from '../../lib/execution-status';
+import { stepResultStatusOptions, getStepStatusConfig } from '../../lib/execution-status';
 import { ExecutionResultItem } from './ExecutionResultItem';
 
 interface ExecutionStepListProps {
@@ -46,9 +43,7 @@ export function ExecutionStepList({
   }
 
   // 正規化テーブルIDから結果をマップ
-  const resultMap = new Map(
-    results.map((r) => [r.executionStepId, r])
-  );
+  const resultMap = new Map(results.map((r) => [r.executionStepId, r]));
 
   return (
     <div className="space-y-2">

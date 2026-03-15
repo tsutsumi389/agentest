@@ -4,7 +4,7 @@ import { createMockAdminUser } from '../../__tests__/factories';
 
 // APIをモック（ApiErrorは実際のクラスを使用し、APIメソッドのみモック）
 vi.mock('../../lib/api', async (importOriginal) => {
-  const actual = await importOriginal() as Record<string, unknown>;
+  const actual = (await importOriginal()) as Record<string, unknown>;
   return {
     ...actual,
     adminAuthApi: {
@@ -154,9 +154,9 @@ describe('admin-auth store', () => {
       const apiError = new ApiError(401, 'INVALID_CODE', '無効な認証コードです');
       mockAuthApi.verify2FA.mockRejectedValue(apiError);
 
-      await expect(
-        useAdminAuthStore.getState().verify2FA('000000')
-      ).rejects.toThrow('無効な認証コードです');
+      await expect(useAdminAuthStore.getState().verify2FA('000000')).rejects.toThrow(
+        '無効な認証コードです'
+      );
 
       expect(useAdminAuthStore.getState().error).toEqual(apiError);
     });
@@ -164,9 +164,9 @@ describe('admin-auth store', () => {
     it('不明なエラーの場合はApiErrorに変換してスローする', async () => {
       mockAuthApi.verify2FA.mockRejectedValue(new Error('ネットワークエラー'));
 
-      await expect(
-        useAdminAuthStore.getState().verify2FA('123456')
-      ).rejects.toThrow('認証コードの検証に失敗しました');
+      await expect(useAdminAuthStore.getState().verify2FA('123456')).rejects.toThrow(
+        '認証コードの検証に失敗しました'
+      );
 
       expect(useAdminAuthStore.getState().error?.code).toBe('UNKNOWN_ERROR');
     });
@@ -201,10 +201,7 @@ describe('admin-auth store', () => {
 
       expect(useAdminAuthStore.getState().admin).toBeNull();
       expect(useAdminAuthStore.getState().isAuthenticated).toBe(false);
-      expect(console.error).toHaveBeenCalledWith(
-        'ログアウトエラー:',
-        expect.any(Error)
-      );
+      expect(console.error).toHaveBeenCalledWith('ログアウトエラー:', expect.any(Error));
     });
   });
 

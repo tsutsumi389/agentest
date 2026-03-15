@@ -26,8 +26,20 @@ describe('AccountService', () => {
   describe('getAccounts', () => {
     it('ユーザーのOAuth連携一覧を取得できる', async () => {
       const mockAccounts = [
-        { id: '1', provider: 'github', providerAccountId: 'gh123', createdAt: new Date(), updatedAt: new Date() },
-        { id: '2', provider: 'google', providerAccountId: 'go456', createdAt: new Date(), updatedAt: new Date() },
+        {
+          id: '1',
+          provider: 'github',
+          providerAccountId: 'gh123',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          id: '2',
+          provider: 'google',
+          providerAccountId: 'go456',
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
       ];
       mockAccountRepo.findByUserId.mockResolvedValue(mockAccounts);
 
@@ -52,8 +64,7 @@ describe('AccountService', () => {
     it('連携が存在しない場合はNotFoundErrorを投げる', async () => {
       mockAccountRepo.findByUserIdAndProvider.mockResolvedValue(null);
 
-      await expect(service.getAccountByProvider('user-1', 'github'))
-        .rejects.toThrow(NotFoundError);
+      await expect(service.getAccountByProvider('user-1', 'github')).rejects.toThrow(NotFoundError);
     });
   });
 
@@ -75,8 +86,7 @@ describe('AccountService', () => {
     it('連携が存在しない場合はNotFoundErrorを投げる', async () => {
       mockAccountRepo.findByUserIdAndProvider.mockResolvedValue(null);
 
-      await expect(service.unlinkAccount('user-1', 'github'))
-        .rejects.toThrow(NotFoundError);
+      await expect(service.unlinkAccount('user-1', 'github')).rejects.toThrow(NotFoundError);
     });
 
     it('最後の1つの連携は解除できない', async () => {
@@ -84,8 +94,7 @@ describe('AccountService', () => {
       mockAccountRepo.findByUserIdAndProvider.mockResolvedValue(mockAccount);
       mockAccountRepo.countByUserId.mockResolvedValue(1); // 1つしか連携がない
 
-      await expect(service.unlinkAccount('user-1', 'github'))
-        .rejects.toThrow(ValidationError);
+      await expect(service.unlinkAccount('user-1', 'github')).rejects.toThrow(ValidationError);
     });
   });
 

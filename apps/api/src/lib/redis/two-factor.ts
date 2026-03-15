@@ -37,9 +37,7 @@ export async function setUserTwoFactorToken(
  * 2FA認証用の一時トークンからユーザーIDを取得
  * @param token 一時トークン
  */
-export async function getUserIdByTwoFactorToken(
-  token: string
-): Promise<string | null> {
+export async function getUserIdByTwoFactorToken(token: string): Promise<string | null> {
   const redis = getRedisClient();
   if (!redis) {
     return null;
@@ -58,9 +56,7 @@ export async function getUserIdByTwoFactorToken(
  * 2FA認証用の一時トークンを削除
  * @param token 一時トークン
  */
-export async function deleteUserTwoFactorToken(
-  token: string
-): Promise<boolean> {
+export async function deleteUserTwoFactorToken(token: string): Promise<boolean> {
   const redis = getRedisClient();
   if (!redis) {
     return false;

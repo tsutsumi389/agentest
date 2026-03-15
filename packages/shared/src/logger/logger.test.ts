@@ -130,9 +130,9 @@ describe('createLogger - ログレベル制御', () => {
   it('無効なoptions.levelを指定した場合、エラーをスローする', async () => {
     const { createLogger } = await import('./index.js');
 
-    expect(() =>
-      createLogger({ service: 'test', level: 'verbose' as never }),
-    ).toThrow('Invalid log level: "verbose"');
+    expect(() => createLogger({ service: 'test', level: 'verbose' as never })).toThrow(
+      'Invalid log level: "verbose"'
+    );
   });
 
   it('無効なLOG_LEVELの場合、警告を出力してNODE_ENVベースのデフォルトにフォールバックする', async () => {
@@ -221,10 +221,13 @@ describe('createLogger - mixin', () => {
     process.env.NODE_ENV = 'development';
     const { createLogger } = await import('./index.js');
     const { stream, lines } = createTestStream();
-    const logger = createLogger({
-      service: 'api',
-      mixin: () => ({ requestId: 'mixin-req-001', traceId: 'trace-xyz' }),
-    }, stream);
+    const logger = createLogger(
+      {
+        service: 'api',
+        mixin: () => ({ requestId: 'mixin-req-001', traceId: 'trace-xyz' }),
+      },
+      stream
+    );
 
     logger.info('mixinテスト');
 
@@ -238,10 +241,13 @@ describe('createLogger - mixin', () => {
     process.env.NODE_ENV = 'development';
     const { createLogger } = await import('./index.js');
     const { stream, lines } = createTestStream();
-    const logger = createLogger({
-      service: 'api',
-      mixin: () => ({}),
-    }, stream);
+    const logger = createLogger(
+      {
+        service: 'api',
+        mixin: () => ({}),
+      },
+      stream
+    );
 
     logger.info('空mixinテスト');
 
@@ -257,10 +263,13 @@ describe('createLogger - mixin', () => {
     const { createLogger } = await import('./index.js');
     const { stream, lines } = createTestStream();
     let counter = 0;
-    const logger = createLogger({
-      service: 'api',
-      mixin: () => ({ callCount: ++counter }),
-    }, stream);
+    const logger = createLogger(
+      {
+        service: 'api',
+        mixin: () => ({ callCount: ++counter }),
+      },
+      stream
+    );
 
     logger.info('1回目');
     logger.info('2回目');

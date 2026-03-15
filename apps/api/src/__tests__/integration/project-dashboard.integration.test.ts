@@ -41,7 +41,12 @@ vi.mock('@agentest/auth', () => ({
     }
     next();
   },
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -54,7 +59,10 @@ vi.mock('@agentest/auth', () => ({
 }));
 
 // テスト用認証設定関数
-function setTestAuth(user: { id: string; email: string } | null, projectRole: string | null = null) {
+function setTestAuth(
+  user: { id: string; email: string } | null,
+  projectRole: string | null = null
+) {
   mockAuthUser = user;
   mockProjectRole = projectRole;
 }
@@ -114,9 +122,7 @@ describe('Project Dashboard API Integration Tests', () => {
     it('未認証の場合は401エラー', async () => {
       clearTestAuth();
 
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/dashboard`)
-        .expect(401);
+      const response = await request(app).get(`/api/projects/${project.id}/dashboard`).expect(401);
 
       expect(response.body.error.code).toBe('AUTHENTICATION_ERROR');
     });
@@ -124,9 +130,7 @@ describe('Project Dashboard API Integration Tests', () => {
     it('プロジェクトメンバーでない場合は403エラー', async () => {
       setTestAuth({ id: nonMember.id, email: nonMember.email }, null);
 
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/dashboard`)
-        .expect(403);
+      const response = await request(app).get(`/api/projects/${project.id}/dashboard`).expect(403);
 
       expect(response.body.error.code).toBe('AUTHORIZATION_ERROR');
     });
@@ -134,9 +138,7 @@ describe('Project Dashboard API Integration Tests', () => {
     it('READ権限でダッシュボードを取得できる', async () => {
       setTestAuth({ id: reader.id, email: reader.email }, 'READ');
 
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/dashboard`)
-        .expect(200);
+      const response = await request(app).get(`/api/projects/${project.id}/dashboard`).expect(200);
 
       expect(response.body.dashboard).toBeDefined();
     });
@@ -144,9 +146,7 @@ describe('Project Dashboard API Integration Tests', () => {
     it('WRITE権限でダッシュボードを取得できる', async () => {
       setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
 
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/dashboard`)
-        .expect(200);
+      const response = await request(app).get(`/api/projects/${project.id}/dashboard`).expect(200);
 
       expect(response.body.dashboard).toBeDefined();
     });
@@ -154,9 +154,7 @@ describe('Project Dashboard API Integration Tests', () => {
     it('ADMIN権限でダッシュボードを取得できる', async () => {
       setTestAuth({ id: admin.id, email: admin.email }, 'ADMIN');
 
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/dashboard`)
-        .expect(200);
+      const response = await request(app).get(`/api/projects/${project.id}/dashboard`).expect(200);
 
       expect(response.body.dashboard).toBeDefined();
     });
@@ -167,9 +165,7 @@ describe('Project Dashboard API Integration Tests', () => {
   // ============================================================
   describe('Normal Cases', () => {
     it('空のプロジェクトでダッシュボードを取得（全て0/空）', async () => {
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/dashboard`)
-        .expect(200);
+      const response = await request(app).get(`/api/projects/${project.id}/dashboard`).expect(200);
 
       const { dashboard } = response.body;
       expect(dashboard.summary.totalTestSuites).toBe(0);
@@ -198,9 +194,7 @@ describe('Project Dashboard API Integration Tests', () => {
         data: { testCaseId: tc2.id, content: 'Expected 2', orderKey: 'a' },
       });
 
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/dashboard`)
-        .expect(200);
+      const response = await request(app).get(`/api/projects/${project.id}/dashboard`).expect(200);
 
       expect(response.body.dashboard.summary.totalTestSuites).toBe(1);
       expect(response.body.dashboard.summary.totalTestCases).toBe(3);
@@ -246,12 +240,20 @@ describe('Project Dashboard API Integration Tests', () => {
         expectedResult2.id
       );
 
-      await createTestExecutionExpectedResult(execution.id, execTestCase1.id, execExpectedResult1.id, { status: 'PASS' });
-      await createTestExecutionExpectedResult(execution.id, execTestCase2.id, execExpectedResult2.id, { status: 'FAIL' });
+      await createTestExecutionExpectedResult(
+        execution.id,
+        execTestCase1.id,
+        execExpectedResult1.id,
+        { status: 'PASS' }
+      );
+      await createTestExecutionExpectedResult(
+        execution.id,
+        execTestCase2.id,
+        execExpectedResult2.id,
+        { status: 'FAIL' }
+      );
 
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/dashboard`)
-        .expect(200);
+      const response = await request(app).get(`/api/projects/${project.id}/dashboard`).expect(200);
 
       expect(response.body.dashboard.resultDistribution.pass).toBe(1);
       expect(response.body.dashboard.resultDistribution.fail).toBe(1);
@@ -276,9 +278,7 @@ describe('Project Dashboard API Integration Tests', () => {
         submittedAt: new Date(),
       });
 
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/dashboard`)
-        .expect(200);
+      const response = await request(app).get(`/api/projects/${project.id}/dashboard`).expect(200);
 
       expect(response.body.dashboard.recentActivities.length).toBeGreaterThan(0);
     });
@@ -322,16 +322,18 @@ describe('Project Dashboard API Integration Tests', () => {
         execTestCase.id,
         expectedResult.id
       );
-      await createTestExecutionExpectedResult(execution.id, execTestCase.id, execExpectedResult.id, { status: 'PASS' });
+      await createTestExecutionExpectedResult(
+        execution.id,
+        execTestCase.id,
+        execExpectedResult.id,
+        { status: 'PASS' }
+      );
 
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/dashboard`)
-        .expect(200);
+      const response = await request(app).get(`/api/projects/${project.id}/dashboard`).expect(200);
 
       // 31日前の実行は過去30日間の統計に含まれない
       expect(response.body.dashboard.resultDistribution.pass).toBe(0);
     });
-
   });
 
   // ============================================================
@@ -353,9 +355,7 @@ describe('Project Dashboard API Integration Tests', () => {
         data: { deletedAt: new Date() },
       });
 
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/dashboard`)
-        .expect(404);
+      const response = await request(app).get(`/api/projects/${project.id}/dashboard`).expect(404);
 
       expect(response.body.error.code).toBe('NOT_FOUND');
     });

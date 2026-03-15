@@ -35,7 +35,10 @@ interface TestCaseHistoryListProps {
 /**
  * 変更タイプの定義
  */
-const CHANGE_TYPES: Record<TestCaseChangeType, { label: string; icon: typeof PlusCircle; color: string }> = {
+const CHANGE_TYPES: Record<
+  TestCaseChangeType,
+  { label: string; icon: typeof PlusCircle; color: string }
+> = {
   CREATE: { label: '作成', icon: PlusCircle, color: 'text-green-500' },
   UPDATE: { label: '更新', icon: Pencil, color: 'text-blue-500' },
   DELETE: { label: '削除', icon: Trash2, color: 'text-danger' },
@@ -102,10 +105,11 @@ export function TestCaseHistoryList({ testCase }: TestCaseHistoryListProps) {
   // React Queryで履歴を取得（グループ化済み）
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['test-case-histories', testCase.id, page],
-    queryFn: () => testCasesApi.getHistories(testCase.id, {
-      limit: PAGE_SIZE,
-      offset: (page - 1) * PAGE_SIZE,
-    }),
+    queryFn: () =>
+      testCasesApi.getHistories(testCase.id, {
+        limit: PAGE_SIZE,
+        offset: (page - 1) * PAGE_SIZE,
+      }),
   });
 
   const groupedItems = data?.items || [];
@@ -137,7 +141,9 @@ export function TestCaseHistoryList({ testCase }: TestCaseHistoryListProps) {
       <div className="space-y-4">
         <h3 className="text-sm font-semibold text-foreground">変更履歴</h3>
         <div className="text-center py-12">
-          <p className="text-danger mb-4">{error instanceof Error ? error.message : '履歴の取得に失敗しました'}</p>
+          <p className="text-danger mb-4">
+            {error instanceof Error ? error.message : '履歴の取得に失敗しました'}
+          </p>
           <button className="btn btn-primary btn-sm" onClick={() => refetch()}>
             再読み込み
           </button>
@@ -308,7 +314,10 @@ function hasTestCaseChangeDetail(snapshot: Record<string, unknown>): boolean {
 /**
  * 変更内容のサマリーを取得
  */
-function getChangeSummary(snapshot: Record<string, unknown>, changeType: TestCaseChangeType): string {
+function getChangeSummary(
+  snapshot: Record<string, unknown>,
+  changeType: TestCaseChangeType
+): string {
   if (changeType === 'CREATE') {
     const changeDetail = snapshot.changeDetail as TestCaseChangeDetail | undefined;
     if (changeDetail?.type === 'COPY') {
@@ -364,11 +373,7 @@ function DiffView({ snapshot }: { snapshot: Record<string, unknown> }) {
     return (
       <div className="space-y-2">
         {fields.title && (
-          <DiffField
-            label="タイトル"
-            before={fields.title.before}
-            after={fields.title.after}
-          />
+          <DiffField label="タイトル" before={fields.title.before} after={fields.title.after} />
         )}
         {fields.description && (
           <DiffField
@@ -488,17 +493,13 @@ function DiffView({ snapshot }: { snapshot: Record<string, unknown> }) {
     changeDetail.type === 'STEP_REORDER' ||
     changeDetail.type === 'EXPECTED_RESULT_REORDER'
   ) {
-    return (
-      <p className="text-xs text-foreground-muted italic">順序を変更しました</p>
-    );
+    return <p className="text-xs text-foreground-muted italic">順序を変更しました</p>;
   }
 
   // COPYの場合
   if (changeDetail.type === 'COPY') {
     return (
-      <p className="text-xs text-foreground-muted">
-        コピー元: 「{changeDetail.sourceTitle}」
-      </p>
+      <p className="text-xs text-foreground-muted">コピー元: 「{changeDetail.sourceTitle}」</p>
     );
   }
 
@@ -508,15 +509,7 @@ function DiffView({ snapshot }: { snapshot: Record<string, unknown> }) {
 /**
  * 差分フィールド表示コンポーネント
  */
-function DiffField({
-  label,
-  before,
-  after,
-}: {
-  label: string;
-  before: string;
-  after: string;
-}) {
+function DiffField({ label, before, after }: { label: string; before: string; after: string }) {
   return (
     <div className="text-xs space-y-1">
       <p className="font-medium text-foreground-muted">{label}</p>
@@ -719,15 +712,11 @@ function HistoryGroupItem({ group }: { group: TestCaseHistoryGroupedItem }) {
               <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded text-blue-500 bg-background-tertiary">
                 <Pencil className="w-3 h-3" />
                 更新
-                <span className="text-foreground-muted">
-                  ({totalCount}件)
-                </span>
+                <span className="text-foreground-muted">({totalCount}件)</span>
               </span>
 
               {/* ユーザー名 */}
-              <span className="text-xs text-foreground">
-                {changedBy?.name || 'システム'}
-              </span>
+              <span className="text-xs text-foreground">{changedBy?.name || 'システム'}</span>
             </div>
 
             {/* サマリー表示 + 詳細ボタン */}

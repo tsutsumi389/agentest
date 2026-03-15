@@ -61,9 +61,7 @@ describe('NotificationController', () => {
 
   describe('list', () => {
     it('通知一覧を取得できる', async () => {
-      const mockNotifications = [
-        { id: TEST_NOTIFICATION_ID, message: 'テスト通知' },
-      ];
+      const mockNotifications = [{ id: TEST_NOTIFICATION_ID, message: 'テスト通知' }];
       mockNotificationService.getNotifications.mockResolvedValue(mockNotifications);
 
       const req = mockRequest() as Request;
@@ -71,10 +69,11 @@ describe('NotificationController', () => {
 
       await controller.list(req, res, mockNext);
 
-      expect(mockNotificationService.getNotifications).toHaveBeenCalledWith(
-        TEST_USER_ID,
-        { limit: 20, offset: 0, unreadOnly: false }
-      );
+      expect(mockNotificationService.getNotifications).toHaveBeenCalledWith(TEST_USER_ID, {
+        limit: 20,
+        offset: 0,
+        unreadOnly: false,
+      });
       expect(res.json).toHaveBeenCalledWith({ notifications: mockNotifications });
     });
 
@@ -89,10 +88,11 @@ describe('NotificationController', () => {
 
       await controller.list(req, res, mockNext);
 
-      expect(mockNotificationService.getNotifications).toHaveBeenCalledWith(
-        TEST_USER_ID,
-        { limit: 50, offset: 10, unreadOnly: true }
-      );
+      expect(mockNotificationService.getNotifications).toHaveBeenCalledWith(TEST_USER_ID, {
+        limit: 50,
+        offset: 10,
+        unreadOnly: true,
+      });
       expect(res.json).toHaveBeenCalledWith({ notifications: mockNotifications });
     });
 

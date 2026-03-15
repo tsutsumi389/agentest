@@ -9,10 +9,7 @@ import {
   CircleDot,
   LayoutGrid,
 } from 'lucide-react';
-import type {
-  ExecutionTestCaseSnapshot,
-  ExecutionExpectedResult,
-} from '../../lib/api';
+import type { ExecutionTestCaseSnapshot, ExecutionExpectedResult } from '../../lib/api';
 import { priorityStyles } from './constants';
 
 interface ExecutionSidebarProps {
@@ -37,7 +34,13 @@ type ProgressStatus = 'pass' | 'fail' | 'pending' | 'mixed';
 function calculateProgress(
   testCaseId: string,
   allExpectedResults: ExecutionExpectedResult[]
-): { status: ProgressStatus; passCount: number; failCount: number; pendingCount: number; total: number } {
+): {
+  status: ProgressStatus;
+  passCount: number;
+  failCount: number;
+  pendingCount: number;
+  total: number;
+} {
   const results = allExpectedResults.filter((r) => r.executionTestCaseId === testCaseId);
   const passCount = results.filter((r) => r.status === 'PASS').length;
   const failCount = results.filter((r) => r.status === 'FAIL').length;
@@ -101,9 +104,10 @@ function TestCaseItem({
       onClick={onSelect}
       className={`
         w-full flex items-center gap-2 p-2 rounded-md text-left transition-colors
-        ${isSelected
-          ? 'bg-accent-subtle text-accent'
-          : 'hover:bg-background-tertiary text-foreground'
+        ${
+          isSelected
+            ? 'bg-accent-subtle text-accent'
+            : 'hover:bg-background-tertiary text-foreground'
         }
       `}
     >
@@ -157,9 +161,10 @@ export function ExecutionSidebar({
   const filteredTestCases = useMemo(() => {
     if (!isSearching) return sortedTestCases;
     const query = searchQuery.toLowerCase();
-    return sortedTestCases.filter((tc) =>
-      tc.title.toLowerCase().includes(query) ||
-      (tc.description?.toLowerCase().includes(query) ?? false)
+    return sortedTestCases.filter(
+      (tc) =>
+        tc.title.toLowerCase().includes(query) ||
+        (tc.description?.toLowerCase().includes(query) ?? false)
     );
   }, [sortedTestCases, searchQuery, isSearching]);
 
@@ -189,9 +194,7 @@ export function ExecutionSidebar({
     <div className="flex flex-col h-full">
       {/* ヘッダー */}
       <div className="p-3 border-b border-border space-y-3">
-        <h3 className="font-semibold text-foreground text-sm">
-          テストケース
-        </h3>
+        <h3 className="font-semibold text-foreground text-sm">テストケース</h3>
 
         {/* 検索ボックス */}
         <div className="relative">
@@ -214,9 +217,10 @@ export function ExecutionSidebar({
           aria-label="テストスイート概要を表示"
           className={`
             w-full flex items-center gap-2 p-2 rounded-md text-left transition-colors
-            ${selectedTestCaseId === null
-              ? 'bg-accent-subtle text-accent'
-              : 'hover:bg-background-tertiary text-foreground'
+            ${
+              selectedTestCaseId === null
+                ? 'bg-accent-subtle text-accent'
+                : 'hover:bg-background-tertiary text-foreground'
             }
           `}
         >
@@ -224,12 +228,8 @@ export function ExecutionSidebar({
           <span className="text-sm font-medium flex-1">概要</span>
           {/* サマリーバッジ */}
           <div className="flex items-center gap-1 text-xs">
-            {overallSummary.pass > 0 && (
-              <span className="text-success">{overallSummary.pass}</span>
-            )}
-            {overallSummary.fail > 0 && (
-              <span className="text-danger">{overallSummary.fail}</span>
-            )}
+            {overallSummary.pass > 0 && <span className="text-success">{overallSummary.pass}</span>}
+            {overallSummary.fail > 0 && <span className="text-danger">{overallSummary.fail}</span>}
             {overallSummary.pending > 0 && (
               <span className="text-foreground-muted">{overallSummary.pending}</span>
             )}
@@ -257,7 +257,15 @@ export function ExecutionSidebar({
                 key={testCase.id}
                 testCase={testCase}
                 isSelected={selectedTestCaseId === testCase.id}
-                progress={progressMap.get(testCase.id) || { status: 'pending', passCount: 0, failCount: 0, pendingCount: 0, total: 0 }}
+                progress={
+                  progressMap.get(testCase.id) || {
+                    status: 'pending',
+                    passCount: 0,
+                    failCount: 0,
+                    pendingCount: 0,
+                    total: 0,
+                  }
+                }
                 onSelect={() => onSelect(testCase.id)}
               />
             ))}

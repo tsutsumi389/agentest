@@ -1,9 +1,23 @@
-import { prisma, type PreconditionStatus, type StepStatus, type JudgmentStatus } from '@agentest/db';
+import {
+  prisma,
+  type PreconditionStatus,
+  type StepStatus,
+  type JudgmentStatus,
+} from '@agentest/db';
 import { NotFoundError, BadRequestError } from '@agentest/shared';
-import { createStorageClient, createPublicStorageClient, type StorageClient } from '@agentest/storage';
+import {
+  createStorageClient,
+  createPublicStorageClient,
+  type StorageClient,
+} from '@agentest/storage';
 import { randomUUID } from 'node:crypto';
 import { ExecutionRepository } from '../repositories/execution.repository.js';
-import { MAX_EVIDENCES_PER_RESULT, isAllowedMimeType, sanitizeFileName, validateMagicBytes } from '../config/upload.js';
+import {
+  MAX_EVIDENCES_PER_RESULT,
+  isAllowedMimeType,
+  sanitizeFileName,
+  validateMagicBytes,
+} from '../config/upload.js';
 import { publishDashboardUpdated } from '../lib/redis-publisher.js';
 import {
   publishExecutionPreconditionUpdated,
@@ -20,8 +34,8 @@ const logger = baseLogger.child({ module: 'execution' });
  * 実施者情報のコンテキスト
  */
 export interface ExecutorContext {
-  userId: string;         // 実施ユーザーID
-  agentName?: string;     // MCPエージェント名（例：Claude Code Opus4.5）
+  userId: string; // 実施ユーザーID
+  agentName?: string; // MCPエージェント名（例：Claude Code Opus4.5）
 }
 
 /**
@@ -82,7 +96,10 @@ export class ExecutionService {
                   expiresIn: 3600, // 1時間
                 });
               } catch (error) {
-                logger.warn({ err: error, evidenceId: evidence.id, fileUrl: evidence.fileUrl }, 'エビデンスのダウンロードURL生成に失敗しました');
+                logger.warn(
+                  { err: error, evidenceId: evidence.id, fileUrl: evidence.fileUrl },
+                  'エビデンスのダウンロードURL生成に失敗しました'
+                );
                 downloadUrl = null;
               }
             }
@@ -148,7 +165,8 @@ export class ExecutionService {
     await publishExecutionPreconditionUpdated({
       executionId,
       resultId: preconditionResultId,
-      snapshotPreconditionId: result.executionSuitePreconditionId ?? result.executionCasePreconditionId ?? '',
+      snapshotPreconditionId:
+        result.executionSuitePreconditionId ?? result.executionCasePreconditionId ?? '',
       status: data.status,
       note: data.note ?? null,
     });
@@ -323,7 +341,12 @@ export class ExecutionService {
     });
 
     // 通知本文を生成
-    const body = this.buildNotificationBody(testSuite.name, { passCount, failCount, skippedCount, totalCount });
+    const body = this.buildNotificationBody(testSuite.name, {
+      passCount,
+      failCount,
+      skippedCount,
+      totalCount,
+    });
 
     // 通知データ
     const notificationData = {
@@ -577,7 +600,9 @@ export class ExecutionService {
     // S3メタデータを取得してファイルの存在を確認
     const metadata = await this.storage.getMetadata(evidence.fileUrl);
     if (!metadata) {
-      throw new BadRequestError('ファイルがアップロードされていません。presigned URLを使ってアップロードしてから確認してください');
+      throw new BadRequestError(
+        'ファイルがアップロードされていません。presigned URLを使ってアップロードしてから確認してください'
+      );
     }
 
     const fileSize = metadata.contentLength ?? 0;

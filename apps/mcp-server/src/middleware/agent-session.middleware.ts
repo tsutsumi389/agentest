@@ -54,11 +54,7 @@ function extractClientInfo(req: Request): McpClientInfo | null {
 export function agentSession(options: AgentSessionOptions) {
   const { getProjectId, required = true } = options;
 
-  return async (
-    req: Request,
-    _res: Response,
-    next: NextFunction
-  ): Promise<void> => {
+  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     try {
       // クライアント情報を抽出
       const clientInfo = extractClientInfo(req);
@@ -113,11 +109,7 @@ export function agentSession(options: AgentSessionOptions) {
  * リクエストごとにハートビートを更新
  */
 export function recordHeartbeat() {
-  return async (
-    req: Request,
-    _res: Response,
-    next: NextFunction
-  ): Promise<void> => {
+  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     try {
       if (req.agentSession) {
         await agentSessionService.recordHeartbeat(req.agentSession.id);

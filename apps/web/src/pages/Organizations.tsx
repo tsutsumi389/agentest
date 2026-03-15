@@ -58,14 +58,9 @@ export function OrganizationsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">組織</h1>
-          <p className="text-foreground-muted mt-1">
-            所属組織の管理
-          </p>
+          <p className="text-foreground-muted mt-1">所属組織の管理</p>
         </div>
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="btn btn-primary"
-        >
+        <button onClick={() => setIsCreateModalOpen(true)} className="btn btn-primary">
           <Plus className="w-4 h-4" aria-hidden="true" />
           組織を作成
         </button>
@@ -73,7 +68,10 @@ export function OrganizationsPage() {
 
       {/* 検索 */}
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-subtle" aria-hidden="true" />
+        <Search
+          className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-subtle"
+          aria-hidden="true"
+        />
         <input
           type="text"
           placeholder="組織を検索..."
@@ -96,10 +94,7 @@ export function OrganizationsPage() {
             {searchQuery ? '組織が見つかりません' : '所属している組織がありません'}
           </p>
           {!searchQuery && (
-            <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="btn btn-primary"
-            >
+            <button onClick={() => setIsCreateModalOpen(true)} className="btn btn-primary">
               <Plus className="w-4 h-4" aria-hidden="true" />
               組織を作成
             </button>

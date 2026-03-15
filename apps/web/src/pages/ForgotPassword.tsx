@@ -62,15 +62,16 @@ export function ForgotPasswordPage() {
           {isSent ? (
             /* 送信完了画面 */
             <div className="space-y-4">
-              <p className="text-sm text-foreground text-center">
-                メールを送信しました
-              </p>
+              <p className="text-sm text-foreground text-center">メールを送信しました</p>
               <p className="text-sm text-foreground-muted text-center">
                 受信トレイを確認してください。
               </p>
 
               {error && (
-                <div role="alert" className="text-sm text-error bg-error/10 border border-error/20 rounded-md px-3 py-2">
+                <div
+                  role="alert"
+                  className="text-sm text-error bg-error/10 border border-error/20 rounded-md px-3 py-2"
+                >
                   {error}
                 </div>
               )}
@@ -99,7 +100,10 @@ export function ForgotPasswordPage() {
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 {error && (
-                  <div role="alert" className="text-sm text-error bg-error/10 border border-error/20 rounded-md px-3 py-2">
+                  <div
+                    role="alert"
+                    className="text-sm text-error bg-error/10 border border-error/20 rounded-md px-3 py-2"
+                  >
                     {error}
                   </div>
                 )}
@@ -119,11 +123,7 @@ export function ForgotPasswordPage() {
                   />
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="btn btn-primary w-full"
-                >
+                <button type="submit" disabled={isSubmitting} className="btn btn-primary w-full">
                   {isSubmitting ? '送信中...' : 'リセットリンクを送信'}
                 </button>
               </form>

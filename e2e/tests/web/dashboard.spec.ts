@@ -35,12 +35,12 @@ test.describe('ダッシュボード', () => {
     await page.goto('/dashboard');
 
     // ユーザーメニューを開く（ユーザーアバターをクリック）
-    const userMenuButton = page.locator('[data-testid="user-menu-button"]').or(
-      page.getByRole('button').filter({ has: page.locator('img[alt]') })
-    );
+    const userMenuButton = page
+      .locator('[data-testid="user-menu-button"]')
+      .or(page.getByRole('button').filter({ has: page.locator('img[alt]') }));
 
     // ユーザーメニューが見つからない場合はスキップ
-    if (await userMenuButton.count() === 0) {
+    if ((await userMenuButton.count()) === 0) {
       test.skip();
       return;
     }

@@ -41,7 +41,9 @@ export class AccountService {
     // 連携数をチェック（最低1つは必須）
     const accountCount = await this.accountRepo.countByUserId(userId);
     if (accountCount <= 1) {
-      throw new ValidationError('最低1つのOAuth連携が必要です。連携を解除する前に別のプロバイダーを連携してください。');
+      throw new ValidationError(
+        '最低1つのOAuth連携が必要です。連携を解除する前に別のプロバイダーを連携してください。'
+      );
     }
 
     // 連携を削除

@@ -232,7 +232,9 @@ describe('ReviewCommentService', () => {
         targetId: TEST_SUITE_ID,
       });
 
-      await expect(service.delete(TEST_COMMENT_ID, TEST_USER_ID)).rejects.toThrow(AuthorizationError);
+      await expect(service.delete(TEST_COMMENT_ID, TEST_USER_ID)).rejects.toThrow(
+        AuthorizationError
+      );
     });
   });
 
@@ -386,9 +388,9 @@ describe('ReviewCommentService', () => {
         authorUserId: OTHER_USER_ID,
       });
 
-      await expect(service.deleteReply(TEST_COMMENT_ID, TEST_REPLY_ID, TEST_USER_ID)).rejects.toThrow(
-        AuthorizationError
-      );
+      await expect(
+        service.deleteReply(TEST_COMMENT_ID, TEST_REPLY_ID, TEST_USER_ID)
+      ).rejects.toThrow(AuthorizationError);
     });
   });
 
@@ -413,9 +415,7 @@ describe('ReviewCommentService', () => {
         offset: 0,
       });
 
-      expect(result.items).toEqual(
-        mockComments.map((c) => ({ ...c, targetName: null }))
-      );
+      expect(result.items).toEqual(mockComments.map((c) => ({ ...c, targetName: null })));
       expect(result.total).toBe(2);
     });
 

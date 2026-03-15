@@ -25,8 +25,15 @@ let mockAuthUser: { id: string; email: string } | null = null;
 let mockExecutionRole: string | null = null;
 
 // vi.hoistedを使用してモック関数を事前定義
-const { mockStorageUpload, mockStorageDelete, mockStorageGetDownloadUrl, mockPublicStorageGetDownloadUrl } = vi.hoisted(() => ({
-  mockStorageUpload: vi.fn().mockResolvedValue({ key: 'test-key', url: 'https://example.com/test', size: 1024 }),
+const {
+  mockStorageUpload,
+  mockStorageDelete,
+  mockStorageGetDownloadUrl,
+  mockPublicStorageGetDownloadUrl,
+} = vi.hoisted(() => ({
+  mockStorageUpload: vi
+    .fn()
+    .mockResolvedValue({ key: 'test-key', url: 'https://example.com/test', size: 1024 }),
   mockStorageDelete: vi.fn().mockResolvedValue(undefined),
   mockStorageGetDownloadUrl: vi.fn().mockResolvedValue('https://internal-minio:9000/signed-url'),
   mockPublicStorageGetDownloadUrl: vi.fn().mockResolvedValue('https://localhost:9002/signed-url'),
@@ -64,7 +71,12 @@ vi.mock('@agentest/auth', () => ({
   optionalAuth: () => (_req: any, _res: any, next: any) => next(),
   requireOrgRole: () => (_req: any, _res: any, next: any) => next(),
   requireProjectRole: () => (_req: any, _res: any, next: any) => next(),
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -87,7 +99,10 @@ vi.mock('../../middleware/require-execution-role.js', () => ({
 }));
 
 // テスト用認証設定関数
-function setTestAuth(user: { id: string; email: string } | null, executionRole: string | null = null) {
+function setTestAuth(
+  user: { id: string; email: string } | null,
+  executionRole: string | null = null
+) {
   mockAuthUser = user;
   mockExecutionRole = executionRole;
 }
@@ -155,9 +170,13 @@ describe('Execution Evidence API Integration Tests', () => {
     const execTestSuite = await createTestExecutionTestSuite(execution.id, testSuite.id, {
       name: testSuite.name,
     });
-    const execTestCase = await createTestExecutionTestCase(execTestSuite.id, 'original-test-case-1', {
-      title: 'Test Case 1',
-    });
+    const execTestCase = await createTestExecutionTestCase(
+      execTestSuite.id,
+      'original-test-case-1',
+      {
+        title: 'Test Case 1',
+      }
+    );
     const execExpectedResultSnapshot = await createTestExecutionTestCaseExpectedResult(
       execTestCase.id,
       'original-expected-result-1',
@@ -224,7 +243,6 @@ describe('Execution Evidence API Integration Tests', () => {
       expect(response.status).toBe(403);
     });
 
-
     it('存在しない期待結果には404エラー', async () => {
       setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
 
@@ -280,7 +298,9 @@ describe('Execution Evidence API Integration Tests', () => {
     it('エビデンスを削除できる', async () => {
       setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
 
-      const response = await request(app).delete(`/api/executions/${execution.id}/evidences/${evidence.id}`);
+      const response = await request(app).delete(
+        `/api/executions/${execution.id}/evidences/${evidence.id}`
+      );
 
       expect(response.status).toBe(204);
       expect(mockStorageDelete).toHaveBeenCalledWith('evidences/test.png');
@@ -293,7 +313,9 @@ describe('Execution Evidence API Integration Tests', () => {
     it('認証なしの場合は401エラー', async () => {
       clearTestAuth();
 
-      const response = await request(app).delete(`/api/executions/${execution.id}/evidences/${evidence.id}`);
+      const response = await request(app).delete(
+        `/api/executions/${execution.id}/evidences/${evidence.id}`
+      );
 
       expect(response.status).toBe(401);
     });
@@ -301,16 +323,19 @@ describe('Execution Evidence API Integration Tests', () => {
     it('READ権限のみでは403エラー', async () => {
       setTestAuth({ id: reader.id, email: reader.email }, 'READ');
 
-      const response = await request(app).delete(`/api/executions/${execution.id}/evidences/${evidence.id}`);
+      const response = await request(app).delete(
+        `/api/executions/${execution.id}/evidences/${evidence.id}`
+      );
 
       expect(response.status).toBe(403);
     });
 
-
     it('存在しないエビデンスは404エラー', async () => {
       setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
 
-      const response = await request(app).delete(`/api/executions/${execution.id}/evidences/non-existent-id`);
+      const response = await request(app).delete(
+        `/api/executions/${execution.id}/evidences/non-existent-id`
+      );
 
       expect(response.status).toBe(404);
     });
@@ -335,17 +360,23 @@ describe('Execution Evidence API Integration Tests', () => {
     it('署名付きダウンロードURLを取得できる', async () => {
       setTestAuth({ id: reader.id, email: reader.email }, 'READ');
 
-      const response = await request(app).get(`/api/executions/${execution.id}/evidences/${evidence.id}/download-url`);
+      const response = await request(app).get(
+        `/api/executions/${execution.id}/evidences/${evidence.id}/download-url`
+      );
 
       expect(response.status).toBe(200);
       expect(response.body.downloadUrl).toBe('https://localhost:9002/signed-url');
-      expect(mockPublicStorageGetDownloadUrl).toHaveBeenCalledWith('evidences/test.png', { expiresIn: 3600 });
+      expect(mockPublicStorageGetDownloadUrl).toHaveBeenCalledWith('evidences/test.png', {
+        expiresIn: 3600,
+      });
     });
 
     it('WRITE権限でもダウンロードできる', async () => {
       setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
 
-      const response = await request(app).get(`/api/executions/${execution.id}/evidences/${evidence.id}/download-url`);
+      const response = await request(app).get(
+        `/api/executions/${execution.id}/evidences/${evidence.id}/download-url`
+      );
 
       expect(response.status).toBe(200);
       expect(response.body.downloadUrl).toBeDefined();
@@ -354,7 +385,9 @@ describe('Execution Evidence API Integration Tests', () => {
     it('認証なしの場合は401エラー', async () => {
       clearTestAuth();
 
-      const response = await request(app).get(`/api/executions/${execution.id}/evidences/${evidence.id}/download-url`);
+      const response = await request(app).get(
+        `/api/executions/${execution.id}/evidences/${evidence.id}/download-url`
+      );
 
       expect(response.status).toBe(401);
     });
@@ -368,6 +401,5 @@ describe('Execution Evidence API Integration Tests', () => {
 
       expect(response.status).toBe(404);
     });
-
   });
 });

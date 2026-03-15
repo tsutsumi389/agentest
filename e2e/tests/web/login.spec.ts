@@ -52,12 +52,16 @@ test.describe('ログインページ', () => {
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test('未認証でプロジェクトページにアクセスするとログインにリダイレクトされる', async ({ page }) => {
+  test('未認証でプロジェクトページにアクセスするとログインにリダイレクトされる', async ({
+    page,
+  }) => {
     await page.goto('/projects');
     await expect(page).toHaveURL(/\/login/);
   });
 
-  test('メール未確認ユーザーのログイン時にメール確認ページにリダイレクトされる', async ({ page }) => {
+  test('メール未確認ユーザーのログイン時にメール確認ページにリダイレクトされる', async ({
+    page,
+  }) => {
     await page.goto('/login');
 
     const testEmail = 'unverified@example.com';
@@ -82,7 +86,9 @@ test.describe('ログインページ', () => {
     await page.getByRole('button', { name: 'ログイン', exact: true }).click();
 
     // メール確認ページにリダイレクトされる
-    await expect(page).toHaveURL(new RegExp(`/check-email\\?email=${encodeURIComponent(testEmail)}`));
+    await expect(page).toHaveURL(
+      new RegExp(`/check-email\\?email=${encodeURIComponent(testEmail)}`)
+    );
     await expect(page.getByRole('heading', { name: 'メールアドレスの確認' })).toBeVisible();
   });
 });

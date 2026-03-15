@@ -112,9 +112,7 @@ export function CopyTestCaseModal({
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <Copy className="w-5 h-5 text-accent" />
-            <h2 className="text-lg font-semibold text-foreground">
-              テストケースをコピー
-            </h2>
+            <h2 className="text-lg font-semibold text-foreground">テストケースをコピー</h2>
           </div>
           <button
             onClick={onClose}
@@ -128,9 +126,7 @@ export function CopyTestCaseModal({
         {/* コピー元表示 */}
         <div className="mb-4 p-3 bg-background-secondary rounded-lg">
           <p className="text-xs text-foreground-muted mb-1">コピー元</p>
-          <p className="text-sm font-medium text-foreground truncate">
-            {testCase.title}
-          </p>
+          <p className="text-sm font-medium text-foreground truncate">{testCase.title}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

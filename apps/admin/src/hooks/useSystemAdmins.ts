@@ -51,13 +51,8 @@ export function useUpdateSystemAdmin() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({
-      adminUserId,
-      data,
-    }: {
-      adminUserId: string;
-      data: SystemAdminUpdateRequest;
-    }) => systemAdminApi.update(adminUserId, data),
+    mutationFn: ({ adminUserId, data }: { adminUserId: string; data: SystemAdminUpdateRequest }) =>
+      systemAdminApi.update(adminUserId, data),
     onSuccess: (_, variables) => {
       // 一覧と詳細キャッシュを無効化
       queryClient.invalidateQueries({ queryKey: ['system-admins'] });

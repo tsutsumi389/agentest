@@ -36,7 +36,10 @@ vi.mock('../../../clients/api-client.js', () => ({
 }));
 
 // モック設定後にインポート
-import { searchExecutionTool, searchExecutionInputSchema } from '../../../tools/search-execution.js';
+import {
+  searchExecutionTool,
+  searchExecutionInputSchema,
+} from '../../../tools/search-execution.js';
 
 // テスト用の固定UUID
 const TEST_USER_ID = '11111111-1111-1111-1111-111111111111';
@@ -132,19 +135,27 @@ describe('searchExecutionTool', () => {
     });
 
     it('limitが50を超えるとエラー', () => {
-      expect(() => searchExecutionInputSchema.parse({ testSuiteId: TEST_SUITE_ID, limit: 51 })).toThrow();
+      expect(() =>
+        searchExecutionInputSchema.parse({ testSuiteId: TEST_SUITE_ID, limit: 51 })
+      ).toThrow();
     });
 
     it('limitが0以下だとエラー', () => {
-      expect(() => searchExecutionInputSchema.parse({ testSuiteId: TEST_SUITE_ID, limit: 0 })).toThrow();
+      expect(() =>
+        searchExecutionInputSchema.parse({ testSuiteId: TEST_SUITE_ID, limit: 0 })
+      ).toThrow();
     });
 
     it('offsetが負の値だとエラー', () => {
-      expect(() => searchExecutionInputSchema.parse({ testSuiteId: TEST_SUITE_ID, offset: -1 })).toThrow();
+      expect(() =>
+        searchExecutionInputSchema.parse({ testSuiteId: TEST_SUITE_ID, offset: -1 })
+      ).toThrow();
     });
 
     it('不正な日時形式はエラー', () => {
-      expect(() => searchExecutionInputSchema.parse({ testSuiteId: TEST_SUITE_ID, from: 'invalid-date' })).toThrow();
+      expect(() =>
+        searchExecutionInputSchema.parse({ testSuiteId: TEST_SUITE_ID, from: 'invalid-date' })
+      ).toThrow();
     });
 
     it('不正なUUID形式のtestSuiteIdはエラー', () => {
@@ -152,14 +163,22 @@ describe('searchExecutionTool', () => {
     });
 
     it('不正なsortByはエラー', () => {
-      expect(() => searchExecutionInputSchema.parse({ testSuiteId: TEST_SUITE_ID, sortBy: 'invalid' })).toThrow();
+      expect(() =>
+        searchExecutionInputSchema.parse({ testSuiteId: TEST_SUITE_ID, sortBy: 'invalid' })
+      ).toThrow();
     });
   });
 
   describe('ハンドラー', () => {
     it('認証されていない場合はエラーをスローする', async () => {
       const context: ToolContext = { userId: '' };
-      const input = { testSuiteId: TEST_SUITE_ID, limit: 20, offset: 0, sortBy: 'createdAt' as const, sortOrder: 'desc' as const };
+      const input = {
+        testSuiteId: TEST_SUITE_ID,
+        limit: 20,
+        offset: 0,
+        sortBy: 'createdAt' as const,
+        sortOrder: 'desc' as const,
+      };
 
       await expect(searchExecutionTool.handler(input, context)).rejects.toThrow(
         '認証されていません'
@@ -173,7 +192,13 @@ describe('searchExecutionTool', () => {
       mockApiClient.get.mockResolvedValueOnce(mockResponse);
 
       const context: ToolContext = { userId: TEST_USER_ID };
-      const input = { testSuiteId: TEST_SUITE_ID, limit: 20, offset: 0, sortBy: 'createdAt' as const, sortOrder: 'desc' as const };
+      const input = {
+        testSuiteId: TEST_SUITE_ID,
+        limit: 20,
+        offset: 0,
+        sortBy: 'createdAt' as const,
+        sortOrder: 'desc' as const,
+      };
 
       const result = await searchExecutionTool.handler(input, context);
 
@@ -223,12 +248,16 @@ describe('searchExecutionTool', () => {
     });
 
     it('APIエラーを伝播する', async () => {
-      mockApiClient.get.mockRejectedValueOnce(
-        new Error('Internal API error: 403 - Access denied')
-      );
+      mockApiClient.get.mockRejectedValueOnce(new Error('Internal API error: 403 - Access denied'));
 
       const context: ToolContext = { userId: TEST_USER_ID };
-      const input = { testSuiteId: TEST_SUITE_ID, limit: 20, offset: 0, sortBy: 'createdAt' as const, sortOrder: 'desc' as const };
+      const input = {
+        testSuiteId: TEST_SUITE_ID,
+        limit: 20,
+        offset: 0,
+        sortBy: 'createdAt' as const,
+        sortOrder: 'desc' as const,
+      };
 
       await expect(searchExecutionTool.handler(input, context)).rejects.toThrow(
         'Internal API error: 403 - Access denied'
@@ -245,7 +274,13 @@ describe('searchExecutionTool', () => {
       mockApiClient.get.mockResolvedValueOnce(mockResponse);
 
       const context: ToolContext = { userId: TEST_USER_ID };
-      const input = { testSuiteId: TEST_SUITE_ID, limit: 20, offset: 0, sortBy: 'createdAt' as const, sortOrder: 'desc' as const };
+      const input = {
+        testSuiteId: TEST_SUITE_ID,
+        limit: 20,
+        offset: 0,
+        sortBy: 'createdAt' as const,
+        sortOrder: 'desc' as const,
+      };
 
       const result = (await searchExecutionTool.handler(input, context)) as SearchExecutionResponse;
 
@@ -261,7 +296,13 @@ describe('searchExecutionTool', () => {
       mockApiClient.get.mockResolvedValueOnce(mockResponse);
 
       const context: ToolContext = { userId: TEST_USER_ID };
-      const input = { testSuiteId: TEST_SUITE_ID, limit: 20, offset: 0, sortBy: 'createdAt' as const, sortOrder: 'desc' as const };
+      const input = {
+        testSuiteId: TEST_SUITE_ID,
+        limit: 20,
+        offset: 0,
+        sortBy: 'createdAt' as const,
+        sortOrder: 'desc' as const,
+      };
 
       const result = (await searchExecutionTool.handler(input, context)) as SearchExecutionResponse;
 
@@ -276,7 +317,13 @@ describe('searchExecutionTool', () => {
       mockApiClient.get.mockResolvedValueOnce(mockResponse);
 
       const context: ToolContext = { userId: TEST_USER_ID };
-      const input = { testSuiteId: TEST_SUITE_ID, limit: 20, offset: 0, sortBy: 'createdAt' as const, sortOrder: 'desc' as const };
+      const input = {
+        testSuiteId: TEST_SUITE_ID,
+        limit: 20,
+        offset: 0,
+        sortBy: 'createdAt' as const,
+        sortOrder: 'desc' as const,
+      };
 
       const result = (await searchExecutionTool.handler(input, context)) as SearchExecutionResponse;
 

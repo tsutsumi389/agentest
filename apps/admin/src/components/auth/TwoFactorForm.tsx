@@ -30,11 +30,7 @@ export function TwoFactorForm() {
   // 全桁入力されたら自動送信
   useEffect(() => {
     const code = digits.join('');
-    if (
-      code.length === CODE_LENGTH &&
-      digits.every((d) => d !== '') &&
-      !isSubmittingRef.current
-    ) {
+    if (code.length === CODE_LENGTH && digits.every((d) => d !== '') && !isSubmittingRef.current) {
       // 送信済みフラグを立てる
       isSubmittingRef.current = true;
       clearError();
@@ -116,9 +112,7 @@ export function TwoFactorForm() {
         </div>
         <div>
           <h3 className="text-sm font-medium text-foreground">二要素認証</h3>
-          <p className="text-xs text-foreground-muted">
-            認証アプリの6桁コードを入力してください
-          </p>
+          <p className="text-xs text-foreground-muted">認証アプリの6桁コードを入力してください</p>
         </div>
       </div>
 
@@ -147,9 +141,7 @@ export function TwoFactorForm() {
             inputMode="numeric"
             maxLength={1}
             value={digit}
-            onChange={(e: ChangeEvent<HTMLInputElement>) =>
-              handleChange(index, e.target.value)
-            }
+            onChange={(e: ChangeEvent<HTMLInputElement>) => handleChange(index, e.target.value)}
             onKeyDown={(e) => handleKeyDown(index, e)}
             onPaste={handlePaste}
             className="w-12 h-14 text-center text-xl font-mono font-bold bg-background-secondary border border-border rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent transition-colors disabled:opacity-50"
@@ -162,7 +154,10 @@ export function TwoFactorForm() {
 
       {/* ローディング表示 */}
       {isLoading && (
-        <div className="flex items-center justify-center gap-2 text-foreground-muted" aria-live="polite">
+        <div
+          className="flex items-center justify-center gap-2 text-foreground-muted"
+          aria-live="polite"
+        >
           <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
           <span className="text-sm">検証中...</span>
         </div>

@@ -51,13 +51,7 @@ interface SortableHeaderProps {
 /**
  * ソート可能なテーブルヘッダー
  */
-function SortableHeader({
-  column,
-  sortBy,
-  sortOrder,
-  onSort,
-  children,
-}: SortableHeaderProps) {
+function SortableHeader({ column, sortBy, sortOrder, onSort, children }: SortableHeaderProps) {
   return (
     <th
       className="px-4 py-3 text-left text-sm font-medium text-foreground-muted cursor-pointer hover:text-foreground select-none"
@@ -97,12 +91,7 @@ export function OrganizationTable({
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-b border-border">
-              <SortableHeader
-                column="name"
-                sortBy={sortBy}
-                sortOrder={sortOrder}
-                onSort={onSort}
-              >
+              <SortableHeader column="name" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort}>
                 組織
               </SortableHeader>
               <th className="px-4 py-3 text-left text-sm font-medium text-foreground-muted">
@@ -124,10 +113,7 @@ export function OrganizationTable({
           <tbody>
             {organizations.length === 0 ? (
               <tr>
-                <td
-                  colSpan={4}
-                  className="px-4 py-12 text-center text-foreground-muted"
-                >
+                <td colSpan={4} className="px-4 py-12 text-center text-foreground-muted">
                   組織が見つかりません
                 </td>
               </tr>
@@ -146,11 +132,7 @@ export function OrganizationTable({
                       className="flex items-center gap-3 hover:opacity-80"
                     >
                       {org.avatarUrl ? (
-                        <img
-                          src={org.avatarUrl}
-                          alt={org.name}
-                          className="w-8 h-8 rounded-full"
-                        />
+                        <img src={org.avatarUrl} alt={org.name} className="w-8 h-8 rounded-full" />
                       ) : (
                         <div className="w-8 h-8 rounded-full bg-accent-muted flex items-center justify-center">
                           <span className="text-sm font-medium text-accent">
@@ -163,9 +145,7 @@ export function OrganizationTable({
                           <span className="text-sm font-medium text-foreground hover:text-accent">
                             {org.name}
                           </span>
-                          {org.deletedAt && (
-                            <span className="text-xs text-error">削除済み</span>
-                          )}
+                          {org.deletedAt && <span className="text-xs text-error">削除済み</span>}
                         </div>
                       </div>
                     </Link>

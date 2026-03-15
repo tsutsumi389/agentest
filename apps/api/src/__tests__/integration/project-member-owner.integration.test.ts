@@ -37,7 +37,12 @@ vi.mock('@agentest/auth', () => ({
     }
     next();
   },
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -50,7 +55,10 @@ vi.mock('@agentest/auth', () => ({
 }));
 
 // テスト用認証設定関数
-function setTestAuth(user: { id: string; email: string } | null, projectRole: string | null = null) {
+function setTestAuth(
+  user: { id: string; email: string } | null,
+  projectRole: string | null = null
+) {
   mockAuthUser = user;
   mockProjectRole = projectRole;
 }
@@ -207,9 +215,7 @@ describe('Project Member OWNER Protection Integration Tests', () => {
     it('OWNERは通常メンバーを削除できる', async () => {
       setTestAuth(owner, 'OWNER');
 
-      await request(app)
-        .delete(`/api/projects/${project.id}/members/${member.id}`)
-        .expect(204);
+      await request(app).delete(`/api/projects/${project.id}/members/${member.id}`).expect(204);
 
       // メンバーが削除されていることを確認
       const deletedMember = await prisma.projectMember.findUnique({
@@ -236,9 +242,7 @@ describe('Project Member OWNER Protection Integration Tests', () => {
     it('メンバー一覧にOWNERが含まれている', async () => {
       setTestAuth(owner, 'OWNER');
 
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/members`)
-        .expect(200);
+      const response = await request(app).get(`/api/projects/${project.id}/members`).expect(200);
 
       const members = response.body.members;
       expect(members.length).toBe(3);

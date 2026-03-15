@@ -146,10 +146,7 @@ export class SessionRepository {
   async deleteExpired() {
     return prisma.session.deleteMany({
       where: {
-        OR: [
-          { expiresAt: { lt: new Date() } },
-          { revokedAt: { not: null } },
-        ],
+        OR: [{ expiresAt: { lt: new Date() } }, { revokedAt: { not: null } }],
       },
     });
   }

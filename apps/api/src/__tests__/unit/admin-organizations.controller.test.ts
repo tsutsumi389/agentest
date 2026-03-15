@@ -26,7 +26,13 @@ describe('AdminOrganizationsController', () => {
 
     // モックリクエスト・レスポンスを初期化
     mockReq = {
-      adminUser: { id: 'admin-123', email: 'admin@example.com', name: 'Admin', role: 'ADMIN', totpEnabled: false },
+      adminUser: {
+        id: 'admin-123',
+        email: 'admin@example.com',
+        name: 'Admin',
+        role: 'ADMIN',
+        totpEnabled: false,
+      },
       params: {},
       query: {},
     };
@@ -144,10 +150,25 @@ describe('AdminOrganizationsController', () => {
           deletedAt: null,
           stats: { memberCount: 10, projectCount: 5, testSuiteCount: 20, executionCount: 100 },
           members: [
-            { id: 'member-1', userId: 'user-1', name: 'Owner', email: 'owner@example.com', avatarUrl: null, role: 'OWNER', joinedAt: '2024-01-15T00:00:00.000Z' },
+            {
+              id: 'member-1',
+              userId: 'user-1',
+              name: 'Owner',
+              email: 'owner@example.com',
+              avatarUrl: null,
+              role: 'OWNER',
+              joinedAt: '2024-01-15T00:00:00.000Z',
+            },
           ],
           projects: [
-            { id: 'project-1', name: 'Project A', description: null, memberCount: 3, testSuiteCount: 5, createdAt: '2024-01-16T00:00:00.000Z' },
+            {
+              id: 'project-1',
+              name: 'Project A',
+              description: null,
+              memberCount: 3,
+              testSuiteCount: 5,
+              createdAt: '2024-01-16T00:00:00.000Z',
+            },
           ],
           recentAuditLogs: [],
         },

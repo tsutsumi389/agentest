@@ -31,7 +31,9 @@ export class AdminPasswordResetService {
    *
    * @returns 生トークン（メール送信用）、管理者が存在しない場合はnull
    */
-  async requestPasswordReset(email: string): Promise<{ token: string; adminUser: { id: string; name: string } } | null> {
+  async requestPasswordReset(
+    email: string
+  ): Promise<{ token: string; adminUser: { id: string; name: string } } | null> {
     const adminUser = await prisma.adminUser.findFirst({
       where: { email, deletedAt: null },
     });

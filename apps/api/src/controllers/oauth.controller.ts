@@ -40,7 +40,9 @@ export class OAuthController {
       if (error instanceof ZodError) {
         res.status(400).json({
           error: 'invalid_client_metadata',
-          error_description: error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', '),
+          error_description: error.errors
+            .map((e) => `${e.path.join('.')}: ${e.message}`)
+            .join(', '),
         });
         return;
       }
@@ -94,7 +96,9 @@ export class OAuthController {
       if (error instanceof ZodError) {
         res.status(400).json({
           error: 'invalid_request',
-          error_description: error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', '),
+          error_description: error.errors
+            .map((e) => `${e.path.join('.')}: ${e.message}`)
+            .join(', '),
         });
         return;
       }
@@ -204,7 +208,9 @@ export class OAuthController {
       if (error instanceof ZodError) {
         res.status(400).json({
           error: 'invalid_request',
-          error_description: error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', '),
+          error_description: error.errors
+            .map((e) => `${e.path.join('.')}: ${e.message}`)
+            .join(', '),
         });
         return;
       }
@@ -233,7 +239,9 @@ export class OAuthController {
       if (error instanceof ZodError) {
         res.status(400).json({
           error: 'invalid_request',
-          error_description: error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', '),
+          error_description: error.errors
+            .map((e) => `${e.path.join('.')}: ${e.message}`)
+            .join(', '),
         });
         return;
       }
@@ -257,7 +265,9 @@ export class OAuthController {
       if (error instanceof ZodError) {
         res.status(400).json({
           error: 'invalid_request',
-          error_description: error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join(', '),
+          error_description: error.errors
+            .map((e) => `${e.path.join('.')}: ${e.message}`)
+            .join(', '),
         });
         return;
       }

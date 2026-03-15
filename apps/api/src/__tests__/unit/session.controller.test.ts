@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
 import { SessionController } from '../../controllers/session.controller.js';
-import { AuthenticationError, ValidationError, NotFoundError, AuthorizationError } from '@agentest/shared';
+import {
+  AuthenticationError,
+  ValidationError,
+  NotFoundError,
+  AuthorizationError,
+} from '@agentest/shared';
 
 // SessionService のモック
 const mockSessionService = {
@@ -58,7 +63,10 @@ describe('SessionController', () => {
 
       await controller.getSessions(req, res, mockNext);
 
-      expect(mockSessionService.getUserSessions).toHaveBeenCalledWith('user-1', 'current-session-id');
+      expect(mockSessionService.getUserSessions).toHaveBeenCalledWith(
+        'user-1',
+        'current-session-id'
+      );
       expect(res.json).toHaveBeenCalledWith({ data: mockSessions });
     });
 
@@ -133,7 +141,9 @@ describe('SessionController', () => {
     });
 
     it('他ユーザーのセッション終了はエラーをnextに渡す', async () => {
-      mockSessionService.revokeSession.mockRejectedValue(new AuthorizationError('他のユーザーのセッション'));
+      mockSessionService.revokeSession.mockRejectedValue(
+        new AuthorizationError('他のユーザーのセッション')
+      );
 
       const req = mockRequest({
         params: { sessionId: 'other-user-session' },
@@ -155,7 +165,10 @@ describe('SessionController', () => {
 
       await controller.revokeOtherSessions(req, res, mockNext);
 
-      expect(mockSessionService.revokeOtherSessions).toHaveBeenCalledWith('user-1', 'current-session-id');
+      expect(mockSessionService.revokeOtherSessions).toHaveBeenCalledWith(
+        'user-1',
+        'current-session-id'
+      );
       expect(res.json).toHaveBeenCalledWith({ data: { success: true, revokedCount: 3 } });
     });
 

@@ -66,7 +66,7 @@ function renderOverviewTab(executions: Execution[] = []) {
         executions={executions}
         currentRole="OWNER"
       />
-    </MemoryRouter>,
+    </MemoryRouter>
   );
 }
 

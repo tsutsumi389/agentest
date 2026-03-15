@@ -81,10 +81,13 @@ describe('TestCaseController', () => {
 
       await controller.create(req, res, mockNext);
 
-      expect(mockTestCaseService.create).toHaveBeenCalledWith(TEST_USER_ID, expect.objectContaining({
-        testSuiteId: TEST_SUITE_ID,
-        title: 'New Test Case',
-      }));
+      expect(mockTestCaseService.create).toHaveBeenCalledWith(
+        TEST_USER_ID,
+        expect.objectContaining({
+          testSuiteId: TEST_SUITE_ID,
+          title: 'New Test Case',
+        })
+      );
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith({ testCase: mockCase });
     });
@@ -99,10 +102,13 @@ describe('TestCaseController', () => {
 
       await controller.create(req, res, mockNext);
 
-      expect(mockTestCaseService.create).toHaveBeenCalledWith(TEST_USER_ID, expect.objectContaining({
-        priority: 'MEDIUM',
-        status: 'DRAFT',
-      }));
+      expect(mockTestCaseService.create).toHaveBeenCalledWith(
+        TEST_USER_ID,
+        expect.objectContaining({
+          priority: 'MEDIUM',
+          status: 'DRAFT',
+        })
+      );
     });
   });
 
@@ -116,7 +122,9 @@ describe('TestCaseController', () => {
 
       await controller.getById(req, res, mockNext);
 
-      expect(mockTestCaseService.findById).toHaveBeenCalledWith(TEST_CASE_ID, { includeDeleted: true });
+      expect(mockTestCaseService.findById).toHaveBeenCalledWith(TEST_CASE_ID, {
+        includeDeleted: true,
+      });
       expect(res.json).toHaveBeenCalledWith({ testCase: mockCase });
     });
 
@@ -145,7 +153,12 @@ describe('TestCaseController', () => {
 
       await controller.update(req, res, mockNext);
 
-      expect(mockTestCaseService.update).toHaveBeenCalledWith(TEST_CASE_ID, TEST_USER_ID, { title: 'Updated' }, undefined);
+      expect(mockTestCaseService.update).toHaveBeenCalledWith(
+        TEST_CASE_ID,
+        TEST_USER_ID,
+        { title: 'Updated' },
+        undefined
+      );
       expect(res.json).toHaveBeenCalledWith({ testCase: mockCase });
     });
   });
@@ -352,7 +365,10 @@ describe('TestCaseController', () => {
 
       await controller.getHistories(req, res, mockNext);
 
-      expect(mockTestCaseService.getHistoriesGrouped).toHaveBeenCalledWith(TEST_CASE_ID, { limit: 20, offset: 0 });
+      expect(mockTestCaseService.getHistoriesGrouped).toHaveBeenCalledWith(TEST_CASE_ID, {
+        limit: 20,
+        offset: 0,
+      });
       expect(res.json).toHaveBeenCalledWith({
         items: mockServiceResult.items,
         totalGroups: 1,

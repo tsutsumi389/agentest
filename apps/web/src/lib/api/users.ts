@@ -26,7 +26,10 @@ export const usersApi = {
     if (options?.q) query.set('q', options.q);
     // organizationIdがnullの場合は個人プロジェクトのみ、undefinedの場合はフィルタなし
     if (options?.organizationId !== undefined) {
-      query.set('organizationId', options.organizationId === null ? 'personal' : options.organizationId);
+      query.set(
+        'organizationId',
+        options.organizationId === null ? 'personal' : options.organizationId
+      );
     }
     if (options?.includeDeleted) query.set('includeDeleted', 'true');
     if (options?.limit) query.set('limit', String(options.limit));

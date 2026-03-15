@@ -6,9 +6,18 @@ import { apiClient } from '../clients/api-client.js';
  * 入力スキーマ
  */
 export const searchProjectInputSchema = z.object({
-  q: z.string().max(100).optional().describe('プロジェクト名で部分一致検索。省略時は全プロジェクトを取得'),
+  q: z
+    .string()
+    .max(100)
+    .optional()
+    .describe('プロジェクト名で部分一致検索。省略時は全プロジェクトを取得'),
   limit: z.number().int().min(1).max(50).default(50).describe('取得件数（1-50、デフォルト: 50）'),
-  offset: z.number().int().min(0).default(0).describe('ページネーション用オフセット（デフォルト: 0）'),
+  offset: z
+    .number()
+    .int()
+    .min(0)
+    .default(0)
+    .describe('ページネーション用オフセット（デフォルト: 0）'),
 });
 
 type SearchProjectInput = z.infer<typeof searchProjectInputSchema>;

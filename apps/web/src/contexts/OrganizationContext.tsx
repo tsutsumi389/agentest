@@ -1,10 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useEffect,
-  useCallback,
-  type ReactNode,
-} from 'react';
+import { createContext, useContext, useEffect, useCallback, type ReactNode } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { usersApi, type Organization } from '../lib/api';
 import {
@@ -114,11 +108,7 @@ export function OrganizationProvider({ children }: { children: ReactNode }) {
     isPersonalMode: selectedOrganization === null,
   };
 
-  return (
-    <OrganizationContext.Provider value={value}>
-      {children}
-    </OrganizationContext.Provider>
-  );
+  return <OrganizationContext.Provider value={value}>{children}</OrganizationContext.Provider>;
 }
 
 /**
@@ -135,9 +125,7 @@ export function useOrganization() {
 /**
  * 現在の組織で特定の権限があるかチェックするフック
  */
-export function useHasOrganizationPermission(
-  requiredRoles: Array<'OWNER' | 'ADMIN' | 'MEMBER'>
-) {
+export function useHasOrganizationPermission(requiredRoles: Array<'OWNER' | 'ADMIN' | 'MEMBER'>) {
   const { currentRole, isPersonalMode } = useOrganization();
 
   // 個人モードの場合は常にtrue

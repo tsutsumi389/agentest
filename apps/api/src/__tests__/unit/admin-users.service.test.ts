@@ -25,10 +25,7 @@ vi.mock('../../lib/redis-store.js', () => ({
 
 import { AdminUsersService } from '../../services/admin/admin-users.service.js';
 import { prisma } from '@agentest/db';
-import {
-  getAdminUserDetailCache,
-  setAdminUserDetailCache,
-} from '../../lib/redis-store.js';
+import { getAdminUserDetailCache, setAdminUserDetailCache } from '../../lib/redis-store.js';
 
 describe('AdminUsersService', () => {
   let service: AdminUsersService;
@@ -42,37 +39,39 @@ describe('AdminUsersService', () => {
     const mockUserId = '550e8400-e29b-41d4-a716-446655440000';
 
     // モックユーザーデータを生成するヘルパー
-    const createMockUserData = (overrides: Partial<{
-      id: string;
-      email: string;
-      name: string;
-      avatarUrl: string | null;
-      createdAt: Date;
-      updatedAt: Date;
-      deletedAt: Date | null;
-      sessions: { lastActiveAt: Date | null }[];
-      organizationMembers: {
-        role: string;
-        joinedAt: Date;
-        organization: { id: string; name: string };
-      }[];
-      accounts: { provider: string; createdAt: Date }[];
-      auditLogs: {
+    const createMockUserData = (
+      overrides: Partial<{
         id: string;
-        category: string;
-        action: string;
-        targetType: string | null;
-        targetId: string | null;
-        ipAddress: string | null;
+        email: string;
+        name: string;
+        avatarUrl: string | null;
         createdAt: Date;
-      }[];
-      _count: {
-        organizationMembers: number;
-        projectMembers: number;
-        testSuites: number;
-        executions: number;
-      };
-    }> = {}) => ({
+        updatedAt: Date;
+        deletedAt: Date | null;
+        sessions: { lastActiveAt: Date | null }[];
+        organizationMembers: {
+          role: string;
+          joinedAt: Date;
+          organization: { id: string; name: string };
+        }[];
+        accounts: { provider: string; createdAt: Date }[];
+        auditLogs: {
+          id: string;
+          category: string;
+          action: string;
+          targetType: string | null;
+          targetId: string | null;
+          ipAddress: string | null;
+          createdAt: Date;
+        }[];
+        _count: {
+          organizationMembers: number;
+          projectMembers: number;
+          testSuites: number;
+          executions: number;
+        };
+      }> = {}
+    ) => ({
       id: mockUserId,
       email: 'test@example.com',
       name: 'Test User',
@@ -204,9 +203,7 @@ describe('AdminUsersService', () => {
     it('セッションがない場合はactivity.lastActiveAtがnullになる', async () => {
       vi.mocked(getAdminUserDetailCache).mockResolvedValue(null);
       vi.mocked(setAdminUserDetailCache).mockResolvedValue(true);
-      vi.mocked(prisma.user.findUnique).mockResolvedValue(
-        createMockUserData({ sessions: [] })
-      );
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(createMockUserData({ sessions: [] }));
 
       const result = await service.findUserById(mockUserId);
 
@@ -341,9 +338,7 @@ describe('AdminUsersService', () => {
       const deletedAt = new Date('2024-01-25T00:00:00.000Z');
       vi.mocked(getAdminUserDetailCache).mockResolvedValue(null);
       vi.mocked(setAdminUserDetailCache).mockResolvedValue(true);
-      vi.mocked(prisma.user.findUnique).mockResolvedValue(
-        createMockUserData({ deletedAt })
-      );
+      vi.mocked(prisma.user.findUnique).mockResolvedValue(createMockUserData({ deletedAt }));
 
       const result = await service.findUserById(mockUserId);
 

@@ -81,18 +81,8 @@ export function LockStatusIcon({
   }
 
   if (isOwnLock) {
-    return (
-      <Pencil
-        className={`${sizeClass} text-success ${className}`}
-        aria-label="編集中"
-      />
-    );
+    return <Pencil className={`${sizeClass} text-success ${className}`} aria-label="編集中" />;
   }
 
-  return (
-    <Lock
-      className={`${sizeClass} text-warning ${className}`}
-      aria-label="他者が編集中"
-    />
-  );
+  return <Lock className={`${sizeClass} text-warning ${className}`} aria-label="他者が編集中" />;
 }

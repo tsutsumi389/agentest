@@ -48,9 +48,7 @@ export function mcpApiKeyAuthenticate() {
       // req.user にユーザー情報を設定
       req.user = user;
       // APIキーのスコープを設定（'*'はフルアクセスとして扱う）
-      req.oauthScopes = result.scopes?.includes('*')
-        ? [...SUPPORTED_SCOPES]
-        : result.scopes;
+      req.oauthScopes = result.scopes?.includes('*') ? [...SUPPORTED_SCOPES] : result.scopes;
       // 認証タイプを設定
       req.authType = 'api-key';
 

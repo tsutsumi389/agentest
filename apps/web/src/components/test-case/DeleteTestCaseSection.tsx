@@ -87,9 +87,7 @@ export function DeleteTestCaseSection({
   if (!canEdit) {
     return (
       <div className="text-center py-8">
-        <p className="text-foreground-muted text-sm">
-          テストケースの削除には編集権限が必要です
-        </p>
+        <p className="text-foreground-muted text-sm">テストケースの削除には編集権限が必要です</p>
       </div>
     );
   }
@@ -145,12 +143,10 @@ export function DeleteTestCaseSection({
         <div className="flex items-start gap-3">
           <AlertTriangle className="w-5 h-5 text-danger flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
-            <h4 className="text-sm font-semibold text-danger mb-1">
-              テストケースを削除
-            </h4>
+            <h4 className="text-sm font-semibold text-danger mb-1">テストケースを削除</h4>
             <p className="text-foreground-muted text-xs mb-3">
-              テストケースを削除すると、{DELETION_GRACE_PERIOD_DAYS}日間の猶予期間後に完全に削除されます。
-              猶予期間中は復元することができます。
+              テストケースを削除すると、{DELETION_GRACE_PERIOD_DAYS}
+              日間の猶予期間後に完全に削除されます。 猶予期間中は復元することができます。
             </p>
             <ul className="text-foreground-subtle text-xs mb-3 space-y-1">
               <li className="flex items-center gap-2">

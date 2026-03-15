@@ -51,10 +51,7 @@ export class AdminOrganizationsController {
       // パスパラメータをバリデーション
       const parseResult = uuidSchema.safeParse(req.params.id);
       if (!parseResult.success) {
-        throw new ValidationError(
-          '無効な組織IDです',
-          { id: ['有効なUUID形式で指定してください'] }
-        );
+        throw new ValidationError('無効な組織IDです', { id: ['有効なUUID形式で指定してください'] });
       }
 
       const result = await this.organizationsService.findOrganizationById(parseResult.data);

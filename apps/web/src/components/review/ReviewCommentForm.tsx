@@ -34,13 +34,16 @@ export function ReviewCommentForm({
 }: ReviewCommentFormProps) {
   const [content, setContent] = useState('');
 
-  const handleSubmit = useCallback((e?: React.FormEvent) => {
-    e?.preventDefault();
-    const trimmedContent = content.trim();
-    if (!trimmedContent || isSubmitting) return;
-    onSubmit(trimmedContent);
-    setContent('');
-  }, [content, isSubmitting, onSubmit]);
+  const handleSubmit = useCallback(
+    (e?: React.FormEvent) => {
+      e?.preventDefault();
+      const trimmedContent = content.trim();
+      if (!trimmedContent || isSubmitting) return;
+      onSubmit(trimmedContent);
+      setContent('');
+    },
+    [content, isSubmitting, onSubmit]
+  );
 
   // Ctrl/Cmd + Enterで送信
   const handleMarkdownSubmit = useCallback(() => {

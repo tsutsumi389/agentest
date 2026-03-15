@@ -117,9 +117,7 @@ export function TestCaseItemFormModal({
     >
       <div className="card w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-foreground">
-            {title}
-          </h2>
+          <h2 className="text-lg font-semibold text-foreground">{title}</h2>
           <button
             onClick={handleClose}
             className="p-1 text-foreground-muted hover:text-foreground hover:bg-background-tertiary rounded transition-colors"
@@ -132,7 +130,10 @@ export function TestCaseItemFormModal({
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* 内容 */}
           <div>
-            <label htmlFor="item-content" className="block text-sm font-medium text-foreground mb-1">
+            <label
+              htmlFor="item-content"
+              className="block text-sm font-medium text-foreground mb-1"
+            >
               内容 <span className="text-danger">*</span>
             </label>
             <MarkdownEditor
@@ -148,9 +149,7 @@ export function TestCaseItemFormModal({
             />
             {error && <p className="text-xs text-danger mt-1">{error}</p>}
             {helpText && (
-              <p className="text-xs text-foreground-subtle mt-1">
-                {helpText}（Markdown対応）
-              </p>
+              <p className="text-xs text-foreground-subtle mt-1">{helpText}（Markdown対応）</p>
             )}
           </div>
 

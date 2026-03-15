@@ -80,9 +80,7 @@ class ToolRegistry {
   /**
    * ツールを登録
    */
-  register<TInput extends Record<string, unknown>>(
-    definition: ToolDefinition<TInput>
-  ): void {
+  register<TInput extends Record<string, unknown>>(definition: ToolDefinition<TInput>): void {
     if (this.tools.has(definition.name)) {
       logger.warn({ toolName: definition.name }, 'ツールは既に登録されています。上書きします。');
     }
@@ -156,42 +154,37 @@ export function registerTools(server: McpServer): void {
   for (const tool of tools) {
     // MCPサーバーにツールを登録
     // 注: MCP SDK v1.25.1はZodRawShape（.shape）を受け取り、内部でJSON Schemaに変換する
-    server.tool(
-      tool.name,
-      tool.description,
-      tool.inputSchema.shape,
-      async (args) => {
-        // AsyncLocalStorageからコンテキストを取得
-        const ctx = requestContext.getStore();
-        const context: ToolContext = {
-          userId: ctx?.userId || '',
-          agentSession: ctx?.agentSession,
-        };
+    server.tool(tool.name, tool.description, tool.inputSchema.shape, async (args) => {
+      // AsyncLocalStorageからコンテキストを取得
+      const ctx = requestContext.getStore();
+      const context: ToolContext = {
+        userId: ctx?.userId || '',
+        agentSession: ctx?.agentSession,
+      };
 
-        try {
-          const result = await tool.handler(args as Record<string, unknown>, context);
-          return {
-            content: [
-              {
-                type: 'text' as const,
-                text: JSON.stringify(result, null, 2),
-              },
-            ],
-          };
-        } catch (error) {
-          const message = error instanceof Error ? error.message : 'Unknown error';
-          return {
-            content: [
-              {
-                type: 'text' as const,
-                text: `エラー: ${message}`,
-              },
-            ],
-            isError: true,
-          };
-        }
+      try {
+        const result = await tool.handler(args as Record<string, unknown>, context);
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        return {
+          content: [
+            {
+              type: 'text' as const,
+              text: `エラー: ${message}`,
+            },
+          ],
+          isError: true,
+        };
       }
-    );
+    });
   }
 
   logger.info({ count: tools.length }, 'ツールをMCPサーバーに登録しました');

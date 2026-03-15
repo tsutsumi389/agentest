@@ -38,16 +38,13 @@ describe('InternalApiClient', () => {
       const result = await client.get('/test');
 
       expect(result).toEqual(mockResponse);
-      expect(fetchSpy).toHaveBeenCalledWith(
-        'http://api:3001/test',
-        {
-          method: 'GET',
-          headers: {
-            'X-Internal-API-Key': 'test-internal-api-secret-32characters',
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+      expect(fetchSpy).toHaveBeenCalledWith('http://api:3001/test', {
+        method: 'GET',
+        headers: {
+          'X-Internal-API-Key': 'test-internal-api-secret-32characters',
+          'Content-Type': 'application/json',
+        },
+      });
     });
 
     it('クエリパラメータを正しく追加する', async () => {
@@ -143,9 +140,7 @@ describe('InternalApiClient', () => {
       } as Response);
 
       const client = new InternalApiClient();
-      await expect(client.get('/test')).rejects.toThrow(
-        'Internal API error: 403 - Forbidden'
-      );
+      await expect(client.get('/test')).rejects.toThrow('Internal API error: 403 - Forbidden');
     });
 
     it('APIエラーでJSONパースが失敗した場合はUnknown errorを返す', async () => {
@@ -156,9 +151,7 @@ describe('InternalApiClient', () => {
       } as Response);
 
       const client = new InternalApiClient();
-      await expect(client.get('/test')).rejects.toThrow(
-        'Internal API error: 500 - Unknown error'
-      );
+      await expect(client.get('/test')).rejects.toThrow('Internal API error: 500 - Unknown error');
     });
 
     it('ネットワークエラー時はエラーをスローする', async () => {
@@ -178,17 +171,14 @@ describe('InternalApiClient', () => {
       } as Response);
 
       const client = new InternalApiClient();
-      const result = await client.postMultipart<typeof mockResponse>(
-        '/internal/api/test',
-        {
-          file: {
-            buffer: Buffer.from('test-data'),
-            fileName: 'test.png',
-            mimeType: 'image/png',
-          },
-          fields: { description: 'テスト説明' },
-        }
-      );
+      const result = await client.postMultipart<typeof mockResponse>('/internal/api/test', {
+        file: {
+          buffer: Buffer.from('test-data'),
+          fileName: 'test.png',
+          mimeType: 'image/png',
+        },
+        fields: { description: 'テスト説明' },
+      });
 
       expect(fetchSpy).toHaveBeenCalledTimes(1);
 

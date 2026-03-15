@@ -114,9 +114,9 @@ describe('UserTotpService', () => {
       mockOtplib.generateURI.mockReturnValue('otpauth://...');
       mockRedisStore.setUserTotpSetupSecret.mockResolvedValue(false);
 
-      await expect(
-        service.setupTotp('user-1', 'user@example.com')
-      ).rejects.toThrow('TOTPセットアップの一時保存に失敗しました');
+      await expect(service.setupTotp('user-1', 'user@example.com')).rejects.toThrow(
+        'TOTPセットアップの一時保存に失敗しました'
+      );
     });
   });
 
@@ -165,9 +165,7 @@ describe('UserTotpService', () => {
       mockUserRepo.getTotpSecret.mockResolvedValue(null);
       mockRedisStore.getUserTotpSetupSecret.mockResolvedValue(null);
 
-      await expect(
-        service.enableTotp('user-1', '123456')
-      ).rejects.toThrow(ValidationError);
+      await expect(service.enableTotp('user-1', '123456')).rejects.toThrow(ValidationError);
     });
 
     it('暗号化失敗時はエラーをスローする', async () => {
@@ -353,9 +351,7 @@ describe('UserTotpService', () => {
     it('ユーザーが見つからない場合はAuthenticationError', async () => {
       mockUserRepo.findByIdWithPassword.mockResolvedValue(null);
 
-      await expect(
-        service.disableTotp('user-1', 'password')
-      ).rejects.toThrow(AuthenticationError);
+      await expect(service.disableTotp('user-1', 'password')).rejects.toThrow(AuthenticationError);
     });
 
     it('パスワードが間違っている場合はAuthenticationError + 監査ログ', async () => {
@@ -391,9 +387,7 @@ describe('UserTotpService', () => {
         passwordHash: null,
       });
 
-      await expect(
-        service.disableTotp('user-1', 'password')
-      ).rejects.toThrow(AuthenticationError);
+      await expect(service.disableTotp('user-1', 'password')).rejects.toThrow(AuthenticationError);
     });
   });
 });

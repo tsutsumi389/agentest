@@ -210,7 +210,11 @@ describe('ReviewService（コメント操作）', () => {
           type: 'REVIEW_COMMENT',
           title: 'レビューにコメントが追加されました',
           body: 'Commenterさんが「テストスイート」のレビューにコメントを追加しました',
-          data: { reviewId: TEST_REVIEW_ID, testSuiteId: TEST_SUITE_ID, commentId: TEST_COMMENT_ID },
+          data: {
+            reviewId: TEST_REVIEW_ID,
+            testSuiteId: TEST_SUITE_ID,
+            commentId: TEST_COMMENT_ID,
+          },
           organizationId: 'org-1',
         });
       });
@@ -274,7 +278,9 @@ describe('ReviewService（コメント操作）', () => {
       const updatedComment = { id: TEST_COMMENT_ID, content: '更新' };
       mockReviewRepo.updateComment.mockResolvedValue(updatedComment);
 
-      const result = await service.updateComment(TEST_REVIEW_ID, TEST_COMMENT_ID, TEST_USER_ID, { content: '更新' });
+      const result = await service.updateComment(TEST_REVIEW_ID, TEST_COMMENT_ID, TEST_USER_ID, {
+        content: '更新',
+      });
 
       expect(result).toEqual(updatedComment);
     });
@@ -327,7 +333,12 @@ describe('ReviewService（コメント操作）', () => {
       const updatedComment = { id: TEST_COMMENT_ID, status: 'RESOLVED' };
       mockReviewRepo.updateCommentStatus.mockResolvedValue(updatedComment);
 
-      const result = await service.updateCommentStatus(TEST_REVIEW_ID, TEST_COMMENT_ID, TEST_USER_ID, 'RESOLVED');
+      const result = await service.updateCommentStatus(
+        TEST_REVIEW_ID,
+        TEST_COMMENT_ID,
+        TEST_USER_ID,
+        'RESOLVED'
+      );
 
       expect(result).toEqual(updatedComment);
     });
@@ -377,7 +388,9 @@ describe('ReviewService（コメント操作）', () => {
     it('コメントが存在しない場合はNotFoundErrorを投げる', async () => {
       mockReviewRepo.findCommentById.mockResolvedValue(null);
 
-      await expect(service.deleteComment(TEST_REVIEW_ID, TEST_COMMENT_ID, TEST_USER_ID)).rejects.toThrow(NotFoundError);
+      await expect(
+        service.deleteComment(TEST_REVIEW_ID, TEST_COMMENT_ID, TEST_USER_ID)
+      ).rejects.toThrow(NotFoundError);
     });
 
     it('コメントが別レビューに属する場合はBadRequestErrorを投げる', async () => {
@@ -387,7 +400,9 @@ describe('ReviewService（コメント操作）', () => {
         authorUserId: TEST_USER_ID,
       });
 
-      await expect(service.deleteComment(TEST_REVIEW_ID, TEST_COMMENT_ID, TEST_USER_ID)).rejects.toThrow(BadRequestError);
+      await expect(
+        service.deleteComment(TEST_REVIEW_ID, TEST_COMMENT_ID, TEST_USER_ID)
+      ).rejects.toThrow(BadRequestError);
     });
 
     it('他人のコメントはAuthorizationErrorを投げる', async () => {
@@ -397,7 +412,9 @@ describe('ReviewService（コメント操作）', () => {
         authorUserId: OTHER_USER_ID,
       });
 
-      await expect(service.deleteComment(TEST_REVIEW_ID, TEST_COMMENT_ID, TEST_USER_ID)).rejects.toThrow(AuthorizationError);
+      await expect(
+        service.deleteComment(TEST_REVIEW_ID, TEST_COMMENT_ID, TEST_USER_ID)
+      ).rejects.toThrow(AuthorizationError);
     });
   });
 
@@ -416,7 +433,9 @@ describe('ReviewService（コメント操作）', () => {
       const mockReply = { id: TEST_REPLY_ID, content: '返信' };
       mockReviewRepo.addReply.mockResolvedValue(mockReply);
 
-      const result = await service.addReply(TEST_REVIEW_ID, TEST_COMMENT_ID, TEST_USER_ID, { content: '返信' });
+      const result = await service.addReply(TEST_REVIEW_ID, TEST_COMMENT_ID, TEST_USER_ID, {
+        content: '返信',
+      });
 
       expect(result).toEqual(mockReply);
       expect(mockReviewRepo.addReply).toHaveBeenCalledWith({
@@ -466,7 +485,11 @@ describe('ReviewService（コメント操作）', () => {
       mockReviewRepo.updateReply.mockResolvedValue(updatedReply);
 
       const result = await service.updateReply(
-        TEST_REVIEW_ID, TEST_COMMENT_ID, TEST_REPLY_ID, TEST_USER_ID, { content: '更新返信' }
+        TEST_REVIEW_ID,
+        TEST_COMMENT_ID,
+        TEST_REPLY_ID,
+        TEST_USER_ID,
+        { content: '更新返信' }
       );
 
       expect(result).toEqual(updatedReply);
@@ -476,7 +499,9 @@ describe('ReviewService（コメント操作）', () => {
       mockReviewRepo.findReplyById.mockResolvedValue(null);
 
       await expect(
-        service.updateReply(TEST_REVIEW_ID, TEST_COMMENT_ID, TEST_REPLY_ID, TEST_USER_ID, { content: '更新' })
+        service.updateReply(TEST_REVIEW_ID, TEST_COMMENT_ID, TEST_REPLY_ID, TEST_USER_ID, {
+          content: '更新',
+        })
       ).rejects.toThrow(NotFoundError);
     });
 
@@ -489,7 +514,9 @@ describe('ReviewService（コメント操作）', () => {
       });
 
       await expect(
-        service.updateReply(TEST_REVIEW_ID, TEST_COMMENT_ID, TEST_REPLY_ID, TEST_USER_ID, { content: '更新' })
+        service.updateReply(TEST_REVIEW_ID, TEST_COMMENT_ID, TEST_REPLY_ID, TEST_USER_ID, {
+          content: '更新',
+        })
       ).rejects.toThrow(BadRequestError);
     });
 
@@ -502,7 +529,9 @@ describe('ReviewService（コメント操作）', () => {
       });
 
       await expect(
-        service.updateReply(TEST_REVIEW_ID, TEST_COMMENT_ID, TEST_REPLY_ID, TEST_USER_ID, { content: '更新' })
+        service.updateReply(TEST_REVIEW_ID, TEST_COMMENT_ID, TEST_REPLY_ID, TEST_USER_ID, {
+          content: '更新',
+        })
       ).rejects.toThrow(BadRequestError);
     });
 
@@ -515,7 +544,9 @@ describe('ReviewService（コメント操作）', () => {
       });
 
       await expect(
-        service.updateReply(TEST_REVIEW_ID, TEST_COMMENT_ID, TEST_REPLY_ID, TEST_USER_ID, { content: '更新' })
+        service.updateReply(TEST_REVIEW_ID, TEST_COMMENT_ID, TEST_REPLY_ID, TEST_USER_ID, {
+          content: '更新',
+        })
       ).rejects.toThrow(AuthorizationError);
     });
   });

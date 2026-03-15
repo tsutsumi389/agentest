@@ -1,7 +1,12 @@
 import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { prisma, type ProjectRole } from '@agentest/db';
-import { AuthenticationError, AuthorizationError, NotFoundError, BadRequestError } from '@agentest/shared';
+import {
+  AuthenticationError,
+  AuthorizationError,
+  NotFoundError,
+  BadRequestError,
+} from '@agentest/shared';
 
 const testCaseIdSchema = z.string().uuid();
 
@@ -20,7 +25,10 @@ export interface RequireTestCaseRoleOptions {
  * @param roles - 必要なプロジェクトロールの配列
  * @param options - オプション設定
  */
-export function requireTestCaseRole(roles: ProjectRole[], options: RequireTestCaseRoleOptions = {}) {
+export function requireTestCaseRole(
+  roles: ProjectRole[],
+  options: RequireTestCaseRoleOptions = {}
+) {
   const { allowDeletedTestCase = false } = options;
 
   return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {

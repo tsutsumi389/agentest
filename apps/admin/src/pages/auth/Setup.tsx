@@ -84,7 +84,9 @@ export function SetupPage() {
     } catch (err) {
       if (err instanceof ApiError) {
         if (err.statusCode === 403 && err.code === 'AUTHORIZATION_ERROR') {
-          setSubmitError('セットアップは既に完了しています。ログインページからログインしてください。');
+          setSubmitError(
+            'セットアップは既に完了しています。ログインページからログインしてください。'
+          );
         } else if (err.statusCode === 403) {
           // CSRF保護等によるブロック
           setSubmitError('リクエストが拒否されました。ページを再読み込みして再度お試しください。');
@@ -126,9 +128,7 @@ export function SetupPage() {
               <div className="w-10 h-10 rounded-lg bg-accent-muted flex items-center justify-center">
                 <Terminal className="w-6 h-6 text-accent" aria-hidden="true" />
               </div>
-              <span className="text-2xl font-bold text-foreground">
-                Agentest Admin
-              </span>
+              <span className="text-2xl font-bold text-foreground">Agentest Admin</span>
             </div>
           </div>
 
@@ -142,7 +142,8 @@ export function SetupPage() {
                 サーバーに接続できません
               </h1>
               <p className="text-foreground-muted mb-6">
-                APIサーバーとの通信に失敗しました。<br />
+                APIサーバーとの通信に失敗しました。
+                <br />
                 サーバーが起動していることを確認してください。
               </p>
               <button
@@ -185,9 +186,7 @@ export function SetupPage() {
               <div className="w-10 h-10 rounded-lg bg-accent-muted flex items-center justify-center">
                 <Terminal className="w-6 h-6 text-accent" aria-hidden="true" />
               </div>
-              <span className="text-2xl font-bold text-foreground">
-                Agentest Admin
-              </span>
+              <span className="text-2xl font-bold text-foreground">Agentest Admin</span>
             </div>
           </div>
 
@@ -201,13 +200,11 @@ export function SetupPage() {
                 セットアップが完了しました
               </h1>
               <p className="text-foreground-muted mb-6">
-                管理者アカウントが作成されました。<br />
+                管理者アカウントが作成されました。
+                <br />
                 ログインページからログインしてください。
               </p>
-              <Link
-                to="/login"
-                className="btn btn-primary w-full"
-              >
+              <Link to="/login" className="btn btn-primary w-full">
                 ログインページへ
               </Link>
             </div>
@@ -232,18 +229,14 @@ export function SetupPage() {
             <div className="w-10 h-10 rounded-lg bg-accent-muted flex items-center justify-center">
               <Terminal className="w-6 h-6 text-accent" aria-hidden="true" />
             </div>
-            <span className="text-2xl font-bold text-foreground">
-              Agentest Admin
-            </span>
+            <span className="text-2xl font-bold text-foreground">Agentest Admin</span>
           </div>
           <p className="text-foreground-muted text-sm">初回セットアップ</p>
         </div>
 
         {/* セットアップフォーム */}
         <div className="card p-6">
-          <h1 className="text-lg font-semibold text-foreground mb-2">
-            管理者アカウントの作成
-          </h1>
+          <h1 className="text-lg font-semibold text-foreground mb-2">管理者アカウントの作成</h1>
           <p className="text-sm text-foreground-muted mb-6">
             最高権限管理者（SUPER_ADMIN）アカウントを作成します。
           </p>
@@ -267,10 +260,7 @@ export function SetupPage() {
 
             {/* 名前入力 */}
             <div className="space-y-2">
-              <label
-                htmlFor="name"
-                className="block text-sm font-medium text-foreground-muted"
-              >
+              <label htmlFor="name" className="block text-sm font-medium text-foreground-muted">
                 名前
               </label>
               <div className="relative">
@@ -294,10 +284,7 @@ export function SetupPage() {
 
             {/* メールアドレス入力 */}
             <div className="space-y-2">
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-foreground-muted"
-              >
+              <label htmlFor="email" className="block text-sm font-medium text-foreground-muted">
                 メールアドレス
               </label>
               <div className="relative">
@@ -321,10 +308,7 @@ export function SetupPage() {
 
             {/* パスワード入力 */}
             <div className="space-y-2">
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-foreground-muted"
-              >
+              <label htmlFor="password" className="block text-sm font-medium text-foreground-muted">
                 パスワード
               </label>
               <div className="relative">

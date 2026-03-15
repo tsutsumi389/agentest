@@ -30,13 +30,20 @@ vi.mock('@agentest/auth', () => ({
   },
   optionalAuth: () => (_req: any, _res: any, next: any) => next(),
   requireOrgRole: () => (_req: any, _res: any, next: any) => next(),
-  requireProjectRole: (roles: string[], _options?: { allowDeletedProject?: boolean }) => (_req: any, _res: any, next: any) => {
-    if (!mockProjectRole || !roles.includes(mockProjectRole)) {
-      return next(new AuthorizationError('権限がありません'));
-    }
-    next();
-  },
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  requireProjectRole:
+    (roles: string[], _options?: { allowDeletedProject?: boolean }) =>
+    (_req: any, _res: any, next: any) => {
+      if (!mockProjectRole || !roles.includes(mockProjectRole)) {
+        return next(new AuthorizationError('権限がありません'));
+      }
+      next();
+    },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -50,24 +57,26 @@ vi.mock('@agentest/auth', () => ({
 
 // テストスイート権限ミドルウェアをモック
 vi.mock('../../middleware/require-test-suite-role.js', () => ({
-  requireTestSuiteRole: (roles: string[], options?: { allowDeletedSuite?: boolean }) => async (req: any, _res: any, next: any) => {
-    if (!mockTestSuiteRole || !roles.includes(mockTestSuiteRole)) {
-      return next(new AuthorizationError('権限がありません'));
-    }
-    // テストスイートの存在チェック
-    const testSuiteId = req.params.testSuiteId;
-    if (testSuiteId) {
-      const testSuite = await prisma.testSuite.findUnique({ where: { id: testSuiteId } });
-      if (!testSuite) {
-        return next(new NotFoundError('TestSuite', testSuiteId));
+  requireTestSuiteRole:
+    (roles: string[], options?: { allowDeletedSuite?: boolean }) =>
+    async (req: any, _res: any, next: any) => {
+      if (!mockTestSuiteRole || !roles.includes(mockTestSuiteRole)) {
+        return next(new AuthorizationError('権限がありません'));
       }
-      // allowDeletedSuiteオプションのチェック
-      if (testSuite.deletedAt && !options?.allowDeletedSuite) {
-        return next(new NotFoundError('TestSuite', testSuiteId));
+      // テストスイートの存在チェック
+      const testSuiteId = req.params.testSuiteId;
+      if (testSuiteId) {
+        const testSuite = await prisma.testSuite.findUnique({ where: { id: testSuiteId } });
+        if (!testSuite) {
+          return next(new NotFoundError('TestSuite', testSuiteId));
+        }
+        // allowDeletedSuiteオプションのチェック
+        if (testSuite.deletedAt && !options?.allowDeletedSuite) {
+          return next(new NotFoundError('TestSuite', testSuiteId));
+        }
       }
-    }
-    next();
-  },
+      next();
+    },
 }));
 
 // テスト用認証設定関数
@@ -360,9 +369,7 @@ describe('Test Suite History & Restore API Integration Tests', () => {
     });
 
     it('復元後に履歴が記録される', async () => {
-      await request(app)
-        .post(`/api/test-suites/${testSuite.id}/restore`)
-        .expect(200);
+      await request(app).post(`/api/test-suites/${testSuite.id}/restore`).expect(200);
 
       const history = await prisma.testSuiteHistory.findFirst({
         where: {
@@ -450,14 +457,10 @@ describe('Test Suite History & Restore API Integration Tests', () => {
 
     it('復元後は通常のテストスイート操作ができる', async () => {
       // まず復元
-      await request(app)
-        .post(`/api/test-suites/${testSuite.id}/restore`)
-        .expect(200);
+      await request(app).post(`/api/test-suites/${testSuite.id}/restore`).expect(200);
 
       // テストスイート詳細を取得できる
-      const response = await request(app)
-        .get(`/api/test-suites/${testSuite.id}`)
-        .expect(200);
+      const response = await request(app).get(`/api/test-suites/${testSuite.id}`).expect(200);
 
       expect(response.body.testSuite.id).toBe(testSuite.id);
       expect(response.body.testSuite.deletedAt).toBeNull();
@@ -499,9 +502,7 @@ describe('Test Suite History & Restore API Integration Tests', () => {
     });
 
     it('テストスイート削除時に履歴が作成される', async () => {
-      await request(app)
-        .delete(`/api/test-suites/${testSuite.id}`)
-        .expect(204);
+      await request(app).delete(`/api/test-suites/${testSuite.id}`).expect(204);
 
       const history = await prisma.testSuiteHistory.findFirst({
         where: {
@@ -536,25 +537,19 @@ describe('Test Suite History & Restore API Integration Tests', () => {
       it('ADMINは履歴を閲覧できる', async () => {
         setTestAuth({ id: admin.id, email: admin.email }, 'ADMIN', 'ADMIN');
 
-        await request(app)
-          .get(`/api/test-suites/${testSuite.id}/histories`)
-          .expect(200);
+        await request(app).get(`/api/test-suites/${testSuite.id}/histories`).expect(200);
       });
 
       it('WRITEは履歴を閲覧できる', async () => {
         setTestAuth({ id: writer.id, email: writer.email }, 'WRITE', 'WRITE');
 
-        await request(app)
-          .get(`/api/test-suites/${testSuite.id}/histories`)
-          .expect(200);
+        await request(app).get(`/api/test-suites/${testSuite.id}/histories`).expect(200);
       });
 
       it('READは履歴を閲覧できる', async () => {
         setTestAuth({ id: reader.id, email: reader.email }, 'READ', 'READ');
 
-        await request(app)
-          .get(`/api/test-suites/${testSuite.id}/histories`)
-          .expect(200);
+        await request(app).get(`/api/test-suites/${testSuite.id}/histories`).expect(200);
       });
     });
 
@@ -570,25 +565,19 @@ describe('Test Suite History & Restore API Integration Tests', () => {
       it('ADMINはテストスイートを復元できる', async () => {
         setTestAuth({ id: admin.id, email: admin.email }, 'ADMIN', 'ADMIN');
 
-        await request(app)
-          .post(`/api/test-suites/${testSuite.id}/restore`)
-          .expect(200);
+        await request(app).post(`/api/test-suites/${testSuite.id}/restore`).expect(200);
       });
 
       it('WRITEはテストスイートを復元できない', async () => {
         setTestAuth({ id: writer.id, email: writer.email }, 'WRITE', 'WRITE');
 
-        await request(app)
-          .post(`/api/test-suites/${testSuite.id}/restore`)
-          .expect(403);
+        await request(app).post(`/api/test-suites/${testSuite.id}/restore`).expect(403);
       });
 
       it('READはテストスイートを復元できない', async () => {
         setTestAuth({ id: reader.id, email: reader.email }, 'READ', 'READ');
 
-        await request(app)
-          .post(`/api/test-suites/${testSuite.id}/restore`)
-          .expect(403);
+        await request(app).post(`/api/test-suites/${testSuite.id}/restore`).expect(403);
       });
     });
   });

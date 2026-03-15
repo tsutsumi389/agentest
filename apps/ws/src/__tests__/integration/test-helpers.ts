@@ -159,10 +159,7 @@ export async function createTestServer(): Promise<TestServerContext> {
  * 認証済みのWebSocketクライアント接続を作成
  * 接続後にauthenticateメッセージでトークンを送信する方式（セキュリティ対策）
  */
-export function createAuthenticatedClient(
-  serverUrl: string,
-  token: string
-): Promise<WebSocket> {
+export function createAuthenticatedClient(serverUrl: string, token: string): Promise<WebSocket> {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(serverUrl);
 
@@ -173,11 +170,13 @@ export function createAuthenticatedClient(
 
     ws.on('open', () => {
       // 接続確立後にauthenticateメッセージで認証
-      ws.send(JSON.stringify({
-        type: 'authenticate',
-        token,
-        timestamp: Date.now(),
-      }));
+      ws.send(
+        JSON.stringify({
+          type: 'authenticate',
+          token,
+          timestamp: Date.now(),
+        })
+      );
     });
 
     ws.on('message', (data) => {
@@ -205,9 +204,7 @@ export function createAuthenticatedClient(
 /**
  * トークンなしでWebSocketクライアント接続を作成
  */
-export function createUnauthenticatedClient(
-  serverUrl: string
-): Promise<WebSocket> {
+export function createUnauthenticatedClient(serverUrl: string): Promise<WebSocket> {
   return new Promise((resolve, reject) => {
     const ws = new WebSocket(serverUrl);
 
@@ -267,10 +264,7 @@ export function waitForMessage<T = unknown>(
 /**
  * WebSocketから次のメッセージを待つ（タイプ不問）
  */
-export function waitForAnyMessage<T = unknown>(
-  ws: WebSocket,
-  timeoutMs = 3000
-): Promise<T> {
+export function waitForAnyMessage<T = unknown>(ws: WebSocket, timeoutMs = 3000): Promise<T> {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       ws.removeListener('message', handler);
@@ -295,10 +289,7 @@ export function waitForAnyMessage<T = unknown>(
 /**
  * 指定時間内にメッセージが来ないことを確認
  */
-export function expectNoMessage(
-  ws: WebSocket,
-  waitMs = 500
-): Promise<void> {
+export function expectNoMessage(ws: WebSocket, waitMs = 500): Promise<void> {
   return new Promise((resolve, reject) => {
     const timeout = setTimeout(() => {
       ws.removeListener('message', handler);
@@ -323,10 +314,7 @@ export function expectNoMessage(
 /**
  * 指定時間内にすべてのメッセージを収集
  */
-export function collectMessages(
-  ws: WebSocket,
-  collectMs = 500
-): Promise<unknown[]> {
+export function collectMessages(ws: WebSocket, collectMs = 500): Promise<unknown[]> {
   return new Promise((resolve) => {
     const messages: unknown[] = [];
 

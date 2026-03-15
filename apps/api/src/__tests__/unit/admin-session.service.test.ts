@@ -191,10 +191,7 @@ describe('AdminSessionService', () => {
       const result = await service.refreshSession('session-1', createdAt);
 
       expect(result).not.toBeNull();
-      expect(mockSessionRepo.extendExpiry).toHaveBeenCalledWith(
-        'session-1',
-        expect.any(Date)
-      );
+      expect(mockSessionRepo.extendExpiry).toHaveBeenCalledWith('session-1', expect.any(Date));
 
       // 新しい有効期限が約2時間後であることを確認
       const newExpiry = result!.getTime();

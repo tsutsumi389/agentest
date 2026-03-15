@@ -79,17 +79,14 @@ describe('TokenIntrospectionService', () => {
 
       const result = await service.introspect('valid-token');
 
-      expect(mockFetch).toHaveBeenCalledWith(
-        'http://localhost:3001/oauth/introspect',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Internal-Api-Key': 'test-internal-secret',
-          },
-          body: JSON.stringify({ token: 'valid-token' }),
-        }
-      );
+      expect(mockFetch).toHaveBeenCalledWith('http://localhost:3001/oauth/introspect', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Internal-Api-Key': 'test-internal-secret',
+        },
+        body: JSON.stringify({ token: 'valid-token' }),
+      });
       expect(result).toEqual(mockResponse);
     });
 

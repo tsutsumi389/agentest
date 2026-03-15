@@ -70,11 +70,14 @@ export class AuditLogRepository {
   /**
    * 組織の監査ログを取得（ページネーション対応）
    */
-  async findByOrganization(
-    organizationId: string,
-    options: AuditLogQueryOptions = {}
-  ) {
-    const { page = 1, limit: requestedLimit = AUDIT_LOG_DEFAULT_LIMIT, category, startDate, endDate } = options;
+  async findByOrganization(organizationId: string, options: AuditLogQueryOptions = {}) {
+    const {
+      page = 1,
+      limit: requestedLimit = AUDIT_LOG_DEFAULT_LIMIT,
+      category,
+      startDate,
+      endDate,
+    } = options;
     const limit = Math.min(requestedLimit, AUDIT_LOG_MAX_LIMIT);
     const skip = (page - 1) * limit;
 
@@ -117,11 +120,14 @@ export class AuditLogRepository {
   /**
    * ユーザーの監査ログを取得（ページネーション対応）
    */
-  async findByUser(
-    userId: string,
-    options: AuditLogQueryOptions = {}
-  ) {
-    const { page = 1, limit: requestedLimit = AUDIT_LOG_DEFAULT_LIMIT, category, startDate, endDate } = options;
+  async findByUser(userId: string, options: AuditLogQueryOptions = {}) {
+    const {
+      page = 1,
+      limit: requestedLimit = AUDIT_LOG_DEFAULT_LIMIT,
+      category,
+      startDate,
+      endDate,
+    } = options;
     const limit = Math.min(requestedLimit, AUDIT_LOG_MAX_LIMIT);
     const skip = (page - 1) * limit;
 
@@ -165,10 +171,7 @@ export class AuditLogRepository {
   /**
    * エクスポート用に組織の監査ログを取得（上限: 10,000件）
    */
-  async findForExport(
-    organizationId: string,
-    options: AuditLogExportOptions = {}
-  ) {
+  async findForExport(organizationId: string, options: AuditLogExportOptions = {}) {
     const { category, startDate, endDate } = options;
 
     const where: Prisma.AuditLogWhereInput = {

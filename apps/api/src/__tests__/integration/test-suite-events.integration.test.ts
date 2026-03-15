@@ -50,7 +50,12 @@ vi.mock('@agentest/auth', () => ({
     }
     next();
   },
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -64,19 +69,21 @@ vi.mock('@agentest/auth', () => ({
 
 // テストスイート権限ミドルウェアをモック
 vi.mock('../../middleware/require-test-suite-role.js', () => ({
-  requireTestSuiteRole: (roles: string[], _options?: { allowDeletedSuite?: boolean }) => async (req: any, _res: any, next: any) => {
-    if (!mockTestSuiteRole || !roles.includes(mockTestSuiteRole)) {
-      return next(new AuthorizationError('権限がありません'));
-    }
-    const testSuiteId = req.params.testSuiteId;
-    if (testSuiteId) {
-      const testSuite = await prisma.testSuite.findUnique({ where: { id: testSuiteId } });
-      if (!testSuite) {
-        return next(new NotFoundError('TestSuite', testSuiteId));
+  requireTestSuiteRole:
+    (roles: string[], _options?: { allowDeletedSuite?: boolean }) =>
+    async (req: any, _res: any, next: any) => {
+      if (!mockTestSuiteRole || !roles.includes(mockTestSuiteRole)) {
+        return next(new AuthorizationError('権限がありません'));
       }
-    }
-    next();
-  },
+      const testSuiteId = req.params.testSuiteId;
+      if (testSuiteId) {
+        const testSuite = await prisma.testSuite.findUnique({ where: { id: testSuiteId } });
+        if (!testSuite) {
+          return next(new NotFoundError('TestSuite', testSuiteId));
+        }
+      }
+      next();
+    },
 }));
 
 function setTestAuth(
@@ -254,8 +261,14 @@ describe('Test Suite Events Integration Tests', () => {
     let precondition2: Awaited<ReturnType<typeof createTestPrecondition>>;
 
     beforeEach(async () => {
-      precondition1 = await createTestPrecondition(testSuite.id, { content: 'First', orderKey: 'a' });
-      precondition2 = await createTestPrecondition(testSuite.id, { content: 'Second', orderKey: 'b' });
+      precondition1 = await createTestPrecondition(testSuite.id, {
+        content: 'First',
+        orderKey: 'a',
+      });
+      precondition2 = await createTestPrecondition(testSuite.id, {
+        content: 'Second',
+        orderKey: 'b',
+      });
     });
 
     it('前提条件並び替え時にpublishTestSuiteUpdatedが呼ばれる', async () => {

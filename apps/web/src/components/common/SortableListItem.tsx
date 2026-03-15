@@ -55,14 +55,10 @@ export function SortableListItem({
   isReordering,
   actionAriaLabel,
 }: SortableListItemProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id, disabled: !canEdit || isReordering });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+    disabled: !canEdit || isReordering,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -94,14 +90,14 @@ export function SortableListItem({
         )}
 
         {/* インデックス番号 */}
-        <span className={`w-6 h-6 rounded-full text-xs font-medium flex items-center justify-center flex-shrink-0 ${INDEX_COLORS[indexColor]}`}>
+        <span
+          className={`w-6 h-6 rounded-full text-xs font-medium flex items-center justify-center flex-shrink-0 ${INDEX_COLORS[indexColor]}`}
+        >
           {index}
         </span>
 
         {/* 内容 */}
-        <p className="text-sm text-foreground truncate">
-          {content}
-        </p>
+        <p className="text-sm text-foreground truncate">{content}</p>
       </div>
 
       {/* アクションメニュー */}

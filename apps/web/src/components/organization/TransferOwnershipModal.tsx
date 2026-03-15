@@ -1,6 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { X, Loader2, ArrowRight, AlertTriangle, Crown } from 'lucide-react';
-import { organizationsApi, ApiError, type Organization, type OrganizationMember } from '../../lib/api';
+import {
+  organizationsApi,
+  ApiError,
+  type Organization,
+  type OrganizationMember,
+} from '../../lib/api';
 import { toast } from '../../stores/toast';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
@@ -346,7 +351,10 @@ export function TransferOwnershipModal({
 
               {/* 確認入力 */}
               <div>
-                <label htmlFor="confirm-org-name" className="block text-sm font-medium text-foreground mb-1.5">
+                <label
+                  htmlFor="confirm-org-name"
+                  className="block text-sm font-medium text-foreground mb-1.5"
+                >
                   確認のため組織名を入力してください
                 </label>
                 <input
@@ -371,7 +379,12 @@ export function TransferOwnershipModal({
         <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-border">
           {!confirmationStep ? (
             <>
-              <button type="button" onClick={onClose} className="btn btn-secondary" disabled={isSubmitting}>
+              <button
+                type="button"
+                onClick={onClose}
+                className="btn btn-secondary"
+                disabled={isSubmitting}
+              >
                 キャンセル
               </button>
               <button
@@ -386,7 +399,12 @@ export function TransferOwnershipModal({
             </>
           ) : (
             <>
-              <button type="button" onClick={handleBack} className="btn btn-secondary" disabled={isSubmitting}>
+              <button
+                type="button"
+                onClick={handleBack}
+                className="btn btn-secondary"
+                disabled={isSubmitting}
+              >
                 戻る
               </button>
               <button

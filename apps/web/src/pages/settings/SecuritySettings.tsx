@@ -1,10 +1,30 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Loader2, Monitor, Smartphone, Tablet, X, AlertTriangle, Github, Link2, Unlink } from 'lucide-react';
+import {
+  Loader2,
+  Monitor,
+  Smartphone,
+  Tablet,
+  X,
+  AlertTriangle,
+  Github,
+  Link2,
+  Unlink,
+} from 'lucide-react';
 import { useAuthStore } from '../../stores/auth';
 import { useConfigStore } from '../../stores/config';
 import { toast } from '../../stores/toast';
-import { ApiError, sessionsApi, accountsApi, passwordApi, type Session, type Account } from '../../lib/api';
-import { PasswordStrengthChecklist, PASSWORD_CHECKS } from '../../components/PasswordStrengthChecklist';
+import {
+  ApiError,
+  sessionsApi,
+  accountsApi,
+  passwordApi,
+  type Session,
+  type Account,
+} from '../../lib/api';
+import {
+  PasswordStrengthChecklist,
+  PASSWORD_CHECKS,
+} from '../../components/PasswordStrengthChecklist';
 import { TwoFactorSettings } from '../../components/settings/TwoFactorSettings';
 import { GoogleIcon } from '../../components/ui/GoogleIcon';
 
@@ -122,11 +142,7 @@ function ConfirmDialog({
       }}
     >
       {/* オーバーレイ */}
-      <div
-        className="absolute inset-0 bg-black/50"
-        onClick={onCancel}
-        role="presentation"
-      />
+      <div className="absolute inset-0 bg-black/50" onClick={onCancel} role="presentation" />
       {/* ダイアログ */}
       <div className="relative bg-background border border-border rounded-lg shadow-lg max-w-md w-full mx-4 p-6">
         <div className="flex items-start gap-4">
@@ -134,7 +150,9 @@ function ConfirmDialog({
             <AlertTriangle className="w-5 h-5 text-warning" />
           </div>
           <div className="flex-1">
-            <h3 id="confirm-dialog-title" className="text-lg font-semibold text-foreground">{title}</h3>
+            <h3 id="confirm-dialog-title" className="text-lg font-semibold text-foreground">
+              {title}
+            </h3>
             <p className="text-sm text-foreground-muted mt-1">{message}</p>
           </div>
           <button
@@ -146,18 +164,10 @@ function ConfirmDialog({
           </button>
         </div>
         <div className="flex justify-end gap-2 mt-6">
-          <button
-            className="btn btn-ghost"
-            onClick={onCancel}
-            disabled={isLoading}
-          >
+          <button className="btn btn-ghost" onClick={onCancel} disabled={isLoading}>
             キャンセル
           </button>
-          <button
-            className="btn btn-danger"
-            onClick={onConfirm}
-            disabled={isLoading}
-          >
+          <button className="btn btn-danger" onClick={onConfirm} disabled={isLoading}>
             {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
             {confirmLabel}
           </button>
@@ -190,9 +200,13 @@ function SessionItem({
       }`}
     >
       <div className="flex items-center gap-4">
-        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-          session.isCurrent ? 'bg-accent text-white' : 'bg-background-tertiary text-foreground-muted'
-        }`}>
+        <div
+          className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+            session.isCurrent
+              ? 'bg-accent text-white'
+              : 'bg-background-tertiary text-foreground-muted'
+          }`}
+        >
           <DeviceIcon deviceType={deviceType} />
         </div>
         <div>
@@ -217,11 +231,7 @@ function SessionItem({
           onClick={() => onRevoke(session.id)}
           disabled={isRevoking}
         >
-          {isRevoking ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            'ログアウト'
-          )}
+          {isRevoking ? <Loader2 className="w-4 h-4 animate-spin" /> : 'ログアウト'}
         </button>
       )}
     </div>
@@ -242,12 +252,13 @@ const INITIAL_SESSION_DISPLAY_COUNT = 5;
  */
 export function SecuritySettings() {
   const { user } = useAuthStore();
-  const { auth: { providers: enabledProviders }, isOAuthEnabled } = useConfigStore();
+  const {
+    auth: { providers: enabledProviders },
+    isOAuthEnabled,
+  } = useConfigStore();
 
   // 有効なプロバイダーのみフィルタリング
-  const availableProviders = OAUTH_PROVIDERS.filter(
-    (p) => enabledProviders[p.id]
-  );
+  const availableProviders = OAUTH_PROVIDERS.filter((p) => enabledProviders[p.id]);
   const showOAuthSection = isOAuthEnabled();
   const [showAllSessions, setShowAllSessions] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -496,24 +507,16 @@ export function SecuritySettings() {
           <div>
             <h2 className="text-lg font-semibold text-foreground">パスワード</h2>
             <p className="text-sm text-foreground-muted mt-1">
-              {hasPassword
-                ? 'パスワードが設定されています'
-                : 'パスワードが設定されていません'}
+              {hasPassword ? 'パスワードが設定されています' : 'パスワードが設定されていません'}
             </p>
           </div>
           {hasPassword === false && (
-            <button
-              className="btn btn-primary btn-sm"
-              onClick={() => openPasswordModal('set')}
-            >
+            <button className="btn btn-primary btn-sm" onClick={() => openPasswordModal('set')}>
               パスワードを設定
             </button>
           )}
           {hasPassword === true && (
-            <button
-              className="btn btn-ghost btn-sm"
-              onClick={() => openPasswordModal('change')}
-            >
+            <button className="btn btn-ghost btn-sm" onClick={() => openPasswordModal('change')}>
               パスワードを変更
             </button>
           )}
@@ -540,7 +543,10 @@ export function SecuritySettings() {
             <form onSubmit={handlePasswordSubmit} className="space-y-4">
               {showPasswordModal === 'change' && (
                 <div>
-                  <label htmlFor="current-password" className="block text-sm font-medium text-foreground mb-1">
+                  <label
+                    htmlFor="current-password"
+                    className="block text-sm font-medium text-foreground mb-1"
+                  >
                     現在のパスワード
                   </label>
                   <input
@@ -557,7 +563,10 @@ export function SecuritySettings() {
               )}
 
               <div>
-                <label htmlFor="new-password" className="block text-sm font-medium text-foreground mb-1">
+                <label
+                  htmlFor="new-password"
+                  className="block text-sm font-medium text-foreground mb-1"
+                >
                   新しいパスワード
                 </label>
                 <input
@@ -576,7 +585,10 @@ export function SecuritySettings() {
               </div>
 
               <div>
-                <label htmlFor="confirm-password" className="block text-sm font-medium text-foreground mb-1">
+                <label
+                  htmlFor="confirm-password"
+                  className="block text-sm font-medium text-foreground mb-1"
+                >
                   パスワード（確認）
                 </label>
                 <input
@@ -591,9 +603,7 @@ export function SecuritySettings() {
                 />
               </div>
 
-              {passwordError && (
-                <p className="text-sm text-danger">{passwordError}</p>
-              )}
+              {passwordError && <p className="text-sm text-danger">{passwordError}</p>}
 
               <div className="flex justify-end gap-2">
                 <button
@@ -625,87 +635,88 @@ export function SecuritySettings() {
 
       {/* 接続済みアカウント（有効なOAuthプロバイダーがある場合のみ表示） */}
       {showOAuthSection && (
-      <div className="card p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="text-lg font-semibold text-foreground">接続済みアカウント</h2>
-            <p className="text-sm text-foreground-muted mt-1">
-              OAuthプロバイダーとの連携を管理します
-            </p>
+        <div className="card p-6">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">接続済みアカウント</h2>
+              <p className="text-sm text-foreground-muted mt-1">
+                OAuthプロバイダーとの連携を管理します
+              </p>
+            </div>
           </div>
-        </div>
 
-        {isLoadingAccounts ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-foreground-muted" />
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {availableProviders.map((provider) => {
-              const linked = isProviderLinked(provider.id);
-              const account = accounts.find((a) => a.provider === provider.id);
-              const isUnlinking = unlinkingProvider === provider.id;
-              const canUnlink = accounts.length > 1 || hasPassword === true;
+          {isLoadingAccounts ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-foreground-muted" />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {availableProviders.map((provider) => {
+                const linked = isProviderLinked(provider.id);
+                const account = accounts.find((a) => a.provider === provider.id);
+                const isUnlinking = unlinkingProvider === provider.id;
+                const canUnlink = accounts.length > 1 || hasPassword === true;
 
-              return (
-                <div
-                  key={provider.id}
-                  className="flex items-center justify-between p-3 bg-background-tertiary rounded"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded bg-background flex items-center justify-center">
-                      <provider.icon className="w-4 h-4" />
+                return (
+                  <div
+                    key={provider.id}
+                    className="flex items-center justify-between p-3 bg-background-tertiary rounded"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded bg-background flex items-center justify-center">
+                        <provider.icon className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <span className="text-foreground font-medium">{provider.name}</span>
+                        {linked && account && (
+                          <p className="text-xs text-foreground-muted">
+                            連携日: {new Date(account.createdAt).toLocaleDateString('ja-JP')}
+                          </p>
+                        )}
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-foreground font-medium">{provider.name}</span>
-                      {linked && account && (
-                        <p className="text-xs text-foreground-muted">
-                          連携日: {new Date(account.createdAt).toLocaleDateString('ja-JP')}
-                        </p>
+                    <div className="flex items-center gap-2">
+                      {linked ? (
+                        <>
+                          <span className="badge badge-success">接続済み</span>
+                          {canUnlink && (
+                            <button
+                              className="btn btn-ghost btn-sm text-danger hover:bg-danger-subtle"
+                              onClick={() => openConfirmDialog('unlink', { provider: provider.id })}
+                              disabled={isUnlinking}
+                              title="連携を解除"
+                            >
+                              {isUnlinking ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Unlink className="w-4 h-4" />
+                              )}
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <button
+                          className="btn btn-primary btn-sm"
+                          onClick={() => handleLinkAccount(provider.id)}
+                        >
+                          <Link2 className="w-4 h-4" />
+                          連携する
+                        </button>
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {linked ? (
-                      <>
-                        <span className="badge badge-success">接続済み</span>
-                        {canUnlink && (
-                          <button
-                            className="btn btn-ghost btn-sm text-danger hover:bg-danger-subtle"
-                            onClick={() => openConfirmDialog('unlink', { provider: provider.id })}
-                            disabled={isUnlinking}
-                            title="連携を解除"
-                          >
-                            {isUnlinking ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <Unlink className="w-4 h-4" />
-                            )}
-                          </button>
-                        )}
-                      </>
-                    ) : (
-                      <button
-                        className="btn btn-primary btn-sm"
-                        onClick={() => handleLinkAccount(provider.id)}
-                      >
-                        <Link2 className="w-4 h-4" />
-                        連携する
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                );
+              })}
+            </div>
+          )}
 
-        {accounts.length === 1 && !hasPassword && (
-          <p className="text-xs text-foreground-subtle mt-4">
-            ※ 最低1つのOAuth連携が必要です。連携を解除するには別のプロバイダーを先に連携するか、パスワードを設定してください。
-          </p>
-        )}
-      </div>
+          {accounts.length === 1 && !hasPassword && (
+            <p className="text-xs text-foreground-subtle mt-4">
+              ※
+              最低1つのOAuth連携が必要です。連携を解除するには別のプロバイダーを先に連携するか、パスワードを設定してください。
+            </p>
+          )}
+        </div>
       )}
 
       {/* セッション管理 */}
@@ -766,15 +777,15 @@ export function SecuritySettings() {
           confirmDialog?.type === 'all-sessions'
             ? '他のすべてのセッションを終了'
             : confirmDialog?.type === 'unlink'
-            ? 'OAuth連携を解除'
-            : 'セッションを終了'
+              ? 'OAuth連携を解除'
+              : 'セッションを終了'
         }
         message={
           confirmDialog?.type === 'all-sessions'
             ? '現在のセッション以外のすべてのセッションを終了します。他のデバイスからは再度ログインが必要になります。'
             : confirmDialog?.type === 'unlink'
-            ? `${confirmDialog.provider}との連携を解除します。この操作は取り消せません。`
-            : 'このセッションを終了します。該当デバイスからは再度ログインが必要になります。'
+              ? `${confirmDialog.provider}との連携を解除します。この操作は取り消せません。`
+              : 'このセッションを終了します。該当デバイスからは再度ログインが必要になります。'
         }
         confirmLabel={confirmDialog?.type === 'unlink' ? '解除する' : '終了する'}
         onConfirm={handleConfirm}
@@ -783,8 +794,8 @@ export function SecuritySettings() {
           confirmDialog?.type === 'all-sessions'
             ? isRevokingAll
             : confirmDialog?.type === 'unlink'
-            ? unlinkingProvider !== null
-            : revokingSessionId !== null
+              ? unlinkingProvider !== null
+              : revokingSessionId !== null
         }
       />
     </div>

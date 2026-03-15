@@ -47,8 +47,20 @@ describe('enrichCommentsWithTargetName', () => {
     const result = await enrichCommentsWithTargetName(comments);
 
     expect(result).toEqual([
-      { id: 'c1', targetType: 'CASE', targetId: 'case-1', content: 'test', targetName: 'ログインテスト' },
-      { id: 'c2', targetType: 'CASE', targetId: 'case-2', content: 'test2', targetName: '登録テスト' },
+      {
+        id: 'c1',
+        targetType: 'CASE',
+        targetId: 'case-1',
+        content: 'test',
+        targetName: 'ログインテスト',
+      },
+      {
+        id: 'c2',
+        targetType: 'CASE',
+        targetId: 'case-2',
+        content: 'test2',
+        targetName: '登録テスト',
+      },
     ]);
     expect(mockPrismaTestCase.findMany).toHaveBeenCalledWith({
       where: { id: { in: ['case-1', 'case-2'] } },
@@ -57,17 +69,19 @@ describe('enrichCommentsWithTargetName', () => {
   });
 
   it('targetType=SUITEのコメントにテストスイート名を付与する', async () => {
-    const comments = [
-      { id: 'c1', targetType: 'SUITE', targetId: 'suite-1', content: 'test' },
-    ];
-    mockPrismaTestSuite.findMany.mockResolvedValue([
-      { id: 'suite-1', name: '認証スイート' },
-    ]);
+    const comments = [{ id: 'c1', targetType: 'SUITE', targetId: 'suite-1', content: 'test' }];
+    mockPrismaTestSuite.findMany.mockResolvedValue([{ id: 'suite-1', name: '認証スイート' }]);
 
     const result = await enrichCommentsWithTargetName(comments);
 
     expect(result).toEqual([
-      { id: 'c1', targetType: 'SUITE', targetId: 'suite-1', content: 'test', targetName: '認証スイート' },
+      {
+        id: 'c1',
+        targetType: 'SUITE',
+        targetId: 'suite-1',
+        content: 'test',
+        targetName: '認証スイート',
+      },
     ]);
     expect(mockPrismaTestSuite.findMany).toHaveBeenCalledWith({
       where: { id: { in: ['suite-1'] } },
@@ -85,9 +99,7 @@ describe('enrichCommentsWithTargetName', () => {
       { id: 'case-1', title: 'テストA' },
       { id: 'case-2', title: 'テストB' },
     ]);
-    mockPrismaTestSuite.findMany.mockResolvedValue([
-      { id: 'suite-1', name: 'スイートA' },
-    ]);
+    mockPrismaTestSuite.findMany.mockResolvedValue([{ id: 'suite-1', name: 'スイートA' }]);
 
     const result = await enrichCommentsWithTargetName(comments);
 
@@ -101,9 +113,7 @@ describe('enrichCommentsWithTargetName', () => {
       { id: 'c1', targetType: 'CASE', targetId: 'case-1', content: 'first' },
       { id: 'c2', targetType: 'CASE', targetId: 'case-1', content: 'second' },
     ];
-    mockPrismaTestCase.findMany.mockResolvedValue([
-      { id: 'case-1', title: 'ログインテスト' },
-    ]);
+    mockPrismaTestCase.findMany.mockResolvedValue([{ id: 'case-1', title: 'ログインテスト' }]);
 
     const result = await enrichCommentsWithTargetName(comments);
 
@@ -117,9 +127,7 @@ describe('enrichCommentsWithTargetName', () => {
   });
 
   it('削除済みターゲットにはnullを返す', async () => {
-    const comments = [
-      { id: 'c1', targetType: 'CASE', targetId: 'deleted-case', content: 'test' },
-    ];
+    const comments = [{ id: 'c1', targetType: 'CASE', targetId: 'deleted-case', content: 'test' }];
     // 削除済みで見つからない
     mockPrismaTestCase.findMany.mockResolvedValue([]);
 
@@ -129,12 +137,8 @@ describe('enrichCommentsWithTargetName', () => {
   });
 
   it('CASEのみの場合はtestSuiteクエリを発行しない', async () => {
-    const comments = [
-      { id: 'c1', targetType: 'CASE', targetId: 'case-1', content: 'test' },
-    ];
-    mockPrismaTestCase.findMany.mockResolvedValue([
-      { id: 'case-1', title: 'テスト' },
-    ]);
+    const comments = [{ id: 'c1', targetType: 'CASE', targetId: 'case-1', content: 'test' }];
+    mockPrismaTestCase.findMany.mockResolvedValue([{ id: 'case-1', title: 'テスト' }]);
 
     await enrichCommentsWithTargetName(comments);
 
@@ -143,12 +147,8 @@ describe('enrichCommentsWithTargetName', () => {
   });
 
   it('SUITEのみの場合はtestCaseクエリを発行しない', async () => {
-    const comments = [
-      { id: 'c1', targetType: 'SUITE', targetId: 'suite-1', content: 'test' },
-    ];
-    mockPrismaTestSuite.findMany.mockResolvedValue([
-      { id: 'suite-1', name: 'スイート' },
-    ]);
+    const comments = [{ id: 'c1', targetType: 'SUITE', targetId: 'suite-1', content: 'test' }];
+    mockPrismaTestSuite.findMany.mockResolvedValue([{ id: 'suite-1', name: 'スイート' }]);
 
     await enrichCommentsWithTargetName(comments);
 
@@ -165,13 +165,9 @@ describe('enrichReviewWithTargetNames', () => {
   it('レビューオブジェクトのコメントにtargetNameを付与する', async () => {
     const review = {
       id: 'review-1',
-      comments: [
-        { id: 'c1', targetType: 'CASE', targetId: 'case-1', content: 'comment' },
-      ],
+      comments: [{ id: 'c1', targetType: 'CASE', targetId: 'case-1', content: 'comment' }],
     };
-    mockPrismaTestCase.findMany.mockResolvedValue([
-      { id: 'case-1', title: 'ログインテスト' },
-    ]);
+    mockPrismaTestCase.findMany.mockResolvedValue([{ id: 'case-1', title: 'ログインテスト' }]);
 
     const result = await enrichReviewWithTargetNames(review);
 

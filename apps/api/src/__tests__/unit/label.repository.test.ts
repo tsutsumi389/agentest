@@ -291,8 +291,16 @@ describe('LabelRepository', () => {
   describe('getTestSuiteLabels', () => {
     it('テストスイートのラベル一覧を取得できる', async () => {
       const mockTestSuiteLabels = [
-        { testSuiteId: 'suite-1', labelId: 'label-1', label: { id: 'label-1', name: 'Bug', color: '#FF0000' } },
-        { testSuiteId: 'suite-1', labelId: 'label-2', label: { id: 'label-2', name: 'Feature', color: '#00FF00' } },
+        {
+          testSuiteId: 'suite-1',
+          labelId: 'label-1',
+          label: { id: 'label-1', name: 'Bug', color: '#FF0000' },
+        },
+        {
+          testSuiteId: 'suite-1',
+          labelId: 'label-2',
+          label: { id: 'label-2', name: 'Feature', color: '#00FF00' },
+        },
       ];
       mockPrismaTestSuiteLabel.findMany.mockResolvedValue(mockTestSuiteLabels);
 

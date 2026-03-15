@@ -2,11 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vites
 import request from 'supertest';
 import type { Express } from 'express';
 import { prisma } from '@agentest/db';
-import {
-  createTestUser,
-  createTestSession,
-  cleanupTestData,
-} from './test-helpers.js';
+import { createTestUser, createTestSession, cleanupTestData } from './test-helpers.js';
 
 import { AuthenticationError } from '@agentest/shared';
 import { createApp } from '../../app.js';
@@ -28,7 +24,12 @@ vi.mock('@agentest/auth', () => ({
   optionalAuth: () => (_req: any, _res: any, next: any) => next(),
   requireOrgRole: () => (_req: any, _res: any, next: any) => next(),
   requireProjectRole: () => (_req: any, _res: any, next: any) => next(),
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -85,9 +86,7 @@ describe('Sessions API Integration Tests', () => {
       await createTestSession(testUser.id, { userAgent: 'Firefox' });
       await createTestSession(testUser.id, { userAgent: 'Safari' });
 
-      const response = await request(app)
-        .get('/api/sessions')
-        .expect(200);
+      const response = await request(app).get('/api/sessions').expect(200);
 
       expect(response.body.data).toHaveLength(3);
       expect(response.body.data[0]).toHaveProperty('id');
@@ -98,9 +97,7 @@ describe('Sessions API Integration Tests', () => {
     });
 
     it('現在のセッションにisCurrentがtrueで返される', async () => {
-      const response = await request(app)
-        .get('/api/sessions')
-        .expect(200);
+      const response = await request(app).get('/api/sessions').expect(200);
 
       const current = response.body.data.find((s: any) => s.id === currentSession.id);
       expect(current.isCurrent).toBe(true);
@@ -113,13 +110,9 @@ describe('Sessions API Integration Tests', () => {
         revokedAt: new Date(),
       });
 
-      const response = await request(app)
-        .get('/api/sessions')
-        .expect(200);
+      const response = await request(app).get('/api/sessions').expect(200);
 
-      const revokedSession = response.body.data.find(
-        (s: any) => s.userAgent === 'Revoked Browser'
-      );
+      const revokedSession = response.body.data.find((s: any) => s.userAgent === 'Revoked Browser');
       expect(revokedSession).toBeUndefined();
     });
 
@@ -130,22 +123,16 @@ describe('Sessions API Integration Tests', () => {
         expiresAt: new Date(Date.now() - 1000),
       });
 
-      const response = await request(app)
-        .get('/api/sessions')
-        .expect(200);
+      const response = await request(app).get('/api/sessions').expect(200);
 
-      const expiredSession = response.body.data.find(
-        (s: any) => s.userAgent === 'Expired Browser'
-      );
+      const expiredSession = response.body.data.find((s: any) => s.userAgent === 'Expired Browser');
       expect(expiredSession).toBeUndefined();
     });
 
     it('未認証の場合は401エラー', async () => {
       clearTestAuth();
 
-      const response = await request(app)
-        .get('/api/sessions')
-        .expect(401);
+      const response = await request(app).get('/api/sessions').expect(401);
 
       expect(response.body.error.code).toBe('AUTHENTICATION_ERROR');
     });
@@ -157,9 +144,7 @@ describe('Sessions API Integration Tests', () => {
       await createTestSession(testUser.id);
       await createTestSession(testUser.id);
 
-      const response = await request(app)
-        .get('/api/sessions/count')
-        .expect(200);
+      const response = await request(app).get('/api/sessions/count').expect(200);
 
       expect(response.body.data.count).toBe(3);
     });
@@ -170,9 +155,7 @@ describe('Sessions API Integration Tests', () => {
       // 期限切れセッション
       await createTestSession(testUser.id, { expiresAt: new Date(Date.now() - 1000) });
 
-      const response = await request(app)
-        .get('/api/sessions/count')
-        .expect(200);
+      const response = await request(app).get('/api/sessions/count').expect(200);
 
       // 現在のセッションのみ
       expect(response.body.data.count).toBe(1);
@@ -186,9 +169,7 @@ describe('Sessions API Integration Tests', () => {
         userAgent: 'Target Browser',
       });
 
-      const response = await request(app)
-        .delete(`/api/sessions/${targetSession.id}`)
-        .expect(200);
+      const response = await request(app).delete(`/api/sessions/${targetSession.id}`).expect(200);
 
       expect(response.body.data.success).toBe(true);
 
@@ -200,9 +181,7 @@ describe('Sessions API Integration Tests', () => {
     });
 
     it('現在のセッションは終了できない（バリデーションエラー）', async () => {
-      const response = await request(app)
-        .delete(`/api/sessions/${currentSession.id}`)
-        .expect(400);
+      const response = await request(app).delete(`/api/sessions/${currentSession.id}`).expect(400);
 
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
       expect(response.body.error.message).toContain('現在使用中のセッション');
@@ -221,9 +200,7 @@ describe('Sessions API Integration Tests', () => {
       const otherUser = await createTestUser({ email: 'other@example.com' });
       const otherSession = await createTestSession(otherUser.id);
 
-      const response = await request(app)
-        .delete(`/api/sessions/${otherSession.id}`)
-        .expect(403);
+      const response = await request(app).delete(`/api/sessions/${otherSession.id}`).expect(403);
 
       expect(response.body.error.code).toBe('AUTHORIZATION_ERROR');
     });
@@ -234,9 +211,7 @@ describe('Sessions API Integration Tests', () => {
         revokedAt: new Date(),
       });
 
-      const response = await request(app)
-        .delete(`/api/sessions/${revokedSession.id}`)
-        .expect(404);
+      const response = await request(app).delete(`/api/sessions/${revokedSession.id}`).expect(404);
 
       expect(response.body.error.code).toBe('NOT_FOUND');
     });
@@ -248,9 +223,7 @@ describe('Sessions API Integration Tests', () => {
       const session1 = await createTestSession(testUser.id);
       const session2 = await createTestSession(testUser.id);
 
-      const response = await request(app)
-        .delete('/api/sessions')
-        .expect(200);
+      const response = await request(app).delete('/api/sessions').expect(200);
 
       expect(response.body.data.success).toBe(true);
       expect(response.body.data.revokedCount).toBe(2);
@@ -269,9 +242,7 @@ describe('Sessions API Integration Tests', () => {
     });
 
     it('他にセッションがない場合はrevokedCount: 0', async () => {
-      const response = await request(app)
-        .delete('/api/sessions')
-        .expect(200);
+      const response = await request(app).delete('/api/sessions').expect(200);
 
       expect(response.body.data.revokedCount).toBe(0);
     });

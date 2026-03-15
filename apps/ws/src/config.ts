@@ -31,7 +31,10 @@ function validateEnv() {
   const parsed = envSchema.safeParse(process.env);
 
   if (!parsed.success) {
-    logger.error({ fieldErrors: parsed.error.flatten().fieldErrors }, '環境変数のバリデーションエラー');
+    logger.error(
+      { fieldErrors: parsed.error.flatten().fieldErrors },
+      '環境変数のバリデーションエラー'
+    );
     throw new Error('環境変数が不正です');
   }
 

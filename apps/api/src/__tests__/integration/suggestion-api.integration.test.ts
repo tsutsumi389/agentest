@@ -36,7 +36,12 @@ vi.mock('@agentest/auth', () => ({
     }
     next();
   },
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -204,9 +209,7 @@ describe('Suggestion API Integration Tests', () => {
     it('READロールでもアクセスできる', async () => {
       setTestAuth({ id: reader.id, email: reader.email }, 'READ', 'READ');
 
-      await request(app)
-        .get(`/api/projects/${project.id}/suggestions/test-suites`)
-        .expect(200);
+      await request(app).get(`/api/projects/${project.id}/suggestions/test-suites`).expect(200);
     });
 
     it('未認証は401エラー', async () => {
@@ -367,15 +370,15 @@ describe('Suggestion API Integration Tests', () => {
         .expect(200);
 
       expect(response.body.suggestions).toHaveLength(2);
-      expect(response.body.suggestions.find((s: any) => s.title === 'Login Success Test')).toBeUndefined();
+      expect(
+        response.body.suggestions.find((s: any) => s.title === 'Login Success Test')
+      ).toBeUndefined();
     });
 
     it('READロールでもアクセスできる', async () => {
       setTestAuth({ id: reader.id, email: reader.email }, 'READ', 'READ');
 
-      await request(app)
-        .get(`/api/test-suites/${testSuite.id}/suggestions/test-cases`)
-        .expect(200);
+      await request(app).get(`/api/test-suites/${testSuite.id}/suggestions/test-cases`).expect(200);
     });
 
     it('未認証は401エラー', async () => {
@@ -453,25 +456,19 @@ describe('Suggestion API Integration Tests', () => {
       it('ADMINはテストスイートサジェストを取得できる', async () => {
         setTestAuth({ id: owner.id, email: owner.email }, 'ADMIN', 'ADMIN');
 
-        await request(app)
-          .get(`/api/projects/${project.id}/suggestions/test-suites`)
-          .expect(200);
+        await request(app).get(`/api/projects/${project.id}/suggestions/test-suites`).expect(200);
       });
 
       it('WRITEはテストスイートサジェストを取得できる', async () => {
         setTestAuth({ id: owner.id, email: owner.email }, 'WRITE', 'WRITE');
 
-        await request(app)
-          .get(`/api/projects/${project.id}/suggestions/test-suites`)
-          .expect(200);
+        await request(app).get(`/api/projects/${project.id}/suggestions/test-suites`).expect(200);
       });
 
       it('READはテストスイートサジェストを取得できる', async () => {
         setTestAuth({ id: reader.id, email: reader.email }, 'READ', 'READ');
 
-        await request(app)
-          .get(`/api/projects/${project.id}/suggestions/test-suites`)
-          .expect(200);
+        await request(app).get(`/api/projects/${project.id}/suggestions/test-suites`).expect(200);
       });
     });
 

@@ -44,9 +44,7 @@ export function RecentExecutionsList({ userId }: RecentExecutionsListProps) {
           <h2 className="font-semibold text-foreground">最近のテスト実行</h2>
         </div>
         <div className="p-4">
-          <p className="text-sm text-danger">
-            テスト実行結果の取得に失敗しました
-          </p>
+          <p className="text-sm text-danger">テスト実行結果の取得に失敗しました</p>
         </div>
       </div>
     );
@@ -61,9 +59,7 @@ export function RecentExecutionsList({ userId }: RecentExecutionsListProps) {
         </div>
         <div className="p-8 text-center">
           <Play className="w-12 h-12 text-foreground-subtle mx-auto mb-3" />
-          <p className="text-foreground-muted">
-            まだテスト実行結果がありません
-          </p>
+          <p className="text-foreground-muted">まだテスト実行結果がありません</p>
         </div>
       </div>
     );
@@ -90,14 +86,12 @@ export function RecentExecutionsList({ userId }: RecentExecutionsListProps) {
 function ExecutionItem({ execution }: { execution: RecentExecutionItem }) {
   const { judgmentCounts } = execution;
   const total =
-    judgmentCounts.PASS +
-    judgmentCounts.FAIL +
-    judgmentCounts.PENDING +
-    judgmentCounts.SKIPPED;
+    judgmentCounts.PASS + judgmentCounts.FAIL + judgmentCounts.PENDING + judgmentCounts.SKIPPED;
 
   // 成功率を計算
   const completedTotal = judgmentCounts.PASS + judgmentCounts.FAIL + judgmentCounts.SKIPPED;
-  const passRate = completedTotal > 0 ? Math.round((judgmentCounts.PASS / completedTotal) * 100) : 0;
+  const passRate =
+    completedTotal > 0 ? Math.round((judgmentCounts.PASS / completedTotal) * 100) : 0;
 
   return (
     <Link
@@ -106,9 +100,7 @@ function ExecutionItem({ execution }: { execution: RecentExecutionItem }) {
     >
       {/* プロジェクト名 / テストスイート名 */}
       <div className="flex items-center gap-2 mb-2">
-        <span className="text-foreground font-medium">
-          {execution.projectName}
-        </span>
+        <span className="text-foreground font-medium">{execution.projectName}</span>
         <span className="text-foreground-muted">/</span>
         <span className="text-foreground-muted">{execution.testSuiteName}</span>
         <ArrowRight className="w-4 h-4 text-foreground-subtle ml-auto" />
@@ -159,9 +151,7 @@ function ExecutionItem({ execution }: { execution: RecentExecutionItem }) {
           未判定 {judgmentCounts.PENDING}
         </span>
         {completedTotal > 0 && (
-          <span className="ml-auto font-medium text-foreground">
-            {passRate}%
-          </span>
+          <span className="ml-auto font-medium text-foreground">{passRate}%</span>
         )}
       </div>
     </Link>

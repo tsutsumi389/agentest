@@ -24,7 +24,9 @@ export const SUPPORTED_SCOPES = [
 export const clientRegistrationSchema = z.object({
   client_name: z.string().min(1).max(100),
   redirect_uris: z.array(z.string().url()).min(1),
-  grant_types: z.array(z.enum(['authorization_code', 'refresh_token'])).default(['authorization_code']),
+  grant_types: z
+    .array(z.enum(['authorization_code', 'refresh_token']))
+    .default(['authorization_code']),
   response_types: z.array(z.enum(['code'])).default(['code']),
   token_endpoint_auth_method: z.enum(['none']).default('none'),
   scope: z.string().optional(),
@@ -64,7 +66,9 @@ export const authorizationCodeTokenRequestSchema = z.object({
   resource: z.string().url().optional(), // RFC 8707
 });
 
-export type AuthorizationCodeTokenRequestInput = z.infer<typeof authorizationCodeTokenRequestSchema>;
+export type AuthorizationCodeTokenRequestInput = z.infer<
+  typeof authorizationCodeTokenRequestSchema
+>;
 
 /**
  * リフレッシュトークンリクエスト (/oauth/token grant_type=refresh_token)
@@ -132,7 +136,7 @@ export function parseAndValidateScopes(scopeString?: string): string[] {
 
   const requestedScopes = scopeString.split(' ').filter(Boolean);
   const validScopes = requestedScopes.filter((s) =>
-    SUPPORTED_SCOPES.includes(s as typeof SUPPORTED_SCOPES[number])
+    SUPPORTED_SCOPES.includes(s as (typeof SUPPORTED_SCOPES)[number])
   );
 
   return validScopes;

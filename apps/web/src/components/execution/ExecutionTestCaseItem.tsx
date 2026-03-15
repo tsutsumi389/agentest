@@ -129,22 +129,19 @@ export function ExecutionTestCaseItem({
         </span>
 
         {/* タイトル */}
-        <span className="flex-1 min-w-0 text-sm font-medium text-foreground truncate" title={testCase.title}>
+        <span
+          className="flex-1 min-w-0 text-sm font-medium text-foreground truncate"
+          title={testCase.title}
+        >
           {testCase.title}
         </span>
 
         {/* 進捗サマリー */}
         {totalCount > 0 && (
           <div className="flex-shrink-0 flex items-center gap-2 text-xs">
-            {passCount > 0 && (
-              <span className="text-success">{passCount} PASS</span>
-            )}
-            {failCount > 0 && (
-              <span className="text-danger">{failCount} FAIL</span>
-            )}
-            {pendingCount > 0 && (
-              <span className="text-foreground-muted">{pendingCount} 未</span>
-            )}
+            {passCount > 0 && <span className="text-success">{passCount} PASS</span>}
+            {failCount > 0 && <span className="text-danger">{failCount} FAIL</span>}
+            {pendingCount > 0 && <span className="text-foreground-muted">{pendingCount} 未</span>}
           </div>
         )}
 

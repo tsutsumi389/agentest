@@ -123,9 +123,7 @@ export function MarkdownToolbar({ textareaRef, onInsert }: MarkdownToolbarProps)
 
       {/* その他のアクションボタン */}
       {TOOLBAR_ACTIONS.map((action) => {
-        const tooltip = action.shortcut
-          ? `${action.label} (${action.shortcut})`
-          : action.label;
+        const tooltip = action.shortcut ? `${action.label} (${action.shortcut})` : action.label;
         return (
           <button
             key={action.label}

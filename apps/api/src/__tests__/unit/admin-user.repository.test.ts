@@ -1,10 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { prisma } from '@agentest/db';
 import { AdminUserRepository } from '../../repositories/admin-user.repository.js';
-import {
-  createTestAdminUser,
-  cleanupTestData,
-} from '../integration/test-helpers.js';
+import { createTestAdminUser, cleanupTestData } from '../integration/test-helpers.js';
 
 describe('AdminUserRepository', () => {
   let repo: AdminUserRepository;

@@ -72,7 +72,7 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...customHeaders as Record<string, string>,
+    ...(customHeaders as Record<string, string>),
   };
 
   const config: RequestInit = {
@@ -96,11 +96,10 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
   // エラーレスポンスの場合
   if (!response.ok) {
     // JSONレスポンスでない場合やerrorフィールドがない場合のデフォルト値
-    const errorData = data && typeof data === 'object' && 'error' in data
-      ? data.error
-      : {};
+    const errorData = data && typeof data === 'object' && 'error' in data ? data.error : {};
     const code = typeof errorData?.code === 'string' ? errorData.code : 'UNKNOWN_ERROR';
-    const message = typeof errorData?.message === 'string' ? errorData.message : 'リクエストに失敗しました';
+    const message =
+      typeof errorData?.message === 'string' ? errorData.message : 'リクエストに失敗しました';
     const details = errorData?.details as Record<string, string[]> | undefined;
 
     throw new ApiError(response.status, code, message, details);
@@ -145,8 +144,7 @@ export const setupApi = {
   /**
    * セットアップ状態を取得
    */
-  getStatus: () =>
-    api.get<SetupStatusResponse>('/admin/setup/status'),
+  getStatus: () => api.get<SetupStatusResponse>('/admin/setup/status'),
 
   /**
    * 初回セットアップ（SUPER_ADMIN作成）
@@ -169,26 +167,22 @@ export const adminAuthApi = {
   /**
    * ログアウト
    */
-  logout: () =>
-    api.post<{ message: string }>('/admin/auth/logout'),
+  logout: () => api.post<{ message: string }>('/admin/auth/logout'),
 
   /**
    * 現在の管理者情報を取得
    */
-  me: () =>
-    api.get<{ admin: AdminUser }>('/admin/auth/me'),
+  me: () => api.get<{ admin: AdminUser }>('/admin/auth/me'),
 
   /**
    * 2FA検証
    */
-  verify2FA: (code: string) =>
-    api.post<Verify2FAResponse>('/admin/auth/2fa/verify', { code }),
+  verify2FA: (code: string) => api.post<Verify2FAResponse>('/admin/auth/2fa/verify', { code }),
 
   /**
    * セッション延長
    */
-  refresh: () =>
-    api.post<{ expiresAt: string }>('/admin/auth/refresh'),
+  refresh: () => api.post<{ expiresAt: string }>('/admin/auth/refresh'),
 };
 
 // ============================================
@@ -211,14 +205,12 @@ export const adminProfileApi = {
   /**
    * 2FAセットアップ開始
    */
-  setup2FA: () =>
-    api.post<{ qrCodeDataUrl: string; secret: string }>('/admin/auth/2fa/setup'),
+  setup2FA: () => api.post<{ qrCodeDataUrl: string; secret: string }>('/admin/auth/2fa/setup'),
 
   /**
    * 2FA有効化
    */
-  enable2FA: (code: string) =>
-    api.post<{ message: string }>('/admin/auth/2fa/enable', { code }),
+  enable2FA: (code: string) => api.post<{ message: string }>('/admin/auth/2fa/enable', { code }),
 
   /**
    * 2FA無効化
@@ -260,8 +252,7 @@ export const adminDashboardApi = {
   /**
    * ダッシュボード統計を取得
    */
-  getStats: () =>
-    api.get<AdminDashboardStats>('/admin/dashboard'),
+  getStats: () => api.get<AdminDashboardStats>('/admin/dashboard'),
 };
 
 // ============================================
@@ -315,8 +306,7 @@ export const adminUsersApi = {
   /**
    * ユーザー詳細を取得
    */
-  getById: (userId: string) =>
-    api.get<AdminUserDetailResponse>(`/admin/users/${userId}`),
+  getById: (userId: string) => api.get<AdminUserDetailResponse>(`/admin/users/${userId}`),
 };
 
 // ============================================

@@ -94,16 +94,14 @@ describe('ProjectDashboardService', () => {
     it('存在しないプロジェクトはNotFoundError', async () => {
       mockPrisma.project.findFirst.mockResolvedValue(null);
 
-      await expect(service.getDashboard('non-existent'))
-        .rejects.toThrow(NotFoundError);
+      await expect(service.getDashboard('non-existent')).rejects.toThrow(NotFoundError);
     });
 
     it('削除済みプロジェクトはNotFoundError', async () => {
       // findFirstはdeletedAt: nullの条件で検索するためnullが返る
       mockPrisma.project.findFirst.mockResolvedValue(null);
 
-      await expect(service.getDashboard('deleted-project'))
-        .rejects.toThrow(NotFoundError);
+      await expect(service.getDashboard('deleted-project')).rejects.toThrow(NotFoundError);
     });
   });
 
@@ -302,11 +300,7 @@ describe('ProjectDashboardService', () => {
               id: 'exec-1',
               createdAt: new Date(),
               environment: { id: 'env-1', name: 'Production' },
-              expectedResults: [
-                { status: 'PASS' },
-                { status: 'FAIL' },
-                { status: 'FAIL' },
-              ],
+              expectedResults: [{ status: 'PASS' }, { status: 'FAIL' }, { status: 'FAIL' }],
             },
           ],
         },
@@ -320,10 +314,7 @@ describe('ProjectDashboardService', () => {
               id: 'exec-2',
               createdAt: new Date(),
               environment: null,
-              expectedResults: [
-                { status: 'PASS' },
-                { status: 'PASS' },
-              ],
+              expectedResults: [{ status: 'PASS' }, { status: 'PASS' }],
             },
           ],
         },
@@ -410,11 +401,7 @@ describe('ProjectDashboardService', () => {
               id: 'exec-1',
               createdAt: new Date(),
               environment: { id: 'env-1', name: 'Development' },
-              expectedResults: [
-                { status: 'PASS' },
-                { status: 'PENDING' },
-                { status: 'PENDING' },
-              ],
+              expectedResults: [{ status: 'PASS' }, { status: 'PENDING' }, { status: 'PENDING' }],
             },
           ],
         },

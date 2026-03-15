@@ -45,16 +45,20 @@ describe('confirmEvidenceUploadTool', () => {
 
     it('フィールドが不足している場合はエラー', () => {
       expect(() => confirmEvidenceUploadInputSchema.parse({})).toThrow();
-      expect(() => confirmEvidenceUploadInputSchema.parse({
-        executionId: TEST_EXECUTION_ID,
-      })).toThrow();
+      expect(() =>
+        confirmEvidenceUploadInputSchema.parse({
+          executionId: TEST_EXECUTION_ID,
+        })
+      ).toThrow();
     });
 
     it('無効なUUIDはエラー', () => {
-      expect(() => confirmEvidenceUploadInputSchema.parse({
-        executionId: 'invalid',
-        evidenceId: TEST_EVIDENCE_ID,
-      })).toThrow();
+      expect(() =>
+        confirmEvidenceUploadInputSchema.parse({
+          executionId: 'invalid',
+          evidenceId: TEST_EVIDENCE_ID,
+        })
+      ).toThrow();
     });
   });
 
@@ -83,7 +87,10 @@ describe('confirmEvidenceUploadTool', () => {
         evidenceId: TEST_EVIDENCE_ID,
       };
 
-      const result = await confirmEvidenceUploadTool.handler(input, context) as Record<string, unknown>;
+      const result = (await confirmEvidenceUploadTool.handler(input, context)) as Record<
+        string,
+        unknown
+      >;
 
       expect(mockApiClient.post).toHaveBeenCalledWith(
         `/internal/api/executions/${TEST_EXECUTION_ID}/evidences/${TEST_EVIDENCE_ID}/confirm`,

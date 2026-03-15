@@ -37,7 +37,12 @@ export class LabelRepository {
   /**
    * ラベルを作成
    */
-  async create(data: { projectId: string; name: string; description?: string | null; color: string }) {
+  async create(data: {
+    projectId: string;
+    name: string;
+    description?: string | null;
+    color: string;
+  }) {
     return prisma.label.create({
       data: {
         projectId: data.projectId,

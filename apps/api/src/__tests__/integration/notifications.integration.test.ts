@@ -27,7 +27,12 @@ vi.mock('@agentest/auth', () => ({
   optionalAuth: () => (_req: any, _res: any, next: any) => next(),
   requireOrgRole: () => (_req: any, _res: any, next: any) => next(),
   requireProjectRole: () => (_req: any, _res: any, next: any) => next(),
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -54,7 +59,10 @@ describe('Notifications API Integration Tests', () => {
 
   beforeAll(async () => {
     app = createApp();
-    testUser = await createTestUser({ email: 'notification-test@example.com', name: 'Notification Test User' });
+    testUser = await createTestUser({
+      email: 'notification-test@example.com',
+      name: 'Notification Test User',
+    });
   });
 
   afterAll(async () => {
@@ -174,7 +182,10 @@ describe('Notifications API Integration Tests', () => {
     it('他ユーザーの通知は既読にできない', async () => {
       setTestAuth({ id: testUser.id, email: testUser.email });
 
-      const otherUser = await createTestUser({ email: 'other-user@example.com', name: 'Other User' });
+      const otherUser = await createTestUser({
+        email: 'other-user@example.com',
+        name: 'Other User',
+      });
       const notification = await prisma.notification.create({
         data: {
           userId: otherUser.id,

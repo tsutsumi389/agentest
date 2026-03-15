@@ -141,13 +141,23 @@ describe('AdminAuthService - Profile', () => {
       mockSessionService.revokeAllSessionsExcept.mockResolvedValue(undefined);
       mockAuditLogService.log.mockResolvedValue(undefined);
 
-      await service.changePassword(TEST_ADMIN_ID, currentPassword, newPassword, TEST_IP, TEST_UA, currentSessionId);
+      await service.changePassword(
+        TEST_ADMIN_ID,
+        currentPassword,
+        newPassword,
+        TEST_IP,
+        TEST_UA,
+        currentSessionId
+      );
 
       expect(mockUserRepo.findByIdWithPassword).toHaveBeenCalledWith(TEST_ADMIN_ID);
       expect(bcrypt.compare).toHaveBeenCalledWith(currentPassword, '$2b$12$existingHash');
       expect(bcrypt.hash).toHaveBeenCalledWith(newPassword, 12);
       expect(mockUserRepo.updatePassword).toHaveBeenCalledWith(TEST_ADMIN_ID, hashedPassword);
-      expect(mockSessionService.revokeAllSessionsExcept).toHaveBeenCalledWith(TEST_ADMIN_ID, currentSessionId);
+      expect(mockSessionService.revokeAllSessionsExcept).toHaveBeenCalledWith(
+        TEST_ADMIN_ID,
+        currentSessionId
+      );
       expect(mockAuditLogService.log).toHaveBeenCalledWith({
         adminUserId: TEST_ADMIN_ID,
         action: 'PASSWORD_CHANGED',

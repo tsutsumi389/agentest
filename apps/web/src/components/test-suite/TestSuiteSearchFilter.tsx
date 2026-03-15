@@ -16,10 +16,30 @@ const STATUS_OPTIONS = [
  * ソート統合オプション（フィールド + 順序を1つに統合）
  */
 const SORT_COMBINED_OPTIONS = [
-  { value: 'updatedAt-desc', label: '更新日(新しい順)', sortBy: 'updatedAt' as const, sortOrder: 'desc' as const },
-  { value: 'updatedAt-asc', label: '更新日(古い順)', sortBy: 'updatedAt' as const, sortOrder: 'asc' as const },
-  { value: 'createdAt-desc', label: '作成日(新しい順)', sortBy: 'createdAt' as const, sortOrder: 'desc' as const },
-  { value: 'createdAt-asc', label: '作成日(古い順)', sortBy: 'createdAt' as const, sortOrder: 'asc' as const },
+  {
+    value: 'updatedAt-desc',
+    label: '更新日(新しい順)',
+    sortBy: 'updatedAt' as const,
+    sortOrder: 'desc' as const,
+  },
+  {
+    value: 'updatedAt-asc',
+    label: '更新日(古い順)',
+    sortBy: 'updatedAt' as const,
+    sortOrder: 'asc' as const,
+  },
+  {
+    value: 'createdAt-desc',
+    label: '作成日(新しい順)',
+    sortBy: 'createdAt' as const,
+    sortOrder: 'desc' as const,
+  },
+  {
+    value: 'createdAt-asc',
+    label: '作成日(古い順)',
+    sortBy: 'createdAt' as const,
+    sortOrder: 'asc' as const,
+  },
   { value: 'name-asc', label: '名前(A→Z)', sortBy: 'name' as const, sortOrder: 'asc' as const },
   { value: 'name-desc', label: '名前(Z→A)', sortBy: 'name' as const, sortOrder: 'desc' as const },
 ] as const;
@@ -82,7 +102,8 @@ export function TestSuiteSearchFilter({
 
   // 現在のソート値
   const currentSortValue = `${filters.sortBy || 'updatedAt'}-${filters.sortOrder || 'desc'}`;
-  const currentSortLabel = SORT_COMBINED_OPTIONS.find((o) => o.value === currentSortValue)?.label || '更新日(新しい順)';
+  const currentSortLabel =
+    SORT_COMBINED_OPTIONS.find((o) => o.value === currentSortValue)?.label || '更新日(新しい順)';
 
   // 検索入力のデバウンス
   useEffect(() => {
@@ -215,7 +236,11 @@ export function TestSuiteSearchFilter({
       </div>
 
       {/* ステータストグルボタングループ */}
-      <div className="inline-flex rounded-md border border-border overflow-hidden" role="radiogroup" aria-label="ステータス">
+      <div
+        className="inline-flex rounded-md border border-border overflow-hidden"
+        role="radiogroup"
+        aria-label="ステータス"
+      >
         {STATUS_OPTIONS.map((option) => {
           const isActive = (filters.status || '') === option.value;
           return (
@@ -253,10 +278,15 @@ export function TestSuiteSearchFilter({
           >
             <Tag className="w-3.5 h-3.5" />
             <span>ラベル{selectedLabels.length > 0 && ` (${selectedLabels.length})`}</span>
-            <ChevronDown className={`w-3 h-3 transition-transform ${isLabelOpen ? 'rotate-180' : ''}`} />
+            <ChevronDown
+              className={`w-3 h-3 transition-transform ${isLabelOpen ? 'rotate-180' : ''}`}
+            />
           </button>
           {isLabelOpen && (
-            <div className="absolute left-0 mt-1 w-56 card z-dropdown animate-fade-in overflow-hidden" role="listbox">
+            <div
+              className="absolute left-0 mt-1 w-56 card z-dropdown animate-fade-in overflow-hidden"
+              role="listbox"
+            >
               {/* ラベル検索入力 */}
               <div className="p-2 border-b border-border">
                 <input
@@ -271,7 +301,9 @@ export function TestSuiteSearchFilter({
               {/* ラベル一覧 */}
               <div className="overflow-y-auto max-h-48 py-1">
                 {filteredLabels.length === 0 ? (
-                  <div className="px-3 py-2 text-xs text-foreground-muted">一致するラベルがありません</div>
+                  <div className="px-3 py-2 text-xs text-foreground-muted">
+                    一致するラベルがありません
+                  </div>
                 ) : (
                   filteredLabels.map((label) => {
                     const isSelected = filters.labelIds?.includes(label.id);
@@ -299,7 +331,9 @@ export function TestSuiteSearchFilter({
               {/* 選択件数とクリア */}
               {selectedLabels.length > 0 && (
                 <div className="px-3 py-2 border-t border-border flex items-center justify-between">
-                  <span className="text-xs text-foreground-muted">{selectedLabels.length}件選択中</span>
+                  <span className="text-xs text-foreground-muted">
+                    {selectedLabels.length}件選択中
+                  </span>
                   <button
                     onClick={clearLabelSelection}
                     className="text-xs text-foreground-muted hover:text-foreground"
@@ -328,10 +362,15 @@ export function TestSuiteSearchFilter({
         >
           <ArrowUpDown className="w-3.5 h-3.5" />
           <span>{currentSortLabel}</span>
-          <ChevronDown className={`w-3 h-3 transition-transform ${isSortOpen ? 'rotate-180' : ''}`} />
+          <ChevronDown
+            className={`w-3 h-3 transition-transform ${isSortOpen ? 'rotate-180' : ''}`}
+          />
         </button>
         {isSortOpen && (
-          <div className="absolute left-0 mt-1 w-48 card py-1 z-dropdown animate-fade-in" role="listbox">
+          <div
+            className="absolute left-0 mt-1 w-48 card py-1 z-dropdown animate-fade-in"
+            role="listbox"
+          >
             {SORT_COMBINED_OPTIONS.map((option) => (
               <button
                 key={option.value}
@@ -365,7 +404,9 @@ export function TestSuiteSearchFilter({
 
       {/* 件数表示 */}
       {totalCount !== undefined && (
-        <span className="text-foreground-muted ml-auto text-xs whitespace-nowrap">{totalCount}件</span>
+        <span className="text-foreground-muted ml-auto text-xs whitespace-nowrap">
+          {totalCount}件
+        </span>
       )}
     </div>
   );

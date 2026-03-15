@@ -58,28 +58,44 @@ router.post('/:reviewId/comments', requireAuth(authConfig), reviewController.add
  * PATCH /api/reviews/:reviewId/comments/:commentId
  * 投稿者本人のみ（サービス層でチェック）
  */
-router.patch('/:reviewId/comments/:commentId', requireAuth(authConfig), reviewController.updateComment);
+router.patch(
+  '/:reviewId/comments/:commentId',
+  requireAuth(authConfig),
+  reviewController.updateComment
+);
 
 /**
  * コメントステータス変更
  * PATCH /api/reviews/:reviewId/comments/:commentId/status
  * 権限はサービス層でチェック
  */
-router.patch('/:reviewId/comments/:commentId/status', requireAuth(authConfig), reviewController.updateCommentStatus);
+router.patch(
+  '/:reviewId/comments/:commentId/status',
+  requireAuth(authConfig),
+  reviewController.updateCommentStatus
+);
 
 /**
  * コメント削除
  * DELETE /api/reviews/:reviewId/comments/:commentId
  * 投稿者本人のみ（サービス層でチェック）
  */
-router.delete('/:reviewId/comments/:commentId', requireAuth(authConfig), reviewController.deleteComment);
+router.delete(
+  '/:reviewId/comments/:commentId',
+  requireAuth(authConfig),
+  reviewController.deleteComment
+);
 
 /**
  * 返信追加
  * POST /api/reviews/:reviewId/comments/:commentId/replies
  * 権限はサービス層でチェック
  */
-router.post('/:reviewId/comments/:commentId/replies', requireAuth(authConfig), reviewController.addReply);
+router.post(
+  '/:reviewId/comments/:commentId/replies',
+  requireAuth(authConfig),
+  reviewController.addReply
+);
 
 /**
  * 返信更新

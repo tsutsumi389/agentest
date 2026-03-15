@@ -24,7 +24,9 @@ function isExternalUrl(url: string): boolean {
  */
 export function LoginPage() {
   const { isAuthenticated, isLoading, setUser, set2FARequired } = useAuthStore();
-  const { auth: { providers } } = useConfigStore();
+  const {
+    auth: { providers },
+  } = useConfigStore();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
@@ -112,21 +114,20 @@ export function LoginPage() {
             <AgentestLogo className="w-10 h-10 text-accent" />
             <span className="text-2xl font-bold text-foreground">Agentest</span>
           </div>
-          <p className="text-foreground-muted text-sm">
-            AI連携テスト管理ツール
-          </p>
+          <p className="text-foreground-muted text-sm">AI連携テスト管理ツール</p>
         </div>
 
         {/* ログインカード */}
         <div className="card p-6">
-          <h1 className="text-lg font-semibold text-foreground text-center mb-6">
-            ログイン
-          </h1>
+          <h1 className="text-lg font-semibold text-foreground text-center mb-6">ログイン</h1>
 
           {/* メール/パスワードフォーム */}
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div role="alert" className="text-sm text-error bg-error/10 border border-error/20 rounded-md px-3 py-2">
+              <div
+                role="alert"
+                className="text-sm text-error bg-error/10 border border-error/20 rounded-md px-3 py-2"
+              >
                 {error}
               </div>
             )}
@@ -167,11 +168,7 @@ export function LoginPage() {
               </Link>
             </div>
 
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="btn btn-primary w-full"
-            >
+            <button type="submit" disabled={isSubmitting} className="btn btn-primary w-full">
               {isSubmitting ? 'ログイン中...' : 'ログイン'}
             </button>
           </form>
@@ -192,20 +189,14 @@ export function LoginPage() {
               {/* OAuthボタン */}
               <div className="space-y-3">
                 {showGitHub && (
-                  <button
-                    onClick={handleGitHubLogin}
-                    className="btn btn-secondary w-full"
-                  >
+                  <button onClick={handleGitHubLogin} className="btn btn-secondary w-full">
                     <Github className="w-5 h-5" />
                     GitHubでログイン
                   </button>
                 )}
 
                 {showGoogle && (
-                  <button
-                    onClick={handleGoogleLogin}
-                    className="btn btn-secondary w-full"
-                  >
+                  <button onClick={handleGoogleLogin} className="btn btn-secondary w-full">
                     <GoogleIcon className="w-5 h-5" />
                     Googleでログイン
                   </button>

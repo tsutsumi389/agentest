@@ -48,22 +48,27 @@ const createTestCaseBodySchema = z.object({
 /**
  * テストケース更新リクエストボディのスキーマ
  */
-const updateTestCaseBodySchema = z.object({
-  title: z.string().min(1).max(200).optional(),
-  description: z.string().max(2000).nullable().optional(),
-  priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
-  status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).optional(),
-  preconditions: z.array(childEntityUpdateSchema).optional(),
-  steps: z.array(childEntityUpdateSchema).optional(),
-  expectedResults: z.array(childEntityUpdateSchema).optional(),
-  groupId: z.string().uuid().optional(),
-}).refine((data) => {
-  // groupIdを除外してチェック
-  const { groupId: _, ...rest } = data;
-  return Object.keys(rest).length > 0;
-}, {
-  message: 'At least one field must be provided',
-});
+const updateTestCaseBodySchema = z
+  .object({
+    title: z.string().min(1).max(200).optional(),
+    description: z.string().max(2000).nullable().optional(),
+    priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional(),
+    status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).optional(),
+    preconditions: z.array(childEntityUpdateSchema).optional(),
+    steps: z.array(childEntityUpdateSchema).optional(),
+    expectedResults: z.array(childEntityUpdateSchema).optional(),
+    groupId: z.string().uuid().optional(),
+  })
+  .refine(
+    (data) => {
+      // groupIdを除外してチェック
+      const { groupId: _, ...rest } = data;
+      return Object.keys(rest).length > 0;
+    },
+    {
+      message: 'At least one field must be provided',
+    }
+  );
 
 /**
  * GET /internal/api/test-cases/:testCaseId
@@ -164,7 +169,16 @@ router.post('/test-cases', async (req: Request, res: Response, next: NextFunctio
       return;
     }
 
-    const { testSuiteId, title, description, priority, status, preconditions, steps, expectedResults } = bodyResult.data;
+    const {
+      testSuiteId,
+      title,
+      description,
+      priority,
+      status,
+      preconditions,
+      steps,
+      expectedResults,
+    } = bodyResult.data;
 
     // 書き込み権限チェック
     const canWrite = await authService.canWriteToTestSuite(userId, testSuiteId);
@@ -262,7 +276,12 @@ router.patch('/test-cases/:testCaseId', async (req: Request, res: Response, next
     const { groupId, ...updateDataWithoutGroupId } = updateData;
 
     const testCase = hasChildEntities
-      ? await testCaseService.updateWithChildren(testCaseId, userId, updateDataWithoutGroupId, groupId)
+      ? await testCaseService.updateWithChildren(
+          testCaseId,
+          userId,
+          updateDataWithoutGroupId,
+          groupId
+        )
       : await testCaseService.update(testCaseId, userId, updateDataWithoutGroupId, groupId);
 
     res.json({ testCase });
@@ -275,54 +294,57 @@ router.patch('/test-cases/:testCaseId', async (req: Request, res: Response, next
  * DELETE /internal/api/test-cases/:testCaseId
  * テストケースを削除（論理削除）
  */
-router.delete('/test-cases/:testCaseId', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { testCaseId } = req.params;
+router.delete(
+  '/test-cases/:testCaseId',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { testCaseId } = req.params;
 
-    // userIdクエリ検証
-    const userIdResult = userIdQuerySchema.safeParse(req.query);
-    if (!userIdResult.success) {
-      res.status(400).json({
-        error: 'Bad Request',
-        message: 'Invalid query parameters',
-        details: userIdResult.error.flatten(),
+      // userIdクエリ検証
+      const userIdResult = userIdQuerySchema.safeParse(req.query);
+      if (!userIdResult.success) {
+        res.status(400).json({
+          error: 'Bad Request',
+          message: 'Invalid query parameters',
+          details: userIdResult.error.flatten(),
+        });
+        return;
+      }
+
+      const { userId } = userIdResult.data;
+
+      // テストケース取得（テストスイートIDを取得するため）
+      const existingTestCase = await prisma.testCase.findUnique({
+        where: { id: testCaseId },
+        select: { testSuiteId: true, deletedAt: true },
       });
-      return;
+
+      if (!existingTestCase || existingTestCase.deletedAt) {
+        res.status(404).json({
+          error: 'Not Found',
+          message: 'Test case not found',
+        });
+        return;
+      }
+
+      // 書き込み権限チェック（テストスイート経由）
+      const canWrite = await authService.canWriteToTestSuite(userId, existingTestCase.testSuiteId);
+      if (!canWrite) {
+        res.status(403).json({
+          error: 'Forbidden',
+          message: 'Access denied to this test case',
+        });
+        return;
+      }
+
+      // テストケース削除
+      await testCaseService.softDelete(testCaseId, userId);
+
+      res.json({ success: true, deletedId: testCaseId });
+    } catch (error) {
+      next(error);
     }
-
-    const { userId } = userIdResult.data;
-
-    // テストケース取得（テストスイートIDを取得するため）
-    const existingTestCase = await prisma.testCase.findUnique({
-      where: { id: testCaseId },
-      select: { testSuiteId: true, deletedAt: true },
-    });
-
-    if (!existingTestCase || existingTestCase.deletedAt) {
-      res.status(404).json({
-        error: 'Not Found',
-        message: 'Test case not found',
-      });
-      return;
-    }
-
-    // 書き込み権限チェック（テストスイート経由）
-    const canWrite = await authService.canWriteToTestSuite(userId, existingTestCase.testSuiteId);
-    if (!canWrite) {
-      res.status(403).json({
-        error: 'Forbidden',
-        message: 'Access denied to this test case',
-      });
-      return;
-    }
-
-    // テストケース削除
-    await testCaseService.softDelete(testCaseId, userId);
-
-    res.json({ success: true, deletedId: testCaseId });
-  } catch (error) {
-    next(error);
   }
-});
+);
 
 export default router;

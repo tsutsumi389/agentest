@@ -40,12 +40,15 @@ function createMockWsClass() {
 // WebSocketのstaticプロパティ
 const OPEN = 1;
 
-vi.stubGlobal('WebSocket', Object.assign(createMockWsClass(), {
-  CONNECTING: 0,
-  OPEN: 1,
-  CLOSING: 2,
-  CLOSED: 3,
-}));
+vi.stubGlobal(
+  'WebSocket',
+  Object.assign(createMockWsClass(), {
+    CONNECTING: 0,
+    OPEN: 1,
+    CLOSING: 2,
+    CLOSED: 3,
+  })
+);
 
 // import.meta.envのモック
 vi.stubGlobal('import', { meta: { env: { VITE_WS_URL: 'ws://test:3002' } } });
@@ -59,12 +62,15 @@ describe('WebSocketClient', () => {
     // モジュールを毎回リセットしてシングルトンをクリア
     vi.resetModules();
     // WebSocketモックを再設定
-    vi.stubGlobal('WebSocket', Object.assign(createMockWsClass(), {
-      CONNECTING: 0,
-      OPEN: 1,
-      CLOSING: 2,
-      CLOSED: 3,
-    }));
+    vi.stubGlobal(
+      'WebSocket',
+      Object.assign(createMockWsClass(), {
+        CONNECTING: 0,
+        OPEN: 1,
+        CLOSING: 2,
+        CLOSED: 3,
+      })
+    );
     const mod = await import('../ws.js');
     wsClient = mod.wsClient;
   });
@@ -85,12 +91,8 @@ describe('WebSocketClient', () => {
       ws.onopen?.(new Event('open'));
 
       // authenticateメッセージが送信される
-      expect(ws.send).toHaveBeenCalledWith(
-        expect.stringContaining('"type":"authenticate"')
-      );
-      expect(ws.send).toHaveBeenCalledWith(
-        expect.stringContaining('"token":"my-token"')
-      );
+      expect(ws.send).toHaveBeenCalledWith(expect.stringContaining('"type":"authenticate"'));
+      expect(ws.send).toHaveBeenCalledWith(expect.stringContaining('"token":"my-token"'));
     });
   });
 
@@ -117,9 +119,11 @@ describe('WebSocketClient', () => {
       ws1.onopen?.(new Event('open'));
 
       // authenticated受信をシミュレート
-      ws1.onmessage?.(new MessageEvent('message', {
-        data: JSON.stringify({ type: 'authenticated', userId: 'user-1', timestamp: Date.now() }),
-      }));
+      ws1.onmessage?.(
+        new MessageEvent('message', {
+          data: JSON.stringify({ type: 'authenticated', userId: 'user-1', timestamp: Date.now() }),
+        })
+      );
 
       // 切断
       ws1.readyState = 3;
@@ -167,9 +171,16 @@ describe('WebSocketClient', () => {
       ws1.onopen?.(new Event('open'));
 
       // AUTH_TIMEOUTエラーを受信
-      ws1.onmessage?.(new MessageEvent('message', {
-        data: JSON.stringify({ type: 'error', code: 'AUTH_TIMEOUT', message: 'Timeout', timestamp: Date.now() }),
-      }));
+      ws1.onmessage?.(
+        new MessageEvent('message', {
+          data: JSON.stringify({
+            type: 'error',
+            code: 'AUTH_TIMEOUT',
+            message: 'Timeout',
+            timestamp: Date.now(),
+          }),
+        })
+      );
 
       // 切断
       ws1.readyState = 3;

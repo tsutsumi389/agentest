@@ -1,4 +1,11 @@
-import { prisma, type PrismaClient, type OAuthClient, type OAuthAuthorizationCode, type OAuthAccessToken, type OAuthRefreshToken } from '@agentest/db';
+import {
+  prisma,
+  type PrismaClient,
+  type OAuthClient,
+  type OAuthAuthorizationCode,
+  type OAuthAccessToken,
+  type OAuthRefreshToken,
+} from '@agentest/db';
 
 /**
  * OAuth Repository インターフェース
@@ -109,7 +116,9 @@ export class OAuthRepository implements IOAuthRepository {
   // 認可コード操作
   // ============================================
 
-  async createAuthorizationCode(data: CreateAuthorizationCodeInput): Promise<OAuthAuthorizationCode> {
+  async createAuthorizationCode(
+    data: CreateAuthorizationCodeInput
+  ): Promise<OAuthAuthorizationCode> {
     return this.db.oAuthAuthorizationCode.create({
       data: {
         code: data.code,

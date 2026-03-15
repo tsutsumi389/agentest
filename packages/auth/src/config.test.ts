@@ -89,9 +89,7 @@ describe('config', () => {
       expect(config.oauth.github).toBeDefined();
       expect(config.oauth.github?.clientId).toBe('github-client-id');
       expect(config.oauth.github?.clientSecret).toBe('github-client-secret');
-      expect(config.oauth.github?.callbackUrl).toBe(
-        'https://example.com/auth/github/callback'
-      );
+      expect(config.oauth.github?.callbackUrl).toBe('https://example.com/auth/github/callback');
     });
 
     it('GitHub OAuth設定でデフォルトのコールバックURLを使用する', () => {
@@ -102,9 +100,7 @@ describe('config', () => {
 
       const config = createAuthConfig(env);
 
-      expect(config.oauth.github?.callbackUrl).toBe(
-        'http://localhost:3001/auth/github/callback'
-      );
+      expect(config.oauth.github?.callbackUrl).toBe('http://localhost:3001/auth/github/callback');
     });
 
     it('GitHub設定が不完全な場合はundefinedになる', () => {
@@ -130,9 +126,7 @@ describe('config', () => {
       expect(config.oauth.google).toBeDefined();
       expect(config.oauth.google?.clientId).toBe('google-client-id');
       expect(config.oauth.google?.clientSecret).toBe('google-client-secret');
-      expect(config.oauth.google?.callbackUrl).toBe(
-        'https://example.com/auth/google/callback'
-      );
+      expect(config.oauth.google?.callbackUrl).toBe('https://example.com/auth/google/callback');
     });
 
     it('Google OAuth設定でデフォルトのコールバックURLを使用する', () => {
@@ -143,9 +137,7 @@ describe('config', () => {
 
       const config = createAuthConfig(env);
 
-      expect(config.oauth.google?.callbackUrl).toBe(
-        'http://localhost:3001/auth/google/callback'
-      );
+      expect(config.oauth.google?.callbackUrl).toBe('http://localhost:3001/auth/google/callback');
     });
 
     it('Google設定が不完全な場合はundefinedになる', () => {

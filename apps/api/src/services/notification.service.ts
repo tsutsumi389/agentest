@@ -43,10 +43,7 @@ export class NotificationService {
 
     // 組織設定をチェック（組織レベルで無効化されている場合はユーザー設定を上書き）
     if (organizationId) {
-      const orgSetting = await this.notificationRepo.getOrganizationSetting(
-        organizationId,
-        type
-      );
+      const orgSetting = await this.notificationRepo.getOrganizationSetting(organizationId, type);
       if (orgSetting) {
         // 組織設定がfalseの場合、ユーザー設定に関わらず無効化
         if (!orgSetting.inAppEnabled) {

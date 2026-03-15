@@ -148,7 +148,10 @@ export function ExecutionTestCaseDetailPanel({
               </h2>
             </div>
             {testCase.description && (
-              <MarkdownPreview content={testCase.description} className="text-sm text-foreground-muted" />
+              <MarkdownPreview
+                content={testCase.description}
+                className="text-sm text-foreground-muted"
+              />
             )}
           </div>
 
@@ -184,7 +187,9 @@ export function ExecutionTestCaseDetailPanel({
                 disabled={isPipActive}
                 className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded border border-border hover:bg-background-tertiary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 title={isPipActive ? 'PiPウィンドウは既に開いています' : 'Picture-in-Pictureで開く'}
-                aria-label={isPipActive ? 'PiPウィンドウは既に開いています' : 'Picture-in-Pictureで開く'}
+                aria-label={
+                  isPipActive ? 'PiPウィンドウは既に開いています' : 'Picture-in-Pictureで開く'
+                }
               >
                 <PictureInPicture2 className="w-4 h-4" />
                 <span className="hidden sm:inline">PiP</span>

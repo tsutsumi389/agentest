@@ -42,7 +42,9 @@ export function ExecutionPage() {
   const selectedTestCaseId = searchParams.get('testCase');
 
   // 更新中の結果IDを管理
-  const [updatingPreconditionStatusId, setUpdatingPreconditionStatusId] = useState<string | null>(null);
+  const [updatingPreconditionStatusId, setUpdatingPreconditionStatusId] = useState<string | null>(
+    null
+  );
   const [updatingPreconditionNoteId, setUpdatingPreconditionNoteId] = useState<string | null>(null);
   const [updatingStepStatusId, setUpdatingStepStatusId] = useState<string | null>(null);
   const [updatingStepNoteId, setUpdatingStepNoteId] = useState<string | null>(null);
@@ -63,13 +65,16 @@ export function ExecutionPage() {
   const execution = data?.execution;
 
   // テストケース選択ハンドラ
-  const handleTestCaseSelect = useCallback((testCaseId: string | null) => {
-    if (testCaseId) {
-      setSearchParams({ testCase: testCaseId });
-    } else {
-      setSearchParams({});
-    }
-  }, [setSearchParams]);
+  const handleTestCaseSelect = useCallback(
+    (testCaseId: string | null) => {
+      if (testCaseId) {
+        setSearchParams({ testCase: testCaseId });
+      } else {
+        setSearchParams({});
+      }
+    },
+    [setSearchParams]
+  );
 
   // サイドバーを設定
   useEffect(() => {
@@ -99,14 +104,26 @@ export function ExecutionPage() {
 
   // 前提条件結果更新（楽観的更新）
   const updatePreconditionMutation = useMutation({
-    mutationFn: ({ resultId, status, note }: { resultId: string; status: PreconditionResultStatus; note: string | null }) =>
+    mutationFn: ({
+      resultId,
+      status,
+      note,
+    }: {
+      resultId: string;
+      status: PreconditionResultStatus;
+      note: string | null;
+    }) =>
       executionsApi.updatePreconditionResult(executionId!, resultId, {
         status,
         note: note ?? undefined,
       }),
     onMutate: async ({ resultId, status, note }) => {
       await queryClient.cancelQueries({ queryKey: ['execution', executionId, 'details'] });
-      const previousData = queryClient.getQueryData<{ execution: ExecutionWithDetails }>(['execution', executionId, 'details']);
+      const previousData = queryClient.getQueryData<{ execution: ExecutionWithDetails }>([
+        'execution',
+        executionId,
+        'details',
+      ]);
 
       if (previousData) {
         queryClient.setQueryData(['execution', executionId, 'details'], {
@@ -123,7 +140,11 @@ export function ExecutionPage() {
     },
     onSuccess: (data, { resultId }) => {
       // APIレスポンスの実施者情報でキャッシュを更新
-      const previousData = queryClient.getQueryData<{ execution: ExecutionWithDetails }>(['execution', executionId, 'details']);
+      const previousData = queryClient.getQueryData<{ execution: ExecutionWithDetails }>([
+        'execution',
+        executionId,
+        'details',
+      ]);
       if (previousData) {
         queryClient.setQueryData(['execution', executionId, 'details'], {
           execution: {
@@ -149,14 +170,26 @@ export function ExecutionPage() {
 
   // ステップ結果更新（楽観的更新）
   const updateStepMutation = useMutation({
-    mutationFn: ({ resultId, status, note }: { resultId: string; status: StepResultStatus; note: string | null }) =>
+    mutationFn: ({
+      resultId,
+      status,
+      note,
+    }: {
+      resultId: string;
+      status: StepResultStatus;
+      note: string | null;
+    }) =>
       executionsApi.updateStepResult(executionId!, resultId, {
         status,
         note: note ?? undefined,
       }),
     onMutate: async ({ resultId, status, note }) => {
       await queryClient.cancelQueries({ queryKey: ['execution', executionId, 'details'] });
-      const previousData = queryClient.getQueryData<{ execution: ExecutionWithDetails }>(['execution', executionId, 'details']);
+      const previousData = queryClient.getQueryData<{ execution: ExecutionWithDetails }>([
+        'execution',
+        executionId,
+        'details',
+      ]);
 
       if (previousData) {
         queryClient.setQueryData(['execution', executionId, 'details'], {
@@ -173,7 +206,11 @@ export function ExecutionPage() {
     },
     onSuccess: (data, { resultId }) => {
       // APIレスポンスの実施者情報でキャッシュを更新
-      const previousData = queryClient.getQueryData<{ execution: ExecutionWithDetails }>(['execution', executionId, 'details']);
+      const previousData = queryClient.getQueryData<{ execution: ExecutionWithDetails }>([
+        'execution',
+        executionId,
+        'details',
+      ]);
       if (previousData) {
         queryClient.setQueryData(['execution', executionId, 'details'], {
           execution: {
@@ -199,14 +236,26 @@ export function ExecutionPage() {
 
   // 期待結果更新（楽観的更新）
   const updateExpectedMutation = useMutation({
-    mutationFn: ({ resultId, status, note }: { resultId: string; status: ExpectedResultStatus; note: string | null }) =>
+    mutationFn: ({
+      resultId,
+      status,
+      note,
+    }: {
+      resultId: string;
+      status: ExpectedResultStatus;
+      note: string | null;
+    }) =>
       executionsApi.updateExpectedResult(executionId!, resultId, {
         status,
         note: note ?? undefined,
       }),
     onMutate: async ({ resultId, status, note }) => {
       await queryClient.cancelQueries({ queryKey: ['execution', executionId, 'details'] });
-      const previousData = queryClient.getQueryData<{ execution: ExecutionWithDetails }>(['execution', executionId, 'details']);
+      const previousData = queryClient.getQueryData<{ execution: ExecutionWithDetails }>([
+        'execution',
+        executionId,
+        'details',
+      ]);
 
       if (previousData) {
         queryClient.setQueryData(['execution', executionId, 'details'], {
@@ -223,7 +272,11 @@ export function ExecutionPage() {
     },
     onSuccess: (data, { resultId }) => {
       // APIレスポンスの実施者情報でキャッシュを更新（evidencesは既存を保持）
-      const previousData = queryClient.getQueryData<{ execution: ExecutionWithDetails }>(['execution', executionId, 'details']);
+      const previousData = queryClient.getQueryData<{ execution: ExecutionWithDetails }>([
+        'execution',
+        executionId,
+        'details',
+      ]);
       if (previousData) {
         queryClient.setQueryData(['execution', executionId, 'details'], {
           execution: {
@@ -249,21 +302,30 @@ export function ExecutionPage() {
 
   // エビデンスアップロード
   const uploadEvidenceMutation = useMutation({
-    mutationFn: ({ expectedResultId, file, description }: { expectedResultId: string; file: File; description?: string }) =>
-      executionsApi.uploadEvidence(executionId!, expectedResultId, file, description),
+    mutationFn: ({
+      expectedResultId,
+      file,
+      description,
+    }: {
+      expectedResultId: string;
+      file: File;
+      description?: string;
+    }) => executionsApi.uploadEvidence(executionId!, expectedResultId, file, description),
     onMutate: async ({ expectedResultId }) => {
       setUploadingEvidenceResultId(expectedResultId);
     },
     onSuccess: (data, { expectedResultId }) => {
-      const previousData = queryClient.getQueryData<{ execution: ExecutionWithDetails }>(['execution', executionId, 'details']);
+      const previousData = queryClient.getQueryData<{ execution: ExecutionWithDetails }>([
+        'execution',
+        executionId,
+        'details',
+      ]);
       if (previousData) {
         queryClient.setQueryData(['execution', executionId, 'details'], {
           execution: {
             ...previousData.execution,
             expectedResults: previousData.execution.expectedResults.map((r) =>
-              r.id === expectedResultId
-                ? { ...r, evidences: [...r.evidences, data.evidence] }
-                : r
+              r.id === expectedResultId ? { ...r, evidences: [...r.evidences, data.evidence] } : r
             ),
           },
         });
@@ -284,7 +346,11 @@ export function ExecutionPage() {
     onMutate: async (evidenceId) => {
       setDeletingEvidenceId(evidenceId);
       await queryClient.cancelQueries({ queryKey: ['execution', executionId, 'details'] });
-      const previousData = queryClient.getQueryData<{ execution: ExecutionWithDetails }>(['execution', executionId, 'details']);
+      const previousData = queryClient.getQueryData<{ execution: ExecutionWithDetails }>([
+        'execution',
+        executionId,
+        'details',
+      ]);
 
       if (previousData) {
         queryClient.setQueryData(['execution', executionId, 'details'], {
@@ -398,13 +464,17 @@ export function ExecutionPage() {
   // ソート済みテストケースリスト
   const sortedTestCases = useMemo(() => {
     if (!execution?.executionTestSuite) return [];
-    return [...execution.executionTestSuite.testCases].sort((a, b) => a.orderKey.localeCompare(b.orderKey));
+    return [...execution.executionTestSuite.testCases].sort((a, b) =>
+      a.orderKey.localeCompare(b.orderKey)
+    );
   }, [execution?.executionTestSuite]);
 
   // 選択中のテストケースを取得
   const selectedTestCase = useMemo(() => {
     if (!selectedTestCaseId || !execution?.executionTestSuite) return null;
-    return execution.executionTestSuite.testCases.find((tc) => tc.id === selectedTestCaseId) ?? null;
+    return (
+      execution.executionTestSuite.testCases.find((tc) => tc.id === selectedTestCaseId) ?? null
+    );
   }, [selectedTestCaseId, execution?.executionTestSuite]);
 
   // 現在のテストケースインデックス
@@ -414,13 +484,16 @@ export function ExecutionPage() {
   }, [selectedTestCaseId, sortedTestCases]);
 
   // テストケースナビゲーションハンドラ
-  const handleNavigateToTestCase = useCallback((direction: 'prev' | 'next') => {
-    if (currentTestCaseIndex < 0) return;
-    const newIndex = direction === 'prev' ? currentTestCaseIndex - 1 : currentTestCaseIndex + 1;
-    if (newIndex >= 0 && newIndex < sortedTestCases.length) {
-      handleTestCaseSelect(sortedTestCases[newIndex].id);
-    }
-  }, [currentTestCaseIndex, sortedTestCases, handleTestCaseSelect]);
+  const handleNavigateToTestCase = useCallback(
+    (direction: 'prev' | 'next') => {
+      if (currentTestCaseIndex < 0) return;
+      const newIndex = direction === 'prev' ? currentTestCaseIndex - 1 : currentTestCaseIndex + 1;
+      if (newIndex >= 0 && newIndex < sortedTestCases.length) {
+        handleTestCaseSelect(sortedTestCases[newIndex].id);
+      }
+    },
+    [currentTestCaseIndex, sortedTestCases, handleTestCaseSelect]
+  );
 
   // 選択中のテストケースに紐づく結果を取得
   const selectedTestCaseResults = useMemo(() => {
@@ -460,9 +533,7 @@ export function ExecutionPage() {
       preconditionResults: execution.preconditionResults.filter(
         (r) => r.executionTestCaseId === pipTestCase.id
       ),
-      stepResults: execution.stepResults.filter(
-        (r) => r.executionTestCaseId === pipTestCase.id
-      ),
+      stepResults: execution.stepResults.filter((r) => r.executionTestCaseId === pipTestCase.id),
       expectedResults: execution.expectedResults.filter(
         (r) => r.executionTestCaseId === pipTestCase.id
       ),
@@ -476,14 +547,17 @@ export function ExecutionPage() {
   }, [pipTestCase, sortedTestCases]);
 
   // PiP内でのテストケースナビゲーション（URLも更新）
-  const handlePipNavigateToTestCase = useCallback((direction: 'prev' | 'next') => {
-    const currentIndex = pipTestCaseIndex;
-    if (currentIndex < 0) return;
-    const newIndex = direction === 'prev' ? currentIndex - 1 : currentIndex + 1;
-    if (newIndex >= 0 && newIndex < sortedTestCases.length) {
-      handleTestCaseSelect(sortedTestCases[newIndex].id);
-    }
-  }, [pipTestCaseIndex, sortedTestCases, handleTestCaseSelect]);
+  const handlePipNavigateToTestCase = useCallback(
+    (direction: 'prev' | 'next') => {
+      const currentIndex = pipTestCaseIndex;
+      if (currentIndex < 0) return;
+      const newIndex = direction === 'prev' ? currentIndex - 1 : currentIndex + 1;
+      if (newIndex >= 0 && newIndex < sortedTestCases.length) {
+        handleTestCaseSelect(sortedTestCases[newIndex].id);
+      }
+    },
+    [pipTestCaseIndex, sortedTestCases, handleTestCaseSelect]
+  );
 
   // ローディング表示
   if (isLoading) {
@@ -542,7 +616,10 @@ export function ExecutionPage() {
               casePreconditions={pipTestCase.preconditions}
               steps={pipTestCase.steps}
               expectedResults={pipTestCase.expectedResults}
-              preconditionResults={[...suitePreconditionResults, ...pipTestCaseResults.preconditionResults]}
+              preconditionResults={[
+                ...suitePreconditionResults,
+                ...pipTestCaseResults.preconditionResults,
+              ]}
               stepResults={pipTestCaseResults.stepResults}
               expectedResultResults={pipTestCaseResults.expectedResults}
               isEditable={isEditable}
@@ -612,7 +689,10 @@ export function ExecutionPage() {
           casePreconditions={selectedTestCase.preconditions}
           steps={selectedTestCase.steps}
           expectedResults={selectedTestCase.expectedResults}
-          preconditionResults={[...suitePreconditionResults, ...selectedTestCaseResults.preconditionResults]}
+          preconditionResults={[
+            ...suitePreconditionResults,
+            ...selectedTestCaseResults.preconditionResults,
+          ]}
           stepResults={selectedTestCaseResults.stepResults}
           expectedResultResults={selectedTestCaseResults.expectedResults}
           isEditable={isEditable}

@@ -3,18 +3,54 @@ import { NotFoundError, BadRequestError } from '@agentest/shared';
 
 // トランザクション内モック
 const mockTx = vi.hoisted(() => ({
-  testCasePrecondition: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
-  testCaseStep: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
-  testCaseExpectedResult: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
+  testCasePrecondition: {
+    findFirst: vi.fn(),
+    findMany: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
+  testCaseStep: {
+    findFirst: vi.fn(),
+    findMany: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
+  testCaseExpectedResult: {
+    findFirst: vi.fn(),
+    findMany: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
   testCaseHistory: { create: vi.fn() },
   testCase: { findUnique: vi.fn(), update: vi.fn() },
   user: { findUnique: vi.fn() },
 }));
 
 const mockPrisma = vi.hoisted(() => ({
-  testCasePrecondition: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
-  testCaseStep: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
-  testCaseExpectedResult: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
+  testCasePrecondition: {
+    findMany: vi.fn(),
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
+  testCaseStep: {
+    findMany: vi.fn(),
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
+  testCaseExpectedResult: {
+    findMany: vi.fn(),
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
   testCaseHistory: { create: vi.fn() },
   testCase: { findUnique: vi.fn(), update: vi.fn() },
   $transaction: vi.fn((fn: (tx: typeof mockTx) => Promise<unknown>) => fn(mockTx)),
@@ -38,7 +74,12 @@ vi.mock('../../lib/redis-publisher.js', () => ({ publishDashboardUpdated: vi.fn(
 vi.mock('../../lib/events.js', () => ({ publishTestCaseUpdated: vi.fn() }));
 
 import { TestCaseService } from '../../services/test-case.service.js';
-import { TEST_USER_ID, TEST_CASE_ID, EXPECTED_RESULT_ID, createMockTestCase } from './test-case.service.test-helpers.js';
+import {
+  TEST_USER_ID,
+  TEST_CASE_ID,
+  EXPECTED_RESULT_ID,
+  createMockTestCase,
+} from './test-case.service.test-helpers.js';
 
 describe('TestCaseService（期待結果CRUD）', () => {
   let service: TestCaseService;
@@ -54,9 +95,7 @@ describe('TestCaseService（期待結果CRUD）', () => {
 
   describe('getExpectedResults', () => {
     it('期待結果一覧を取得できる', async () => {
-      const mockItems = [
-        { id: 'e1', content: '期待結果1', orderKey: '00001' },
-      ];
+      const mockItems = [{ id: 'e1', content: '期待結果1', orderKey: '00001' }];
       mockPrisma.testCaseExpectedResult.findMany.mockResolvedValue(mockItems);
 
       const result = await service.getExpectedResults(TEST_CASE_ID);
@@ -77,11 +116,18 @@ describe('TestCaseService（期待結果CRUD）', () => {
 
   describe('addExpectedResult', () => {
     it('期待結果を追加できる', async () => {
-      const mockCreated = { id: EXPECTED_RESULT_ID, content: '新しい期待結果', orderKey: '00001', testCaseId: TEST_CASE_ID };
+      const mockCreated = {
+        id: EXPECTED_RESULT_ID,
+        content: '新しい期待結果',
+        orderKey: '00001',
+        testCaseId: TEST_CASE_ID,
+      };
       mockTx.testCaseExpectedResult.findFirst.mockResolvedValue(null);
       mockTx.testCaseExpectedResult.create.mockResolvedValue(mockCreated);
 
-      const result = await service.addExpectedResult(TEST_CASE_ID, TEST_USER_ID, { content: '新しい期待結果' });
+      const result = await service.addExpectedResult(TEST_CASE_ID, TEST_USER_ID, {
+        content: '新しい期待結果',
+      });
 
       expect(result).toEqual(mockCreated);
       expect(mockPrisma.$transaction).toHaveBeenCalled();
@@ -155,7 +201,9 @@ describe('TestCaseService（期待結果CRUD）', () => {
       });
       mockTx.testCaseExpectedResult.update.mockResolvedValue({});
 
-      await service.updateExpectedResult(TEST_CASE_ID, EXPECTED_RESULT_ID, TEST_USER_ID, { content: '新' });
+      await service.updateExpectedResult(TEST_CASE_ID, EXPECTED_RESULT_ID, TEST_USER_ID, {
+        content: '新',
+      });
 
       expect(mockTx.testCaseHistory.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
@@ -193,7 +241,9 @@ describe('TestCaseService（期待結果CRUD）', () => {
       mockPrisma.testCaseExpectedResult.findFirst.mockResolvedValue(null);
 
       await expect(
-        service.updateExpectedResult(TEST_CASE_ID, EXPECTED_RESULT_ID, TEST_USER_ID, { content: '更新' })
+        service.updateExpectedResult(TEST_CASE_ID, EXPECTED_RESULT_ID, TEST_USER_ID, {
+          content: '更新',
+        })
       ).rejects.toThrow(NotFoundError);
     });
   });
@@ -210,7 +260,9 @@ describe('TestCaseService（期待結果CRUD）', () => {
 
       await service.deleteExpectedResult(TEST_CASE_ID, EXPECTED_RESULT_ID, TEST_USER_ID);
 
-      expect(mockTx.testCaseExpectedResult.delete).toHaveBeenCalledWith({ where: { id: EXPECTED_RESULT_ID } });
+      expect(mockTx.testCaseExpectedResult.delete).toHaveBeenCalledWith({
+        where: { id: EXPECTED_RESULT_ID },
+      });
     });
 
     it('EXPECTED_RESULT_DELETE履歴を記録する', async () => {
@@ -314,9 +366,7 @@ describe('TestCaseService（期待結果CRUD）', () => {
     });
 
     it('順序が同じ場合は更新をスキップする', async () => {
-      const existing = [
-        { id: 'e1', content: '期待結果1', orderKey: '00001' },
-      ];
+      const existing = [{ id: 'e1', content: '期待結果1', orderKey: '00001' }];
       mockPrisma.testCaseExpectedResult.findMany.mockResolvedValue(existing);
 
       const result = await service.reorderExpectedResults(TEST_CASE_ID, ['e1'], TEST_USER_ID);

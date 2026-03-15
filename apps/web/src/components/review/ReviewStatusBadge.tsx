@@ -4,11 +4,14 @@ import type { ReviewStatus } from '../../lib/api';
 /**
  * ステータス設定
  */
-const STATUS_CONFIG: Record<ReviewStatus, {
-  icon: typeof CheckCircle2;
-  className: string;
-  label: string;
-}> = {
+const STATUS_CONFIG: Record<
+  ReviewStatus,
+  {
+    icon: typeof CheckCircle2;
+    className: string;
+    label: string;
+  }
+> = {
   OPEN: {
     icon: MessageCircle,
     className: 'bg-warning/20 text-warning',

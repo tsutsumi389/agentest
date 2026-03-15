@@ -15,9 +15,7 @@ describe('ImagePreviewModal', () => {
   });
 
   it('isOpen=false のとき何も表示しない', () => {
-    const { container } = render(
-      <ImagePreviewModal {...defaultProps} isOpen={false} />
-    );
+    const { container } = render(<ImagePreviewModal {...defaultProps} isOpen={false} />);
     expect(container.firstChild).toBeNull();
   });
 

@@ -61,7 +61,11 @@ export class ReviewController {
    * テストスイートのレビュー一覧取得（SUBMITTEDのみ）
    * GET /api/test-suites/:testSuiteId/reviews
    */
-  getReviewsByTestSuite = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getReviewsByTestSuite = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const { testSuiteId } = testSuiteIdSchema.parse(req.params);
       const options = reviewSearchSchema.parse(req.query);
@@ -200,7 +204,12 @@ export class ReviewController {
     try {
       const { reviewId, commentId } = commentIdSchema.parse(req.params);
       const data = reviewCommentUpdateSchema.parse(req.body);
-      const comment = await this.reviewService.updateComment(reviewId, commentId, req.user!.id, data);
+      const comment = await this.reviewService.updateComment(
+        reviewId,
+        commentId,
+        req.user!.id,
+        data
+      );
 
       res.json({ comment });
     } catch (error) {
@@ -216,7 +225,12 @@ export class ReviewController {
     try {
       const { reviewId, commentId } = commentIdSchema.parse(req.params);
       const { status } = reviewStatusUpdateSchema.parse(req.body);
-      const comment = await this.reviewService.updateCommentStatus(reviewId, commentId, req.user!.id, status);
+      const comment = await this.reviewService.updateCommentStatus(
+        reviewId,
+        commentId,
+        req.user!.id,
+        status
+      );
 
       res.json({ comment });
     } catch (error) {
@@ -263,7 +277,13 @@ export class ReviewController {
     try {
       const { reviewId, commentId, replyId } = replyIdSchema.parse(req.params);
       const data = reviewReplyCreateSchema.parse(req.body);
-      const reply = await this.reviewService.updateReply(reviewId, commentId, replyId, req.user!.id, data);
+      const reply = await this.reviewService.updateReply(
+        reviewId,
+        commentId,
+        replyId,
+        req.user!.id,
+        data
+      );
 
       res.json({ reply });
     } catch (error) {

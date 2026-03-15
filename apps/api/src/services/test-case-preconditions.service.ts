@@ -28,7 +28,12 @@ export class TestCasePreconditionsService extends TestCaseChildrenBaseService {
    * 前提条件を追加
    * @param groupId 外部から指定されたgroupId（省略時は自動生成）
    */
-  async addPrecondition(testCaseId: string, userId: string, data: { content: string; orderKey?: string }, groupId?: string) {
+  async addPrecondition(
+    testCaseId: string,
+    userId: string,
+    data: { content: string; orderKey?: string },
+    groupId?: string
+  ) {
     const testCase = await this.findById(testCaseId);
 
     const effectiveGroupId = groupId ?? crypto.randomUUID();
@@ -53,7 +58,9 @@ export class TestCasePreconditionsService extends TestCaseChildrenBaseService {
       // 履歴を保存
       const snapshot: HistorySnapshot = {
         ...this.buildBaseSnapshot(testCase),
-        preconditions: [{ id: precondition.id, content: precondition.content, orderKey: precondition.orderKey }],
+        preconditions: [
+          { id: precondition.id, content: precondition.content, orderKey: precondition.orderKey },
+        ],
         changeDetail: {
           type: 'PRECONDITION_ADD',
           preconditionId: precondition.id,
@@ -65,7 +72,11 @@ export class TestCasePreconditionsService extends TestCaseChildrenBaseService {
 
       // テストケース更新イベント発行（エラー時も処理継続）
       await this.publishEventSafely(
-        tx, testCaseId, testCase.testSuiteId, testCase.testSuite.projectId, userId,
+        tx,
+        testCaseId,
+        testCase.testSuiteId,
+        testCase.testSuite.projectId,
+        userId,
         [{ field: 'precondition:add', oldValue: null, newValue: precondition.id }]
       );
 
@@ -77,7 +88,13 @@ export class TestCasePreconditionsService extends TestCaseChildrenBaseService {
    * 前提条件を更新
    * @param groupId 外部から指定されたgroupId（省略時は自動生成）
    */
-  async updatePrecondition(testCaseId: string, preconditionId: string, userId: string, data: { content: string }, groupId?: string) {
+  async updatePrecondition(
+    testCaseId: string,
+    preconditionId: string,
+    userId: string,
+    data: { content: string },
+    groupId?: string
+  ) {
     const testCase = await this.findById(testCaseId);
 
     // 前提条件の存在確認
@@ -98,7 +115,9 @@ export class TestCasePreconditionsService extends TestCaseChildrenBaseService {
     return prisma.$transaction(async (tx) => {
       const snapshot: HistorySnapshot = {
         ...this.buildBaseSnapshot(testCase),
-        preconditions: [{ id: precondition.id, content: precondition.content, orderKey: precondition.orderKey }],
+        preconditions: [
+          { id: precondition.id, content: precondition.content, orderKey: precondition.orderKey },
+        ],
         changeDetail: {
           type: 'PRECONDITION_UPDATE',
           preconditionId,
@@ -116,7 +135,11 @@ export class TestCasePreconditionsService extends TestCaseChildrenBaseService {
 
       // テストケース更新イベント発行（エラー時も処理継続）
       await this.publishEventSafely(
-        tx, testCaseId, testCase.testSuiteId, testCase.testSuite.projectId, userId,
+        tx,
+        testCaseId,
+        testCase.testSuiteId,
+        testCase.testSuite.projectId,
+        userId,
         [{ field: 'precondition:update', oldValue: precondition.content, newValue: data.content }]
       );
 
@@ -128,7 +151,12 @@ export class TestCasePreconditionsService extends TestCaseChildrenBaseService {
    * 前提条件を削除
    * @param groupId 外部から指定されたgroupId（省略時は自動生成）
    */
-  async deletePrecondition(testCaseId: string, preconditionId: string, userId: string, groupId?: string) {
+  async deletePrecondition(
+    testCaseId: string,
+    preconditionId: string,
+    userId: string,
+    groupId?: string
+  ) {
     const testCase = await this.findById(testCaseId);
 
     // 前提条件の存在確認
@@ -141,7 +169,9 @@ export class TestCasePreconditionsService extends TestCaseChildrenBaseService {
 
     const snapshot: HistorySnapshot = {
       ...this.buildBaseSnapshot(testCase),
-      preconditions: [{ id: precondition.id, content: precondition.content, orderKey: precondition.orderKey }],
+      preconditions: [
+        { id: precondition.id, content: precondition.content, orderKey: precondition.orderKey },
+      ],
       changeDetail: {
         type: 'PRECONDITION_DELETE',
         preconditionId,
@@ -177,7 +207,11 @@ export class TestCasePreconditionsService extends TestCaseChildrenBaseService {
 
       // テストケース更新イベント発行（エラー時も処理継続）
       await this.publishEventSafely(
-        tx, testCaseId, testCase.testSuiteId, testCase.testSuite.projectId, userId,
+        tx,
+        testCaseId,
+        testCase.testSuiteId,
+        testCase.testSuite.projectId,
+        userId,
         [{ field: 'precondition:delete', oldValue: preconditionId, newValue: null }]
       );
     });
@@ -187,7 +221,12 @@ export class TestCasePreconditionsService extends TestCaseChildrenBaseService {
    * 前提条件を並び替え
    * @param groupId 外部から指定されたgroupId（省略時は自動生成）
    */
-  async reorderPreconditions(testCaseId: string, preconditionIds: string[], userId: string, groupId?: string) {
+  async reorderPreconditions(
+    testCaseId: string,
+    preconditionIds: string[],
+    userId: string,
+    groupId?: string
+  ) {
     const testCase = await this.findById(testCaseId);
 
     // 全ての前提条件を取得
@@ -229,7 +268,11 @@ export class TestCasePreconditionsService extends TestCaseChildrenBaseService {
     // 履歴を保存（並び替え前の状態）
     const snapshot: HistorySnapshot = {
       ...this.buildBaseSnapshot(testCase),
-      preconditions: preconditions.map((p) => ({ id: p.id, content: p.content, orderKey: p.orderKey })),
+      preconditions: preconditions.map((p) => ({
+        id: p.id,
+        content: p.content,
+        orderKey: p.orderKey,
+      })),
       changeDetail: {
         type: 'PRECONDITION_REORDER',
         before: preconditions.map((p) => p.id),
@@ -254,7 +297,11 @@ export class TestCasePreconditionsService extends TestCaseChildrenBaseService {
 
       // テストケース更新イベント発行（エラー時も処理継続）
       await this.publishEventSafely(
-        tx, testCaseId, testCase.testSuiteId, testCase.testSuite.projectId, userId,
+        tx,
+        testCaseId,
+        testCase.testSuiteId,
+        testCase.testSuite.projectId,
+        userId,
         [{ field: 'precondition:reorder', oldValue: currentOrder, newValue: preconditionIds }]
       );
     });

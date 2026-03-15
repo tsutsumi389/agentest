@@ -243,7 +243,14 @@ describe('MCP CRUDツール統合テスト', () => {
           project: { id: TEST_PROJECT_ID, name: 'テストプロジェクト' },
           createdByUser: null,
           preconditions: [
-            { id: 'pre-1', testSuiteId: TEST_SUITE_ID, content: 'テスト環境が起動していること', orderKey: 'a', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
+            {
+              id: 'pre-1',
+              testSuiteId: TEST_SUITE_ID,
+              content: 'テスト環境が起動していること',
+              orderKey: 'a',
+              createdAt: '2024-01-01T00:00:00Z',
+              updatedAt: '2024-01-01T00:00:00Z',
+            },
           ],
           testCases: [
             {
@@ -297,14 +304,42 @@ describe('MCP CRUDツール統合テスト', () => {
           orderKey: 'a',
           createdByUser: { id: TEST_USER_ID, name: 'CRUD Test User', avatarUrl: null },
           preconditions: [
-            { id: 'pre-1', testCaseId: TEST_CASE_ID, content: 'メールアドレスが未登録であること', orderKey: 'a', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
+            {
+              id: 'pre-1',
+              testCaseId: TEST_CASE_ID,
+              content: 'メールアドレスが未登録であること',
+              orderKey: 'a',
+              createdAt: '2024-01-01T00:00:00Z',
+              updatedAt: '2024-01-01T00:00:00Z',
+            },
           ],
           steps: [
-            { id: 'step-1', testCaseId: TEST_CASE_ID, content: '登録ページにアクセスする', orderKey: 'a', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
-            { id: 'step-2', testCaseId: TEST_CASE_ID, content: '必要情報を入力して送信する', orderKey: 'b', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
+            {
+              id: 'step-1',
+              testCaseId: TEST_CASE_ID,
+              content: '登録ページにアクセスする',
+              orderKey: 'a',
+              createdAt: '2024-01-01T00:00:00Z',
+              updatedAt: '2024-01-01T00:00:00Z',
+            },
+            {
+              id: 'step-2',
+              testCaseId: TEST_CASE_ID,
+              content: '必要情報を入力して送信する',
+              orderKey: 'b',
+              createdAt: '2024-01-01T00:00:00Z',
+              updatedAt: '2024-01-01T00:00:00Z',
+            },
           ],
           expectedResults: [
-            { id: 'er-1', testCaseId: TEST_CASE_ID, content: '登録完了ページが表示される', orderKey: 'a', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' },
+            {
+              id: 'er-1',
+              testCaseId: TEST_CASE_ID,
+              content: '登録完了ページが表示される',
+              orderKey: 'a',
+              createdAt: '2024-01-01T00:00:00Z',
+              updatedAt: '2024-01-01T00:00:00Z',
+            },
           ],
           createdAt: '2024-01-01T00:00:00Z',
           updatedAt: '2024-01-01T00:00:00Z',
@@ -329,9 +364,7 @@ describe('MCP CRUDツール統合テスト', () => {
     });
 
     it('APIエラー時にMCPエラーとして返される', async () => {
-      mockApiGet.mockRejectedValueOnce(
-        new Error('Internal API error: 500 - サーバー内部エラー')
-      );
+      mockApiGet.mockRejectedValueOnce(new Error('Internal API error: 500 - サーバー内部エラー'));
 
       const response = await callMcpTool(app, sessionId, 'get_test_case', {
         testCaseId: TEST_CASE_ID,
@@ -476,12 +509,8 @@ describe('MCP CRUDツール統合テスト', () => {
           createdAt: '2024-01-01T00:00:00Z',
           updatedAt: '2024-01-01T00:00:00Z',
           preconditions: [],
-          steps: [
-            { id: 'step-1', content: 'ページにアクセスする', orderKey: 'a' },
-          ],
-          expectedResults: [
-            { id: 'er-1', content: 'ページが表示される', orderKey: 'a' },
-          ],
+          steps: [{ id: 'step-1', content: 'ページにアクセスする', orderKey: 'a' }],
+          expectedResults: [{ id: 'er-1', content: 'ページが表示される', orderKey: 'a' }],
         },
       };
 
@@ -633,9 +662,7 @@ describe('MCP CRUDツール統合テスト', () => {
           status: 'ACTIVE',
           createdAt: '2024-01-01T00:00:00Z',
           updatedAt: '2024-01-02T00:00:00Z',
-          steps: [
-            { id: TEST_STEP_ID_1, content: '更新した手順', orderKey: 'a' },
-          ],
+          steps: [{ id: TEST_STEP_ID_1, content: '更新した手順', orderKey: 'a' }],
         },
       };
 
@@ -719,10 +746,9 @@ describe('MCP CRUDツール統合テスト', () => {
       expect(result.deletedId).toBe(TEST_SUITE_ID);
 
       // apiClient.deleteが正しいパスで呼ばれたことを確認
-      expect(mockApiDelete).toHaveBeenCalledWith(
-        `/internal/api/test-suites/${TEST_SUITE_ID}`,
-        { userId: TEST_USER_ID }
-      );
+      expect(mockApiDelete).toHaveBeenCalledWith(`/internal/api/test-suites/${TEST_SUITE_ID}`, {
+        userId: TEST_USER_ID,
+      });
     });
   });
 
@@ -750,10 +776,9 @@ describe('MCP CRUDツール統合テスト', () => {
       expect(result.deletedId).toBe(TEST_CASE_ID);
 
       // apiClient.deleteが正しいパスで呼ばれたことを確認
-      expect(mockApiDelete).toHaveBeenCalledWith(
-        `/internal/api/test-cases/${TEST_CASE_ID}`,
-        { userId: TEST_USER_ID }
-      );
+      expect(mockApiDelete).toHaveBeenCalledWith(`/internal/api/test-cases/${TEST_CASE_ID}`, {
+        userId: TEST_USER_ID,
+      });
     });
 
     it('API削除エラー時にMCPエラーとして返される', async () => {
@@ -886,13 +911,21 @@ describe('MCP CRUDツール統合テスト', () => {
         },
       });
 
-      const createResponse = await callMcpTool(app, sessionId, 'create_test_suite', {
-        projectId: TEST_PROJECT_ID,
-        name: '一連操作テストスイート',
-      }, 10);
+      const createResponse = await callMcpTool(
+        app,
+        sessionId,
+        'create_test_suite',
+        {
+          projectId: TEST_PROJECT_ID,
+          name: '一連操作テストスイート',
+        },
+        10
+      );
 
       expect(isToolError(createResponse)).toBe(false);
-      const created = parseToolResult(createResponse) as { testSuite: { id: string; name: string } };
+      const created = parseToolResult(createResponse) as {
+        testSuite: { id: string; name: string };
+      };
       expect(created.testSuite.id).toBe(suiteId);
 
       // 2. 取得
@@ -913,12 +946,20 @@ describe('MCP CRUDツール統合テスト', () => {
         },
       });
 
-      const getResponse = await callMcpTool(app, sessionId, 'get_test_suite', {
-        testSuiteId: suiteId,
-      }, 11);
+      const getResponse = await callMcpTool(
+        app,
+        sessionId,
+        'get_test_suite',
+        {
+          testSuiteId: suiteId,
+        },
+        11
+      );
 
       expect(isToolError(getResponse)).toBe(false);
-      const fetched = parseToolResult(getResponse) as { testSuite: { name: string; status: string } };
+      const fetched = parseToolResult(getResponse) as {
+        testSuite: { name: string; status: string };
+      };
       expect(fetched.testSuite.name).toBe('一連操作テストスイート');
       expect(fetched.testSuite.status).toBe('DRAFT');
 
@@ -935,15 +976,23 @@ describe('MCP CRUDツール統合テスト', () => {
         },
       });
 
-      const updateResponse = await callMcpTool(app, sessionId, 'update_test_suite', {
-        testSuiteId: suiteId,
-        name: '更新済みテストスイート',
-        description: '説明を追加',
-        status: 'ACTIVE',
-      }, 12);
+      const updateResponse = await callMcpTool(
+        app,
+        sessionId,
+        'update_test_suite',
+        {
+          testSuiteId: suiteId,
+          name: '更新済みテストスイート',
+          description: '説明を追加',
+          status: 'ACTIVE',
+        },
+        12
+      );
 
       expect(isToolError(updateResponse)).toBe(false);
-      const updated = parseToolResult(updateResponse) as { testSuite: { name: string; status: string; description: string } };
+      const updated = parseToolResult(updateResponse) as {
+        testSuite: { name: string; status: string; description: string };
+      };
       expect(updated.testSuite.name).toBe('更新済みテストスイート');
       expect(updated.testSuite.status).toBe('ACTIVE');
       expect(updated.testSuite.description).toBe('説明を追加');
@@ -954,9 +1003,15 @@ describe('MCP CRUDツール統合テスト', () => {
         deletedId: suiteId,
       });
 
-      const deleteResponse = await callMcpTool(app, sessionId, 'delete_test_suite', {
-        testSuiteId: suiteId,
-      }, 13);
+      const deleteResponse = await callMcpTool(
+        app,
+        sessionId,
+        'delete_test_suite',
+        {
+          testSuiteId: suiteId,
+        },
+        13
+      );
 
       expect(isToolError(deleteResponse)).toBe(false);
       const deleted = parseToolResult(deleteResponse) as { success: boolean; deletedId: string };
@@ -983,14 +1038,22 @@ describe('MCP CRUDツール統合テスト', () => {
         },
       });
 
-      const createResponse = await callMcpTool(app, sessionId, 'create_test_case', {
-        testSuiteId: TEST_SUITE_ID,
-        title: '一連操作テストケース',
-        steps: [{ content: '初期手順' }],
-      }, 20);
+      const createResponse = await callMcpTool(
+        app,
+        sessionId,
+        'create_test_case',
+        {
+          testSuiteId: TEST_SUITE_ID,
+          title: '一連操作テストケース',
+          steps: [{ content: '初期手順' }],
+        },
+        20
+      );
 
       expect(isToolError(createResponse)).toBe(false);
-      const created = parseToolResult(createResponse) as { testCase: { id: string; title: string } };
+      const created = parseToolResult(createResponse) as {
+        testCase: { id: string; title: string };
+      };
       expect(created.testCase.id).toBe(caseId);
 
       // 2. 取得
@@ -1006,19 +1069,36 @@ describe('MCP CRUDツール統合テスト', () => {
           orderKey: 'a',
           createdByUser: null,
           preconditions: [],
-          steps: [{ id: TEST_STEP_ID_2, testCaseId: caseId, content: '初期手順', orderKey: 'a', createdAt: '2024-01-01T00:00:00Z', updatedAt: '2024-01-01T00:00:00Z' }],
+          steps: [
+            {
+              id: TEST_STEP_ID_2,
+              testCaseId: caseId,
+              content: '初期手順',
+              orderKey: 'a',
+              createdAt: '2024-01-01T00:00:00Z',
+              updatedAt: '2024-01-01T00:00:00Z',
+            },
+          ],
           expectedResults: [],
           createdAt: '2024-01-01T00:00:00Z',
           updatedAt: '2024-01-01T00:00:00Z',
         },
       });
 
-      const getResponse = await callMcpTool(app, sessionId, 'get_test_case', {
-        testCaseId: caseId,
-      }, 21);
+      const getResponse = await callMcpTool(
+        app,
+        sessionId,
+        'get_test_case',
+        {
+          testCaseId: caseId,
+        },
+        21
+      );
 
       expect(isToolError(getResponse)).toBe(false);
-      const fetched = parseToolResult(getResponse) as { testCase: { title: string; steps: { content: string }[] } };
+      const fetched = parseToolResult(getResponse) as {
+        testCase: { title: string; steps: { content: string }[] };
+      };
       expect(fetched.testCase.title).toBe('一連操作テストケース');
       expect(fetched.testCase.steps).toHaveLength(1);
 
@@ -1040,20 +1120,25 @@ describe('MCP CRUDツール統合テスト', () => {
         },
       });
 
-      const updateResponse = await callMcpTool(app, sessionId, 'update_test_case', {
-        testCaseId: caseId,
-        title: '更新済みテストケース',
-        description: 'ケース説明追加',
-        priority: 'HIGH',
-        status: 'ACTIVE',
-        steps: [
-          { id: TEST_STEP_ID_2, content: '更新した手順1' },
-          { content: '追加した手順2' },
-        ],
-      }, 22);
+      const updateResponse = await callMcpTool(
+        app,
+        sessionId,
+        'update_test_case',
+        {
+          testCaseId: caseId,
+          title: '更新済みテストケース',
+          description: 'ケース説明追加',
+          priority: 'HIGH',
+          status: 'ACTIVE',
+          steps: [{ id: TEST_STEP_ID_2, content: '更新した手順1' }, { content: '追加した手順2' }],
+        },
+        22
+      );
 
       expect(isToolError(updateResponse)).toBe(false);
-      const updated = parseToolResult(updateResponse) as { testCase: { title: string; priority: string; steps: { content: string }[] } };
+      const updated = parseToolResult(updateResponse) as {
+        testCase: { title: string; priority: string; steps: { content: string }[] };
+      };
       expect(updated.testCase.title).toBe('更新済みテストケース');
       expect(updated.testCase.priority).toBe('HIGH');
       expect(updated.testCase.steps).toHaveLength(2);
@@ -1064,9 +1149,15 @@ describe('MCP CRUDツール統合テスト', () => {
         deletedId: caseId,
       });
 
-      const deleteResponse = await callMcpTool(app, sessionId, 'delete_test_case', {
-        testCaseId: caseId,
-      }, 23);
+      const deleteResponse = await callMcpTool(
+        app,
+        sessionId,
+        'delete_test_case',
+        {
+          testCaseId: caseId,
+        },
+        23
+      );
 
       expect(isToolError(deleteResponse)).toBe(false);
       const deleted = parseToolResult(deleteResponse) as { success: boolean; deletedId: string };

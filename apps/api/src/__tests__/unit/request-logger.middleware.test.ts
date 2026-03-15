@@ -14,9 +14,9 @@ const { mockLogger, mockPinoHttpMiddleware } = vi.hoisted(() => {
   };
   mockLogger.child.mockReturnValue(mockLogger);
 
-  const mockPinoHttpMiddleware = vi.fn(
-    (_req: unknown, _res: unknown, next: () => void) => { next(); }
-  );
+  const mockPinoHttpMiddleware = vi.fn((_req: unknown, _res: unknown, next: () => void) => {
+    next();
+  });
 
   return { mockLogger, mockPinoHttpMiddleware };
 });
@@ -35,7 +35,11 @@ const mockUUID = '12345678-1234-1234-1234-123456789abc';
 vi.spyOn(crypto, 'randomUUID').mockReturnValue(mockUUID);
 
 // モック設定後にインポート
-import { httpLogger, attachRequestId, runWithRequestContext } from '../../middleware/request-logger.js';
+import {
+  httpLogger,
+  attachRequestId,
+  runWithRequestContext,
+} from '../../middleware/request-logger.js';
 import { getRequestId } from '../../lib/request-context.js';
 
 describe('request-logger middleware', () => {

@@ -93,9 +93,7 @@ describe('System Admin API Integration Tests', () => {
 
   describe('GET /admin/admin-users', () => {
     it('SUPER_ADMINは一覧を取得できる', async () => {
-      const response = await request(app)
-        .get('/admin/admin-users')
-        .set('Cookie', superAdminCookie);
+      const response = await request(app).get('/admin/admin-users').set('Cookie', superAdminCookie);
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('adminUsers');
@@ -104,9 +102,7 @@ describe('System Admin API Integration Tests', () => {
     });
 
     it('ADMINは一覧を取得できない（403）', async () => {
-      const response = await request(app)
-        .get('/admin/admin-users')
-        .set('Cookie', adminCookie);
+      const response = await request(app).get('/admin/admin-users').set('Cookie', adminCookie);
 
       expect(response.status).toBe(403);
     });
@@ -220,14 +216,11 @@ describe('System Admin API Integration Tests', () => {
 
     it('有効な招待が既に存在する場合はエラーを返す', async () => {
       // 最初の招待を作成
-      await request(app)
-        .post('/admin/admin-users')
-        .set('Cookie', superAdminCookie)
-        .send({
-          email: 'duplicate-invite@example.com',
-          name: 'Duplicate Invite',
-          role: 'VIEWER',
-        });
+      await request(app).post('/admin/admin-users').set('Cookie', superAdminCookie).send({
+        email: 'duplicate-invite@example.com',
+        name: 'Duplicate Invite',
+        role: 'VIEWER',
+      });
 
       // 同じメールアドレスで再度招待しようとする
       const response = await request(app)
@@ -247,21 +240,19 @@ describe('System Admin API Integration Tests', () => {
   describe('GET /admin/admin-users/invitations/:token', () => {
     it('有効な招待情報を取得できる（認証不要）', async () => {
       // 招待を作成
-      await request(app)
-        .post('/admin/admin-users')
-        .set('Cookie', superAdminCookie)
-        .send({
-          email: 'invitation-test@example.com',
-          name: 'Invitation Test',
-          role: 'ADMIN',
-        });
+      await request(app).post('/admin/admin-users').set('Cookie', superAdminCookie).send({
+        email: 'invitation-test@example.com',
+        name: 'Invitation Test',
+        role: 'ADMIN',
+      });
 
       const invitation = await prisma.adminInvitation.findFirst({
         where: { email: 'invitation-test@example.com' },
       });
 
-      const response = await request(app)
-        .get(`/admin/admin-users/invitations/${invitation!.token}`);
+      const response = await request(app).get(
+        `/admin/admin-users/invitations/${invitation!.token}`
+      );
 
       expect(response.status).toBe(200);
       expect(response.body.email).toBe('invitation-test@example.com');
@@ -272,8 +263,7 @@ describe('System Admin API Integration Tests', () => {
     });
 
     it('存在しないトークンでは404を返す', async () => {
-      const response = await request(app)
-        .get('/admin/admin-users/invitations/invalid-token-12345');
+      const response = await request(app).get('/admin/admin-users/invitations/invalid-token-12345');
 
       expect(response.status).toBe(404);
     });
@@ -291,8 +281,9 @@ describe('System Admin API Integration Tests', () => {
         },
       });
 
-      const response = await request(app)
-        .get(`/admin/admin-users/invitations/${expiredInvitation.token}`);
+      const response = await request(app).get(
+        `/admin/admin-users/invitations/${expiredInvitation.token}`
+      );
 
       expect(response.status).toBe(400);
       expect(response.body.error.code).toBe('INVITATION_EXPIRED');
@@ -305,14 +296,11 @@ describe('System Admin API Integration Tests', () => {
   describe('POST /admin/admin-users/invitations/:token/accept', () => {
     it('招待を受諾してアカウントを作成できる（認証不要）', async () => {
       // 招待を作成
-      await request(app)
-        .post('/admin/admin-users')
-        .set('Cookie', superAdminCookie)
-        .send({
-          email: 'accept-test@example.com',
-          name: 'Accept Test',
-          role: 'VIEWER',
-        });
+      await request(app).post('/admin/admin-users').set('Cookie', superAdminCookie).send({
+        email: 'accept-test@example.com',
+        name: 'Accept Test',
+        role: 'VIEWER',
+      });
 
       const invitation = await prisma.adminInvitation.findFirst({
         where: { email: 'accept-test@example.com' },
@@ -346,14 +334,11 @@ describe('System Admin API Integration Tests', () => {
 
     it('弱いパスワードではバリデーションエラーを返す', async () => {
       // 招待を作成
-      await request(app)
-        .post('/admin/admin-users')
-        .set('Cookie', superAdminCookie)
-        .send({
-          email: 'weak-password@example.com',
-          name: 'Weak Password Test',
-          role: 'VIEWER',
-        });
+      await request(app).post('/admin/admin-users').set('Cookie', superAdminCookie).send({
+        email: 'weak-password@example.com',
+        name: 'Weak Password Test',
+        role: 'VIEWER',
+      });
 
       const invitation = await prisma.adminInvitation.findFirst({
         where: { email: 'weak-password@example.com' },
@@ -371,25 +356,20 @@ describe('System Admin API Integration Tests', () => {
 
     it('既に受諾済みの招待ではエラーを返す', async () => {
       // 招待を作成して受諾
-      await request(app)
-        .post('/admin/admin-users')
-        .set('Cookie', superAdminCookie)
-        .send({
-          email: 'already-accepted@example.com',
-          name: 'Already Accepted',
-          role: 'VIEWER',
-        });
+      await request(app).post('/admin/admin-users').set('Cookie', superAdminCookie).send({
+        email: 'already-accepted@example.com',
+        name: 'Already Accepted',
+        role: 'VIEWER',
+      });
 
       const invitation = await prisma.adminInvitation.findFirst({
         where: { email: 'already-accepted@example.com' },
       });
 
       // 1回目の受諾
-      await request(app)
-        .post(`/admin/admin-users/invitations/${invitation!.token}/accept`)
-        .send({
-          password: 'StrongPassword123!',
-        });
+      await request(app).post(`/admin/admin-users/invitations/${invitation!.token}/accept`).send({
+        password: 'StrongPassword123!',
+      });
 
       // 2回目の受諾を試みる
       const response = await request(app)

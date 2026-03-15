@@ -27,7 +27,11 @@ const getLockStatusSchema = z.object({
  * @param targetId - ロック対象のID
  * @throws AuthorizationError - 権限がない場合
  */
-async function checkAdminAccess(userId: string, targetType: LockTargetType, targetId: string): Promise<void> {
+async function checkAdminAccess(
+  userId: string,
+  targetType: LockTargetType,
+  targetId: string
+): Promise<void> {
   let project: {
     id: string;
     organizationId: string | null;

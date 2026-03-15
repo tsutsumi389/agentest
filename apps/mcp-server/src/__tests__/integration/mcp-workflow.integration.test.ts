@@ -2,11 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vites
 import request from 'supertest';
 import type { Express } from 'express';
 import { prisma } from '@agentest/db';
-import {
-  createTestUser,
-  createTestProject,
-  cleanupTestData,
-} from './test-helpers.js';
+import { createTestUser, createTestProject, cleanupTestData } from './test-helpers.js';
 import {
   parseToolResultRaw as parseToolResult,
   initializeMcpSession,
@@ -164,17 +160,19 @@ describe('MCPワークフロー統合テスト', () => {
 
       // ステップ1: プロジェクト検索
       mockApiClientGet.mockResolvedValueOnce({
-        projects: [{
-          id: TEST_PROJECT_ID,
-          name: 'テストプロジェクト',
-          description: 'E2Eテスト用プロジェクト',
-          organizationId: null,
-          organization: null,
-          role: 'OWNER',
-          _count: { testSuites: 0 },
-          createdAt: '2025-01-01T00:00:00.000Z',
-          updatedAt: '2025-01-01T00:00:00.000Z',
-        }],
+        projects: [
+          {
+            id: TEST_PROJECT_ID,
+            name: 'テストプロジェクト',
+            description: 'E2Eテスト用プロジェクト',
+            organizationId: null,
+            organization: null,
+            role: 'OWNER',
+            _count: { testSuites: 0 },
+            createdAt: '2025-01-01T00:00:00.000Z',
+            updatedAt: '2025-01-01T00:00:00.000Z',
+          },
+        ],
         pagination: { total: 1, limit: 50, offset: 0, hasMore: false },
       });
 
@@ -198,12 +196,18 @@ describe('MCPワークフロー統合テスト', () => {
         },
       });
 
-      const createSuiteResponse = await callMcpTool(app, sessionId, 'create_test_suite', {
-        projectId,
-        name: 'ログイン機能テストスイート',
-        description: 'ログイン機能に関するテストケース群',
-        status: 'ACTIVE',
-      }, 3);
+      const createSuiteResponse = await callMcpTool(
+        app,
+        sessionId,
+        'create_test_suite',
+        {
+          projectId,
+          name: 'ログイン機能テストスイート',
+          description: 'ログイン機能に関するテストケース群',
+          status: 'ACTIVE',
+        },
+        3
+      );
       expect(createSuiteResponse.status).toBe(200);
       const suiteResult = parseToolResult(createSuiteResponse);
       const suite = JSON.parse(suiteResult.content[0].text);
@@ -221,7 +225,9 @@ describe('MCPワークフロー統合テスト', () => {
           orderKey: 'a',
           createdAt: '2025-01-01T00:00:00.000Z',
           updatedAt: '2025-01-01T00:00:00.000Z',
-          preconditions: [{ id: 'pre-1', content: 'ユーザーアカウントが存在すること', orderKey: 'a' }],
+          preconditions: [
+            { id: 'pre-1', content: 'ユーザーアカウントが存在すること', orderKey: 'a' },
+          ],
           steps: [
             { id: 'step-1', content: 'ログインページを開く', orderKey: 'a' },
             { id: 'step-2', content: 'メールアドレスを入力する', orderKey: 'b' },
@@ -232,19 +238,22 @@ describe('MCPワークフロー統合テスト', () => {
         },
       });
 
-      const createCaseResponse = await callMcpTool(app, sessionId, 'create_test_case', {
-        testSuiteId,
-        title: '正常ログインテスト',
-        description: '有効な認証情報でログインできることを確認',
-        priority: 'HIGH',
-        status: 'ACTIVE',
-        preconditions: [{ content: 'ユーザーアカウントが存在すること' }],
-        steps: [
-          { content: 'ログインページを開く' },
-          { content: 'メールアドレスを入力する' },
-        ],
-        expectedResults: [{ content: 'ダッシュボードページに遷移すること' }],
-      }, 4);
+      const createCaseResponse = await callMcpTool(
+        app,
+        sessionId,
+        'create_test_case',
+        {
+          testSuiteId,
+          title: '正常ログインテスト',
+          description: '有効な認証情報でログインできることを確認',
+          priority: 'HIGH',
+          status: 'ACTIVE',
+          preconditions: [{ content: 'ユーザーアカウントが存在すること' }],
+          steps: [{ content: 'ログインページを開く' }, { content: 'メールアドレスを入力する' }],
+          expectedResults: [{ content: 'ダッシュボードページに遷移すること' }],
+        },
+        4
+      );
       expect(createCaseResponse.status).toBe(200);
 
       // ステップ4: 実行作成
@@ -258,9 +267,15 @@ describe('MCPワークフロー統合テスト', () => {
         },
       });
 
-      const createExecResponse = await callMcpTool(app, sessionId, 'create_execution', {
-        testSuiteId,
-      }, 5);
+      const createExecResponse = await callMcpTool(
+        app,
+        sessionId,
+        'create_execution',
+        {
+          testSuiteId,
+        },
+        5
+      );
       expect(createExecResponse.status).toBe(200);
       const execResult = parseToolResult(createExecResponse);
       const execution = JSON.parse(execResult.content[0].text);
@@ -283,65 +298,135 @@ describe('MCPワークフロー統合テスト', () => {
             createdAt: '2025-01-01T00:00:00.000Z',
             updatedAt: '2025-01-01T00:00:00.000Z',
             preconditions: [],
-            testCases: [{
-              id: TEST_EXEC_CASE_ID,
-              executionTestSuiteId: TEST_EXEC_SUITE_ID,
-              originalTestCaseId: TEST_CASE_ID,
-              title: '正常ログインテスト',
-              description: null,
-              priority: 'HIGH',
-              orderKey: 'a',
-              createdAt: '2025-01-01T00:00:00.000Z',
-              updatedAt: '2025-01-01T00:00:00.000Z',
-              preconditions: [],
-              steps: [{ id: 'exec-step-1', executionTestCaseId: TEST_EXEC_CASE_ID, originalStepId: 'step-1', content: 'ログインページを開く', orderKey: 'a', createdAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-01T00:00:00.000Z' }],
-              expectedResults: [{ id: 'exec-er-1', executionTestCaseId: TEST_EXEC_CASE_ID, originalExpectedResultId: 'er-1', content: 'ダッシュボードページに遷移すること', orderKey: 'a', createdAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-01T00:00:00.000Z' }],
-            }],
+            testCases: [
+              {
+                id: TEST_EXEC_CASE_ID,
+                executionTestSuiteId: TEST_EXEC_SUITE_ID,
+                originalTestCaseId: TEST_CASE_ID,
+                title: '正常ログインテスト',
+                description: null,
+                priority: 'HIGH',
+                orderKey: 'a',
+                createdAt: '2025-01-01T00:00:00.000Z',
+                updatedAt: '2025-01-01T00:00:00.000Z',
+                preconditions: [],
+                steps: [
+                  {
+                    id: 'exec-step-1',
+                    executionTestCaseId: TEST_EXEC_CASE_ID,
+                    originalStepId: 'step-1',
+                    content: 'ログインページを開く',
+                    orderKey: 'a',
+                    createdAt: '2025-01-01T00:00:00.000Z',
+                    updatedAt: '2025-01-01T00:00:00.000Z',
+                  },
+                ],
+                expectedResults: [
+                  {
+                    id: 'exec-er-1',
+                    executionTestCaseId: TEST_EXEC_CASE_ID,
+                    originalExpectedResultId: 'er-1',
+                    content: 'ダッシュボードページに遷移すること',
+                    orderKey: 'a',
+                    createdAt: '2025-01-01T00:00:00.000Z',
+                    updatedAt: '2025-01-01T00:00:00.000Z',
+                  },
+                ],
+              },
+            ],
           },
-          preconditionResults: [{
-            id: TEST_PRECONDITION_RESULT_ID,
-            executionId,
-            executionTestCaseId: TEST_EXEC_CASE_ID,
-            executionSuitePreconditionId: null,
-            executionCasePreconditionId: null,
-            status: 'PENDING',
-            note: null,
-            checkedAt: null,
-            suitePrecondition: null,
-            casePrecondition: null,
-            executionTestCase: null,
-          }],
-          stepResults: [{
-            id: TEST_STEP_RESULT_ID,
-            executionId,
-            executionTestCaseId: TEST_EXEC_CASE_ID,
-            executionStepId: 'exec-step-1',
-            status: 'PENDING',
-            note: null,
-            executedAt: null,
-            executionStep: { id: 'exec-step-1', executionTestCaseId: TEST_EXEC_CASE_ID, originalStepId: 'step-1', content: 'ログインページを開く', orderKey: 'a', createdAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-01T00:00:00.000Z' },
-            executionTestCase: { id: TEST_EXEC_CASE_ID, executionTestSuiteId: TEST_EXEC_SUITE_ID, originalTestCaseId: TEST_CASE_ID, title: '正常ログインテスト', description: null, priority: 'HIGH', orderKey: 'a', createdAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-01T00:00:00.000Z' },
-          }],
-          expectedResults: [{
-            id: TEST_EXPECTED_RESULT_ID,
-            executionId,
-            executionTestCaseId: TEST_EXEC_CASE_ID,
-            executionExpectedResultId: 'exec-er-1',
-            status: 'PENDING',
-            note: null,
-            judgedAt: null,
-            executionExpectedResult: { id: 'exec-er-1', executionTestCaseId: TEST_EXEC_CASE_ID, originalExpectedResultId: 'er-1', content: 'ダッシュボードページに遷移すること', orderKey: 'a', createdAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-01T00:00:00.000Z' },
-            executionTestCase: { id: TEST_EXEC_CASE_ID, executionTestSuiteId: TEST_EXEC_SUITE_ID, originalTestCaseId: TEST_CASE_ID, title: '正常ログインテスト', description: null, priority: 'HIGH', orderKey: 'a', createdAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-01T00:00:00.000Z' },
-            evidences: [],
-          }],
+          preconditionResults: [
+            {
+              id: TEST_PRECONDITION_RESULT_ID,
+              executionId,
+              executionTestCaseId: TEST_EXEC_CASE_ID,
+              executionSuitePreconditionId: null,
+              executionCasePreconditionId: null,
+              status: 'PENDING',
+              note: null,
+              checkedAt: null,
+              suitePrecondition: null,
+              casePrecondition: null,
+              executionTestCase: null,
+            },
+          ],
+          stepResults: [
+            {
+              id: TEST_STEP_RESULT_ID,
+              executionId,
+              executionTestCaseId: TEST_EXEC_CASE_ID,
+              executionStepId: 'exec-step-1',
+              status: 'PENDING',
+              note: null,
+              executedAt: null,
+              executionStep: {
+                id: 'exec-step-1',
+                executionTestCaseId: TEST_EXEC_CASE_ID,
+                originalStepId: 'step-1',
+                content: 'ログインページを開く',
+                orderKey: 'a',
+                createdAt: '2025-01-01T00:00:00.000Z',
+                updatedAt: '2025-01-01T00:00:00.000Z',
+              },
+              executionTestCase: {
+                id: TEST_EXEC_CASE_ID,
+                executionTestSuiteId: TEST_EXEC_SUITE_ID,
+                originalTestCaseId: TEST_CASE_ID,
+                title: '正常ログインテスト',
+                description: null,
+                priority: 'HIGH',
+                orderKey: 'a',
+                createdAt: '2025-01-01T00:00:00.000Z',
+                updatedAt: '2025-01-01T00:00:00.000Z',
+              },
+            },
+          ],
+          expectedResults: [
+            {
+              id: TEST_EXPECTED_RESULT_ID,
+              executionId,
+              executionTestCaseId: TEST_EXEC_CASE_ID,
+              executionExpectedResultId: 'exec-er-1',
+              status: 'PENDING',
+              note: null,
+              judgedAt: null,
+              executionExpectedResult: {
+                id: 'exec-er-1',
+                executionTestCaseId: TEST_EXEC_CASE_ID,
+                originalExpectedResultId: 'er-1',
+                content: 'ダッシュボードページに遷移すること',
+                orderKey: 'a',
+                createdAt: '2025-01-01T00:00:00.000Z',
+                updatedAt: '2025-01-01T00:00:00.000Z',
+              },
+              executionTestCase: {
+                id: TEST_EXEC_CASE_ID,
+                executionTestSuiteId: TEST_EXEC_SUITE_ID,
+                originalTestCaseId: TEST_CASE_ID,
+                title: '正常ログインテスト',
+                description: null,
+                priority: 'HIGH',
+                orderKey: 'a',
+                createdAt: '2025-01-01T00:00:00.000Z',
+                updatedAt: '2025-01-01T00:00:00.000Z',
+              },
+              evidences: [],
+            },
+          ],
           createdAt: '2025-01-01T00:00:00.000Z',
           updatedAt: '2025-01-01T00:00:00.000Z',
         },
       });
 
-      const getExecResponse = await callMcpTool(app, sessionId, 'get_execution', {
-        executionId,
-      }, 6);
+      const getExecResponse = await callMcpTool(
+        app,
+        sessionId,
+        'get_execution',
+        {
+          executionId,
+        },
+        6
+      );
       expect(getExecResponse.status).toBe(200);
       const execDetail = JSON.parse(parseToolResult(getExecResponse).content[0].text);
 
@@ -359,13 +444,19 @@ describe('MCPワークフロー統合テスト', () => {
         },
       });
 
-      const updatePrecondResponse = await callMcpTool(app, sessionId, 'update_execution_precondition_result', {
-        executionId,
-        preconditionResultId,
-        status: 'MET',
-        note: '確認済み',
-        agentName: 'Claude Code Opus4.5',
-      }, 7);
+      const updatePrecondResponse = await callMcpTool(
+        app,
+        sessionId,
+        'update_execution_precondition_result',
+        {
+          executionId,
+          preconditionResultId,
+          status: 'MET',
+          note: '確認済み',
+          agentName: 'Claude Code Opus4.5',
+        },
+        7
+      );
       expect(updatePrecondResponse.status).toBe(200);
 
       // ステップ7: ステップ結果を更新
@@ -382,13 +473,19 @@ describe('MCPワークフロー統合テスト', () => {
         },
       });
 
-      const updateStepResponse = await callMcpTool(app, sessionId, 'update_execution_step_result', {
-        executionId,
-        stepResultId,
-        status: 'DONE',
-        note: '正常に実行完了',
-        agentName: 'Claude Code Opus4.5',
-      }, 8);
+      const updateStepResponse = await callMcpTool(
+        app,
+        sessionId,
+        'update_execution_step_result',
+        {
+          executionId,
+          stepResultId,
+          status: 'DONE',
+          note: '正常に実行完了',
+          agentName: 'Claude Code Opus4.5',
+        },
+        8
+      );
       expect(updateStepResponse.status).toBe(200);
 
       // ステップ8: 期待結果を更新
@@ -405,13 +502,19 @@ describe('MCPワークフロー統合テスト', () => {
         },
       });
 
-      const updateExpectedResponse = await callMcpTool(app, sessionId, 'update_execution_expected_result', {
-        executionId,
-        expectedResultId,
-        status: 'PASS',
-        note: '期待通りの結果',
-        agentName: 'Claude Code Opus4.5',
-      }, 9);
+      const updateExpectedResponse = await callMcpTool(
+        app,
+        sessionId,
+        'update_execution_expected_result',
+        {
+          executionId,
+          expectedResultId,
+          status: 'PASS',
+          note: '期待通りの結果',
+          agentName: 'Claude Code Opus4.5',
+        },
+        9
+      );
       expect(updateExpectedResponse.status).toBe(200);
       const finalResult = parseToolResult(updateExpectedResponse);
       const finalParsed = JSON.parse(finalResult.content[0].text);
@@ -428,25 +531,33 @@ describe('MCPワークフロー統合テスト', () => {
 
       // テストスイート検索
       mockApiClientGet.mockResolvedValueOnce({
-        testSuites: [{
-          id: TEST_SUITE_ID,
-          name: '既存テストスイート',
-          description: null,
-          status: 'ACTIVE',
-          projectId: TEST_PROJECT_ID,
-          project: { id: TEST_PROJECT_ID, name: 'テストプロジェクト' },
-          createdByUser: null,
-          _count: { testCases: 3, preconditions: 1 },
-          createdAt: '2025-01-01T00:00:00.000Z',
-          updatedAt: '2025-01-01T00:00:00.000Z',
-        }],
+        testSuites: [
+          {
+            id: TEST_SUITE_ID,
+            name: '既存テストスイート',
+            description: null,
+            status: 'ACTIVE',
+            projectId: TEST_PROJECT_ID,
+            project: { id: TEST_PROJECT_ID, name: 'テストプロジェクト' },
+            createdByUser: null,
+            _count: { testCases: 3, preconditions: 1 },
+            createdAt: '2025-01-01T00:00:00.000Z',
+            updatedAt: '2025-01-01T00:00:00.000Z',
+          },
+        ],
         pagination: { total: 1, limit: 20, offset: 0, hasMore: false },
       });
 
-      const searchResponse = await callMcpTool(app, sessionId, 'search_test_suite', {
-        projectId: TEST_PROJECT_ID,
-        q: '既存テスト',
-      }, 2);
+      const searchResponse = await callMcpTool(
+        app,
+        sessionId,
+        'search_test_suite',
+        {
+          projectId: TEST_PROJECT_ID,
+          q: '既存テスト',
+        },
+        2
+      );
       expect(searchResponse.status).toBe(200);
       const searchResult = JSON.parse(parseToolResult(searchResponse).content[0].text);
       const suiteId = searchResult.testSuites[0].id;
@@ -462,9 +573,15 @@ describe('MCPワークフロー統合テスト', () => {
         },
       });
 
-      const execResponse = await callMcpTool(app, sessionId, 'create_execution', {
-        testSuiteId: suiteId,
-      }, 3);
+      const execResponse = await callMcpTool(
+        app,
+        sessionId,
+        'create_execution',
+        {
+          testSuiteId: suiteId,
+        },
+        3
+      );
       expect(execResponse.status).toBe(200);
       const execParsed = JSON.parse(parseToolResult(execResponse).content[0].text);
       expect(execParsed.execution.testSuiteId).toBe(suiteId);
@@ -580,17 +697,19 @@ describe('MCPワークフロー統合テスト', () => {
 
       // 1回目: プロジェクト検索
       mockApiClientGet.mockResolvedValueOnce({
-        projects: [{
-          id: TEST_PROJECT_ID,
-          name: 'テストプロジェクト',
-          description: null,
-          organizationId: null,
-          organization: null,
-          role: 'OWNER',
-          _count: { testSuites: 1 },
-          createdAt: '2025-01-01T00:00:00.000Z',
-          updatedAt: '2025-01-01T00:00:00.000Z',
-        }],
+        projects: [
+          {
+            id: TEST_PROJECT_ID,
+            name: 'テストプロジェクト',
+            description: null,
+            organizationId: null,
+            organization: null,
+            role: 'OWNER',
+            _count: { testSuites: 1 },
+            createdAt: '2025-01-01T00:00:00.000Z',
+            updatedAt: '2025-01-01T00:00:00.000Z',
+          },
+        ],
         pagination: { total: 1, limit: 50, offset: 0, hasMore: false },
       });
 
@@ -610,9 +729,15 @@ describe('MCPワークフロー統合テスト', () => {
         pagination: { total: 0, limit: 20, offset: 0, hasMore: false },
       });
 
-      const response2 = await callMcpTool(app, sessionId, 'search_test_suite', {
-        projectId: TEST_PROJECT_ID,
-      }, 3);
+      const response2 = await callMcpTool(
+        app,
+        sessionId,
+        'search_test_suite',
+        {
+          projectId: TEST_PROJECT_ID,
+        },
+        3
+      );
       expect(response2.status).toBe(200);
       expect(parseToolResult(response2).isError).toBeUndefined();
 
@@ -635,10 +760,16 @@ describe('MCPワークフロー統合テスト', () => {
         },
       });
 
-      const response3 = await callMcpTool(app, sessionId, 'create_test_suite', {
-        projectId: TEST_PROJECT_ID,
-        name: '新規テストスイート',
-      }, 4);
+      const response3 = await callMcpTool(
+        app,
+        sessionId,
+        'create_test_suite',
+        {
+          projectId: TEST_PROJECT_ID,
+          name: '新規テストスイート',
+        },
+        4
+      );
       expect(response3.status).toBe(200);
       expect(parseToolResult(response3).isError).toBeUndefined();
 
@@ -659,7 +790,19 @@ describe('MCPワークフロー統合テスト', () => {
 
       // 検索ツール
       mockApiClientGet.mockResolvedValueOnce({
-        projects: [{ id: TEST_PROJECT_ID, name: 'P', description: null, organizationId: null, organization: null, role: 'OWNER', _count: { testSuites: 0 }, createdAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-01T00:00:00.000Z' }],
+        projects: [
+          {
+            id: TEST_PROJECT_ID,
+            name: 'P',
+            description: null,
+            organizationId: null,
+            organization: null,
+            role: 'OWNER',
+            _count: { testSuites: 0 },
+            createdAt: '2025-01-01T00:00:00.000Z',
+            updatedAt: '2025-01-01T00:00:00.000Z',
+          },
+        ],
         pagination: { total: 1, limit: 50, offset: 0, hasMore: false },
       });
       const r1 = await callMcpTool(app, sessionId, 'search_project', {}, 2);
@@ -667,27 +810,67 @@ describe('MCPワークフロー統合テスト', () => {
 
       // 作成ツール
       mockApiClientPost.mockResolvedValueOnce({
-        testSuite: { id: TEST_SUITE_ID, projectId: TEST_PROJECT_ID, name: 'S', description: null, status: 'DRAFT', createdAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-01T00:00:00.000Z' },
+        testSuite: {
+          id: TEST_SUITE_ID,
+          projectId: TEST_PROJECT_ID,
+          name: 'S',
+          description: null,
+          status: 'DRAFT',
+          createdAt: '2025-01-01T00:00:00.000Z',
+          updatedAt: '2025-01-01T00:00:00.000Z',
+        },
       });
-      const r2 = await callMcpTool(app, sessionId, 'create_test_suite', { projectId: TEST_PROJECT_ID, name: 'S' }, 3);
+      const r2 = await callMcpTool(
+        app,
+        sessionId,
+        'create_test_suite',
+        { projectId: TEST_PROJECT_ID, name: 'S' },
+        3
+      );
       expect(r2.status).toBe(200);
 
       // 作成ツール（実行）
       mockApiClientPost.mockResolvedValueOnce({
-        execution: { id: TEST_EXECUTION_ID, testSuiteId: TEST_SUITE_ID, environmentId: null, createdAt: '2025-01-01T00:00:00.000Z', updatedAt: '2025-01-01T00:00:00.000Z' },
+        execution: {
+          id: TEST_EXECUTION_ID,
+          testSuiteId: TEST_SUITE_ID,
+          environmentId: null,
+          createdAt: '2025-01-01T00:00:00.000Z',
+          updatedAt: '2025-01-01T00:00:00.000Z',
+        },
       });
-      const r3 = await callMcpTool(app, sessionId, 'create_execution', { testSuiteId: TEST_SUITE_ID }, 4);
+      const r3 = await callMcpTool(
+        app,
+        sessionId,
+        'create_execution',
+        { testSuiteId: TEST_SUITE_ID },
+        4
+      );
       expect(r3.status).toBe(200);
 
       // 更新ツール
       mockApiClientPatch.mockResolvedValueOnce({
-        stepResult: { id: TEST_STEP_RESULT_ID, executionId: TEST_EXECUTION_ID, status: 'DONE', note: null, executedAt: '2025-01-01T00:00:00.000Z', executedByUser: null, executedByAgentName: null },
+        stepResult: {
+          id: TEST_STEP_RESULT_ID,
+          executionId: TEST_EXECUTION_ID,
+          status: 'DONE',
+          note: null,
+          executedAt: '2025-01-01T00:00:00.000Z',
+          executedByUser: null,
+          executedByAgentName: null,
+        },
       });
-      const r4 = await callMcpTool(app, sessionId, 'update_execution_step_result', {
-        executionId: TEST_EXECUTION_ID,
-        stepResultId: TEST_STEP_RESULT_ID,
-        status: 'DONE',
-      }, 5);
+      const r4 = await callMcpTool(
+        app,
+        sessionId,
+        'update_execution_step_result',
+        {
+          executionId: TEST_EXECUTION_ID,
+          stepResultId: TEST_STEP_RESULT_ID,
+          status: 'DONE',
+        },
+        5
+      );
       expect(r4.status).toBe(200);
 
       // すべてのレスポンスが正常であることを確認
@@ -707,9 +890,15 @@ describe('MCPワークフロー統合テスト', () => {
         new Error('Internal API error: 500 - Internal server error')
       );
 
-      const failedResponse = await callMcpTool(app, sessionId, 'create_execution', {
-        testSuiteId: TEST_SUITE_ID,
-      }, 2);
+      const failedResponse = await callMcpTool(
+        app,
+        sessionId,
+        'create_execution',
+        {
+          testSuiteId: TEST_SUITE_ID,
+        },
+        2
+      );
 
       expect(failedResponse.status).toBe(200); // MCPプロトコルとしては200（エラーはコンテンツ内）
       const failedResult = parseToolResult(failedResponse);
@@ -727,9 +916,15 @@ describe('MCPワークフロー統合テスト', () => {
         },
       });
 
-      const retryResponse = await callMcpTool(app, sessionId, 'create_execution', {
-        testSuiteId: TEST_SUITE_ID,
-      }, 3);
+      const retryResponse = await callMcpTool(
+        app,
+        sessionId,
+        'create_execution',
+        {
+          testSuiteId: TEST_SUITE_ID,
+        },
+        3
+      );
 
       expect(retryResponse.status).toBe(200);
       const retryResult = parseToolResult(retryResponse);
@@ -747,9 +942,15 @@ describe('MCPワークフロー統合テスト', () => {
         new Error('Internal API error: 404 - Test suite not found')
       );
 
-      const failedResponse = await callMcpTool(app, sessionId, 'create_execution', {
-        testSuiteId: wrongSuiteId,
-      }, 2);
+      const failedResponse = await callMcpTool(
+        app,
+        sessionId,
+        'create_execution',
+        {
+          testSuiteId: wrongSuiteId,
+        },
+        2
+      );
 
       const failedResult = parseToolResult(failedResponse);
       expect(failedResult.isError).toBe(true);
@@ -766,9 +967,15 @@ describe('MCPワークフロー統合テスト', () => {
         },
       });
 
-      const retryResponse = await callMcpTool(app, sessionId, 'create_execution', {
-        testSuiteId: TEST_SUITE_ID,
-      }, 3);
+      const retryResponse = await callMcpTool(
+        app,
+        sessionId,
+        'create_execution',
+        {
+          testSuiteId: TEST_SUITE_ID,
+        },
+        3
+      );
 
       expect(retryResponse.status).toBe(200);
       const retryResult = parseToolResult(retryResponse);
@@ -781,9 +988,7 @@ describe('MCPワークフロー統合テスト', () => {
       const sessionId = await initializeMcpSession(app, { projectId: testProject.id });
 
       // 1回目: ネットワークエラー
-      mockApiClientGet.mockRejectedValueOnce(
-        new Error('fetch failed: ECONNREFUSED')
-      );
+      mockApiClientGet.mockRejectedValueOnce(new Error('fetch failed: ECONNREFUSED'));
 
       const failedResponse = await callMcpTool(app, sessionId, 'search_project', {}, 2);
       const failedResult = parseToolResult(failedResponse);
@@ -791,17 +996,19 @@ describe('MCPワークフロー統合テスト', () => {
 
       // 2回目: ネットワーク復旧後に同じセッションで再試行
       mockApiClientGet.mockResolvedValueOnce({
-        projects: [{
-          id: TEST_PROJECT_ID,
-          name: 'テストプロジェクト',
-          description: null,
-          organizationId: null,
-          organization: null,
-          role: 'OWNER',
-          _count: { testSuites: 0 },
-          createdAt: '2025-01-01T00:00:00.000Z',
-          updatedAt: '2025-01-01T00:00:00.000Z',
-        }],
+        projects: [
+          {
+            id: TEST_PROJECT_ID,
+            name: 'テストプロジェクト',
+            description: null,
+            organizationId: null,
+            organization: null,
+            role: 'OWNER',
+            _count: { testSuites: 0 },
+            createdAt: '2025-01-01T00:00:00.000Z',
+            updatedAt: '2025-01-01T00:00:00.000Z',
+          },
+        ],
         pagination: { total: 1, limit: 50, offset: 0, hasMore: false },
       });
 
@@ -821,12 +1028,18 @@ describe('MCPワークフロー統合テスト', () => {
         new Error('Internal API error: 503 - Storage service unavailable')
       );
 
-      const failedResponse = await callMcpTool(app, sessionId, 'upload_execution_evidence', {
-        executionId: TEST_EXECUTION_ID,
-        expectedResultId: TEST_EXPECTED_RESULT_ID,
-        filePath: '/tmp/evidence.png',
-        description: 'テストエビデンス',
-      }, 2);
+      const failedResponse = await callMcpTool(
+        app,
+        sessionId,
+        'upload_execution_evidence',
+        {
+          executionId: TEST_EXECUTION_ID,
+          expectedResultId: TEST_EXPECTED_RESULT_ID,
+          filePath: '/tmp/evidence.png',
+          description: 'テストエビデンス',
+        },
+        2
+      );
 
       const failedResult = parseToolResult(failedResponse);
       expect(failedResult.isError).toBe(true);
@@ -838,12 +1051,18 @@ describe('MCPワークフロー統合テスト', () => {
         uploadUrl: 'https://minio.example.com/presigned-put-url',
       });
 
-      const retryResponse = await callMcpTool(app, sessionId, 'upload_execution_evidence', {
-        executionId: TEST_EXECUTION_ID,
-        expectedResultId: TEST_EXPECTED_RESULT_ID,
-        filePath: '/tmp/evidence.png',
-        description: 'テストエビデンス',
-      }, 3);
+      const retryResponse = await callMcpTool(
+        app,
+        sessionId,
+        'upload_execution_evidence',
+        {
+          executionId: TEST_EXECUTION_ID,
+          expectedResultId: TEST_EXPECTED_RESULT_ID,
+          filePath: '/tmp/evidence.png',
+          description: 'テストエビデンス',
+        },
+        3
+      );
 
       expect(retryResponse.status).toBe(200);
       const retryResult = parseToolResult(retryResponse);

@@ -238,8 +238,8 @@ function InlineCommentItem({
             </button>
           )}
           {/* 解決済み/未解決ボタン（編集権限のみ） */}
-          {canEdit && (
-            comment.status === 'OPEN' ? (
+          {canEdit &&
+            (comment.status === 'OPEN' ? (
               <button
                 type="button"
                 onClick={() => handleStatusChange('RESOLVED')}
@@ -259,8 +259,7 @@ function InlineCommentItem({
               >
                 <RotateCcw className="w-4 h-4" />
               </button>
-            )
-          )}
+            ))}
         </div>
       </div>
 

@@ -149,7 +149,7 @@ describe('WebSocket接続 統合テスト', () => {
       timestamp: Date.now(),
     });
 
-    const message = await waitForMessage(ws, 'authenticated') as {
+    const message = (await waitForMessage(ws, 'authenticated')) as {
       type: string;
       userId: string;
       timestamp: number;
@@ -176,7 +176,7 @@ describe('WebSocket接続 統合テスト', () => {
       timestamp: Date.now(),
     });
 
-    const errorMsg = await waitForMessage(ws, 'error') as {
+    const errorMsg = (await waitForMessage(ws, 'error')) as {
       type: string;
       code: string;
     };
@@ -199,7 +199,7 @@ describe('WebSocket接続 統合テスト', () => {
       timestamp: Date.now(),
     });
 
-    const errorMsg = await waitForMessage(ws, 'error') as {
+    const errorMsg = (await waitForMessage(ws, 'error')) as {
       type: string;
       code: string;
       message: string;
@@ -224,7 +224,7 @@ describe('WebSocket接続 統合テスト', () => {
       timestamp: Date.now(),
     });
 
-    const errorMsg = await waitForMessage(ws, 'error') as {
+    const errorMsg = (await waitForMessage(ws, 'error')) as {
       type: string;
       code: string;
     };
@@ -286,7 +286,7 @@ describe('WebSocket接続 統合テスト', () => {
     sendMessage(ws, { type: 'ping', timestamp: Date.now() });
 
     // pongレスポンスを受信
-    const pongMsg = await waitForMessage(ws, 'pong') as {
+    const pongMsg = (await waitForMessage(ws, 'pong')) as {
       type: string;
       timestamp: number;
     };
@@ -322,7 +322,7 @@ describe('WebSocket接続 統合テスト', () => {
       timestamp: Date.now(),
     });
 
-    const subscribedMsg = await waitForMessage(ws, 'subscribed') as {
+    const subscribedMsg = (await waitForMessage(ws, 'subscribed')) as {
       type: string;
       channels: string[];
       timestamp: number;
@@ -387,10 +387,7 @@ describe('WebSocket接続 統合テスト', () => {
 
     await waitForMessage(ws, 'authenticated');
 
-    const channels = [
-      `project:${TEST_PROJECT_ID}`,
-      `test_suite:${TEST_PROJECT_ID}`,
-    ];
+    const channels = [`project:${TEST_PROJECT_ID}`, `test_suite:${TEST_PROJECT_ID}`];
 
     sendMessage(ws, {
       type: 'subscribe',
@@ -398,7 +395,7 @@ describe('WebSocket接続 統合テスト', () => {
       timestamp: Date.now(),
     });
 
-    const subscribedMsg = await waitForMessage(ws, 'subscribed') as {
+    const subscribedMsg = (await waitForMessage(ws, 'subscribed')) as {
       type: string;
       channels: string[];
     };
@@ -432,7 +429,7 @@ describe('WebSocket接続 統合テスト', () => {
     // 不正なJSON文字列を送信
     ws.send('これはJSONではない');
 
-    const errorMsg = await waitForMessage(ws, 'error') as {
+    const errorMsg = (await waitForMessage(ws, 'error')) as {
       type: string;
       code: string;
       message: string;
@@ -457,8 +454,12 @@ describe('WebSocket接続 統合テスト', () => {
 
     // 両方の接続確立を待つ
     await Promise.all([
-      new Promise<void>((resolve) => { ws1.on('open', resolve); }),
-      new Promise<void>((resolve) => { ws2.on('open', resolve); }),
+      new Promise<void>((resolve) => {
+        ws1.on('open', resolve);
+      }),
+      new Promise<void>((resolve) => {
+        ws2.on('open', resolve);
+      }),
     ]);
 
     // authenticateメッセージで認証
@@ -514,7 +515,7 @@ describe('WebSocket接続 統合テスト', () => {
     // 認証せずにpingを送信
     sendMessage(ws, { type: 'ping', timestamp: Date.now() });
 
-    const errorMsg = await waitForMessage(ws, 'error') as {
+    const errorMsg = (await waitForMessage(ws, 'error')) as {
       type: string;
       code: string;
     };
@@ -546,7 +547,7 @@ describe('WebSocket接続 統合テスト', () => {
       timestamp: Date.now(),
     });
 
-    const errorMsg = await waitForMessage(ws, 'error') as {
+    const errorMsg = (await waitForMessage(ws, 'error')) as {
       type: string;
       code: string;
     };
@@ -572,7 +573,7 @@ describe('WebSocket接続 統合テスト', () => {
     }
 
     // TOO_MANY_ATTEMPTSエラーを受信
-    const errorMsg = await waitForMessage(ws, 'error') as {
+    const errorMsg = (await waitForMessage(ws, 'error')) as {
       type: string;
       code: string;
     };
@@ -607,7 +608,7 @@ describe('WebSocket接続 統合テスト', () => {
     clients.push(ws);
 
     // open前にメッセージリスナーを登録（サーバーが先にauthenticatedを送信するため）
-    const message = await waitForMessage(ws, 'authenticated') as {
+    const message = (await waitForMessage(ws, 'authenticated')) as {
       type: string;
       userId: string;
       timestamp: number;
@@ -656,7 +657,7 @@ describe('WebSocket接続 統合テスト', () => {
       timestamp: Date.now(),
     });
 
-    const message = await waitForMessage(ws, 'authenticated') as {
+    const message = (await waitForMessage(ws, 'authenticated')) as {
       type: string;
       userId: string;
     };
@@ -709,7 +710,7 @@ describe('WebSocket接続 統合テスト', () => {
       timestamp: Date.now(),
     });
 
-    const errorMsg = await waitForMessage(ws, 'error') as {
+    const errorMsg = (await waitForMessage(ws, 'error')) as {
       type: string;
       code: string;
     };

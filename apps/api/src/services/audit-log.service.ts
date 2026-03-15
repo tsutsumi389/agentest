@@ -36,9 +36,7 @@ export class AuditLogService {
   /**
    * @param auditLogRepo - 監査ログリポジトリ（テスト時にモック可能）
    */
-  constructor(
-    private auditLogRepo: AuditLogRepository = new AuditLogRepository()
-  ) {}
+  constructor(private auditLogRepo: AuditLogRepository = new AuditLogRepository()) {}
 
   /**
    * 監査ログを記録
@@ -110,7 +108,17 @@ export class AuditLogService {
   formatAsCSV(logs: AuditLogWithUser[]): string {
     // BOM付きUTF-8（Excel対応）
     const BOM = '\uFEFF';
-    const headers = ['ID', '日時', 'カテゴリ', 'アクション', 'ユーザー', '対象タイプ', '対象ID', 'IPアドレス', '詳細'];
+    const headers = [
+      'ID',
+      '日時',
+      'カテゴリ',
+      'アクション',
+      'ユーザー',
+      '対象タイプ',
+      '対象ID',
+      'IPアドレス',
+      '詳細',
+    ];
 
     const escapeCSV = (value: string | null | undefined): string => {
       if (value === null || value === undefined) return '';
@@ -136,7 +144,9 @@ export class AuditLogService {
         log.targetId || '',
         log.ipAddress || '',
         details,
-      ].map(escapeCSV).join(',');
+      ]
+        .map(escapeCSV)
+        .join(',');
     });
 
     return BOM + headers.join(',') + '\n' + rows.join('\n');
@@ -153,11 +163,13 @@ export class AuditLogService {
       createdAt: log.createdAt instanceof Date ? log.createdAt.toISOString() : log.createdAt,
       category: log.category,
       action: log.action,
-      user: log.user ? {
-        id: log.user.id,
-        email: log.user.email,
-        name: log.user.name,
-      } : null,
+      user: log.user
+        ? {
+            id: log.user.id,
+            email: log.user.email,
+            name: log.user.name,
+          }
+        : null,
       targetType: log.targetType,
       targetId: log.targetId,
       ipAddress: log.ipAddress,

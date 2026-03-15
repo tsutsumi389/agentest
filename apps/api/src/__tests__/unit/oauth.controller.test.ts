@@ -18,7 +18,7 @@ const MockOAuthError = vi.hoisted(() => {
     constructor(
       public error: string,
       public errorDescription: string,
-      public statusCode: number = 400,
+      public statusCode: number = 400
     ) {
       super(errorDescription);
       this.name = 'OAuthError';
@@ -145,14 +145,14 @@ describe('OAuthController', () => {
         expect.objectContaining({
           error: 'invalid_client_metadata',
           error_description: expect.any(String),
-        }),
+        })
       );
       expect(next).not.toHaveBeenCalled();
     });
 
     it('OAuthError時にカスタムステータスコードとエラー情報を返す', async () => {
       mockOAuthService.registerClient.mockRejectedValue(
-        new MockOAuthError('invalid_client', 'Client already exists', 409),
+        new MockOAuthError('invalid_client', 'Client already exists', 409)
       );
 
       const req = mockRequest({ body: validRegistrationBody });
@@ -211,7 +211,7 @@ describe('OAuthController', () => {
       await controller.authorize(req as Request, res as Response, next);
 
       expect(res.redirect).toHaveBeenCalledWith(
-        expect.stringContaining('https://app.example.com/login'),
+        expect.stringContaining('https://app.example.com/login')
       );
       // リダイレクトURLにreturnパラメータが含まれることを確認
       const redirectUrl = vi.mocked(res.redirect!).mock.calls[0][0] as unknown as string;
@@ -228,7 +228,7 @@ describe('OAuthController', () => {
       await controller.authorize(req as Request, res as Response, next);
 
       expect(res.redirect).toHaveBeenCalledWith(
-        expect.stringContaining('https://app.example.com/oauth/consent'),
+        expect.stringContaining('https://app.example.com/oauth/consent')
       );
       // 同意画面URLに必要なパラメータが含まれることを確認
       const redirectUrl = vi.mocked(res.redirect!).mock.calls[0][0] as unknown as string;
@@ -253,14 +253,14 @@ describe('OAuthController', () => {
         expect.objectContaining({
           error: 'invalid_request',
           error_description: expect.any(String),
-        }),
+        })
       );
       expect(next).not.toHaveBeenCalled();
     });
 
     it('OAuthError時にステータスコードとエラー情報を返す', async () => {
       mockOAuthService.validateAuthorizeRequest.mockRejectedValue(
-        new MockOAuthError('invalid_client', 'Unknown client_id', 400),
+        new MockOAuthError('invalid_client', 'Unknown client_id', 400)
       );
 
       const req = mockRequest({ query: validAuthorizeQuery });
@@ -315,7 +315,7 @@ describe('OAuthController', () => {
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           redirect_url: expect.any(String),
-        }),
+        })
       );
       // リダイレクトURLにaccess_deniedエラーが含まれることを確認
       const result = vi.mocked(res.json!).mock.calls[0][0] as { redirect_url: string };
@@ -354,7 +354,7 @@ describe('OAuthController', () => {
 
     it('OAuthError発生時にredirect_uriがあればリダイレクトURLを返す', async () => {
       mockOAuthService.issueAuthorizationCode.mockRejectedValue(
-        new MockOAuthError('server_error', 'Internal error', 500),
+        new MockOAuthError('server_error', 'Internal error', 500)
       );
 
       const req = mockRequest({ body: consentBody });
@@ -366,7 +366,7 @@ describe('OAuthController', () => {
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({
           redirect_url: expect.any(String),
-        }),
+        })
       );
       const result = vi.mocked(res.json!).mock.calls[0][0] as { redirect_url: string };
       const redirectUrl = new URL(result.redirect_url);
@@ -377,7 +377,7 @@ describe('OAuthController', () => {
 
     it('OAuthError発生時にredirect_uriがなければステータスコードとJSONを返す', async () => {
       mockOAuthService.issueAuthorizationCode.mockRejectedValue(
-        new MockOAuthError('invalid_client', 'Client not found', 400),
+        new MockOAuthError('invalid_client', 'Client not found', 400)
       );
 
       // redirect_uriを含まないボディ
@@ -444,14 +444,14 @@ describe('OAuthController', () => {
         expect.objectContaining({
           error: 'invalid_request',
           error_description: expect.any(String),
-        }),
+        })
       );
       expect(next).not.toHaveBeenCalled();
     });
 
     it('OAuthError時にステータスコードとエラー情報を返す', async () => {
       mockOAuthService.exchangeCodeForToken.mockRejectedValue(
-        new MockOAuthError('invalid_grant', 'Authorization code expired', 400),
+        new MockOAuthError('invalid_grant', 'Authorization code expired', 400)
       );
 
       const req = mockRequest({ body: validTokenBody });
@@ -503,7 +503,7 @@ describe('OAuthController', () => {
         expect.objectContaining({
           error: 'invalid_request',
           error_description: expect.any(String),
-        }),
+        })
       );
       expect(next).not.toHaveBeenCalled();
     });
@@ -541,7 +541,7 @@ describe('OAuthController', () => {
         expect.objectContaining({
           error: 'invalid_request',
           error_description: expect.any(String),
-        }),
+        })
       );
       expect(next).not.toHaveBeenCalled();
     });

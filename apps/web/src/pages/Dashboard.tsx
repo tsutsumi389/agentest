@@ -12,7 +12,11 @@ export function DashboardPage() {
   const { user } = useAuthStore();
 
   // プロジェクト一覧を取得
-  const { data: projectsData, isLoading, isError } = useQuery({
+  const {
+    data: projectsData,
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ['user-projects', user?.id],
     queryFn: () => usersApi.getProjects(user!.id),
     enabled: !!user?.id,
@@ -45,15 +49,11 @@ export function DashboardPage() {
         </div>
 
         {isLoading ? (
-          <div className="p-8 text-center text-foreground-muted">
-            読み込み中...
-          </div>
+          <div className="p-8 text-center text-foreground-muted">読み込み中...</div>
         ) : projects.length === 0 ? (
           <div className="p-8 text-center">
             <FolderKanban className="w-12 h-12 text-foreground-subtle mx-auto mb-3" />
-            <p className="text-foreground-muted mb-4">
-              プロジェクトがありません
-            </p>
+            <p className="text-foreground-muted mb-4">プロジェクトがありません</p>
             <Link to="/projects" className="btn btn-primary">
               プロジェクトを作成
             </Link>

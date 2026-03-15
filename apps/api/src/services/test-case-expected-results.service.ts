@@ -28,7 +28,12 @@ export class TestCaseExpectedResultsService extends TestCaseChildrenBaseService 
    * 期待結果を追加
    * @param groupId 外部から指定されたgroupId（省略時は自動生成）
    */
-  async addExpectedResult(testCaseId: string, userId: string, data: { content: string; orderKey?: string }, groupId?: string) {
+  async addExpectedResult(
+    testCaseId: string,
+    userId: string,
+    data: { content: string; orderKey?: string },
+    groupId?: string
+  ) {
     const testCase = await this.findById(testCaseId);
 
     const effectiveGroupId = groupId ?? crypto.randomUUID();
@@ -53,7 +58,13 @@ export class TestCaseExpectedResultsService extends TestCaseChildrenBaseService 
       // 履歴を保存
       const snapshot: HistorySnapshot = {
         ...this.buildBaseSnapshot(testCase),
-        expectedResults: [{ id: expectedResult.id, content: expectedResult.content, orderKey: expectedResult.orderKey }],
+        expectedResults: [
+          {
+            id: expectedResult.id,
+            content: expectedResult.content,
+            orderKey: expectedResult.orderKey,
+          },
+        ],
         changeDetail: {
           type: 'EXPECTED_RESULT_ADD',
           expectedResultId: expectedResult.id,
@@ -65,7 +76,11 @@ export class TestCaseExpectedResultsService extends TestCaseChildrenBaseService 
 
       // テストケース更新イベント発行（エラー時も処理継続）
       await this.publishEventSafely(
-        tx, testCaseId, testCase.testSuiteId, testCase.testSuite.projectId, userId,
+        tx,
+        testCaseId,
+        testCase.testSuiteId,
+        testCase.testSuite.projectId,
+        userId,
         [{ field: 'expectedResult:add', oldValue: null, newValue: expectedResult.id }]
       );
 
@@ -77,7 +92,13 @@ export class TestCaseExpectedResultsService extends TestCaseChildrenBaseService 
    * 期待結果を更新
    * @param groupId 外部から指定されたgroupId（省略時は自動生成）
    */
-  async updateExpectedResult(testCaseId: string, expectedResultId: string, userId: string, data: { content: string }, groupId?: string) {
+  async updateExpectedResult(
+    testCaseId: string,
+    expectedResultId: string,
+    userId: string,
+    data: { content: string },
+    groupId?: string
+  ) {
     const testCase = await this.findById(testCaseId);
 
     // 期待結果の存在確認
@@ -98,7 +119,13 @@ export class TestCaseExpectedResultsService extends TestCaseChildrenBaseService 
     return prisma.$transaction(async (tx) => {
       const snapshot: HistorySnapshot = {
         ...this.buildBaseSnapshot(testCase),
-        expectedResults: [{ id: expectedResult.id, content: expectedResult.content, orderKey: expectedResult.orderKey }],
+        expectedResults: [
+          {
+            id: expectedResult.id,
+            content: expectedResult.content,
+            orderKey: expectedResult.orderKey,
+          },
+        ],
         changeDetail: {
           type: 'EXPECTED_RESULT_UPDATE',
           expectedResultId,
@@ -116,8 +143,18 @@ export class TestCaseExpectedResultsService extends TestCaseChildrenBaseService 
 
       // テストケース更新イベント発行（エラー時も処理継続）
       await this.publishEventSafely(
-        tx, testCaseId, testCase.testSuiteId, testCase.testSuite.projectId, userId,
-        [{ field: 'expectedResult:update', oldValue: expectedResult.content, newValue: data.content }]
+        tx,
+        testCaseId,
+        testCase.testSuiteId,
+        testCase.testSuite.projectId,
+        userId,
+        [
+          {
+            field: 'expectedResult:update',
+            oldValue: expectedResult.content,
+            newValue: data.content,
+          },
+        ]
       );
 
       return result;
@@ -128,7 +165,12 @@ export class TestCaseExpectedResultsService extends TestCaseChildrenBaseService 
    * 期待結果を削除
    * @param groupId 外部から指定されたgroupId（省略時は自動生成）
    */
-  async deleteExpectedResult(testCaseId: string, expectedResultId: string, userId: string, groupId?: string) {
+  async deleteExpectedResult(
+    testCaseId: string,
+    expectedResultId: string,
+    userId: string,
+    groupId?: string
+  ) {
     const testCase = await this.findById(testCaseId);
 
     // 期待結果の存在確認
@@ -141,7 +183,13 @@ export class TestCaseExpectedResultsService extends TestCaseChildrenBaseService 
 
     const snapshot: HistorySnapshot = {
       ...this.buildBaseSnapshot(testCase),
-      expectedResults: [{ id: expectedResult.id, content: expectedResult.content, orderKey: expectedResult.orderKey }],
+      expectedResults: [
+        {
+          id: expectedResult.id,
+          content: expectedResult.content,
+          orderKey: expectedResult.orderKey,
+        },
+      ],
       changeDetail: {
         type: 'EXPECTED_RESULT_DELETE',
         expectedResultId,
@@ -177,7 +225,11 @@ export class TestCaseExpectedResultsService extends TestCaseChildrenBaseService 
 
       // テストケース更新イベント発行（エラー時も処理継続）
       await this.publishEventSafely(
-        tx, testCaseId, testCase.testSuiteId, testCase.testSuite.projectId, userId,
+        tx,
+        testCaseId,
+        testCase.testSuiteId,
+        testCase.testSuite.projectId,
+        userId,
         [{ field: 'expectedResult:delete', oldValue: expectedResultId, newValue: null }]
       );
     });
@@ -187,7 +239,12 @@ export class TestCaseExpectedResultsService extends TestCaseChildrenBaseService 
    * 期待結果を並び替え
    * @param groupId 外部から指定されたgroupId（省略時は自動生成）
    */
-  async reorderExpectedResults(testCaseId: string, expectedResultIds: string[], userId: string, groupId?: string) {
+  async reorderExpectedResults(
+    testCaseId: string,
+    expectedResultIds: string[],
+    userId: string,
+    groupId?: string
+  ) {
     const testCase = await this.findById(testCaseId);
 
     // 全ての期待結果を取得
@@ -229,7 +286,11 @@ export class TestCaseExpectedResultsService extends TestCaseChildrenBaseService 
     // 履歴を保存（並び替え前の状態）
     const snapshot: HistorySnapshot = {
       ...this.buildBaseSnapshot(testCase),
-      expectedResults: expectedResults.map((e) => ({ id: e.id, content: e.content, orderKey: e.orderKey })),
+      expectedResults: expectedResults.map((e) => ({
+        id: e.id,
+        content: e.content,
+        orderKey: e.orderKey,
+      })),
       changeDetail: {
         type: 'EXPECTED_RESULT_REORDER',
         before: expectedResults.map((e) => e.id),
@@ -254,7 +315,11 @@ export class TestCaseExpectedResultsService extends TestCaseChildrenBaseService 
 
       // テストケース更新イベント発行（エラー時も処理継続）
       await this.publishEventSafely(
-        tx, testCaseId, testCase.testSuiteId, testCase.testSuite.projectId, userId,
+        tx,
+        testCaseId,
+        testCase.testSuiteId,
+        testCase.testSuite.projectId,
+        userId,
         [{ field: 'expectedResult:reorder', oldValue: currentOrder, newValue: expectedResultIds }]
       );
     });

@@ -44,9 +44,8 @@ function getVisibilityState(): DocumentVisibilityState {
  * ```
  */
 export function usePageVisibility(): UsePageVisibilityReturn {
-  const [visibilityState, setVisibilityState] = useState<DocumentVisibilityState>(
-    getVisibilityState
-  );
+  const [visibilityState, setVisibilityState] =
+    useState<DocumentVisibilityState>(getVisibilityState);
 
   useEffect(() => {
     const handleVisibilityChange = () => {

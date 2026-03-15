@@ -70,9 +70,7 @@
       "project": ["src/**/*.ts"]
     }
   },
-  "ignore": [
-    "e2e/**"
-  ],
+  "ignore": ["e2e/**"],
   "ignoreDependencies": [
     "autoprefixer",
     "postcss",
@@ -82,7 +80,5 @@
     "@prisma/client",
     "vite-plugin-singlefile"
   ],
-  "ignoreBinaries": [
-    "playwright"
-  ]
+  "ignoreBinaries": ["playwright"]
 }

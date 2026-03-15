@@ -114,7 +114,10 @@ describe('NotificationService', () => {
         readAt: null,
       };
       mockNotificationRepo.findById.mockResolvedValue(mockNotification);
-      mockNotificationRepo.markAsRead.mockResolvedValue({ ...mockNotification, readAt: new Date() });
+      mockNotificationRepo.markAsRead.mockResolvedValue({
+        ...mockNotification,
+        readAt: new Date(),
+      });
       mockNotificationRepo.countUnread.mockResolvedValue(4);
 
       const result = await service.markAsRead('user-1', 'notif-1');
@@ -172,15 +175,15 @@ describe('NotificationService', () => {
         userId: 'other-user',
       });
 
-      await expect(service.deleteNotification('user-1', 'notif-1')).rejects.toThrow(AuthorizationError);
+      await expect(service.deleteNotification('user-1', 'notif-1')).rejects.toThrow(
+        AuthorizationError
+      );
     });
   });
 
   describe('getPreferences', () => {
     it('通知設定を取得できる', async () => {
-      const mockPreferences = [
-        { type: 'ORG_INVITATION', emailEnabled: true, inAppEnabled: true },
-      ];
+      const mockPreferences = [{ type: 'ORG_INVITATION', emailEnabled: true, inAppEnabled: true }];
       mockNotificationRepo.getPreferences.mockResolvedValue(mockPreferences);
 
       const result = await service.getPreferences('user-1');
@@ -368,7 +371,7 @@ describe('NotificationService', () => {
     it('subjectの改行文字を除去してSMTPヘッダーインジェクションを防止する', async () => {
       await service.send({
         ...baseSendParams,
-        title: "テスト\r\nBcc: attacker@evil.com",
+        title: 'テスト\r\nBcc: attacker@evil.com',
       });
 
       const emailCall = mockEmailService.send.mock.calls[0]?.[0];

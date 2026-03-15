@@ -24,9 +24,7 @@ describe('organization store', () => {
 
   describe('setOrganizations', () => {
     it('組織一覧を設定する', () => {
-      const orgs = [
-        { organization: createMockOrganization(), role: 'OWNER' as const },
-      ];
+      const orgs = [{ organization: createMockOrganization(), role: 'OWNER' as const }];
       useOrganizationStore.getState().setOrganizations(orgs);
       expect(useOrganizationStore.getState().organizations).toEqual(orgs);
     });
@@ -39,17 +37,21 @@ describe('organization store', () => {
 
     it('選択中の組織が含まれていない場合はリセットする', () => {
       useOrganizationStore.setState({ selectedOrganizationId: 'org-removed' });
-      useOrganizationStore.getState().setOrganizations([
-        { organization: createMockOrganization({ id: 'org-1' }), role: 'OWNER' },
-      ]);
+      useOrganizationStore
+        .getState()
+        .setOrganizations([
+          { organization: createMockOrganization({ id: 'org-1' }), role: 'OWNER' },
+        ]);
       expect(useOrganizationStore.getState().selectedOrganizationId).toBeNull();
     });
 
     it('選択中の組織が含まれている場合はそのまま', () => {
       useOrganizationStore.setState({ selectedOrganizationId: 'org-1' });
-      useOrganizationStore.getState().setOrganizations([
-        { organization: createMockOrganization({ id: 'org-1' }), role: 'OWNER' },
-      ]);
+      useOrganizationStore
+        .getState()
+        .setOrganizations([
+          { organization: createMockOrganization({ id: 'org-1' }), role: 'OWNER' },
+        ]);
       expect(useOrganizationStore.getState().selectedOrganizationId).toBe('org-1');
     });
   });
@@ -100,18 +102,20 @@ describe('organization store', () => {
 
   describe('updateOrganization', () => {
     it('組織を更新する', () => {
-      useOrganizationStore.getState().setOrganizations([
-        { organization: createMockOrganization({ id: 'org-1', name: '旧名前' }), role: 'OWNER' },
-      ]);
+      useOrganizationStore
+        .getState()
+        .setOrganizations([
+          { organization: createMockOrganization({ id: 'org-1', name: '旧名前' }), role: 'OWNER' },
+        ]);
       useOrganizationStore.getState().updateOrganization('org-1', { name: '新名前' });
       const { organizations } = useOrganizationStore.getState();
       expect(organizations[0].organization.name).toBe('新名前');
     });
 
     it('存在しない組織IDを指定しても安全', () => {
-      useOrganizationStore.getState().setOrganizations([
-        { organization: createMockOrganization(), role: 'OWNER' },
-      ]);
+      useOrganizationStore
+        .getState()
+        .setOrganizations([{ organization: createMockOrganization(), role: 'OWNER' }]);
       useOrganizationStore.getState().updateOrganization('nonexistent', { name: '新名前' });
       expect(useOrganizationStore.getState().organizations[0].organization.name).toBe('テスト組織');
     });
@@ -130,9 +134,11 @@ describe('organization store', () => {
     });
 
     it('削除した組織が選択中だった場合はリセットする', () => {
-      useOrganizationStore.getState().setOrganizations([
-        { organization: createMockOrganization({ id: 'org-1' }), role: 'OWNER' },
-      ]);
+      useOrganizationStore
+        .getState()
+        .setOrganizations([
+          { organization: createMockOrganization({ id: 'org-1' }), role: 'OWNER' },
+        ]);
       useOrganizationStore.getState().selectOrganization('org-1');
       useOrganizationStore.getState().removeOrganization('org-1');
       expect(useOrganizationStore.getState().selectedOrganizationId).toBeNull();
@@ -151,9 +157,9 @@ describe('organization store', () => {
 
   describe('reset', () => {
     it('ストアを初期状態にリセットする', () => {
-      useOrganizationStore.getState().setOrganizations([
-        { organization: createMockOrganization(), role: 'OWNER' },
-      ]);
+      useOrganizationStore
+        .getState()
+        .setOrganizations([{ organization: createMockOrganization(), role: 'OWNER' }]);
       useOrganizationStore.getState().selectOrganization('org-1');
       useOrganizationStore.getState().setError('エラー');
 
@@ -174,9 +180,7 @@ describe('organization store', () => {
 
     it('選択中の組織を返す', () => {
       const org = createMockOrganization({ id: 'org-1' });
-      useOrganizationStore.getState().setOrganizations([
-        { organization: org, role: 'OWNER' },
-      ]);
+      useOrganizationStore.getState().setOrganizations([{ organization: org, role: 'OWNER' }]);
       useOrganizationStore.getState().selectOrganization('org-1');
 
       const { result } = renderHook(() => useSelectedOrganization());
@@ -193,9 +197,11 @@ describe('organization store', () => {
     });
 
     it('選択中の組織のロールを返す', () => {
-      useOrganizationStore.getState().setOrganizations([
-        { organization: createMockOrganization({ id: 'org-1' }), role: 'ADMIN' },
-      ]);
+      useOrganizationStore
+        .getState()
+        .setOrganizations([
+          { organization: createMockOrganization({ id: 'org-1' }), role: 'ADMIN' },
+        ]);
       useOrganizationStore.getState().selectOrganization('org-1');
 
       const { result } = renderHook(() => useCurrentOrganizationRole());

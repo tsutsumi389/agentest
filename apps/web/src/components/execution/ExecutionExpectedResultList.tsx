@@ -5,10 +5,7 @@ import type {
   ExecutionExpectedResult,
   ExpectedResultStatus,
 } from '../../lib/api';
-import {
-  expectedResultStatusOptions,
-  getExpectedStatusConfig,
-} from '../../lib/execution-status';
+import { expectedResultStatusOptions, getExpectedStatusConfig } from '../../lib/execution-status';
 import { ExecutionResultItem } from './ExecutionResultItem';
 import { ExecutionEvidenceList } from './ExecutionEvidenceList';
 import { ExecutionEvidenceUpload } from './ExecutionEvidenceUpload';
@@ -70,9 +67,7 @@ export function ExecutionExpectedResultList({
   }
 
   // 正規化テーブルIDから結果をマップ
-  const resultMap = new Map(
-    results.map((r) => [r.executionExpectedResultId, r])
-  );
+  const resultMap = new Map(results.map((r) => [r.executionExpectedResultId, r]));
 
   return (
     <div className="space-y-2">
@@ -90,7 +85,10 @@ export function ExecutionExpectedResultList({
           // 結果が見つからない場合（データ不整合）
           if (!result) {
             return (
-              <div key={expectedResult.id} className="flex gap-3 py-3 border-b border-border last:border-b-0">
+              <div
+                key={expectedResult.id}
+                className="flex gap-3 py-3 border-b border-border last:border-b-0"
+              >
                 <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-background-tertiary text-foreground-muted text-xs font-medium">
                   {index + 1}
                 </div>
@@ -143,9 +141,7 @@ export function ExecutionExpectedResultList({
                     <button
                       type="button"
                       onClick={() =>
-                        setOpenUploadResultId(
-                          openUploadResultId === result.id ? null : result.id
-                        )
+                        setOpenUploadResultId(openUploadResultId === result.id ? null : result.id)
                       }
                       className="mt-2 flex items-center gap-1 text-xs text-foreground-muted hover:text-foreground transition-colors"
                       aria-expanded={openUploadResultId === result.id}
@@ -157,7 +153,9 @@ export function ExecutionExpectedResultList({
                       <ExecutionEvidenceUpload
                         currentCount={result.evidences.length}
                         isUploading={isUploading}
-                        onUpload={(file, description) => onEvidenceUpload(result.id, file, description)}
+                        onUpload={(file, description) =>
+                          onEvidenceUpload(result.id, file, description)
+                        }
                       />
                     )}
                   </>

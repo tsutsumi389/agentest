@@ -18,9 +18,7 @@ import type { TestSuiteSearchItem, JudgmentCounts } from '../repositories/test-s
 /**
  * 期待結果のステータスを集計して判定カウントを返す
  */
-function countJudgmentStatuses(
-  expectedResults: Array<{ status: string }>
-): JudgmentCounts {
+function countJudgmentStatuses(expectedResults: Array<{ status: string }>): JudgmentCounts {
   const counts: JudgmentCounts = {
     PASS: 0,
     FAIL: 0,
@@ -139,7 +137,12 @@ export class ProjectController {
         throw new NotFoundError('User');
       }
 
-      const member = await this.projectService.addMember(projectId, user.id, data.role, req.user!.id);
+      const member = await this.projectService.addMember(
+        projectId,
+        user.id,
+        data.role,
+        req.user!.id
+      );
 
       res.status(201).json({ member });
     } catch (error) {
@@ -212,7 +215,11 @@ export class ProjectController {
     try {
       const { projectId, environmentId } = req.params;
       const data = projectEnvironmentUpdateSchema.parse(req.body);
-      const environment = await this.projectService.updateEnvironment(projectId, environmentId, data);
+      const environment = await this.projectService.updateEnvironment(
+        projectId,
+        environmentId,
+        data
+      );
 
       res.json({ environment });
     } catch (error) {
@@ -241,7 +248,10 @@ export class ProjectController {
     try {
       const { projectId } = req.params;
       const data = projectEnvironmentReorderSchema.parse(req.body);
-      const environments = await this.projectService.reorderEnvironments(projectId, data.environmentIds);
+      const environments = await this.projectService.reorderEnvironments(
+        projectId,
+        data.environmentIds
+      );
 
       res.json({ environments });
     } catch (error) {
@@ -344,7 +354,10 @@ export class ProjectController {
         offset = parsed;
       }
 
-      const { histories, total } = await this.projectService.getHistories(projectId, { limit, offset });
+      const { histories, total } = await this.projectService.getHistories(projectId, {
+        limit,
+        offset,
+      });
 
       res.json({ histories, total });
     } catch (error) {
@@ -378,9 +391,7 @@ export class ProjectController {
       const labelIdsParam = req.query.labelIds as string | undefined;
       const labelIds = labelIdsParam ? labelIdsParam.split(',').filter(Boolean) : undefined;
 
-      const filters = environmentId || labelIds
-        ? { environmentId, labelIds }
-        : undefined;
+      const filters = environmentId || labelIds ? { environmentId, labelIds } : undefined;
 
       const dashboard = await this.dashboardService.getDashboard(projectId, filters);
 

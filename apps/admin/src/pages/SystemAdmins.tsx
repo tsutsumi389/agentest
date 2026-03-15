@@ -8,7 +8,13 @@ import type {
   SystemAdminRole,
   SystemAdminListItem,
 } from '@agentest/shared/types';
-import { useSystemAdmins, useInviteSystemAdmin, useDeleteSystemAdmin, useUnlockSystemAdmin, useReset2FASystemAdmin } from '../hooks/useSystemAdmins';
+import {
+  useSystemAdmins,
+  useInviteSystemAdmin,
+  useDeleteSystemAdmin,
+  useUnlockSystemAdmin,
+  useReset2FASystemAdmin,
+} from '../hooks/useSystemAdmins';
 import {
   SystemAdminTable,
   SystemAdminSearchForm,
@@ -100,7 +106,11 @@ export function SystemAdmins() {
   };
 
   // 招待処理
-  const handleInvite = async (inviteData: { email: string; name: string; role: SystemAdminRole }) => {
+  const handleInvite = async (inviteData: {
+    email: string;
+    name: string;
+    role: SystemAdminRole;
+  }) => {
     await inviteMutation.mutateAsync(inviteData);
   };
 
@@ -148,12 +158,8 @@ export function SystemAdmins() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center py-12">
           <Shield className="w-12 h-12 mx-auto text-foreground-muted mb-4" />
-          <h1 className="text-xl font-semibold text-foreground mb-2">
-            アクセス権限がありません
-          </h1>
-          <p className="text-foreground-muted">
-            このページはSUPER_ADMIN権限が必要です。
-          </p>
+          <h1 className="text-xl font-semibold text-foreground mb-2">アクセス権限がありません</h1>
+          <p className="text-foreground-muted">このページはSUPER_ADMIN権限が必要です。</p>
         </div>
       </div>
     );
@@ -168,9 +174,7 @@ export function SystemAdmins() {
             <Shield className="w-6 h-6 text-accent" />
             <div>
               <h1 className="text-2xl font-bold text-foreground">システム管理者一覧</h1>
-              <p className="text-foreground-muted mt-1">
-                管理者アカウントの管理
-              </p>
+              <p className="text-foreground-muted mt-1">管理者アカウントの管理</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -194,10 +198,7 @@ export function SystemAdmins() {
 
         {/* 検索・フィルター */}
         <div className="bg-background-secondary border border-border rounded-lg p-4 space-y-4">
-          <SystemAdminSearchForm
-            value={params.q || ''}
-            onChange={(q) => updateParams({ q })}
-          />
+          <SystemAdminSearchForm value={params.q || ''} onChange={(q) => updateParams({ q })} />
           <SystemAdminFilters
             role={params.role || []}
             status={params.status || 'active'}
@@ -216,9 +217,7 @@ export function SystemAdmins() {
         {/* テーブル */}
         <div className="bg-background-secondary border border-border rounded-lg">
           {isLoading ? (
-            <div className="text-center text-foreground-muted py-12">
-              読み込み中...
-            </div>
+            <div className="text-center text-foreground-muted py-12">読み込み中...</div>
           ) : data ? (
             <SystemAdminTable
               admins={data.adminUsers}

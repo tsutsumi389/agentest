@@ -125,7 +125,12 @@ export class ReviewCommentController {
     try {
       const { commentId, replyId } = replyIdSchema.parse(req.params);
       const data = reviewCommentUpdateSchema.parse(req.body);
-      const reply = await this.reviewCommentService.updateReply(commentId, replyId, req.user!.id, data);
+      const reply = await this.reviewCommentService.updateReply(
+        commentId,
+        replyId,
+        req.user!.id,
+        data
+      );
 
       res.json({ reply });
     } catch (error) {
@@ -156,7 +161,11 @@ export class ReviewCommentController {
     try {
       const { testSuiteId } = req.params;
       const searchParams = reviewCommentSearchSchema.parse(req.query);
-      const { items, total } = await this.reviewCommentService.search('SUITE', testSuiteId, searchParams);
+      const { items, total } = await this.reviewCommentService.search(
+        'SUITE',
+        testSuiteId,
+        searchParams
+      );
 
       res.json({
         comments: items,
@@ -177,7 +186,11 @@ export class ReviewCommentController {
     try {
       const { testCaseId } = req.params;
       const searchParams = reviewCommentSearchSchema.parse(req.query);
-      const { items, total } = await this.reviewCommentService.search('CASE', testCaseId, searchParams);
+      const { items, total } = await this.reviewCommentService.search(
+        'CASE',
+        testCaseId,
+        searchParams
+      );
 
       res.json({
         comments: items,

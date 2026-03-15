@@ -823,10 +823,7 @@ describe('UserService', () => {
           },
         },
         environment: null,
-        expectedResults: [
-          { status: 'PASS' },
-          { status: 'PASS' },
-        ],
+        expectedResults: [{ status: 'PASS' }, { status: 'PASS' }],
       },
     ];
 

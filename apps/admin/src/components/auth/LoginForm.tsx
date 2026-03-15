@@ -63,9 +63,7 @@ export function LoginForm() {
         <div
           role="alert"
           className={`flex items-start gap-3 p-3 rounded-md ${
-            isLockedError
-              ? 'bg-warning-muted text-warning'
-              : 'bg-danger-muted text-danger'
+            isLockedError ? 'bg-warning-muted text-warning' : 'bg-danger-muted text-danger'
           }`}
         >
           {isLockedError ? (
@@ -75,19 +73,14 @@ export function LoginForm() {
           )}
           <div className="text-sm">
             <p>{errorMessage}</p>
-            {isLockedError && (
-              <p className="mt-1 opacity-80">30分後に再度お試しください</p>
-            )}
+            {isLockedError && <p className="mt-1 opacity-80">30分後に再度お試しください</p>}
           </div>
         </div>
       )}
 
       {/* メールアドレス入力 */}
       <div className="space-y-2">
-        <label
-          htmlFor="email"
-          className="block text-sm font-medium text-foreground-muted"
-        >
+        <label htmlFor="email" className="block text-sm font-medium text-foreground-muted">
           メールアドレス
         </label>
         <div className="relative">
@@ -110,10 +103,7 @@ export function LoginForm() {
 
       {/* パスワード入力 */}
       <div className="space-y-2">
-        <label
-          htmlFor="password"
-          className="block text-sm font-medium text-foreground-muted"
-        >
+        <label htmlFor="password" className="block text-sm font-medium text-foreground-muted">
           パスワード
         </label>
         <div className="relative">

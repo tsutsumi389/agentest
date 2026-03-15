@@ -1,11 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import type { Express } from 'express';
 import { prisma } from '@agentest/db';
-import {
-  createTestUser,
-  createTestProject,
-  cleanupTestData,
-} from './test-helpers.js';
+import { createTestUser, createTestProject, cleanupTestData } from './test-helpers.js';
 import {
   parseToolResultRaw as parseToolResult,
   initializeMcpSession,
@@ -314,7 +310,11 @@ describe('MCP実行ツール統合テスト', () => {
 
       expect(mockApiClientPatch).toHaveBeenCalledWith(
         `/internal/api/executions/${TEST_EXECUTION_ID}/precondition-results/${TEST_PRECONDITION_RESULT_ID}`,
-        { status: 'MET', note: 'データベースが初期化済みであることを確認', agentName: 'Claude Code Opus4.5' },
+        {
+          status: 'MET',
+          note: 'データベースが初期化済みであることを確認',
+          agentName: 'Claude Code Opus4.5',
+        },
         { userId: testUser.id }
       );
     });
@@ -562,7 +562,11 @@ describe('MCP実行ツール統合テスト', () => {
       // JSON POSTで送信されること（multipartではない）
       expect(mockApiClientPost).toHaveBeenCalledWith(
         `/internal/api/executions/${TEST_EXECUTION_ID}/expected-results/${TEST_EXPECTED_RESULT_ID}/evidences/upload-url`,
-        { fileName: 'screenshot.png', fileType: 'image/png', description: 'ログイン画面のスクリーンショット' },
+        {
+          fileName: 'screenshot.png',
+          fileType: 'image/png',
+          description: 'ログイン画面のスクリーンショット',
+        },
         { userId: testUser.id }
       );
     });
@@ -640,11 +644,16 @@ describe('MCP実行ツール統合テスト', () => {
         },
       });
 
-      const metResponse = await callMcpTool(app, sessionId, 'update_execution_precondition_result', {
-        executionId: TEST_EXECUTION_ID,
-        preconditionResultId: TEST_PRECONDITION_RESULT_ID,
-        status: 'MET',
-      });
+      const metResponse = await callMcpTool(
+        app,
+        sessionId,
+        'update_execution_precondition_result',
+        {
+          executionId: TEST_EXECUTION_ID,
+          preconditionResultId: TEST_PRECONDITION_RESULT_ID,
+          status: 'MET',
+        }
+      );
 
       const metResult = parseToolResult(metResponse);
       const metParsed = JSON.parse(metResult.content[0].text);
@@ -663,12 +672,18 @@ describe('MCP実行ツール統合テスト', () => {
         },
       });
 
-      const notMetResponse = await callMcpTool(app, sessionId, 'update_execution_precondition_result', {
-        executionId: TEST_EXECUTION_ID,
-        preconditionResultId: TEST_PRECONDITION_RESULT_ID,
-        status: 'NOT_MET',
-        note: '前提条件を満たしていない',
-      }, 3);
+      const notMetResponse = await callMcpTool(
+        app,
+        sessionId,
+        'update_execution_precondition_result',
+        {
+          executionId: TEST_EXECUTION_ID,
+          preconditionResultId: TEST_PRECONDITION_RESULT_ID,
+          status: 'NOT_MET',
+          note: '前提条件を満たしていない',
+        },
+        3
+      );
 
       const notMetResult = parseToolResult(notMetResponse);
       const notMetParsed = JSON.parse(notMetResult.content[0].text);

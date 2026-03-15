@@ -46,18 +46,14 @@ describe('Admin Organizations API Integration Tests', () => {
     });
 
     // ログインしてセッションを取得
-    const loginResponse = await request(app)
-      .post('/admin/auth/login')
-      .send({
-        email: 'admin@example.com',
-        password: testPassword,
-      });
+    const loginResponse = await request(app).post('/admin/auth/login').send({
+      email: 'admin@example.com',
+      password: testPassword,
+    });
 
     const cookies = loginResponse.headers['set-cookie'];
     const cookieArray = Array.isArray(cookies) ? cookies : [cookies];
-    sessionCookie = cookieArray.find((c: string) =>
-      c.startsWith('admin_session=')
-    ) as string;
+    sessionCookie = cookieArray.find((c: string) => c.startsWith('admin_session=')) as string;
   });
 
   describe('GET /admin/organizations', () => {
@@ -82,8 +78,7 @@ describe('Admin Organizations API Integration Tests', () => {
     });
 
     it('未認証リクエストは401エラーを返す', async () => {
-      const response = await request(app)
-        .get('/admin/organizations');
+      const response = await request(app).get('/admin/organizations');
 
       expect(response.status).toBe(401);
       expect(response.body.error).toBeDefined();
@@ -403,7 +398,9 @@ describe('Admin Organizations API Integration Tests', () => {
 
     it('createdFromがcreatedToより後の日付の場合はエラーを返す', async () => {
       const response = await request(app)
-        .get('/admin/organizations?createdFrom=2024-12-31T00:00:00.000Z&createdTo=2024-01-01T00:00:00.000Z')
+        .get(
+          '/admin/organizations?createdFrom=2024-12-31T00:00:00.000Z&createdTo=2024-01-01T00:00:00.000Z'
+        )
         .set('Cookie', sessionCookie);
 
       expect(response.status).toBe(400);
@@ -452,8 +449,7 @@ describe('Admin Organizations API Integration Tests', () => {
         name: `${testPrefix}-org`,
       });
 
-      const response = await request(app)
-        .get(`/admin/organizations/${org.id}`);
+      const response = await request(app).get(`/admin/organizations/${org.id}`);
 
       expect(response.status).toBe(401);
       expect(response.body.error).toBeDefined();

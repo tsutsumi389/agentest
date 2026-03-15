@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
-import { mcpApiKeyAuthenticate, hasApiKeyHeader } from '../../../middleware/api-key-auth.middleware.js';
+import {
+  mcpApiKeyAuthenticate,
+  hasApiKeyHeader,
+} from '../../../middleware/api-key-auth.middleware.js';
 import { SUPPORTED_SCOPES } from '../../../config/scopes.js';
 
 // apiKeyAuthService のモック

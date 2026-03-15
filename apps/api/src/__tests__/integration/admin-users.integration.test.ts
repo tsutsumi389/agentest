@@ -42,18 +42,14 @@ describe('Admin Users API Integration Tests', () => {
     });
 
     // ログインしてセッションを取得
-    const loginResponse = await request(app)
-      .post('/admin/auth/login')
-      .send({
-        email: 'admin@example.com',
-        password: testPassword,
-      });
+    const loginResponse = await request(app).post('/admin/auth/login').send({
+      email: 'admin@example.com',
+      password: testPassword,
+    });
 
     const cookies = loginResponse.headers['set-cookie'];
     const cookieArray = Array.isArray(cookies) ? cookies : [cookies];
-    sessionCookie = cookieArray.find((c: string) =>
-      c.startsWith('admin_session=')
-    ) as string;
+    sessionCookie = cookieArray.find((c: string) => c.startsWith('admin_session=')) as string;
   });
 
   describe('GET /admin/users/:id', () => {
@@ -80,8 +76,7 @@ describe('Admin Users API Integration Tests', () => {
         name: 'Target User',
       });
 
-      const response = await request(app)
-        .get(`/admin/users/${testUser.id}`);
+      const response = await request(app).get(`/admin/users/${testUser.id}`);
 
       expect(response.status).toBe(401);
       expect(response.body.error).toBeDefined();
@@ -262,7 +257,10 @@ describe('Admin Users API Integration Tests', () => {
       const oauthProviders = response.body.user.oauthProviders;
       expect(oauthProviders).toBeDefined();
       expect(oauthProviders).toHaveLength(2);
-      expect(oauthProviders.map((p: { provider: string }) => p.provider).sort()).toEqual(['github', 'google']);
+      expect(oauthProviders.map((p: { provider: string }) => p.provider).sort()).toEqual([
+        'github',
+        'google',
+      ]);
       expect(oauthProviders[0].createdAt).toBeDefined();
     });
 

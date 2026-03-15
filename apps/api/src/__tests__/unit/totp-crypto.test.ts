@@ -71,9 +71,9 @@ describe('totp-crypto', () => {
     it('さまざまなTOTPシークレット形式でラウンドトリップが成功する', async () => {
       const { encryptTotpSecret, decryptTotpSecret } = await importModule();
       const secrets = [
-        'JBSWY3DPEHPK3PXP',       // 一般的なBase32
-        'ABCDEFGHIJKLMNOP',        // アルファベットのみ
-        'A2B3C4D5E6F7G8H9',       // 英数字混合
+        'JBSWY3DPEHPK3PXP', // 一般的なBase32
+        'ABCDEFGHIJKLMNOP', // アルファベットのみ
+        'A2B3C4D5E6F7G8H9', // 英数字混合
         'VERYLONGSECRETKEYTHATMIGHTBEUSEDINSOMECASES', // 長いシークレット
       ];
 

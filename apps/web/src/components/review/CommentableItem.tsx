@@ -73,13 +73,7 @@ export function CommentableItem({
 
   // このアイテムに紐づくコメントを取得
   const allComments = externalComments || currentReview?.comments || [];
-  const itemComments = getCommentsForTarget(
-    allComments,
-    targetType,
-    targetId,
-    targetField,
-    itemId
-  );
+  const itemComments = getCommentsForTarget(allComments, targetType, targetId, targetField, itemId);
   const commentCount = itemComments.length;
 
   // 未解決コメントをフィルタリング（レビュー中でない場合）

@@ -73,9 +73,7 @@ describe('getTestSuiteTool', () => {
       const context: ToolContext = { userId: '' };
       const input = { testSuiteId: TEST_TEST_SUITE_ID };
 
-      await expect(getTestSuiteTool.handler(input, context)).rejects.toThrow(
-        '認証されていません'
-      );
+      await expect(getTestSuiteTool.handler(input, context)).rejects.toThrow('認証されていません');
       expect(mockApiClient.get).not.toHaveBeenCalled();
     });
 
@@ -98,9 +96,7 @@ describe('getTestSuiteTool', () => {
 
     it('前提条件とテストケースを含むテストスイートを返す', async () => {
       const testSuiteWithData = createMockTestSuite({
-        preconditions: [
-          { id: 'precond-1', content: 'Precondition 1', orderKey: '00001' },
-        ],
+        preconditions: [{ id: 'precond-1', content: 'Precondition 1', orderKey: '00001' }],
         testCases: [
           {
             id: 'tc-1',
@@ -120,7 +116,9 @@ describe('getTestSuiteTool', () => {
 
       const result = await getTestSuiteTool.handler(input, context);
 
-      const typedResult = result as { testSuite: { preconditions: unknown[]; testCases: unknown[] } };
+      const typedResult = result as {
+        testSuite: { preconditions: unknown[]; testCases: unknown[] };
+      };
       expect(typedResult.testSuite.preconditions).toHaveLength(1);
       expect(typedResult.testSuite.testCases).toHaveLength(1);
     });
@@ -139,9 +137,7 @@ describe('getTestSuiteTool', () => {
     });
 
     it('APIエラーを伝播する（403）', async () => {
-      mockApiClient.get.mockRejectedValueOnce(
-        new Error('Internal API error: 403 - Access denied')
-      );
+      mockApiClient.get.mockRejectedValueOnce(new Error('Internal API error: 403 - Access denied'));
 
       const context: ToolContext = { userId: TEST_USER_ID };
       const input = { testSuiteId: TEST_TEST_SUITE_ID };

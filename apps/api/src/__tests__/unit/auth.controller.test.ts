@@ -50,7 +50,9 @@ vi.mock('@agentest/db', () => {
     $transaction: mockPrismaTransaction,
   };
   // $transaction はコールバックに prisma 自身を渡す
-  mockPrismaTransaction.mockImplementation(async (fn: (tx: typeof prismaInstance) => Promise<unknown>) => fn(prismaInstance));
+  mockPrismaTransaction.mockImplementation(
+    async (fn: (tx: typeof prismaInstance) => Promise<unknown>) => fn(prismaInstance)
+  );
   return { prisma: prismaInstance };
 });
 
@@ -205,7 +207,11 @@ describe('AuthController', () => {
       });
       expect(mockPrismaTransaction).toHaveBeenCalled();
       expect(res.cookie).toHaveBeenCalledWith('access_token', NEW_ACCESS_TOKEN, expect.any(Object));
-      expect(res.cookie).toHaveBeenCalledWith('refresh_token', NEW_REFRESH_TOKEN, expect.any(Object));
+      expect(res.cookie).toHaveBeenCalledWith(
+        'refresh_token',
+        NEW_REFRESH_TOKEN,
+        expect.any(Object)
+      );
       expect(res.json).toHaveBeenCalledWith({
         message: 'トークンが更新されました',
       });
@@ -358,7 +364,11 @@ describe('AuthController', () => {
       await controller.oauthCallback(req, res, mockNext);
 
       expect(res.cookie).toHaveBeenCalledWith('access_token', NEW_ACCESS_TOKEN, expect.any(Object));
-      expect(res.cookie).toHaveBeenCalledWith('refresh_token', NEW_REFRESH_TOKEN, expect.any(Object));
+      expect(res.cookie).toHaveBeenCalledWith(
+        'refresh_token',
+        NEW_REFRESH_TOKEN,
+        expect.any(Object)
+      );
       expect(res.redirect).toHaveBeenCalledWith('http://localhost:3000/auth/callback');
     });
 
@@ -404,7 +414,9 @@ describe('AuthController', () => {
           providerAccountId: 'github-123',
         }),
       });
-      expect(res.redirect).toHaveBeenCalledWith('http://localhost:3000/settings?tab=security&link=success');
+      expect(res.redirect).toHaveBeenCalledWith(
+        'http://localhost:3000/settings?tab=security&link=success'
+      );
     });
 
     it('既に連携済みの場合エラーリダイレクト', async () => {

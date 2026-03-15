@@ -75,9 +75,7 @@ function MetadataCard({
         <div className="min-w-0">
           <p className="text-xs text-foreground-muted mb-1">{label}</p>
           <p className="text-sm font-medium text-foreground truncate">{value}</p>
-          {subValue && (
-            <p className="text-xs text-foreground-muted mt-0.5">{subValue}</p>
-          )}
+          {subValue && <p className="text-xs text-foreground-muted mt-0.5">{subValue}</p>}
         </div>
       </div>
     </div>
@@ -112,13 +110,7 @@ function ExpectedResultsHighlightSummary({
 
       {/* プログレスバー */}
       <div className="space-y-1">
-        <ProgressBar
-          passed={pass}
-          failed={fail}
-          skipped={skipped}
-          total={total}
-          size="lg"
-        />
+        <ProgressBar passed={pass} failed={fail} skipped={skipped} total={total} size="lg" />
         <div className="text-xs text-foreground-muted text-right">
           {executed} / {total} 実行済み
         </div>
@@ -266,7 +258,10 @@ export function ExecutionOverviewPanel({
                 {executionTestSuite?.name ?? 'テスト実行'}
               </h1>
               {executionTestSuite?.description && (
-                <MarkdownPreview content={executionTestSuite.description} className="text-foreground-muted text-sm mt-2" />
+                <MarkdownPreview
+                  content={executionTestSuite.description}
+                  className="text-foreground-muted text-sm mt-2"
+                />
               )}
             </div>
           </div>
@@ -278,7 +273,9 @@ export function ExecutionOverviewPanel({
               disabled={isPipActive}
               className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm rounded border border-border hover:bg-background-tertiary transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
               title={isPipActive ? 'PiPウィンドウは既に開いています' : 'Picture-in-Pictureで開く'}
-              aria-label={isPipActive ? 'PiPウィンドウは既に開いています' : 'Picture-in-Pictureで開く'}
+              aria-label={
+                isPipActive ? 'PiPウィンドウは既に開いています' : 'Picture-in-Pictureで開く'
+              }
             >
               <PictureInPicture2 className="w-4 h-4" />
               <span className="hidden sm:inline">PiP</span>
@@ -359,12 +356,7 @@ export function ExecutionOverviewPanel({
               value={stepSummary.skipped}
               color="warning"
             />
-            <SummaryCard
-              icon={Circle}
-              label="未実行"
-              value={stepSummary.pending}
-              color="muted"
-            />
+            <SummaryCard icon={Circle} label="未実行" value={stepSummary.pending} color="muted" />
           </div>
         </div>
       )}

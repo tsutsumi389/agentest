@@ -40,42 +40,27 @@ describe('date', () => {
 
   describe('formatDuration', () => {
     it('時間・分・秒を含む差分をフォーマットする', () => {
-      const result = formatDuration(
-        '2024-01-15T10:00:00Z',
-        '2024-01-15T11:23:45Z'
-      );
+      const result = formatDuration('2024-01-15T10:00:00Z', '2024-01-15T11:23:45Z');
       expect(result).toBe('1時間23分45秒');
     });
 
     it('分・秒のみの差分をフォーマットする', () => {
-      const result = formatDuration(
-        '2024-01-15T10:00:00Z',
-        '2024-01-15T10:05:30Z'
-      );
+      const result = formatDuration('2024-01-15T10:00:00Z', '2024-01-15T10:05:30Z');
       expect(result).toBe('5分30秒');
     });
 
     it('秒のみの差分をフォーマットする', () => {
-      const result = formatDuration(
-        '2024-01-15T10:00:00Z',
-        '2024-01-15T10:00:45Z'
-      );
+      const result = formatDuration('2024-01-15T10:00:00Z', '2024-01-15T10:00:45Z');
       expect(result).toBe('45秒');
     });
 
     it('負の差分の場合は---を返す', () => {
-      const result = formatDuration(
-        '2024-01-15T11:00:00Z',
-        '2024-01-15T10:00:00Z'
-      );
+      const result = formatDuration('2024-01-15T11:00:00Z', '2024-01-15T10:00:00Z');
       expect(result).toBe('---');
     });
 
     it('同じ時刻の場合は0秒を返す', () => {
-      const result = formatDuration(
-        '2024-01-15T10:00:00Z',
-        '2024-01-15T10:00:00Z'
-      );
+      const result = formatDuration('2024-01-15T10:00:00Z', '2024-01-15T10:00:00Z');
       expect(result).toBe('0秒');
     });
   });

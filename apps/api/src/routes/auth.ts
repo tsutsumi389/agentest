@@ -89,8 +89,12 @@ if (env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET) {
    * GitHub OAuthコールバック
    * GET /api/auth/github/callback
    */
-  router.get('/github/callback',
-    passport.authenticate('github', { session: false, failureRedirect: '/login?error=oauth_failed' }),
+  router.get(
+    '/github/callback',
+    passport.authenticate('github', {
+      session: false,
+      failureRedirect: '/login?error=oauth_failed',
+    }),
     authController.oauthCallback
   );
 
@@ -102,10 +106,14 @@ if (env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET) {
    */
   router.get('/github/link', requireAuth(authConfig), (req, res) => {
     // 連携追加モードをクッキーに設定（ユーザーIDを含む）
-    res.cookie(LINK_MODE_COOKIE, JSON.stringify({
-      provider: 'github',
-      userId: req.user!.id,
-    }), linkCookieOptions);
+    res.cookie(
+      LINK_MODE_COOKIE,
+      JSON.stringify({
+        provider: 'github',
+        userId: req.user!.id,
+      }),
+      linkCookieOptions
+    );
     // 通常のOAuth開始エンドポイントにリダイレクト
     res.redirect('/api/auth/github');
   });
@@ -116,14 +124,21 @@ if (env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET) {
  * GET /api/auth/google
  */
 if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
-  router.get('/google', passport.authenticate('google', { session: false, scope: ['profile', 'email'] }));
+  router.get(
+    '/google',
+    passport.authenticate('google', { session: false, scope: ['profile', 'email'] })
+  );
 
   /**
    * Google OAuthコールバック
    * GET /api/auth/google/callback
    */
-  router.get('/google/callback',
-    passport.authenticate('google', { session: false, failureRedirect: '/login?error=oauth_failed' }),
+  router.get(
+    '/google/callback',
+    passport.authenticate('google', {
+      session: false,
+      failureRedirect: '/login?error=oauth_failed',
+    }),
     authController.oauthCallback
   );
 
@@ -135,10 +150,14 @@ if (env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET) {
    */
   router.get('/google/link', requireAuth(authConfig), (req, res) => {
     // 連携追加モードをクッキーに設定（ユーザーIDを含む）
-    res.cookie(LINK_MODE_COOKIE, JSON.stringify({
-      provider: 'google',
-      userId: req.user!.id,
-    }), linkCookieOptions);
+    res.cookie(
+      LINK_MODE_COOKIE,
+      JSON.stringify({
+        provider: 'google',
+        userId: req.user!.id,
+      }),
+      linkCookieOptions
+    );
     // 通常のOAuth開始エンドポイントにリダイレクト
     res.redirect('/api/auth/google');
   });
@@ -158,7 +177,12 @@ router.get('/2fa/status', requireAuth(authConfig), userTotpController.status);
  *
  * QRコードと秘密鍵を返却（レート制限: 3回/分）
  */
-router.post('/2fa/setup', requireAuth(authConfig), rateLimiter({ max: 3, windowMs: 60000, routeId: '2fa-setup' }), userTotpController.setup);
+router.post(
+  '/2fa/setup',
+  requireAuth(authConfig),
+  rateLimiter({ max: 3, windowMs: 60000, routeId: '2fa-setup' }),
+  userTotpController.setup
+);
 
 /**
  * 2FA有効化
@@ -166,7 +190,12 @@ router.post('/2fa/setup', requireAuth(authConfig), rateLimiter({ max: 3, windowM
  *
  * TOTPコードを検証し有効化（レート制限: 5回/分）
  */
-router.post('/2fa/enable', requireAuth(authConfig), rateLimiter({ max: 5, windowMs: 60000, routeId: '2fa-enable' }), userTotpController.enable);
+router.post(
+  '/2fa/enable',
+  requireAuth(authConfig),
+  rateLimiter({ max: 5, windowMs: 60000, routeId: '2fa-enable' }),
+  userTotpController.enable
+);
 
 /**
  * 2FA検証（ログイン時の第2ステップ）
@@ -176,7 +205,11 @@ router.post('/2fa/enable', requireAuth(authConfig), rateLimiter({ max: 5, window
  * twoFactorTokenで認証する（AuthControllerが処理）。
  * レート制限: 5回/分（ブルートフォース対策）
  */
-router.post('/2fa/verify', rateLimiter({ max: 5, windowMs: 60000, routeId: '2fa-verify' }), authController.verifyTwoFactor);
+router.post(
+  '/2fa/verify',
+  rateLimiter({ max: 5, windowMs: 60000, routeId: '2fa-verify' }),
+  authController.verifyTwoFactor
+);
 
 /**
  * 2FA無効化
@@ -184,7 +217,12 @@ router.post('/2fa/verify', rateLimiter({ max: 5, windowMs: 60000, routeId: '2fa-
  *
  * パスワード確認後に無効化（レート制限: 5回/分）
  */
-router.post('/2fa/disable', requireAuth(authConfig), rateLimiter({ max: 5, windowMs: 60000, routeId: '2fa-disable' }), userTotpController.disable);
+router.post(
+  '/2fa/disable',
+  requireAuth(authConfig),
+  rateLimiter({ max: 5, windowMs: 60000, routeId: '2fa-disable' }),
+  userTotpController.disable
+);
 
 // テスト用ログインエンドポイント（非本番環境のみ）
 if (env.NODE_ENV !== 'production') {

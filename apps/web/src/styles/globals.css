@@ -118,7 +118,9 @@
   /* フォーカススタイル - 改善版 */
   *:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px var(--bg-primary), 0 0 0 4px var(--info);
+    box-shadow:
+      0 0 0 2px var(--bg-primary),
+      0 0 0 4px var(--info);
   }
 
   /* マウス操作時はフォーカスリング非表示 */
@@ -371,7 +373,7 @@
 
   /* モノスペースフォント */
   .font-code {
-    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
   }
 
   /* トーストアニメーション */

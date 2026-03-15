@@ -49,12 +49,11 @@ export function CheckEmailPage() {
           </h1>
 
           <div className="space-y-4">
-            <p className="text-sm text-foreground text-center">
-              確認メールを送信しました
-            </p>
+            <p className="text-sm text-foreground text-center">確認メールを送信しました</p>
             {email && (
               <p className="text-sm text-foreground-muted text-center">
-                <span className="font-medium text-foreground">{email}</span> の受信トレイを確認してください。
+                <span className="font-medium text-foreground">{email}</span>{' '}
+                の受信トレイを確認してください。
               </p>
             )}
             <p className="text-sm text-foreground-muted text-center">
@@ -62,7 +61,10 @@ export function CheckEmailPage() {
             </p>
 
             {error && (
-              <div role="alert" className="text-sm text-error bg-error/10 border border-error/20 rounded-md px-3 py-2">
+              <div
+                role="alert"
+                className="text-sm text-error bg-error/10 border border-error/20 rounded-md px-3 py-2"
+              >
                 {error}
               </div>
             )}

@@ -6,8 +6,15 @@ import { apiClient } from '../clients/api-client.js';
  * 入力スキーマ
  */
 export const createExecutionInputSchema = z.object({
-  testSuiteId: z.string().uuid().describe('テスト実行を開始するテストスイートのID。search_test_suiteで取得したIDを指定'),
-  environmentId: z.string().uuid().optional().describe('実行環境ID。get_projectで取得した環境一覧から選択。省略時は環境なしで実行'),
+  testSuiteId: z
+    .string()
+    .uuid()
+    .describe('テスト実行を開始するテストスイートのID。search_test_suiteで取得したIDを指定'),
+  environmentId: z
+    .string()
+    .uuid()
+    .optional()
+    .describe('実行環境ID。get_projectで取得した環境一覧から選択。省略時は環境なしで実行'),
 });
 
 type CreateExecutionInput = z.infer<typeof createExecutionInputSchema>;
@@ -28,7 +35,10 @@ interface CreateExecutionResponse {
 /**
  * ハンドラー
  */
-const createExecutionHandler: ToolHandler<CreateExecutionInput, CreateExecutionResponse> = async (input, context) => {
+const createExecutionHandler: ToolHandler<CreateExecutionInput, CreateExecutionResponse> = async (
+  input,
+  context
+) => {
   const { userId } = context;
 
   if (!userId) {

@@ -6,11 +6,29 @@ import { apiClient } from '../clients/api-client.js';
  * 入力スキーマ
  */
 export const searchTestSuiteInputSchema = z.object({
-  projectId: z.string().uuid().optional().describe('特定プロジェクト内のテストスイートに絞り込む場合に指定。search_projectで取得したIDを使用'),
-  q: z.string().max(100).optional().describe('テストスイート名で部分一致検索。省略時は全テストスイートを取得'),
-  status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).optional().describe('ステータスで絞り込み: DRAFT（下書き）, ACTIVE（有効）, ARCHIVED（アーカイブ済み）'),
+  projectId: z
+    .string()
+    .uuid()
+    .optional()
+    .describe(
+      '特定プロジェクト内のテストスイートに絞り込む場合に指定。search_projectで取得したIDを使用'
+    ),
+  q: z
+    .string()
+    .max(100)
+    .optional()
+    .describe('テストスイート名で部分一致検索。省略時は全テストスイートを取得'),
+  status: z
+    .enum(['DRAFT', 'ACTIVE', 'ARCHIVED'])
+    .optional()
+    .describe('ステータスで絞り込み: DRAFT（下書き）, ACTIVE（有効）, ARCHIVED（アーカイブ済み）'),
   limit: z.number().int().min(1).max(50).default(20).describe('取得件数（1-50、デフォルト: 20）'),
-  offset: z.number().int().min(0).default(0).describe('ページネーション用オフセット（デフォルト: 0）'),
+  offset: z
+    .number()
+    .int()
+    .min(0)
+    .default(0)
+    .describe('ページネーション用オフセット（デフォルト: 0）'),
 });
 
 type SearchTestSuiteInput = z.infer<typeof searchTestSuiteInputSchema>;

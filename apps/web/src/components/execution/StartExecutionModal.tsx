@@ -1,12 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { X, Loader2, Play } from 'lucide-react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import {
-  projectsApi,
-  testSuitesApi,
-  ApiError,
-  type Execution,
-} from '../../lib/api';
+import { projectsApi, testSuitesApi, ApiError, type Execution } from '../../lib/api';
 import { toast } from '../../stores/toast';
 
 interface StartExecutionModalProps {
@@ -128,9 +123,7 @@ export function StartExecutionModal({
     >
       <div className="card w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-foreground">
-            テスト実行を開始
-          </h2>
+          <h2 className="text-lg font-semibold text-foreground">テスト実行を開始</h2>
           <button
             onClick={handleClose}
             className="p-1 text-foreground-muted hover:text-foreground hover:bg-background-tertiary rounded transition-colors"
@@ -150,9 +143,7 @@ export function StartExecutionModal({
 
           {/* 環境選択 */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              環境を選択
-            </label>
+            <label className="block text-sm font-medium text-foreground mb-2">環境を選択</label>
             {isLoadingEnvironments ? (
               <div className="flex items-center gap-2 text-foreground-muted">
                 <Loader2 className="w-4 h-4 animate-spin" />

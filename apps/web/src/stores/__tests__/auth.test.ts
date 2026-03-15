@@ -115,10 +115,7 @@ describe('auth store', () => {
 
       expect(useAuthStore.getState().user).toBeNull();
       expect(useAuthStore.getState().isAuthenticated).toBe(false);
-      expect(console.error).toHaveBeenCalledWith(
-        'ログアウトエラー:',
-        expect.any(Error)
-      );
+      expect(console.error).toHaveBeenCalledWith('ログアウトエラー:', expect.any(Error));
     });
   });
 
@@ -152,9 +149,9 @@ describe('auth store', () => {
     it('ユーザーが存在しない場合はエラーを投げる', async () => {
       useAuthStore.setState({ user: null });
 
-      await expect(
-        useAuthStore.getState().updateUser({ name: '新名前' })
-      ).rejects.toThrow('ユーザーが見つかりません');
+      await expect(useAuthStore.getState().updateUser({ name: '新名前' })).rejects.toThrow(
+        'ユーザーが見つかりません'
+      );
     });
 
     it('API失敗時はエラーが伝播する', async () => {
@@ -164,9 +161,9 @@ describe('auth store', () => {
       });
       mockUsersApi.update.mockRejectedValue(new Error('サーバーエラー'));
 
-      await expect(
-        useAuthStore.getState().updateUser({ name: '新名前' })
-      ).rejects.toThrow('サーバーエラー');
+      await expect(useAuthStore.getState().updateUser({ name: '新名前' })).rejects.toThrow(
+        'サーバーエラー'
+      );
 
       // ユーザー情報は変更されない
       const user = useAuthStore.getState().user;
@@ -226,9 +223,9 @@ describe('auth store', () => {
         twoFactorToken: null,
       });
 
-      await expect(
-        useAuthStore.getState().verify2FA('123456')
-      ).rejects.toThrow('2FAトークンがありません');
+      await expect(useAuthStore.getState().verify2FA('123456')).rejects.toThrow(
+        '2FAトークンがありません'
+      );
     });
 
     it('verify2FA 認証エラー（401）時はトークンをクリア', async () => {
@@ -241,9 +238,9 @@ describe('auth store', () => {
         twoFactorToken: 'temp-token-123',
       });
 
-      await expect(
-        useAuthStore.getState().verify2FA('000000')
-      ).rejects.toThrow('2FAトークンが無効です');
+      await expect(useAuthStore.getState().verify2FA('000000')).rejects.toThrow(
+        '2FAトークンが無効です'
+      );
 
       const state = useAuthStore.getState();
       expect(state.requires2FA).toBe(true);
@@ -259,9 +256,7 @@ describe('auth store', () => {
         twoFactorToken: 'temp-token-123',
       });
 
-      await expect(
-        useAuthStore.getState().verify2FA('000000')
-      ).rejects.toThrow('Network Error');
+      await expect(useAuthStore.getState().verify2FA('000000')).rejects.toThrow('Network Error');
 
       const state = useAuthStore.getState();
       expect(state.requires2FA).toBe(true);

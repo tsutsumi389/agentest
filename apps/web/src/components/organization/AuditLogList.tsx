@@ -40,13 +40,7 @@ type CategoryFilter = AuditLogCategoryKey | typeof CATEGORY_FILTER_ALL;
 /**
  * カテゴリに対応するアイコンを取得
  */
-function CategoryIcon({
-  category,
-  className,
-}: {
-  category: string;
-  className?: string;
-}) {
+function CategoryIcon({ category, className }: { category: string; className?: string }) {
   const categoryInfo = getAuditLogCategoryInfo(category);
   const Icon = categoryInfo.icon;
   return <Icon className={className} />;
@@ -89,9 +83,7 @@ type DateRangeValue = (typeof DATE_RANGE_OPTIONS)[number]['value'];
 /**
  * 日付範囲を計算する
  */
-function getDateRange(
-  rangeValue: string
-): { startDate?: string; endDate?: string } {
+function getDateRange(rangeValue: string): { startDate?: string; endDate?: string } {
   if (rangeValue === 'all') {
     return {};
   }
@@ -164,10 +156,7 @@ export function AuditLogList({ organizationId }: AuditLogListProps) {
         ...dateRange,
       };
 
-      const response = await organizationsApi.getAuditLogs(
-        organizationId,
-        params
-      );
+      const response = await organizationsApi.getAuditLogs(organizationId, params);
       setLogs(response.logs);
       setTotalPages(response.totalPages);
       setTotal(response.total);
@@ -418,9 +407,7 @@ export function AuditLogList({ organizationId }: AuditLogListProps) {
       {logs.length === 0 ? (
         <div className="text-center py-12">
           <p className="text-foreground-muted">
-            {hasFilters
-              ? '条件に一致する監査ログがありません'
-              : '監査ログがありません'}
+            {hasFilters ? '条件に一致する監査ログがありません' : '監査ログがありません'}
           </p>
         </div>
       ) : (
@@ -444,8 +431,7 @@ export function AuditLogList({ organizationId }: AuditLogListProps) {
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
               <p className="text-sm text-foreground-muted">
-                {total}件中 {(page - 1) * pageSize + 1} -{' '}
-                {Math.min(page * pageSize, total)}件を表示
+                {total}件中 {(page - 1) * pageSize + 1} - {Math.min(page * pageSize, total)}件を表示
               </p>
 
               <div className="flex items-center gap-2">
@@ -558,11 +544,7 @@ function AuditLogItem({ log, onClick }: AuditLogItemProps) {
       {/* ユーザーアバター */}
       <div className="flex-shrink-0">
         {log.user?.avatarUrl ? (
-          <img
-            src={log.user.avatarUrl}
-            alt={log.user.name}
-            className="w-8 h-8 rounded-full"
-          />
+          <img src={log.user.avatarUrl} alt={log.user.name} className="w-8 h-8 rounded-full" />
         ) : log.user ? (
           <div className="w-8 h-8 rounded-full bg-accent-subtle flex items-center justify-center">
             <span className="text-xs font-medium text-accent">
@@ -583,37 +565,25 @@ function AuditLogItem({ log, onClick }: AuditLogItemProps) {
           <CategoryBadge category={log.category} />
 
           {/* アクション */}
-          <span className="font-medium text-foreground text-sm">
-            {log.action}
-          </span>
+          <span className="font-medium text-foreground text-sm">{log.action}</span>
         </div>
 
         {/* 詳細情報 */}
         {detailsText && (
-          <p className="mt-1 text-sm text-foreground-muted truncate">
-            {detailsText}
-          </p>
+          <p className="mt-1 text-sm text-foreground-muted truncate">{detailsText}</p>
         )}
 
         {/* ユーザー情報 */}
         <div className="mt-1 flex items-center gap-2 text-xs text-foreground-subtle">
-          {log.user ? (
-            <span>{log.user.name}</span>
-          ) : (
-            <span>システム</span>
-          )}
+          {log.user ? <span>{log.user.name}</span> : <span>システム</span>}
           <span>•</span>
-          <span title={formatDateTime(log.createdAt)}>
-            {formatRelativeTime(log.createdAt)}
-          </span>
+          <span title={formatDateTime(log.createdAt)}>{formatRelativeTime(log.createdAt)}</span>
         </div>
       </div>
 
       {/* 日時（デスクトップのみ） */}
       <div className="hidden md:block flex-shrink-0 text-right">
-        <span className="text-xs text-foreground-subtle">
-          {formatDateTime(log.createdAt)}
-        </span>
+        <span className="text-xs text-foreground-subtle">{formatDateTime(log.createdAt)}</span>
       </div>
     </div>
   );

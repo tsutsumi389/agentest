@@ -6,7 +6,10 @@ import { apiClient, checkLockStatus } from '../clients/api-client.js';
  * 入力スキーマ
  */
 export const deleteTestSuiteInputSchema = z.object({
-  testSuiteId: z.string().uuid().describe('削除するテストスイートのID。search_test_suiteで取得したIDを指定'),
+  testSuiteId: z
+    .string()
+    .uuid()
+    .describe('削除するテストスイートのID。search_test_suiteで取得したIDを指定'),
 });
 
 type DeleteTestSuiteInput = z.infer<typeof deleteTestSuiteInputSchema>;
@@ -22,7 +25,10 @@ interface DeleteTestSuiteResponse {
 /**
  * ハンドラー
  */
-const deleteTestSuiteHandler: ToolHandler<DeleteTestSuiteInput, DeleteTestSuiteResponse> = async (input, context) => {
+const deleteTestSuiteHandler: ToolHandler<DeleteTestSuiteInput, DeleteTestSuiteResponse> = async (
+  input,
+  context
+) => {
   const { userId } = context;
 
   if (!userId) {

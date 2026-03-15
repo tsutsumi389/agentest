@@ -127,7 +127,9 @@ test.describe('セキュリティ設定', () => {
 
   test('接続済みアカウント一覧が表示される', async ({ page }) => {
     // 接続済みアカウントセクションが表示される
-    await expect(page.getByRole('heading', { name: '接続済みアカウント' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: '接続済みアカウント' })).toBeVisible({
+      timeout: 10000,
+    });
 
     // OAuthプロバイダーが表示される
     await expect(page.getByText('GitHub')).toBeVisible();
@@ -135,7 +137,9 @@ test.describe('セキュリティ設定', () => {
 
   test('ログインセッション一覧が表示される', async ({ page }) => {
     // アクティブなセッションセクションが表示される
-    await expect(page.getByRole('heading', { name: 'アクティブなセッション' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'アクティブなセッション' })).toBeVisible({
+      timeout: 10000,
+    });
 
     // 現在のセッションが表示される
     await expect(page.getByText('現在のセッション')).toBeVisible({ timeout: 10000 });
@@ -157,7 +161,9 @@ test.describe('APIトークン管理', () => {
 
   test('APIトークンセクションが表示される', async ({ page }) => {
     // APIトークンセクションが表示される
-    await expect(page.getByRole('heading', { name: 'APIトークン' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'APIトークン' })).toBeVisible({
+      timeout: 10000,
+    });
 
     // 説明テキストが表示される
     await expect(page.getByText(/MCP.*サーバー|CI.*CD/)).toBeVisible();
@@ -191,9 +197,7 @@ test.describe('APIトークン管理', () => {
   test('APIトークン一覧が表示される', async ({ page }) => {
     // トークンがある場合はリストが表示される、なければ空メッセージ
     await expect(
-      page.getByText('アクティブなAPIトークンがありません').or(
-        page.getByText(/agentest_/).first()
-      )
+      page.getByText('アクティブなAPIトークンがありません').or(page.getByText(/agentest_/).first())
     ).toBeVisible({ timeout: 10000 });
   });
 
@@ -216,7 +220,12 @@ test.describe('APIトークン管理', () => {
 
     // トークン名要素の親をたどって、ボタンを持つコンテナを見つける
     // コンテナはトークン名とcodeとbuttonを子孫に持つ最も近いdiv
-    const tokenContainer = page.locator('div').filter({ hasText: tokenName }).filter({ has: page.locator('code') }).filter({ has: page.locator('> button') }).first();
+    const tokenContainer = page
+      .locator('div')
+      .filter({ hasText: tokenName })
+      .filter({ has: page.locator('code') })
+      .filter({ has: page.locator('> button') })
+      .first();
 
     // コンテナ内のボタンをクリック
     await tokenContainer.locator('> button').click();

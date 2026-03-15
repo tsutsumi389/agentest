@@ -1,9 +1,5 @@
 import { WebSocket } from 'ws';
-import type {
-  UserJoinedEvent,
-  UserLeftEvent,
-  PresenceListEvent,
-} from '@agentest/ws-types';
+import type { UserJoinedEvent, UserLeftEvent, PresenceListEvent } from '@agentest/ws-types';
 import type { AuthenticatedUser } from '../auth.js';
 
 // チャンネルごとのプレゼンスユーザー

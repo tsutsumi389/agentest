@@ -12,9 +12,7 @@ interface UserActivitySectionProps {
 export function UserActivitySection({ activity }: UserActivitySectionProps) {
   return (
     <div className="bg-background-secondary border border-border rounded-lg p-4">
-      <h2 className="text-sm font-medium text-foreground-muted mb-4">
-        アクティビティ
-      </h2>
+      <h2 className="text-sm font-medium text-foreground-muted mb-4">アクティビティ</h2>
       <div className="grid grid-cols-2 gap-4">
         {/* 最終アクティブ */}
         <div className="flex items-center gap-3">
@@ -36,9 +34,7 @@ export function UserActivitySection({ activity }: UserActivitySectionProps) {
           </div>
           <div>
             <p className="text-sm text-foreground-muted">アクティブセッション</p>
-            <p className="text-foreground font-medium">
-              {activity.activeSessionCount}
-            </p>
+            <p className="text-foreground font-medium">{activity.activeSessionCount}</p>
           </div>
         </div>
       </div>

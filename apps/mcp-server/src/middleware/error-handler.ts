@@ -1,6 +1,11 @@
 import type { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
-import { isAppError, ValidationError, AuthenticationError, AuthorizationError } from '@agentest/shared';
+import {
+  isAppError,
+  ValidationError,
+  AuthenticationError,
+  AuthorizationError,
+} from '@agentest/shared';
 import { env } from '../config/env.js';
 import { logger as baseLogger } from '../utils/logger.js';
 
@@ -71,25 +76,22 @@ function handleZodError(error: ZodError): ValidationError {
  * MCPエンドポイント（/mcp）へのリクエストの場合はJSON-RPC形式で返す
  * それ以外はREST API形式で返す
  */
-export function errorHandler(
-  error: Error,
-  req: Request,
-  res: Response,
-  _next: NextFunction
-): void {
+export function errorHandler(error: Error, req: Request, res: Response, _next: NextFunction): void {
   const useMcpFormat = isMcpRequest(req);
 
   // Zodエラーの場合はバリデーションエラーに変換
   if (error instanceof ZodError) {
     const validationError = handleZodError(error);
     if (useMcpFormat) {
-      res.status(400).json(
-        createJsonRpcError(
-          JSON_RPC_ERROR_CODES.VALIDATION_ERROR,
-          validationError.message,
-          validationError.details
-        )
-      );
+      res
+        .status(400)
+        .json(
+          createJsonRpcError(
+            JSON_RPC_ERROR_CODES.VALIDATION_ERROR,
+            validationError.message,
+            validationError.details
+          )
+        );
     } else {
       res.status(validationError.statusCode).json(validationError.toJSON());
     }
@@ -112,9 +114,7 @@ export function errorHandler(
       } else if (error instanceof ValidationError) {
         code = JSON_RPC_ERROR_CODES.VALIDATION_ERROR;
       }
-      res.status(error.statusCode).json(
-        createJsonRpcError(code, error.message)
-      );
+      res.status(error.statusCode).json(createJsonRpcError(code, error.message));
     } else {
       res.status(error.statusCode).json(error.toJSON());
     }
@@ -125,18 +125,19 @@ export function errorHandler(
   logger.error({ err: error }, '予期しないエラー');
 
   const statusCode = 500;
-  const message = env.NODE_ENV === 'production'
-    ? 'サーバー内部エラーが発生しました'
-    : error.message;
+  const message =
+    env.NODE_ENV === 'production' ? 'サーバー内部エラーが発生しました' : error.message;
 
   if (useMcpFormat) {
-    res.status(statusCode).json(
-      createJsonRpcError(
-        JSON_RPC_ERROR_CODES.INTERNAL_ERROR,
-        message,
-        env.NODE_ENV !== 'production' ? { stack: error.stack } : undefined
-      )
-    );
+    res
+      .status(statusCode)
+      .json(
+        createJsonRpcError(
+          JSON_RPC_ERROR_CODES.INTERNAL_ERROR,
+          message,
+          env.NODE_ENV !== 'production' ? { stack: error.stack } : undefined
+        )
+      );
   } else {
     const response = {
       error: {

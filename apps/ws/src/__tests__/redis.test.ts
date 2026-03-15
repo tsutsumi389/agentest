@@ -1,8 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // vi.hoistedでモック関数を先に定義（vi.mockのホイスティング対策）
-const { mockLogger, mockPublish, mockSubscribe, mockUnsubscribe, mockQuit, mockDisconnect, mockOn } = vi.hoisted(() => {
-  const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn(), fatal: vi.fn(), child: vi.fn() };
+const {
+  mockLogger,
+  mockPublish,
+  mockSubscribe,
+  mockUnsubscribe,
+  mockQuit,
+  mockDisconnect,
+  mockOn,
+} = vi.hoisted(() => {
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn(),
+  };
   mockLogger.child.mockReturnValue(mockLogger);
   return {
     mockLogger,

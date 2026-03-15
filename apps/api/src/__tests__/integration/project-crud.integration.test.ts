@@ -34,7 +34,12 @@ vi.mock('@agentest/auth', () => ({
     }
     next();
   },
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -47,7 +52,10 @@ vi.mock('@agentest/auth', () => ({
 }));
 
 // テスト用認証設定関数
-function setTestAuth(user: { id: string; email: string } | null, projectRole: string | null = null) {
+function setTestAuth(
+  user: { id: string; email: string } | null,
+  projectRole: string | null = null
+) {
   mockAuthUser = user;
   mockProjectRole = projectRole;
 }
@@ -184,9 +192,7 @@ describe('Project CRUD API 統合テスト', () => {
     it('プロジェクト詳細を取得できる', async () => {
       setTestAuth({ id: reader.id, email: reader.email }, 'READ');
 
-      const response = await request(app)
-        .get(`/api/projects/${project.id}`)
-        .expect(200);
+      const response = await request(app).get(`/api/projects/${project.id}`).expect(200);
 
       expect(response.body.project).toHaveProperty('id', project.id);
       expect(response.body.project).toHaveProperty('name', 'Test Project');
@@ -204,9 +210,7 @@ describe('Project CRUD API 統合テスト', () => {
     it('未認証は401エラー', async () => {
       clearTestAuth();
 
-      const response = await request(app)
-        .get(`/api/projects/${project.id}`)
-        .expect(401);
+      const response = await request(app).get(`/api/projects/${project.id}`).expect(401);
 
       expect(response.body.error.code).toBe('AUTHENTICATION_ERROR');
     });
@@ -214,9 +218,7 @@ describe('Project CRUD API 統合テスト', () => {
     it('権限なしは403エラー', async () => {
       setTestAuth({ id: reader.id, email: reader.email }, null);
 
-      const response = await request(app)
-        .get(`/api/projects/${project.id}`)
-        .expect(403);
+      const response = await request(app).get(`/api/projects/${project.id}`).expect(403);
 
       expect(response.body.error.code).toBe('AUTHORIZATION_ERROR');
     });
@@ -286,17 +288,13 @@ describe('Project CRUD API 統合テスト', () => {
     it('プロジェクトを削除できる', async () => {
       setTestAuth({ id: admin.id, email: admin.email }, 'ADMIN');
 
-      await request(app)
-        .delete(`/api/projects/${project.id}`)
-        .expect(204);
+      await request(app).delete(`/api/projects/${project.id}`).expect(204);
     });
 
     it('削除後にdeletedAtが設定されていることを確認', async () => {
       setTestAuth({ id: admin.id, email: admin.email }, 'ADMIN');
 
-      await request(app)
-        .delete(`/api/projects/${project.id}`)
-        .expect(204);
+      await request(app).delete(`/api/projects/${project.id}`).expect(204);
 
       // 論理削除されたプロジェクトを直接DBから確認
       const deletedProject = await prisma.project.findUnique({
@@ -309,9 +307,7 @@ describe('Project CRUD API 統合テスト', () => {
     it('未認証は401エラー', async () => {
       clearTestAuth();
 
-      const response = await request(app)
-        .delete(`/api/projects/${project.id}`)
-        .expect(401);
+      const response = await request(app).delete(`/api/projects/${project.id}`).expect(401);
 
       expect(response.body.error.code).toBe('AUTHENTICATION_ERROR');
     });
@@ -320,18 +316,14 @@ describe('Project CRUD API 統合テスト', () => {
       // WRITEロールで試す
       setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
 
-      const writeResponse = await request(app)
-        .delete(`/api/projects/${project.id}`)
-        .expect(403);
+      const writeResponse = await request(app).delete(`/api/projects/${project.id}`).expect(403);
 
       expect(writeResponse.body.error.code).toBe('AUTHORIZATION_ERROR');
 
       // READロールで試す
       setTestAuth({ id: reader.id, email: reader.email }, 'READ');
 
-      const readResponse = await request(app)
-        .delete(`/api/projects/${project.id}`)
-        .expect(403);
+      const readResponse = await request(app).delete(`/api/projects/${project.id}`).expect(403);
 
       expect(readResponse.body.error.code).toBe('AUTHORIZATION_ERROR');
     });
@@ -344,9 +336,7 @@ describe('Project CRUD API 統合テスト', () => {
     it('メンバー一覧を取得できる', async () => {
       setTestAuth({ id: reader.id, email: reader.email }, 'READ');
 
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/members`)
-        .expect(200);
+      const response = await request(app).get(`/api/projects/${project.id}/members`).expect(200);
 
       // owner, admin, writer, readerの4名
       expect(response.body.members).toHaveLength(4);
@@ -375,9 +365,7 @@ describe('Project CRUD API 統合テスト', () => {
     it('メンバー情報にユーザー詳細が含まれる', async () => {
       setTestAuth({ id: reader.id, email: reader.email }, 'READ');
 
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/members`)
-        .expect(200);
+      const response = await request(app).get(`/api/projects/${project.id}/members`).expect(200);
 
       const ownerMember = response.body.members.find((m: any) => m.userId === owner.id);
       expect(ownerMember.user).toHaveProperty('id', owner.id);
@@ -461,9 +449,7 @@ describe('Project CRUD API 統合テスト', () => {
     it('メンバーを削除できる', async () => {
       setTestAuth({ id: admin.id, email: admin.email }, 'ADMIN');
 
-      await request(app)
-        .delete(`/api/projects/${project.id}/members/${reader.id}`)
-        .expect(204);
+      await request(app).delete(`/api/projects/${project.id}/members/${reader.id}`).expect(204);
 
       // DBでメンバーが削除されていることを確認
       const deletedMember = await prisma.projectMember.findUnique({

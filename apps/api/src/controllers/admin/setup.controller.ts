@@ -59,42 +59,45 @@ export class AdminSetupController {
 
       // トランザクションで存在チェック + 作成 + 監査ログを一括実行（レースコンディション防止）
       // Serializable分離レベルで並行リクエストによる複数SUPER_ADMIN作成を確実に防止
-      const adminUser = await prisma.$transaction(async (tx) => {
-        const existingCount = await tx.adminUser.count({
-          where: { deletedAt: null },
-        });
+      const adminUser = await prisma.$transaction(
+        async (tx) => {
+          const existingCount = await tx.adminUser.count({
+            where: { deletedAt: null },
+          });
 
-        if (existingCount > 0) {
-          throw new AuthorizationError('セットアップは既に完了しています');
+          if (existingCount > 0) {
+            throw new AuthorizationError('セットアップは既に完了しています');
+          }
+
+          // SUPER_ADMINアカウントを作成
+          const user = await tx.adminUser.create({
+            data: {
+              email,
+              name,
+              role: 'SUPER_ADMIN',
+              passwordHash,
+            },
+          });
+
+          // 監査ログを記録
+          await tx.adminAuditLog.create({
+            data: {
+              adminUserId: user.id,
+              action: 'INITIAL_SETUP',
+              targetType: 'AdminUser',
+              targetId: user.id,
+              details: { email, name },
+              ipAddress,
+              userAgent,
+            },
+          });
+
+          return user;
+        },
+        {
+          isolationLevel: 'Serializable',
         }
-
-        // SUPER_ADMINアカウントを作成
-        const user = await tx.adminUser.create({
-          data: {
-            email,
-            name,
-            role: 'SUPER_ADMIN',
-            passwordHash,
-          },
-        });
-
-        // 監査ログを記録
-        await tx.adminAuditLog.create({
-          data: {
-            adminUserId: user.id,
-            action: 'INITIAL_SETUP',
-            targetType: 'AdminUser',
-            targetId: user.id,
-            details: { email, name },
-            ipAddress,
-            userAgent,
-          },
-        });
-
-        return user;
-      }, {
-        isolationLevel: 'Serializable',
-      });
+      );
 
       log.info({ adminId: adminUser.id, email }, '初回セットアップが完了しました');
 

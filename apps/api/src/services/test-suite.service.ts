@@ -1,7 +1,15 @@
 import { prisma, type EntityStatus, type Prisma } from '@agentest/db';
-import { NotFoundError, BadRequestError, ConflictError, type TestSuiteChangeDetail } from '@agentest/shared';
+import {
+  NotFoundError,
+  BadRequestError,
+  ConflictError,
+  type TestSuiteChangeDetail,
+} from '@agentest/shared';
 import { TestSuiteRepository } from '../repositories/test-suite.repository.js';
-import { TestCaseRepository, type TestCaseSearchOptions } from '../repositories/test-case.repository.js';
+import {
+  TestCaseRepository,
+  type TestCaseSearchOptions,
+} from '../repositories/test-case.repository.js';
 import { publishDashboardUpdated } from '../lib/redis-publisher.js';
 import { publishTestSuiteUpdated } from '../lib/events.js';
 import { logger as baseLogger } from '../utils/logger.js';
@@ -65,7 +73,10 @@ export class TestSuiteService {
    * テストスイートを作成
    * 注意: CREATE履歴は作成しない（TestCaseServiceと同様の方針）
    */
-  async create(userId: string, data: { projectId: string; name: string; description?: string; status?: EntityStatus }) {
+  async create(
+    userId: string,
+    data: { projectId: string; name: string; description?: string; status?: EntityStatus }
+  ) {
     // プロジェクトの存在確認
     const project = await prisma.project.findUnique({
       where: { id: data.projectId },
@@ -274,7 +285,9 @@ export class TestSuiteService {
         where: { testSuiteId },
         orderBy: { orderKey: 'desc' },
       });
-      orderKey = lastPrecondition ? `${parseInt(lastPrecondition.orderKey) + 1}`.padStart(5, '0') : '00001';
+      orderKey = lastPrecondition
+        ? `${parseInt(lastPrecondition.orderKey) + 1}`.padStart(5, '0')
+        : '00001';
     }
 
     // トランザクションで前提条件作成と履歴保存を実行
@@ -293,7 +306,13 @@ export class TestSuiteService {
         name: testSuite.name,
         description: testSuite.description,
         status: testSuite.status,
-        preconditions: [{ id: newPrecondition.id, content: newPrecondition.content, orderKey: newPrecondition.orderKey }],
+        preconditions: [
+          {
+            id: newPrecondition.id,
+            content: newPrecondition.content,
+            orderKey: newPrecondition.orderKey,
+          },
+        ],
         changeDetail: {
           type: 'PRECONDITION_ADD',
           preconditionId: newPrecondition.id,
@@ -356,7 +375,9 @@ export class TestSuiteService {
       name: testSuite.name,
       description: testSuite.description,
       status: testSuite.status,
-      preconditions: [{ id: precondition.id, content: precondition.content, orderKey: precondition.orderKey }],
+      preconditions: [
+        { id: precondition.id, content: precondition.content, orderKey: precondition.orderKey },
+      ],
       changeDetail: {
         type: 'PRECONDITION_UPDATE',
         preconditionId,
@@ -404,7 +425,12 @@ export class TestSuiteService {
   /**
    * 前提条件を削除
    */
-  async deletePrecondition(testSuiteId: string, preconditionId: string, userId: string, options?: { groupId?: string }) {
+  async deletePrecondition(
+    testSuiteId: string,
+    preconditionId: string,
+    userId: string,
+    options?: { groupId?: string }
+  ) {
     const testSuite = await this.findById(testSuiteId);
 
     // 前提条件の存在確認
@@ -421,7 +447,9 @@ export class TestSuiteService {
       name: testSuite.name,
       description: testSuite.description,
       status: testSuite.status,
-      preconditions: [{ id: precondition.id, content: precondition.content, orderKey: precondition.orderKey }],
+      preconditions: [
+        { id: precondition.id, content: precondition.content, orderKey: precondition.orderKey },
+      ],
       changeDetail: {
         type: 'PRECONDITION_DELETE',
         preconditionId,
@@ -478,7 +506,12 @@ export class TestSuiteService {
   /**
    * 前提条件を並び替え
    */
-  async reorderPreconditions(testSuiteId: string, preconditionIds: string[], userId: string, options?: { groupId?: string }) {
+  async reorderPreconditions(
+    testSuiteId: string,
+    preconditionIds: string[],
+    userId: string,
+    options?: { groupId?: string }
+  ) {
     const testSuite = await this.findById(testSuiteId);
 
     // 全ての前提条件を取得
@@ -516,7 +549,11 @@ export class TestSuiteService {
       name: testSuite.name,
       description: testSuite.description,
       status: testSuite.status,
-      preconditions: preconditions.map((p) => ({ id: p.id, content: p.content, orderKey: p.orderKey })),
+      preconditions: preconditions.map((p) => ({
+        id: p.id,
+        content: p.content,
+        orderKey: p.orderKey,
+      })),
       changeDetail: {
         type: 'PRECONDITION_REORDER',
         before: preconditions.map((p) => p.id),
@@ -554,7 +591,13 @@ export class TestSuiteService {
       await publishTestSuiteUpdated(
         testSuiteId,
         testSuite.projectId,
-        [{ field: 'precondition:reorder', oldValue: preconditions.map((p) => p.id), newValue: preconditionIds }],
+        [
+          {
+            field: 'precondition:reorder',
+            oldValue: preconditions.map((p) => p.id),
+            newValue: preconditionIds,
+          },
+        ],
         { type: 'user', id: userId, name: user?.name || 'Unknown' }
       );
     } catch (error) {
@@ -903,7 +946,12 @@ export class TestSuiteService {
   /**
    * テストケースを並び替え
    */
-  async reorderTestCases(testSuiteId: string, testCaseIds: string[], userId: string, options?: { groupId?: string }) {
+  async reorderTestCases(
+    testSuiteId: string,
+    testCaseIds: string[],
+    userId: string,
+    options?: { groupId?: string }
+  ) {
     const testSuite = await this.findById(testSuiteId);
 
     // 現在のテストケース一覧取得

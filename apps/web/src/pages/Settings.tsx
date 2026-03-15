@@ -25,7 +25,10 @@ export function SettingsPage() {
       return 'notifications';
     }
     // クエリパラメータからタブを取得
-    if (tabParam && ['profile', 'notifications', 'security', 'api-tokens', 'mcp-sessions'].includes(tabParam)) {
+    if (
+      tabParam &&
+      ['profile', 'notifications', 'security', 'api-tokens', 'mcp-sessions'].includes(tabParam)
+    ) {
       return tabParam;
     }
     return 'profile';
@@ -73,9 +76,7 @@ export function SettingsPage() {
       {/* ヘッダー */}
       <div>
         <h1 className="text-2xl font-bold text-foreground">設定</h1>
-        <p className="text-foreground-muted mt-1">
-          アカウントとアプリケーションの設定
-        </p>
+        <p className="text-foreground-muted mt-1">アカウントとアプリケーションの設定</p>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
@@ -88,9 +89,10 @@ export function SettingsPage() {
                   onClick={() => handleTabChange(tab.id)}
                   className={`
                     w-full flex items-center gap-2 px-3 py-2 text-sm font-medium rounded transition-colors
-                    ${activeTab === tab.id
-                      ? 'bg-accent-subtle text-accent'
-                      : 'text-foreground-muted hover:text-foreground hover:bg-background-tertiary'
+                    ${
+                      activeTab === tab.id
+                        ? 'bg-accent-subtle text-accent'
+                        : 'text-foreground-muted hover:text-foreground hover:bg-background-tertiary'
                     }
                   `}
                 >

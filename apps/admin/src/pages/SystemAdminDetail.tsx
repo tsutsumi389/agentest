@@ -1,6 +1,21 @@
 import { useParams, useNavigate, Link } from 'react-router';
-import { ArrowLeft, Shield, ShieldCheck, ShieldX, Monitor, History, Unlock, KeyRound, Trash2 } from 'lucide-react';
-import { useSystemAdmin, useDeleteSystemAdmin, useUnlockSystemAdmin, useReset2FASystemAdmin } from '../hooks/useSystemAdmins';
+import {
+  ArrowLeft,
+  Shield,
+  ShieldCheck,
+  ShieldX,
+  Monitor,
+  History,
+  Unlock,
+  KeyRound,
+  Trash2,
+} from 'lucide-react';
+import {
+  useSystemAdmin,
+  useDeleteSystemAdmin,
+  useUnlockSystemAdmin,
+  useReset2FASystemAdmin,
+} from '../hooks/useSystemAdmins';
 import { SystemAdminRoleBadge } from '../components/system-admins';
 import { formatDate, formatRelativeTime } from '../lib/date-utils';
 import { useAdminAuthStore } from '../stores/admin-auth.store';
@@ -64,12 +79,8 @@ export function SystemAdminDetail() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center py-12">
           <Shield className="w-12 h-12 mx-auto text-foreground-muted mb-4" />
-          <h1 className="text-xl font-semibold text-foreground mb-2">
-            アクセス権限がありません
-          </h1>
-          <p className="text-foreground-muted">
-            このページはSUPER_ADMIN権限が必要です。
-          </p>
+          <h1 className="text-xl font-semibold text-foreground mb-2">アクセス権限がありません</h1>
+          <p className="text-foreground-muted">このページはSUPER_ADMIN権限が必要です。</p>
         </div>
       </div>
     );
@@ -78,9 +89,7 @@ export function SystemAdminDetail() {
   if (isLoading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center text-foreground-muted py-12">
-          読み込み中...
-        </div>
+        <div className="text-center text-foreground-muted py-12">読み込み中...</div>
       </div>
     );
   }
@@ -89,9 +98,7 @@ export function SystemAdminDetail() {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center py-12">
-          <h1 className="text-xl font-semibold text-foreground mb-2">
-            管理者が見つかりません
-          </h1>
+          <h1 className="text-xl font-semibold text-foreground mb-2">管理者が見つかりません</h1>
           <Link to="/system-admins" className="text-accent hover:underline">
             一覧に戻る
           </Link>
@@ -110,10 +117,7 @@ export function SystemAdminDetail() {
         {/* ヘッダー */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Link
-              to="/system-admins"
-              className="p-2 text-foreground-muted hover:text-foreground"
-            >
+            <Link to="/system-admins" className="p-2 text-foreground-muted hover:text-foreground">
               <ArrowLeft className="w-5 h-5" />
             </Link>
             <div className="flex items-center gap-3">
@@ -178,7 +182,9 @@ export function SystemAdminDetail() {
 
         {/* ステータス表示 */}
         {(admin.deletedAt || isLocked) && (
-          <div className={`p-4 rounded-lg ${admin.deletedAt ? 'bg-error/10 border border-error/30' : 'bg-warning/10 border border-warning/30'}`}>
+          <div
+            className={`p-4 rounded-lg ${admin.deletedAt ? 'bg-error/10 border border-error/30' : 'bg-warning/10 border border-warning/30'}`}
+          >
             {admin.deletedAt ? (
               <p className="text-error">
                 このアカウントは {formatDate(admin.deletedAt)} に削除されました。
@@ -236,9 +242,7 @@ export function SystemAdminDetail() {
             {/* 現在のセッション一覧 */}
             {admin.activity.currentSessions.length > 0 && (
               <div className="mt-6">
-                <h3 className="text-sm font-medium text-foreground-muted mb-3">
-                  現在のセッション
-                </h3>
+                <h3 className="text-sm font-medium text-foreground-muted mb-3">現在のセッション</h3>
                 <div className="space-y-2">
                   {admin.activity.currentSessions.map((session) => (
                     <div
@@ -249,7 +253,8 @@ export function SystemAdminDetail() {
                         {session.userAgent?.substring(0, 50) || '不明なブラウザ'}...
                       </div>
                       <div className="text-foreground-muted mt-1">
-                        {session.ipAddress || '不明なIP'} · {formatRelativeTime(session.lastActiveAt)}
+                        {session.ipAddress || '不明なIP'} ·{' '}
+                        {formatRelativeTime(session.lastActiveAt)}
                       </div>
                     </div>
                   ))}

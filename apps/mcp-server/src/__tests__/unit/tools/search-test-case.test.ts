@@ -152,27 +152,39 @@ describe('searchTestCaseTool', () => {
 
     it('qが100文字を超えるとエラー', () => {
       const longQuery = 'a'.repeat(101);
-      expect(() => searchTestCaseInputSchema.parse({ testSuiteId: TEST_SUITE_ID, q: longQuery })).toThrow();
+      expect(() =>
+        searchTestCaseInputSchema.parse({ testSuiteId: TEST_SUITE_ID, q: longQuery })
+      ).toThrow();
     });
 
     it('limitが50を超えるとエラー', () => {
-      expect(() => searchTestCaseInputSchema.parse({ testSuiteId: TEST_SUITE_ID, limit: 51 })).toThrow();
+      expect(() =>
+        searchTestCaseInputSchema.parse({ testSuiteId: TEST_SUITE_ID, limit: 51 })
+      ).toThrow();
     });
 
     it('limitが0以下だとエラー', () => {
-      expect(() => searchTestCaseInputSchema.parse({ testSuiteId: TEST_SUITE_ID, limit: 0 })).toThrow();
+      expect(() =>
+        searchTestCaseInputSchema.parse({ testSuiteId: TEST_SUITE_ID, limit: 0 })
+      ).toThrow();
     });
 
     it('offsetが負の値だとエラー', () => {
-      expect(() => searchTestCaseInputSchema.parse({ testSuiteId: TEST_SUITE_ID, offset: -1 })).toThrow();
+      expect(() =>
+        searchTestCaseInputSchema.parse({ testSuiteId: TEST_SUITE_ID, offset: -1 })
+      ).toThrow();
     });
 
     it('不正なステータスはエラー', () => {
-      expect(() => searchTestCaseInputSchema.parse({ testSuiteId: TEST_SUITE_ID, status: ['INVALID'] })).toThrow();
+      expect(() =>
+        searchTestCaseInputSchema.parse({ testSuiteId: TEST_SUITE_ID, status: ['INVALID'] })
+      ).toThrow();
     });
 
     it('不正な優先度はエラー', () => {
-      expect(() => searchTestCaseInputSchema.parse({ testSuiteId: TEST_SUITE_ID, priority: ['INVALID'] })).toThrow();
+      expect(() =>
+        searchTestCaseInputSchema.parse({ testSuiteId: TEST_SUITE_ID, priority: ['INVALID'] })
+      ).toThrow();
     });
 
     it('不正なUUID形式のtestSuiteIdはエラー', () => {
@@ -183,7 +195,13 @@ describe('searchTestCaseTool', () => {
   describe('ハンドラー', () => {
     it('認証されていない場合はエラーをスローする', async () => {
       const context: ToolContext = { userId: '' };
-      const input = { testSuiteId: TEST_SUITE_ID, limit: 20, offset: 0, sortBy: 'orderKey' as const, sortOrder: 'asc' as const };
+      const input = {
+        testSuiteId: TEST_SUITE_ID,
+        limit: 20,
+        offset: 0,
+        sortBy: 'orderKey' as const,
+        sortOrder: 'asc' as const,
+      };
 
       await expect(searchTestCaseTool.handler(input, context)).rejects.toThrow(
         '認証されていません'
@@ -197,7 +215,13 @@ describe('searchTestCaseTool', () => {
       mockApiClient.get.mockResolvedValueOnce(mockResponse);
 
       const context: ToolContext = { userId: TEST_USER_ID };
-      const input = { testSuiteId: TEST_SUITE_ID, limit: 20, offset: 0, sortBy: 'orderKey' as const, sortOrder: 'asc' as const };
+      const input = {
+        testSuiteId: TEST_SUITE_ID,
+        limit: 20,
+        offset: 0,
+        sortBy: 'orderKey' as const,
+        sortOrder: 'asc' as const,
+      };
 
       const result = await searchTestCaseTool.handler(input, context);
 
@@ -250,12 +274,16 @@ describe('searchTestCaseTool', () => {
     });
 
     it('APIエラーを伝播する', async () => {
-      mockApiClient.get.mockRejectedValueOnce(
-        new Error('Internal API error: 403 - Access denied')
-      );
+      mockApiClient.get.mockRejectedValueOnce(new Error('Internal API error: 403 - Access denied'));
 
       const context: ToolContext = { userId: TEST_USER_ID };
-      const input = { testSuiteId: TEST_SUITE_ID, limit: 20, offset: 0, sortBy: 'orderKey' as const, sortOrder: 'asc' as const };
+      const input = {
+        testSuiteId: TEST_SUITE_ID,
+        limit: 20,
+        offset: 0,
+        sortBy: 'orderKey' as const,
+        sortOrder: 'asc' as const,
+      };
 
       await expect(searchTestCaseTool.handler(input, context)).rejects.toThrow(
         'Internal API error: 403 - Access denied'
@@ -272,7 +300,13 @@ describe('searchTestCaseTool', () => {
       mockApiClient.get.mockResolvedValueOnce(mockResponse);
 
       const context: ToolContext = { userId: TEST_USER_ID };
-      const input = { testSuiteId: TEST_SUITE_ID, limit: 20, offset: 0, sortBy: 'orderKey' as const, sortOrder: 'asc' as const };
+      const input = {
+        testSuiteId: TEST_SUITE_ID,
+        limit: 20,
+        offset: 0,
+        sortBy: 'orderKey' as const,
+        sortOrder: 'asc' as const,
+      };
 
       const result = (await searchTestCaseTool.handler(input, context)) as SearchTestCaseResponse;
 
@@ -288,7 +322,13 @@ describe('searchTestCaseTool', () => {
       mockApiClient.get.mockResolvedValueOnce(mockResponse);
 
       const context: ToolContext = { userId: TEST_USER_ID };
-      const input = { testSuiteId: TEST_SUITE_ID, limit: 20, offset: 0, sortBy: 'orderKey' as const, sortOrder: 'asc' as const };
+      const input = {
+        testSuiteId: TEST_SUITE_ID,
+        limit: 20,
+        offset: 0,
+        sortBy: 'orderKey' as const,
+        sortOrder: 'asc' as const,
+      };
 
       const result = (await searchTestCaseTool.handler(input, context)) as SearchTestCaseResponse;
 
@@ -301,7 +341,14 @@ describe('searchTestCaseTool', () => {
       mockApiClient.get.mockResolvedValueOnce(mockResponse);
 
       const context: ToolContext = { userId: TEST_USER_ID };
-      const input = { testSuiteId: TEST_SUITE_ID, priority: ['CRITICAL'] as ('LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL')[], limit: 20, offset: 0, sortBy: 'orderKey' as const, sortOrder: 'asc' as const };
+      const input = {
+        testSuiteId: TEST_SUITE_ID,
+        priority: ['CRITICAL'] as ('LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL')[],
+        limit: 20,
+        offset: 0,
+        sortBy: 'orderKey' as const,
+        sortOrder: 'asc' as const,
+      };
 
       const result = (await searchTestCaseTool.handler(input, context)) as SearchTestCaseResponse;
 

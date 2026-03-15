@@ -35,7 +35,12 @@ vi.mock('@agentest/auth', () => ({
     }
     next();
   },
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -48,7 +53,10 @@ vi.mock('@agentest/auth', () => ({
 }));
 
 // テスト用認証設定関数
-function setTestAuth(user: { id: string; email: string } | null, projectRole: string | null = null) {
+function setTestAuth(
+  user: { id: string; email: string } | null,
+  projectRole: string | null = null
+) {
   mockAuthUser = user;
   mockProjectRole = projectRole;
 }
@@ -331,7 +339,9 @@ describe('Test Suite Search API Integration Tests', () => {
         .expect(200);
 
       expect(response.body.testSuites).toHaveLength(2);
-      expect(response.body.testSuites.find((s: any) => s.name === 'Login Test Suite')).toBeUndefined();
+      expect(
+        response.body.testSuites.find((s: any) => s.name === 'Login Test Suite')
+      ).toBeUndefined();
     });
 
     it('includeDeleted=trueで削除済みスイートも含められる', async () => {
@@ -453,25 +463,19 @@ describe('Test Suite Search API Integration Tests', () => {
       it('ADMINはテストスイートを検索できる', async () => {
         setTestAuth({ id: admin.id, email: admin.email }, 'ADMIN');
 
-        await request(app)
-          .get(`/api/projects/${project.id}/test-suites`)
-          .expect(200);
+        await request(app).get(`/api/projects/${project.id}/test-suites`).expect(200);
       });
 
       it('WRITEはテストスイートを検索できる', async () => {
         setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
 
-        await request(app)
-          .get(`/api/projects/${project.id}/test-suites`)
-          .expect(200);
+        await request(app).get(`/api/projects/${project.id}/test-suites`).expect(200);
       });
 
       it('READはテストスイートを検索できる', async () => {
         setTestAuth({ id: reader.id, email: reader.email }, 'READ');
 
-        await request(app)
-          .get(`/api/projects/${project.id}/test-suites`)
-          .expect(200);
+        await request(app).get(`/api/projects/${project.id}/test-suites`).expect(200);
       });
     });
   });

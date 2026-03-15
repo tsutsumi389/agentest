@@ -34,10 +34,12 @@ vi.mock('@agentest/auth', () => ({
   optionalAuth: () => (_req: any, _res: any, next: any) => next(),
   requireOrgRole: () => (_req: any, _res: any, next: any) => next(),
   requireProjectRole: () => (_req: any, _res: any, next: any) => next(),
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => {
-    if (mockState.authUser) req.user = mockState.authUser;
-    next();
-  },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockState.authUser) req.user = mockState.authUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -51,19 +53,21 @@ vi.mock('@agentest/auth', () => ({
 
 // テストスイート権限ミドルウェアをモック
 vi.mock('../../middleware/require-test-suite-role.js', () => ({
-  requireTestSuiteRole: (roles: string[], _options?: { allowDeletedSuite?: boolean }) => async (req: any, _res: any, next: any) => {
-    if (!mockState.testSuiteRole || !roles.includes(mockState.testSuiteRole)) {
-      return next(new AuthorizationError('権限がありません'));
-    }
-    const testSuiteId = req.params.testSuiteId;
-    if (testSuiteId) {
-      const testSuite = await prisma.testSuite.findUnique({ where: { id: testSuiteId } });
-      if (!testSuite) {
-        return next(new NotFoundError('TestSuite', testSuiteId));
+  requireTestSuiteRole:
+    (roles: string[], _options?: { allowDeletedSuite?: boolean }) =>
+    async (req: any, _res: any, next: any) => {
+      if (!mockState.testSuiteRole || !roles.includes(mockState.testSuiteRole)) {
+        return next(new AuthorizationError('権限がありません'));
       }
-    }
-    next();
-  },
+      const testSuiteId = req.params.testSuiteId;
+      if (testSuiteId) {
+        const testSuite = await prisma.testSuite.findUnique({ where: { id: testSuiteId } });
+        if (!testSuite) {
+          return next(new NotFoundError('TestSuite', testSuiteId));
+        }
+      }
+      next();
+    },
 }));
 
 // テストケース権限ミドルウェアをモック
@@ -145,9 +149,7 @@ describe('Reviews API Integration Tests', () => {
     it('未認証の場合は401を返す', async () => {
       clearTestAuth();
 
-      const response = await request(app)
-        .post(`/api/test-suites/${testSuite.id}/reviews`)
-        .send({});
+      const response = await request(app).post(`/api/test-suites/${testSuite.id}/reviews`).send({});
 
       expect(response.status).toBe(401);
     });
@@ -156,14 +158,10 @@ describe('Reviews API Integration Tests', () => {
       setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
 
       // 最初のレビュー作成
-      await request(app)
-        .post(`/api/test-suites/${testSuite.id}/reviews`)
-        .send({});
+      await request(app).post(`/api/test-suites/${testSuite.id}/reviews`).send({});
 
       // 2つ目のレビュー作成（失敗するはず）
-      const response = await request(app)
-        .post(`/api/test-suites/${testSuite.id}/reviews`)
-        .send({});
+      const response = await request(app).post(`/api/test-suites/${testSuite.id}/reviews`).send({});
 
       expect(response.status).toBe(400);
     });
@@ -236,8 +234,7 @@ describe('Reviews API Integration Tests', () => {
         status: 'DRAFT',
       });
 
-      const response = await request(app)
-        .get('/api/reviews/drafts');
+      const response = await request(app).get('/api/reviews/drafts');
 
       expect(response.status).toBe(200);
       expect(response.body.reviews).toHaveLength(1);
@@ -259,8 +256,7 @@ describe('Reviews API Integration Tests', () => {
 
       setTestAuth({ id: otherUser.id, email: otherUser.email }, 'READ');
 
-      const response = await request(app)
-        .get(`/api/reviews/${review.id}`);
+      const response = await request(app).get(`/api/reviews/${review.id}`);
 
       expect(response.status).toBe(200);
       expect(response.body.review.id).toBe(review.id);
@@ -272,8 +268,7 @@ describe('Reviews API Integration Tests', () => {
         status: 'DRAFT',
       });
 
-      const response = await request(app)
-        .get(`/api/reviews/${review.id}`);
+      const response = await request(app).get(`/api/reviews/${review.id}`);
 
       expect(response.status).toBe(200);
       expect(response.body.review.id).toBe(review.id);
@@ -287,8 +282,7 @@ describe('Reviews API Integration Tests', () => {
 
       setTestAuth({ id: otherUser.id, email: otherUser.email });
 
-      const response = await request(app)
-        .get(`/api/reviews/${review.id}`);
+      const response = await request(app).get(`/api/reviews/${review.id}`);
 
       expect(response.status).toBe(404);
     });
@@ -418,8 +412,7 @@ describe('Reviews API Integration Tests', () => {
         status: 'DRAFT',
       });
 
-      const response = await request(app)
-        .delete(`/api/reviews/${review.id}`);
+      const response = await request(app).delete(`/api/reviews/${review.id}`);
 
       expect(response.status).toBe(204);
 
@@ -436,8 +429,7 @@ describe('Reviews API Integration Tests', () => {
         submittedAt: new Date(),
       });
 
-      const response = await request(app)
-        .delete(`/api/reviews/${review.id}`);
+      const response = await request(app).delete(`/api/reviews/${review.id}`);
 
       expect(response.status).toBe(400);
     });
@@ -448,8 +440,7 @@ describe('Reviews API Integration Tests', () => {
         status: 'DRAFT',
       });
 
-      const response = await request(app)
-        .delete(`/api/reviews/${review.id}`);
+      const response = await request(app).delete(`/api/reviews/${review.id}`);
 
       expect(response.status).toBe(403);
     });
@@ -472,14 +463,12 @@ describe('Reviews API Integration Tests', () => {
 
     describe('POST /api/reviews/:reviewId/comments', () => {
       it('SUBMITTEDレビューにコメントを追加できる', async () => {
-        const response = await request(app)
-          .post(`/api/reviews/${review.id}/comments`)
-          .send({
-            targetType: 'SUITE',
-            targetId: testSuite.id,
-            targetField: 'TITLE',
-            content: 'テストコメント',
-          });
+        const response = await request(app).post(`/api/reviews/${review.id}/comments`).send({
+          targetType: 'SUITE',
+          targetId: testSuite.id,
+          targetField: 'TITLE',
+          content: 'テストコメント',
+        });
 
         expect(response.status).toBe(201);
         expect(response.body.comment).toBeDefined();
@@ -529,8 +518,9 @@ describe('Reviews API Integration Tests', () => {
           targetId: testSuite.id,
         });
 
-        const response = await request(app)
-          .delete(`/api/reviews/${review.id}/comments/${comment.id}`);
+        const response = await request(app).delete(
+          `/api/reviews/${review.id}/comments/${comment.id}`
+        );
 
         expect(response.status).toBe(204);
       });
@@ -575,8 +565,9 @@ describe('Reviews API Integration Tests', () => {
           authorUserId: owner.id,
         });
 
-        const response = await request(app)
-          .delete(`/api/reviews/${review.id}/comments/${comment.id}/replies/${reply.id}`);
+        const response = await request(app).delete(
+          `/api/reviews/${review.id}/comments/${comment.id}/replies/${reply.id}`
+        );
 
         expect(response.status).toBe(204);
       });
@@ -643,13 +634,11 @@ describe('Reviews API Integration Tests', () => {
       const reviewId = createRes.body.review.id;
 
       // 2. レビュー削除
-      const deleteRes = await request(app)
-        .delete(`/api/reviews/${reviewId}`);
+      const deleteRes = await request(app).delete(`/api/reviews/${reviewId}`);
       expect(deleteRes.status).toBe(204);
 
       // 3. 削除確認
-      const getRes = await request(app)
-        .get(`/api/reviews/${reviewId}`);
+      const getRes = await request(app).get(`/api/reviews/${reviewId}`);
       expect(getRes.status).toBe(404);
     });
   });

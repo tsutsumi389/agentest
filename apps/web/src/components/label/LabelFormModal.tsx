@@ -91,9 +91,7 @@ export function LabelFormModal({ label, onClose, onSave, isOpen }: LabelFormModa
       <div className="bg-background border border-border rounded-lg shadow-xl w-full max-w-md mx-4">
         {/* ヘッダー */}
         <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2 className="text-lg font-semibold">
-            {isEditing ? 'ラベルを編集' : '新しいラベル'}
-          </h2>
+          <h2 className="text-lg font-semibold">{isEditing ? 'ラベルを編集' : '新しいラベル'}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -107,11 +105,7 @@ export function LabelFormModal({ label, onClose, onSave, isOpen }: LabelFormModa
         {/* フォーム */}
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           {/* エラー表示 */}
-          {error && (
-            <div className="p-3 bg-danger-subtle text-danger text-sm rounded">
-              {error}
-            </div>
-          )}
+          {error && <div className="p-3 bg-danger-subtle text-danger text-sm rounded">{error}</div>}
 
           {/* ラベル名 */}
           <div>

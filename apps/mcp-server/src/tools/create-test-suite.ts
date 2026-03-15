@@ -6,10 +6,22 @@ import { apiClient } from '../clients/api-client.js';
  * 入力スキーマ
  */
 export const createTestSuiteInputSchema = z.object({
-  projectId: z.string().uuid().describe('テストスイートを作成するプロジェクトのID。search_projectで取得したIDを指定'),
+  projectId: z
+    .string()
+    .uuid()
+    .describe('テストスイートを作成するプロジェクトのID。search_projectで取得したIDを指定'),
   name: z.string().min(1).max(200).describe('テストスイート名（1-200文字）'),
-  description: z.string().max(2000).optional().describe('テストスイートの説明（最大2000文字）。省略可。Markdown記法対応'),
-  status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).default('DRAFT').describe('初期ステータス: DRAFT（下書き、デフォルト）, ACTIVE（有効）, ARCHIVED（アーカイブ済み）'),
+  description: z
+    .string()
+    .max(2000)
+    .optional()
+    .describe('テストスイートの説明（最大2000文字）。省略可。Markdown記法対応'),
+  status: z
+    .enum(['DRAFT', 'ACTIVE', 'ARCHIVED'])
+    .default('DRAFT')
+    .describe(
+      '初期ステータス: DRAFT（下書き、デフォルト）, ACTIVE（有効）, ARCHIVED（アーカイブ済み）'
+    ),
 });
 
 type CreateTestSuiteInput = z.infer<typeof createTestSuiteInputSchema>;
@@ -32,7 +44,10 @@ interface CreateTestSuiteResponse {
 /**
  * ハンドラー
  */
-const createTestSuiteHandler: ToolHandler<CreateTestSuiteInput, CreateTestSuiteResponse> = async (input, context) => {
+const createTestSuiteHandler: ToolHandler<CreateTestSuiteInput, CreateTestSuiteResponse> = async (
+  input,
+  context
+) => {
   const { userId } = context;
 
   if (!userId) {

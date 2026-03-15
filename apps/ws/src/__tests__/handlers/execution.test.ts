@@ -1,10 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import {
-  TEST_PROJECT_ID,
-  TEST_SUITE_ID,
-  TEST_EXECUTION_ID,
-  TEST_USER_ID,
-} from '../helpers.js';
+import { TEST_PROJECT_ID, TEST_SUITE_ID, TEST_EXECUTION_ID, TEST_USER_ID } from '../helpers.js';
 
 // crypto.randomUUIDをモック
 vi.stubGlobal('crypto', {
@@ -342,13 +337,7 @@ describe('handlers/execution', () => {
 
       // Promise.allSettledを使用しているのでエラーにならない
       await expect(
-        publishExecutionStarted(
-          TEST_EXECUTION_ID,
-          TEST_SUITE_ID,
-          TEST_PROJECT_ID,
-          null,
-          executedBy
-        )
+        publishExecutionStarted(TEST_EXECUTION_ID, TEST_SUITE_ID, TEST_PROJECT_ID, null, executedBy)
       ).resolves.not.toThrow();
 
       // 3つのチャンネルにパブリッシュが試行されたことを確認

@@ -213,12 +213,8 @@ describe('InternalAuthorizationService', () => {
 
   describe('getAccessibleProjectIds', () => {
     it('直接参加プロジェクトと組織経由プロジェクトを結合して返す', async () => {
-      mockPrisma.projectMember.findMany.mockResolvedValue([
-        { projectId: TEST_PROJECT_ID },
-      ]);
-      mockPrisma.project.findMany.mockResolvedValue([
-        { id: OTHER_PROJECT_ID },
-      ]);
+      mockPrisma.projectMember.findMany.mockResolvedValue([{ projectId: TEST_PROJECT_ID }]);
+      mockPrisma.project.findMany.mockResolvedValue([{ id: OTHER_PROJECT_ID }]);
 
       const result = await service.getAccessibleProjectIds(TEST_USER_ID);
 
@@ -227,9 +223,7 @@ describe('InternalAuthorizationService', () => {
     });
 
     it('重複するプロジェクトIDは排除される', async () => {
-      mockPrisma.projectMember.findMany.mockResolvedValue([
-        { projectId: TEST_PROJECT_ID },
-      ]);
+      mockPrisma.projectMember.findMany.mockResolvedValue([{ projectId: TEST_PROJECT_ID }]);
       mockPrisma.project.findMany.mockResolvedValue([
         { id: TEST_PROJECT_ID }, // 重複
         { id: OTHER_PROJECT_ID },
@@ -298,25 +292,26 @@ describe('InternalAuthorizationService', () => {
       expect(result).toBe(false);
     });
 
-    it.each(['OWNER', 'ADMIN', 'WRITE'] as const)(
-      'プロジェクトメンバーの%sロールはtrueを返す',
-      async (role) => {
-        mockPrisma.project.findUnique.mockResolvedValue({
-          id: TEST_PROJECT_ID,
-          organizationId: null,
-          deletedAt: null,
-        });
-        mockPrisma.projectMember.findUnique.mockResolvedValue({
-          userId: TEST_USER_ID,
-          projectId: TEST_PROJECT_ID,
-          role,
-        });
+    it.each([
+      'OWNER',
+      'ADMIN',
+      'WRITE',
+    ] as const)('プロジェクトメンバーの%sロールはtrueを返す', async (role) => {
+      mockPrisma.project.findUnique.mockResolvedValue({
+        id: TEST_PROJECT_ID,
+        organizationId: null,
+        deletedAt: null,
+      });
+      mockPrisma.projectMember.findUnique.mockResolvedValue({
+        userId: TEST_USER_ID,
+        projectId: TEST_PROJECT_ID,
+        role,
+      });
 
-        const result = await service.canWriteToProject(TEST_USER_ID, TEST_PROJECT_ID);
+      const result = await service.canWriteToProject(TEST_USER_ID, TEST_PROJECT_ID);
 
-        expect(result).toBe(true);
-      }
-    );
+      expect(result).toBe(true);
+    });
 
     it('READロールのプロジェクトメンバーはfalseを返す（組織なし）', async () => {
       mockPrisma.project.findUnique.mockResolvedValue({
@@ -335,26 +330,23 @@ describe('InternalAuthorizationService', () => {
       expect(result).toBe(false);
     });
 
-    it.each(['OWNER', 'ADMIN'] as const)(
-      '組織%sは書き込み権限を持つ',
-      async (role) => {
-        mockPrisma.project.findUnique.mockResolvedValue({
-          id: TEST_PROJECT_ID,
-          organizationId: TEST_ORG_ID,
-          deletedAt: null,
-        });
-        mockPrisma.projectMember.findUnique.mockResolvedValue(null);
-        mockPrisma.organizationMember.findUnique.mockResolvedValue({
-          userId: TEST_USER_ID,
-          organizationId: TEST_ORG_ID,
-          role,
-        });
+    it.each(['OWNER', 'ADMIN'] as const)('組織%sは書き込み権限を持つ', async (role) => {
+      mockPrisma.project.findUnique.mockResolvedValue({
+        id: TEST_PROJECT_ID,
+        organizationId: TEST_ORG_ID,
+        deletedAt: null,
+      });
+      mockPrisma.projectMember.findUnique.mockResolvedValue(null);
+      mockPrisma.organizationMember.findUnique.mockResolvedValue({
+        userId: TEST_USER_ID,
+        organizationId: TEST_ORG_ID,
+        role,
+      });
 
-        const result = await service.canWriteToProject(TEST_USER_ID, TEST_PROJECT_ID);
+      const result = await service.canWriteToProject(TEST_USER_ID, TEST_PROJECT_ID);
 
-        expect(result).toBe(true);
-      }
-    );
+      expect(result).toBe(true);
+    });
 
     it('組織MEMBERは書き込み権限を持たない', async () => {
       mockPrisma.project.findUnique.mockResolvedValue({

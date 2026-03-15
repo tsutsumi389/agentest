@@ -41,9 +41,7 @@ export function UserOAuthSection({ providers }: UserOAuthSectionProps) {
   return (
     <div className="bg-background-secondary border border-border rounded-lg">
       <div className="px-4 py-3 border-b border-border">
-        <h2 className="text-sm font-medium text-foreground">
-          OAuth連携（{providers.length}）
-        </h2>
+        <h2 className="text-sm font-medium text-foreground">OAuth連携（{providers.length}）</h2>
       </div>
       {providers.length === 0 ? (
         <div className="px-4 py-8 text-center text-foreground-muted">

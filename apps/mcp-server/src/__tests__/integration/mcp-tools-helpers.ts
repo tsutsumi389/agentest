@@ -334,7 +334,11 @@ export function createMcpToolCallRequest(
  */
 export function extractJsonRpcFromSse(response: request.Response): Record<string, unknown> | null {
   // まずbodyにJSON-RPCレスポンスがある場合（JSONモードの場合）
-  if (response.body && typeof response.body === 'object' && ('result' in response.body || 'error' in response.body)) {
+  if (
+    response.body &&
+    typeof response.body === 'object' &&
+    ('result' in response.body || 'error' in response.body)
+  ) {
     return response.body as Record<string, unknown>;
   }
   // SSEレスポンスからJSON-RPCメッセージを抽出
@@ -363,7 +367,9 @@ export function extractJsonRpcFromSse(response: request.Response): Record<string
  */
 export function parseToolResultJson(response: request.Response): unknown {
   const jsonRpc = extractJsonRpcFromSse(response);
-  const result = jsonRpc?.result as { content?: Array<{ type: string; text: string }>; isError?: boolean } | undefined;
+  const result = jsonRpc?.result as
+    | { content?: Array<{ type: string; text: string }>; isError?: boolean }
+    | undefined;
   if (!result?.content?.[0]?.text) return null;
   try {
     return JSON.parse(result.content[0].text);
@@ -376,7 +382,10 @@ export function parseToolResultJson(response: request.Response): unknown {
  * MCPツール応答のresultオブジェクトをそのまま返す
  * execution-tools, workflow向け
  */
-export function parseToolResultRaw(response: request.Response): { content: Array<{ type: string; text: string }>; isError?: boolean } {
+export function parseToolResultRaw(response: request.Response): {
+  content: Array<{ type: string; text: string }>;
+  isError?: boolean;
+} {
   const jsonRpc = extractJsonRpcFromSse(response);
   if (jsonRpc?.result) {
     return jsonRpc.result as { content: Array<{ type: string; text: string }>; isError?: boolean };

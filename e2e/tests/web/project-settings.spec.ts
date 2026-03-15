@@ -40,9 +40,7 @@ test.describe('プロジェクト一般設定', () => {
 
   test('プロジェクト説明を変更できる', async ({ page }) => {
     // 説明フィールドを取得
-    const descriptionInput = page.getByLabel('説明').or(
-      page.getByPlaceholder(/説明/)
-    );
+    const descriptionInput = page.getByLabel('説明').or(page.getByPlaceholder(/説明/));
 
     // 新しい説明を入力
     const newDescription = `E2E Test Description ${Date.now()}`;
@@ -103,7 +101,11 @@ test.describe('環境管理', () => {
 
     // 環境名を含む行を特定し、その行のメニューボタンをクリック
     const envNameElement = page.getByText(envName, { exact: true });
-    const envRow = page.locator('div').filter({ has: envNameElement }).filter({ has: page.getByRole('button', { name: '環境操作メニュー' }) }).last();
+    const envRow = page
+      .locator('div')
+      .filter({ has: envNameElement })
+      .filter({ has: page.getByRole('button', { name: '環境操作メニュー' }) })
+      .last();
     await envRow.getByRole('button', { name: '環境操作メニュー' }).click();
 
     // メニューが開くまで待機し、編集オプションをクリック
@@ -186,9 +188,9 @@ test.describe('ラベル管理', () => {
     await page.getByRole('button', { name: '作成', exact: true }).click();
 
     // 成功メッセージが表示されるか、ラベルが一覧に追加される
-    await expect(
-      page.getByText(/作成しました/).or(page.getByText(labelName))
-    ).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(/作成しました/).or(page.getByText(labelName))).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test('ラベルを編集できる', async ({ page, apiClient }) => {
@@ -210,7 +212,9 @@ test.describe('ラベル管理', () => {
     await labelRow.getByRole('button', { name: '編集' }).click();
 
     // 編集モーダルが表示される
-    await expect(page.getByRole('heading', { name: 'ラベルを編集' })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: 'ラベルを編集' })).toBeVisible({
+      timeout: 5000,
+    });
 
     // 編集フィールドを取得
     const editInput = page.getByPlaceholder('例: 回帰テスト');
@@ -245,10 +249,17 @@ test.describe('ラベル管理', () => {
     await expect(page.getByText(labelName)).toBeVisible({ timeout: 10000 });
 
     // ラベル名の隣にある削除ボタンをクリック
-    await page.getByText(labelName).locator('..').locator('..').getByRole('button', { name: '削除' }).click();
+    await page
+      .getByText(labelName)
+      .locator('..')
+      .locator('..')
+      .getByRole('button', { name: '削除' })
+      .click();
 
     // 確認ダイアログが表示される
-    await expect(page.getByRole('heading', { name: 'ラベルを削除' })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: 'ラベルを削除' })).toBeVisible({
+      timeout: 5000,
+    });
 
     // 確認ダイアログで「削除」をクリック（ダイアログ内の削除ボタン）
     await page.getByRole('button', { name: '削除' }).last().click();
@@ -264,7 +275,9 @@ test.describe('削除済みテストスイート', () => {
     await page.goto(`/projects/${DEMO_PROJECT_ID}?tab=settings&section=danger`);
 
     // プロジェクト削除セクションが表示される
-    await expect(page.getByRole('heading', { name: 'プロジェクトを削除' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'プロジェクトを削除' })).toBeVisible({
+      timeout: 10000,
+    });
 
     // 削除ボタンが表示される
     await expect(page.getByRole('button', { name: 'プロジェクトを削除' })).toBeVisible();
@@ -285,9 +298,9 @@ test.describe('削除済みテストスイート', () => {
     await page.goto(`/projects/${DEMO_PROJECT_ID}?tab=test-suites`);
 
     // 削除済み表示フィルターがあればクリック
-    const deletedFilter = page.getByRole('button', { name: /削除済み/ }).or(
-      page.getByText(/削除済み.*表示/)
-    );
+    const deletedFilter = page
+      .getByRole('button', { name: /削除済み/ })
+      .or(page.getByText(/削除済み.*表示/));
     if (await deletedFilter.isVisible()) {
       await deletedFilter.click();
     }

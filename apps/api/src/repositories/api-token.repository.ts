@@ -14,10 +14,7 @@ export class ApiTokenRepository {
       where: {
         tokenHash,
         revokedAt: null,
-        OR: [
-          { expiresAt: null },
-          { expiresAt: { gt: new Date() } },
-        ],
+        OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
       },
       include: {
         user: {

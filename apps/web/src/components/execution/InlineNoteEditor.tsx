@@ -53,47 +53,49 @@ export function InlineNoteEditor({
   }, [value, isEditing]);
 
   // テキストエリアに書式を挿入する
-  const handleInsert = useCallback(
-    (prefix: string, suffix: string, block?: boolean) => {
-      const textarea = textareaRef.current;
-      if (!textarea) return;
+  const handleInsert = useCallback((prefix: string, suffix: string, block?: boolean) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
 
-      const currentValue = textarea.value;
-      const start = textarea.selectionStart;
-      const end = textarea.selectionEnd;
-      const selectedText = currentValue.substring(start, end);
+    const currentValue = textarea.value;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = currentValue.substring(start, end);
 
-      let newText: string;
-      let newCursorPos: number;
+    let newText: string;
+    let newCursorPos: number;
 
-      if (block) {
-        // 行頭に挿入するタイプ（リスト、引用、見出しなど）
-        const lineStart = currentValue.lastIndexOf('\n', start - 1) + 1;
-        const beforeLine = currentValue.substring(0, lineStart);
-        const afterLineStart = currentValue.substring(lineStart);
+    if (block) {
+      // 行頭に挿入するタイプ（リスト、引用、見出しなど）
+      const lineStart = currentValue.lastIndexOf('\n', start - 1) + 1;
+      const beforeLine = currentValue.substring(0, lineStart);
+      const afterLineStart = currentValue.substring(lineStart);
 
-        newText = beforeLine + prefix + afterLineStart;
-        newCursorPos = lineStart + prefix.length + (start - lineStart);
-      } else if (selectedText) {
-        // テキストが選択されている場合：選択範囲を囲む
-        newText = currentValue.substring(0, start) + prefix + selectedText + suffix + currentValue.substring(end);
-        newCursorPos = start + prefix.length + selectedText.length + suffix.length;
-      } else {
-        // 選択されていない場合：カーソル位置に挿入
-        newText = currentValue.substring(0, start) + prefix + suffix + currentValue.substring(end);
-        newCursorPos = start + prefix.length;
-      }
+      newText = beforeLine + prefix + afterLineStart;
+      newCursorPos = lineStart + prefix.length + (start - lineStart);
+    } else if (selectedText) {
+      // テキストが選択されている場合：選択範囲を囲む
+      newText =
+        currentValue.substring(0, start) +
+        prefix +
+        selectedText +
+        suffix +
+        currentValue.substring(end);
+      newCursorPos = start + prefix.length + selectedText.length + suffix.length;
+    } else {
+      // 選択されていない場合：カーソル位置に挿入
+      newText = currentValue.substring(0, start) + prefix + suffix + currentValue.substring(end);
+      newCursorPos = start + prefix.length;
+    }
 
-      setDraft(newText);
+    setDraft(newText);
 
-      // カーソル位置を更新（非同期で行う必要がある）
-      requestAnimationFrame(() => {
-        textarea.focus();
-        textarea.setSelectionRange(newCursorPos, newCursorPos);
-      });
-    },
-    []
-  );
+    // カーソル位置を更新（非同期で行う必要がある）
+    requestAnimationFrame(() => {
+      textarea.focus();
+      textarea.setSelectionRange(newCursorPos, newCursorPos);
+    });
+  }, []);
 
   const handleStartEdit = () => {
     if (!isEditable || isUpdating) return;
@@ -153,7 +155,9 @@ export function InlineNoteEditor({
   if (isEditing) {
     return (
       <div className="space-y-2">
-        <div className={`border rounded-lg overflow-hidden ${isOverLimit ? 'border-danger' : 'border-border'}`}>
+        <div
+          className={`border rounded-lg overflow-hidden ${isOverLimit ? 'border-danger' : 'border-border'}`}
+        >
           <MarkdownToolbar textareaRef={textareaRef} onInsert={handleInsert} />
           <textarea
             ref={textareaRef}

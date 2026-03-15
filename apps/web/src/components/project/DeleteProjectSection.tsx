@@ -137,12 +137,10 @@ export function DeleteProjectSection({ project, deletedAt, onUpdated }: DeletePr
             <AlertTriangle className="w-6 h-6 text-danger" />
           </div>
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-danger mb-2">
-              プロジェクトを削除
-            </h3>
+            <h3 className="text-lg font-semibold text-danger mb-2">プロジェクトを削除</h3>
             <p className="text-foreground-muted text-sm mb-4">
-              プロジェクトを削除すると、{DELETION_GRACE_PERIOD_DAYS}日間の猶予期間後に完全に削除されます。
-              猶予期間中は復元することができます。
+              プロジェクトを削除すると、{DELETION_GRACE_PERIOD_DAYS}
+              日間の猶予期間後に完全に削除されます。 猶予期間中は復元することができます。
             </p>
             <ul className="text-foreground-subtle text-sm mb-4 space-y-1">
               <li className="flex items-center gap-2">

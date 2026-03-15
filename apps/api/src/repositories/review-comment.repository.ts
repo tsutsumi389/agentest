@@ -1,4 +1,10 @@
-import { prisma, type ReviewStatus, type ReviewTargetType, type ReviewTargetField, type Prisma } from '@agentest/db';
+import {
+  prisma,
+  type ReviewStatus,
+  type ReviewTargetType,
+  type ReviewTargetField,
+  type Prisma,
+} from '@agentest/db';
 import { enrichCommentsWithTargetName } from './review-comment-enrichment.js';
 
 /**

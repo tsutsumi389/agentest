@@ -6,13 +6,15 @@ import { toast } from '../../stores/toast';
  * 通知設定
  */
 export function NotificationSettings() {
-  const [preferences, setPreferences] = useState<Array<{
-    type: string;
-    label: string;
-    description: string;
-    emailEnabled: boolean;
-    inAppEnabled: boolean;
-  }>>([]);
+  const [preferences, setPreferences] = useState<
+    Array<{
+      type: string;
+      label: string;
+      description: string;
+      emailEnabled: boolean;
+      inAppEnabled: boolean;
+    }>
+  >([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState<string | null>(null);
 
@@ -35,12 +37,14 @@ export function NotificationSettings() {
         });
         if (response.ok) {
           const data = await response.json();
-          const prefs = data.preferences.map((p: { type: string; emailEnabled: boolean; inAppEnabled: boolean }) => ({
-            type: p.type,
-            ...notificationTypeInfo[p.type] || { label: p.type, description: '' },
-            emailEnabled: p.emailEnabled,
-            inAppEnabled: p.inAppEnabled,
-          }));
+          const prefs = data.preferences.map(
+            (p: { type: string; emailEnabled: boolean; inAppEnabled: boolean }) => ({
+              type: p.type,
+              ...(notificationTypeInfo[p.type] || { label: p.type, description: '' }),
+              emailEnabled: p.emailEnabled,
+              inAppEnabled: p.inAppEnabled,
+            })
+          );
           setPreferences(prefs);
         }
       } catch (error) {
@@ -68,11 +72,7 @@ export function NotificationSettings() {
       });
 
       if (response.ok) {
-        setPreferences((prev) =>
-          prev.map((p) =>
-            p.type === type ? { ...p, [field]: value } : p
-          )
-        );
+        setPreferences((prev) => prev.map((p) => (p.type === type ? { ...p, [field]: value } : p)));
         toast.success('通知設定を更新しました');
       } else {
         toast.error('通知設定の更新に失敗しました');
@@ -97,9 +97,7 @@ export function NotificationSettings() {
   return (
     <div className="card p-6">
       <h2 className="text-lg font-semibold text-foreground mb-4">通知設定</h2>
-      <p className="text-foreground-muted mb-6">
-        通知の受け取り方法をカスタマイズできます。
-      </p>
+      <p className="text-foreground-muted mb-6">通知の受け取り方法をカスタマイズできます。</p>
 
       <div className="space-y-4">
         {/* テーブルヘッダー */}

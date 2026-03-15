@@ -31,7 +31,14 @@ vi.mock('../../config/env.js', () => ({
 
 // Logger モック
 const { mockLogger } = vi.hoisted(() => {
-  const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn(), fatal: vi.fn(), child: vi.fn() };
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn(),
+  };
   mockLogger.child.mockReturnValue(mockLogger);
   return { mockLogger };
 });
@@ -163,9 +170,11 @@ describe('AdminPasswordResetController', () => {
 
       await controller.requestReset(req, res, next);
 
-      expect(next).toHaveBeenCalledWith(expect.objectContaining({
-        message: '入力内容に誤りがあります',
-      }));
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: '入力内容に誤りがあります',
+        })
+      );
       expect(res.json).not.toHaveBeenCalled();
     });
   });
@@ -212,9 +221,11 @@ describe('AdminPasswordResetController', () => {
 
       await controller.resetPassword(req, res, next);
 
-      expect(next).toHaveBeenCalledWith(expect.objectContaining({
-        message: '入力内容に誤りがあります',
-      }));
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: '入力内容に誤りがあります',
+        })
+      );
       expect(mockResetService.resetPassword).not.toHaveBeenCalled();
     });
 
@@ -227,9 +238,11 @@ describe('AdminPasswordResetController', () => {
 
       await controller.resetPassword(req, res, next);
 
-      expect(next).toHaveBeenCalledWith(expect.objectContaining({
-        message: '入力内容に誤りがあります',
-      }));
+      expect(next).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: '入力内容に誤りがあります',
+        })
+      );
     });
   });
 });

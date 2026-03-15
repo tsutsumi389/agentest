@@ -136,7 +136,9 @@ export function MarkdownEditor({
   const borderClass = error ? 'border-danger' : 'border-border';
 
   return (
-    <div className={`border ${borderClass} rounded-lg overflow-hidden bg-background-secondary ${className}`}>
+    <div
+      className={`border ${borderClass} rounded-lg overflow-hidden bg-background-secondary ${className}`}
+    >
       {/* タブ */}
       <div className="flex border-b border-border" role="tablist" aria-label="エディタモード">
         <button
@@ -172,9 +174,7 @@ export function MarkdownEditor({
       </div>
 
       {/* ツールバー（Writeモードのみ） */}
-      {mode === 'write' && (
-        <MarkdownToolbar textareaRef={textareaRef} onInsert={handleInsert} />
-      )}
+      {mode === 'write' && <MarkdownToolbar textareaRef={textareaRef} onInsert={handleInsert} />}
 
       {/* エディタ / プレビュー */}
       {mode === 'write' ? (

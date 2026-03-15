@@ -27,7 +27,7 @@ describe('logUncaughtException', () => {
 
     expect(mockLogger.fatal).toHaveBeenCalledWith(
       { err: error },
-      'キャッチされない例外が発生しました',
+      'キャッチされない例外が発生しました'
     );
     expect(consoleErrorSpy).not.toHaveBeenCalled();
   });
@@ -114,7 +114,7 @@ describe('logUnhandledRejection', () => {
 
     expect(mockLogger.fatal).toHaveBeenCalledWith(
       { err: error, reason: 'Error: Promise拒否' },
-      '未処理のPromise拒否が発生しました',
+      '未処理のPromise拒否が発生しました'
     );
     expect(consoleErrorSpy).not.toHaveBeenCalled();
   });
@@ -126,7 +126,7 @@ describe('logUnhandledRejection', () => {
 
     expect(mockLogger.fatal).toHaveBeenCalledWith(
       { err: undefined, reason: '文字列エラー' },
-      '未処理のPromise拒否が発生しました',
+      '未処理のPromise拒否が発生しました'
     );
     expect(consoleErrorSpy).not.toHaveBeenCalled();
   });
@@ -141,8 +141,12 @@ describe('registerProcessHandlers', () => {
   beforeEach(() => {
     // 既存のリスナーを保存し、テスト後に復元する
     originalListeners = {
-      uncaughtException: process.listeners('uncaughtException') as NodeJS.UncaughtExceptionListener[],
-      unhandledRejection: process.listeners('unhandledRejection') as NodeJS.UnhandledRejectionListener[],
+      uncaughtException: process.listeners(
+        'uncaughtException'
+      ) as NodeJS.UncaughtExceptionListener[],
+      unhandledRejection: process.listeners(
+        'unhandledRejection'
+      ) as NodeJS.UnhandledRejectionListener[],
     };
     process.removeAllListeners('uncaughtException');
     process.removeAllListeners('unhandledRejection');

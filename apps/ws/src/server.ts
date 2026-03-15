@@ -1,9 +1,6 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { createServer, type Server, type IncomingMessage } from 'http';
-import type {
-  ServerMessage,
-  ServerEvent,
-} from '@agentest/ws-types';
+import type { ServerMessage, ServerEvent } from '@agentest/ws-types';
 import { Channels } from '@agentest/ws-types';
 import { z } from 'zod';
 import { authenticateToken, authenticateFromCookie, type AuthenticatedUser } from './auth.js';
@@ -40,7 +37,8 @@ const clientMessageSchema = z.discriminatedUnion('type', [
 ]);
 
 // 許可されたチャンネル名のパターン（UUID v4形式）
-const CHANNEL_PATTERN = /^(project|test_suite|test_case|execution|user):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+const CHANNEL_PATTERN =
+  /^(project|test_suite|test_case|execution|user):[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 const logger = baseLogger.child({ module: 'server' });
 
@@ -353,7 +351,10 @@ async function handleSubscribe(ws: ExtendedWebSocket, channels: string[]): Promi
     if (!channelSubscribers.has(channel)) {
       const subscribed = await subscribeToChannel(channel);
       if (!subscribed) {
-        logger.warn({ channel, userId: ws.userId }, 'Redisサブスクライブ失敗のためチャンネルをスキップ');
+        logger.warn(
+          { channel, userId: ws.userId },
+          'Redisサブスクライブ失敗のためチャンネルをスキップ'
+        );
         continue;
       }
       channelSubscribers.set(channel, new Set());

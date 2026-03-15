@@ -33,7 +33,12 @@ vi.mock('@agentest/auth', () => ({
     next();
   },
   requireProjectRole: () => (_req: any, _res: any, next: any) => next(),
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -163,7 +168,10 @@ describe('Organization Invitation Accept/Token API Integration Tests', () => {
   // ============================================================
   describe('POST /api/organizations/invitations/:token/accept', () => {
     it('招待を承諾してメンバーになれる', async () => {
-      const invitedUser = await createTestUser({ email: 'newmember@example.com', name: 'New Member' });
+      const invitedUser = await createTestUser({
+        email: 'newmember@example.com',
+        name: 'New Member',
+      });
       const invitation = await createTestInvitation(organization.id, owner.id, {
         email: 'newmember@example.com',
         role: 'MEMBER',
@@ -199,7 +207,10 @@ describe('Organization Invitation Accept/Token API Integration Tests', () => {
     });
 
     it('ADMINとして招待された場合はADMINになれる', async () => {
-      const invitedUser = await createTestUser({ email: 'newadmin@example.com', name: 'New Admin' });
+      const invitedUser = await createTestUser({
+        email: 'newadmin@example.com',
+        name: 'New Admin',
+      });
       await createTestInvitation(organization.id, owner.id, {
         email: 'newadmin@example.com',
         role: 'ADMIN',
@@ -208,9 +219,7 @@ describe('Organization Invitation Accept/Token API Integration Tests', () => {
 
       setTestAuth({ id: invitedUser.id, email: invitedUser.email }, null);
 
-      await request(app)
-        .post('/api/organizations/invitations/admin-token/accept')
-        .expect(200);
+      await request(app).post('/api/organizations/invitations/admin-token/accept').expect(200);
 
       // ADMINとして追加されていることを確認
       const member = await prisma.organizationMember.findUnique({

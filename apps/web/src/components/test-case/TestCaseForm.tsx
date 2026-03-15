@@ -3,19 +3,11 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
 import { arrayMove } from '@dnd-kit/sortable';
 import { type DragEndEvent } from '@dnd-kit/core';
-import {
-  testCasesApi,
-  ApiError,
-  type TestCaseWithDetails,
-} from '../../lib/api';
+import { testCasesApi, ApiError, type TestCaseWithDetails } from '../../lib/api';
 import { toast } from '../../stores/toast';
 import { MentionInput } from '../common/MentionInput';
 import { ConfirmDialog } from '../common/ConfirmDialog';
-import {
-  DynamicListSection,
-  useDndSensors,
-  type ListItem,
-} from '../common/DynamicListSection';
+import { DynamicListSection, useDndSensors, type ListItem } from '../common/DynamicListSection';
 import { MarkdownEditor } from '../common/markdown';
 
 /**
@@ -35,7 +27,6 @@ const STATUS_TOGGLE_OPTIONS = [
   { value: 'DRAFT', label: '下書き' },
   { value: 'ACTIVE', label: 'アクティブ' },
 ] as const;
-
 
 interface TestCaseFormProps {
   /** フォームモード */
@@ -236,7 +227,10 @@ export function TestCaseForm({
   // コピー作成用mutation
   const copyMutation = useMutation({
     mutationFn: (data: { sourceTestCaseId: string; title: string; targetTestSuiteId: string }) =>
-      testCasesApi.copy(data.sourceTestCaseId, { title: data.title, targetTestSuiteId: data.targetTestSuiteId }),
+      testCasesApi.copy(data.sourceTestCaseId, {
+        title: data.title,
+        targetTestSuiteId: data.targetTestSuiteId,
+      }),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
       toast.success('テストケースをコピーしました');
@@ -295,7 +289,10 @@ export function TestCaseForm({
 
         // 前提条件を追加
         for (const item of activeItems.preconditions) {
-          await testCasesApi.addPrecondition(createdTestCase.id, { content: item.content.trim(), groupId });
+          await testCasesApi.addPrecondition(createdTestCase.id, {
+            content: item.content.trim(),
+            groupId,
+          });
         }
 
         // ステップを追加
@@ -305,7 +302,10 @@ export function TestCaseForm({
 
         // 期待結果を追加
         for (const item of activeItems.expectedResults) {
-          await testCasesApi.addExpectedResult(createdTestCase.id, { content: item.content.trim(), groupId });
+          await testCasesApi.addExpectedResult(createdTestCase.id, {
+            content: item.content.trim(),
+            groupId,
+          });
         }
 
         queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
@@ -318,7 +318,13 @@ export function TestCaseForm({
         const groupId = crypto.randomUUID();
 
         // 基本情報の更新
-        const updates: { title?: string; description?: string; priority?: string; status?: string; groupId?: string } = {};
+        const updates: {
+          title?: string;
+          description?: string;
+          priority?: string;
+          status?: string;
+          groupId?: string;
+        } = {};
         if (title.trim() !== testCase.title) {
           updates.title = title.trim();
         }
@@ -372,22 +378,34 @@ export function TestCaseForm({
   ) => {
     const api = {
       precondition: {
-        add: (id: string, data: { content: string; groupId?: string }) => testCasesApi.addPrecondition(id, data),
-        update: (id: string, itemId: string, data: { content: string; groupId?: string }) => testCasesApi.updatePrecondition(id, itemId, data),
-        delete: (id: string, itemId: string, gId?: string) => testCasesApi.deletePrecondition(id, itemId, gId),
-        reorder: (id: string, ids: string[], gId?: string) => testCasesApi.reorderPreconditions(id, ids, gId),
+        add: (id: string, data: { content: string; groupId?: string }) =>
+          testCasesApi.addPrecondition(id, data),
+        update: (id: string, itemId: string, data: { content: string; groupId?: string }) =>
+          testCasesApi.updatePrecondition(id, itemId, data),
+        delete: (id: string, itemId: string, gId?: string) =>
+          testCasesApi.deletePrecondition(id, itemId, gId),
+        reorder: (id: string, ids: string[], gId?: string) =>
+          testCasesApi.reorderPreconditions(id, ids, gId),
       },
       step: {
-        add: (id: string, data: { content: string; groupId?: string }) => testCasesApi.addStep(id, data),
-        update: (id: string, itemId: string, data: { content: string; groupId?: string }) => testCasesApi.updateStep(id, itemId, data),
-        delete: (id: string, itemId: string, gId?: string) => testCasesApi.deleteStep(id, itemId, gId),
-        reorder: (id: string, ids: string[], gId?: string) => testCasesApi.reorderSteps(id, ids, gId),
+        add: (id: string, data: { content: string; groupId?: string }) =>
+          testCasesApi.addStep(id, data),
+        update: (id: string, itemId: string, data: { content: string; groupId?: string }) =>
+          testCasesApi.updateStep(id, itemId, data),
+        delete: (id: string, itemId: string, gId?: string) =>
+          testCasesApi.deleteStep(id, itemId, gId),
+        reorder: (id: string, ids: string[], gId?: string) =>
+          testCasesApi.reorderSteps(id, ids, gId),
       },
       expectedResult: {
-        add: (id: string, data: { content: string; groupId?: string }) => testCasesApi.addExpectedResult(id, data),
-        update: (id: string, itemId: string, data: { content: string; groupId?: string }) => testCasesApi.updateExpectedResult(id, itemId, data),
-        delete: (id: string, itemId: string, gId?: string) => testCasesApi.deleteExpectedResult(id, itemId, gId),
-        reorder: (id: string, ids: string[], gId?: string) => testCasesApi.reorderExpectedResults(id, ids, gId),
+        add: (id: string, data: { content: string; groupId?: string }) =>
+          testCasesApi.addExpectedResult(id, data),
+        update: (id: string, itemId: string, data: { content: string; groupId?: string }) =>
+          testCasesApi.updateExpectedResult(id, itemId, data),
+        delete: (id: string, itemId: string, gId?: string) =>
+          testCasesApi.deleteExpectedResult(id, itemId, gId),
+        reorder: (id: string, ids: string[], gId?: string) =>
+          testCasesApi.reorderExpectedResults(id, ids, gId),
       },
     }[type];
 
@@ -400,11 +418,12 @@ export function TestCaseForm({
     const newItems: { tempId: string; realId: string }[] = [];
     for (const item of items.filter((i) => i.isNew && !i.isDeleted && i.content.trim())) {
       const result = await api.add(testCaseId, { content: item.content.trim(), groupId });
-      const realId = 'precondition' in result
-        ? result.precondition.id
-        : 'step' in result
-          ? result.step.id
-          : result.expectedResult.id;
+      const realId =
+        'precondition' in result
+          ? result.precondition.id
+          : 'step' in result
+            ? result.step.id
+            : result.expectedResult.id;
       newItems.push({ tempId: item.id, realId });
     }
 
@@ -423,9 +442,7 @@ export function TestCaseForm({
         return newItem ? newItem.realId : item.id;
       });
       // 並び順が変わっている場合のみreorderを呼び出す
-      const currentOrder = items
-        .filter((i) => !i.isNew && !i.isDeleted)
-        .map((i) => i.id);
+      const currentOrder = items.filter((i) => !i.isNew && !i.isDeleted).map((i) => i.id);
       const hasOrderChanged =
         orderedIds.length !== currentOrder.length ||
         orderedIds.some((id, index) => id !== currentOrder[index]);
@@ -437,9 +454,7 @@ export function TestCaseForm({
   };
 
   // リスト項目の追加
-  const addListItem = (
-    setter: React.Dispatch<React.SetStateAction<ListItem[]>>
-  ) => {
+  const addListItem = (setter: React.Dispatch<React.SetStateAction<ListItem[]>>) => {
     setter((prev) => [
       ...prev,
       {
@@ -456,21 +471,12 @@ export function TestCaseForm({
     id: string,
     content: string
   ) => {
-    setter((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, content } : item))
-    );
+    setter((prev) => prev.map((item) => (item.id === id ? { ...item, content } : item)));
   };
 
   // リスト項目の削除
-  const deleteListItem = (
-    setter: React.Dispatch<React.SetStateAction<ListItem[]>>,
-    id: string
-  ) => {
-    setter((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, isDeleted: true } : item
-      )
-    );
+  const deleteListItem = (setter: React.Dispatch<React.SetStateAction<ListItem[]>>, id: string) => {
+    setter((prev) => prev.map((item) => (item.id === id ? { ...item, isDeleted: true } : item)));
   };
 
   // ドラッグ終了時のハンドラ
@@ -552,7 +558,10 @@ export function TestCaseForm({
 
         {/* 説明 */}
         <div>
-          <label htmlFor="case-description" className="block text-sm font-medium text-foreground mb-1">
+          <label
+            htmlFor="case-description"
+            className="block text-sm font-medium text-foreground mb-1"
+          >
             説明
           </label>
           <MarkdownEditor
@@ -585,13 +594,15 @@ export function TestCaseForm({
 
         {/* ステータス（ARCHIVEDの場合はトグル無効） */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
-            ステータス
-          </label>
+          <label className="block text-sm font-medium text-foreground mb-1">ステータス</label>
           {status === 'ARCHIVED' ? (
             <p className="text-sm text-foreground-muted">アーカイブ</p>
           ) : (
-            <div className="inline-flex rounded-md border border-border" role="radiogroup" aria-label="ステータス">
+            <div
+              className="inline-flex rounded-md border border-border"
+              role="radiogroup"
+              aria-label="ステータス"
+            >
               {STATUS_TOGGLE_OPTIONS.map((option) => (
                 <button
                   key={option.value}
@@ -668,18 +679,18 @@ export function TestCaseForm({
         >
           キャンセル
         </button>
-        <button
-          type="submit"
-          className="btn btn-primary"
-          disabled={!title.trim() || isPending}
-        >
+        <button type="submit" className="btn btn-primary" disabled={!title.trim() || isPending}>
           {isPending ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
               保存中...
             </>
           ) : mode === 'create' ? (
-            sourceTestCaseId ? 'コピーして作成' : '作成'
+            sourceTestCaseId ? (
+              'コピーして作成'
+            ) : (
+              '作成'
+            )
           ) : (
             '保存'
           )}

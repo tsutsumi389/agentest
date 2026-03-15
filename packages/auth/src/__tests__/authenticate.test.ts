@@ -53,10 +53,7 @@ describe('authenticate', () => {
 
       await middleware(req, res, mockNext);
 
-      expect(mockVerifyAccessToken).toHaveBeenCalledWith(
-        TEST_ACCESS_TOKEN,
-        testConfig
-      );
+      expect(mockVerifyAccessToken).toHaveBeenCalledWith(TEST_ACCESS_TOKEN, testConfig);
     });
 
     it('クッキーからトークンを抽出する', async () => {
@@ -71,10 +68,7 @@ describe('authenticate', () => {
 
       await middleware(req, res, mockNext);
 
-      expect(mockVerifyAccessToken).toHaveBeenCalledWith(
-        TEST_ACCESS_TOKEN,
-        testConfig
-      );
+      expect(mockVerifyAccessToken).toHaveBeenCalledWith(TEST_ACCESS_TOKEN, testConfig);
     });
 
     it('Authorizationヘッダーがクッキーより優先される', async () => {
@@ -90,10 +84,7 @@ describe('authenticate', () => {
 
       await middleware(req, res, mockNext);
 
-      expect(mockVerifyAccessToken).toHaveBeenCalledWith(
-        'header-token',
-        testConfig
-      );
+      expect(mockVerifyAccessToken).toHaveBeenCalledWith('header-token', testConfig);
     });
   });
 

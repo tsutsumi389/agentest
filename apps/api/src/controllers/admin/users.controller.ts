@@ -51,10 +51,9 @@ export class AdminUsersController {
       // パスパラメータをバリデーション
       const parseResult = uuidSchema.safeParse(req.params.id);
       if (!parseResult.success) {
-        throw new ValidationError(
-          '無効なユーザーIDです',
-          { id: ['有効なUUID形式で指定してください'] }
-        );
+        throw new ValidationError('無効なユーザーIDです', {
+          id: ['有効なUUID形式で指定してください'],
+        });
       }
 
       const result = await this.usersService.findUserById(parseResult.data);

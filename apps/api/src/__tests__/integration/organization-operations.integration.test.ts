@@ -33,7 +33,12 @@ vi.mock('@agentest/auth', () => ({
     next();
   },
   requireProjectRole: () => (_req: any, _res: any, next: any) => next(),
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -99,9 +104,7 @@ describe('Organization Operations API Integration Tests', () => {
   // ============================================================
   describe('GET /api/organizations/:organizationId', () => {
     it('組織詳細を取得できる', async () => {
-      const response = await request(app)
-        .get(`/api/organizations/${organization.id}`)
-        .expect(200);
+      const response = await request(app).get(`/api/organizations/${organization.id}`).expect(200);
 
       expect(response.body.organization).toHaveProperty('id', organization.id);
       expect(response.body.organization).toHaveProperty('name', 'Test Organization');
@@ -109,9 +112,7 @@ describe('Organization Operations API Integration Tests', () => {
     });
 
     it('存在しない組織は404エラー', async () => {
-      const response = await request(app)
-        .get('/api/organizations/non-existent-id')
-        .expect(404);
+      const response = await request(app).get('/api/organizations/non-existent-id').expect(404);
 
       expect(response.body.error.code).toBe('NOT_FOUND');
     });
@@ -119,9 +120,7 @@ describe('Organization Operations API Integration Tests', () => {
     it('未認証の場合は401エラー', async () => {
       clearTestAuth();
 
-      const response = await request(app)
-        .get(`/api/organizations/${organization.id}`)
-        .expect(401);
+      const response = await request(app).get(`/api/organizations/${organization.id}`).expect(401);
 
       expect(response.body.error.code).toBe('AUTHENTICATION_ERROR');
     });

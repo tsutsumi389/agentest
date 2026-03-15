@@ -136,7 +136,10 @@ function PasswordSection() {
       <h2 className="text-lg font-semibold text-foreground mb-4">パスワード変更</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="currentPassword" className="block text-sm font-medium text-foreground-muted mb-1">
+          <label
+            htmlFor="currentPassword"
+            className="block text-sm font-medium text-foreground-muted mb-1"
+          >
             現在のパスワード
           </label>
           <input
@@ -150,7 +153,10 @@ function PasswordSection() {
           />
         </div>
         <div>
-          <label htmlFor="newPassword" className="block text-sm font-medium text-foreground-muted mb-1">
+          <label
+            htmlFor="newPassword"
+            className="block text-sm font-medium text-foreground-muted mb-1"
+          >
             新しいパスワード
           </label>
           <input
@@ -187,7 +193,10 @@ function PasswordSection() {
           )}
         </div>
         <div>
-          <label htmlFor="confirmPassword" className="block text-sm font-medium text-foreground-muted mb-1">
+          <label
+            htmlFor="confirmPassword"
+            className="block text-sm font-medium text-foreground-muted mb-1"
+          >
             新しいパスワード（確認）
           </label>
           <input
@@ -199,9 +208,7 @@ function PasswordSection() {
             autoComplete="new-password"
             required
           />
-          {passwordMismatch && (
-            <p className="text-xs text-error mt-1">パスワードが一致しません</p>
-          )}
+          {passwordMismatch && <p className="text-xs text-error mt-1">パスワードが一致しません</p>}
         </div>
 
         {error && (
@@ -218,11 +225,7 @@ function PasswordSection() {
           </div>
         )}
 
-        <button
-          type="submit"
-          disabled={isLoading || !canSubmit}
-          className="btn btn-primary"
-        >
+        <button type="submit" disabled={isLoading || !canSubmit} className="btn btn-primary">
           {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
           パスワードを変更
         </button>
@@ -317,7 +320,10 @@ function TwoFactorDisabled() {
 
       <form onSubmit={handleEnable} className="space-y-4">
         <div>
-          <label htmlFor="totpCode" className="block text-sm font-medium text-foreground-muted mb-1">
+          <label
+            htmlFor="totpCode"
+            className="block text-sm font-medium text-foreground-muted mb-1"
+          >
             認証コード
           </label>
           <input
@@ -343,13 +349,21 @@ function TwoFactorDisabled() {
         )}
 
         <div className="flex gap-3">
-          <button type="submit" disabled={isEnabling || code.length !== 6} className="btn btn-primary">
+          <button
+            type="submit"
+            disabled={isEnabling || code.length !== 6}
+            className="btn btn-primary"
+          >
             {isEnabling ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
             有効化
           </button>
           <button
             type="button"
-            onClick={() => { setStep('idle'); setCode(''); setQrData(null); }}
+            onClick={() => {
+              setStep('idle');
+              setCode('');
+              setQrData(null);
+            }}
             className="btn btn-ghost"
           >
             キャンセル
@@ -392,7 +406,10 @@ function TwoFactorEnabled() {
       ) : (
         <form onSubmit={handleDisable} className="space-y-4">
           <div>
-            <label htmlFor="disablePassword" className="block text-sm font-medium text-foreground-muted mb-1">
+            <label
+              htmlFor="disablePassword"
+              className="block text-sm font-medium text-foreground-muted mb-1"
+            >
               パスワードを入力して確認
             </label>
             <input
@@ -414,13 +431,20 @@ function TwoFactorEnabled() {
           )}
 
           <div className="flex gap-3">
-            <button type="submit" disabled={isLoading || password === ''} className="btn btn-primary bg-error hover:bg-error/80">
+            <button
+              type="submit"
+              disabled={isLoading || password === ''}
+              className="btn btn-primary bg-error hover:bg-error/80"
+            >
               {isLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
               無効化する
             </button>
             <button
               type="button"
-              onClick={() => { setShowDisable(false); setPassword(''); }}
+              onClick={() => {
+                setShowDisable(false);
+                setPassword('');
+              }}
               className="btn btn-ghost"
             >
               キャンセル

@@ -47,10 +47,7 @@ describe('ApiTokenRepository', () => {
         where: {
           tokenHash: TEST_TOKEN_HASH,
           revokedAt: null,
-          OR: [
-            { expiresAt: null },
-            { expiresAt: { gt: expect.any(Date) } },
-          ],
+          OR: [{ expiresAt: null }, { expiresAt: { gt: expect.any(Date) } }],
         },
         include: {
           user: {
@@ -149,7 +146,12 @@ describe('ApiTokenRepository', () => {
     it('ユーザーのAPIトークン一覧を取得できる', async () => {
       const mockTokens = [
         { id: TEST_TOKEN_ID, userId: TEST_USER_ID, name: 'Token 1', createdAt: new Date() },
-        { id: '44444444-4444-4444-4444-444444444444', userId: TEST_USER_ID, name: 'Token 2', createdAt: new Date() },
+        {
+          id: '44444444-4444-4444-4444-444444444444',
+          userId: TEST_USER_ID,
+          name: 'Token 2',
+          createdAt: new Date(),
+        },
       ];
       mockPrismaApiToken.findMany.mockResolvedValue(mockTokens);
 
@@ -175,7 +177,12 @@ describe('ApiTokenRepository', () => {
   describe('findByOrganizationId', () => {
     it('組織のAPIトークン一覧を取得できる', async () => {
       const mockTokens = [
-        { id: TEST_TOKEN_ID, organizationId: TEST_ORG_ID, name: 'Org Token 1', createdAt: new Date() },
+        {
+          id: TEST_TOKEN_ID,
+          organizationId: TEST_ORG_ID,
+          name: 'Org Token 1',
+          createdAt: new Date(),
+        },
       ];
       mockPrismaApiToken.findMany.mockResolvedValue(mockTokens);
 

@@ -79,24 +79,30 @@ export function ExecutionEvidenceUpload({
   }, []);
 
   // ファイル選択処理
-  const handleFileSelect = useCallback((file: File) => {
-    setError(null);
-    const validationError = validateFile(file);
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
-    setSelectedFile(file);
-  }, [validateFile]);
+  const handleFileSelect = useCallback(
+    (file: File) => {
+      setError(null);
+      const validationError = validateFile(file);
+      if (validationError) {
+        setError(validationError);
+        return;
+      }
+      setSelectedFile(file);
+    },
+    [validateFile]
+  );
 
   // ドラッグイベント
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!isLimitReached && !isUploading) {
-      setIsDragOver(true);
-    }
-  }, [isLimitReached, isUploading]);
+  const handleDragOver = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!isLimitReached && !isUploading) {
+        setIsDragOver(true);
+      }
+    },
+    [isLimitReached, isUploading]
+  );
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -104,18 +110,21 @@ export function ExecutionEvidenceUpload({
     setIsDragOver(false);
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragOver(false);
+  const handleDrop = useCallback(
+    (e: React.DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDragOver(false);
 
-    if (isLimitReached || isUploading) return;
+      if (isLimitReached || isUploading) return;
 
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      handleFileSelect(files[0]);
-    }
-  }, [isLimitReached, isUploading, handleFileSelect]);
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        handleFileSelect(files[0]);
+      }
+    },
+    [isLimitReached, isUploading, handleFileSelect]
+  );
 
   // input変更時
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -184,12 +193,8 @@ export function ExecutionEvidenceUpload({
           <div className="flex items-center gap-3">
             {/* ファイル情報 */}
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-foreground truncate">
-                {selectedFile.name}
-              </p>
-              <p className="text-xs text-foreground-muted">
-                {formatFileSize(selectedFile.size)}
-              </p>
+              <p className="text-xs font-medium text-foreground truncate">{selectedFile.name}</p>
+              <p className="text-xs text-foreground-muted">{formatFileSize(selectedFile.size)}</p>
             </div>
 
             {/* キャンセルボタン */}
@@ -246,9 +251,10 @@ export function ExecutionEvidenceUpload({
           onDrop={handleDrop}
           className={`
             px-3 py-3 border border-dashed rounded-lg text-center cursor-pointer transition-colors
-            ${isDragOver
-              ? 'border-accent bg-accent/10'
-              : 'border-border hover:border-border-focus hover:bg-background-secondary'
+            ${
+              isDragOver
+                ? 'border-accent bg-accent/10'
+                : 'border-border hover:border-border-focus hover:bg-background-secondary'
             }
           `}
           onClick={() => fileInputRef.current?.click()}
@@ -262,9 +268,7 @@ export function ExecutionEvidenceUpload({
             disabled={isUploading}
           />
           <Upload className="w-5 h-5 text-foreground-muted mx-auto mb-1" />
-          <p className="text-xs text-foreground-muted">
-            ファイルをドラッグ&ドロップ
-          </p>
+          <p className="text-xs text-foreground-muted">ファイルをドラッグ&ドロップ</p>
           <p className="text-xs text-foreground-muted">
             または<span className="text-accent">クリックして選択</span>
           </p>

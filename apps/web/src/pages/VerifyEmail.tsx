@@ -67,16 +67,11 @@ export function VerifyEmailPage() {
 
           {status === 'success' && (
             <div className="space-y-4">
-              <p className="text-sm text-foreground text-center">
-                メールアドレスが確認されました
-              </p>
+              <p className="text-sm text-foreground text-center">メールアドレスが確認されました</p>
               <p className="text-sm text-foreground-muted text-center">
                 アカウントが有効化されました。ログインしてご利用ください。
               </p>
-              <Link
-                to="/login"
-                className="btn btn-primary w-full block text-center"
-              >
+              <Link to="/login" className="btn btn-primary w-full block text-center">
                 ログインする
               </Link>
             </div>
@@ -84,7 +79,10 @@ export function VerifyEmailPage() {
 
           {status === 'error' && (
             <div className="space-y-4">
-              <div role="alert" className="text-sm text-error bg-error/10 border border-error/20 rounded-md px-3 py-2 text-center">
+              <div
+                role="alert"
+                className="text-sm text-error bg-error/10 border border-error/20 rounded-md px-3 py-2 text-center"
+              >
                 {errorMessage}
               </div>
               <p className="text-sm text-foreground-muted text-center">

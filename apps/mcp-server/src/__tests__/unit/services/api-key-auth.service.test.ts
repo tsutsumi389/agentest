@@ -127,10 +127,7 @@ describe('ApiKeyAuthService', () => {
       const result = await apiKeyAuthService.validateToken('agentest_' + 'a'.repeat(43));
 
       expect(result.valid).toBe(false);
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        { statusCode: 500 },
-        'APIキー検証エラー'
-      );
+      expect(mockLogger.error).toHaveBeenCalledWith({ statusCode: 500 }, 'APIキー検証エラー');
     });
 
     it('ネットワークエラーの場合はvalid: falseを返す', async () => {

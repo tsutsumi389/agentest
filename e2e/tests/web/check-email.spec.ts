@@ -14,7 +14,9 @@ test.describe('メール確認待ちページ', () => {
     await expect(page.getByText('確認メールを送信しました')).toBeVisible();
     await expect(page.getByText('test@example.com')).toBeVisible();
     await expect(page.getByText('受信トレイを確認してください。')).toBeVisible();
-    await expect(page.getByText('メール内のリンクをクリックしてアカウントを有効化してください。')).toBeVisible();
+    await expect(
+      page.getByText('メール内のリンクをクリックしてアカウントを有効化してください。')
+    ).toBeVisible();
 
     // 再送信ボタンの確認
     await expect(page.getByRole('button', { name: '確認メールを再送信' })).toBeVisible();

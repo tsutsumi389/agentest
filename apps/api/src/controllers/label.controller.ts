@@ -1,5 +1,9 @@
 import type { Request, Response, NextFunction } from 'express';
-import { labelCreateSchema, labelUpdateSchema, testSuiteLabelsUpdateSchema } from '@agentest/shared';
+import {
+  labelCreateSchema,
+  labelUpdateSchema,
+  testSuiteLabelsUpdateSchema,
+} from '@agentest/shared';
 import { LabelService } from '../services/label.service.js';
 
 /**
@@ -83,7 +87,11 @@ export class LabelController {
   /**
    * テストスイートのラベル一括更新
    */
-  updateTestSuiteLabels = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  updateTestSuiteLabels = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const { testSuiteId } = req.params;
       const { labelIds } = testSuiteLabelsUpdateSchema.parse(req.body);

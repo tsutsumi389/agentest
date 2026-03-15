@@ -56,45 +56,51 @@ export function CreateOrganizationModal({
   }, [isOpen, resetForm]);
 
   // フォーカストラップ: モーダル内でTabキーをトラップする
-  const handleTabKey = useCallback((e: KeyboardEvent) => {
-    if (!isOpen || !modalRef.current) return;
+  const handleTabKey = useCallback(
+    (e: KeyboardEvent) => {
+      if (!isOpen || !modalRef.current) return;
 
-    // フォーカス可能な要素を網羅的に取得
-    const focusableSelector = [
-      'button:not([disabled])',
-      'input:not([disabled])',
-      'textarea:not([disabled])',
-      'select:not([disabled])',
-      'a[href]',
-      '[tabindex]:not([tabindex="-1"])',
-    ].join(', ');
-    const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(focusableSelector);
-    const firstElement = focusableElements[0];
-    const lastElement = focusableElements[focusableElements.length - 1];
+      // フォーカス可能な要素を網羅的に取得
+      const focusableSelector = [
+        'button:not([disabled])',
+        'input:not([disabled])',
+        'textarea:not([disabled])',
+        'select:not([disabled])',
+        'a[href]',
+        '[tabindex]:not([tabindex="-1"])',
+      ].join(', ');
+      const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(focusableSelector);
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
 
-    if (e.key === 'Tab') {
-      if (e.shiftKey) {
-        // Shift+Tab: 最初の要素から最後へ
-        if (document.activeElement === firstElement) {
-          e.preventDefault();
-          lastElement?.focus();
-        }
-      } else {
-        // Tab: 最後の要素から最初へ
-        if (document.activeElement === lastElement) {
-          e.preventDefault();
-          firstElement?.focus();
+      if (e.key === 'Tab') {
+        if (e.shiftKey) {
+          // Shift+Tab: 最初の要素から最後へ
+          if (document.activeElement === firstElement) {
+            e.preventDefault();
+            lastElement?.focus();
+          }
+        } else {
+          // Tab: 最後の要素から最初へ
+          if (document.activeElement === lastElement) {
+            e.preventDefault();
+            firstElement?.focus();
+          }
         }
       }
-    }
-  }, [isOpen]);
+    },
+    [isOpen]
+  );
 
   // ESCキーでモーダルを閉じる
-  const handleEscapeKey = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Escape') {
-      onClose();
-    }
-  }, [onClose]);
+  const handleEscapeKey = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    },
+    [onClose]
+  );
 
   // キーボードイベントリスナー（フォーカストラップ + ESCキー）
   useEffect(() => {
@@ -222,7 +228,10 @@ export function CreateOrganizationModal({
 
             {/* 組織名 */}
             <div>
-              <label htmlFor="org-name" className="block text-sm font-medium text-foreground mb-1.5">
+              <label
+                htmlFor="org-name"
+                className="block text-sm font-medium text-foreground mb-1.5"
+              >
                 組織名 <span className="text-error">*</span>
               </label>
               <input
@@ -246,7 +255,10 @@ export function CreateOrganizationModal({
 
             {/* 説明 */}
             <div>
-              <label htmlFor="org-description" className="block text-sm font-medium text-foreground mb-1.5">
+              <label
+                htmlFor="org-description"
+                className="block text-sm font-medium text-foreground mb-1.5"
+              >
                 説明
               </label>
               <textarea
@@ -278,11 +290,7 @@ export function CreateOrganizationModal({
             >
               キャンセル
             </button>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={isSubmitting}
-            >
+            <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />

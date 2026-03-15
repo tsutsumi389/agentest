@@ -1,7 +1,10 @@
 import { prisma, type ProjectRole, type ChangeType, type Prisma } from '@agentest/db';
 import { NotFoundError, ConflictError, ValidationError } from '@agentest/shared';
 import { ProjectRepository } from '../repositories/project.repository.js';
-import { TestSuiteRepository, type TestSuiteSearchOptions } from '../repositories/test-suite.repository.js';
+import {
+  TestSuiteRepository,
+  type TestSuiteSearchOptions,
+} from '../repositories/test-suite.repository.js';
 import { notificationService } from './notification.service.js';
 
 // 復元可能な期間（30日）
@@ -18,7 +21,10 @@ export class ProjectService {
    * プロジェクトを作成
    * プロジェクト作成時に作成者をOWNERロールでProjectMemberに登録する
    */
-  async create(userId: string, data: { name: string; description?: string | null; organizationId?: string | null }) {
+  async create(
+    userId: string,
+    data: { name: string; description?: string | null; organizationId?: string | null }
+  ) {
     // 組織プロジェクトの場合、組織の存在確認を実行
     if (data.organizationId) {
       const org = await prisma.organization.findUnique({
@@ -84,7 +90,11 @@ export class ProjectService {
   /**
    * プロジェクトを更新
    */
-  async update(projectId: string, data: { name?: string; description?: string | null }, userId?: string) {
+  async update(
+    projectId: string,
+    data: { name?: string; description?: string | null },
+    userId?: string
+  ) {
     const project = await this.findById(projectId);
 
     // トランザクションで更新と履歴作成を実行
@@ -303,7 +313,12 @@ export class ProjectService {
    */
   async createEnvironment(
     projectId: string,
-    data: { name: string; baseUrl?: string | null; description?: string | null; isDefault?: boolean }
+    data: {
+      name: string;
+      baseUrl?: string | null;
+      description?: string | null;
+      isDefault?: boolean;
+    }
   ) {
     await this.findById(projectId);
 
@@ -339,7 +354,12 @@ export class ProjectService {
   async updateEnvironment(
     projectId: string,
     environmentId: string,
-    data: { name?: string; baseUrl?: string | null; description?: string | null; isDefault?: boolean }
+    data: {
+      name?: string;
+      baseUrl?: string | null;
+      description?: string | null;
+      isDefault?: boolean;
+    }
   ) {
     await this.findById(projectId);
 
@@ -543,10 +563,14 @@ export class ProjectService {
     // 30日以内かチェック
     const deletedAt = project.deletedAt!;
     const now = new Date();
-    const daysSinceDeleted = Math.floor((now.getTime() - deletedAt.getTime()) / (1000 * 60 * 60 * 24));
+    const daysSinceDeleted = Math.floor(
+      (now.getTime() - deletedAt.getTime()) / (1000 * 60 * 60 * 24)
+    );
 
     if (daysSinceDeleted > RESTORE_LIMIT_DAYS) {
-      throw new ValidationError(`削除から${RESTORE_LIMIT_DAYS}日以上経過しているため復元できません`);
+      throw new ValidationError(
+        `削除から${RESTORE_LIMIT_DAYS}日以上経過しているため復元できません`
+      );
     }
 
     // トランザクションで復元と履歴作成を実行

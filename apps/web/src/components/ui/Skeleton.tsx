@@ -10,7 +10,8 @@ interface SkeletonProps {
  * コンテンツ読み込み中のプレースホルダー表示
  */
 export function Skeleton({ className = '', variant = 'text' }: SkeletonProps) {
-  const baseClass = 'animate-skeleton bg-gradient-to-r from-background-secondary via-background-tertiary to-background-secondary bg-[length:200%_100%]';
+  const baseClass =
+    'animate-skeleton bg-gradient-to-r from-background-secondary via-background-tertiary to-background-secondary bg-[length:200%_100%]';
 
   const variantClass = {
     text: 'h-4 rounded',
@@ -54,10 +55,7 @@ export function TableRowSkeleton({ columns = 4 }: { columns?: number }) {
   return (
     <div className="flex items-center gap-4 p-4 border-b border-border">
       {Array.from({ length: columns }).map((_, i) => (
-        <Skeleton
-          key={i}
-          className={i === 0 ? 'w-1/4' : 'flex-1'}
-        />
+        <Skeleton key={i} className={i === 0 ? 'w-1/4' : 'flex-1'} />
       ))}
     </div>
   );

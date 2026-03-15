@@ -1,12 +1,5 @@
 import { useEffect, useRef } from 'react';
-import {
-  X,
-  User,
-  Globe,
-  Monitor,
-  Calendar,
-  Target,
-} from 'lucide-react';
+import { X, User, Globe, Monitor, Calendar, Target } from 'lucide-react';
 import type { AuditLog } from '../../lib/api';
 import { formatDateTime } from '../../lib/date';
 import {
@@ -28,11 +21,7 @@ interface AuditLogDetailModalProps {
 /**
  * 監査ログ詳細モーダルコンポーネント
  */
-export function AuditLogDetailModal({
-  isOpen,
-  log,
-  onClose,
-}: AuditLogDetailModalProps) {
+export function AuditLogDetailModal({ isOpen, log, onClose }: AuditLogDetailModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -102,19 +91,16 @@ export function AuditLogDetailModal({
         {/* ヘッダー */}
         <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
           <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${categoryInfo.bgColor}`}>
+            <div
+              className={`w-10 h-10 rounded-lg flex items-center justify-center ${categoryInfo.bgColor}`}
+            >
               <CategoryIcon className={`w-5 h-5 ${categoryInfo.color}`} />
             </div>
             <div>
-              <h2
-                id="audit-log-detail-title"
-                className="text-lg font-semibold text-foreground"
-              >
+              <h2 id="audit-log-detail-title" className="text-lg font-semibold text-foreground">
                 {log.action}
               </h2>
-              <span className={`text-sm ${categoryInfo.color}`}>
-                {categoryInfo.label}
-              </span>
+              <span className={`text-sm ${categoryInfo.color}`}>{categoryInfo.label}</span>
             </div>
           </div>
           <button
@@ -256,10 +242,7 @@ export function AuditLogDetailModal({
 
         {/* フッター */}
         <div className="flex justify-end p-4 border-t border-border flex-shrink-0">
-          <button
-            onClick={onClose}
-            className="btn btn-ghost"
-          >
+          <button onClick={onClose} className="btn btn-ghost">
             閉じる
           </button>
         </div>

@@ -353,18 +353,9 @@ describe('Internal API Create Endpoints Integration Tests', () => {
           .send({
             testSuiteId: testSuite.id,
             title: 'Test Case with Children',
-            preconditions: [
-              { content: 'Precondition 1' },
-              { content: 'Precondition 2' },
-            ],
-            steps: [
-              { content: 'Step 1' },
-              { content: 'Step 2' },
-              { content: 'Step 3' },
-            ],
-            expectedResults: [
-              { content: 'Expected Result 1' },
-            ],
+            preconditions: [{ content: 'Precondition 1' }, { content: 'Precondition 2' }],
+            steps: [{ content: 'Step 1' }, { content: 'Step 2' }, { content: 'Step 3' }],
+            expectedResults: [{ content: 'Expected Result 1' }],
           });
 
         expect(response.status).toBe(201);
@@ -492,9 +483,7 @@ describe('Internal API Create Endpoints Integration Tests', () => {
             ],
           },
           expectedResults: {
-            create: [
-              { content: 'Expected 1', orderKey: '00001' },
-            ],
+            create: [{ content: 'Expected 1', orderKey: '00001' }],
           },
         },
       });

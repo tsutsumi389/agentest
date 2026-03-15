@@ -11,7 +11,10 @@ vi.mock('../../../clients/api-client.js', () => ({
 }));
 
 // モック設定後にインポート
-import { createTestSuiteTool, createTestSuiteInputSchema } from '../../../tools/create-test-suite.js';
+import {
+  createTestSuiteTool,
+  createTestSuiteInputSchema,
+} from '../../../tools/create-test-suite.js';
 
 // テスト用の固定UUID
 const TEST_USER_ID = '11111111-1111-1111-1111-111111111111';
@@ -71,18 +74,22 @@ describe('createTestSuiteTool', () => {
     });
 
     it('無効なUUIDはエラー', () => {
-      expect(() => createTestSuiteInputSchema.parse({
-        projectId: 'invalid-uuid',
-        name: 'Test Suite',
-      })).toThrow();
+      expect(() =>
+        createTestSuiteInputSchema.parse({
+          projectId: 'invalid-uuid',
+          name: 'Test Suite',
+        })
+      ).toThrow();
     });
 
     it('無効なstatusはエラー', () => {
-      expect(() => createTestSuiteInputSchema.parse({
-        projectId: TEST_PROJECT_ID,
-        name: 'Test Suite',
-        status: 'INVALID',
-      })).toThrow();
+      expect(() =>
+        createTestSuiteInputSchema.parse({
+          projectId: TEST_PROJECT_ID,
+          name: 'Test Suite',
+          status: 'INVALID',
+        })
+      ).toThrow();
     });
   });
 

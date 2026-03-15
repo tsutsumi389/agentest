@@ -214,9 +214,9 @@ describe('TestSuiteService（コアCRUD）', () => {
     it('テストスイートが存在しない場合はNotFoundErrorを投げる', async () => {
       mockTestSuiteRepo.findById.mockResolvedValue(null);
 
-      await expect(
-        service.update(TEST_SUITE_ID, TEST_USER_ID, { name: '更新' })
-      ).rejects.toThrow(NotFoundError);
+      await expect(service.update(TEST_SUITE_ID, TEST_USER_ID, { name: '更新' })).rejects.toThrow(
+        NotFoundError
+      );
     });
   });
 
@@ -263,9 +263,9 @@ describe('TestSuiteService（コアCRUD）', () => {
         return (fn as (tx: typeof mockPrisma) => unknown)(mockPrisma);
       });
 
-      await expect(
-        service.update(TEST_SUITE_ID, TEST_USER_ID, { name: '更新名' })
-      ).rejects.toThrow('DB error');
+      await expect(service.update(TEST_SUITE_ID, TEST_USER_ID, { name: '更新名' })).rejects.toThrow(
+        'DB error'
+      );
     });
 
     it('softDelete中に履歴作成が失敗した場合、エラーが伝播する', async () => {
@@ -275,9 +275,7 @@ describe('TestSuiteService（コアCRUD）', () => {
         return (fn as (tx: typeof mockPrisma) => unknown)(mockPrisma);
       });
 
-      await expect(
-        service.softDelete(TEST_SUITE_ID, TEST_USER_ID)
-      ).rejects.toThrow('DB error');
+      await expect(service.softDelete(TEST_SUITE_ID, TEST_USER_ID)).rejects.toThrow('DB error');
     });
   });
 

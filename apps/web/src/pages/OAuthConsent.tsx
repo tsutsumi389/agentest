@@ -126,7 +126,10 @@ export function OAuthConsentPage() {
         // エラー時もリダイレクト
         const errorUrl = new URL(redirectUri);
         errorUrl.searchParams.set('error', data.error || 'server_error');
-        errorUrl.searchParams.set('error_description', data.error_description || 'An error occurred');
+        errorUrl.searchParams.set(
+          'error_description',
+          data.error_description || 'An error occurred'
+        );
         if (state) errorUrl.searchParams.set('state', state);
         window.location.href = errorUrl.toString();
       }
@@ -152,9 +155,7 @@ export function OAuthConsentPage() {
           <div className="flex items-center gap-3 mb-6">
             <Shield className="w-8 h-8 text-accent" />
             <div>
-              <h1 className="text-lg font-semibold text-foreground">
-                アクセス許可の確認
-              </h1>
+              <h1 className="text-lg font-semibold text-foreground">アクセス許可の確認</h1>
               <p className="text-sm text-foreground-muted">
                 {clientName} があなたのアカウントへのアクセスを求めています
               </p>
@@ -172,9 +173,7 @@ export function OAuthConsentPage() {
 
           {/* スコープ一覧 */}
           <div className="mb-6">
-            <h2 className="text-sm font-medium text-foreground mb-3">
-              要求される権限:
-            </h2>
+            <h2 className="text-sm font-medium text-foreground mb-3">要求される権限:</h2>
             <ul className="space-y-2">
               {scopes.map((s) => {
                 const info = SCOPE_LABELS[s] || { label: s, description: '' };
@@ -182,13 +181,9 @@ export function OAuthConsentPage() {
                   <li key={s} className="flex items-start gap-2 p-2 bg-surface-raised rounded">
                     <Check className="w-4 h-4 text-success flex-shrink-0 mt-0.5" />
                     <div>
-                      <span className="text-sm font-medium text-foreground">
-                        {info.label}
-                      </span>
+                      <span className="text-sm font-medium text-foreground">{info.label}</span>
                       {info.description && (
-                        <p className="text-xs text-foreground-muted">
-                          {info.description}
-                        </p>
+                        <p className="text-xs text-foreground-muted">{info.description}</p>
                       )}
                     </div>
                   </li>

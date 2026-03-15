@@ -1,9 +1,6 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  Loader2,
-  AlertTriangle,
-} from 'lucide-react';
+import { Loader2, AlertTriangle } from 'lucide-react';
 import {
   testCasesApi,
   ApiError,
@@ -157,13 +154,9 @@ export function TestCaseDetailPanel({
     <div className="flex flex-col h-full">
       {/* タブコンテンツ */}
       <div className="flex-1 overflow-y-auto p-4">
-        {currentTab === 'overview' && (
-          <OverviewTab testCase={testCase} canEdit={canEdit} />
-        )}
+        {currentTab === 'overview' && <OverviewTab testCase={testCase} canEdit={canEdit} />}
 
-        {currentTab === 'history' && (
-          <TestCaseHistoryList testCase={testCase} />
-        )}
+        {currentTab === 'history' && <TestCaseHistoryList testCase={testCase} />}
 
         {currentTab === 'settings' && (
           <DeleteTestCaseSection
@@ -192,13 +185,7 @@ export function useTestCaseDetails(testCaseId: string | null) {
 /**
  * 概要タブ（表示のみ）
  */
-function OverviewTab({
-  testCase,
-  canEdit,
-}: {
-  testCase: TestCaseWithDetails;
-  canEdit: boolean;
-}) {
+function OverviewTab({ testCase, canEdit }: { testCase: TestCaseWithDetails; canEdit: boolean }) {
   const { currentReview, refreshReview } = useReviewSession();
 
   // 現在のレビューセッションからコメントを取得
@@ -230,9 +217,7 @@ function OverviewTab({
               <MarkdownPreview content={testCase.description} />
             </div>
           ) : (
-            <div className="p-4 text-center text-foreground-muted">
-              説明なし
-            </div>
+            <div className="p-4 text-center text-foreground-muted">説明なし</div>
           )}
         </div>
       </CommentableField>

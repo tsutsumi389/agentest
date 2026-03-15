@@ -147,17 +147,13 @@ describe('Labels API Integration Tests', () => {
       await createTestLabel(project.id, { name: 'Bug', color: '#FF0000' });
       await createTestLabel(project.id, { name: 'Feature', color: '#00FF00' });
 
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/labels`)
-        .expect(200);
+      const response = await request(app).get(`/api/projects/${project.id}/labels`).expect(200);
 
       expect(response.body.labels).toHaveLength(2);
     });
 
     it('空の場合は空配列を返す', async () => {
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/labels`)
-        .expect(200);
+      const response = await request(app).get(`/api/projects/${project.id}/labels`).expect(200);
 
       expect(response.body.labels).toEqual([]);
     });
@@ -167,9 +163,7 @@ describe('Labels API Integration Tests', () => {
       await createTestLabel(project.id, { name: 'Aaa', color: '#00FF00' });
       await createTestLabel(project.id, { name: 'Mmm', color: '#0000FF' });
 
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/labels`)
-        .expect(200);
+      const response = await request(app).get(`/api/projects/${project.id}/labels`).expect(200);
 
       const names = response.body.labels.map((l: any) => l.name);
       expect(names).toEqual(['Aaa', 'Mmm', 'Zzz']);
@@ -178,9 +172,7 @@ describe('Labels API Integration Tests', () => {
     it('未認証の場合は401エラー', async () => {
       clearTestAuth();
 
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/labels`)
-        .expect(401);
+      const response = await request(app).get(`/api/projects/${project.id}/labels`).expect(401);
 
       expect(response.body.error.code).toBe('AUTHENTICATION_ERROR');
     });
@@ -189,9 +181,7 @@ describe('Labels API Integration Tests', () => {
       setTestAuth({ id: reader.id, email: reader.email }, 'READ', 'READ');
       await createTestLabel(project.id, { name: 'Bug', color: '#FF0000' });
 
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/labels`)
-        .expect(200);
+      const response = await request(app).get(`/api/projects/${project.id}/labels`).expect(200);
 
       expect(response.body.labels).toHaveLength(1);
     });
@@ -199,9 +189,7 @@ describe('Labels API Integration Tests', () => {
     it('権限がない場合は403エラー', async () => {
       setTestAuth({ id: reader.id, email: reader.email }, null, null);
 
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/labels`)
-        .expect(403);
+      const response = await request(app).get(`/api/projects/${project.id}/labels`).expect(403);
 
       expect(response.body.error.code).toBe('AUTHORIZATION_ERROR');
     });
@@ -399,7 +387,10 @@ describe('Labels API Integration Tests', () => {
     it('別プロジェクトのラベルは404エラー', async () => {
       // 別のプロジェクトを作成
       const anotherProject = await createTestProject(owner.id, { name: 'Another Project' });
-      const anotherLabel = await createTestLabel(anotherProject.id, { name: 'Other', color: '#000000' });
+      const anotherLabel = await createTestLabel(anotherProject.id, {
+        name: 'Other',
+        color: '#000000',
+      });
 
       const response = await request(app)
         .patch(`/api/projects/${project.id}/labels/${anotherLabel.id}`)
@@ -454,15 +445,11 @@ describe('Labels API Integration Tests', () => {
     });
 
     it('ラベルを削除できる', async () => {
-      await request(app)
-        .delete(`/api/projects/${project.id}/labels/${label.id}`)
-        .expect(204);
+      await request(app).delete(`/api/projects/${project.id}/labels/${label.id}`).expect(204);
     });
 
     it('削除後にDBから消えている', async () => {
-      await request(app)
-        .delete(`/api/projects/${project.id}/labels/${label.id}`)
-        .expect(204);
+      await request(app).delete(`/api/projects/${project.id}/labels/${label.id}`).expect(204);
 
       const deleted = await prisma.label.findUnique({ where: { id: label.id } });
       expect(deleted).toBeNull();
@@ -479,7 +466,10 @@ describe('Labels API Integration Tests', () => {
     it('別プロジェクトのラベルは404エラー', async () => {
       // 別のプロジェクトを作成
       const anotherProject = await createTestProject(owner.id, { name: 'Another Project' });
-      const anotherLabel = await createTestLabel(anotherProject.id, { name: 'Other', color: '#000000' });
+      const anotherLabel = await createTestLabel(anotherProject.id, {
+        name: 'Other',
+        color: '#000000',
+      });
 
       const response = await request(app)
         .delete(`/api/projects/${project.id}/labels/${anotherLabel.id}`)
@@ -511,9 +501,7 @@ describe('Labels API Integration Tests', () => {
     it('ADMIN権限のみ削除できる', async () => {
       setTestAuth({ id: admin.id, email: admin.email }, 'ADMIN', 'ADMIN');
 
-      await request(app)
-        .delete(`/api/projects/${project.id}/labels/${label.id}`)
-        .expect(204);
+      await request(app).delete(`/api/projects/${project.id}/labels/${label.id}`).expect(204);
     });
   });
 
@@ -632,7 +620,10 @@ describe('Labels API Integration Tests', () => {
     it('別プロジェクトのラベルIDは400エラー', async () => {
       // 別のプロジェクトを作成してラベルを追加
       const anotherProject = await createTestProject(owner.id, { name: 'Another Project' });
-      const anotherLabel = await createTestLabel(anotherProject.id, { name: 'Other', color: '#000000' });
+      const anotherLabel = await createTestLabel(anotherProject.id, {
+        name: 'Other',
+        color: '#000000',
+      });
 
       const response = await request(app)
         .put(`/api/test-suites/${testSuite.id}/labels`)

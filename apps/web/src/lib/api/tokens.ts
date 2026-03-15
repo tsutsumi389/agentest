@@ -1,9 +1,5 @@
 import { api } from './client.js';
-import type {
-  ApiToken,
-  CreatedApiToken,
-  CreateApiTokenRequest,
-} from './types.js';
+import type { ApiToken, CreatedApiToken, CreateApiTokenRequest } from './types.js';
 
 // ============================================
 // APIトークンAPI
@@ -18,6 +14,5 @@ export const apiTokensApi = {
     api.post<{ token: CreatedApiToken }>('/api/api-tokens', data),
 
   // トークンを失効
-  revoke: (tokenId: string) =>
-    api.delete<{ success: boolean }>(`/api/api-tokens/${tokenId}`),
+  revoke: (tokenId: string) => api.delete<{ success: boolean }>(`/api/api-tokens/${tokenId}`),
 };

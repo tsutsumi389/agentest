@@ -32,10 +32,7 @@ export function Breadcrumb({ items, showHome = true, className = '' }: Breadcrum
     : items;
 
   return (
-    <nav
-      aria-label="パンくずリスト"
-      className={`flex items-center gap-1 text-sm ${className}`}
-    >
+    <nav aria-label="パンくずリスト" className={`flex items-center gap-1 text-sm ${className}`}>
       <ol className="flex items-center gap-1">
         {allItems.map((item, index) => {
           const isLast = index === allItems.length - 1;

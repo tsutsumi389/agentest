@@ -28,9 +28,7 @@ describe('useKeyboardShortcuts', () => {
 
   it('ショートカットキーでアクションが実行される', () => {
     const action = vi.fn();
-    renderHook(() =>
-      useKeyboardShortcuts([{ key: 'k', action }])
-    );
+    renderHook(() => useKeyboardShortcuts([{ key: 'k', action }]));
 
     const event = new KeyboardEvent('keydown', { key: 'k' });
     window.dispatchEvent(event);
@@ -39,9 +37,7 @@ describe('useKeyboardShortcuts', () => {
 
   it('修飾キーなしのショートカットが正しく動作する', () => {
     const action = vi.fn();
-    renderHook(() =>
-      useKeyboardShortcuts([{ key: 'escape', action }])
-    );
+    renderHook(() => useKeyboardShortcuts([{ key: 'escape', action }]));
 
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     expect(action).toHaveBeenCalledTimes(1);
@@ -49,9 +45,7 @@ describe('useKeyboardShortcuts', () => {
 
   it('入力フィールド内ではデフォルトで発火しない', () => {
     const action = vi.fn();
-    renderHook(() =>
-      useKeyboardShortcuts([{ key: 'k', action }])
-    );
+    renderHook(() => useKeyboardShortcuts([{ key: 'k', action }]));
 
     const input = appendTestInput();
     const event = new KeyboardEvent('keydown', {
@@ -65,9 +59,7 @@ describe('useKeyboardShortcuts', () => {
 
   it('enableInInput=trueの場合は入力フィールド内でも発火する', () => {
     const action = vi.fn();
-    renderHook(() =>
-      useKeyboardShortcuts([{ key: 'escape', action, enableInInput: true }])
-    );
+    renderHook(() => useKeyboardShortcuts([{ key: 'escape', action, enableInInput: true }]));
 
     const input = appendTestInput();
     const event = new KeyboardEvent('keydown', {
@@ -81,9 +73,7 @@ describe('useKeyboardShortcuts', () => {
 
   it('アンマウント時にリスナーが解除される', () => {
     const action = vi.fn();
-    const { unmount } = renderHook(() =>
-      useKeyboardShortcuts([{ key: 'k', action }])
-    );
+    const { unmount } = renderHook(() => useKeyboardShortcuts([{ key: 'k', action }]));
 
     unmount();
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k' }));
@@ -92,9 +82,7 @@ describe('useKeyboardShortcuts', () => {
 
   it('meta修飾キー付きのショートカットが動作する（Ctrl: non-Mac）', () => {
     const action = vi.fn();
-    renderHook(() =>
-      useKeyboardShortcuts([{ key: 'k', meta: true, action }])
-    );
+    renderHook(() => useKeyboardShortcuts([{ key: 'k', meta: true, action }]));
 
     // metaなしでは発火しない
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k' }));
@@ -107,9 +95,7 @@ describe('useKeyboardShortcuts', () => {
 
   it('meta修飾キー付きのショートカットが動作する（metaKey: Mac）', () => {
     const action = vi.fn();
-    renderHook(() =>
-      useKeyboardShortcuts([{ key: 'k', meta: true, action }])
-    );
+    renderHook(() => useKeyboardShortcuts([{ key: 'k', meta: true, action }]));
 
     // jsdomはnon-Mac環境のため、metaKeyではなくctrlKeyがmeta扱い
     // metaKeyのみでは発火しないことを確認
@@ -120,9 +106,7 @@ describe('useKeyboardShortcuts', () => {
 
   it('shift修飾キー付きのショートカットが動作する', () => {
     const action = vi.fn();
-    renderHook(() =>
-      useKeyboardShortcuts([{ key: 'k', shift: true, action }])
-    );
+    renderHook(() => useKeyboardShortcuts([{ key: 'k', shift: true, action }]));
 
     // shiftなしでは発火しない
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k' }));
@@ -135,9 +119,7 @@ describe('useKeyboardShortcuts', () => {
 
   it('alt修飾キー付きのショートカットが動作する', () => {
     const action = vi.fn();
-    renderHook(() =>
-      useKeyboardShortcuts([{ key: 'k', alt: true, action }])
-    );
+    renderHook(() => useKeyboardShortcuts([{ key: 'k', alt: true, action }]));
 
     // altなしでは発火しない
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k' }));

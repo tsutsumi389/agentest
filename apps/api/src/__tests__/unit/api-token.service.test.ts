@@ -143,8 +143,7 @@ describe('ApiTokenService', () => {
     });
 
     it('userIdもorganizationIdもない場合はValidationErrorを投げる', async () => {
-      await expect(service.createToken({ name: 'My Token' }))
-        .rejects.toThrow(ValidationError);
+      await expect(service.createToken({ name: 'My Token' })).rejects.toThrow(ValidationError);
     });
 
     it('有効期限付きトークンを作成できる', async () => {
@@ -189,8 +188,7 @@ describe('ApiTokenService', () => {
     it('存在しないトークンはNotFoundErrorを投げる', async () => {
       mockApiTokenRepo.findById.mockResolvedValue(null);
 
-      await expect(service.revokeToken('token-1', 'user-1'))
-        .rejects.toThrow(NotFoundError);
+      await expect(service.revokeToken('token-1', 'user-1')).rejects.toThrow(NotFoundError);
     });
 
     it('他人のトークンはAuthorizationErrorを投げる', async () => {
@@ -201,8 +199,7 @@ describe('ApiTokenService', () => {
       };
       mockApiTokenRepo.findById.mockResolvedValue(mockToken);
 
-      await expect(service.revokeToken('token-1', 'user-1'))
-        .rejects.toThrow(AuthorizationError);
+      await expect(service.revokeToken('token-1', 'user-1')).rejects.toThrow(AuthorizationError);
     });
 
     it('既に失効済みのトークンはValidationErrorを投げる', async () => {
@@ -213,8 +210,7 @@ describe('ApiTokenService', () => {
       };
       mockApiTokenRepo.findById.mockResolvedValue(mockToken);
 
-      await expect(service.revokeToken('token-1', 'user-1'))
-        .rejects.toThrow(ValidationError);
+      await expect(service.revokeToken('token-1', 'user-1')).rejects.toThrow(ValidationError);
     });
   });
 

@@ -20,7 +20,9 @@ test.describe('テストケース一覧', () => {
       await page.waitForLoadState('networkidle');
 
       // テストケースの詳細がロードされる
-      await expect(page.getByRole('heading', { name: testCase.testCase.title })).toBeVisible({ timeout: 10000 });
+      await expect(page.getByRole('heading', { name: testCase.testCase.title })).toBeVisible({
+        timeout: 10000,
+      });
 
       // サイドバーにもテストケースが表示される（検索で確認）
       const searchInput = page.getByPlaceholder('検索...');
@@ -67,17 +69,25 @@ test.describe('テストケース一覧', () => {
 
     try {
       // 作成したテストケースに直接遷移
-      await page.goto(`/test-suites/${DEMO_TEST_SUITE_ID}?testCase=${highPriorityCase.testCase.id}`);
+      await page.goto(
+        `/test-suites/${DEMO_TEST_SUITE_ID}?testCase=${highPriorityCase.testCase.id}`
+      );
       await page.waitForLoadState('networkidle');
 
       // テストケースがロードされるのを待つ
-      await expect(page.getByRole('heading', { name: highPriorityCase.testCase.title })).toBeVisible({ timeout: 10000 });
+      await expect(
+        page.getByRole('heading', { name: highPriorityCase.testCase.title })
+      ).toBeVisible({ timeout: 10000 });
 
       // 詳細画面で「高」優先度が表示されることを確認
       await expect(page.getByRole('main').getByText('高')).toBeVisible({ timeout: 10000 });
     } finally {
       // クリーンアップ
-      await apiClient.deleteTestCase(DEMO_PROJECT_ID, DEMO_TEST_SUITE_ID, highPriorityCase.testCase.id);
+      await apiClient.deleteTestCase(
+        DEMO_PROJECT_ID,
+        DEMO_TEST_SUITE_ID,
+        highPriorityCase.testCase.id
+      );
     }
   });
 });
@@ -104,7 +114,9 @@ test.describe('テストケースCRUD', () => {
       await expect(page.getByText('新規テストケース作成')).toBeVisible({ timeout: 5000 });
 
       // タイトル入力フィールドに入力（MentionInputのplaceholder）
-      const titleInput = page.getByPlaceholder('例: ログインフォームの表示確認（@でテストケース参照）');
+      const titleInput = page.getByPlaceholder(
+        '例: ログインフォームの表示確認（@でテストケース参照）'
+      );
       await titleInput.fill(testCaseName);
 
       // 「作成」ボタンをクリック
@@ -112,7 +124,9 @@ test.describe('テストケースCRUD', () => {
       await saveButton.click();
 
       // 作成されたテストケースの詳細がメインコンテンツに表示される
-      await expect(page.getByRole('heading', { name: testCaseName })).toBeVisible({ timeout: 10000 });
+      await expect(page.getByRole('heading', { name: testCaseName })).toBeVisible({
+        timeout: 10000,
+      });
 
       // URLからテストケースIDを取得してクリーンアップ用に保存
       const url = page.url();
@@ -145,7 +159,9 @@ test.describe('テストケースCRUD', () => {
       await page.reload();
 
       // テストケースがロードされるのを待つ
-      await expect(page.getByRole('heading', { name: originalTitle })).toBeVisible({ timeout: 10000 });
+      await expect(page.getByRole('heading', { name: originalTitle })).toBeVisible({
+        timeout: 10000,
+      });
 
       // 編集ボタンをクリック（title属性で特定）
       const editButton = page.locator('button[title="テストケースを編集"]');
@@ -368,7 +384,9 @@ test.describe('テストケースCRUD', () => {
       await page.waitForLoadState('networkidle');
 
       // テストケースがロードされるのを待つ
-      await expect(page.getByRole('heading', { name: originalTitle })).toBeVisible({ timeout: 10000 });
+      await expect(page.getByRole('heading', { name: originalTitle })).toBeVisible({
+        timeout: 10000,
+      });
 
       // コピーボタンをクリック（title属性で特定）
       const copyButton = page.locator('button[title="テストケースをコピー"]');
@@ -376,14 +394,18 @@ test.describe('テストケースCRUD', () => {
       await copyButton.click();
 
       // コピーモーダルが表示されるのを待つ
-      await expect(page.getByRole('heading', { name: 'テストケースをコピー' })).toBeVisible({ timeout: 5000 });
+      await expect(page.getByRole('heading', { name: 'テストケースをコピー' })).toBeVisible({
+        timeout: 5000,
+      });
 
       // モーダル内の「コピー」ボタンをクリック（フォーム内のsubmitボタン）
       const confirmCopyButton = page.locator('form button[type="submit"]');
       await confirmCopyButton.click();
 
       // モーダルが閉じるのを待つ（コピー成功）
-      await expect(page.getByRole('heading', { name: 'テストケースをコピー' })).not.toBeVisible({ timeout: 10000 });
+      await expect(page.getByRole('heading', { name: 'テストケースをコピー' })).not.toBeVisible({
+        timeout: 10000,
+      });
 
       // URLにtestCaseパラメータがあることを確認（元のテストケースまたはコピーされたテストケース）
       await page.waitForURL(/testCase=/, { timeout: 10000 });
@@ -398,11 +420,15 @@ test.describe('テストケースCRUD', () => {
       // クリーンアップ（タイムアウト後はブラウザが閉じている可能性があるためエラーを無視）
       try {
         await apiClient.deleteTestCase(DEMO_PROJECT_ID, DEMO_TEST_SUITE_ID, testCase.testCase.id);
-      } catch { /* 削除済みまたはコンテキスト閉鎖 */ }
+      } catch {
+        /* 削除済みまたはコンテキスト閉鎖 */
+      }
       if (copiedTestCaseId) {
         try {
           await apiClient.deleteTestCase(DEMO_PROJECT_ID, DEMO_TEST_SUITE_ID, copiedTestCaseId);
-        } catch { /* 削除済みまたはコンテキスト閉鎖 */ }
+        } catch {
+          /* 削除済みまたはコンテキスト閉鎖 */
+        }
       }
     }
   });

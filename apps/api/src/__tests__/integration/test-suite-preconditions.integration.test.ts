@@ -36,7 +36,12 @@ vi.mock('@agentest/auth', () => ({
     }
     next();
   },
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -50,20 +55,22 @@ vi.mock('@agentest/auth', () => ({
 
 // テストスイート権限ミドルウェアをモック
 vi.mock('../../middleware/require-test-suite-role.js', () => ({
-  requireTestSuiteRole: (roles: string[], _options?: { allowDeletedSuite?: boolean }) => async (req: any, _res: any, next: any) => {
-    if (!mockTestSuiteRole || !roles.includes(mockTestSuiteRole)) {
-      return next(new AuthorizationError('権限がありません'));
-    }
-    // テストスイートの存在チェック
-    const testSuiteId = req.params.testSuiteId;
-    if (testSuiteId) {
-      const testSuite = await prisma.testSuite.findUnique({ where: { id: testSuiteId } });
-      if (!testSuite) {
-        return next(new NotFoundError('TestSuite', testSuiteId));
+  requireTestSuiteRole:
+    (roles: string[], _options?: { allowDeletedSuite?: boolean }) =>
+    async (req: any, _res: any, next: any) => {
+      if (!mockTestSuiteRole || !roles.includes(mockTestSuiteRole)) {
+        return next(new AuthorizationError('権限がありません'));
       }
-    }
-    next();
-  },
+      // テストスイートの存在チェック
+      const testSuiteId = req.params.testSuiteId;
+      if (testSuiteId) {
+        const testSuite = await prisma.testSuite.findUnique({ where: { id: testSuiteId } });
+        if (!testSuite) {
+          return next(new NotFoundError('TestSuite', testSuiteId));
+        }
+      }
+      next();
+    },
 }));
 
 // テスト用認証設定関数
@@ -303,7 +310,9 @@ describe('Test Suite Preconditions API Integration Tests', () => {
 
     it('存在しない前提条件は404エラー', async () => {
       const response = await request(app)
-        .patch(`/api/test-suites/${testSuite.id}/preconditions/00000000-0000-0000-0000-000000000000`)
+        .patch(
+          `/api/test-suites/${testSuite.id}/preconditions/00000000-0000-0000-0000-000000000000`
+        )
         .send({
           content: 'Updated content',
         })
@@ -372,7 +381,9 @@ describe('Test Suite Preconditions API Integration Tests', () => {
 
     it('存在しない前提条件は404エラー', async () => {
       const response = await request(app)
-        .delete(`/api/test-suites/${testSuite.id}/preconditions/00000000-0000-0000-0000-000000000000`)
+        .delete(
+          `/api/test-suites/${testSuite.id}/preconditions/00000000-0000-0000-0000-000000000000`
+        )
         .expect(404);
 
       expect(response.body.error.code).toBe('NOT_FOUND');
@@ -412,9 +423,18 @@ describe('Test Suite Preconditions API Integration Tests', () => {
     let precondition3: Awaited<ReturnType<typeof createTestPrecondition>>;
 
     beforeEach(async () => {
-      precondition1 = await createTestPrecondition(testSuite.id, { content: 'First', orderKey: 'a' });
-      precondition2 = await createTestPrecondition(testSuite.id, { content: 'Second', orderKey: 'b' });
-      precondition3 = await createTestPrecondition(testSuite.id, { content: 'Third', orderKey: 'c' });
+      precondition1 = await createTestPrecondition(testSuite.id, {
+        content: 'First',
+        orderKey: 'a',
+      });
+      precondition2 = await createTestPrecondition(testSuite.id, {
+        content: 'Second',
+        orderKey: 'b',
+      });
+      precondition3 = await createTestPrecondition(testSuite.id, {
+        content: 'Third',
+        orderKey: 'c',
+      });
     });
 
     it('前提条件の並び順を変更できる', async () => {
@@ -527,9 +547,7 @@ describe('Test Suite Preconditions API Integration Tests', () => {
       });
 
       it('前提条件一覧を取得できる', async () => {
-        await request(app)
-          .get(`/api/test-suites/${testSuite.id}/preconditions`)
-          .expect(200);
+        await request(app).get(`/api/test-suites/${testSuite.id}/preconditions`).expect(200);
       });
 
       it('前提条件を追加できる', async () => {
@@ -567,9 +585,7 @@ describe('Test Suite Preconditions API Integration Tests', () => {
       });
 
       it('前提条件一覧を取得できる', async () => {
-        await request(app)
-          .get(`/api/test-suites/${testSuite.id}/preconditions`)
-          .expect(200);
+        await request(app).get(`/api/test-suites/${testSuite.id}/preconditions`).expect(200);
       });
 
       it('前提条件を追加できる', async () => {
@@ -607,9 +623,7 @@ describe('Test Suite Preconditions API Integration Tests', () => {
       });
 
       it('前提条件一覧を取得できる', async () => {
-        await request(app)
-          .get(`/api/test-suites/${testSuite.id}/preconditions`)
-          .expect(200);
+        await request(app).get(`/api/test-suites/${testSuite.id}/preconditions`).expect(200);
       });
 
       it('前提条件を追加できない', async () => {

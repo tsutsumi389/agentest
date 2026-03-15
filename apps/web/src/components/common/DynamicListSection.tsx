@@ -1,10 +1,4 @@
-import {
-  Plus,
-  Trash2,
-  GripVertical,
-  ChevronDown,
-  ChevronUp,
-} from 'lucide-react';
+import { Plus, Trash2, GripVertical, ChevronDown, ChevronUp } from 'lucide-react';
 import {
   DndContext,
   closestCenter,
@@ -80,29 +74,16 @@ export function DynamicListSection({
       >
         <span>
           {title}
-          {items.length > 0 && (
-            <span className="ml-2 text-foreground-muted">({items.length})</span>
-          )}
+          {items.length > 0 && <span className="ml-2 text-foreground-muted">({items.length})</span>}
         </span>
-        {isExpanded ? (
-          <ChevronUp className="w-4 h-4" />
-        ) : (
-          <ChevronDown className="w-4 h-4" />
-        )}
+        {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
       </button>
 
       {/* コンテンツ */}
       {isExpanded && (
         <div className="p-3 space-y-2">
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={onDragEnd}
-          >
-            <SortableContext
-              items={items.map((i) => i.id)}
-              strategy={verticalListSortingStrategy}
-            >
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+            <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
               {items.map((item, index) => (
                 <SortableListItem
                   key={item.id}
@@ -155,14 +136,9 @@ function SortableListItem({
   placeholder,
   useMarkdown = false,
 }: SortableListItemProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: item.id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -187,9 +163,7 @@ function SortableListItem({
       </button>
 
       {/* 番号 */}
-      <span className="text-sm text-foreground-muted w-6 flex-shrink-0 mt-2">
-        {index + 1}.
-      </span>
+      <span className="text-sm text-foreground-muted w-6 flex-shrink-0 mt-2">{index + 1}.</span>
 
       {/* 入力欄 */}
       {useMarkdown ? (
@@ -273,9 +247,7 @@ export function createDragEndHandler<T extends ListItem>(
 /**
  * リスト項目を追加するユーティリティ
  */
-export function addListItem<T extends ListItem>(
-  setter: React.Dispatch<React.SetStateAction<T[]>>
-) {
+export function addListItem<T extends ListItem>(setter: React.Dispatch<React.SetStateAction<T[]>>) {
   setter((prev) => [
     ...prev,
     {
@@ -294,9 +266,7 @@ export function updateListItem<T extends ListItem>(
   id: string,
   content: string
 ) {
-  setter((prev) =>
-    prev.map((item) => (item.id === id ? { ...item, content } : item))
-  );
+  setter((prev) => prev.map((item) => (item.id === id ? { ...item, content } : item)));
 }
 
 /**
@@ -306,9 +276,5 @@ export function deleteListItem<T extends ListItem>(
   setter: React.Dispatch<React.SetStateAction<T[]>>,
   id: string
 ) {
-  setter((prev) =>
-    prev.map((item) =>
-      item.id === id ? { ...item, isDeleted: true } : item
-    )
-  );
+  setter((prev) => prev.map((item) => (item.id === id ? { ...item, isDeleted: true } : item)));
 }

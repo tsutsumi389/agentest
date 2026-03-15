@@ -1,6 +1,9 @@
 import { Link, useSearchParams } from 'react-router';
 import { AgentestLogo } from '../components/ui/AgentestLogo';
-import { PasswordStrengthChecklist, PASSWORD_CHECKS } from '../components/PasswordStrengthChecklist';
+import {
+  PasswordStrengthChecklist,
+  PASSWORD_CHECKS,
+} from '../components/PasswordStrengthChecklist';
 import { authApi, ApiError } from '../lib/api';
 import { useState } from 'react';
 
@@ -101,9 +104,7 @@ export function ResetPasswordPage() {
           {isSuccess ? (
             /* 成功画面 */
             <div className="space-y-4">
-              <p className="text-sm text-foreground text-center">
-                パスワードを変更しました
-              </p>
+              <p className="text-sm text-foreground text-center">パスワードを変更しました</p>
               <div className="pt-4 border-t border-border text-center">
                 <Link to="/login" className="text-sm text-accent hover:underline">
                   ログインする
@@ -114,7 +115,10 @@ export function ResetPasswordPage() {
             /* 入力フォーム */
             <form onSubmit={handleSubmit} className="space-y-4">
               {error && (
-                <div role="alert" className="text-sm text-error bg-error/10 border border-error/20 rounded-md px-3 py-2">
+                <div
+                  role="alert"
+                  className="text-sm text-error bg-error/10 border border-error/20 rounded-md px-3 py-2"
+                >
                   {error}
                   {isTokenExpired && (
                     <div className="mt-2">
@@ -127,7 +131,10 @@ export function ResetPasswordPage() {
               )}
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-foreground mb-1"
+                >
                   新しいパスワード
                 </label>
                 <input
@@ -145,7 +152,10 @@ export function ResetPasswordPage() {
               </div>
 
               <div>
-                <label htmlFor="password-confirm" className="block text-sm font-medium text-foreground mb-1">
+                <label
+                  htmlFor="password-confirm"
+                  className="block text-sm font-medium text-foreground mb-1"
+                >
                   パスワード（確認）
                 </label>
                 <input
@@ -159,11 +169,7 @@ export function ResetPasswordPage() {
                 />
               </div>
 
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="btn btn-primary w-full"
-              >
+              <button type="submit" disabled={isSubmitting} className="btn btn-primary w-full">
                 {isSubmitting ? '変更中...' : 'パスワードを変更'}
               </button>
             </form>

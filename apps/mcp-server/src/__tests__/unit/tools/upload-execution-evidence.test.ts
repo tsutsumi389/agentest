@@ -71,29 +71,37 @@ describe('uploadExecutionEvidenceTool', () => {
 
     it('executionId, expectedResultId, filePathは必須', () => {
       expect(() => uploadExecutionEvidenceInputSchema.parse({})).toThrow();
-      expect(() => uploadExecutionEvidenceInputSchema.parse({
-        executionId: TEST_EXECUTION_ID,
-      })).toThrow();
-      expect(() => uploadExecutionEvidenceInputSchema.parse({
-        executionId: TEST_EXECUTION_ID,
-        expectedResultId: TEST_EXPECTED_RESULT_ID,
-      })).toThrow();
+      expect(() =>
+        uploadExecutionEvidenceInputSchema.parse({
+          executionId: TEST_EXECUTION_ID,
+        })
+      ).toThrow();
+      expect(() =>
+        uploadExecutionEvidenceInputSchema.parse({
+          executionId: TEST_EXECUTION_ID,
+          expectedResultId: TEST_EXPECTED_RESULT_ID,
+        })
+      ).toThrow();
     });
 
     it('無効なUUIDはエラー', () => {
-      expect(() => uploadExecutionEvidenceInputSchema.parse({
-        executionId: 'invalid-uuid',
-        expectedResultId: TEST_EXPECTED_RESULT_ID,
-        filePath: '/tmp/test.png',
-      })).toThrow();
+      expect(() =>
+        uploadExecutionEvidenceInputSchema.parse({
+          executionId: 'invalid-uuid',
+          expectedResultId: TEST_EXPECTED_RESULT_ID,
+          filePath: '/tmp/test.png',
+        })
+      ).toThrow();
     });
 
     it('空のfilePathはエラー', () => {
-      expect(() => uploadExecutionEvidenceInputSchema.parse({
-        executionId: TEST_EXECUTION_ID,
-        expectedResultId: TEST_EXPECTED_RESULT_ID,
-        filePath: '',
-      })).toThrow();
+      expect(() =>
+        uploadExecutionEvidenceInputSchema.parse({
+          executionId: TEST_EXECUTION_ID,
+          expectedResultId: TEST_EXPECTED_RESULT_ID,
+          filePath: '',
+        })
+      ).toThrow();
     });
   });
 
@@ -125,7 +133,10 @@ describe('uploadExecutionEvidenceTool', () => {
         filePath: '/tmp/screenshot.png',
       };
 
-      const result = await uploadExecutionEvidenceTool.handler(input, context) as Record<string, unknown>;
+      const result = (await uploadExecutionEvidenceTool.handler(input, context)) as Record<
+        string,
+        unknown
+      >;
 
       // JSON POSTで送信されること（multipartではない）
       expect(mockApiClient.post).toHaveBeenCalledWith(
@@ -161,7 +172,10 @@ describe('uploadExecutionEvidenceTool', () => {
         fileType: 'image/jpeg',
       };
 
-      const result = await uploadExecutionEvidenceTool.handler(input, context) as Record<string, unknown>;
+      const result = (await uploadExecutionEvidenceTool.handler(input, context)) as Record<
+        string,
+        unknown
+      >;
 
       expect(mockApiClient.post).toHaveBeenCalledWith(
         expect.any(String),
@@ -212,7 +226,10 @@ describe('uploadExecutionEvidenceTool', () => {
         filePath: '/tmp/noext',
       };
 
-      const result = await uploadExecutionEvidenceTool.handler(input, context) as Record<string, unknown>;
+      const result = (await uploadExecutionEvidenceTool.handler(input, context)) as Record<
+        string,
+        unknown
+      >;
 
       expect(mockApiClient.post).toHaveBeenCalledWith(
         expect.any(String),

@@ -6,14 +6,40 @@ import { apiClient } from '../clients/api-client.js';
  * 入力スキーマ
  */
 export const searchTestCaseInputSchema = z.object({
-  testSuiteId: z.string().uuid().describe('検索対象のテストスイートID。search_test_suiteで取得したIDを指定'),
-  q: z.string().max(100).optional().describe('タイトル・手順・期待結果に対するキーワード部分一致検索'),
-  status: z.array(z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED'])).optional().describe('ステータスで絞り込み（複数選択可）: DRAFT（下書き）, ACTIVE（有効）, ARCHIVED（アーカイブ済み）'),
-  priority: z.array(z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'])).optional().describe('優先度で絞り込み（複数選択可）: LOW, MEDIUM, HIGH, CRITICAL'),
+  testSuiteId: z
+    .string()
+    .uuid()
+    .describe('検索対象のテストスイートID。search_test_suiteで取得したIDを指定'),
+  q: z
+    .string()
+    .max(100)
+    .optional()
+    .describe('タイトル・手順・期待結果に対するキーワード部分一致検索'),
+  status: z
+    .array(z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']))
+    .optional()
+    .describe(
+      'ステータスで絞り込み（複数選択可）: DRAFT（下書き）, ACTIVE（有効）, ARCHIVED（アーカイブ済み）'
+    ),
+  priority: z
+    .array(z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']))
+    .optional()
+    .describe('優先度で絞り込み（複数選択可）: LOW, MEDIUM, HIGH, CRITICAL'),
   limit: z.number().int().min(1).max(50).default(20).describe('取得件数（1-50、デフォルト: 20）'),
-  offset: z.number().int().min(0).default(0).describe('ページネーション用オフセット（デフォルト: 0）'),
-  sortBy: z.enum(['title', 'createdAt', 'updatedAt', 'priority', 'orderKey']).default('orderKey').describe('ソート項目（デフォルト: orderKey=表示順序）'),
-  sortOrder: z.enum(['asc', 'desc']).default('asc').describe('ソート順: asc（昇順）, desc（降順）。デフォルト: asc'),
+  offset: z
+    .number()
+    .int()
+    .min(0)
+    .default(0)
+    .describe('ページネーション用オフセット（デフォルト: 0）'),
+  sortBy: z
+    .enum(['title', 'createdAt', 'updatedAt', 'priority', 'orderKey'])
+    .default('orderKey')
+    .describe('ソート項目（デフォルト: orderKey=表示順序）'),
+  sortOrder: z
+    .enum(['asc', 'desc'])
+    .default('asc')
+    .describe('ソート順: asc（昇順）, desc（降順）。デフォルト: asc'),
 });
 
 type SearchTestCaseInput = z.infer<typeof searchTestCaseInputSchema>;

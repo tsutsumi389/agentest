@@ -57,15 +57,8 @@ export function AuditLogDetailModal({ log, onClose }: AuditLogDetailModalProps) 
               <DetailItem label="日時" value={formatDateTime(log.createdAt)} />
               <DetailItem label="カテゴリ" value={CATEGORY_LABELS[log.category] || log.category} />
               <DetailItem label="アクション" value={log.action} />
-              <DetailItem
-                label="対象タイプ"
-                value={log.targetType || '-'}
-              />
-              <DetailItem
-                label="対象ID"
-                value={log.targetId || '-'}
-                mono
-              />
+              <DetailItem label="対象タイプ" value={log.targetType || '-'} />
+              <DetailItem label="対象ID" value={log.targetId || '-'} mono />
             </div>
 
             {/* 組織情報 */}
@@ -138,11 +131,7 @@ function DetailItem({
   return (
     <div>
       <span className="text-xs text-foreground-muted">{label}</span>
-      <p
-        className={`text-sm text-foreground ${mono ? 'font-mono' : ''} break-all`}
-      >
-        {value}
-      </p>
+      <p className={`text-sm text-foreground ${mono ? 'font-mono' : ''} break-all`}>{value}</p>
     </div>
   );
 }

@@ -1,13 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router';
-import {
-  Search,
-  LayoutDashboard,
-  FolderKanban,
-  Settings,
-  FileText,
-  Command,
-} from 'lucide-react';
+import { Search, LayoutDashboard, FolderKanban, Settings, FileText, Command } from 'lucide-react';
 import { useShortcut, formatShortcut } from '../hooks/useKeyboardShortcuts';
 
 /**
@@ -42,60 +35,61 @@ export function CommandPalette({ additionalCommands = [] }: CommandPaletteProps)
   useShortcut('k', () => setIsOpen(true), { meta: true });
 
   // デフォルトのコマンド
-  const defaultCommands: CommandItem[] = useMemo(() => [
-    {
-      id: 'nav-dashboard',
-      label: 'ダッシュボードに移動',
-      icon: LayoutDashboard,
-      action: () => navigate('/dashboard'),
-      category: 'navigation',
-    },
-    {
-      id: 'nav-projects',
-      label: 'プロジェクト一覧に移動',
-      icon: FolderKanban,
-      action: () => navigate('/projects'),
-      category: 'navigation',
-    },
-    {
-      id: 'nav-settings',
-      label: '設定を開く',
-      icon: Settings,
-      action: () => navigate('/settings'),
-      category: 'navigation',
-    },
-    {
-      id: 'action-new-project',
-      label: '新規プロジェクト作成',
-      icon: FolderKanban,
-      action: () => {
-        navigate('/projects');
-        // 少し遅延してモーダルを開くトリガーを発火させることも可能
+  const defaultCommands: CommandItem[] = useMemo(
+    () => [
+      {
+        id: 'nav-dashboard',
+        label: 'ダッシュボードに移動',
+        icon: LayoutDashboard,
+        action: () => navigate('/dashboard'),
+        category: 'navigation',
       },
-      category: 'action',
-    },
-    {
-      id: 'action-new-test',
-      label: '新規テストスイート作成',
-      icon: FileText,
-      action: () => navigate('/projects'),
-      category: 'action',
-    },
-  ], [navigate]);
+      {
+        id: 'nav-projects',
+        label: 'プロジェクト一覧に移動',
+        icon: FolderKanban,
+        action: () => navigate('/projects'),
+        category: 'navigation',
+      },
+      {
+        id: 'nav-settings',
+        label: '設定を開く',
+        icon: Settings,
+        action: () => navigate('/settings'),
+        category: 'navigation',
+      },
+      {
+        id: 'action-new-project',
+        label: '新規プロジェクト作成',
+        icon: FolderKanban,
+        action: () => {
+          navigate('/projects');
+          // 少し遅延してモーダルを開くトリガーを発火させることも可能
+        },
+        category: 'action',
+      },
+      {
+        id: 'action-new-test',
+        label: '新規テストスイート作成',
+        icon: FileText,
+        action: () => navigate('/projects'),
+        category: 'action',
+      },
+    ],
+    [navigate]
+  );
 
   // 全コマンド
-  const allCommands = useMemo(() => [
-    ...defaultCommands,
-    ...additionalCommands,
-  ], [defaultCommands, additionalCommands]);
+  const allCommands = useMemo(
+    () => [...defaultCommands, ...additionalCommands],
+    [defaultCommands, additionalCommands]
+  );
 
   // フィルタリング
   const filteredCommands = useMemo(() => {
     if (!query) return allCommands;
     const lowerQuery = query.toLowerCase();
-    return allCommands.filter(cmd =>
-      cmd.label.toLowerCase().includes(lowerQuery)
-    );
+    return allCommands.filter((cmd) => cmd.label.toLowerCase().includes(lowerQuery));
   }, [allCommands, query]);
 
   // パレットが開いたときにフォーカス
@@ -119,18 +113,14 @@ export function CommandPalette({ additionalCommands = [] }: CommandPaletteProps)
       case 'j':
         if (!e.metaKey && !e.ctrlKey) {
           e.preventDefault();
-          setSelectedIndex(prev =>
-            prev < filteredCommands.length - 1 ? prev + 1 : 0
-          );
+          setSelectedIndex((prev) => (prev < filteredCommands.length - 1 ? prev + 1 : 0));
         }
         break;
       case 'ArrowUp':
       case 'k':
         if (!e.metaKey && !e.ctrlKey) {
           e.preventDefault();
-          setSelectedIndex(prev =>
-            prev > 0 ? prev - 1 : filteredCommands.length - 1
-          );
+          setSelectedIndex((prev) => (prev > 0 ? prev - 1 : filteredCommands.length - 1));
         }
         break;
       case 'Enter':
@@ -165,7 +155,7 @@ export function CommandPalette({ additionalCommands = [] }: CommandPaletteProps)
       {/* パレット */}
       <div
         className="relative w-full max-w-lg bg-background-secondary border border-border rounded-lg shadow-lg overflow-hidden"
-        onClick={e => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
       >
         {/* 検索入力 */}
         <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
@@ -174,7 +164,7 @@ export function CommandPalette({ additionalCommands = [] }: CommandPaletteProps)
             ref={inputRef}
             type="text"
             value={query}
-            onChange={e => setQuery(e.target.value)}
+            onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="コマンドを検索..."
             className="flex-1 bg-transparent text-foreground placeholder:text-foreground-subtle focus:outline-none"
@@ -204,9 +194,10 @@ export function CommandPalette({ additionalCommands = [] }: CommandPaletteProps)
                     onClick={() => executeCommand(command)}
                     className={`
                       w-full flex items-center gap-3 px-4 py-2 text-left transition-colors
-                      ${isSelected
-                        ? 'bg-accent-subtle text-foreground'
-                        : 'text-foreground-muted hover:bg-background-tertiary hover:text-foreground'
+                      ${
+                        isSelected
+                          ? 'bg-accent-subtle text-foreground'
+                          : 'text-foreground-muted hover:bg-background-tertiary hover:text-foreground'
                       }
                     `}
                   >

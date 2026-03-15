@@ -4,7 +4,12 @@ import { MemoryRouter, Route, Routes } from 'react-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // モックデータ
-const mockUser = { id: 'user-1', name: 'テストユーザー', email: 'test@example.com', avatarUrl: null };
+const mockUser = {
+  id: 'user-1',
+  name: 'テストユーザー',
+  email: 'test@example.com',
+  avatarUrl: null,
+};
 
 vi.mock('../../stores/auth', () => ({
   useAuthStore: () => ({ user: mockUser }),
@@ -67,16 +72,18 @@ function renderWithProviders(projectId: string = 'proj-1') {
 /**
  * テストスイートデータ生成ヘルパー
  */
-function createTestSuite(overrides: {
-  id?: string;
-  name?: string;
-  lastExecution?: {
-    id: string;
-    createdAt: string;
-    environment: { id: string; name: string } | null;
-    judgmentCounts: { PASS: number; FAIL: number; PENDING: number; SKIPPED: number };
-  } | null;
-} = {}) {
+function createTestSuite(
+  overrides: {
+    id?: string;
+    name?: string;
+    lastExecution?: {
+      id: string;
+      createdAt: string;
+      environment: { id: string; name: string } | null;
+      judgmentCounts: { PASS: number; FAIL: number; PENDING: number; SKIPPED: number };
+    } | null;
+  } = {}
+) {
   return {
     id: overrides.id ?? 'suite-1',
     projectId: 'proj-1',
@@ -107,7 +114,16 @@ describe('ProjectDetailPage - TestSuiteRow プログレスバー', () => {
       },
     });
     mockedProjectsApi.getMembers.mockResolvedValue({
-      members: [{ id: 'member-1', projectId: 'proj-1', userId: 'user-1', role: 'OWNER', addedAt: '2024-01-01T00:00:00Z', user: mockUser }],
+      members: [
+        {
+          id: 'member-1',
+          projectId: 'proj-1',
+          userId: 'user-1',
+          role: 'OWNER',
+          addedAt: '2024-01-01T00:00:00Z',
+          user: mockUser,
+        },
+      ],
     });
     mockedUsersApi.getProjects.mockResolvedValue({ projects: [] });
     mockedLabelsApi.getByProject.mockResolvedValue({ labels: [] });
@@ -160,9 +176,7 @@ describe('ProjectDetailPage - TestSuiteRow プログレスバー', () => {
 
   it('lastExecutionがない場合、プログレスバーは表示されない', async () => {
     mockedProjectsApi.searchTestSuites.mockResolvedValue({
-      testSuites: [
-        createTestSuite({ lastExecution: null }),
-      ],
+      testSuites: [createTestSuite({ lastExecution: null })],
       total: 1,
       limit: 20,
       offset: 0,
@@ -235,7 +249,16 @@ describe('ProjectDetailPage - ローディング表示', () => {
       },
     });
     mockedProjectsApi.getMembers.mockResolvedValue({
-      members: [{ id: 'member-1', projectId: 'proj-1', userId: 'user-1', role: 'OWNER', addedAt: '2024-01-01T00:00:00Z', user: mockUser }],
+      members: [
+        {
+          id: 'member-1',
+          projectId: 'proj-1',
+          userId: 'user-1',
+          role: 'OWNER',
+          addedAt: '2024-01-01T00:00:00Z',
+          user: mockUser,
+        },
+      ],
     });
     mockedUsersApi.getProjects.mockResolvedValue({ projects: [] });
     mockedLabelsApi.getByProject.mockResolvedValue({ labels: [] });

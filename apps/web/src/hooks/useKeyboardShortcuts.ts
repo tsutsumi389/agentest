@@ -30,35 +30,40 @@ const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(na
  * グローバルなキーボードショートカットを登録
  */
 export function useKeyboardShortcuts(shortcuts: ShortcutConfig[]) {
-  const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    // 入力フィールド内かチェック
-    const isInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(
-      (event.target as HTMLElement)?.tagName
-    ) || (event.target as HTMLElement)?.isContentEditable;
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      // 入力フィールド内かチェック
+      const isInput =
+        ['INPUT', 'TEXTAREA', 'SELECT'].includes((event.target as HTMLElement)?.tagName) ||
+        (event.target as HTMLElement)?.isContentEditable;
 
-    for (const shortcut of shortcuts) {
-      // 入力フィールド内で無効なショートカットはスキップ
-      if (isInput && !shortcut.enableInInput) {
-        continue;
+      for (const shortcut of shortcuts) {
+        // 入力フィールド内で無効なショートカットはスキップ
+        if (isInput && !shortcut.enableInInput) {
+          continue;
+        }
+
+        // メタキーチェック（Mac: Cmd, Windows: Ctrl）
+        const metaMatch = shortcut.meta
+          ? isMac
+            ? event.metaKey
+            : event.ctrlKey
+          : !(isMac ? event.metaKey : event.ctrlKey);
+
+        // 各修飾キーチェック
+        const shiftMatch = shortcut.shift ? event.shiftKey : !event.shiftKey;
+        const altMatch = shortcut.alt ? event.altKey : !event.altKey;
+        const keyMatch = event.key.toLowerCase() === shortcut.key.toLowerCase();
+
+        if (metaMatch && shiftMatch && altMatch && keyMatch) {
+          event.preventDefault();
+          shortcut.action();
+          return;
+        }
       }
-
-      // メタキーチェック（Mac: Cmd, Windows: Ctrl）
-      const metaMatch = shortcut.meta
-        ? (isMac ? event.metaKey : event.ctrlKey)
-        : !(isMac ? event.metaKey : event.ctrlKey);
-
-      // 各修飾キーチェック
-      const shiftMatch = shortcut.shift ? event.shiftKey : !event.shiftKey;
-      const altMatch = shortcut.alt ? event.altKey : !event.altKey;
-      const keyMatch = event.key.toLowerCase() === shortcut.key.toLowerCase();
-
-      if (metaMatch && shiftMatch && altMatch && keyMatch) {
-        event.preventDefault();
-        shortcut.action();
-        return;
-      }
-    }
-  }, [shortcuts]);
+    },
+    [shortcuts]
+  );
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -96,12 +101,12 @@ export function formatShortcut(shortcut: Omit<ShortcutConfig, 'action'>): string
 
   // 特殊キーの表示
   const keyDisplay: Record<string, string> = {
-    'escape': 'Esc',
-    'enter': '↵',
-    'arrowup': '↑',
-    'arrowdown': '↓',
-    'arrowleft': '←',
-    'arrowright': '→',
+    escape: 'Esc',
+    enter: '↵',
+    arrowup: '↑',
+    arrowdown: '↓',
+    arrowleft: '←',
+    arrowright: '→',
     ' ': 'Space',
   };
 

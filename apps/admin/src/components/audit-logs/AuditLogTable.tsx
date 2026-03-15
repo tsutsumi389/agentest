@@ -54,13 +54,7 @@ interface SortableHeaderProps {
 /**
  * ソート可能なテーブルヘッダー
  */
-function SortableHeader({
-  column,
-  sortBy,
-  sortOrder,
-  onSort,
-  children,
-}: SortableHeaderProps) {
+function SortableHeader({ column, sortBy, sortOrder, onSort, children }: SortableHeaderProps) {
   return (
     <th
       className="px-4 py-3 text-left text-sm font-medium text-foreground-muted cursor-pointer hover:text-foreground select-none"
@@ -135,9 +129,7 @@ export function AuditLogTable({
               <th className="px-4 py-3 text-left text-sm font-medium text-foreground-muted">
                 ユーザー
               </th>
-              <th className="px-4 py-3 text-left text-sm font-medium text-foreground-muted">
-                IP
-              </th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-foreground-muted">IP</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-foreground-muted">
                 詳細
               </th>
@@ -146,19 +138,13 @@ export function AuditLogTable({
           <tbody>
             {auditLogs.length === 0 ? (
               <tr>
-                <td
-                  colSpan={8}
-                  className="px-4 py-12 text-center text-foreground-muted"
-                >
+                <td colSpan={8} className="px-4 py-12 text-center text-foreground-muted">
                   監査ログが見つかりません
                 </td>
               </tr>
             ) : (
               auditLogs.map((log) => (
-                <tr
-                  key={log.id}
-                  className="border-b border-border hover:bg-background-secondary"
-                >
+                <tr key={log.id} className="border-b border-border hover:bg-background-secondary">
                   {/* 日時 */}
                   <td className="px-4 py-3 text-sm text-foreground-muted whitespace-nowrap">
                     {formatRelativeTime(log.createdAt)}
@@ -170,9 +156,7 @@ export function AuditLogTable({
                   </td>
 
                   {/* アクション */}
-                  <td className="px-4 py-3 text-sm text-foreground">
-                    {log.action}
-                  </td>
+                  <td className="px-4 py-3 text-sm text-foreground">{log.action}</td>
 
                   {/* 対象 */}
                   <td className="px-4 py-3 text-sm text-foreground-muted font-mono text-xs">
@@ -202,10 +186,7 @@ export function AuditLogTable({
                   {/* ユーザー */}
                   <td className="px-4 py-3">
                     {log.user ? (
-                      <Link
-                        to={`/users/${log.user.id}`}
-                        className="flex items-center gap-2"
-                      >
+                      <Link to={`/users/${log.user.id}`} className="flex items-center gap-2">
                         {log.user.avatarUrl ? (
                           <img
                             src={log.user.avatarUrl}
@@ -219,9 +200,7 @@ export function AuditLogTable({
                             </span>
                           </div>
                         )}
-                        <span className="text-sm text-accent hover:underline">
-                          {log.user.name}
-                        </span>
+                        <span className="text-sm text-accent hover:underline">{log.user.name}</span>
                       </Link>
                     ) : (
                       <span className="text-sm text-foreground-muted">-</span>

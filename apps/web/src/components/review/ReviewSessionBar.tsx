@@ -10,12 +10,7 @@ import { ReviewSubmitModal } from './ReviewSubmitModal';
  * レビュー中に画面下部に固定表示されるバー
  */
 export function ReviewSessionBar() {
-  const {
-    currentReview,
-    isReviewing,
-    isLoading,
-    cancelReview,
-  } = useReviewSession();
+  const { currentReview, isReviewing, isLoading, cancelReview } = useReviewSession();
 
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);

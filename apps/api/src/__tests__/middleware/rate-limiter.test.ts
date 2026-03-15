@@ -21,7 +21,14 @@ vi.mock('../../lib/redis-store.js', () => ({
 
 // Logger モック
 const { mockLogger } = vi.hoisted(() => {
-  const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn(), fatal: vi.fn(), child: vi.fn() };
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn(),
+  };
   mockLogger.child.mockReturnValue(mockLogger);
   return { mockLogger };
 });
@@ -62,10 +69,10 @@ describe('rateLimiter', () => {
     vi.clearAllMocks();
     // デフォルト: リクエスト数 = 1（制限内）
     mockPipeline.exec.mockResolvedValue([
-      [null, 0],        // zremrangebyscore
-      [null, 1],        // zadd
-      [null, 1],        // zcard - リクエスト数
-      [null, 1],        // pexpire
+      [null, 0], // zremrangebyscore
+      [null, 1], // zadd
+      [null, 1], // zcard - リクエスト数
+      [null, 1], // pexpire
     ]);
   });
 
@@ -214,7 +221,7 @@ describe('rateLimiter', () => {
     expect(mockPipeline.zadd).toHaveBeenCalledWith(
       expect.any(String),
       expect.any(Number), // timestamp
-      expect.any(String)  // unique member
+      expect.any(String) // unique member
     );
     expect(mockPipeline.zcard).toHaveBeenCalledWith(expect.any(String));
     expect(mockPipeline.pexpire).toHaveBeenCalledWith(expect.any(String), 60000);

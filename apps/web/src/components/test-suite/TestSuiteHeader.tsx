@@ -1,7 +1,24 @@
 import { useState, useEffect, useRef } from 'react';
-import { Play, Pencil, FileText, History, MessageSquare, Settings, Copy, MoreVertical, Archive, CheckCircle2, Loader2 } from 'lucide-react';
+import {
+  Play,
+  Pencil,
+  FileText,
+  History,
+  MessageSquare,
+  Settings,
+  Copy,
+  MoreVertical,
+  Archive,
+  CheckCircle2,
+  Loader2,
+} from 'lucide-react';
 import type { TestSuite, ProjectMemberRole, Label } from '../../lib/api';
-import { PRIORITY_COLORS, PRIORITY_LABELS, STATUS_COLORS, STATUS_LABELS } from '../../lib/constants';
+import {
+  PRIORITY_COLORS,
+  PRIORITY_LABELS,
+  STATUS_COLORS,
+  STATUS_LABELS,
+} from '../../lib/constants';
 import { LabelBadgeList } from '../ui/LabelBadge';
 import { Breadcrumb, type BreadcrumbItem } from '../ui/Breadcrumb';
 
@@ -135,8 +152,8 @@ export function TestSuiteHeader({
         <div className="px-4 pt-3 pb-0 flex items-center justify-between">
           <Breadcrumb items={breadcrumbItems} showHome={false} />
           {/* 3点リーダーメニュー（作成モード以外） */}
-          {!isCreateMode && (
-            isTestCaseMode ? (
+          {!isCreateMode &&
+            (isTestCaseMode ? (
               <TestCaseActionMenu
                 canEdit={canEdit}
                 onEdit={onEditTestCase}
@@ -155,8 +172,7 @@ export function TestSuiteHeader({
                 onStatusChange={onStatusChange}
                 isStatusChangePending={isStatusChangePending}
               />
-            )
-          )}
+            ))}
         </div>
       )}
 
@@ -166,16 +182,22 @@ export function TestSuiteHeader({
           // テストケース選択時: タイトル + バッジ
           <div className="flex items-center gap-2">
             {/* 優先度バッジ */}
-            <span className={`px-2 py-0.5 text-xs font-medium rounded ${PRIORITY_COLORS[selectedTestCase.priority]}`}>
+            <span
+              className={`px-2 py-0.5 text-xs font-medium rounded ${PRIORITY_COLORS[selectedTestCase.priority]}`}
+            >
               {PRIORITY_LABELS[selectedTestCase.priority]}
             </span>
-            <h1 className="text-lg font-semibold text-foreground truncate max-w-[300px]"
-                title={selectedTestCase.title}>
+            <h1
+              className="text-lg font-semibold text-foreground truncate max-w-[300px]"
+              title={selectedTestCase.title}
+            >
               {selectedTestCase.title}
             </h1>
             {/* ステータスバッジ（アクティブは通常状態のため非表示） */}
             {selectedTestCase.status !== 'ACTIVE' && (
-              <span className={`px-2 py-0.5 text-xs font-medium rounded ${STATUS_COLORS[selectedTestCase.status]}`}>
+              <span
+                className={`px-2 py-0.5 text-xs font-medium rounded ${STATUS_COLORS[selectedTestCase.status]}`}
+              >
                 {STATUS_LABELS[selectedTestCase.status]}
               </span>
             )}
@@ -189,37 +211,35 @@ export function TestSuiteHeader({
         ) : (
           // テストスイート表示時: タイトル + ステータスバッジ + ラベル
           <div className="flex items-center gap-3">
-            <h1 className="text-lg font-semibold text-foreground">
-              {testSuite.name}
-            </h1>
+            <h1 className="text-lg font-semibold text-foreground">{testSuite.name}</h1>
             {/* ステータスバッジ（ARCHIVED時のみ表示） */}
             {testSuite.status === 'ARCHIVED' && (
-              <span className={`px-2 py-0.5 text-xs font-medium rounded ${STATUS_COLORS[testSuite.status]}`}>
+              <span
+                className={`px-2 py-0.5 text-xs font-medium rounded ${STATUS_COLORS[testSuite.status]}`}
+              >
                 {STATUS_LABELS[testSuite.status]}
               </span>
             )}
             {/* ラベルバッジ */}
-            {labels && labels.length > 0 && (
-              <LabelBadgeList labels={labels} emptyText="" />
-            )}
+            {labels && labels.length > 0 && <LabelBadgeList labels={labels} emptyText="" />}
           </div>
         )}
       </div>
 
       {/* ナビゲーションタブ（作成モード時は非表示） */}
       {!isCreateMode && (
-      <div className="px-4 pb-0 flex items-center justify-between">
-        {isTestCaseMode ? (
-          // テストケース選択時: テストケース用タブ
-          <nav className="-mb-px flex gap-4" aria-label="タブ">
-            {TEST_CASE_TABS.map((tab) => {
-              const Icon = tab.icon;
-              const isActive = testCaseTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => onTestCaseTabChange?.(tab.id)}
-                  className={`
+        <div className="px-4 pb-0 flex items-center justify-between">
+          {isTestCaseMode ? (
+            // テストケース選択時: テストケース用タブ
+            <nav className="-mb-px flex gap-4" aria-label="タブ">
+              {TEST_CASE_TABS.map((tab) => {
+                const Icon = tab.icon;
+                const isActive = testCaseTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => onTestCaseTabChange?.(tab.id)}
+                    className={`
                     flex items-center gap-2 px-1 py-3 text-sm font-medium border-b-2 transition-colors
                     ${
                       isActive
@@ -227,26 +247,26 @@ export function TestSuiteHeader({
                         : 'border-transparent text-foreground-muted hover:text-foreground hover:border-border'
                     }
                   `}
-                  aria-current={isActive ? 'page' : undefined}
-                >
-                  <Icon className="w-4 h-4" />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </nav>
-        ) : (
-          // テストスイート表示時: テストスイート用タブ
-          <nav className="-mb-px flex gap-4" aria-label="タブ">
-            {TABS.map((tab) => {
-              const Icon = tab.icon;
-              // テストケース選択中はタブのハイライトを解除
-              const isActive = !hasSelectedTestCase && currentTab === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => onTabChange?.(tab.id)}
-                  className={`
+                    aria-current={isActive ? 'page' : undefined}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </nav>
+          ) : (
+            // テストスイート表示時: テストスイート用タブ
+            <nav className="-mb-px flex gap-4" aria-label="タブ">
+              {TABS.map((tab) => {
+                const Icon = tab.icon;
+                // テストケース選択中はタブのハイライトを解除
+                const isActive = !hasSelectedTestCase && currentTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => onTabChange?.(tab.id)}
+                    className={`
                     flex items-center gap-2 px-1 py-3 text-sm font-medium border-b-2 transition-colors
                     ${
                       isActive
@@ -254,16 +274,16 @@ export function TestSuiteHeader({
                         : 'border-transparent text-foreground-muted hover:text-foreground hover:border-border'
                     }
                   `}
-                  aria-current={isActive ? 'page' : undefined}
-                >
-                  <Icon className="w-4 h-4" />
-                  {tab.label}
-                </button>
-              );
-            })}
-          </nav>
-        )}
-      </div>
+                    aria-current={isActive ? 'page' : undefined}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </nav>
+          )}
+        </div>
       )}
     </div>
   );

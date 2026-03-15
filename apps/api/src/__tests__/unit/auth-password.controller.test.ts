@@ -9,7 +9,14 @@ import {
 
 // Logger のモック
 const { mockLogger } = vi.hoisted(() => {
-  const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn(), fatal: vi.fn(), child: vi.fn() };
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn(),
+  };
   mockLogger.child.mockReturnValue(mockLogger);
   return { mockLogger };
 });
@@ -78,10 +85,12 @@ vi.mock('../../config/env.js', () => ({
 }));
 
 // @agentest/auth のモック
-const mockGenerateTokens = vi.hoisted(() => vi.fn().mockReturnValue({
-  accessToken: 'mock-access-token',
-  refreshToken: 'mock-refresh-token',
-}));
+const mockGenerateTokens = vi.hoisted(() =>
+  vi.fn().mockReturnValue({
+    accessToken: 'mock-access-token',
+    refreshToken: 'mock-refresh-token',
+  })
+);
 vi.mock('@agentest/auth', () => ({
   generateTokens: mockGenerateTokens,
   verifyRefreshToken: vi.fn(),
@@ -97,7 +106,9 @@ const mockPrisma = vi.hoisted(() => ({
   $transaction: vi.fn(),
 }));
 // $transaction はコールバックに prisma 自身を渡す
-mockPrisma.$transaction.mockImplementation(async (fn: (tx: typeof mockPrisma) => Promise<unknown>) => fn(mockPrisma));
+mockPrisma.$transaction.mockImplementation(
+  async (fn: (tx: typeof mockPrisma) => Promise<unknown>) => fn(mockPrisma)
+);
 vi.mock('@agentest/db', () => ({ prisma: mockPrisma }));
 
 // pkce のモック
@@ -243,7 +254,9 @@ describe('AuthController - パスワード認証', () => {
     });
 
     it('アカウントロック中は401を返す', async () => {
-      const lockError = new AuthenticationError('アカウントがロックされています。しばらく経ってから再度お試しください');
+      const lockError = new AuthenticationError(
+        'アカウントがロックされています。しばらく経ってから再度お試しください'
+      );
       mockPasswordAuthService.login.mockRejectedValue(lockError);
 
       const req = createMockReq({
@@ -325,7 +338,7 @@ describe('AuthController - パスワード認証', () => {
       await controller.register(req, res, next);
 
       // 非同期メール送信を待つ
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith({
@@ -368,7 +381,7 @@ describe('AuthController - パスワード認証', () => {
       await controller.register(req, res, next);
 
       // 非同期メール送信を待つ
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       // クッキーは設定されない（メール確認が必要）
       expect(res.cookie).not.toHaveBeenCalled();
@@ -476,7 +489,7 @@ describe('AuthController - パスワード認証', () => {
       });
 
       // 非同期処理の完了を待つ（fire-and-forget）
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       // メール送信が呼ばれたことを確認
       expect(mockEmailService.send).toHaveBeenCalled();
@@ -529,7 +542,7 @@ describe('AuthController - パスワード認証', () => {
       await controller.forgotPassword(req1, res1, next1);
 
       // 非同期処理の完了を待つ（fire-and-forget）
-      await new Promise(resolve => setTimeout(resolve, 0));
+      await new Promise((resolve) => setTimeout(resolve, 0));
 
       // ユーザーが存在しない場合
       mockPasswordAuthService.requestPasswordReset.mockResolvedValue(null);
@@ -590,7 +603,9 @@ describe('AuthController - パスワード認証', () => {
     });
 
     it('期限切れトークンで400を返す', async () => {
-      const expiredError = new BadRequestError('パスワードリセットトークンの有効期限が切れています');
+      const expiredError = new BadRequestError(
+        'パスワードリセットトークンの有効期限が切れています'
+      );
       mockPasswordAuthService.resetPassword.mockRejectedValue(expiredError);
 
       const req = createMockReq({

@@ -11,7 +11,9 @@ test.describe('パスワードリセット実行', () => {
     await expect(page.getByText('無効なリンクです')).toBeVisible();
 
     // パスワードリセット再リクエストリンクが表示される
-    await expect(page.getByRole('link', { name: 'パスワードリセットを再リクエスト' })).toBeVisible();
+    await expect(
+      page.getByRole('link', { name: 'パスワードリセットを再リクエスト' })
+    ).toBeVisible();
   });
 
   test('トークンありでアクセスするとパスワード設定フォームが表示される', async ({ page }) => {

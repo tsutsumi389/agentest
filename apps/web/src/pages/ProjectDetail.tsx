@@ -10,7 +10,16 @@ import {
   ChevronRight,
   BarChart3,
 } from 'lucide-react';
-import { projectsApi, usersApi, labelsApi, type Project, type TestSuite, type TestSuiteSearchParams, type ProjectMemberRole, type Label } from '../lib/api';
+import {
+  projectsApi,
+  usersApi,
+  labelsApi,
+  type Project,
+  type TestSuite,
+  type TestSuiteSearchParams,
+  type ProjectMemberRole,
+  type Label,
+} from '../lib/api';
 import { TestSuiteSearchFilter } from '../components/test-suite/TestSuiteSearchFilter';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import { TestSuiteRowSkeleton } from '../components/test-suite/TestSuiteRowSkeleton';
@@ -30,7 +39,12 @@ export function ProjectDetailPage() {
   const { projectId } = useParams<{ projectId: string }>();
   const { user } = useAuth();
   const [urlSearchParams, setUrlSearchParams] = useSearchParams();
-  const { filters: suiteSearchParams, setFilters: setSuiteSearchParams, currentPage, setPage: handlePageChange } = useTestSuiteFilterParams(urlSearchParams, setUrlSearchParams);
+  const {
+    filters: suiteSearchParams,
+    setFilters: setSuiteSearchParams,
+    currentPage,
+    setPage: handlePageChange,
+  } = useTestSuiteFilterParams(urlSearchParams, setUrlSearchParams);
   const queryClient = useQueryClient();
 
   // URLクエリパラメータからタブ状態を取得
@@ -38,21 +52,27 @@ export function ProjectDetailPage() {
   const settingsSection = (urlSearchParams.get('section') as SettingsSection) || 'general';
 
   // タブ変更ハンドラ
-  const handleTabChange = useCallback((tab: ProjectTab) => {
-    const newParams = new URLSearchParams(urlSearchParams);
-    newParams.set('tab', tab);
-    if (tab !== 'settings') {
-      newParams.delete('section');
-    }
-    setUrlSearchParams(newParams);
-  }, [urlSearchParams, setUrlSearchParams]);
+  const handleTabChange = useCallback(
+    (tab: ProjectTab) => {
+      const newParams = new URLSearchParams(urlSearchParams);
+      newParams.set('tab', tab);
+      if (tab !== 'settings') {
+        newParams.delete('section');
+      }
+      setUrlSearchParams(newParams);
+    },
+    [urlSearchParams, setUrlSearchParams]
+  );
 
   // 設定セクション変更ハンドラ
-  const handleSettingsSectionChange = useCallback((section: SettingsSection) => {
-    const newParams = new URLSearchParams(urlSearchParams);
-    newParams.set('section', section);
-    setUrlSearchParams(newParams, { replace: true });
-  }, [urlSearchParams, setUrlSearchParams]);
+  const handleSettingsSectionChange = useCallback(
+    (section: SettingsSection) => {
+      const newParams = new URLSearchParams(urlSearchParams);
+      newParams.set('section', section);
+      setUrlSearchParams(newParams, { replace: true });
+    },
+    [urlSearchParams, setUrlSearchParams]
+  );
 
   // プロジェクト情報を取得
   const { data: projectData, isLoading: isLoadingProject } = useQuery({
@@ -125,10 +145,15 @@ export function ProjectDetailPage() {
   const totalPages = totalCount ? Math.ceil(totalCount / limit) : 1;
 
   // プロジェクト更新後のコールバック
-  const handleProjectUpdated = useCallback((updated: Project) => {
-    queryClient.setQueryData(['project', projectId], { project: updated });
-    queryClient.invalidateQueries({ queryKey: ['user-projects-for-detail', user?.id, projectId] });
-  }, [queryClient, projectId, user?.id]);
+  const handleProjectUpdated = useCallback(
+    (updated: Project) => {
+      queryClient.setQueryData(['project', projectId], { project: updated });
+      queryClient.invalidateQueries({
+        queryKey: ['user-projects-for-detail', user?.id, projectId],
+      });
+    },
+    [queryClient, projectId, user?.id]
+  );
 
   // タブ定義
   const tabs = [
@@ -164,18 +189,13 @@ export function ProjectDetailPage() {
             </div>
             <div>
               <h1 className="text-2xl font-bold text-foreground">{project.name}</h1>
-              <p className="text-foreground-muted">
-                {project.description || '説明なし'}
-              </p>
+              <p className="text-foreground-muted">{project.description || '説明なし'}</p>
             </div>
           </div>
 
           {/* テストスイートタブの時のみ作成ボタンを表示 */}
           {currentTab === 'suites' && (
-            <Link
-              to={`/test-suites/new?projectId=${projectId!}`}
-              className="btn btn-primary"
-            >
+            <Link to={`/test-suites/new?projectId=${projectId!}`} className="btn btn-primary">
               <Plus className="w-4 h-4" />
               テストスイート
             </Link>
@@ -194,9 +214,10 @@ export function ProjectDetailPage() {
                   onClick={() => handleTabChange(tab.id)}
                   className={`
                     flex items-center gap-2 px-1 py-3 text-sm font-medium border-b-2 transition-colors
-                    ${isActive
-                      ? 'border-accent text-accent'
-                      : 'border-transparent text-foreground-muted hover:text-foreground hover:border-border'
+                    ${
+                      isActive
+                        ? 'border-accent text-accent'
+                        : 'border-transparent text-foreground-muted hover:text-foreground hover:border-border'
                     }
                   `}
                   aria-current={isActive ? 'page' : undefined}
@@ -211,9 +232,7 @@ export function ProjectDetailPage() {
       </div>
 
       {/* タブコンテンツ */}
-      {currentTab === 'overview' && (
-        <ProjectOverviewTab projectId={projectId!} />
-      )}
+      {currentTab === 'overview' && <ProjectOverviewTab projectId={projectId!} />}
 
       {currentTab === 'suites' && (
         <TestSuiteListContent
@@ -243,7 +262,6 @@ export function ProjectDetailPage() {
           deletedAt={deletedAt}
         />
       )}
-
     </div>
   );
 }
@@ -301,15 +319,19 @@ function TestSuiteListContent({
         <div className="p-8 text-center">
           <FileText className="w-12 h-12 text-foreground-subtle mx-auto mb-3" />
           <p className="text-foreground-muted mb-4">
-            {suiteSearchParams.q || suiteSearchParams.labelIds?.length || suiteSearchParams.includeDeleted || suiteSearchParams.status !== 'ACTIVE'
+            {suiteSearchParams.q ||
+            suiteSearchParams.labelIds?.length ||
+            suiteSearchParams.includeDeleted ||
+            suiteSearchParams.status !== 'ACTIVE'
               ? '条件に一致するテストスイートがありません'
               : 'テストスイートがありません'}
           </p>
-          {!(suiteSearchParams.q || suiteSearchParams.labelIds?.length || suiteSearchParams.status !== 'ACTIVE') && (
-            <Link
-              to={`/test-suites/new?projectId=${projectId}`}
-              className="btn btn-primary"
-            >
+          {!(
+            suiteSearchParams.q ||
+            suiteSearchParams.labelIds?.length ||
+            suiteSearchParams.status !== 'ACTIVE'
+          ) && (
+            <Link to={`/test-suites/new?projectId=${projectId}`} className="btn btn-primary">
               <Plus className="w-4 h-4" />
               テストスイートを作成
             </Link>
@@ -456,16 +478,18 @@ function TestSuiteRow({ suite }: { suite: TestSuite }) {
     >
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded bg-background-tertiary flex items-center justify-center">
-          <FileText className={`w-5 h-5 ${isDeleted ? 'text-foreground-subtle' : 'text-foreground-muted'}`} />
+          <FileText
+            className={`w-5 h-5 ${isDeleted ? 'text-foreground-subtle' : 'text-foreground-muted'}`}
+          />
         </div>
         <div>
           <div className="flex items-center gap-2 flex-wrap">
-            <p className={`font-medium ${isDeleted ? 'text-foreground-muted line-through' : 'text-foreground'}`}>
+            <p
+              className={`font-medium ${isDeleted ? 'text-foreground-muted line-through' : 'text-foreground'}`}
+            >
               {suite.name}
             </p>
-            {isDeleted && (
-              <span className="badge badge-danger">削除済み</span>
-            )}
+            {isDeleted && <span className="badge badge-danger">削除済み</span>}
             {/* ラベル表示 */}
             {!isDeleted && suite.labels && suite.labels.length > 0 && (
               <div className="flex items-center gap-1">
@@ -488,47 +512,52 @@ function TestSuiteRow({ suite }: { suite: TestSuite }) {
           <div className="flex items-center gap-3 text-sm text-foreground-muted">
             <span>{suite._count?.testCases || 0} テストケース</span>
             {/* 最終実行結果表示（環境名 + プログレスバー + 合格率 + 判定結果カウント） */}
-            {!isDeleted && suite.lastExecution && (() => {
-              const { environment, judgmentCounts } = suite.lastExecution;
-              const total = judgmentCounts.PASS + judgmentCounts.FAIL + judgmentCounts.PENDING + judgmentCounts.SKIPPED;
-              const completedTotal = judgmentCounts.PASS + judgmentCounts.FAIL + judgmentCounts.SKIPPED;
-              const passRate = completedTotal > 0 ? Math.round((judgmentCounts.PASS / completedTotal) * 100) : 0;
-              return (
-                <>
-                  <span className="text-foreground-subtle">•</span>
-                  <span className="flex items-center gap-2">
-                    {environment && (
-                      <span className="text-foreground-muted">
-                        {environment.name}
+            {!isDeleted &&
+              suite.lastExecution &&
+              (() => {
+                const { environment, judgmentCounts } = suite.lastExecution;
+                const total =
+                  judgmentCounts.PASS +
+                  judgmentCounts.FAIL +
+                  judgmentCounts.PENDING +
+                  judgmentCounts.SKIPPED;
+                const completedTotal =
+                  judgmentCounts.PASS + judgmentCounts.FAIL + judgmentCounts.SKIPPED;
+                const passRate =
+                  completedTotal > 0 ? Math.round((judgmentCounts.PASS / completedTotal) * 100) : 0;
+                return (
+                  <>
+                    <span className="text-foreground-subtle">•</span>
+                    <span className="flex items-center gap-2">
+                      {environment && (
+                        <span className="text-foreground-muted">{environment.name}</span>
+                      )}
+                      <span className="w-24">
+                        <ProgressBar
+                          passed={judgmentCounts.PASS}
+                          failed={judgmentCounts.FAIL}
+                          skipped={judgmentCounts.SKIPPED}
+                          total={total}
+                          size="sm"
+                        />
                       </span>
-                    )}
-                    <span className="w-24">
-                      <ProgressBar
-                        passed={judgmentCounts.PASS}
-                        failed={judgmentCounts.FAIL}
-                        skipped={judgmentCounts.SKIPPED}
-                        total={total}
-                        size="sm"
-                      />
+                      <span className="text-foreground-muted text-xs font-medium">{passRate}%</span>
+                      {/* 判定結果カウント（0件は非表示） */}
+                      {judgmentDisplayOrder.map((status) => {
+                        const count = judgmentCounts[status];
+                        if (count === 0) return null;
+                        const config = judgmentDisplayConfig[status];
+                        return (
+                          <span key={status} className={config.className}>
+                            {count}
+                            {config.label}
+                          </span>
+                        );
+                      })}
                     </span>
-                    <span className="text-foreground-muted text-xs font-medium">
-                      {passRate}%
-                    </span>
-                    {/* 判定結果カウント（0件は非表示） */}
-                    {judgmentDisplayOrder.map((status) => {
-                      const count = judgmentCounts[status];
-                      if (count === 0) return null;
-                      const config = judgmentDisplayConfig[status];
-                      return (
-                        <span key={status} className={config.className}>
-                          {count}{config.label}
-                        </span>
-                      );
-                    })}
-                  </span>
-                </>
-              );
-            })()}
+                  </>
+                );
+              })()}
           </div>
         </div>
       </div>
@@ -544,4 +573,3 @@ function TestSuiteRow({ suite }: { suite: TestSuite }) {
     </Link>
   );
 }
-

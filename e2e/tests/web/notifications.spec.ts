@@ -151,7 +151,9 @@ test.describe('通知センター（ヘッダー）', () => {
 
     // 通知センターまたはドロップダウンが開く
     await expect(
-      page.getByRole('heading', { name: '通知' }).or(page.locator('[class*="notification"]').first())
+      page
+        .getByRole('heading', { name: '通知' })
+        .or(page.locator('[class*="notification"]').first())
     ).toBeVisible({ timeout: 5000 });
   });
 

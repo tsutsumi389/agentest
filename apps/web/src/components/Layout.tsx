@@ -65,11 +65,7 @@ export function Layout() {
           )}
 
           {/* メインコンテンツ */}
-          <main
-            id="main-content"
-            className="flex-1 min-w-0 p-6"
-            tabIndex={-1}
-          >
+          <main id="main-content" className="flex-1 min-w-0 p-6" tabIndex={-1}>
             <Outlet />
           </main>
         </div>

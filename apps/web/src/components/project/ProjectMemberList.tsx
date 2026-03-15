@@ -1,6 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Loader2, MoreVertical, UserMinus, Shield, Pencil, Eye, UserPlus } from 'lucide-react';
-import { projectsApi, ApiError, type ProjectMember, type Project, type ProjectMemberRole } from '../../lib/api';
+import {
+  projectsApi,
+  ApiError,
+  type ProjectMember,
+  type Project,
+  type ProjectMemberRole,
+} from '../../lib/api';
 import { useAuth } from '../../hooks/useAuth';
 import { toast } from '../../stores/toast';
 import { ConfirmDialog } from '../common/ConfirmDialog';
@@ -278,9 +284,9 @@ export function ProjectMemberList({ project, currentRole }: ProjectMemberListPro
     try {
       const response = await projectsApi.updateMemberRole(project.id, userId, newRole);
       setMembers((prev) =>
-        prev.map((m) =>
-          m.userId === userId ? { ...m, role: response.member.role } : m
-        ).sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role])
+        prev
+          .map((m) => (m.userId === userId ? { ...m, role: response.member.role } : m))
+          .sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role])
       );
       toast.success('ロールを変更しました');
     } catch (err) {
@@ -364,15 +370,10 @@ export function ProjectMemberList({ project, currentRole }: ProjectMemberListPro
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-lg font-semibold text-foreground">メンバー管理</h2>
-          <p className="text-sm text-foreground-muted mt-1">
-            {members.length}人のメンバー
-          </p>
+          <p className="text-sm text-foreground-muted mt-1">{members.length}人のメンバー</p>
         </div>
         {canManageMembers && (
-          <button
-            className="btn btn-primary"
-            onClick={() => setIsAddModalOpen(true)}
-          >
+          <button className="btn btn-primary" onClick={() => setIsAddModalOpen(true)}>
             <UserPlus className="w-4 h-4" />
             メンバーを追加
           </button>
@@ -381,9 +382,7 @@ export function ProjectMemberList({ project, currentRole }: ProjectMemberListPro
 
       {/* メンバー一覧（OWNERも含む） */}
       {members.length === 0 ? (
-        <p className="text-center text-foreground-muted py-8">
-          メンバーがいません
-        </p>
+        <p className="text-center text-foreground-muted py-8">メンバーがいません</p>
       ) : (
         <div className="space-y-2">
           {members.map((member) => (
@@ -410,16 +409,12 @@ export function ProjectMemberList({ project, currentRole }: ProjectMemberListPro
                 {/* ユーザー情報 */}
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-foreground truncate">
-                      {member.user.name}
-                    </span>
+                    <span className="font-medium text-foreground truncate">{member.user.name}</span>
                     {member.userId === user?.id && (
                       <span className="badge badge-accent text-xs">あなた</span>
                     )}
                   </div>
-                  <p className="text-sm text-foreground-muted truncate">
-                    {member.user.email}
-                  </p>
+                  <p className="text-sm text-foreground-muted truncate">{member.user.email}</p>
                 </div>
               </div>
 
@@ -432,8 +427,8 @@ export function ProjectMemberList({ project, currentRole }: ProjectMemberListPro
                       member.role === 'OWNER' || member.role === 'ADMIN'
                         ? 'text-accent'
                         : member.role === 'WRITE'
-                        ? 'text-success'
-                        : 'text-foreground-muted'
+                          ? 'text-success'
+                          : 'text-foreground-muted'
                     }`}
                   />
                   <span
@@ -441,8 +436,8 @@ export function ProjectMemberList({ project, currentRole }: ProjectMemberListPro
                       member.role === 'OWNER' || member.role === 'ADMIN'
                         ? 'text-accent'
                         : member.role === 'WRITE'
-                        ? 'text-success'
-                        : 'text-foreground-muted'
+                          ? 'text-success'
+                          : 'text-foreground-muted'
                     }`}
                   >
                     {ROLE_LABELS[member.role]}

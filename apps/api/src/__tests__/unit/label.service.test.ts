@@ -111,9 +111,9 @@ describe('LabelService', () => {
       mockProjectRepo.findById.mockResolvedValue(mockProject);
       mockLabelRepo.findByProjectIdAndName.mockResolvedValue(existingLabel);
 
-      await expect(
-        service.create('project-1', { name: 'Bug', color: '#FF0000' })
-      ).rejects.toThrow(ConflictError);
+      await expect(service.create('project-1', { name: 'Bug', color: '#FF0000' })).rejects.toThrow(
+        ConflictError
+      );
     });
   });
 
@@ -174,9 +174,9 @@ describe('LabelService', () => {
       };
       mockLabelRepo.findById.mockResolvedValue(mockLabel);
 
-      await expect(
-        service.update('project-1', 'label-1', { name: 'Updated' })
-      ).rejects.toThrow(NotFoundError);
+      await expect(service.update('project-1', 'label-1', { name: 'Updated' })).rejects.toThrow(
+        NotFoundError
+      );
     });
 
     it('名前変更時に重複がある場合はConflictErrorを投げる', async () => {
@@ -189,9 +189,9 @@ describe('LabelService', () => {
       mockLabelRepo.findById.mockResolvedValue(mockLabel);
       mockLabelRepo.findByProjectIdAndName.mockResolvedValue(existingLabel);
 
-      await expect(
-        service.update('project-1', 'label-1', { name: 'Feature' })
-      ).rejects.toThrow(ConflictError);
+      await expect(service.update('project-1', 'label-1', { name: 'Feature' })).rejects.toThrow(
+        ConflictError
+      );
     });
 
     it('同じ名前への変更は許可される', async () => {
@@ -322,9 +322,9 @@ describe('LabelService', () => {
     it('存在しないテストスイートはNotFoundErrorを投げる', async () => {
       mockTestSuiteRepo.findById.mockResolvedValue(null);
 
-      await expect(
-        service.updateTestSuiteLabels('non-existent', ['label-1'])
-      ).rejects.toThrow(NotFoundError);
+      await expect(service.updateTestSuiteLabels('non-existent', ['label-1'])).rejects.toThrow(
+        NotFoundError
+      );
     });
   });
 });

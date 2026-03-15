@@ -95,9 +95,10 @@ export const useAdminAuthStore = create<AdminAuthState>((set) => ({
         requires2FA: false,
       });
     } catch (error) {
-      const apiError = error instanceof ApiError
-        ? error
-        : new ApiError(500, 'UNKNOWN_ERROR', 'ログインに失敗しました');
+      const apiError =
+        error instanceof ApiError
+          ? error
+          : new ApiError(500, 'UNKNOWN_ERROR', 'ログインに失敗しました');
 
       set({
         isLoading: false,
@@ -124,9 +125,10 @@ export const useAdminAuthStore = create<AdminAuthState>((set) => ({
         requires2FA: false,
       });
     } catch (error) {
-      const apiError = error instanceof ApiError
-        ? error
-        : new ApiError(500, 'UNKNOWN_ERROR', '認証コードの検証に失敗しました');
+      const apiError =
+        error instanceof ApiError
+          ? error
+          : new ApiError(500, 'UNKNOWN_ERROR', '認証コードの検証に失敗しました');
 
       set({
         isLoading: false,

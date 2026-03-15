@@ -24,7 +24,9 @@ export class AdminOrganizationsService {
   /**
    * 組織一覧を取得
    */
-  async findOrganizations(params: AdminOrganizationSearchParams): Promise<AdminOrganizationListResponse> {
+  async findOrganizations(
+    params: AdminOrganizationSearchParams
+  ): Promise<AdminOrganizationListResponse> {
     // デフォルト値を設定
     const {
       q,
@@ -212,9 +214,12 @@ export class AdminOrganizationsService {
   /**
    * 組織詳細を取得
    */
-  async findOrganizationById(organizationId: string): Promise<AdminOrganizationDetailResponse | null> {
+  async findOrganizationById(
+    organizationId: string
+  ): Promise<AdminOrganizationDetailResponse | null> {
     // キャッシュをチェック
-    const cached = await getAdminOrganizationDetailCache<AdminOrganizationDetailResponse>(organizationId);
+    const cached =
+      await getAdminOrganizationDetailCache<AdminOrganizationDetailResponse>(organizationId);
     if (cached) {
       return cached;
     }

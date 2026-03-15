@@ -1,7 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Bot, Loader2, X, AlertTriangle } from 'lucide-react';
 import { toast } from '../../stores/toast';
-import { ApiError, agentSessionsApi, type AgentSessionItem, type AgentSessionStatus } from '../../lib/api';
+import {
+  ApiError,
+  agentSessionsApi,
+  type AgentSessionItem,
+  type AgentSessionStatus,
+} from '../../lib/api';
 
 /**
  * 相対時間をフォーマット
@@ -54,11 +59,7 @@ function ConfirmDialog({
       }}
     >
       {/* オーバーレイ */}
-      <div
-        className="absolute inset-0 bg-black/50"
-        onClick={onCancel}
-        role="presentation"
-      />
+      <div className="absolute inset-0 bg-black/50" onClick={onCancel} role="presentation" />
       {/* ダイアログ */}
       <div className="relative bg-background border border-border rounded-lg shadow-lg max-w-md w-full mx-4 p-6">
         <div className="flex items-start gap-4">
@@ -66,7 +67,9 @@ function ConfirmDialog({
             <AlertTriangle className="w-5 h-5 text-warning" />
           </div>
           <div className="flex-1">
-            <h3 id="confirm-dialog-title" className="text-lg font-semibold text-foreground">{title}</h3>
+            <h3 id="confirm-dialog-title" className="text-lg font-semibold text-foreground">
+              {title}
+            </h3>
             <p className="text-sm text-foreground-muted mt-1">{message}</p>
           </div>
           <button
@@ -78,18 +81,10 @@ function ConfirmDialog({
           </button>
         </div>
         <div className="flex justify-end gap-2 mt-6">
-          <button
-            className="btn btn-ghost"
-            onClick={onCancel}
-            disabled={isLoading}
-          >
+          <button className="btn btn-ghost" onClick={onCancel} disabled={isLoading}>
             キャンセル
           </button>
-          <button
-            className="btn btn-danger"
-            onClick={onConfirm}
-            disabled={isLoading}
-          >
+          <button className="btn btn-danger" onClick={onConfirm} disabled={isLoading}>
             {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
             {confirmLabel}
           </button>
@@ -138,9 +133,7 @@ function McpSessionItem({
             <span className="font-medium text-foreground">
               {session.clientName || session.clientId}
             </span>
-            <span className={badgeConfig.className}>
-              {badgeConfig.label}
-            </span>
+            <span className={badgeConfig.className}>{badgeConfig.label}</span>
           </div>
           <div className="text-sm text-foreground-muted mt-0.5">
             {session.projectName && (
@@ -172,11 +165,7 @@ function McpSessionItem({
           disabled={isEnding}
           aria-label={`${session.clientName || session.clientId} のセッションを終了`}
         >
-          {isEnding ? (
-            <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
-          ) : (
-            '終了'
-          )}
+          {isEnding ? <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" /> : '終了'}
         </button>
       )}
     </div>
@@ -191,7 +180,11 @@ export function McpSessionSettings() {
   const [isLoading, setIsLoading] = useState(true);
   const [showAllSessions, setShowAllSessions] = useState(false);
   const [endingSessionId, setEndingSessionId] = useState<string | null>(null);
-  const [confirmDialog, setConfirmDialog] = useState<{ sessionId: string; clientName: string; source: 'agent' | 'oauth' } | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    sessionId: string;
+    clientName: string;
+    source: 'agent' | 'oauth';
+  } | null>(null);
   const [includeEnded, setIncludeEnded] = useState(false);
 
   const fetchSessions = useCallback(async () => {
@@ -282,11 +275,13 @@ export function McpSessionSettings() {
               <McpSessionItem
                 key={session.id}
                 session={session}
-                onEnd={(id) => setConfirmDialog({
-                  sessionId: id,
-                  clientName: session.clientName || session.clientId,
-                  source: session.source,
-                })}
+                onEnd={(id) =>
+                  setConfirmDialog({
+                    sessionId: id,
+                    clientName: session.clientName || session.clientId,
+                    source: session.source,
+                  })
+                }
                 isEnding={endingSessionId === session.id}
               />
             ))}
@@ -318,7 +313,9 @@ export function McpSessionSettings() {
         title="MCPセッションを終了"
         message={`${confirmDialog?.clientName || ''} のセッションを終了しますか？実行中の処理が中断される可能性があります。`}
         confirmLabel="終了する"
-        onConfirm={() => confirmDialog && handleEndSession(confirmDialog.sessionId, confirmDialog.source)}
+        onConfirm={() =>
+          confirmDialog && handleEndSession(confirmDialog.sessionId, confirmDialog.source)
+        }
         onCancel={() => setConfirmDialog(null)}
         isLoading={endingSessionId !== null}
       />

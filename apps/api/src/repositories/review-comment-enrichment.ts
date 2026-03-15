@@ -13,18 +13,10 @@ export async function enrichCommentsWithTargetName<
 
   // targetTypeごとにユニークなIDを収集
   const caseIds = [
-    ...new Set(
-      comments
-        .filter((c) => c.targetType === 'CASE')
-        .map((c) => c.targetId)
-    ),
+    ...new Set(comments.filter((c) => c.targetType === 'CASE').map((c) => c.targetId)),
   ];
   const suiteIds = [
-    ...new Set(
-      comments
-        .filter((c) => c.targetType === 'SUITE')
-        .map((c) => c.targetId)
-    ),
+    ...new Set(comments.filter((c) => c.targetType === 'SUITE').map((c) => c.targetId)),
   ];
 
   // バッチ取得（必要な場合のみクエリ発行、並列実行）

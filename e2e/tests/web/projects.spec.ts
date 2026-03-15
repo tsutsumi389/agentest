@@ -29,7 +29,9 @@ test.describe('プロジェクト一覧', () => {
     await selectOrganizationFilter(page, DEMO_ORG_NAME);
 
     // シードデータの Demo Project が表示される（h3要素を指定）
-    await expect(page.getByRole('heading', { name: 'Demo Project' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Demo Project' })).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test('プロジェクトを検索できる', async ({ page }) => {
@@ -39,7 +41,9 @@ test.describe('プロジェクト一覧', () => {
     await selectOrganizationFilter(page, DEMO_ORG_NAME);
 
     // Demo Projectが表示されるのを待つ
-    await expect(page.getByRole('heading', { name: 'Demo Project' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Demo Project' })).toBeVisible({
+      timeout: 10000,
+    });
 
     // 検索フィールドに入力
     await page.getByPlaceholder('プロジェクトを検索...').fill('Demo');
@@ -55,7 +59,9 @@ test.describe('プロジェクト一覧', () => {
     await selectOrganizationFilter(page, DEMO_ORG_NAME);
 
     // Demo Projectが表示されるのを待つ
-    await expect(page.getByRole('heading', { name: 'Demo Project' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'Demo Project' })).toBeVisible({
+      timeout: 10000,
+    });
 
     // Demo Project をクリック（h3要素）
     await page.getByRole('heading', { name: 'Demo Project' }).click();
@@ -82,7 +88,9 @@ test.describe('プロジェクトCRUD', () => {
     await page.getByPlaceholder('例: Webアプリテスト').fill(projectName);
 
     // 説明を入力
-    await page.getByPlaceholder('プロジェクトの説明を入力...').fill('E2Eテストで作成したプロジェクト');
+    await page
+      .getByPlaceholder('プロジェクトの説明を入力...')
+      .fill('E2Eテストで作成したプロジェクト');
 
     // 「作成」ボタンをクリック
     await page.getByRole('button', { name: '作成', exact: true }).click();

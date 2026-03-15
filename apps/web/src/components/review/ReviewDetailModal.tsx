@@ -17,11 +17,7 @@ interface ReviewDetailModalProps {
  * レビュー詳細モーダルコンポーネント
  * 提出済みレビューの詳細とコメント一覧を表示
  */
-export function ReviewDetailModal({
-  isOpen,
-  reviewId,
-  onClose,
-}: ReviewDetailModalProps) {
+export function ReviewDetailModal({ isOpen, reviewId, onClose }: ReviewDetailModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
 
@@ -90,10 +86,7 @@ export function ReviewDetailModal({
       >
         {/* ヘッダー */}
         <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
-          <h2
-            id="review-detail-title"
-            className="text-lg font-semibold text-foreground"
-          >
+          <h2 id="review-detail-title" className="text-lg font-semibold text-foreground">
             レビュー詳細
           </h2>
           <button

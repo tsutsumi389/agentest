@@ -35,10 +35,7 @@ export async function setCache<T>(
  * @param key キャッシュキー
  * @param errorMessage エラー時のログメッセージ
  */
-export async function getCache<T>(
-  key: string,
-  errorMessage: string
-): Promise<T | null> {
+export async function getCache<T>(key: string, errorMessage: string): Promise<T | null> {
   const redis = getRedisClient();
   if (!redis) {
     return null;
@@ -62,10 +59,7 @@ export async function getCache<T>(
  * @param key キャッシュキー
  * @param errorMessage エラー時のログメッセージ
  */
-export async function invalidateCache(
-  key: string,
-  errorMessage: string
-): Promise<boolean> {
+export async function invalidateCache(key: string, errorMessage: string): Promise<boolean> {
   const redis = getRedisClient();
   if (!redis) {
     return false;

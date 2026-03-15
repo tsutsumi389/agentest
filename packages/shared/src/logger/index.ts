@@ -15,7 +15,13 @@ export type LogLevel = 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace' |
 
 /** ランタイムバリデーション用の有効なログレベル一覧 */
 const VALID_LOG_LEVELS: ReadonlySet<string> = new Set<LogLevel>([
-  'fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent',
+  'fatal',
+  'error',
+  'warn',
+  'info',
+  'debug',
+  'trace',
+  'silent',
 ]);
 
 export type Logger = pino.Logger;
@@ -35,7 +41,7 @@ function resolveLogLevel(explicitLevel?: LogLevel): LogLevel {
   if (explicitLevel) {
     if (!VALID_LOG_LEVELS.has(explicitLevel)) {
       throw new Error(
-        `Invalid log level: "${explicitLevel}". Valid levels: ${[...VALID_LOG_LEVELS].join(', ')}`,
+        `Invalid log level: "${explicitLevel}". Valid levels: ${[...VALID_LOG_LEVELS].join(', ')}`
       );
     }
     return explicitLevel;
@@ -47,12 +53,14 @@ function resolveLogLevel(explicitLevel?: LogLevel): LogLevel {
       return envLevel as LogLevel;
     }
     // createLoggerがまだ呼ばれていないためconsole.warnを使用
-    console.warn(JSON.stringify({
-      time: new Date().toISOString(),
-      level: 'warn',
-      msg: `Invalid LOG_LEVEL "${envLevel}", falling back to NODE_ENV-based default`,
-      validLevels: [...VALID_LOG_LEVELS],
-    }));
+    console.warn(
+      JSON.stringify({
+        time: new Date().toISOString(),
+        level: 'warn',
+        msg: `Invalid LOG_LEVEL "${envLevel}", falling back to NODE_ENV-based default`,
+        validLevels: [...VALID_LOG_LEVELS],
+      })
+    );
   }
 
   switch (process.env.NODE_ENV) {
@@ -71,7 +79,10 @@ function resolveLogLevel(explicitLevel?: LogLevel): LogLevel {
  * @param options - サービス名やログレベルの設定
  * @param destination - 出力先ストリーム（テスト用。省略時はstdout）
  */
-export function createLogger(options: CreateLoggerOptions, destination?: DestinationStream): Logger {
+export function createLogger(
+  options: CreateLoggerOptions,
+  destination?: DestinationStream
+): Logger {
   const level = resolveLogLevel(options.level);
 
   const loggerOptions: pino.LoggerOptions = {

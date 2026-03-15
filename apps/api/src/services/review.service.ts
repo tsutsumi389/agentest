@@ -139,13 +139,19 @@ export class ReviewService {
     const projectId = await this.getTestSuiteProjectId(data.testSuiteId);
 
     // プロジェクト権限確認（WRITE以上）
-    const hasPermission = await authorizationService.checkProjectRole(userId, projectId, ['ADMIN', 'WRITE']);
+    const hasPermission = await authorizationService.checkProjectRole(userId, projectId, [
+      'ADMIN',
+      'WRITE',
+    ]);
     if (!hasPermission) {
       throw new AuthorizationError('Insufficient permissions to start review');
     }
 
     // 既存の下書きレビューがあるか確認
-    const existingDraft = await this.reviewRepo.findDraftByUserAndTestSuite(userId, data.testSuiteId);
+    const existingDraft = await this.reviewRepo.findDraftByUserAndTestSuite(
+      userId,
+      data.testSuiteId
+    );
     if (existingDraft) {
       throw new BadRequestError('You already have a draft review for this test suite');
     }
@@ -179,7 +185,11 @@ export class ReviewService {
   /**
    * レビューを提出（DRAFT → SUBMITTED）
    */
-  async submit(reviewId: string, userId: string, data: { verdict: ReviewVerdict; summary?: string }) {
+  async submit(
+    reviewId: string,
+    userId: string,
+    data: { verdict: ReviewVerdict; summary?: string }
+  ) {
     const review = await this.findById(reviewId);
 
     // 投稿者本人のみ提出可能
@@ -248,14 +258,22 @@ export class ReviewService {
     } else {
       // SUBMITTEDの場合は権限確認（WRITE以上）
       const projectId = await this.getTestSuiteProjectId(review.testSuiteId);
-      const hasPermission = await authorizationService.checkProjectRole(userId, projectId, ['ADMIN', 'WRITE']);
+      const hasPermission = await authorizationService.checkProjectRole(userId, projectId, [
+        'ADMIN',
+        'WRITE',
+      ]);
       if (!hasPermission) {
         throw new AuthorizationError('Insufficient permissions to add comment');
       }
     }
 
     // 対象アイテムの存在確認
-    await this.validateTargetItem(data.targetType, data.targetId, data.targetField, data.targetItemId);
+    await this.validateTargetItem(
+      data.targetType,
+      data.targetId,
+      data.targetField,
+      data.targetItemId
+    );
 
     const comment = await this.reviewRepo.addComment({
       reviewId,
@@ -295,7 +313,12 @@ export class ReviewService {
   /**
    * コメントを更新（投稿者本人のみ）
    */
-  async updateComment(reviewId: string, commentId: string, userId: string, data: { content: string }) {
+  async updateComment(
+    reviewId: string,
+    commentId: string,
+    userId: string,
+    data: { content: string }
+  ) {
     const comment = await this.reviewRepo.findCommentById(commentId);
     if (!comment) {
       throw new NotFoundError('ReviewComment', commentId);
@@ -317,7 +340,12 @@ export class ReviewService {
   /**
    * コメントのステータスを変更（WRITE以上）
    */
-  async updateCommentStatus(reviewId: string, commentId: string, userId: string, status: ReviewStatus) {
+  async updateCommentStatus(
+    reviewId: string,
+    commentId: string,
+    userId: string,
+    status: ReviewStatus
+  ) {
     const comment = await this.reviewRepo.findCommentById(commentId);
     if (!comment) {
       throw new NotFoundError('ReviewComment', commentId);
@@ -333,7 +361,10 @@ export class ReviewService {
 
     // プロジェクト権限確認（WRITE以上）
     const projectId = await this.getTestSuiteProjectId(review.testSuiteId);
-    const hasPermission = await authorizationService.checkProjectRole(userId, projectId, ['ADMIN', 'WRITE']);
+    const hasPermission = await authorizationService.checkProjectRole(userId, projectId, [
+      'ADMIN',
+      'WRITE',
+    ]);
     if (!hasPermission) {
       throw new AuthorizationError('Insufficient permissions to update comment status');
     }
@@ -366,12 +397,7 @@ export class ReviewService {
   /**
    * 返信を追加
    */
-  async addReply(
-    reviewId: string,
-    commentId: string,
-    userId: string,
-    data: { content: string }
-  ) {
+  async addReply(reviewId: string, commentId: string, userId: string, data: { content: string }) {
     const comment = await this.reviewRepo.findCommentById(commentId);
     if (!comment) {
       throw new NotFoundError('ReviewComment', commentId);
@@ -387,7 +413,10 @@ export class ReviewService {
 
     // プロジェクト権限確認（WRITE以上）
     const projectId = await this.getTestSuiteProjectId(review.testSuiteId);
-    const hasPermission = await authorizationService.checkProjectRole(userId, projectId, ['ADMIN', 'WRITE']);
+    const hasPermission = await authorizationService.checkProjectRole(userId, projectId, [
+      'ADMIN',
+      'WRITE',
+    ]);
     if (!hasPermission) {
       throw new AuthorizationError('Insufficient permissions to add reply');
     }
@@ -435,12 +464,7 @@ export class ReviewService {
   /**
    * 返信を削除（投稿者本人のみ）
    */
-  async deleteReply(
-    reviewId: string,
-    commentId: string,
-    replyId: string,
-    userId: string
-  ) {
+  async deleteReply(reviewId: string, commentId: string, replyId: string, userId: string) {
     const reply = await this.reviewRepo.findReplyById(replyId);
     if (!reply) {
       throw new NotFoundError('ReviewCommentReply', replyId);

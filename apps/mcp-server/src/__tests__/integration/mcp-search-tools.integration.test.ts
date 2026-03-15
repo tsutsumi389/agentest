@@ -101,13 +101,9 @@ vi.mock('../../clients/api-client.js', () => ({
 /**
  * 認証状態を設定
  */
-function setTestAuth(
-  user: typeof mockAuthUser,
-  tokenPayload?: { sub: string; email: string }
-) {
+function setTestAuth(user: typeof mockAuthUser, tokenPayload?: { sub: string; email: string }) {
   mockAuthUser = user;
-  mockVerifyAccessTokenResult =
-    tokenPayload ?? (user ? { sub: user.id, email: user.email } : null);
+  mockVerifyAccessTokenResult = tokenPayload ?? (user ? { sub: user.id, email: user.email } : null);
   mockVerifyAccessTokenError = null;
 }
 
@@ -279,7 +275,10 @@ describe('MCP検索ツール統合テスト', () => {
       expect(response.status).toBe(200);
       expect(isToolError(response)).toBe(false);
 
-      const result = parseToolResult(response) as { projects: unknown[]; pagination: { total: number } };
+      const result = parseToolResult(response) as {
+        projects: unknown[];
+        pagination: { total: number };
+      };
       expect(result.projects).toHaveLength(0);
       expect(result.pagination.total).toBe(0);
     });

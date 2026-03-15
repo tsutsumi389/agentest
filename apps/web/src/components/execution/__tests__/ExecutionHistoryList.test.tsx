@@ -38,7 +38,7 @@ function renderItem(execution: Execution) {
   return render(
     <MemoryRouter>
       <ExecutionItem execution={execution} />
-    </MemoryRouter>,
+    </MemoryRouter>
   );
 }
 
@@ -57,7 +57,7 @@ describe('ExecutionItem 合格率ラベル', () => {
     renderItem(
       createExecution({
         judgmentCounts: { PASS: 0, FAIL: 0, PENDING: 0, SKIPPED: 0 },
-      }),
+      })
     );
     expect(screen.queryByTestId('pass-rate-label')).toBeNull();
   });
@@ -66,7 +66,7 @@ describe('ExecutionItem 合格率ラベル', () => {
     renderItem(
       createExecution({
         judgmentCounts: { PASS: 5, FAIL: 0, PENDING: 0, SKIPPED: 0 },
-      }),
+      })
     );
     expect(screen.getByTestId('pass-rate-label')).toHaveTextContent('5/5 (100%)');
   });
@@ -75,7 +75,7 @@ describe('ExecutionItem 合格率ラベル', () => {
     renderItem(
       createExecution({
         judgmentCounts: { PASS: 0, FAIL: 0, PENDING: 5, SKIPPED: 0 },
-      }),
+      })
     );
     expect(screen.getByTestId('pass-rate-label')).toHaveTextContent('0/5 (0%)');
   });
@@ -84,7 +84,7 @@ describe('ExecutionItem 合格率ラベル', () => {
     renderItem(
       createExecution({
         judgmentCounts: { PASS: 0, FAIL: 3, PENDING: 0, SKIPPED: 0 },
-      }),
+      })
     );
     expect(screen.getByTestId('pass-rate-label')).toHaveTextContent('0/3 (0%)');
   });
@@ -93,7 +93,7 @@ describe('ExecutionItem 合格率ラベル', () => {
     renderItem(
       createExecution({
         judgmentCounts: undefined,
-      }),
+      })
     );
     expect(screen.queryByTestId('pass-rate-label')).toBeNull();
   });

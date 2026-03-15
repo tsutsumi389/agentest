@@ -26,7 +26,7 @@ describe('ErrorBoundary', () => {
     render(
       <ErrorBoundary>
         <NormalChild />
-      </ErrorBoundary>,
+      </ErrorBoundary>
     );
 
     expect(screen.getByText('正常コンテンツ')).toBeInTheDocument();
@@ -36,14 +36,14 @@ describe('ErrorBoundary', () => {
     render(
       <ErrorBoundary>
         <ThrowError message="テストエラー" />
-      </ErrorBoundary>,
+      </ErrorBoundary>
     );
 
     expect(screen.getByText('エラーが発生しました')).toBeInTheDocument();
     expect(
       screen.getByText(
-        '予期しないエラーが発生しました。ページを再読み込みするか、しばらくしてから再度お試しください。',
-      ),
+        '予期しないエラーが発生しました。ページを再読み込みするか、しばらくしてから再度お試しください。'
+      )
     ).toBeInTheDocument();
   });
 
@@ -51,7 +51,7 @@ describe('ErrorBoundary', () => {
     render(
       <ErrorBoundary>
         <ThrowError message="テストエラー" />
-      </ErrorBoundary>,
+      </ErrorBoundary>
     );
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
@@ -61,7 +61,7 @@ describe('ErrorBoundary', () => {
     render(
       <ErrorBoundary>
         <ThrowError message="詳細エラーメッセージ" />
-      </ErrorBoundary>,
+      </ErrorBoundary>
     );
 
     expect(screen.getByText('エラー詳細')).toBeInTheDocument();
@@ -72,7 +72,7 @@ describe('ErrorBoundary', () => {
     render(
       <ErrorBoundary fallback={<div>カスタムエラー画面</div>}>
         <ThrowError message="テストエラー" />
-      </ErrorBoundary>,
+      </ErrorBoundary>
     );
 
     expect(screen.getByText('カスタムエラー画面')).toBeInTheDocument();
@@ -92,7 +92,7 @@ describe('ErrorBoundary', () => {
     render(
       <ErrorBoundary>
         <ConditionalError />
-      </ErrorBoundary>,
+      </ErrorBoundary>
     );
 
     expect(screen.getByText('エラーが発生しました')).toBeInTheDocument();
@@ -116,7 +116,7 @@ describe('ErrorBoundary', () => {
     render(
       <ErrorBoundary>
         <ThrowError message="テストエラー" />
-      </ErrorBoundary>,
+      </ErrorBoundary>
     );
 
     fireEvent.click(screen.getByText('ページを再読み込み'));

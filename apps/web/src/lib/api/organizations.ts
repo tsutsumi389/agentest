@@ -31,8 +31,7 @@ export const organizationsApi = {
     api.patch<{ organization: Organization }>(`/api/organizations/${organizationId}`, data),
 
   // 組織を削除
-  delete: (organizationId: string) =>
-    api.delete<void>(`/api/organizations/${organizationId}`),
+  delete: (organizationId: string) => api.delete<void>(`/api/organizations/${organizationId}`),
 
   // メンバー一覧を取得
   getMembers: (organizationId: string) =>
@@ -40,11 +39,16 @@ export const organizationsApi = {
 
   // メンバーを招待
   invite: (organizationId: string, data: InviteMemberRequest) =>
-    api.post<{ invitation: OrganizationInvitation; emailSent: boolean }>(`/api/organizations/${organizationId}/invitations`, data),
+    api.post<{ invitation: OrganizationInvitation; emailSent: boolean }>(
+      `/api/organizations/${organizationId}/invitations`,
+      data
+    ),
 
   // 保留中の招待一覧を取得
   getInvitations: (organizationId: string) =>
-    api.get<{ invitations: OrganizationInvitation[] }>(`/api/organizations/${organizationId}/invitations`),
+    api.get<{ invitations: OrganizationInvitation[] }>(
+      `/api/organizations/${organizationId}/invitations`
+    ),
 
   // 招待を取消
   cancelInvitation: (organizationId: string, invitationId: string) =>
@@ -60,11 +64,16 @@ export const organizationsApi = {
 
   // 招待を辞退
   declineInvitation: (token: string) =>
-    api.post<{ invitation: OrganizationInvitation }>(`/api/organizations/invitations/${token}/decline`),
+    api.post<{ invitation: OrganizationInvitation }>(
+      `/api/organizations/invitations/${token}/decline`
+    ),
 
   // メンバーのロールを更新
   updateMemberRole: (organizationId: string, userId: string, role: 'ADMIN' | 'MEMBER') =>
-    api.patch<{ member: OrganizationMember }>(`/api/organizations/${organizationId}/members/${userId}`, { role }),
+    api.patch<{ member: OrganizationMember }>(
+      `/api/organizations/${organizationId}/members/${userId}`,
+      { role }
+    ),
 
   // メンバーを削除
   removeMember: (organizationId: string, userId: string) =>
@@ -72,7 +81,10 @@ export const organizationsApi = {
 
   // オーナー権限を移譲
   transferOwnership: (organizationId: string, newOwnerId: string) =>
-    api.post<{ member: OrganizationMember }>(`/api/organizations/${organizationId}/transfer-ownership`, { newOwnerId }),
+    api.post<{ member: OrganizationMember }>(
+      `/api/organizations/${organizationId}/transfer-ownership`,
+      { newOwnerId }
+    ),
 
   // 監査ログを取得
   getAuditLogs: (organizationId: string, params?: AuditLogQueryParams) => {

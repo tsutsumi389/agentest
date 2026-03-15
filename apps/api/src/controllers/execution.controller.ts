@@ -61,7 +61,11 @@ export class ExecutionController {
   /**
    * 前提条件結果更新
    */
-  updatePreconditionResult = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  updatePreconditionResult = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const { executionId, preconditionResultId } = req.params;
       const data = updatePreconditionResultSchema.parse(req.body);
@@ -85,12 +89,9 @@ export class ExecutionController {
     try {
       const { executionId, stepResultId } = req.params;
       const data = updateStepResultSchema.parse(req.body);
-      const result = await this.executionService.updateStepResult(
-        executionId,
-        stepResultId,
-        data,
-        { userId: req.user!.id }
-      );
+      const result = await this.executionService.updateStepResult(executionId, stepResultId, data, {
+        userId: req.user!.id,
+      });
 
       res.json({ result });
     } catch (error) {
@@ -166,10 +167,17 @@ export class ExecutionController {
   /**
    * エビデンスダウンロードURL取得
    */
-  getEvidenceDownloadUrl = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getEvidenceDownloadUrl = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
     try {
       const { executionId, evidenceId } = req.params;
-      const downloadUrl = await this.executionService.getEvidenceDownloadUrl(executionId, evidenceId);
+      const downloadUrl = await this.executionService.getEvidenceDownloadUrl(
+        executionId,
+        evidenceId
+      );
 
       res.json({ downloadUrl });
     } catch (error) {

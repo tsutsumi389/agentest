@@ -41,11 +41,7 @@ export function LockConflictModal({
             <Lock className="w-5 h-5 text-warning" />
             <h2 className="text-lg font-medium">編集がブロックされました</h2>
           </div>
-          <button
-            onClick={onClose}
-            className="btn-icon-ghost"
-            aria-label="閉じる"
-          >
+          <button onClick={onClose} className="btn-icon-ghost" aria-label="閉じる">
             <X className="w-5 h-5" />
           </button>
         </div>

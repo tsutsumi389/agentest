@@ -24,7 +24,8 @@ export function CreateProjectModal({ isOpen, onClose, organizationId }: CreatePr
 
   // 組織名を取得（モーダルタイトル用）
   const organizationName = organizationId
-    ? organizations.find(({ organization }) => organization.id === organizationId)?.organization.name
+    ? organizations.find(({ organization }) => organization.id === organizationId)?.organization
+        .name
     : undefined;
 
   const createMutation = useMutation({
@@ -144,9 +145,7 @@ export function CreateProjectModal({ isOpen, onClose, organizationId }: CreatePr
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              説明
-            </label>
+            <label className="block text-sm font-medium text-foreground mb-1">説明</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -168,10 +167,7 @@ export function CreateProjectModal({ isOpen, onClose, organizationId }: CreatePr
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={
-                !name ||
-                createMutation.isPending
-              }
+              disabled={!name || createMutation.isPending}
             >
               {createMutation.isPending ? (
                 <>

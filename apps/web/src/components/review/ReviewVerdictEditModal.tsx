@@ -121,10 +121,7 @@ export function ReviewVerdictEditModal({
   return (
     <div className="fixed inset-0 z-modal flex items-center justify-center p-4">
       {/* オーバーレイ */}
-      <div
-        className="absolute inset-0 bg-black/50"
-        onClick={!isSubmitting ? onClose : undefined}
-      />
+      <div className="absolute inset-0 bg-black/50" onClick={!isSubmitting ? onClose : undefined} />
 
       {/* モーダル */}
       <div
@@ -137,10 +134,7 @@ export function ReviewVerdictEditModal({
       >
         {/* ヘッダー */}
         <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2
-            id="verdict-edit-modal-title"
-            className="text-lg font-semibold text-foreground"
-          >
+          <h2 id="verdict-edit-modal-title" className="text-lg font-semibold text-foreground">
             評価を変更
           </h2>
           <button
@@ -187,12 +181,16 @@ export function ReviewVerdictEditModal({
                       className="sr-only"
                       disabled={isSubmitting}
                     />
-                    <Icon className={`w-5 h-5 mt-0.5 flex-shrink-0 ${isSelected ? '' : 'text-foreground-muted'}`} />
+                    <Icon
+                      className={`w-5 h-5 mt-0.5 flex-shrink-0 ${isSelected ? '' : 'text-foreground-muted'}`}
+                    />
                     <div className="flex-1 min-w-0">
                       <div className={`font-medium ${isSelected ? '' : 'text-foreground'}`}>
                         {option.label}
                       </div>
-                      <div className={`text-xs mt-0.5 ${isSelected ? 'opacity-80' : 'text-foreground-muted'}`}>
+                      <div
+                        className={`text-xs mt-0.5 ${isSelected ? 'opacity-80' : 'text-foreground-muted'}`}
+                      >
                         {option.description}
                       </div>
                     </div>
@@ -212,11 +210,7 @@ export function ReviewVerdictEditModal({
             >
               キャンセル
             </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="btn btn-primary"
-            >
+            <button type="submit" disabled={isSubmitting} className="btn btn-primary">
               {isSubmitting ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />

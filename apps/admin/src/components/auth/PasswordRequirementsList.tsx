@@ -19,9 +19,7 @@ const REQUIREMENT_ITEMS = [
 export function PasswordRequirementsList({ requirements }: PasswordRequirementsListProps) {
   return (
     <div className="space-y-2 p-3 bg-surface-secondary rounded-md">
-      <p className="text-xs font-medium text-foreground-muted mb-2">
-        パスワード要件:
-      </p>
+      <p className="text-xs font-medium text-foreground-muted mb-2">パスワード要件:</p>
       <ul className="space-y-1 text-xs">
         {REQUIREMENT_ITEMS.map(({ key, label }) => (
           <li

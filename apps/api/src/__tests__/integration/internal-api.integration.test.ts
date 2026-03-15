@@ -107,9 +107,7 @@ describe('Internal API Integration Tests', () => {
         expect(response.body.projects.length).toBeGreaterThanOrEqual(1);
 
         // テストプロジェクトが含まれていることを確認
-        const project = response.body.projects.find(
-          (p: { id: string }) => p.id === testProject.id
-        );
+        const project = response.body.projects.find((p: { id: string }) => p.id === testProject.id);
         expect(project).toBeDefined();
         expect(project.name).toBe(testProject.name);
         expect(project.role).toBe('OWNER');
@@ -145,9 +143,7 @@ describe('Internal API Integration Tests', () => {
 
     describe('認証失敗', () => {
       it('シークレットがない場合は403を返す', async () => {
-        const response = await request(app).get(
-          `/internal/api/users/${testUser.id}/projects`
-        );
+        const response = await request(app).get(`/internal/api/users/${testUser.id}/projects`);
 
         expect(response.status).toBe(403);
         expect(response.body).toEqual({
@@ -273,7 +269,9 @@ describe('Internal API Integration Tests', () => {
 
         // 複数ステータスでフィルタ（?status=DRAFT&status=ACTIVE形式）
         const response = await request(app)
-          .get(`/internal/api/test-suites/${testSuite.id}/test-cases?userId=${testUser.id}&status=DRAFT&status=ACTIVE`)
+          .get(
+            `/internal/api/test-suites/${testSuite.id}/test-cases?userId=${testUser.id}&status=DRAFT&status=ACTIVE`
+          )
           .set('X-Internal-API-Key', env.INTERNAL_API_SECRET);
 
         expect(response.status).toBe(200);
@@ -317,7 +315,9 @@ describe('Internal API Integration Tests', () => {
 
         // 複数優先度でフィルタ（?priority=HIGH&priority=CRITICAL形式）
         const response = await request(app)
-          .get(`/internal/api/test-suites/${testSuite.id}/test-cases?userId=${testUser.id}&priority=HIGH&priority=CRITICAL`)
+          .get(
+            `/internal/api/test-suites/${testSuite.id}/test-cases?userId=${testUser.id}&priority=HIGH&priority=CRITICAL`
+          )
           .set('X-Internal-API-Key', env.INTERNAL_API_SECRET);
 
         expect(response.status).toBe(200);
@@ -476,8 +476,9 @@ describe('Internal API Integration Tests', () => {
         expect(response.status).toBe(200);
         expect(response.body.executions.length).toBe(2);
         // 昇順なので最初が古い日付
-        expect(new Date(response.body.executions[0].createdAt).getTime())
-          .toBeLessThan(new Date(response.body.executions[1].createdAt).getTime());
+        expect(new Date(response.body.executions[0].createdAt).getTime()).toBeLessThan(
+          new Date(response.body.executions[1].createdAt).getTime()
+        );
       });
 
       it('実行者がnullの実行履歴を返す', async () => {
@@ -541,7 +542,6 @@ describe('Internal API Integration Tests', () => {
         expect(response.status).toBe(400);
         expect(response.body.error).toBe('Bad Request');
       });
-
     });
 
     describe('実行履歴なし', () => {

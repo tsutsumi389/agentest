@@ -13,7 +13,9 @@ test.describe('パスワードリセットリクエスト', () => {
     await expect(page.getByRole('heading', { name: 'パスワードリセット' })).toBeVisible();
 
     // 説明テキストの確認
-    await expect(page.getByText('登録されたメールアドレスにリセットリンクを送信します。')).toBeVisible();
+    await expect(
+      page.getByText('登録されたメールアドレスにリセットリンクを送信します。')
+    ).toBeVisible();
 
     // フォーム要素の確認
     await expect(page.getByLabel('メールアドレス')).toBeVisible();

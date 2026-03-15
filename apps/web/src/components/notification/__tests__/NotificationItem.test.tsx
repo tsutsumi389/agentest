@@ -27,7 +27,7 @@ describe('NotificationItem', () => {
     return render(
       <MemoryRouter>
         <NotificationItem {...defaultProps} {...overrides} />
-      </MemoryRouter>,
+      </MemoryRouter>
     );
   }
 

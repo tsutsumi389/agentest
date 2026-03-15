@@ -4,10 +4,7 @@ import type {
   AdminAuditLogListResponse,
   AdminAuditLogEntry,
 } from '@agentest/shared';
-import {
-  getAdminAuditLogsCache,
-  setAdminAuditLogsCache,
-} from '../../lib/redis-store.js';
+import { getAdminAuditLogsCache, setAdminAuditLogsCache } from '../../lib/redis-store.js';
 
 // キャッシュ有効期限（秒）
 const CACHE_TTL_SECONDS = 30;

@@ -28,21 +28,14 @@ export function verifyCodeChallenge(
   }
 
   const computed = computeCodeChallenge(codeVerifier);
-  return crypto.timingSafeEqual(
-    Buffer.from(computed),
-    Buffer.from(codeChallenge)
-  );
+  return crypto.timingSafeEqual(Buffer.from(computed), Buffer.from(codeChallenge));
 }
 
 /**
  * Base64URL エンコード (RFC 4648)
  */
 function base64UrlEncode(buffer: Buffer): string {
-  return buffer
-    .toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=/g, '');
+  return buffer.toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 
 /**

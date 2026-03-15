@@ -113,9 +113,7 @@ describe('SystemAdminService', () => {
     it('自分自身を削除しようとするとエラーになる', async () => {
       const adminId = 'admin-1';
 
-      await expect(service.deleteAdminUser(adminId, adminId)).rejects.toThrow(
-        BusinessError
-      );
+      await expect(service.deleteAdminUser(adminId, adminId)).rejects.toThrow(BusinessError);
       await expect(service.deleteAdminUser(adminId, adminId)).rejects.toThrow(
         '自分自身は削除できません'
       );
@@ -124,9 +122,9 @@ describe('SystemAdminService', () => {
     it('存在しない管理者を削除しようとするとエラーになる', async () => {
       vi.mocked(prisma.adminUser.findUnique).mockResolvedValue(null);
 
-      await expect(
-        service.deleteAdminUser('non-existent', 'current-admin')
-      ).rejects.toThrow(NotFoundError);
+      await expect(service.deleteAdminUser('non-existent', 'current-admin')).rejects.toThrow(
+        NotFoundError
+      );
     });
 
     it('最後のSUPER_ADMINを削除しようとするとエラーになる', async () => {
@@ -139,12 +137,12 @@ describe('SystemAdminService', () => {
       vi.mocked(prisma.adminUser.findUnique).mockResolvedValue(targetAdmin as never);
       vi.mocked(prisma.adminUser.count).mockResolvedValue(1);
 
-      await expect(
-        service.deleteAdminUser('super-admin-1', 'current-admin')
-      ).rejects.toThrow(BusinessError);
-      await expect(
-        service.deleteAdminUser('super-admin-1', 'current-admin')
-      ).rejects.toThrow('最後のSUPER_ADMINは削除できません');
+      await expect(service.deleteAdminUser('super-admin-1', 'current-admin')).rejects.toThrow(
+        BusinessError
+      );
+      await expect(service.deleteAdminUser('super-admin-1', 'current-admin')).rejects.toThrow(
+        '最後のSUPER_ADMINは削除できません'
+      );
     });
 
     it('削除済み管理者を削除しようとするとエラーになる', async () => {
@@ -156,9 +154,9 @@ describe('SystemAdminService', () => {
 
       vi.mocked(prisma.adminUser.findUnique).mockResolvedValue(deletedAdmin as never);
 
-      await expect(
-        service.deleteAdminUser('deleted-admin', 'current-admin')
-      ).rejects.toThrow(NotFoundError);
+      await expect(service.deleteAdminUser('deleted-admin', 'current-admin')).rejects.toThrow(
+        NotFoundError
+      );
     });
   });
 
@@ -174,12 +172,12 @@ describe('SystemAdminService', () => {
 
       vi.mocked(prisma.adminUser.findUnique).mockResolvedValue(targetAdmin as never);
 
-      await expect(
-        service.updateAdminUser(adminId, { role: 'VIEWER' }, adminId)
-      ).rejects.toThrow(BusinessError);
-      await expect(
-        service.updateAdminUser(adminId, { role: 'VIEWER' }, adminId)
-      ).rejects.toThrow('自分自身のロールは変更できません');
+      await expect(service.updateAdminUser(adminId, { role: 'VIEWER' }, adminId)).rejects.toThrow(
+        BusinessError
+      );
+      await expect(service.updateAdminUser(adminId, { role: 'VIEWER' }, adminId)).rejects.toThrow(
+        '自分自身のロールは変更できません'
+      );
     });
 
     it('最後のSUPER_ADMINのロールを変更しようとするとエラーになる', async () => {
@@ -414,12 +412,12 @@ describe('SystemAdminService', () => {
 
       vi.mocked(prisma.adminInvitation.findUnique).mockResolvedValue(expiredInvitation as never);
 
-      await expect(
-        service.acceptInvitation('expired-token', 'StrongPassword123!')
-      ).rejects.toThrow(BusinessError);
-      await expect(
-        service.acceptInvitation('expired-token', 'StrongPassword123!')
-      ).rejects.toThrow('この招待は有効期限が切れています');
+      await expect(service.acceptInvitation('expired-token', 'StrongPassword123!')).rejects.toThrow(
+        BusinessError
+      );
+      await expect(service.acceptInvitation('expired-token', 'StrongPassword123!')).rejects.toThrow(
+        'この招待は有効期限が切れています'
+      );
     });
 
     it('既に使用済みのトークンではエラーになる', async () => {
@@ -431,12 +429,12 @@ describe('SystemAdminService', () => {
 
       vi.mocked(prisma.adminInvitation.findUnique).mockResolvedValue(usedInvitation as never);
 
-      await expect(
-        service.acceptInvitation('used-token', 'StrongPassword123!')
-      ).rejects.toThrow(BusinessError);
-      await expect(
-        service.acceptInvitation('used-token', 'StrongPassword123!')
-      ).rejects.toThrow('この招待は既に受諾されています');
+      await expect(service.acceptInvitation('used-token', 'StrongPassword123!')).rejects.toThrow(
+        BusinessError
+      );
+      await expect(service.acceptInvitation('used-token', 'StrongPassword123!')).rejects.toThrow(
+        'この招待は既に受諾されています'
+      );
     });
   });
 

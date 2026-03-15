@@ -1,6 +1,12 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Channels, type DashboardUpdatedEvent } from '@agentest/ws-types';
-import { projectsApi, type ProjectDashboardStats, type Label, type ProjectEnvironment, labelsApi } from '../lib/api';
+import {
+  projectsApi,
+  type ProjectDashboardStats,
+  type Label,
+  type ProjectEnvironment,
+  labelsApi,
+} from '../lib/api';
 import { wsClient } from '../lib/ws';
 
 /**
@@ -33,7 +39,9 @@ interface UseProjectDashboardResult {
  * プロジェクトダッシュボードフック
  * WebSocketでリアルタイム更新を受け取り、デバウンス付きでリフェッチする
  */
-export function useProjectDashboard(options: UseProjectDashboardOptions): UseProjectDashboardResult {
+export function useProjectDashboard(
+  options: UseProjectDashboardOptions
+): UseProjectDashboardResult {
   const { projectId, environmentId, labelIds = [] } = options;
 
   const [stats, setStats] = useState<ProjectDashboardStats | null>(null);
@@ -55,39 +63,43 @@ export function useProjectDashboard(options: UseProjectDashboardOptions): UsePro
    * ダッシュボードデータを取得
    * バックグラウンドフェッチ時はローディング状態を変更せず、失敗時も既存エラーを保持する
    */
-  const fetchDashboard = useCallback(async (isBackground = false) => {
-    const currentRequestId = ++requestIdRef.current;
+  const fetchDashboard = useCallback(
+    async (isBackground = false) => {
+      const currentRequestId = ++requestIdRef.current;
 
-    try {
-      if (!isBackground) {
-        setIsLoading(true);
+      try {
+        if (!isBackground) {
+          setIsLoading(true);
+          setError(null);
+        }
+
+        const params =
+          environmentId || stableLabelIds.length > 0
+            ? { environmentId, labelIds: stableLabelIds }
+            : undefined;
+
+        const response = await projectsApi.getDashboard(projectId, params);
+
+        // 古いリクエストの結果を無視する
+        if (currentRequestId !== requestIdRef.current) return;
+
+        setStats(response.dashboard);
+        // バックグラウンドフェッチ成功時もエラーをクリア
         setError(null);
+      } catch {
+        if (currentRequestId !== requestIdRef.current) return;
+        // バックグラウンドフェッチ失敗時は既存のエラー状態を保持する
+        if (!isBackground) {
+          setError('ダッシュボードの取得に失敗しました');
+        }
+      } finally {
+        if (currentRequestId === requestIdRef.current && !isBackground) {
+          setIsLoading(false);
+        }
       }
-
-      const params = environmentId || stableLabelIds.length > 0
-        ? { environmentId, labelIds: stableLabelIds }
-        : undefined;
-
-      const response = await projectsApi.getDashboard(projectId, params);
-
-      // 古いリクエストの結果を無視する
-      if (currentRequestId !== requestIdRef.current) return;
-
-      setStats(response.dashboard);
-      // バックグラウンドフェッチ成功時もエラーをクリア
-      setError(null);
-    } catch {
-      if (currentRequestId !== requestIdRef.current) return;
-      // バックグラウンドフェッチ失敗時は既存のエラー状態を保持する
-      if (!isBackground) {
-        setError('ダッシュボードの取得に失敗しました');
-      }
-    } finally {
-      if (currentRequestId === requestIdRef.current && !isBackground) {
-        setIsLoading(false);
-      }
-    }
-  }, [projectId, environmentId, stableLabelIds]);
+    },
+    [projectId, environmentId, stableLabelIds]
+  );
 
   /**
    * 環境とラベル一覧を取得

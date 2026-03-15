@@ -41,9 +41,7 @@ function createWrapper(queryClient: QueryClient) {
 
 // 型安全なハンドラ取得ヘルパー
 function getEventHandler(eventType: string): (event: unknown) => void {
-  const call = mockWsClient.on.mock.calls.find(
-    (c: unknown[]) => c[0] === eventType
-  );
+  const call = mockWsClient.on.mock.calls.find((c: unknown[]) => c[0] === eventType);
   if (!call) throw new Error(`No handler registered for ${eventType}`);
   return call[1] as (event: unknown) => void;
 }
@@ -146,7 +144,11 @@ describe('useExecutionRealtime', () => {
       });
 
       // キャッシュが更新されていることを確認
-      const cached = queryClient.getQueryData<{ execution: ExecutionWithDetails }>(['execution', 'exec-1', 'details']);
+      const cached = queryClient.getQueryData<{ execution: ExecutionWithDetails }>([
+        'execution',
+        'exec-1',
+        'details',
+      ]);
       expect(cached?.execution.preconditionResults[0]).toMatchObject({
         id: 'pr-1',
         status: 'OK',
@@ -186,7 +188,11 @@ describe('useExecutionRealtime', () => {
         timestamp: Date.now(),
       });
 
-      const cached = queryClient.getQueryData<{ execution: ExecutionWithDetails }>(['execution', 'exec-1', 'details']);
+      const cached = queryClient.getQueryData<{ execution: ExecutionWithDetails }>([
+        'execution',
+        'exec-1',
+        'details',
+      ]);
       expect(cached?.execution.preconditionResults[0].status).toBe('UNCHECKED');
     });
   });
@@ -196,9 +202,7 @@ describe('useExecutionRealtime', () => {
       const mockExecution = {
         execution: {
           preconditionResults: [],
-          stepResults: [
-            { id: 'sr-1', status: 'PENDING', note: null },
-          ],
+          stepResults: [{ id: 'sr-1', status: 'PENDING', note: null }],
           expectedResults: [],
         } as unknown as ExecutionWithDetails,
       };
@@ -221,7 +225,11 @@ describe('useExecutionRealtime', () => {
         timestamp: Date.now(),
       });
 
-      const cached = queryClient.getQueryData<{ execution: ExecutionWithDetails }>(['execution', 'exec-1', 'details']);
+      const cached = queryClient.getQueryData<{ execution: ExecutionWithDetails }>([
+        'execution',
+        'exec-1',
+        'details',
+      ]);
       expect(cached?.execution.stepResults[0]).toMatchObject({
         id: 'sr-1',
         status: 'PASSED',
@@ -236,9 +244,7 @@ describe('useExecutionRealtime', () => {
         execution: {
           preconditionResults: [],
           stepResults: [],
-          expectedResults: [
-            { id: 'er-1', status: 'PENDING', note: null, evidences: [] },
-          ],
+          expectedResults: [{ id: 'er-1', status: 'PENDING', note: null, evidences: [] }],
         } as unknown as ExecutionWithDetails,
       };
       queryClient.setQueryData(['execution', 'exec-1', 'details'], mockExecution);
@@ -260,7 +266,11 @@ describe('useExecutionRealtime', () => {
         timestamp: Date.now(),
       });
 
-      const cached = queryClient.getQueryData<{ execution: ExecutionWithDetails }>(['execution', 'exec-1', 'details']);
+      const cached = queryClient.getQueryData<{ execution: ExecutionWithDetails }>([
+        'execution',
+        'exec-1',
+        'details',
+      ]);
       expect(cached?.execution.expectedResults[0]).toMatchObject({
         id: 'er-1',
         status: 'PASS',

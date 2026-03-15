@@ -115,15 +115,12 @@ function renderSecuritySettings() {
   return render(
     <MemoryRouter initialEntries={['/settings?tab=security']}>
       <SettingsPage />
-    </MemoryRouter>,
+    </MemoryRouter>
   );
 }
 
 // デフォルトのAPIモック設定
-function setupDefaultMocks(options?: {
-  hasPassword?: boolean;
-  accountCount?: number;
-}) {
+function setupDefaultMocks(options?: { hasPassword?: boolean; accountCount?: number }) {
   const { hasPassword = false, accountCount = 1 } = options ?? {};
 
   mockPasswordApi.getStatus.mockResolvedValue({
@@ -209,7 +206,7 @@ describe('SecuritySettings - パスワード管理', () => {
       const passwordSection = screen.getByText('パスワード');
       const oauthSection = screen.getByText('接続済みアカウント');
       expect(
-        passwordSection.compareDocumentPosition(oauthSection) & Node.DOCUMENT_POSITION_FOLLOWING,
+        passwordSection.compareDocumentPosition(oauthSection) & Node.DOCUMENT_POSITION_FOLLOWING
       ).toBeTruthy();
     });
   });
@@ -359,7 +356,7 @@ describe('SecuritySettings - パスワード管理', () => {
     it('エラー時にエラーメッセージが表示される', async () => {
       const { ApiError } = await import('../../lib/api');
       mockPasswordApi.setPassword.mockRejectedValue(
-        new ApiError(400, 'VALIDATION_ERROR', 'パスワードが要件を満たしていません'),
+        new ApiError(400, 'VALIDATION_ERROR', 'パスワードが要件を満たしていません')
       );
 
       renderSecuritySettings();
@@ -478,7 +475,7 @@ describe('SecuritySettings - パスワード管理', () => {
     it('現在のパスワードが間違っている場合にエラーが表示される', async () => {
       const { ApiError } = await import('../../lib/api');
       mockPasswordApi.changePassword.mockRejectedValue(
-        new ApiError(401, 'INVALID_PASSWORD', '現在のパスワードが正しくありません'),
+        new ApiError(401, 'INVALID_PASSWORD', '現在のパスワードが正しくありません')
       );
 
       renderSecuritySettings();
@@ -631,7 +628,8 @@ describe('SecuritySettings - パスワード管理', () => {
       const sessions = [
         {
           id: 'session-current',
-          userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120',
+          userAgent:
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/120',
           ipAddress: '127.0.0.1',
           lastActiveAt: new Date().toISOString(),
           isCurrent: true,

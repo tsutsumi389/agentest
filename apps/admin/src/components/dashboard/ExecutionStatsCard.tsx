@@ -11,9 +11,7 @@ interface ExecutionStatsCardProps {
 export function ExecutionStatsCard({ stats }: ExecutionStatsCardProps) {
   // 成功率に応じた色を決定
   const passRateColor =
-    stats.passRate >= 90 ? 'text-success' :
-    stats.passRate >= 70 ? 'text-warning' :
-    'text-danger';
+    stats.passRate >= 90 ? 'text-success' : stats.passRate >= 70 ? 'text-warning' : 'text-danger';
 
   return (
     <div className="stat-card">
@@ -36,9 +34,11 @@ export function ExecutionStatsCard({ stats }: ExecutionStatsCardProps) {
           <div className="h-2 bg-background-tertiary rounded-full overflow-hidden">
             <div
               className={`h-full transition-all ${
-                stats.passRate >= 90 ? 'bg-success' :
-                stats.passRate >= 70 ? 'bg-warning' :
-                'bg-danger'
+                stats.passRate >= 90
+                  ? 'bg-success'
+                  : stats.passRate >= 70
+                    ? 'bg-warning'
+                    : 'bg-danger'
               }`}
               style={{ width: `${stats.passRate}%` }}
             />
@@ -50,14 +50,18 @@ export function ExecutionStatsCard({ stats }: ExecutionStatsCardProps) {
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-success" />
             <div>
-              <div className="text-sm font-medium text-foreground">{stats.passCount.toLocaleString()}</div>
+              <div className="text-sm font-medium text-foreground">
+                {stats.passCount.toLocaleString()}
+              </div>
               <div className="text-xs text-foreground-muted">成功</div>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <XCircle className="w-4 h-4 text-danger" />
             <div>
-              <div className="text-sm font-medium text-foreground">{stats.failCount.toLocaleString()}</div>
+              <div className="text-sm font-medium text-foreground">
+                {stats.failCount.toLocaleString()}
+              </div>
               <div className="text-xs text-foreground-muted">失敗</div>
             </div>
           </div>

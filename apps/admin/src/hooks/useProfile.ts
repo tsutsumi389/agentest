@@ -18,7 +18,8 @@ export function useUpdateProfile() {
       updateAdmin(admin);
       return admin;
     } catch (e) {
-      const apiError = e instanceof ApiError ? e : new ApiError(500, 'UNKNOWN_ERROR', '更新に失敗しました');
+      const apiError =
+        e instanceof ApiError ? e : new ApiError(500, 'UNKNOWN_ERROR', '更新に失敗しました');
       setError(apiError);
       throw apiError;
     } finally {
@@ -42,7 +43,10 @@ export function useChangePassword() {
     try {
       await adminProfileApi.changePassword({ currentPassword, newPassword });
     } catch (e) {
-      const apiError = e instanceof ApiError ? e : new ApiError(500, 'UNKNOWN_ERROR', 'パスワード変更に失敗しました');
+      const apiError =
+        e instanceof ApiError
+          ? e
+          : new ApiError(500, 'UNKNOWN_ERROR', 'パスワード変更に失敗しました');
       setError(apiError);
       throw apiError;
     } finally {
@@ -66,7 +70,10 @@ export function useSetup2FA() {
     try {
       return await adminProfileApi.setup2FA();
     } catch (e) {
-      const apiError = e instanceof ApiError ? e : new ApiError(500, 'UNKNOWN_ERROR', '2FAセットアップに失敗しました');
+      const apiError =
+        e instanceof ApiError
+          ? e
+          : new ApiError(500, 'UNKNOWN_ERROR', '2FAセットアップに失敗しました');
       setError(apiError);
       throw apiError;
     } finally {
@@ -96,7 +103,8 @@ export function useEnable2FA() {
         updateAdmin({ ...currentAdmin, totpEnabled: true });
       }
     } catch (e) {
-      const apiError = e instanceof ApiError ? e : new ApiError(500, 'UNKNOWN_ERROR', '2FA有効化に失敗しました');
+      const apiError =
+        e instanceof ApiError ? e : new ApiError(500, 'UNKNOWN_ERROR', '2FA有効化に失敗しました');
       setError(apiError);
       throw apiError;
     } finally {
@@ -126,7 +134,8 @@ export function useDisable2FA() {
         updateAdmin({ ...currentAdmin, totpEnabled: false });
       }
     } catch (e) {
-      const apiError = e instanceof ApiError ? e : new ApiError(500, 'UNKNOWN_ERROR', '2FA無効化に失敗しました');
+      const apiError =
+        e instanceof ApiError ? e : new ApiError(500, 'UNKNOWN_ERROR', '2FA無効化に失敗しました');
       setError(apiError);
       throw apiError;
     } finally {

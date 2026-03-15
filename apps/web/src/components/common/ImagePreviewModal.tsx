@@ -16,12 +16,7 @@ interface ImagePreviewModalProps {
  * 画像プレビューモーダル
  * サムネイルクリック時に画像を拡大表示する
  */
-export function ImagePreviewModal({
-  isOpen,
-  imageUrl,
-  fileName,
-  onClose,
-}: ImagePreviewModalProps) {
+export function ImagePreviewModal({ isOpen, imageUrl, fileName, onClose }: ImagePreviewModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [hasError, setHasError] = useState(false);
@@ -47,9 +42,8 @@ export function ImagePreviewModal({
       }
       // フォーカストラップ
       if (e.key === 'Tab' && modalRef.current) {
-        const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
-          'button:not([disabled])'
-        );
+        const focusableElements =
+          modalRef.current.querySelectorAll<HTMLElement>('button:not([disabled])');
         const firstElement = focusableElements[0];
         const lastElement = focusableElements[focusableElements.length - 1];
 

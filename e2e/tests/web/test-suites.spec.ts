@@ -76,7 +76,10 @@ test.describe('テストケース', () => {
     await expect(page.getByText('Login Feature Tests')).toBeVisible({ timeout: 10000 });
 
     // サイドバーにテストケース一覧が表示される
-    const sidebar = page.locator('[class*="sidebar"]').or(page.locator('nav')).or(page.locator('aside'));
+    const sidebar = page
+      .locator('[class*="sidebar"]')
+      .or(page.locator('nav'))
+      .or(page.locator('aside'));
     await expect(sidebar.locator('text=テストケース').first()).toBeVisible({ timeout: 5000 });
 
     // テストケースの件数表示を確認

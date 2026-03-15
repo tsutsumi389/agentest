@@ -70,7 +70,14 @@ vi.mock('../../services/admin/admin-audit-log.service.js', () => ({
 
 // Logger モック
 const { mockLogger } = vi.hoisted(() => {
-  const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn(), fatal: vi.fn(), child: vi.fn() };
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn(),
+  };
   mockLogger.child.mockReturnValue(mockLogger);
   return { mockLogger };
 });
@@ -227,18 +234,21 @@ describe('AdminPasswordResetService', () => {
     it('トークンが存在しない場合、BadRequestErrorを投げる', async () => {
       mockPrisma.adminPasswordResetToken.findFirst.mockResolvedValue(null);
 
-      await expect(service.resetPassword('invalid-token', 'NewPassword123!'))
-        .rejects.toThrow(BadRequestError);
-      await expect(service.resetPassword('invalid-token', 'NewPassword123!'))
-        .rejects.toThrow('無効なパスワードリセットトークンです');
+      await expect(service.resetPassword('invalid-token', 'NewPassword123!')).rejects.toThrow(
+        BadRequestError
+      );
+      await expect(service.resetPassword('invalid-token', 'NewPassword123!')).rejects.toThrow(
+        '無効なパスワードリセットトークンです'
+      );
     });
 
     it('使用済みトークンの場合、BadRequestErrorを投げる', async () => {
       const usedToken = { ...validResetToken, usedAt: new Date() };
       mockPrisma.adminPasswordResetToken.findFirst.mockResolvedValue(usedToken);
 
-      await expect(service.resetPassword('used-token', 'NewPassword123!'))
-        .rejects.toThrow('このパスワードリセットトークンは既に使用されています');
+      await expect(service.resetPassword('used-token', 'NewPassword123!')).rejects.toThrow(
+        'このパスワードリセットトークンは既に使用されています'
+      );
     });
 
     it('期限切れトークンの場合、BadRequestErrorを投げる', async () => {
@@ -248,8 +258,9 @@ describe('AdminPasswordResetService', () => {
       };
       mockPrisma.adminPasswordResetToken.findFirst.mockResolvedValue(expiredToken);
 
-      await expect(service.resetPassword('expired-token', 'NewPassword123!'))
-        .rejects.toThrow('パスワードリセットトークンの有効期限が切れています');
+      await expect(service.resetPassword('expired-token', 'NewPassword123!')).rejects.toThrow(
+        'パスワードリセットトークンの有効期限が切れています'
+      );
     });
 
     it('トランザクション内でトークン使用済み化、パスワード更新、セッション無効化を実行する', async () => {

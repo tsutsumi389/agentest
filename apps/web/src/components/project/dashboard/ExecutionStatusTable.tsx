@@ -19,7 +19,10 @@ interface ExecutionStatusTableProps {
 /**
  * タブ定義
  */
-const TAB_CONFIG: Record<TabType, { label: string; icon: React.ComponentType<{ className?: string }> }> = {
+const TAB_CONFIG: Record<
+  TabType,
+  { label: string; icon: React.ComponentType<{ className?: string }> }
+> = {
   failing: { label: '失敗中', icon: AlertTriangle },
   skipped: { label: 'スキップ中', icon: SkipForward },
   neverExecuted: { label: 'テスト未実施', icon: Clock },
@@ -58,7 +61,11 @@ export function ExecutionStatusTable({ stats }: ExecutionStatusTableProps) {
       <h2 className="text-lg font-semibold text-foreground mb-4">テスト実行状況</h2>
 
       {/* タブボタン */}
-      <div role="tablist" aria-label="テスト実行状況のカテゴリ" className="flex border-b border-border mb-4">
+      <div
+        role="tablist"
+        aria-label="テスト実行状況のカテゴリ"
+        className="flex border-b border-border mb-4"
+      >
         {(Object.keys(TAB_CONFIG) as TabType[]).map((tab) => {
           const { label, icon: Icon } = TAB_CONFIG[tab];
           const count = counts[tab];
@@ -75,9 +82,10 @@ export function ExecutionStatusTable({ stats }: ExecutionStatusTableProps) {
               className={`
                 flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors
                 border-b-2 -mb-px
-                ${isActive
-                  ? 'border-accent text-accent'
-                  : 'border-transparent text-foreground-muted hover:text-foreground'
+                ${
+                  isActive
+                    ? 'border-accent text-accent'
+                    : 'border-transparent text-foreground-muted hover:text-foreground'
                 }
                 ${count === 0 ? 'opacity-50' : ''}
               `}
@@ -136,13 +144,7 @@ export function ExecutionStatusTable({ stats }: ExecutionStatusTableProps) {
 /**
  * 失敗中テストスイート一覧
  */
-function FailingSuitesList({
-  items,
-  total,
-}: {
-  items: FailingTestSuiteItem[];
-  total: number;
-}) {
+function FailingSuitesList({ items, total }: { items: FailingTestSuiteItem[]; total: number }) {
   if (items.length === 0) {
     return <EmptyState message="失敗中のテストスイートはありません" />;
   }
@@ -158,7 +160,9 @@ function FailingSuitesList({
           environment={item.environment}
           details={
             <>
-              <span>失敗: {item.failCount}/{item.totalExpectedResults}</span>
+              <span>
+                失敗: {item.failCount}/{item.totalExpectedResults}
+              </span>
               <span className="mx-2">|</span>
               <span>最終実行: {formatRelativeTimeOrDefault(item.lastExecutedAt)}</span>
             </>
@@ -173,13 +177,7 @@ function FailingSuitesList({
 /**
  * スキップ中テストスイート一覧
  */
-function SkippedSuitesList({
-  items,
-  total,
-}: {
-  items: SkippedTestSuiteItem[];
-  total: number;
-}) {
+function SkippedSuitesList({ items, total }: { items: SkippedTestSuiteItem[]; total: number }) {
   if (items.length === 0) {
     return <EmptyState message="スキップ中のテストスイートはありません" />;
   }
@@ -195,7 +193,9 @@ function SkippedSuitesList({
           environment={item.environment}
           details={
             <>
-              <span>スキップ: {item.skippedCount}/{item.totalExpectedResults}</span>
+              <span>
+                スキップ: {item.skippedCount}/{item.totalExpectedResults}
+              </span>
               <span className="mx-2">|</span>
               <span>最終実行: {formatRelativeTimeOrDefault(item.lastExecutedAt)}</span>
             </>
@@ -269,7 +269,9 @@ function InProgressSuitesList({
           environment={item.environment}
           details={
             <>
-              <span>未判定: {item.pendingCount}/{item.totalExpectedResults}</span>
+              <span>
+                未判定: {item.pendingCount}/{item.totalExpectedResults}
+              </span>
               <span className="mx-2">|</span>
               <span>最終実行: {formatRelativeTimeOrDefault(item.lastExecutedAt)}</span>
             </>
@@ -309,9 +311,7 @@ function TestSuiteListItem({
       <div className="flex-1 min-w-0">
         <p className="font-medium text-foreground truncate">{name}</p>
         {environment && (
-          <p className="text-sm text-foreground-muted truncate">
-            環境: {environment.name}
-          </p>
+          <p className="text-sm text-foreground-muted truncate">環境: {environment.name}</p>
         )}
         <p className="text-xs text-foreground-subtle mt-1">{details}</p>
       </div>

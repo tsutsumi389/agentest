@@ -105,9 +105,7 @@ export function ExecutionTestCaseList({
         const preconditionResults = allPreconditionResults.filter(
           (r) => r.executionTestCaseId === testCase.id
         );
-        const stepResults = allStepResults.filter(
-          (r) => r.executionTestCaseId === testCase.id
-        );
+        const stepResults = allStepResults.filter((r) => r.executionTestCaseId === testCase.id);
         const expectedResults = allExpectedResults.filter(
           (r) => r.executionTestCaseId === testCase.id
         );

@@ -28,9 +28,7 @@ describe('escapeHtml', () => {
   });
 
   it('ダブルクォートをエスケープする', () => {
-    expect(escapeHtml('" onclick="alert(1)"')).toBe(
-      '&quot; onclick=&quot;alert(1)&quot;'
-    );
+    expect(escapeHtml('" onclick="alert(1)"')).toBe('&quot; onclick=&quot;alert(1)&quot;');
   });
 
   it('特殊文字を含まない文字列はそのまま返す', () => {
@@ -54,7 +52,9 @@ describe('sanitizeUrl', () => {
   });
 
   it('http URLを許可する', () => {
-    expect(sanitizeUrl('http://localhost:3000/invite/abc')).toBe('http://localhost:3000/invite/abc');
+    expect(sanitizeUrl('http://localhost:3000/invite/abc')).toBe(
+      'http://localhost:3000/invite/abc'
+    );
   });
 
   it('クエリパラメータ付きURLを許可する', () => {
@@ -67,7 +67,9 @@ describe('sanitizeUrl', () => {
   });
 
   it('data: URIを拒否する', () => {
-    expect(() => sanitizeUrl('data:text/html,<script>alert(1)</script>')).toThrow('許可されないURLプロトコル');
+    expect(() => sanitizeUrl('data:text/html,<script>alert(1)</script>')).toThrow(
+      '許可されないURLプロトコル'
+    );
   });
 
   it('ftp: URIを拒否する', () => {

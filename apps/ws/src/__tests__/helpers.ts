@@ -112,6 +112,11 @@ export function getSentMessages(mockWs: MockWebSocket): unknown[] {
 // 特定のタイプのメッセージを取得するヘルパー
 export function getSentMessagesByType(mockWs: MockWebSocket, type: string): unknown[] {
   return getSentMessages(mockWs).filter((msg) => {
-    return typeof msg === 'object' && msg !== null && 'type' in msg && (msg as { type: string }).type === type;
+    return (
+      typeof msg === 'object' &&
+      msg !== null &&
+      'type' in msg &&
+      (msg as { type: string }).type === type
+    );
   });
 }

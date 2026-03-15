@@ -36,14 +36,10 @@ export function OrganizationMembersSection({ members }: OrganizationMembersSecti
   return (
     <div className="bg-background-secondary border border-border rounded-lg">
       <div className="px-4 py-3 border-b border-border">
-        <h2 className="text-sm font-medium text-foreground">
-          メンバー一覧（最新20件）
-        </h2>
+        <h2 className="text-sm font-medium text-foreground">メンバー一覧（最新20件）</h2>
       </div>
       {members.length === 0 ? (
-        <div className="px-4 py-8 text-center text-foreground-muted">
-          メンバーはいません
-        </div>
+        <div className="px-4 py-8 text-center text-foreground-muted">メンバーはいません</div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -86,12 +82,8 @@ export function OrganizationMembersSection({ members }: OrganizationMembersSecti
                         </div>
                       )}
                       <div>
-                        <div className="text-sm font-medium text-foreground">
-                          {member.name}
-                        </div>
-                        <div className="text-xs text-foreground-muted">
-                          {member.email}
-                        </div>
+                        <div className="text-sm font-medium text-foreground">{member.name}</div>
+                        <div className="text-xs text-foreground-muted">{member.email}</div>
                       </div>
                     </Link>
                   </td>

@@ -96,12 +96,14 @@ describe('EditLockController', () => {
         { type: 'user', id: 'user-1', name: 'Test User' }
       );
       expect(mockRes.status).toHaveBeenCalledWith(201);
-      expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
-        lock: expect.objectContaining({
-          id: '33333333-3333-3333-3333-333333333333',
-          targetType: 'SUITE',
-        }),
-      }));
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          lock: expect.objectContaining({
+            id: '33333333-3333-3333-3333-333333333333',
+            targetType: 'SUITE',
+          }),
+        })
+      );
     });
 
     it('不正なリクエストはエラーを返す', async () => {
@@ -130,10 +132,15 @@ describe('EditLockController', () => {
 
       await controller.getStatus(mockReq as Request, mockRes as Response, mockNext);
 
-      expect(mockEditLockService.getLockStatus).toHaveBeenCalledWith('SUITE', '11111111-1111-1111-1111-111111111111');
-      expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
-        isLocked: true,
-      }));
+      expect(mockEditLockService.getLockStatus).toHaveBeenCalledWith(
+        'SUITE',
+        '11111111-1111-1111-1111-111111111111'
+      );
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          isLocked: true,
+        })
+      );
     });
 
     it('ロックがない場合はisLocked=falseを返す', async () => {
@@ -217,10 +224,14 @@ describe('EditLockController', () => {
 
       await controller.forceRelease(mockReq as Request, mockRes as Response, mockNext);
 
-      expect(mockEditLockService.forceRelease).toHaveBeenCalledWith('33333333-3333-3333-3333-333333333333');
-      expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
-        message: 'Lock forcibly released',
-      }));
+      expect(mockEditLockService.forceRelease).toHaveBeenCalledWith(
+        '33333333-3333-3333-3333-333333333333'
+      );
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Lock forcibly released',
+        })
+      );
     });
 
     it('OWNERもロックを強制解除できる', async () => {
@@ -254,10 +265,14 @@ describe('EditLockController', () => {
 
       await controller.forceRelease(mockReq as Request, mockRes as Response, mockNext);
 
-      expect(mockEditLockService.forceRelease).toHaveBeenCalledWith('33333333-3333-3333-3333-333333333333');
-      expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
-        message: 'Lock forcibly released',
-      }));
+      expect(mockEditLockService.forceRelease).toHaveBeenCalledWith(
+        '33333333-3333-3333-3333-333333333333'
+      );
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Lock forcibly released',
+        })
+      );
     });
 
     it('権限がないユーザーはエラーを返す', async () => {
@@ -292,11 +307,13 @@ describe('EditLockController', () => {
       await controller.forceRelease(mockReq as Request, mockRes as Response, mockNext);
 
       expect(mockRes.status).toHaveBeenCalledWith(404);
-      expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
-        error: expect.objectContaining({
-          code: 'NOT_FOUND',
-        }),
-      }));
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.objectContaining({
+            code: 'NOT_FOUND',
+          }),
+        })
+      );
     });
 
     it('組織のADMINもロックを強制解除できる', async () => {
@@ -332,10 +349,14 @@ describe('EditLockController', () => {
 
       await controller.forceRelease(mockReq as Request, mockRes as Response, mockNext);
 
-      expect(mockEditLockService.forceRelease).toHaveBeenCalledWith('33333333-3333-3333-3333-333333333333');
-      expect(mockRes.json).toHaveBeenCalledWith(expect.objectContaining({
-        message: 'Lock forcibly released',
-      }));
+      expect(mockEditLockService.forceRelease).toHaveBeenCalledWith(
+        '33333333-3333-3333-3333-333333333333'
+      );
+      expect(mockRes.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Lock forcibly released',
+        })
+      );
     });
   });
 });
