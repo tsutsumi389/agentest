@@ -1,5 +1,11 @@
 import { env } from './env.js';
 
+// セッション有効期限（7日）
+export const SESSION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
+
+// OAuth連携追加モードを示すクッキー名
+export const LINK_MODE_COOKIE = 'oauth_link_mode';
+
 /**
  * 認証設定（requireAuthミドルウェア用）
  * JWT検証とCookie設定を含む

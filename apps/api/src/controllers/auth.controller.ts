@@ -10,8 +10,8 @@ import {
   passwordResetRequestSchema,
   passwordResetSchema,
 } from '@agentest/shared';
+import { authConfig, SESSION_EXPIRY_MS, LINK_MODE_COOKIE } from '../config/auth.js';
 import { env } from '../config/env.js';
-import { SessionService } from '../services/session.service.js';
 import { UserPasswordAuthService } from '../services/user-password-auth.service.js';
 import { UserTotpService } from '../services/user-totp.service.js';
 import { emailService } from '../services/email.service.js';
@@ -23,36 +23,6 @@ import { getUserIdByTwoFactorToken, deleteUserTwoFactorToken } from '../lib/redi
 import { logger as baseLogger } from '../utils/logger.js';
 
 const logger = baseLogger.child({ module: 'auth-controller' });
-
-const authConfig = {
-  jwt: {
-    accessSecret: env.JWT_ACCESS_SECRET,
-    refreshSecret: env.JWT_REFRESH_SECRET,
-    accessExpiry: env.JWT_ACCESS_EXPIRES_IN,
-    refreshExpiry: env.JWT_REFRESH_EXPIRES_IN,
-  },
-  cookie: {
-    httpOnly: true,
-    secure: env.NODE_ENV === 'production',
-    sameSite: 'strict' as const,
-    path: '/',
-  },
-  oauth: {},
-};
-
-// クッキー設定
-const cookieOptions = {
-  httpOnly: true,
-  secure: env.NODE_ENV === 'production',
-  sameSite: 'strict' as const,
-  path: '/',
-};
-
-// セッション有効期限（7日）
-const SESSION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
-
-// OAuth連携追加モードを示すクッキー名
-const LINK_MODE_COOKIE = 'oauth_link_mode';
 
 // 連携追加モードのクッキー情報
 interface LinkModeInfo {
@@ -70,7 +40,6 @@ const twoFactorVerifySchema = z.object({
  * 認証コントローラー
  */
 export class AuthController {
-  private sessionService = new SessionService();
   private passwordAuthService = new UserPasswordAuthService();
   private totpService = new UserTotpService();
 
@@ -538,11 +507,11 @@ export class AuthController {
     tokens: { accessToken: string; refreshToken: string }
   ): void {
     res.cookie('access_token', tokens.accessToken, {
-      ...cookieOptions,
+      ...authConfig.cookie,
       maxAge: 15 * 60 * 1000, // 15分
     });
     res.cookie('refresh_token', tokens.refreshToken, {
-      ...cookieOptions,
+      ...authConfig.cookie,
       maxAge: SESSION_EXPIRY_MS,
     });
   }
@@ -607,22 +576,26 @@ export class AuthController {
 
       // リフレッシュトークンとセッションを保存（ハッシュ化して保存）
       const tokenHash = hashToken(tokens.refreshToken);
-      await Promise.all([
-        prisma.refreshToken.create({
-          data: {
-            userId: oauthUser.userId,
-            tokenHash,
-            expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
-          },
-        }),
-        this.sessionService.createSession({
-          userId: oauthUser.userId,
-          tokenHash,
-          userAgent: clientInfo.userAgent,
-          ipAddress: clientInfo.ipAddress,
-          expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
-        }),
-      ]);
+      await prisma.$transaction(async (tx) => {
+        await Promise.all([
+          tx.refreshToken.create({
+            data: {
+              userId: oauthUser.userId,
+              tokenHash,
+              expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
+            },
+          }),
+          tx.session.create({
+            data: {
+              userId: oauthUser.userId,
+              tokenHash,
+              userAgent: clientInfo.userAgent,
+              ipAddress: clientInfo.ipAddress,
+              expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
+            },
+          }),
+        ]);
+      });
 
       // クッキーに設定（生トークン）
       this.setAuthCookies(res, tokens);
@@ -648,15 +621,22 @@ export class AuthController {
       refreshToken?: string;
     }
   ): Promise<{ success: boolean; error?: string }> => {
-    // 同じプロバイダーアカウントが他のユーザーに紐づいていないか確認
-    const existingAccount = await prisma.account.findUnique({
-      where: {
-        provider_providerAccountId: {
-          provider: profile.provider,
-          providerAccountId: profile.providerAccountId,
+    // 両方のユニーク制約を並列で確認
+    const [existingAccount, duplicateProvider] = await Promise.all([
+      prisma.account.findUnique({
+        where: {
+          provider_providerAccountId: {
+            provider: profile.provider,
+            providerAccountId: profile.providerAccountId,
+          },
         },
-      },
-    });
+      }),
+      prisma.account.findUnique({
+        where: {
+          userId_provider: { userId, provider: profile.provider },
+        },
+      }),
+    ]);
 
     if (existingAccount) {
       if (existingAccount.userId === userId) {
@@ -669,27 +649,32 @@ export class AuthController {
       }
     }
 
-    // 同じユーザー・プロバイダーの組み合わせが存在しないか確認
-    const duplicateProvider = await prisma.account.findUnique({
-      where: {
-        userId_provider: { userId, provider: profile.provider },
-      },
-    });
-
     if (duplicateProvider) {
       return { success: false, error: `${profile.provider}は既に別のアカウントで連携されています` };
     }
 
-    // 新しい連携を作成（トークンは暗号化して保存）
-    await prisma.account.create({
-      data: {
-        userId,
-        provider: profile.provider,
-        providerAccountId: profile.providerAccountId,
-        accessToken: encryptToken(profile.accessToken, env.TOKEN_ENCRYPTION_KEY),
-        refreshToken: encryptToken(profile.refreshToken, env.TOKEN_ENCRYPTION_KEY),
-      },
-    });
+    // 新しい連携を作成（ユニーク制約違反をハンドルしてTOCTOU race conditionに対応）
+    try {
+      await prisma.account.create({
+        data: {
+          userId,
+          provider: profile.provider,
+          providerAccountId: profile.providerAccountId,
+          accessToken: encryptToken(profile.accessToken, env.TOKEN_ENCRYPTION_KEY),
+          refreshToken: encryptToken(profile.refreshToken, env.TOKEN_ENCRYPTION_KEY),
+        },
+      });
+    } catch (error) {
+      // Prismaのユニーク制約違反（P2002）をユーザーフレンドリーなメッセージに変換
+      if (
+        error instanceof Error &&
+        'code' in error &&
+        (error as { code: string }).code === 'P2002'
+      ) {
+        return { success: false, error: `この${profile.provider}アカウントは既に連携されています` };
+      }
+      throw error;
+    }
 
     return { success: true };
   };
