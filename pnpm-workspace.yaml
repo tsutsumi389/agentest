@@ -75,10 +75,6 @@ catalog:
   supertest: "^7.0.0"
   "@types/supertest": "^6.0.2"
 
-  # Linting
-  eslint: "^9.16.0"
-  "@eslint/js": "^9.16.0"
-  typescript-eslint: "^8.17.0"
-  eslint-plugin-react: "^7.37.0"
-  eslint-plugin-react-hooks: "^5.1.0"
-  globals: "^15.13.0"
+  # Linting & Formatting
+  "@biomejs/biome": "^2.4.7"
+  oxlint: "^1.55.0"

@@ -74,7 +74,6 @@
     "e2e/**"
   ],
   "ignoreDependencies": [
-    "prettier",
     "autoprefixer",
     "postcss",
     "tailwindcss",

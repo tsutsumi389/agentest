@@ -18,7 +18,7 @@ if [ "$tool" = "Edit" ] || [ "$tool" = "Write" ]; then
   file="$(jq -r '.tool_input.file_path // empty' <<< "$input")"
 
   # リンター・ビルド設定の変更ブロック
-  if echo "$file" | grep -qE '(eslint\.config|\.prettierrc|tsconfig\.json|biome\.json)'; then
+  if echo "$file" | grep -qE '(eslint\.config|\.prettierrc|tsconfig\.json|biome\.json|\.oxlintrc)'; then
     echo "BLOCKED: リンター/ビルド設定の変更は禁止です。コードを修正してください。" >&2
     exit 2
   fi

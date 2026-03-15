@@ -11,7 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "lint": "eslint src/"
+    "lint": "oxlint src/"
   },
   "dependencies": {
     "@agentest/auth": "workspace:*",
