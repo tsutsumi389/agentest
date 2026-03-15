@@ -48,6 +48,14 @@ if [ -n "$changed_packages" ]; then
   done
 
   if [ -n "$filters" ]; then
+    # 型チェック（tsc -b の増分ビルドで変更分のみチェック）
+    typecheck_output=$(docker compose -f docker/docker-compose.yml -f docker/docker-compose.override.yml exec -T dev pnpm exec tsc -b 2>&1) || {
+      echo "型エラーがあります。修正してから完了してください:" >&2
+      echo "$typecheck_output" | tail -30 >&2
+      exit 1
+    }
+
+    # テスト実行
     test_output=$(docker compose -f docker/docker-compose.yml -f docker/docker-compose.override.yml exec -T dev pnpm turbo run test --concurrency=1 $filters 2>&1) || {
       echo "テストが失敗しています。修正してから完了してください:" >&2
       echo "$test_output" | tail -30 >&2
