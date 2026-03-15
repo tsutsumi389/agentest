@@ -5,17 +5,20 @@ import { GoogleIcon } from '../components/ui/GoogleIcon';
 import { useAuthStore } from '../stores/auth';
 import { useConfigStore } from '../stores/config';
 import { authApi, ApiError } from '../lib/api';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+
+const API_URL = import.meta.env.VITE_API_URL || '';
 
 /**
  * リダイレクト先が外部オリジンかどうかを判定
+ * パース失敗時は安全側に倒して外部扱い（true）を返す
  */
 function isExternalUrl(url: string): boolean {
   try {
     const parsedUrl = new URL(url, window.location.origin);
     return parsedUrl.origin !== window.location.origin;
   } catch {
-    return false;
+    return true;
   }
 }
 
@@ -41,36 +44,36 @@ export function LoginPage() {
 
   // リダイレクト先を取得（認証後に戻る先）
   const redirectTo = searchParams.get('redirect');
+  const isExternal = useMemo(() => (redirectTo ? isExternalUrl(redirectTo) : false), [redirectTo]);
 
   // 既にログイン済みで外部オリジンへのリダイレクトが必要な場合
   useEffect(() => {
-    if (isAuthenticated && !isLoading && redirectTo && isExternalUrl(redirectTo)) {
+    if (isAuthenticated && !isLoading && redirectTo && isExternal) {
       window.location.href = redirectTo;
     }
-  }, [isAuthenticated, isLoading, redirectTo]);
+  }, [isAuthenticated, isLoading, redirectTo, isExternal]);
+
+  // リダイレクト先をsessionStorageに保存（OAuth認証後に使用）
+  // 外部URLは保存しない（オープンリダイレクト防止）
+  useEffect(() => {
+    if (redirectTo && !isExternal) {
+      sessionStorage.setItem('auth_redirect', redirectTo);
+    } else {
+      sessionStorage.removeItem('auth_redirect');
+    }
+  }, [redirectTo, isExternal]);
 
   // 既にログイン済みの場合はリダイレクト先またはダッシュボードにリダイレクト
   if (isAuthenticated && !isLoading) {
     // 外部オリジンの場合はuseEffectで処理するので、ここではnullを返す
-    if (redirectTo && isExternalUrl(redirectTo)) {
+    if (redirectTo && isExternal) {
       return null;
     }
     return <Navigate to={redirectTo || '/dashboard'} replace />;
   }
 
-  // リダイレクト先をsessionStorageに保存（OAuth認証後に使用）
-  if (redirectTo) {
-    sessionStorage.setItem('auth_redirect', redirectTo);
-  }
-
-  const apiUrl = import.meta.env.VITE_API_URL || '';
-
-  const handleGitHubLogin = () => {
-    window.location.href = `${apiUrl}/api/auth/github`;
-  };
-
-  const handleGoogleLogin = () => {
-    window.location.href = `${apiUrl}/api/auth/google`;
+  const handleOAuthLogin = (provider: 'github' | 'google') => {
+    window.location.href = `${API_URL}/api/auth/${provider}`;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -91,7 +94,8 @@ export function LoginPage() {
 
       // 2FA無効ユーザー: 従来通りダッシュボードへ遷移
       setUser(response.user);
-      navigate(redirectTo || '/dashboard', { replace: true });
+      const safeRedirect = redirectTo && !isExternal ? redirectTo : '/dashboard';
+      navigate(safeRedirect, { replace: true });
     } catch (err) {
       // メール未確認エラーの場合はメール確認ページへリダイレクト
       if (err instanceof ApiError && err.code === 'EMAIL_NOT_VERIFIED') {
@@ -189,14 +193,20 @@ export function LoginPage() {
               {/* OAuthボタン */}
               <div className="space-y-3">
                 {showGitHub && (
-                  <button onClick={handleGitHubLogin} className="btn btn-secondary w-full">
+                  <button
+                    onClick={() => handleOAuthLogin('github')}
+                    className="btn btn-secondary w-full"
+                  >
                     <Github className="w-5 h-5" />
                     GitHubでログイン
                   </button>
                 )}
 
                 {showGoogle && (
-                  <button onClick={handleGoogleLogin} className="btn btn-secondary w-full">
+                  <button
+                    onClick={() => handleOAuthLogin('google')}
+                    className="btn btn-secondary w-full"
+                  >
                     <GoogleIcon className="w-5 h-5" />
                     Googleでログイン
                   </button>
