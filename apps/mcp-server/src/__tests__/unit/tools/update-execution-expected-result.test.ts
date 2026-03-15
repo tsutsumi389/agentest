@@ -71,38 +71,48 @@ describe('updateExecutionExpectedResultTool', () => {
 
     it('executionIdとexpectedResultIdとstatusは必須', () => {
       expect(() => updateExecutionExpectedResultInputSchema.parse({})).toThrow();
-      expect(() => updateExecutionExpectedResultInputSchema.parse({
-        executionId: TEST_EXECUTION_ID,
-      })).toThrow();
-      expect(() => updateExecutionExpectedResultInputSchema.parse({
-        executionId: TEST_EXECUTION_ID,
-        expectedResultId: TEST_EXPECTED_RESULT_ID,
-      })).toThrow();
+      expect(() =>
+        updateExecutionExpectedResultInputSchema.parse({
+          executionId: TEST_EXECUTION_ID,
+        })
+      ).toThrow();
+      expect(() =>
+        updateExecutionExpectedResultInputSchema.parse({
+          executionId: TEST_EXECUTION_ID,
+          expectedResultId: TEST_EXPECTED_RESULT_ID,
+        })
+      ).toThrow();
     });
 
     it('無効なUUIDはエラー', () => {
-      expect(() => updateExecutionExpectedResultInputSchema.parse({
-        executionId: 'invalid-uuid',
-        expectedResultId: TEST_EXPECTED_RESULT_ID,
-        status: 'PASS',
-      })).toThrow();
+      expect(() =>
+        updateExecutionExpectedResultInputSchema.parse({
+          executionId: 'invalid-uuid',
+          expectedResultId: TEST_EXPECTED_RESULT_ID,
+          status: 'PASS',
+        })
+      ).toThrow();
     });
 
     it('無効なstatusはエラー', () => {
-      expect(() => updateExecutionExpectedResultInputSchema.parse({
-        executionId: TEST_EXECUTION_ID,
-        expectedResultId: TEST_EXPECTED_RESULT_ID,
-        status: 'PENDING',
-      })).toThrow();
+      expect(() =>
+        updateExecutionExpectedResultInputSchema.parse({
+          executionId: TEST_EXECUTION_ID,
+          expectedResultId: TEST_EXPECTED_RESULT_ID,
+          status: 'PENDING',
+        })
+      ).toThrow();
     });
 
     it('noteは2000文字以下', () => {
-      expect(() => updateExecutionExpectedResultInputSchema.parse({
-        executionId: TEST_EXECUTION_ID,
-        expectedResultId: TEST_EXPECTED_RESULT_ID,
-        status: 'PASS',
-        note: 'a'.repeat(2001),
-      })).toThrow();
+      expect(() =>
+        updateExecutionExpectedResultInputSchema.parse({
+          executionId: TEST_EXECUTION_ID,
+          expectedResultId: TEST_EXPECTED_RESULT_ID,
+          status: 'PASS',
+          note: 'a'.repeat(2001),
+        })
+      ).toThrow();
     });
   });
 

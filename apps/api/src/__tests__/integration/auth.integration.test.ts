@@ -44,7 +44,12 @@ vi.mock('@agentest/auth', () => ({
   optionalAuth: () => (_req: any, _res: any, next: any) => next(),
   requireOrgRole: () => (_req: any, _res: any, next: any) => next(),
   requireProjectRole: () => (_req: any, _res: any, next: any) => next(),
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn().mockImplementation(() => mockGeneratedTokens),
@@ -70,7 +75,10 @@ function clearTestAuth() {
   mockAuthUser = null;
 }
 
-function setMockRefreshTokenVerification(result: { sub: string; email: string } | null, error?: Error) {
+function setMockRefreshTokenVerification(
+  result: { sub: string; email: string } | null,
+  error?: Error
+) {
   mockVerifyRefreshTokenResult = result;
   mockVerifyRefreshTokenError = error ?? null;
 }
@@ -186,9 +194,7 @@ describe('Auth API Integration Tests', () => {
     });
 
     it('新しいセッションがDBに作成される', async () => {
-      await request(app)
-        .post('/api/auth/refresh')
-        .send({ refreshToken: rawRefreshToken });
+      await request(app).post('/api/auth/refresh').send({ refreshToken: rawRefreshToken });
 
       // 新しいセッションが作成されていることを確認
       const sessions = await prisma.session.findMany({
@@ -199,9 +205,7 @@ describe('Auth API Integration Tests', () => {
     });
 
     it('古いリフレッシュトークンが無効化される', async () => {
-      await request(app)
-        .post('/api/auth/refresh')
-        .send({ refreshToken: rawRefreshToken });
+      await request(app).post('/api/auth/refresh').send({ refreshToken: rawRefreshToken });
 
       const oldToken = await prisma.refreshToken.findUnique({
         where: { id: refreshToken.id },
@@ -211,19 +215,14 @@ describe('Auth API Integration Tests', () => {
     });
 
     it('リフレッシュトークンなしでは400エラー', async () => {
-      const response = await request(app)
-        .post('/api/auth/refresh')
-        .send({});
+      const response = await request(app).post('/api/auth/refresh').send({});
 
       expect(response.status).toBe(401);
       expect(response.body.error.message).toContain('リフレッシュトークン');
     });
 
     it('無効なリフレッシュトークンでは401エラー', async () => {
-      setMockRefreshTokenVerification(
-        null,
-        new AuthenticationError('無効なトークンです')
-      );
+      setMockRefreshTokenVerification(null, new AuthenticationError('無効なトークンです'));
 
       const response = await request(app)
         .post('/api/auth/refresh')
@@ -312,9 +311,7 @@ describe('Auth API Integration Tests', () => {
     });
 
     it('リフレッシュトークンが無効化される', async () => {
-      await request(app)
-        .post('/api/auth/logout')
-        .set('Cookie', `refresh_token=${rawLogoutToken}`);
+      await request(app).post('/api/auth/logout').set('Cookie', `refresh_token=${rawLogoutToken}`);
 
       const token = await prisma.refreshToken.findUnique({
         where: { id: refreshToken.id },
@@ -324,9 +321,7 @@ describe('Auth API Integration Tests', () => {
     });
 
     it('セッションが無効化される', async () => {
-      await request(app)
-        .post('/api/auth/logout')
-        .set('Cookie', `refresh_token=${rawLogoutToken}`);
+      await request(app).post('/api/auth/logout').set('Cookie', `refresh_token=${rawLogoutToken}`);
 
       const sess = await prisma.session.findUnique({
         where: { id: session.id },

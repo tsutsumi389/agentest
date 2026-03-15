@@ -1,14 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router';
-import {
-  Loader2,
-  ChevronLeft,
-  ChevronRight,
-  Calendar,
-  User,
-  X,
-  Server,
-} from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, Calendar, User, X, Server } from 'lucide-react';
 import {
   testSuitesApi,
   projectsApi,
@@ -173,7 +165,8 @@ export function ExecutionHistoryList({ testSuiteId, projectId }: ExecutionHistor
   };
 
   // フィルタが適用されているか
-  const hasFilters = selectedDateRange !== 'all' || selectedEnvironmentId !== '' || pageSize !== DEFAULT_PAGE_SIZE;
+  const hasFilters =
+    selectedDateRange !== 'all' || selectedEnvironmentId !== '' || pageSize !== DEFAULT_PAGE_SIZE;
 
   // ローディング表示
   if (isLoading && executions.length === 0) {
@@ -419,7 +412,10 @@ export function ExecutionItem({ execution }: { execution: Execution }) {
               size="sm"
             />
           </div>
-          <span className="text-xs text-foreground-muted font-code shrink-0 whitespace-nowrap" data-testid="pass-rate-label">
+          <span
+            className="text-xs text-foreground-muted font-code shrink-0 whitespace-nowrap"
+            data-testid="pass-rate-label"
+          >
             {counts.PASS}/{total} ({passRate}%)
           </span>
         </div>
@@ -427,10 +423,7 @@ export function ExecutionItem({ execution }: { execution: Execution }) {
 
       {/* 日時（右寄せ） */}
       <div className="ml-auto text-right shrink-0">
-        <span
-          className="text-sm text-foreground-muted"
-          title={formatDateTime(execution.createdAt)}
-        >
+        <span className="text-sm text-foreground-muted" title={formatDateTime(execution.createdAt)}>
           {formatRelativeTime(execution.createdAt)}
         </span>
       </div>

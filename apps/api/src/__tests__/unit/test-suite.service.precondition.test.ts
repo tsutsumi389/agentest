@@ -245,9 +245,9 @@ describe('TestSuiteService - Precondition Management', () => {
     it('テストスイートが存在しない場合はNotFoundErrorを投げる', async () => {
       mockTestSuiteRepo.findById.mockResolvedValue(null);
 
-      await expect(service.deletePrecondition('invalid-suite', 'precondition-1', 'user-1')).rejects.toThrow(
-        NotFoundError
-      );
+      await expect(
+        service.deletePrecondition('invalid-suite', 'precondition-1', 'user-1')
+      ).rejects.toThrow(NotFoundError);
     });
 
     it('前提条件が存在しない場合はNotFoundErrorを投げる', async () => {

@@ -5,7 +5,9 @@ import { logger as baseLogger } from './utils/logger.js';
 const logger = baseLogger.child({ module: 'redis' });
 
 // TLSオプション（rediss://プロトコル検出）
-const redisOptions = env.REDIS_URL.startsWith('rediss://') ? { tls: { rejectUnauthorized: false } } : {};
+const redisOptions = env.REDIS_URL.startsWith('rediss://')
+  ? { tls: { rejectUnauthorized: false } }
+  : {};
 
 // パブリッシャー用Redisクライアント
 export const publisher = new Redis(env.REDIS_URL, redisOptions);

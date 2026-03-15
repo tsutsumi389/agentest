@@ -3,18 +3,54 @@ import { BadRequestError } from '@agentest/shared';
 
 // トランザクション内モック
 const mockTx = vi.hoisted(() => ({
-  testCasePrecondition: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
-  testCaseStep: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
-  testCaseExpectedResult: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
+  testCasePrecondition: {
+    findFirst: vi.fn(),
+    findMany: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
+  testCaseStep: {
+    findFirst: vi.fn(),
+    findMany: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
+  testCaseExpectedResult: {
+    findFirst: vi.fn(),
+    findMany: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
   testCaseHistory: { create: vi.fn() },
   testCase: { findUnique: vi.fn(), update: vi.fn() },
   user: { findUnique: vi.fn() },
 }));
 
 const mockPrisma = vi.hoisted(() => ({
-  testCasePrecondition: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
-  testCaseStep: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
-  testCaseExpectedResult: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
+  testCasePrecondition: {
+    findMany: vi.fn(),
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
+  testCaseStep: {
+    findMany: vi.fn(),
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
+  testCaseExpectedResult: {
+    findMany: vi.fn(),
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
   testCaseHistory: { create: vi.fn() },
   testCase: { findUnique: vi.fn(), update: vi.fn() },
   $transaction: vi.fn((fn: (tx: typeof mockTx) => Promise<unknown>) => fn(mockTx)),
@@ -38,7 +74,11 @@ vi.mock('../../lib/redis-publisher.js', () => ({ publishDashboardUpdated: vi.fn(
 vi.mock('../../lib/events.js', () => ({ publishTestCaseUpdated: vi.fn() }));
 
 import { TestCaseService } from '../../services/test-case.service.js';
-import { TEST_USER_ID, TEST_CASE_ID, createMockTestCase } from './test-case.service.test-helpers.js';
+import {
+  TEST_USER_ID,
+  TEST_CASE_ID,
+  createMockTestCase,
+} from './test-case.service.test-helpers.js';
 
 describe('TestCaseService（updateWithChildren差分同期）', () => {
   let service: TestCaseService;
@@ -181,13 +221,14 @@ describe('TestCaseService（updateWithChildren差分同期）', () => {
       mockTx.testCaseStep.findMany.mockResolvedValue([
         { id: 's1', content: '旧ステップ', orderKey: '00001' },
       ]);
-      mockTx.testCaseStep.create.mockResolvedValue({ id: 's-new', content: '新ステップ', orderKey: '00002' });
+      mockTx.testCaseStep.create.mockResolvedValue({
+        id: 's-new',
+        content: '新ステップ',
+        orderKey: '00002',
+      });
 
       await service.updateWithChildren(TEST_CASE_ID, TEST_USER_ID, {
-        steps: [
-          { id: 's1', content: '更新ステップ' },
-          { content: '新ステップ' },
-        ],
+        steps: [{ id: 's1', content: '更新ステップ' }, { content: '新ステップ' }],
       });
 
       // s1は更新
@@ -225,7 +266,12 @@ describe('TestCaseService（updateWithChildren差分同期）', () => {
     it('groupIdを指定できる', async () => {
       mockTx.testCase.update.mockResolvedValue({});
 
-      await service.updateWithChildren(TEST_CASE_ID, TEST_USER_ID, { title: '変更' }, 'custom-group');
+      await service.updateWithChildren(
+        TEST_CASE_ID,
+        TEST_USER_ID,
+        { title: '変更' },
+        'custom-group'
+      );
 
       expect(mockTx.testCaseHistory.create).toHaveBeenCalledWith({
         data: expect.objectContaining({ groupId: 'custom-group' }),

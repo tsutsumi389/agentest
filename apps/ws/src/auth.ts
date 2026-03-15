@@ -29,7 +29,9 @@ export function parseCookieToken(cookieHeader: string | undefined): string | nul
 /**
  * Cookieヘッダーからトークンを抽出して認証
  */
-export async function authenticateFromCookie(cookieHeader: string | undefined): Promise<AuthenticatedUser | null> {
+export async function authenticateFromCookie(
+  cookieHeader: string | undefined
+): Promise<AuthenticatedUser | null> {
   const token = parseCookieToken(cookieHeader);
   if (!token) return null;
   return authenticateToken(token);
@@ -68,4 +70,3 @@ export async function authenticateToken(token: string): Promise<AuthenticatedUse
     return null;
   }
 }
-

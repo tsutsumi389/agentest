@@ -3,7 +3,11 @@ import { z } from 'zod';
 import { AuditLogCategory } from '@agentest/db';
 import { auditLogExportSchema, generateTimestamp } from '@agentest/shared';
 import { OrganizationService } from '../services/organization.service.js';
-import { auditLogService, AUDIT_LOG_DEFAULT_LIMIT, AUDIT_LOG_MAX_LIMIT } from '../services/audit-log.service.js';
+import {
+  auditLogService,
+  AUDIT_LOG_DEFAULT_LIMIT,
+  AUDIT_LOG_MAX_LIMIT,
+} from '../services/audit-log.service.js';
 
 const createOrgSchema = z.object({
   name: z.string().min(1).max(100),
@@ -31,25 +35,33 @@ const transferOwnershipSchema = z.object({
 // AuditLogCategoryの値を配列として取得
 const auditLogCategories = Object.values(AuditLogCategory) as [string, ...string[]];
 
-const auditLogQuerySchema = z.object({
-  page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(AUDIT_LOG_MAX_LIMIT).optional().default(AUDIT_LOG_DEFAULT_LIMIT),
-  category: z.enum(auditLogCategories).optional(),
-  startDate: z.coerce.date().optional(),
-  endDate: z.coerce.date().optional(),
-}).refine(
-  (data) => {
-    // startDateとendDateの両方が指定されている場合のみチェック
-    if (data.startDate && data.endDate) {
-      return data.startDate <= data.endDate;
+const auditLogQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).optional().default(1),
+    limit: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(AUDIT_LOG_MAX_LIMIT)
+      .optional()
+      .default(AUDIT_LOG_DEFAULT_LIMIT),
+    category: z.enum(auditLogCategories).optional(),
+    startDate: z.coerce.date().optional(),
+    endDate: z.coerce.date().optional(),
+  })
+  .refine(
+    (data) => {
+      // startDateとendDateの両方が指定されている場合のみチェック
+      if (data.startDate && data.endDate) {
+        return data.startDate <= data.endDate;
+      }
+      return true;
+    },
+    {
+      message: 'startDateはendDate以前の日付を指定してください',
+      path: ['startDate'],
     }
-    return true;
-  },
-  {
-    message: 'startDateはendDate以前の日付を指定してください',
-    path: ['startDate'],
-  }
-);
+  );
 
 /**
  * 組織コントローラー
@@ -149,7 +161,11 @@ export class OrganizationController {
     try {
       const { organizationId } = req.params;
       const data = inviteSchema.parse(req.body);
-      const { invitation, emailSent } = await this.orgService.invite(organizationId, req.user!.id, data);
+      const { invitation, emailSent } = await this.orgService.invite(
+        organizationId,
+        req.user!.id,
+        data
+      );
 
       res.status(201).json({ invitation, emailSent });
     } catch (error) {

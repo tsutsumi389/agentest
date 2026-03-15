@@ -13,7 +13,14 @@ export const test = base.extend<Fixtures>({
     // Vite HMRのWebSocket接続が常にアクティブなためloadイベントが発火しない場合がある。
     // デフォルトのwaitUntilをdomcontentloadedに変更してタイムアウトを防止する。
     const originalGoto = page.goto.bind(page);
-    page.goto = ((url: string, options?: { waitUntil?: 'load' | 'domcontentloaded' | 'networkidle' | 'commit'; timeout?: number; referer?: string }) => {
+    page.goto = ((
+      url: string,
+      options?: {
+        waitUntil?: 'load' | 'domcontentloaded' | 'networkidle' | 'commit';
+        timeout?: number;
+        referer?: string;
+      }
+    ) => {
       return originalGoto(url, { waitUntil: 'domcontentloaded', ...options });
     }) as typeof page.goto;
 

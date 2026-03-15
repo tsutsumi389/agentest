@@ -216,11 +216,7 @@ export function SystemAdminInviteModal({
             >
               キャンセル
             </button>
-            <button
-              type="submit"
-              className="btn btn-primary"
-              disabled={isLoading}
-            >
+            <button type="submit" className="btn btn-primary" disabled={isLoading}>
               {isLoading ? '処理中...' : '招待する'}
             </button>
           </div>

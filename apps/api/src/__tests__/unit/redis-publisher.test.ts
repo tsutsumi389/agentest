@@ -60,7 +60,11 @@ vi.mock('../../lib/request-context.js', () => ({
   getRequestId: mockGetRequestId,
 }));
 
-import { publishEvent, publishDashboardUpdated, closeRedisPublisher } from '../../lib/redis-publisher.js';
+import {
+  publishEvent,
+  publishDashboardUpdated,
+  closeRedisPublisher,
+} from '../../lib/redis-publisher.js';
 
 describe('redis-publisher', () => {
   beforeEach(() => {

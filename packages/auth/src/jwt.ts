@@ -3,11 +3,7 @@ import jwt, { type SignOptions } from 'jsonwebtoken';
 import type { JwtPayload, TokenPair, AuthConfig } from './types.js';
 import { AuthenticationError } from '@agentest/shared';
 
-export function generateTokens(
-  userId: string,
-  email: string,
-  config: AuthConfig
-): TokenPair {
+export function generateTokens(userId: string, email: string, config: AuthConfig): TokenPair {
   const accessPayload: Omit<JwtPayload, 'iat' | 'exp'> = {
     sub: userId,
     email,

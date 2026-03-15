@@ -17,7 +17,10 @@ export class InternalApiClient {
   /**
    * GETリクエストを送信
    */
-  async get<T>(path: string, params?: Record<string, string | number | string[] | undefined>): Promise<T> {
+  async get<T>(
+    path: string,
+    params?: Record<string, string | number | string[] | undefined>
+  ): Promise<T> {
     const url = new URL(path, this.baseUrl);
     if (params) {
       Object.entries(params).forEach(([k, v]) => {
@@ -51,7 +54,11 @@ export class InternalApiClient {
   /**
    * POSTリクエストを送信
    */
-  async post<T>(path: string, body: Record<string, unknown>, params?: Record<string, string>): Promise<T> {
+  async post<T>(
+    path: string,
+    body: Record<string, unknown>,
+    params?: Record<string, string>
+  ): Promise<T> {
     const url = new URL(path, this.baseUrl);
     if (params) {
       Object.entries(params).forEach(([k, v]) => {
@@ -81,7 +88,11 @@ export class InternalApiClient {
   /**
    * PATCHリクエストを送信
    */
-  async patch<T>(path: string, body: Record<string, unknown>, params?: Record<string, string>): Promise<T> {
+  async patch<T>(
+    path: string,
+    body: Record<string, unknown>,
+    params?: Record<string, string>
+  ): Promise<T> {
     const url = new URL(path, this.baseUrl);
     if (params) {
       Object.entries(params).forEach(([k, v]) => {
@@ -212,7 +223,9 @@ export class LockConflictError extends Error {
   public readonly expiresAt: string;
 
   constructor(lockedBy: { type: 'user'; id: string; name: string }, expiresAt: string) {
-    super(`編集がブロックされました。ユーザー '${lockedBy.name}' が現在このリソースを編集中です。しばらく待ってから再試行してください。`);
+    super(
+      `編集がブロックされました。ユーザー '${lockedBy.name}' が現在このリソースを編集中です。しばらく待ってから再試行してください。`
+    );
     this.name = 'LockConflictError';
     this.lockedBy = lockedBy;
     this.expiresAt = expiresAt;
@@ -227,10 +240,10 @@ export async function checkLockStatus(
   targetType: 'SUITE' | 'CASE',
   targetId: string
 ): Promise<void> {
-  const response = await apiClient.get<LockStatusResponse>(
-    '/internal/api/locks',
-    { targetType, targetId }
-  );
+  const response = await apiClient.get<LockStatusResponse>('/internal/api/locks', {
+    targetType,
+    targetId,
+  });
 
   if (response.isLocked && response.lock) {
     // 人間がロック中 → 更新拒否

@@ -1,4 +1,14 @@
-import { ChevronUp, ChevronDown, ShieldCheck, ShieldX, Eye, Edit, Trash2, Unlock, KeyRound } from 'lucide-react';
+import {
+  ChevronUp,
+  ChevronDown,
+  ShieldCheck,
+  ShieldX,
+  Eye,
+  Edit,
+  Trash2,
+  Unlock,
+  KeyRound,
+} from 'lucide-react';
 import { Link } from 'react-router';
 import type {
   SystemAdminListItem,
@@ -50,13 +60,7 @@ interface SortableHeaderProps {
   children: React.ReactNode;
 }
 
-function SortableHeader({
-  column,
-  sortBy,
-  sortOrder,
-  onSort,
-  children,
-}: SortableHeaderProps) {
+function SortableHeader({ column, sortBy, sortOrder, onSort, children }: SortableHeaderProps) {
   return (
     <th
       className="px-4 py-3 text-left text-sm font-medium text-foreground-muted cursor-pointer hover:text-foreground select-none"
@@ -110,33 +114,16 @@ export function SystemAdminTable({
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-b border-border">
-              <SortableHeader
-                column="name"
-                sortBy={sortBy}
-                sortOrder={sortOrder}
-                onSort={onSort}
-              >
+              <SortableHeader column="name" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort}>
                 名前
               </SortableHeader>
-              <SortableHeader
-                column="email"
-                sortBy={sortBy}
-                sortOrder={sortOrder}
-                onSort={onSort}
-              >
+              <SortableHeader column="email" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort}>
                 メール
               </SortableHeader>
-              <SortableHeader
-                column="role"
-                sortBy={sortBy}
-                sortOrder={sortOrder}
-                onSort={onSort}
-              >
+              <SortableHeader column="role" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort}>
                 ロール
               </SortableHeader>
-              <th className="px-4 py-3 text-left text-sm font-medium text-foreground-muted">
-                2FA
-              </th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-foreground-muted">2FA</th>
               <th className="px-4 py-3 text-left text-sm font-medium text-foreground-muted">
                 状態
               </th>
@@ -156,10 +143,7 @@ export function SystemAdminTable({
           <tbody>
             {admins.length === 0 ? (
               <tr>
-                <td
-                  colSpan={7}
-                  className="px-4 py-12 text-center text-foreground-muted"
-                >
+                <td colSpan={7} className="px-4 py-12 text-center text-foreground-muted">
                   管理者が見つかりません
                 </td>
               </tr>
@@ -189,9 +173,7 @@ export function SystemAdminTable({
                   </td>
 
                   {/* メール */}
-                  <td className="px-4 py-3 text-sm text-foreground-muted">
-                    {admin.email}
-                  </td>
+                  <td className="px-4 py-3 text-sm text-foreground-muted">{admin.email}</td>
 
                   {/* ロール */}
                   <td className="px-4 py-3">
@@ -212,9 +194,7 @@ export function SystemAdminTable({
                   </td>
 
                   {/* 状態 */}
-                  <td className="px-4 py-3">
-                    {getStatusDisplay(admin)}
-                  </td>
+                  <td className="px-4 py-3">{getStatusDisplay(admin)}</td>
 
                   {/* 登録日 */}
                   <td className="px-4 py-3 text-sm text-foreground-muted">
@@ -244,15 +224,17 @@ export function SystemAdminTable({
                               <Edit className="w-4 h-4" />
                             </button>
                           )}
-                          {admin.lockedUntil && new Date(admin.lockedUntil) > new Date() && onUnlock && (
-                            <button
-                              onClick={() => onUnlock(admin)}
-                              className="p-1 text-foreground-muted hover:text-warning"
-                              title="ロック解除"
-                            >
-                              <Unlock className="w-4 h-4" />
-                            </button>
-                          )}
+                          {admin.lockedUntil &&
+                            new Date(admin.lockedUntil) > new Date() &&
+                            onUnlock && (
+                              <button
+                                onClick={() => onUnlock(admin)}
+                                className="p-1 text-foreground-muted hover:text-warning"
+                                title="ロック解除"
+                              >
+                                <Unlock className="w-4 h-4" />
+                              </button>
+                            )}
                           {admin.totpEnabled && onReset2FA && (
                             <button
                               onClick={() => onReset2FA(admin)}

@@ -1,5 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import type { LockTargetType, LockAcquiredEvent, LockReleasedEvent, LockExpiredEvent } from '@agentest/ws-types';
+import type {
+  LockTargetType,
+  LockAcquiredEvent,
+  LockReleasedEvent,
+  LockExpiredEvent,
+} from '@agentest/ws-types';
 import type { LockHolder } from '@agentest/shared';
 import { api } from '../lib/api';
 import { wsClient } from '../lib/ws';
@@ -116,21 +121,24 @@ export function useEditLock(options: UseEditLockOptions): UseEditLockResult {
   /**
    * ハートビートを開始
    */
-  const startHeartbeat = useCallback((currentLockId: string) => {
-    if (heartbeatIntervalRef.current) {
-      clearInterval(heartbeatIntervalRef.current);
-    }
-
-    heartbeatIntervalRef.current = setInterval(async () => {
-      try {
-        await api.patch<{ lock: LockInfo }>(`/locks/${currentLockId}/heartbeat`);
-      } catch (err) {
-        console.error('ハートビート更新エラー:', err);
-        // ロックが失われた可能性があるので状態を更新
-        fetchLockStatus();
+  const startHeartbeat = useCallback(
+    (currentLockId: string) => {
+      if (heartbeatIntervalRef.current) {
+        clearInterval(heartbeatIntervalRef.current);
       }
-    }, LOCK_CONFIG.HEARTBEAT_INTERVAL_MS);
-  }, [fetchLockStatus]);
+
+      heartbeatIntervalRef.current = setInterval(async () => {
+        try {
+          await api.patch<{ lock: LockInfo }>(`/locks/${currentLockId}/heartbeat`);
+        } catch (err) {
+          console.error('ハートビート更新エラー:', err);
+          // ロックが失われた可能性があるので状態を更新
+          fetchLockStatus();
+        }
+      }, LOCK_CONFIG.HEARTBEAT_INTERVAL_MS);
+    },
+    [fetchLockStatus]
+  );
 
   /**
    * ハートビートを停止
@@ -159,7 +167,12 @@ export function useEditLock(options: UseEditLockOptions): UseEditLockResult {
       startHeartbeat(response.lock.id);
       return true;
     } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'statusCode' in err && (err as { statusCode: number }).statusCode === 409) {
+      if (
+        err &&
+        typeof err === 'object' &&
+        'statusCode' in err &&
+        (err as { statusCode: number }).statusCode === 409
+      ) {
         // ロック競合
         const lockError = err as { lockedBy?: LockHolder };
         setError(`${lockError.lockedBy?.name ?? '他のユーザー'}が編集中です`);

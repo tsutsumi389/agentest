@@ -319,9 +319,9 @@ export function MemberList({ organizationId, currentRole }: MemberListProps) {
     try {
       const response = await organizationsApi.updateMemberRole(organizationId, userId, newRole);
       setMembers((prev) =>
-        prev.map((m) =>
-          m.userId === userId ? { ...m, role: response.member.role } : m
-        ).sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role])
+        prev
+          .map((m) => (m.userId === userId ? { ...m, role: response.member.role } : m))
+          .sort((a, b) => ROLE_ORDER[a.role] - ROLE_ORDER[b.role])
       );
       toast.success('ロールを変更しました');
     } catch (err) {
@@ -396,15 +396,11 @@ export function MemberList({ organizationId, currentRole }: MemberListProps) {
     <div className="card p-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-foreground">メンバー管理</h2>
-        <span className="text-sm text-foreground-muted">
-          {members.length}人のメンバー
-        </span>
+        <span className="text-sm text-foreground-muted">{members.length}人のメンバー</span>
       </div>
 
       {members.length === 0 ? (
-        <p className="text-center text-foreground-muted py-8">
-          メンバーがいません
-        </p>
+        <p className="text-center text-foreground-muted py-8">メンバーがいません</p>
       ) : (
         <div className="space-y-2">
           {members.map((member) => (
@@ -431,16 +427,12 @@ export function MemberList({ organizationId, currentRole }: MemberListProps) {
                 {/* ユーザー情報 */}
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-foreground truncate">
-                      {member.user.name}
-                    </span>
+                    <span className="font-medium text-foreground truncate">{member.user.name}</span>
                     {member.userId === user?.id && (
                       <span className="badge badge-accent text-xs">あなた</span>
                     )}
                   </div>
-                  <p className="text-sm text-foreground-muted truncate">
-                    {member.user.email}
-                  </p>
+                  <p className="text-sm text-foreground-muted truncate">{member.user.email}</p>
                 </div>
               </div>
 
@@ -453,8 +445,8 @@ export function MemberList({ organizationId, currentRole }: MemberListProps) {
                       member.role === 'OWNER'
                         ? 'text-warning'
                         : member.role === 'ADMIN'
-                        ? 'text-accent'
-                        : 'text-foreground-muted'
+                          ? 'text-accent'
+                          : 'text-foreground-muted'
                     }`}
                   />
                   <span
@@ -462,8 +454,8 @@ export function MemberList({ organizationId, currentRole }: MemberListProps) {
                       member.role === 'OWNER'
                         ? 'text-warning'
                         : member.role === 'ADMIN'
-                        ? 'text-accent'
-                        : 'text-foreground-muted'
+                          ? 'text-accent'
+                          : 'text-foreground-muted'
                     }`}
                   >
                     {ROLE_LABELS[member.role]}

@@ -24,14 +24,10 @@ export function OrganizationAuditLogSection({ logs }: OrganizationAuditLogSectio
   return (
     <div className="bg-background-secondary border border-border rounded-lg">
       <div className="px-4 py-3 border-b border-border">
-        <h2 className="text-sm font-medium text-foreground">
-          監査ログ（最新10件）
-        </h2>
+        <h2 className="text-sm font-medium text-foreground">監査ログ（最新10件）</h2>
       </div>
       {logs.length === 0 ? (
-        <div className="px-4 py-8 text-center text-foreground-muted">
-          監査ログはありません
-        </div>
+        <div className="px-4 py-8 text-center text-foreground-muted">監査ログはありません</div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -69,9 +65,7 @@ export function OrganizationAuditLogSection({ logs }: OrganizationAuditLogSectio
                   <td className="px-4 py-3">
                     <CategoryBadge category={log.category} />
                   </td>
-                  <td className="px-4 py-3 text-sm text-foreground">
-                    {log.action}
-                  </td>
+                  <td className="px-4 py-3 text-sm text-foreground">{log.action}</td>
                   <td className="px-4 py-3 text-sm text-foreground-muted font-mono text-xs">
                     {log.targetType && log.targetId ? (
                       <>

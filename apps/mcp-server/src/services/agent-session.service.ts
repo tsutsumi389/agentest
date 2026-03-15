@@ -41,9 +41,7 @@ export const agentSessionService = {
   /**
    * セッションを取得（存在しない場合は作成）
    */
-  async getOrCreateSession(
-    data: CreateAgentSessionData
-  ): Promise<GetOrCreateSessionResult> {
+  async getOrCreateSession(data: CreateAgentSessionData): Promise<GetOrCreateSessionResult> {
     // 既存のアクティブなセッションを検索
     const existingSession = await agentSessionRepository.findActiveByProjectAndClient(
       data.projectId,
@@ -52,9 +50,7 @@ export const agentSessionService = {
 
     if (existingSession) {
       // ハートビートを更新して返す
-      const updatedSession = await agentSessionRepository.updateHeartbeat(
-        existingSession.id
-      );
+      const updatedSession = await agentSessionRepository.updateHeartbeat(existingSession.id);
       return { session: updatedSession, isNew: false };
     }
 

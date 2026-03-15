@@ -165,9 +165,7 @@ describe('UserPasswordAuthService', () => {
     it('同じパスワードから異なるハッシュが生成される（ランダムソルト）', async () => {
       // bcryptは内部でランダムソルトを使用するため、同じ入力でも異なるハッシュが生成される
       // モックでは同じ値を返すので、hashが2回呼ばれることを確認
-      mockBcrypt.hash
-        .mockResolvedValueOnce('$2b$12$hash1')
-        .mockResolvedValueOnce('$2b$12$hash2');
+      mockBcrypt.hash.mockResolvedValueOnce('$2b$12$hash1').mockResolvedValueOnce('$2b$12$hash2');
 
       const hash1 = await service.hashPassword('password123');
       const hash2 = await service.hashPassword('password123');
@@ -446,7 +444,11 @@ describe('UserPasswordAuthService', () => {
       };
       mockPrisma.user.findFirst.mockResolvedValue(expiredLockUser);
       mockBcrypt.compare.mockResolvedValue(true);
-      mockPrisma.user.update.mockResolvedValue({ ...expiredLockUser, failedAttempts: 0, lockedUntil: null });
+      mockPrisma.user.update.mockResolvedValue({
+        ...expiredLockUser,
+        failedAttempts: 0,
+        lockedUntil: null,
+      });
       mockPrisma.refreshToken.create.mockResolvedValue({});
       mockPrisma.session.create.mockResolvedValue({});
 
@@ -469,7 +471,11 @@ describe('UserPasswordAuthService', () => {
       };
       mockPrisma.user.findFirst.mockResolvedValue(expiredLockUser);
       mockBcrypt.compare.mockResolvedValue(true);
-      mockPrisma.user.update.mockResolvedValue({ ...expiredLockUser, failedAttempts: 0, lockedUntil: null });
+      mockPrisma.user.update.mockResolvedValue({
+        ...expiredLockUser,
+        failedAttempts: 0,
+        lockedUntil: null,
+      });
       mockPrisma.refreshToken.create.mockResolvedValue({});
       mockPrisma.session.create.mockResolvedValue({});
 
@@ -640,9 +646,7 @@ describe('UserPasswordAuthService', () => {
       mockPrisma.refreshToken.updateMany.mockResolvedValue({});
       mockPrisma.session.updateMany.mockResolvedValue({});
 
-      await expect(
-        service.resetPassword('raw-token', 'NewPassword123!')
-      ).resolves.not.toThrow();
+      await expect(service.resetPassword('raw-token', 'NewPassword123!')).resolves.not.toThrow();
 
       // パスワードがハッシュ化されて保存される
       expect(mockPrisma.user.update).toHaveBeenCalledWith(
@@ -681,17 +685,13 @@ describe('UserPasswordAuthService', () => {
       };
       mockPrisma.passwordResetToken.findFirst.mockResolvedValue(expiredToken);
 
-      await expect(
-        service.resetPassword('raw-token', 'NewPassword123!')
-      ).rejects.toThrow();
+      await expect(service.resetPassword('raw-token', 'NewPassword123!')).rejects.toThrow();
     });
 
     it('存在しないトークンではエラーを返す', async () => {
       mockPrisma.passwordResetToken.findFirst.mockResolvedValue(null);
 
-      await expect(
-        service.resetPassword('invalid-token', 'NewPassword123!')
-      ).rejects.toThrow();
+      await expect(service.resetPassword('invalid-token', 'NewPassword123!')).rejects.toThrow();
     });
 
     it('既に使用済みのトークンではエラーを返す', async () => {
@@ -701,9 +701,7 @@ describe('UserPasswordAuthService', () => {
       };
       mockPrisma.passwordResetToken.findFirst.mockResolvedValue(usedToken);
 
-      await expect(
-        service.resetPassword('raw-token', 'NewPassword123!')
-      ).rejects.toThrow();
+      await expect(service.resetPassword('raw-token', 'NewPassword123!')).rejects.toThrow();
     });
 
     it('パスワードリセット後にfailedAttemptsがリセットされる', async () => {
@@ -787,9 +785,7 @@ describe('UserPasswordAuthService', () => {
       mockPrisma.user.findFirst.mockResolvedValue(mockOAuthOnlyUser);
       mockPrisma.user.update.mockResolvedValue({});
 
-      await expect(
-        service.setPassword('user-oauth', 'NewPassword123!')
-      ).resolves.not.toThrow();
+      await expect(service.setPassword('user-oauth', 'NewPassword123!')).resolves.not.toThrow();
 
       expect(mockPrisma.user.update).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -804,9 +800,7 @@ describe('UserPasswordAuthService', () => {
     it('既にパスワードが設定されている場合はエラーを返す', async () => {
       mockPrisma.user.findFirst.mockResolvedValue(mockUser); // passwordHashがある
 
-      await expect(
-        service.setPassword('user-1', 'NewPassword123!')
-      ).rejects.toThrow();
+      await expect(service.setPassword('user-1', 'NewPassword123!')).rejects.toThrow();
     });
   });
 
@@ -871,7 +865,12 @@ describe('UserPasswordAuthService', () => {
       mockPrisma.session.updateMany.mockResolvedValue({ count: 1 });
 
       const currentTokenHash = 'current-token-hash';
-      await service.changePassword('user-1', 'CurrentPassword123!', 'NewPassword456!', currentTokenHash);
+      await service.changePassword(
+        'user-1',
+        'CurrentPassword123!',
+        'NewPassword456!',
+        currentTokenHash
+      );
 
       // 現在のセッションを除外してリフレッシュトークンを無効化
       expect(mockPrisma.refreshToken.updateMany).toHaveBeenCalledWith({
@@ -1156,9 +1155,7 @@ describe('UserPasswordAuthService', () => {
     it('存在しないトークンではエラーを返す', async () => {
       mockPrisma.emailVerificationToken.findFirst.mockResolvedValue(null);
 
-      await expect(
-        service.verifyEmail('invalid-token')
-      ).rejects.toThrow(BadRequestError);
+      await expect(service.verifyEmail('invalid-token')).rejects.toThrow(BadRequestError);
     });
 
     it('期限切れトークンではエラーを返す', async () => {
@@ -1168,9 +1165,7 @@ describe('UserPasswordAuthService', () => {
       };
       mockPrisma.emailVerificationToken.findFirst.mockResolvedValue(expiredToken);
 
-      await expect(
-        service.verifyEmail('expired-token')
-      ).rejects.toThrow(BadRequestError);
+      await expect(service.verifyEmail('expired-token')).rejects.toThrow(BadRequestError);
     });
 
     it('使用済みトークンではエラーを返す', async () => {
@@ -1180,9 +1175,7 @@ describe('UserPasswordAuthService', () => {
       };
       mockPrisma.emailVerificationToken.findFirst.mockResolvedValue(usedToken);
 
-      await expect(
-        service.verifyEmail('used-token')
-      ).rejects.toThrow(BadRequestError);
+      await expect(service.verifyEmail('used-token')).rejects.toThrow(BadRequestError);
     });
 
     it('既に確認済みのユーザーでもエラーにならない（冪等性）', async () => {
@@ -1194,9 +1187,7 @@ describe('UserPasswordAuthService', () => {
       mockPrisma.emailVerificationToken.update.mockResolvedValue({});
       mockPrisma.user.update.mockResolvedValue({});
 
-      await expect(
-        service.verifyEmail('raw-verification-token')
-      ).resolves.not.toThrow();
+      await expect(service.verifyEmail('raw-verification-token')).resolves.not.toThrow();
     });
   });
 

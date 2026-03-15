@@ -32,10 +32,7 @@ export class NotificationController {
   list = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const params = getNotificationsSchema.parse(req.query);
-      const notifications = await this.notificationService.getNotifications(
-        req.user!.id,
-        params
-      );
+      const notifications = await this.notificationService.getNotifications(req.user!.id, params);
 
       res.json({ notifications });
     } catch (error) {

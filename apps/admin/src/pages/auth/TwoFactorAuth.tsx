@@ -34,9 +34,7 @@ export function TwoFactorAuthPage() {
             <div className="w-10 h-10 rounded-lg bg-accent-muted flex items-center justify-center">
               <Terminal className="w-6 h-6 text-accent" />
             </div>
-            <span className="text-2xl font-bold text-foreground">
-              Agentest Admin
-            </span>
+            <span className="text-2xl font-bold text-foreground">Agentest Admin</span>
           </div>
           <p className="text-foreground-muted text-sm">管理コンソール</p>
         </div>

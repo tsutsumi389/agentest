@@ -1,9 +1,4 @@
-import type {
-  PreconditionStatus,
-  StepStatus,
-  JudgmentStatus,
-  TestCasePriority,
-} from './enums.js';
+import type { PreconditionStatus, StepStatus, JudgmentStatus, TestCasePriority } from './enums.js';
 
 export interface Execution {
   id: string;

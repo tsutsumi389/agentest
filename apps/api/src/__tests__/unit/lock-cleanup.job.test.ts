@@ -101,7 +101,8 @@ describe('lock-cleanup.job', () => {
         { id: 'lock-2', targetType: 'testSuite', targetId: 'ts-1' },
       ];
       mockProcessExpiredLocks.mockResolvedValue({ count: 2, locks: expiredLocks });
-      const onLockExpired = vi.fn()
+      const onLockExpired = vi
+        .fn()
         .mockRejectedValueOnce(new Error('callback error'))
         .mockResolvedValueOnce(undefined);
 

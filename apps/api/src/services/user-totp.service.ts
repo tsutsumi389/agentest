@@ -111,7 +111,9 @@ export class UserTotpService {
     // Redisから一時秘密鍵を取得
     const tempSecret = await getUserTotpSetupSecret(userId);
     if (!tempSecret) {
-      throw new ValidationError('TOTPセットアップの有効期限が切れました。再度セットアップしてください');
+      throw new ValidationError(
+        'TOTPセットアップの有効期限が切れました。再度セットアップしてください'
+      );
     }
 
     // TOTPコードを検証

@@ -4,11 +4,14 @@ import type { ReviewVerdict } from '../../lib/api';
 /**
  * 評価ごとの設定
  */
-const VERDICT_CONFIG: Record<ReviewVerdict, {
-  icon: typeof CheckCircle;
-  className: string;
-  label: string;
-}> = {
+const VERDICT_CONFIG: Record<
+  ReviewVerdict,
+  {
+    icon: typeof CheckCircle;
+    className: string;
+    label: string;
+  }
+> = {
   APPROVED: {
     icon: CheckCircle,
     className: 'bg-success-subtle text-success',

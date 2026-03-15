@@ -133,10 +133,7 @@ export class AdminSessionService {
    *
    * @returns 新しい有効期限、または延長不可の場合はnull
    */
-  async refreshSession(
-    sessionId: string,
-    createdAt: Date
-  ): Promise<Date | null> {
+  async refreshSession(sessionId: string, createdAt: Date): Promise<Date | null> {
     // 最大延長期限を計算
     const maxExpiryTime = createdAt.getTime() + SESSION_MAX_EXPIRY_MS;
     const now = Date.now();
@@ -179,10 +176,13 @@ export class AdminSessionService {
       await this.sessionRepo.updateLastActiveAt(sessionId);
     } catch (error) {
       // セッションが存在しない場合は警告ログを出力
-      logger.warn({
-        err: error instanceof Error ? error : undefined,
-        sessionId,
-      }, '管理者セッション活動時刻の更新に失敗');
+      logger.warn(
+        {
+          err: error instanceof Error ? error : undefined,
+          sessionId,
+        },
+        '管理者セッション活動時刻の更新に失敗'
+      );
     }
   }
 

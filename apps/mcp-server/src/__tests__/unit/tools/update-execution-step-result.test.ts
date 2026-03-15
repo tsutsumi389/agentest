@@ -62,38 +62,48 @@ describe('updateExecutionStepResultTool', () => {
 
     it('executionIdとstepResultIdとstatusは必須', () => {
       expect(() => updateExecutionStepResultInputSchema.parse({})).toThrow();
-      expect(() => updateExecutionStepResultInputSchema.parse({
-        executionId: TEST_EXECUTION_ID,
-      })).toThrow();
-      expect(() => updateExecutionStepResultInputSchema.parse({
-        executionId: TEST_EXECUTION_ID,
-        stepResultId: TEST_STEP_RESULT_ID,
-      })).toThrow();
+      expect(() =>
+        updateExecutionStepResultInputSchema.parse({
+          executionId: TEST_EXECUTION_ID,
+        })
+      ).toThrow();
+      expect(() =>
+        updateExecutionStepResultInputSchema.parse({
+          executionId: TEST_EXECUTION_ID,
+          stepResultId: TEST_STEP_RESULT_ID,
+        })
+      ).toThrow();
     });
 
     it('無効なUUIDはエラー', () => {
-      expect(() => updateExecutionStepResultInputSchema.parse({
-        executionId: 'invalid-uuid',
-        stepResultId: TEST_STEP_RESULT_ID,
-        status: 'DONE',
-      })).toThrow();
+      expect(() =>
+        updateExecutionStepResultInputSchema.parse({
+          executionId: 'invalid-uuid',
+          stepResultId: TEST_STEP_RESULT_ID,
+          status: 'DONE',
+        })
+      ).toThrow();
     });
 
     it('無効なstatusはエラー', () => {
-      expect(() => updateExecutionStepResultInputSchema.parse({
-        executionId: TEST_EXECUTION_ID,
-        stepResultId: TEST_STEP_RESULT_ID,
-        status: 'PENDING',
-      })).toThrow();
+      expect(() =>
+        updateExecutionStepResultInputSchema.parse({
+          executionId: TEST_EXECUTION_ID,
+          stepResultId: TEST_STEP_RESULT_ID,
+          status: 'PENDING',
+        })
+      ).toThrow();
     });
 
     it('noteは2000文字以下', () => {
-      expect(() => updateExecutionStepResultInputSchema.parse({
-        executionId: TEST_EXECUTION_ID,
-        stepResultId: TEST_STEP_RESULT_ID,
-        status: 'DONE',
-        note: 'a'.repeat(2001),
-      })).toThrow();
+      expect(() =>
+        updateExecutionStepResultInputSchema.parse({
+          executionId: TEST_EXECUTION_ID,
+          stepResultId: TEST_STEP_RESULT_ID,
+          status: 'DONE',
+          note: 'a'.repeat(2001),
+        })
+      ).toThrow();
     });
   });
 

@@ -90,9 +90,7 @@ export function DeleteTestSuiteSection({
     return (
       <div className="card p-6">
         <div className="text-center py-8">
-          <p className="text-foreground-muted">
-            テストスイートの削除には管理者権限が必要です
-          </p>
+          <p className="text-foreground-muted">テストスイートの削除には管理者権限が必要です</p>
         </div>
       </div>
     );
@@ -157,12 +155,10 @@ export function DeleteTestSuiteSection({
             <AlertTriangle className="w-6 h-6 text-danger" />
           </div>
           <div className="flex-1">
-            <h3 className="text-lg font-semibold text-danger mb-2">
-              テストスイートを削除
-            </h3>
+            <h3 className="text-lg font-semibold text-danger mb-2">テストスイートを削除</h3>
             <p className="text-foreground-muted text-sm mb-4">
-              テストスイートを削除すると、{DELETION_GRACE_PERIOD_DAYS}日間の猶予期間後に完全に削除されます。
-              猶予期間中は復元することができます。
+              テストスイートを削除すると、{DELETION_GRACE_PERIOD_DAYS}
+              日間の猶予期間後に完全に削除されます。 猶予期間中は復元することができます。
             </p>
             <ul className="text-foreground-subtle text-sm mb-4 space-y-1">
               <li className="flex items-center gap-2">

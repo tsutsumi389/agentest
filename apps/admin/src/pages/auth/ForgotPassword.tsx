@@ -1,13 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Link } from 'react-router';
-import {
-  Terminal,
-  Mail,
-  Loader2,
-  AlertCircle,
-  CheckCircle,
-  ArrowLeft,
-} from 'lucide-react';
+import { Terminal, Mail, Loader2, AlertCircle, CheckCircle, ArrowLeft } from 'lucide-react';
 import { passwordResetApi, ApiError } from '../../lib/api';
 
 /**
@@ -56,9 +49,7 @@ export function ForgotPasswordPage() {
               <div className="w-10 h-10 rounded-lg bg-accent-muted flex items-center justify-center">
                 <Terminal className="w-6 h-6 text-accent" aria-hidden="true" />
               </div>
-              <span className="text-2xl font-bold text-foreground">
-                Agentest Admin
-              </span>
+              <span className="text-2xl font-bold text-foreground">Agentest Admin</span>
             </div>
           </div>
 
@@ -68,9 +59,7 @@ export function ForgotPasswordPage() {
               <div className="w-16 h-16 rounded-full bg-success-muted flex items-center justify-center mb-4">
                 <CheckCircle className="w-8 h-8 text-success" aria-hidden="true" />
               </div>
-              <h1 className="text-xl font-semibold text-foreground mb-2">
-                メールを送信しました
-              </h1>
+              <h1 className="text-xl font-semibold text-foreground mb-2">メールを送信しました</h1>
               <p className="text-foreground-muted mb-6">
                 メールアドレスが登録されている場合、パスワードリセット用のメールを送信しました。
                 受信トレイをご確認ください。
@@ -78,10 +67,7 @@ export function ForgotPasswordPage() {
               <p className="text-xs text-foreground-subtle mb-6">
                 メールが届かない場合は、迷惑メールフォルダをご確認ください。
               </p>
-              <Link
-                to="/login"
-                className="btn btn-secondary w-full"
-              >
+              <Link to="/login" className="btn btn-secondary w-full">
                 ログインページへ戻る
               </Link>
             </div>
@@ -106,9 +92,7 @@ export function ForgotPasswordPage() {
             <div className="w-10 h-10 rounded-lg bg-accent-muted flex items-center justify-center">
               <Terminal className="w-6 h-6 text-accent" aria-hidden="true" />
             </div>
-            <span className="text-2xl font-bold text-foreground">
-              Agentest Admin
-            </span>
+            <span className="text-2xl font-bold text-foreground">Agentest Admin</span>
           </div>
           <p className="text-foreground-muted text-sm">パスワードリセット</p>
         </div>
@@ -138,10 +122,7 @@ export function ForgotPasswordPage() {
 
             {/* メールアドレス入力 */}
             <div className="space-y-2">
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-foreground-muted"
-              >
+              <label htmlFor="email" className="block text-sm font-medium text-foreground-muted">
                 メールアドレス
               </label>
               <div className="relative">

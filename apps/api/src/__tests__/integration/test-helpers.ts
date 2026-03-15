@@ -12,14 +12,16 @@ function testHashToken(token: string): string {
 /**
  * テスト用ユーザーを作成
  */
-export async function createTestUser(overrides: Partial<{
-  id: string;
-  email: string;
-  name: string;
-  avatarUrl: string | null;
-  passwordHash: string | null;
-  emailVerified: boolean;
-}> = {}) {
+export async function createTestUser(
+  overrides: Partial<{
+    id: string;
+    email: string;
+    name: string;
+    avatarUrl: string | null;
+    passwordHash: string | null;
+    emailVerified: boolean;
+  }> = {}
+) {
   const id = overrides.id ?? randomUUID();
   return prisma.user.create({
     data: {
@@ -1170,8 +1172,7 @@ export async function createTestAdminUser(
   // 注: このハッシュはダミー値であり、結合テストでは bcryptjs.hashSync(testPassword, 12) で
   // 実際のパスワードをハッシュ化してoverrideすることを想定
   // ユニットテストではリポジトリをモックするため、このハッシュが使用されることはない
-  const defaultPasswordHash =
-    '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4bEaLwrMlxAqP6C2';
+  const defaultPasswordHash = '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4bEaLwrMlxAqP6C2';
   return prisma.adminUser.create({
     data: {
       id,

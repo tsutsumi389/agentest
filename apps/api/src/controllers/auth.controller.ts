@@ -373,14 +373,19 @@ export class AuthController {
         verificationUrl,
         expiresInHours: 24,
       });
-      emailService.send({
-        to: result.user.email,
-        subject: verificationEmail.subject,
-        text: verificationEmail.text,
-        html: verificationEmail.html,
-      }).catch((error) => {
-        logger.warn({ userId: result.user.id, email: result.user.email, error }, '確認メール送信失敗');
-      });
+      emailService
+        .send({
+          to: result.user.email,
+          subject: verificationEmail.subject,
+          text: verificationEmail.text,
+          html: verificationEmail.html,
+        })
+        .catch((error) => {
+          logger.warn(
+            { userId: result.user.id, email: result.user.email, error },
+            '確認メール送信失敗'
+          );
+        });
 
       res.status(201).json({
         message: '確認メールを送信しました。メールをご確認ください。',
@@ -425,7 +430,9 @@ export class AuthController {
 
       // バックグラウンドで処理し、即座にレスポンスを返す（タイミングサイドチャネル対策）
       const resendPromise = (async () => {
-        const verificationToken = await this.passwordAuthService.resendVerification(parsed.data.email);
+        const verificationToken = await this.passwordAuthService.resendVerification(
+          parsed.data.email
+        );
 
         // トークンがある場合は確認メールを送信
         if (verificationToken) {
@@ -526,7 +533,10 @@ export class AuthController {
   /**
    * 認証クッキーを設定する共通メソッド
    */
-  private setAuthCookies(res: Response, tokens: { accessToken: string; refreshToken: string }): void {
+  private setAuthCookies(
+    res: Response,
+    tokens: { accessToken: string; refreshToken: string }
+  ): void {
     res.cookie('access_token', tokens.accessToken, {
       ...cookieOptions,
       maxAge: 15 * 60 * 1000, // 15分
@@ -546,11 +556,13 @@ export class AuthController {
   oauthCallback = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       // OAuth コールバックでは req.user は { userId, email, profile } 形式
-      const oauthUser = req.user as {
-        userId: string;
-        email: string;
-        profile?: { provider: string; providerAccountId: string };
-      } | undefined;
+      const oauthUser = req.user as
+        | {
+            userId: string;
+            email: string;
+            profile?: { provider: string; providerAccountId: string };
+          }
+        | undefined;
 
       if (!oauthUser || !oauthUser.userId) {
         throw new AuthenticationError('OAuth認証に失敗しました');
@@ -571,7 +583,9 @@ export class AuthController {
             const result = await this.handleOAuthLink(linkMode.userId, oauthUser.profile);
 
             if (!result.success) {
-              res.redirect(`${env.FRONTEND_URL}/settings?tab=security&link=error&message=${encodeURIComponent(result.error || '連携に失敗しました')}`);
+              res.redirect(
+                `${env.FRONTEND_URL}/settings?tab=security&link=error&message=${encodeURIComponent(result.error || '連携に失敗しました')}`
+              );
               return;
             }
 
@@ -627,7 +641,12 @@ export class AuthController {
    */
   private handleOAuthLink = async (
     userId: string,
-    profile: { provider: string; providerAccountId: string; accessToken?: string; refreshToken?: string }
+    profile: {
+      provider: string;
+      providerAccountId: string;
+      accessToken?: string;
+      refreshToken?: string;
+    }
   ): Promise<{ success: boolean; error?: string }> => {
     // 同じプロバイダーアカウントが他のユーザーに紐づいていないか確認
     const existingAccount = await prisma.account.findUnique({
@@ -643,7 +662,10 @@ export class AuthController {
       if (existingAccount.userId === userId) {
         return { success: false, error: `この${profile.provider}アカウントは既に連携されています` };
       } else {
-        return { success: false, error: `この${profile.provider}アカウントは別のユーザーに連携されています` };
+        return {
+          success: false,
+          error: `この${profile.provider}アカウントは別のユーザーに連携されています`,
+        };
       }
     }
 

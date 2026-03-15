@@ -56,15 +56,23 @@ function getRoleLabel(role: 'OWNER' | 'ADMIN' | 'MEMBER') {
  * 組織カード
  * 組織一覧で各組織を表示するカード
  */
-export function OrganizationCard({ organization, role, onSelect, onRestore, isRestoring }: OrganizationCardProps) {
+export function OrganizationCard({
+  organization,
+  role,
+  onSelect,
+  onRestore,
+  isRestoring,
+}: OrganizationCardProps) {
   const RoleIcon = getRoleIcon(role);
   const isDeleted = !!organization.deletedAt;
   const remainingDays = isDeleted ? getRemainingDays(organization.deletedAt!) : null;
 
   return (
-    <div className={`bg-background-secondary border border-border rounded-lg p-4 transition-colors ${
-      isDeleted ? 'opacity-60' : 'hover:border-accent'
-    }`}>
+    <div
+      className={`bg-background-secondary border border-border rounded-lg p-4 transition-colors ${
+        isDeleted ? 'opacity-60' : 'hover:border-accent'
+      }`}
+    >
       {/* ヘッダー */}
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-3">
@@ -107,14 +115,18 @@ export function OrganizationCard({ organization, role, onSelect, onRestore, isRe
         <div className="flex items-center gap-2">
           {isDeleted ? (
             // 削除済み組織の場合は復元ボタンを表示（OWNERのみ）
-            role === 'OWNER' && onRestore && (
+            role === 'OWNER' &&
+            onRestore && (
               <button
                 onClick={onRestore}
                 disabled={isRestoring}
                 className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-success hover:bg-success/10 rounded transition-colors disabled:opacity-50"
                 aria-label={`${organization.name}を復元`}
               >
-                <RotateCcw className={`w-4 h-4 ${isRestoring ? 'animate-spin' : ''}`} aria-hidden="true" />
+                <RotateCcw
+                  className={`w-4 h-4 ${isRestoring ? 'animate-spin' : ''}`}
+                  aria-hidden="true"
+                />
                 {isRestoring ? '復元中...' : '復元'}
               </button>
             )

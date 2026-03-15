@@ -55,13 +55,15 @@ export function logUncaughtException(error: Error, logger?: ProcessLogger): void
     logger.fatal({ err: error }, 'キャッチされない例外が発生しました');
     return;
   }
-  console.error(JSON.stringify({
-    time: new Date().toISOString(),
-    level: 'fatal',
-    msg: 'キャッチされない例外が発生しました',
-    error: error.message,
-    stack: error.stack,
-  }));
+  console.error(
+    JSON.stringify({
+      time: new Date().toISOString(),
+      level: 'fatal',
+      msg: 'キャッチされない例外が発生しました',
+      error: error.message,
+      stack: error.stack,
+    })
+  );
 }
 
 /**
@@ -71,17 +73,19 @@ export function logUnhandledRejection(reason: unknown, logger?: ProcessLogger): 
   if (logger) {
     logger.fatal(
       { err: reason instanceof Error ? reason : undefined, reason: String(reason) },
-      '未処理のPromise拒否が発生しました',
+      '未処理のPromise拒否が発生しました'
     );
     return;
   }
-  console.error(JSON.stringify({
-    time: new Date().toISOString(),
-    level: 'fatal',
-    msg: '未処理のPromise拒否が発生しました',
-    reason: reason instanceof Error ? reason.message : String(reason),
-    stack: reason instanceof Error ? reason.stack : undefined,
-  }));
+  console.error(
+    JSON.stringify({
+      time: new Date().toISOString(),
+      level: 'fatal',
+      msg: '未処理のPromise拒否が発生しました',
+      reason: reason instanceof Error ? reason.message : String(reason),
+      stack: reason instanceof Error ? reason.stack : undefined,
+    })
+  );
 }
 
 /**
@@ -90,7 +94,7 @@ export function logUnhandledRejection(reason: unknown, logger?: ProcessLogger): 
 export function triggerShutdown(
   shutdownFn: ShutdownFn | null,
   signal: string,
-  safetyTimeoutMs: number,
+  safetyTimeoutMs: number
 ): void {
   if (shutdownFn) {
     shutdownFn(signal, 1).catch(() => {});

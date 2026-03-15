@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TestSuiteRepository, type TestSuiteSearchOptions } from '../../repositories/test-suite.repository.js';
+import {
+  TestSuiteRepository,
+  type TestSuiteSearchOptions,
+} from '../../repositories/test-suite.repository.js';
 
 // Prisma のモック（vi.hoistedでホイスティング問題を回避）
 const mockPrismaTestSuite = vi.hoisted(() => ({

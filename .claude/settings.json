@@ -1,11 +1,43 @@
 {
   "permissions": {
-    "allow": [
-      "Bash(docker compose *)"
-    ]
+    "allow": ["Bash(docker compose *)"]
   },
   "plansDirectory": "docs/plans",
   "enabledPlugins": {
     "everything-claude-code@everything-claude-code": true
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/safety-gate.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/post-lint.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/stop-gate.sh"
+          }
+        ]
+      }
+    ]
   }
 }

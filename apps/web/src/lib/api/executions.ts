@@ -16,12 +16,17 @@ import type {
 // ============================================
 
 export const executionsApi = {
-  getById: (executionId: string) => api.get<{ execution: Execution }>(`/api/executions/${executionId}`),
+  getById: (executionId: string) =>
+    api.get<{ execution: Execution }>(`/api/executions/${executionId}`),
   getByIdWithDetails: (executionId: string) =>
     api.get<{ execution: ExecutionWithDetails }>(`/api/executions/${executionId}/details`),
 
   // 結果更新
-  updatePreconditionResult: (executionId: string, resultId: string, data: UpdatePreconditionResultRequest) =>
+  updatePreconditionResult: (
+    executionId: string,
+    resultId: string,
+    data: UpdatePreconditionResultRequest
+  ) =>
     api.patch<{ result: ExecutionPreconditionResult }>(
       `/api/executions/${executionId}/preconditions/${resultId}`,
       data
@@ -31,7 +36,11 @@ export const executionsApi = {
       `/api/executions/${executionId}/steps/${resultId}`,
       data
     ),
-  updateExpectedResult: (executionId: string, resultId: string, data: UpdateExpectedResultRequest) =>
+  updateExpectedResult: (
+    executionId: string,
+    resultId: string,
+    data: UpdateExpectedResultRequest
+  ) =>
     api.patch<{ result: ExecutionExpectedResult }>(
       `/api/executions/${executionId}/expected-results/${resultId}`,
       data
@@ -79,5 +88,7 @@ export const executionsApi = {
     api.delete<void>(`/api/executions/${executionId}/evidences/${evidenceId}`),
 
   getEvidenceDownloadUrl: (executionId: string, evidenceId: string) =>
-    api.get<{ downloadUrl: string }>(`/api/executions/${executionId}/evidences/${evidenceId}/download-url`),
+    api.get<{ downloadUrl: string }>(
+      `/api/executions/${executionId}/evidences/${evidenceId}/download-url`
+    ),
 };

@@ -14,7 +14,10 @@ vi.mock('../../../clients/api-client.js', () => ({
 }));
 
 // モック設定後にインポート
-import { updateTestSuiteTool, updateTestSuiteInputSchema } from '../../../tools/update-test-suite.js';
+import {
+  updateTestSuiteTool,
+  updateTestSuiteInputSchema,
+} from '../../../tools/update-test-suite.js';
 
 // テスト用の固定UUID
 const TEST_USER_ID = '11111111-1111-1111-1111-111111111111';
@@ -53,29 +56,37 @@ describe('updateTestSuiteTool', () => {
     });
 
     it('無効なUUIDはエラー', () => {
-      expect(() => updateTestSuiteInputSchema.parse({
-        testSuiteId: 'invalid-uuid',
-        name: 'Test Suite',
-      })).toThrow();
+      expect(() =>
+        updateTestSuiteInputSchema.parse({
+          testSuiteId: 'invalid-uuid',
+          name: 'Test Suite',
+        })
+      ).toThrow();
     });
 
     it('nameは1-200文字', () => {
-      expect(() => updateTestSuiteInputSchema.parse({
-        testSuiteId: TEST_SUITE_ID,
-        name: '',
-      })).toThrow();
+      expect(() =>
+        updateTestSuiteInputSchema.parse({
+          testSuiteId: TEST_SUITE_ID,
+          name: '',
+        })
+      ).toThrow();
 
-      expect(() => updateTestSuiteInputSchema.parse({
-        testSuiteId: TEST_SUITE_ID,
-        name: 'a'.repeat(201),
-      })).toThrow();
+      expect(() =>
+        updateTestSuiteInputSchema.parse({
+          testSuiteId: TEST_SUITE_ID,
+          name: 'a'.repeat(201),
+        })
+      ).toThrow();
     });
 
     it('descriptionは2000文字以下', () => {
-      expect(() => updateTestSuiteInputSchema.parse({
-        testSuiteId: TEST_SUITE_ID,
-        description: 'a'.repeat(2001),
-      })).toThrow();
+      expect(() =>
+        updateTestSuiteInputSchema.parse({
+          testSuiteId: TEST_SUITE_ID,
+          description: 'a'.repeat(2001),
+        })
+      ).toThrow();
     });
 
     it('descriptionはnullを許容', () => {
@@ -87,10 +98,12 @@ describe('updateTestSuiteTool', () => {
     });
 
     it('無効なstatusはエラー', () => {
-      expect(() => updateTestSuiteInputSchema.parse({
-        testSuiteId: TEST_SUITE_ID,
-        status: 'INVALID',
-      })).toThrow();
+      expect(() =>
+        updateTestSuiteInputSchema.parse({
+          testSuiteId: TEST_SUITE_ID,
+          status: 'INVALID',
+        })
+      ).toThrow();
     });
 
     it('有効なstatusを受け付ける', () => {
@@ -144,7 +157,10 @@ describe('updateTestSuiteTool', () => {
 
       expect(mockApiClient.patch).toHaveBeenCalledWith(
         `/internal/api/test-suites/${TEST_SUITE_ID}`,
-        expect.objectContaining({ name: 'Updated Suite', groupId: expect.stringMatching(/^[0-9a-f-]{36}$/) }),
+        expect.objectContaining({
+          name: 'Updated Suite',
+          groupId: expect.stringMatching(/^[0-9a-f-]{36}$/),
+        }),
         { userId: TEST_USER_ID }
       );
       expect(result).toEqual(mockResponse);
@@ -176,7 +192,12 @@ describe('updateTestSuiteTool', () => {
 
       expect(mockApiClient.patch).toHaveBeenCalledWith(
         `/internal/api/test-suites/${TEST_SUITE_ID}`,
-        expect.objectContaining({ name: 'Updated Suite', description: 'New Description', status: 'ACTIVE', groupId: expect.stringMatching(/^[0-9a-f-]{36}$/) }),
+        expect.objectContaining({
+          name: 'Updated Suite',
+          description: 'New Description',
+          status: 'ACTIVE',
+          groupId: expect.stringMatching(/^[0-9a-f-]{36}$/),
+        }),
         { userId: TEST_USER_ID }
       );
     });
@@ -202,7 +223,10 @@ describe('updateTestSuiteTool', () => {
 
       expect(mockApiClient.patch).toHaveBeenCalledWith(
         `/internal/api/test-suites/${TEST_SUITE_ID}`,
-        expect.objectContaining({ description: null, groupId: expect.stringMatching(/^[0-9a-f-]{36}$/) }),
+        expect.objectContaining({
+          description: null,
+          groupId: expect.stringMatching(/^[0-9a-f-]{36}$/),
+        }),
         { userId: TEST_USER_ID }
       );
     });

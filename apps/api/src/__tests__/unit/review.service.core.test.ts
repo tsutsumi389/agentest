@@ -120,13 +120,18 @@ describe('ReviewService（コア操作）', () => {
       const result = await service.searchByTestSuite(TEST_SUITE_ID, { limit: 10, offset: 0 });
 
       expect(result).toEqual({ items: [], total: 0 });
-      expect(mockReviewRepo.searchByTestSuite).toHaveBeenCalledWith(TEST_SUITE_ID, { limit: 10, offset: 0 });
+      expect(mockReviewRepo.searchByTestSuite).toHaveBeenCalledWith(TEST_SUITE_ID, {
+        limit: 10,
+        offset: 0,
+      });
     });
 
     it('テストスイートが存在しない場合はNotFoundErrorを投げる', async () => {
       mockPrisma.testSuite.findFirst.mockResolvedValue(null);
 
-      await expect(service.searchByTestSuite(TEST_SUITE_ID, { limit: 10, offset: 0 })).rejects.toThrow(NotFoundError);
+      await expect(
+        service.searchByTestSuite(TEST_SUITE_ID, { limit: 10, offset: 0 })
+      ).rejects.toThrow(NotFoundError);
     });
   });
 
@@ -260,10 +265,15 @@ describe('ReviewService（コア操作）', () => {
       const updatedReview = createMockReview({ status: 'SUBMITTED', verdict: 'CHANGES_REQUESTED' });
       mockReviewRepo.updateVerdict.mockResolvedValue(updatedReview);
 
-      const result = await service.updateVerdict(TEST_REVIEW_ID, TEST_USER_ID, { verdict: 'CHANGES_REQUESTED' });
+      const result = await service.updateVerdict(TEST_REVIEW_ID, TEST_USER_ID, {
+        verdict: 'CHANGES_REQUESTED',
+      });
 
       expect(result).toEqual(updatedReview);
-      expect(mockReviewRepo.updateVerdict).toHaveBeenCalledWith(TEST_REVIEW_ID, 'CHANGES_REQUESTED');
+      expect(mockReviewRepo.updateVerdict).toHaveBeenCalledWith(
+        TEST_REVIEW_ID,
+        'CHANGES_REQUESTED'
+      );
     });
 
     it('他人のレビューはAuthorizationErrorを投げる', async () => {
@@ -296,7 +306,9 @@ describe('ReviewService（コア操作）', () => {
     it('他人のレビューはAuthorizationErrorを投げる', async () => {
       mockReviewRepo.findById.mockResolvedValue(createMockReview());
 
-      await expect(service.delete(TEST_REVIEW_ID, OTHER_USER_ID)).rejects.toThrow(AuthorizationError);
+      await expect(service.delete(TEST_REVIEW_ID, OTHER_USER_ID)).rejects.toThrow(
+        AuthorizationError
+      );
     });
 
     it('SUBMITTED状態のレビューはBadRequestErrorを投げる', async () => {

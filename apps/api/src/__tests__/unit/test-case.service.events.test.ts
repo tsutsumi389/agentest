@@ -165,7 +165,9 @@ describe('TestCaseService - イベント発行', () => {
       });
 
       it('publishTestCaseUpdatedが正しい引数で呼ばれる', async () => {
-        await service.addPrecondition('test-case-1', 'user-1', { content: 'ユーザーがログインしている' });
+        await service.addPrecondition('test-case-1', 'user-1', {
+          content: 'ユーザーがログインしている',
+        });
 
         expect(mockPublishTestCaseUpdated).toHaveBeenCalledWith(
           'test-case-1',
@@ -179,10 +181,15 @@ describe('TestCaseService - イベント発行', () => {
       it('イベント発行エラー時もメイン処理は成功する', async () => {
         mockPublishTestCaseUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
-        const result = await service.addPrecondition('test-case-1', 'user-1', { content: '新しい前提条件' });
+        const result = await service.addPrecondition('test-case-1', 'user-1', {
+          content: '新しい前提条件',
+        });
 
         expect(result).toBeDefined();
-        expect(mockLogger.error).toHaveBeenCalledWith({ err: expect.any(Error) }, 'イベント発行エラー');
+        expect(mockLogger.error).toHaveBeenCalledWith(
+          { err: expect.any(Error) },
+          'イベント発行エラー'
+        );
       });
     });
 
@@ -198,13 +205,21 @@ describe('TestCaseService - イベント発行', () => {
       });
 
       it('publishTestCaseUpdatedが正しい引数で呼ばれる', async () => {
-        await service.updatePrecondition('test-case-1', 'precondition-1', 'user-1', { content: '更新された前提条件' });
+        await service.updatePrecondition('test-case-1', 'precondition-1', 'user-1', {
+          content: '更新された前提条件',
+        });
 
         expect(mockPublishTestCaseUpdated).toHaveBeenCalledWith(
           'test-case-1',
           'test-suite-1',
           'project-1',
-          [{ field: 'precondition:update', oldValue: 'ユーザーがログインしている', newValue: '更新された前提条件' }],
+          [
+            {
+              field: 'precondition:update',
+              oldValue: 'ユーザーがログインしている',
+              newValue: '更新された前提条件',
+            },
+          ],
           { type: 'user', id: 'user-1', name: 'Test User' }
         );
       });
@@ -212,10 +227,15 @@ describe('TestCaseService - イベント発行', () => {
       it('イベント発行エラー時もメイン処理は成功する', async () => {
         mockPublishTestCaseUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
-        const result = await service.updatePrecondition('test-case-1', 'precondition-1', 'user-1', { content: '更新された前提条件' });
+        const result = await service.updatePrecondition('test-case-1', 'precondition-1', 'user-1', {
+          content: '更新された前提条件',
+        });
 
         expect(result).toBeDefined();
-        expect(mockLogger.error).toHaveBeenCalledWith({ err: expect.any(Error) }, 'イベント発行エラー');
+        expect(mockLogger.error).toHaveBeenCalledWith(
+          { err: expect.any(Error) },
+          'イベント発行エラー'
+        );
       });
     });
 
@@ -243,9 +263,14 @@ describe('TestCaseService - イベント発行', () => {
       it('イベント発行エラー時もメイン処理は成功する', async () => {
         mockPublishTestCaseUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
-        await expect(service.deletePrecondition('test-case-1', 'precondition-1', 'user-1')).resolves.toBeUndefined();
+        await expect(
+          service.deletePrecondition('test-case-1', 'precondition-1', 'user-1')
+        ).resolves.toBeUndefined();
 
-        expect(mockLogger.error).toHaveBeenCalledWith({ err: expect.any(Error) }, 'イベント発行エラー');
+        expect(mockLogger.error).toHaveBeenCalledWith(
+          { err: expect.any(Error) },
+          'イベント発行エラー'
+        );
       });
     });
 
@@ -265,13 +290,23 @@ describe('TestCaseService - イベント発行', () => {
       });
 
       it('publishTestCaseUpdatedが正しい引数で呼ばれる', async () => {
-        await service.reorderPreconditions('test-case-1', ['precondition-2', 'precondition-1'], 'user-1');
+        await service.reorderPreconditions(
+          'test-case-1',
+          ['precondition-2', 'precondition-1'],
+          'user-1'
+        );
 
         expect(mockPublishTestCaseUpdated).toHaveBeenCalledWith(
           'test-case-1',
           'test-suite-1',
           'project-1',
-          [{ field: 'precondition:reorder', oldValue: ['precondition-1', 'precondition-2'], newValue: ['precondition-2', 'precondition-1'] }],
+          [
+            {
+              field: 'precondition:reorder',
+              oldValue: ['precondition-1', 'precondition-2'],
+              newValue: ['precondition-2', 'precondition-1'],
+            },
+          ],
           { type: 'user', id: 'user-1', name: 'Test User' }
         );
       });
@@ -279,10 +314,17 @@ describe('TestCaseService - イベント発行', () => {
       it('イベント発行エラー時もメイン処理は成功する', async () => {
         mockPublishTestCaseUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
-        const result = await service.reorderPreconditions('test-case-1', ['precondition-2', 'precondition-1'], 'user-1');
+        const result = await service.reorderPreconditions(
+          'test-case-1',
+          ['precondition-2', 'precondition-1'],
+          'user-1'
+        );
 
         expect(result).toBeDefined();
-        expect(mockLogger.error).toHaveBeenCalledWith({ err: expect.any(Error) }, 'イベント発行エラー');
+        expect(mockLogger.error).toHaveBeenCalledWith(
+          { err: expect.any(Error) },
+          'イベント発行エラー'
+        );
       });
     });
   });
@@ -321,10 +363,15 @@ describe('TestCaseService - イベント発行', () => {
       it('イベント発行エラー時もメイン処理は成功する', async () => {
         mockPublishTestCaseUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
-        const result = await service.addStep('test-case-1', 'user-1', { content: '新しいステップ' });
+        const result = await service.addStep('test-case-1', 'user-1', {
+          content: '新しいステップ',
+        });
 
         expect(result).toBeDefined();
-        expect(mockLogger.error).toHaveBeenCalledWith({ err: expect.any(Error) }, 'イベント発行エラー');
+        expect(mockLogger.error).toHaveBeenCalledWith(
+          { err: expect.any(Error) },
+          'イベント発行エラー'
+        );
       });
     });
 
@@ -340,13 +387,21 @@ describe('TestCaseService - イベント発行', () => {
       });
 
       it('publishTestCaseUpdatedが正しい引数で呼ばれる', async () => {
-        await service.updateStep('test-case-1', 'step-1', 'user-1', { content: '更新されたステップ' });
+        await service.updateStep('test-case-1', 'step-1', 'user-1', {
+          content: '更新されたステップ',
+        });
 
         expect(mockPublishTestCaseUpdated).toHaveBeenCalledWith(
           'test-case-1',
           'test-suite-1',
           'project-1',
-          [{ field: 'step:update', oldValue: 'ログインボタンをクリック', newValue: '更新されたステップ' }],
+          [
+            {
+              field: 'step:update',
+              oldValue: 'ログインボタンをクリック',
+              newValue: '更新されたステップ',
+            },
+          ],
           { type: 'user', id: 'user-1', name: 'Test User' }
         );
       });
@@ -354,10 +409,15 @@ describe('TestCaseService - イベント発行', () => {
       it('イベント発行エラー時もメイン処理は成功する', async () => {
         mockPublishTestCaseUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
-        const result = await service.updateStep('test-case-1', 'step-1', 'user-1', { content: '更新されたステップ' });
+        const result = await service.updateStep('test-case-1', 'step-1', 'user-1', {
+          content: '更新されたステップ',
+        });
 
         expect(result).toBeDefined();
-        expect(mockLogger.error).toHaveBeenCalledWith({ err: expect.any(Error) }, 'イベント発行エラー');
+        expect(mockLogger.error).toHaveBeenCalledWith(
+          { err: expect.any(Error) },
+          'イベント発行エラー'
+        );
       });
     });
 
@@ -385,9 +445,14 @@ describe('TestCaseService - イベント発行', () => {
       it('イベント発行エラー時もメイン処理は成功する', async () => {
         mockPublishTestCaseUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
-        await expect(service.deleteStep('test-case-1', 'step-1', 'user-1')).resolves.toBeUndefined();
+        await expect(
+          service.deleteStep('test-case-1', 'step-1', 'user-1')
+        ).resolves.toBeUndefined();
 
-        expect(mockLogger.error).toHaveBeenCalledWith({ err: expect.any(Error) }, 'イベント発行エラー');
+        expect(mockLogger.error).toHaveBeenCalledWith(
+          { err: expect.any(Error) },
+          'イベント発行エラー'
+        );
       });
     });
 
@@ -413,7 +478,13 @@ describe('TestCaseService - イベント発行', () => {
           'test-case-1',
           'test-suite-1',
           'project-1',
-          [{ field: 'step:reorder', oldValue: ['step-1', 'step-2'], newValue: ['step-2', 'step-1'] }],
+          [
+            {
+              field: 'step:reorder',
+              oldValue: ['step-1', 'step-2'],
+              newValue: ['step-2', 'step-1'],
+            },
+          ],
           { type: 'user', id: 'user-1', name: 'Test User' }
         );
       });
@@ -424,7 +495,10 @@ describe('TestCaseService - イベント発行', () => {
         const result = await service.reorderSteps('test-case-1', ['step-2', 'step-1'], 'user-1');
 
         expect(result).toBeDefined();
-        expect(mockLogger.error).toHaveBeenCalledWith({ err: expect.any(Error) }, 'イベント発行エラー');
+        expect(mockLogger.error).toHaveBeenCalledWith(
+          { err: expect.any(Error) },
+          'イベント発行エラー'
+        );
       });
     });
   });
@@ -449,7 +523,9 @@ describe('TestCaseService - イベント発行', () => {
       });
 
       it('publishTestCaseUpdatedが正しい引数で呼ばれる', async () => {
-        await service.addExpectedResult('test-case-1', 'user-1', { content: 'ログイン画面が表示される' });
+        await service.addExpectedResult('test-case-1', 'user-1', {
+          content: 'ログイン画面が表示される',
+        });
 
         expect(mockPublishTestCaseUpdated).toHaveBeenCalledWith(
           'test-case-1',
@@ -463,10 +539,15 @@ describe('TestCaseService - イベント発行', () => {
       it('イベント発行エラー時もメイン処理は成功する', async () => {
         mockPublishTestCaseUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
-        const result = await service.addExpectedResult('test-case-1', 'user-1', { content: '新しい期待結果' });
+        const result = await service.addExpectedResult('test-case-1', 'user-1', {
+          content: '新しい期待結果',
+        });
 
         expect(result).toBeDefined();
-        expect(mockLogger.error).toHaveBeenCalledWith({ err: expect.any(Error) }, 'イベント発行エラー');
+        expect(mockLogger.error).toHaveBeenCalledWith(
+          { err: expect.any(Error) },
+          'イベント発行エラー'
+        );
       });
     });
 
@@ -482,13 +563,21 @@ describe('TestCaseService - イベント発行', () => {
       });
 
       it('publishTestCaseUpdatedが正しい引数で呼ばれる', async () => {
-        await service.updateExpectedResult('test-case-1', 'expected-1', 'user-1', { content: '更新された期待結果' });
+        await service.updateExpectedResult('test-case-1', 'expected-1', 'user-1', {
+          content: '更新された期待結果',
+        });
 
         expect(mockPublishTestCaseUpdated).toHaveBeenCalledWith(
           'test-case-1',
           'test-suite-1',
           'project-1',
-          [{ field: 'expectedResult:update', oldValue: 'ログイン画面が表示される', newValue: '更新された期待結果' }],
+          [
+            {
+              field: 'expectedResult:update',
+              oldValue: 'ログイン画面が表示される',
+              newValue: '更新された期待結果',
+            },
+          ],
           { type: 'user', id: 'user-1', name: 'Test User' }
         );
       });
@@ -496,10 +585,15 @@ describe('TestCaseService - イベント発行', () => {
       it('イベント発行エラー時もメイン処理は成功する', async () => {
         mockPublishTestCaseUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
-        const result = await service.updateExpectedResult('test-case-1', 'expected-1', 'user-1', { content: '更新された期待結果' });
+        const result = await service.updateExpectedResult('test-case-1', 'expected-1', 'user-1', {
+          content: '更新された期待結果',
+        });
 
         expect(result).toBeDefined();
-        expect(mockLogger.error).toHaveBeenCalledWith({ err: expect.any(Error) }, 'イベント発行エラー');
+        expect(mockLogger.error).toHaveBeenCalledWith(
+          { err: expect.any(Error) },
+          'イベント発行エラー'
+        );
       });
     });
 
@@ -527,9 +621,14 @@ describe('TestCaseService - イベント発行', () => {
       it('イベント発行エラー時もメイン処理は成功する', async () => {
         mockPublishTestCaseUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
-        await expect(service.deleteExpectedResult('test-case-1', 'expected-1', 'user-1')).resolves.toBeUndefined();
+        await expect(
+          service.deleteExpectedResult('test-case-1', 'expected-1', 'user-1')
+        ).resolves.toBeUndefined();
 
-        expect(mockLogger.error).toHaveBeenCalledWith({ err: expect.any(Error) }, 'イベント発行エラー');
+        expect(mockLogger.error).toHaveBeenCalledWith(
+          { err: expect.any(Error) },
+          'イベント発行エラー'
+        );
       });
     });
 
@@ -555,7 +654,13 @@ describe('TestCaseService - イベント発行', () => {
           'test-case-1',
           'test-suite-1',
           'project-1',
-          [{ field: 'expectedResult:reorder', oldValue: ['expected-1', 'expected-2'], newValue: ['expected-2', 'expected-1'] }],
+          [
+            {
+              field: 'expectedResult:reorder',
+              oldValue: ['expected-1', 'expected-2'],
+              newValue: ['expected-2', 'expected-1'],
+            },
+          ],
           { type: 'user', id: 'user-1', name: 'Test User' }
         );
       });
@@ -563,10 +668,17 @@ describe('TestCaseService - イベント発行', () => {
       it('イベント発行エラー時もメイン処理は成功する', async () => {
         mockPublishTestCaseUpdated.mockRejectedValueOnce(new Error('Redis error'));
 
-        const result = await service.reorderExpectedResults('test-case-1', ['expected-2', 'expected-1'], 'user-1');
+        const result = await service.reorderExpectedResults(
+          'test-case-1',
+          ['expected-2', 'expected-1'],
+          'user-1'
+        );
 
         expect(result).toBeDefined();
-        expect(mockLogger.error).toHaveBeenCalledWith({ err: expect.any(Error) }, 'イベント発行エラー');
+        expect(mockLogger.error).toHaveBeenCalledWith(
+          { err: expect.any(Error) },
+          'イベント発行エラー'
+        );
       });
     });
   });
@@ -643,7 +755,10 @@ describe('TestCaseService - イベント発行', () => {
       const result = await service.copy('source-case-1', 'user-1', {});
 
       expect(result).toBeDefined();
-      expect(mockLogger.error).toHaveBeenCalledWith({ err: expect.any(Error) }, 'イベント発行エラー');
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { err: expect.any(Error) },
+        'イベント発行エラー'
+      );
     });
   });
 
@@ -688,7 +803,10 @@ describe('TestCaseService - イベント発行', () => {
       });
 
       expect(result).toBeDefined();
-      expect(mockLogger.error).toHaveBeenCalledWith({ err: expect.any(Error) }, 'イベント発行エラー');
+      expect(mockLogger.error).toHaveBeenCalledWith(
+        { err: expect.any(Error) },
+        'イベント発行エラー'
+      );
     });
   });
 

@@ -703,7 +703,10 @@ describe('OAuthService', () => {
 
       (mockRepository.findAccessTokenByHash as any).mockResolvedValue(mockAccessToken);
 
-      const result = await service.validateAccessToken('access-token', 'http://different-audience:3002');
+      const result = await service.validateAccessToken(
+        'access-token',
+        'http://different-audience:3002'
+      );
 
       expect(result).toBeNull();
     });

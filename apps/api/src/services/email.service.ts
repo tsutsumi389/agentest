@@ -103,18 +103,24 @@ class EmailService {
 
       // 開発環境ではログ出力
       if (env.NODE_ENV !== 'production') {
-        logger.info({
-          to,
-          subject,
-          mailpitUrl: 'http://localhost:8025',
-        }, 'メール送信完了');
+        logger.info(
+          {
+            to,
+            subject,
+            mailpitUrl: 'http://localhost:8025',
+          },
+          'メール送信完了'
+        );
       }
     } catch (error) {
-      logger.error({
-        err: error,
-        to,
-        subject,
-      }, 'メール送信エラー');
+      logger.error(
+        {
+          err: error,
+          to,
+          subject,
+        },
+        'メール送信エラー'
+      );
       // エラーは握りつぶさず、呼び出し元でハンドリングできるようにする
       // ただし、通知送信失敗でアプリ全体がクラッシュしないよう注意
       throw error;

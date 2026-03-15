@@ -28,7 +28,12 @@ export class TestCaseStepsService extends TestCaseChildrenBaseService {
    * ステップを追加
    * @param groupId 外部から指定されたgroupId（省略時は自動生成）
    */
-  async addStep(testCaseId: string, userId: string, data: { content: string; orderKey?: string }, groupId?: string) {
+  async addStep(
+    testCaseId: string,
+    userId: string,
+    data: { content: string; orderKey?: string },
+    groupId?: string
+  ) {
     const testCase = await this.findById(testCaseId);
 
     const effectiveGroupId = groupId ?? crypto.randomUUID();
@@ -65,7 +70,11 @@ export class TestCaseStepsService extends TestCaseChildrenBaseService {
 
       // テストケース更新イベント発行（エラー時も処理継続）
       await this.publishEventSafely(
-        tx, testCaseId, testCase.testSuiteId, testCase.testSuite.projectId, userId,
+        tx,
+        testCaseId,
+        testCase.testSuiteId,
+        testCase.testSuite.projectId,
+        userId,
         [{ field: 'step:add', oldValue: null, newValue: step.id }]
       );
 
@@ -77,7 +86,13 @@ export class TestCaseStepsService extends TestCaseChildrenBaseService {
    * ステップを更新
    * @param groupId 外部から指定されたgroupId（省略時は自動生成）
    */
-  async updateStep(testCaseId: string, stepId: string, userId: string, data: { content: string }, groupId?: string) {
+  async updateStep(
+    testCaseId: string,
+    stepId: string,
+    userId: string,
+    data: { content: string },
+    groupId?: string
+  ) {
     const testCase = await this.findById(testCaseId);
 
     // ステップの存在確認
@@ -116,7 +131,11 @@ export class TestCaseStepsService extends TestCaseChildrenBaseService {
 
       // テストケース更新イベント発行（エラー時も処理継続）
       await this.publishEventSafely(
-        tx, testCaseId, testCase.testSuiteId, testCase.testSuite.projectId, userId,
+        tx,
+        testCaseId,
+        testCase.testSuiteId,
+        testCase.testSuite.projectId,
+        userId,
         [{ field: 'step:update', oldValue: step.content, newValue: data.content }]
       );
 
@@ -177,7 +196,11 @@ export class TestCaseStepsService extends TestCaseChildrenBaseService {
 
       // テストケース更新イベント発行（エラー時も処理継続）
       await this.publishEventSafely(
-        tx, testCaseId, testCase.testSuiteId, testCase.testSuite.projectId, userId,
+        tx,
+        testCaseId,
+        testCase.testSuiteId,
+        testCase.testSuite.projectId,
+        userId,
         [{ field: 'step:delete', oldValue: stepId, newValue: null }]
       );
     });
@@ -254,7 +277,11 @@ export class TestCaseStepsService extends TestCaseChildrenBaseService {
 
       // テストケース更新イベント発行（エラー時も処理継続）
       await this.publishEventSafely(
-        tx, testCaseId, testCase.testSuiteId, testCase.testSuite.projectId, userId,
+        tx,
+        testCaseId,
+        testCase.testSuiteId,
+        testCase.testSuite.projectId,
+        userId,
         [{ field: 'step:reorder', oldValue: currentOrder, newValue: stepIds }]
       );
     });

@@ -229,10 +229,7 @@ describe('SessionRepository', () => {
 
       expect(mockPrismaSession.deleteMany).toHaveBeenCalledWith({
         where: {
-          OR: [
-            { expiresAt: { lt: expect.any(Date) } },
-            { revokedAt: { not: null } },
-          ],
+          OR: [{ expiresAt: { lt: expect.any(Date) } }, { revokedAt: { not: null } }],
         },
       });
       expect(result).toEqual({ count: 10 });

@@ -1,6 +1,9 @@
 import type { LockTargetType } from '@agentest/db';
 import { LockConflictError, NotFoundError, AuthorizationError } from '@agentest/shared';
-import { EditLockRepository, type EditLockWithOwner } from '../repositories/edit-lock.repository.js';
+import {
+  EditLockRepository,
+  type EditLockWithOwner,
+} from '../repositories/edit-lock.repository.js';
 
 /**
  * ロック設定

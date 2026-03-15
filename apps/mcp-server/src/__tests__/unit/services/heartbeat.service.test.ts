@@ -80,20 +80,22 @@ describe('HeartbeatService', () => {
 
       // 1秒進める → interval分の1回増加
       await vi.advanceTimersByTimeAsync(1000);
-      expect(mockAgentSessionService.processTimedOutSessions).toHaveBeenCalledTimes(initialCount + 1);
+      expect(mockAgentSessionService.processTimedOutSessions).toHaveBeenCalledTimes(
+        initialCount + 1
+      );
 
       // もう1秒進める → さらに1回増加
       await vi.advanceTimersByTimeAsync(1000);
-      expect(mockAgentSessionService.processTimedOutSessions).toHaveBeenCalledTimes(initialCount + 2);
+      expect(mockAgentSessionService.processTimedOutSessions).toHaveBeenCalledTimes(
+        initialCount + 2
+      );
     });
 
     it('すでに起動中の場合は警告して何もしない', () => {
       heartbeatService.start(1000);
       heartbeatService.start(1000);
 
-      expect(mockLogger.warn).toHaveBeenCalledWith(
-        'ハートビートサービスは既に起動しています'
-      );
+      expect(mockLogger.warn).toHaveBeenCalledWith('ハートビートサービスは既に起動しています');
     });
 
     it('タイムアウトチェックでエラーが発生してもクラッシュしない', async () => {
@@ -135,9 +137,7 @@ describe('HeartbeatService', () => {
       // 時間を進めてもこれ以上呼ばれない
       await vi.advanceTimersByTimeAsync(5000);
 
-      expect(mockAgentSessionService.processTimedOutSessions).toHaveBeenCalledTimes(
-        callCount
-      );
+      expect(mockAgentSessionService.processTimedOutSessions).toHaveBeenCalledTimes(callCount);
     });
 
     it('起動していない状態で停止しても問題ない', () => {

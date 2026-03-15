@@ -31,7 +31,7 @@ function buildCacheKey(type: TokenType, token: string): string {
  */
 export async function getCachedTokenValidation<T>(
   type: TokenType,
-  token: string,
+  token: string
 ): Promise<T | null> {
   const redis = getRedisClient();
   if (!redis) {
@@ -62,7 +62,7 @@ export async function cacheTokenValidation<T>(
   type: TokenType,
   token: string,
   result: T,
-  ttlSeconds: number = DEFAULT_TTL_SECONDS,
+  ttlSeconds: number = DEFAULT_TTL_SECONDS
 ): Promise<void> {
   const redis = getRedisClient();
   if (!redis) {
@@ -80,10 +80,7 @@ export async function cacheTokenValidation<T>(
 /**
  * トークンのキャッシュを削除
  */
-export async function invalidateTokenCache(
-  type: TokenType,
-  token: string,
-): Promise<void> {
+export async function invalidateTokenCache(type: TokenType, token: string): Promise<void> {
   const redis = getRedisClient();
   if (!redis) {
     return;

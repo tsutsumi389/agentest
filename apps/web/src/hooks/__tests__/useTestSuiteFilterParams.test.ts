@@ -75,7 +75,9 @@ describe('useTestSuiteFilterParams', () => {
 
     it('すべてのパラメータを同時に読み取る', () => {
       const { result } = renderFilterHook(
-        new URLSearchParams('q=検索語&status=ARCHIVED&labels=a,b&sort=name&order=asc&deleted=true&page=2')
+        new URLSearchParams(
+          'q=検索語&status=ARCHIVED&labels=a,b&sort=name&order=asc&deleted=true&page=2'
+        )
       );
 
       expect(result.current.filters).toEqual({
@@ -188,10 +190,9 @@ describe('useTestSuiteFilterParams', () => {
         result.current.setFilters({ ...DEFAULT_SEARCH_PARAMS, q: 'test' });
       });
 
-      expect(mockSetSearchParams).toHaveBeenCalledWith(
-        expect.any(URLSearchParams),
-        { replace: true }
-      );
+      expect(mockSetSearchParams).toHaveBeenCalledWith(expect.any(URLSearchParams), {
+        replace: true,
+      });
     });
 
     it('フィルタ変更時にpageがリセットされること', () => {
@@ -263,7 +264,9 @@ describe('useTestSuiteFilterParams', () => {
 
   describe('resetFilters ヘルパー', () => {
     it('フィルターをデフォルト値にリセットする', () => {
-      const { result } = renderFilterHook(new URLSearchParams('q=test&status=DRAFT&labels=a,b&page=3&tab=suites'));
+      const { result } = renderFilterHook(
+        new URLSearchParams('q=test&status=DRAFT&labels=a,b&page=3&tab=suites')
+      );
 
       act(() => {
         result.current.resetFilters();

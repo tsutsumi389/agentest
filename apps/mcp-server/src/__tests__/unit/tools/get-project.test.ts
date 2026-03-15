@@ -70,9 +70,7 @@ describe('getProjectTool', () => {
       const context: ToolContext = { userId: '' };
       const input = { projectId: TEST_PROJECT_ID };
 
-      await expect(getProjectTool.handler(input, context)).rejects.toThrow(
-        '認証されていません'
-      );
+      await expect(getProjectTool.handler(input, context)).rejects.toThrow('認証されていません');
       expect(mockApiClient.get).not.toHaveBeenCalled();
     });
 
@@ -86,10 +84,9 @@ describe('getProjectTool', () => {
 
       const result = await getProjectTool.handler(input, context);
 
-      expect(mockApiClient.get).toHaveBeenCalledWith(
-        `/internal/api/projects/${TEST_PROJECT_ID}`,
-        { userId: TEST_USER_ID }
-      );
+      expect(mockApiClient.get).toHaveBeenCalledWith(`/internal/api/projects/${TEST_PROJECT_ID}`, {
+        userId: TEST_USER_ID,
+      });
       expect(result).toEqual(mockResponse);
     });
 
@@ -118,7 +115,9 @@ describe('getProjectTool', () => {
 
       const result = await getProjectTool.handler(input, context);
 
-      expect((result as { project: { environments: unknown[] } }).project.environments).toHaveLength(2);
+      expect(
+        (result as { project: { environments: unknown[] } }).project.environments
+      ).toHaveLength(2);
     });
 
     it('APIエラーを伝播する（404）', async () => {
@@ -135,9 +134,7 @@ describe('getProjectTool', () => {
     });
 
     it('APIエラーを伝播する（403）', async () => {
-      mockApiClient.get.mockRejectedValueOnce(
-        new Error('Internal API error: 403 - Access denied')
-      );
+      mockApiClient.get.mockRejectedValueOnce(new Error('Internal API error: 403 - Access denied'));
 
       const context: ToolContext = { userId: TEST_USER_ID };
       const input = { projectId: TEST_PROJECT_ID };

@@ -15,10 +15,7 @@ import { BadRequestError } from '@agentest/shared';
 import { TestCasePreconditionsService } from './test-case-preconditions.service.js';
 import { TestCaseStepsService } from './test-case-steps.service.js';
 import { TestCaseExpectedResultsService } from './test-case-expected-results.service.js';
-import {
-  indexToOrderKey,
-  type HistorySnapshot,
-} from './test-case-children-base.service.js';
+import { indexToOrderKey, type HistorySnapshot } from './test-case-children-base.service.js';
 
 // 型・定数・ユーティリティのre-export（既存importを維持）
 export {
@@ -54,11 +51,22 @@ export class TestCaseChildrenService extends TestCasePreconditionsService {
     return this._stepsService.getSteps(testCaseId);
   }
 
-  async addStep(testCaseId: string, userId: string, data: { content: string; orderKey?: string }, groupId?: string) {
+  async addStep(
+    testCaseId: string,
+    userId: string,
+    data: { content: string; orderKey?: string },
+    groupId?: string
+  ) {
     return this._stepsService.addStep(testCaseId, userId, data, groupId);
   }
 
-  async updateStep(testCaseId: string, stepId: string, userId: string, data: { content: string }, groupId?: string) {
+  async updateStep(
+    testCaseId: string,
+    stepId: string,
+    userId: string,
+    data: { content: string },
+    groupId?: string
+  ) {
     return this._stepsService.updateStep(testCaseId, stepId, userId, data, groupId);
   }
 
@@ -76,20 +84,57 @@ export class TestCaseChildrenService extends TestCasePreconditionsService {
     return this._expectedResultsService.getExpectedResults(testCaseId);
   }
 
-  async addExpectedResult(testCaseId: string, userId: string, data: { content: string; orderKey?: string }, groupId?: string) {
+  async addExpectedResult(
+    testCaseId: string,
+    userId: string,
+    data: { content: string; orderKey?: string },
+    groupId?: string
+  ) {
     return this._expectedResultsService.addExpectedResult(testCaseId, userId, data, groupId);
   }
 
-  async updateExpectedResult(testCaseId: string, expectedResultId: string, userId: string, data: { content: string }, groupId?: string) {
-    return this._expectedResultsService.updateExpectedResult(testCaseId, expectedResultId, userId, data, groupId);
+  async updateExpectedResult(
+    testCaseId: string,
+    expectedResultId: string,
+    userId: string,
+    data: { content: string },
+    groupId?: string
+  ) {
+    return this._expectedResultsService.updateExpectedResult(
+      testCaseId,
+      expectedResultId,
+      userId,
+      data,
+      groupId
+    );
   }
 
-  async deleteExpectedResult(testCaseId: string, expectedResultId: string, userId: string, groupId?: string) {
-    return this._expectedResultsService.deleteExpectedResult(testCaseId, expectedResultId, userId, groupId);
+  async deleteExpectedResult(
+    testCaseId: string,
+    expectedResultId: string,
+    userId: string,
+    groupId?: string
+  ) {
+    return this._expectedResultsService.deleteExpectedResult(
+      testCaseId,
+      expectedResultId,
+      userId,
+      groupId
+    );
   }
 
-  async reorderExpectedResults(testCaseId: string, expectedResultIds: string[], userId: string, groupId?: string) {
-    return this._expectedResultsService.reorderExpectedResults(testCaseId, expectedResultIds, userId, groupId);
+  async reorderExpectedResults(
+    testCaseId: string,
+    expectedResultIds: string[],
+    userId: string,
+    groupId?: string
+  ) {
+    return this._expectedResultsService.reorderExpectedResults(
+      testCaseId,
+      expectedResultIds,
+      userId,
+      groupId
+    );
   }
 
   // --- 差分同期処理（syncChildEntitiesWithHistory）---
@@ -103,7 +148,14 @@ export class TestCaseChildrenService extends TestCasePreconditionsService {
   protected async syncChildEntitiesWithHistory(
     tx: Prisma.TransactionClient,
     testCaseId: string,
-    testCase: { id: string; testSuiteId: string; title: string; description: string | null; priority: string; status: string },
+    testCase: {
+      id: string;
+      testSuiteId: string;
+      title: string;
+      description: string | null;
+      priority: string;
+      status: string;
+    },
     userId: string,
     entityType: 'precondition' | 'step' | 'expectedResult',
     items: { id?: string; content: string }[],
@@ -123,7 +175,11 @@ export class TestCaseChildrenService extends TestCasePreconditionsService {
     // 削除処理と履歴作成
     for (const deleteId of toDelete) {
       const existing = existingMap.get(deleteId)!;
-      const entityInfo = { id: existing.id, content: existing.content, orderKey: existing.orderKey };
+      const entityInfo = {
+        id: existing.id,
+        content: existing.content,
+        orderKey: existing.orderKey,
+      };
 
       // エンティティタイプごとに明示的にchangeDetailを構築
       let deleteSnapshot: HistorySnapshot;
@@ -173,7 +229,11 @@ export class TestCaseChildrenService extends TestCasePreconditionsService {
       if (item.id && existingIds.has(item.id)) {
         // 既存エンティティの更新
         const existing = existingMap.get(item.id)!;
-        const entityInfo = { id: existing.id, content: existing.content, orderKey: existing.orderKey };
+        const entityInfo = {
+          id: existing.id,
+          content: existing.content,
+          orderKey: existing.orderKey,
+        };
 
         // 内容が変更されている場合のみ履歴を作成
         if (existing.content !== item.content) {
@@ -247,7 +307,13 @@ export class TestCaseChildrenService extends TestCasePreconditionsService {
           });
           addSnapshot = {
             ...baseSnapshot,
-            preconditions: [{ id: createdEntity.id, content: createdEntity.content, orderKey: createdEntity.orderKey }],
+            preconditions: [
+              {
+                id: createdEntity.id,
+                content: createdEntity.content,
+                orderKey: createdEntity.orderKey,
+              },
+            ],
             changeDetail: {
               type: 'PRECONDITION_ADD',
               preconditionId: createdEntity.id,
@@ -260,7 +326,13 @@ export class TestCaseChildrenService extends TestCasePreconditionsService {
           });
           addSnapshot = {
             ...baseSnapshot,
-            steps: [{ id: createdEntity.id, content: createdEntity.content, orderKey: createdEntity.orderKey }],
+            steps: [
+              {
+                id: createdEntity.id,
+                content: createdEntity.content,
+                orderKey: createdEntity.orderKey,
+              },
+            ],
             changeDetail: {
               type: 'STEP_ADD',
               stepId: createdEntity.id,
@@ -273,7 +345,13 @@ export class TestCaseChildrenService extends TestCasePreconditionsService {
           });
           addSnapshot = {
             ...baseSnapshot,
-            expectedResults: [{ id: createdEntity.id, content: createdEntity.content, orderKey: createdEntity.orderKey }],
+            expectedResults: [
+              {
+                id: createdEntity.id,
+                content: createdEntity.content,
+                orderKey: createdEntity.orderKey,
+              },
+            ],
             changeDetail: {
               type: 'EXPECTED_RESULT_ADD',
               expectedResultId: createdEntity.id,

@@ -41,14 +41,14 @@ function parseFiltersFromURL(searchParams: URLSearchParams): TestSuiteSearchPara
 
   // sort / order
   const sortParam = searchParams.get('sort');
-  const sortBy = (sortParam === 'name' || sortParam === 'createdAt' || sortParam === 'updatedAt')
-    ? sortParam
-    : DEFAULT_SEARCH_PARAMS.sortBy;
+  const sortBy =
+    sortParam === 'name' || sortParam === 'createdAt' || sortParam === 'updatedAt'
+      ? sortParam
+      : DEFAULT_SEARCH_PARAMS.sortBy;
 
   const orderParam = searchParams.get('order');
-  const sortOrder = (orderParam === 'asc' || orderParam === 'desc')
-    ? orderParam
-    : DEFAULT_SEARCH_PARAMS.sortOrder;
+  const sortOrder =
+    orderParam === 'asc' || orderParam === 'desc' ? orderParam : DEFAULT_SEARCH_PARAMS.sortOrder;
 
   // deleted
   const includeDeleted = searchParams.get('deleted') === 'true' ? true : undefined;

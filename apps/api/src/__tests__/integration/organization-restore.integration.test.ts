@@ -27,14 +27,21 @@ vi.mock('@agentest/auth', () => ({
   },
   optionalAuth: () => (_req: any, _res: any, next: any) => next(),
   // allowDeletedOrgオプションを考慮したモック
-  requireOrgRole: (roles: string[], _options?: { allowDeletedOrg?: boolean }) => (_req: any, _res: any, next: any) => {
-    if (!mockOrgRole || !roles.includes(mockOrgRole)) {
-      return next(new AuthorizationError('権限がありません'));
-    }
-    next();
-  },
+  requireOrgRole:
+    (roles: string[], _options?: { allowDeletedOrg?: boolean }) =>
+    (_req: any, _res: any, next: any) => {
+      if (!mockOrgRole || !roles.includes(mockOrgRole)) {
+        return next(new AuthorizationError('権限がありません'));
+      }
+      next();
+    },
   requireProjectRole: () => (_req: any, _res: any, next: any) => next(),
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -123,9 +130,7 @@ describe('Organization Restore API Integration Tests', () => {
     });
 
     it('復元後に監査ログが記録される', async () => {
-      await request(app)
-        .post(`/api/organizations/${organization.id}/restore`)
-        .expect(200);
+      await request(app).post(`/api/organizations/${organization.id}/restore`).expect(200);
 
       const auditLog = await prisma.auditLog.findFirst({
         where: {
@@ -231,14 +236,10 @@ describe('Organization Restore API Integration Tests', () => {
 
     it('復元後は通常の組織操作ができる', async () => {
       // まず復元
-      await request(app)
-        .post(`/api/organizations/${organization.id}/restore`)
-        .expect(200);
+      await request(app).post(`/api/organizations/${organization.id}/restore`).expect(200);
 
       // 組織詳細を取得できる
-      const response = await request(app)
-        .get(`/api/organizations/${organization.id}`)
-        .expect(200);
+      const response = await request(app).get(`/api/organizations/${organization.id}`).expect(200);
 
       expect(response.body.organization.id).toBe(organization.id);
       expect(response.body.organization.deletedAt).toBeNull();

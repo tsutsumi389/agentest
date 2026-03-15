@@ -52,7 +52,12 @@ vi.mock('@agentest/auth', () => ({
     }
     next();
   },
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -66,19 +71,21 @@ vi.mock('@agentest/auth', () => ({
 
 // テストケース権限ミドルウェアをモック
 vi.mock('../../middleware/require-test-case-role.js', () => ({
-  requireTestCaseRole: (roles: string[], _options?: { allowDeletedTestCase?: boolean }) => async (req: any, _res: any, next: any) => {
-    if (!mockTestCaseRole || !roles.includes(mockTestCaseRole)) {
-      return next(new AuthorizationError('権限がありません'));
-    }
-    const testCaseId = req.params.testCaseId;
-    if (testCaseId) {
-      const testCase = await prisma.testCase.findUnique({ where: { id: testCaseId } });
-      if (!testCase) {
-        return next(new NotFoundError('TestCase', testCaseId));
+  requireTestCaseRole:
+    (roles: string[], _options?: { allowDeletedTestCase?: boolean }) =>
+    async (req: any, _res: any, next: any) => {
+      if (!mockTestCaseRole || !roles.includes(mockTestCaseRole)) {
+        return next(new AuthorizationError('権限がありません'));
       }
-    }
-    next();
-  },
+      const testCaseId = req.params.testCaseId;
+      if (testCaseId) {
+        const testCase = await prisma.testCase.findUnique({ where: { id: testCaseId } });
+        if (!testCase) {
+          return next(new NotFoundError('TestCase', testCaseId));
+        }
+      }
+      next();
+    },
 }));
 
 function setTestAuth(
@@ -245,8 +252,14 @@ describe('Test Case Events Integration Tests', () => {
       let precondition2: Awaited<ReturnType<typeof createTestCasePrecondition>>;
 
       beforeEach(async () => {
-        precondition1 = await createTestCasePrecondition(testCase.id, { content: 'First', orderKey: 'a' });
-        precondition2 = await createTestCasePrecondition(testCase.id, { content: 'Second', orderKey: 'b' });
+        precondition1 = await createTestCasePrecondition(testCase.id, {
+          content: 'First',
+          orderKey: 'a',
+        });
+        precondition2 = await createTestCasePrecondition(testCase.id, {
+          content: 'Second',
+          orderKey: 'b',
+        });
       });
 
       it('前提条件並び替え時にpublishTestCaseUpdatedが呼ばれる', async () => {
@@ -350,9 +363,7 @@ describe('Test Case Events Integration Tests', () => {
       });
 
       it('ステップ削除時にpublishTestCaseUpdatedが呼ばれる', async () => {
-        await request(app)
-          .delete(`/api/test-cases/${testCase.id}/steps/${step.id}`)
-          .expect(204);
+        await request(app).delete(`/api/test-cases/${testCase.id}/steps/${step.id}`).expect(204);
 
         expect(mockPublishTestCaseUpdated).toHaveBeenCalledWith(
           testCase.id,
@@ -511,8 +522,14 @@ describe('Test Case Events Integration Tests', () => {
       let expectedResult2: Awaited<ReturnType<typeof createTestCaseExpectedResult>>;
 
       beforeEach(async () => {
-        expectedResult1 = await createTestCaseExpectedResult(testCase.id, { content: 'Result 1', orderKey: 'a' });
-        expectedResult2 = await createTestCaseExpectedResult(testCase.id, { content: 'Result 2', orderKey: 'b' });
+        expectedResult1 = await createTestCaseExpectedResult(testCase.id, {
+          content: 'Result 1',
+          orderKey: 'a',
+        });
+        expectedResult2 = await createTestCaseExpectedResult(testCase.id, {
+          content: 'Result 2',
+          orderKey: 'b',
+        });
       });
 
       it('期待結果並び替え時にpublishTestCaseUpdatedが呼ばれる', async () => {

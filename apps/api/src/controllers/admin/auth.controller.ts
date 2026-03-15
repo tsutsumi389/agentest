@@ -131,7 +131,9 @@ export class AdminAuthController {
       );
 
       if (!newExpiresAt) {
-        throw new AuthenticationError('セッションの延長可能期限を超えています。再度ログインしてください');
+        throw new AuthenticationError(
+          'セッションの延長可能期限を超えています。再度ログインしてください'
+        );
       }
 
       // 新しい有効期限でクッキーを更新

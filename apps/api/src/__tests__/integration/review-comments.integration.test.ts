@@ -41,7 +41,12 @@ vi.mock('@agentest/auth', () => ({
     }
     next();
   },
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -55,36 +60,40 @@ vi.mock('@agentest/auth', () => ({
 
 // テストスイート権限ミドルウェアをモック
 vi.mock('../../middleware/require-test-suite-role.js', () => ({
-  requireTestSuiteRole: (roles: string[], _options?: { allowDeletedSuite?: boolean }) => async (req: any, _res: any, next: any) => {
-    if (!mockTestSuiteRole || !roles.includes(mockTestSuiteRole)) {
-      return next(new AuthorizationError('権限がありません'));
-    }
-    const testSuiteId = req.params.testSuiteId;
-    if (testSuiteId) {
-      const testSuite = await prisma.testSuite.findUnique({ where: { id: testSuiteId } });
-      if (!testSuite) {
-        return next(new NotFoundError('TestSuite', testSuiteId));
+  requireTestSuiteRole:
+    (roles: string[], _options?: { allowDeletedSuite?: boolean }) =>
+    async (req: any, _res: any, next: any) => {
+      if (!mockTestSuiteRole || !roles.includes(mockTestSuiteRole)) {
+        return next(new AuthorizationError('権限がありません'));
       }
-    }
-    next();
-  },
+      const testSuiteId = req.params.testSuiteId;
+      if (testSuiteId) {
+        const testSuite = await prisma.testSuite.findUnique({ where: { id: testSuiteId } });
+        if (!testSuite) {
+          return next(new NotFoundError('TestSuite', testSuiteId));
+        }
+      }
+      next();
+    },
 }));
 
 // テストケース権限ミドルウェアをモック
 vi.mock('../../middleware/require-test-case-role.js', () => ({
-  requireTestCaseRole: (roles: string[], _options?: { allowDeletedTestCase?: boolean }) => async (req: any, _res: any, next: any) => {
-    if (!mockTestCaseRole || !roles.includes(mockTestCaseRole)) {
-      return next(new AuthorizationError('権限がありません'));
-    }
-    const testCaseId = req.params.testCaseId;
-    if (testCaseId) {
-      const testCase = await prisma.testCase.findUnique({ where: { id: testCaseId } });
-      if (!testCase) {
-        return next(new NotFoundError('TestCase', testCaseId));
+  requireTestCaseRole:
+    (roles: string[], _options?: { allowDeletedTestCase?: boolean }) =>
+    async (req: any, _res: any, next: any) => {
+      if (!mockTestCaseRole || !roles.includes(mockTestCaseRole)) {
+        return next(new AuthorizationError('権限がありません'));
       }
-    }
-    next();
-  },
+      const testCaseId = req.params.testCaseId;
+      if (testCaseId) {
+        const testCase = await prisma.testCase.findUnique({ where: { id: testCaseId } });
+        if (!testCase) {
+          return next(new NotFoundError('TestCase', testCaseId));
+        }
+      }
+      next();
+    },
 }));
 
 // レビューコメント権限ミドルウェアをモック
@@ -349,9 +358,7 @@ describe('Review Comments API Integration Tests', () => {
     it('コメント詳細を取得できる', async () => {
       setTestAuth({ id: reader.id, email: reader.email }, 'READ', 'READ', 'READ', 'READ');
 
-      const response = await request(app)
-        .get(`/api/review-comments/${comment.id}`)
-        .expect(200);
+      const response = await request(app).get(`/api/review-comments/${comment.id}`).expect(200);
 
       expect(response.body.comment.id).toBe(comment.id);
       expect(response.body.comment.content).toBe('Existing comment');
@@ -368,9 +375,7 @@ describe('Review Comments API Integration Tests', () => {
     it('権限がない場合は403エラー', async () => {
       setTestAuth({ id: reader.id, email: reader.email }, 'READ', 'READ', 'READ', null);
 
-      const response = await request(app)
-        .get(`/api/review-comments/${comment.id}`)
-        .expect(403);
+      const response = await request(app).get(`/api/review-comments/${comment.id}`).expect(403);
 
       expect(response.body.error.code).toBe('AUTHORIZATION_ERROR');
     });
@@ -439,9 +444,7 @@ describe('Review Comments API Integration Tests', () => {
     });
 
     it('投稿者本人はコメントを削除できる', async () => {
-      await request(app)
-        .delete(`/api/review-comments/${comment.id}`)
-        .expect(204);
+      await request(app).delete(`/api/review-comments/${comment.id}`).expect(204);
 
       // DBから削除されていることを確認
       const deleted = await prisma.reviewComment.findUnique({
@@ -453,9 +456,7 @@ describe('Review Comments API Integration Tests', () => {
     it('他人のコメントは削除できない', async () => {
       setTestAuth({ id: writer.id, email: writer.email }, 'WRITE', 'WRITE', 'WRITE', 'WRITE');
 
-      const response = await request(app)
-        .delete(`/api/review-comments/${comment.id}`)
-        .expect(403);
+      const response = await request(app).delete(`/api/review-comments/${comment.id}`).expect(403);
 
       expect(response.body.error.code).toBe('AUTHORIZATION_ERROR');
     });
@@ -466,9 +467,7 @@ describe('Review Comments API Integration Tests', () => {
         content: 'Reply to be deleted',
       });
 
-      await request(app)
-        .delete(`/api/review-comments/${comment.id}`)
-        .expect(204);
+      await request(app).delete(`/api/review-comments/${comment.id}`).expect(204);
 
       // 返信も削除されていることを確認
       const deletedReply = await prisma.reviewCommentReply.findUnique({

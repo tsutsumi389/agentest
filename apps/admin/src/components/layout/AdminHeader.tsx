@@ -45,9 +45,7 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
             </button>
             <div className="flex items-center gap-3">
               <LayoutDashboard className="w-6 h-6 text-accent" />
-              <span className="text-lg font-semibold text-foreground">
-                Agentest Admin
-              </span>
+              <span className="text-lg font-semibold text-foreground">Agentest Admin</span>
             </div>
             {/* デスクトップ用ナビゲーション */}
             <nav className="hidden md:flex items-center gap-4 ml-2">
@@ -58,9 +56,7 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
                     key={link.to}
                     to={link.to}
                     className={`text-sm font-medium ${
-                      isActive
-                        ? 'text-accent'
-                        : 'text-foreground-muted hover:text-foreground'
+                      isActive ? 'text-accent' : 'text-foreground-muted hover:text-foreground'
                     }`}
                   >
                     {link.label}

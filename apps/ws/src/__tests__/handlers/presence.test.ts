@@ -1,11 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { WebSocket } from 'ws';
-import {
-  testUser,
-  testUser2,
-  createMockWebSocket,
-  getSentMessages,
-} from '../helpers.js';
+import { testUser, testUser2, createMockWebSocket, getSentMessages } from '../helpers.js';
 import {
   handlePresenceJoin,
   handlePresenceLeave,
@@ -37,7 +32,10 @@ describe('handlers/presence', () => {
 
       // user_joinedイベントが送信されていることを確認
       const joinedEvent = messages.find(
-        (m) => typeof m === 'object' && m !== null && (m as { type?: string }).type === 'presence:user_joined'
+        (m) =>
+          typeof m === 'object' &&
+          m !== null &&
+          (m as { type?: string }).type === 'presence:user_joined'
       );
       expect(joinedEvent).toBeDefined();
       expect(joinedEvent).toMatchObject({
@@ -61,7 +59,8 @@ describe('handlers/presence', () => {
 
       // presence:listイベントが送信されていることを確認
       const listEvent = messages.find(
-        (m) => typeof m === 'object' && m !== null && (m as { type?: string }).type === 'presence:list'
+        (m) =>
+          typeof m === 'object' && m !== null && (m as { type?: string }).type === 'presence:list'
       );
       expect(listEvent).toBeDefined();
       expect(listEvent).toMatchObject({
@@ -90,13 +89,17 @@ describe('handlers/presence', () => {
 
       // user_joinedイベントは送信されない
       const joinedEvent = messages.find(
-        (m) => typeof m === 'object' && m !== null && (m as { type?: string }).type === 'presence:user_joined'
+        (m) =>
+          typeof m === 'object' &&
+          m !== null &&
+          (m as { type?: string }).type === 'presence:user_joined'
       );
       expect(joinedEvent).toBeUndefined();
 
       // presence:listは送信される
       const listEvent = messages.find(
-        (m) => typeof m === 'object' && m !== null && (m as { type?: string }).type === 'presence:list'
+        (m) =>
+          typeof m === 'object' && m !== null && (m as { type?: string }).type === 'presence:list'
       );
       expect(listEvent).toBeDefined();
     });
@@ -116,10 +119,7 @@ describe('handlers/presence', () => {
     it('複数のサブスクライバーに通知を送信', async () => {
       const ws1 = createMockWebSocket({ userId: testUser.id });
       const ws2 = createMockWebSocket({ userId: testUser2.id });
-      const subscribers = new Set([
-        ws1 as unknown as WebSocket,
-        ws2 as unknown as WebSocket,
-      ]);
+      const subscribers = new Set([ws1 as unknown as WebSocket, ws2 as unknown as WebSocket]);
 
       // user2が先に参加
       await handlePresenceJoin(TEST_CHANNEL + '-multi', testUser2, subscribers);
@@ -142,10 +142,7 @@ describe('handlers/presence', () => {
       const leaveChannel = TEST_CHANNEL + '-leave';
 
       // 両ユーザーが参加
-      const allSubscribers = new Set([
-        ws1 as unknown as WebSocket,
-        ws2 as unknown as WebSocket,
-      ]);
+      const allSubscribers = new Set([ws1 as unknown as WebSocket, ws2 as unknown as WebSocket]);
       await handlePresenceJoin(leaveChannel, testUser, allSubscribers);
       await handlePresenceJoin(leaveChannel, testUser2, allSubscribers);
       ws1.send.mockClear();
@@ -158,7 +155,10 @@ describe('handlers/presence', () => {
       // 残っているuser2にuser_leftイベントが送信される
       const messages = getSentMessages(ws2);
       const leftEvent = messages.find(
-        (m) => typeof m === 'object' && m !== null && (m as { type?: string }).type === 'presence:user_left'
+        (m) =>
+          typeof m === 'object' &&
+          m !== null &&
+          (m as { type?: string }).type === 'presence:user_left'
       );
       expect(leftEvent).toBeDefined();
       expect(leftEvent).toMatchObject({
@@ -174,10 +174,7 @@ describe('handlers/presence', () => {
       const ws2 = createMockWebSocket({ userId: testUser.id }); // 同じユーザー
       const multiConnChannel = TEST_CHANNEL + '-multiconn';
 
-      const subscribers = new Set([
-        ws1 as unknown as WebSocket,
-        ws2 as unknown as WebSocket,
-      ]);
+      const subscribers = new Set([ws1 as unknown as WebSocket, ws2 as unknown as WebSocket]);
       await handlePresenceJoin(multiConnChannel, testUser, subscribers);
       ws1.send.mockClear();
       ws2.send.mockClear();
@@ -189,7 +186,10 @@ describe('handlers/presence', () => {
       // user_leftイベントは送信されない
       const messages = getSentMessages(ws2);
       const leftEvent = messages.find(
-        (m) => typeof m === 'object' && m !== null && (m as { type?: string }).type === 'presence:user_left'
+        (m) =>
+          typeof m === 'object' &&
+          m !== null &&
+          (m as { type?: string }).type === 'presence:user_left'
       );
       expect(leftEvent).toBeUndefined();
     });
@@ -239,10 +239,7 @@ describe('handlers/presence', () => {
       const multiPresenceChannel = TEST_CHANNEL + '-multi-presence';
       const ws1 = createMockWebSocket({ userId: testUser.id });
       const ws2 = createMockWebSocket({ userId: testUser2.id });
-      const subscribers = new Set([
-        ws1 as unknown as WebSocket,
-        ws2 as unknown as WebSocket,
-      ]);
+      const subscribers = new Set([ws1 as unknown as WebSocket, ws2 as unknown as WebSocket]);
 
       await handlePresenceJoin(multiPresenceChannel, testUser, subscribers);
       await handlePresenceJoin(multiPresenceChannel, testUser2, subscribers);

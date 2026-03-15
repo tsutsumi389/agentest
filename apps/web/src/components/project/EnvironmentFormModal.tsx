@@ -218,7 +218,10 @@ export function EnvironmentFormModal({
 
           {/* ベースURL */}
           <div>
-            <label htmlFor="env-base-url" className="block text-sm font-medium text-foreground mb-1">
+            <label
+              htmlFor="env-base-url"
+              className="block text-sm font-medium text-foreground mb-1"
+            >
               ベースURL
             </label>
             <input
@@ -241,7 +244,10 @@ export function EnvironmentFormModal({
 
           {/* 説明 */}
           <div>
-            <label htmlFor="env-description" className="block text-sm font-medium text-foreground mb-1">
+            <label
+              htmlFor="env-description"
+              className="block text-sm font-medium text-foreground mb-1"
+            >
               説明
             </label>
             <textarea

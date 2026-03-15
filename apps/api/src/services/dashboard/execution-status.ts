@@ -20,13 +20,12 @@ export async function getExecutionStatusSuites(
   environmentId?: string,
   limit: number = EXECUTION_STATUS_DEFAULT_LIMIT
 ): Promise<ExecutionStatusSuites> {
-  const [failingSuites, skippedSuites, neverExecutedSuites, inProgressSuites] =
-    await Promise.all([
-      getFailingSuites(projectId, filteredTestSuiteIds, environmentId, limit),
-      getSkippedSuites(projectId, filteredTestSuiteIds, environmentId, limit),
-      getNeverExecutedSuites(projectId, filteredTestSuiteIds, limit),
-      getInProgressSuites(projectId, filteredTestSuiteIds, environmentId, limit),
-    ]);
+  const [failingSuites, skippedSuites, neverExecutedSuites, inProgressSuites] = await Promise.all([
+    getFailingSuites(projectId, filteredTestSuiteIds, environmentId, limit),
+    getSkippedSuites(projectId, filteredTestSuiteIds, environmentId, limit),
+    getNeverExecutedSuites(projectId, filteredTestSuiteIds, limit),
+    getInProgressSuites(projectId, filteredTestSuiteIds, environmentId, limit),
+  ]);
 
   return {
     failingSuites,
@@ -88,9 +87,7 @@ async function getFailingSuites(
     const lastExecution = suite.executions[0];
     if (!lastExecution) continue;
 
-    const failCount = lastExecution.expectedResults.filter(
-      (r) => r.status === 'FAIL'
-    ).length;
+    const failCount = lastExecution.expectedResults.filter((r) => r.status === 'FAIL').length;
 
     if (failCount > 0) {
       failingItems.push({
@@ -157,9 +154,7 @@ async function getSkippedSuites(
     const lastExecution = suite.executions[0];
     if (!lastExecution) continue;
 
-    const skippedCount = lastExecution.expectedResults.filter(
-      (r) => r.status === 'SKIPPED'
-    ).length;
+    const skippedCount = lastExecution.expectedResults.filter((r) => r.status === 'SKIPPED').length;
 
     if (skippedCount > 0) {
       skippedItems.push({
@@ -274,9 +269,7 @@ async function getInProgressSuites(
     const lastExecution = suite.executions[0];
     if (!lastExecution) continue;
 
-    const pendingCount = lastExecution.expectedResults.filter(
-      (r) => r.status === 'PENDING'
-    ).length;
+    const pendingCount = lastExecution.expectedResults.filter((r) => r.status === 'PENDING').length;
 
     if (pendingCount > 0) {
       inProgressItems.push({

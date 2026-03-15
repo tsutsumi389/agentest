@@ -14,10 +14,9 @@ describe('useDebounce', () => {
 
   it('遅延後に値が更新される', () => {
     vi.useFakeTimers();
-    const { result, rerender } = renderHook(
-      ({ value }) => useDebounce(value, 300),
-      { initialProps: { value: 'initial' } }
-    );
+    const { result, rerender } = renderHook(({ value }) => useDebounce(value, 300), {
+      initialProps: { value: 'initial' },
+    });
 
     rerender({ value: 'updated' });
     // まだ更新されていない
@@ -32,10 +31,9 @@ describe('useDebounce', () => {
 
   it('遅延内の値変更はキャンセルされる', () => {
     vi.useFakeTimers();
-    const { result, rerender } = renderHook(
-      ({ value }) => useDebounce(value, 300),
-      { initialProps: { value: 'initial' } }
-    );
+    const { result, rerender } = renderHook(({ value }) => useDebounce(value, 300), {
+      initialProps: { value: 'initial' },
+    });
 
     rerender({ value: 'first' });
     act(() => {
@@ -60,10 +58,9 @@ describe('useDebounce', () => {
 
   it('デフォルトの遅延は300ms', () => {
     vi.useFakeTimers();
-    const { result, rerender } = renderHook(
-      ({ value }) => useDebounce(value),
-      { initialProps: { value: 'initial' } }
-    );
+    const { result, rerender } = renderHook(({ value }) => useDebounce(value), {
+      initialProps: { value: 'initial' },
+    });
 
     rerender({ value: 'updated' });
 
@@ -80,10 +77,9 @@ describe('useDebounce', () => {
 
   it('数値型でも動作する', () => {
     vi.useFakeTimers();
-    const { result, rerender } = renderHook(
-      ({ value }) => useDebounce(value, 100),
-      { initialProps: { value: 0 } }
-    );
+    const { result, rerender } = renderHook(({ value }) => useDebounce(value, 100), {
+      initialProps: { value: 0 },
+    });
 
     rerender({ value: 42 });
     act(() => {

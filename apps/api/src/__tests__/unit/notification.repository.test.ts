@@ -169,9 +169,7 @@ describe('NotificationRepository', () => {
 
   describe('getPreferences', () => {
     it('ユーザーの通知設定を取得できる', async () => {
-      const mockPreferences = [
-        { type: 'ORG_INVITATION', emailEnabled: true, inAppEnabled: true },
-      ];
+      const mockPreferences = [{ type: 'ORG_INVITATION', emailEnabled: true, inAppEnabled: true }];
       mockPrismaNotificationPreference.findMany.mockResolvedValue(mockPreferences);
 
       const result = await repository.getPreferences('user-1');

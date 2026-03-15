@@ -1,49 +1,29 @@
 # Agentest
 
-Coding Agent（Claude Code等）から使うテスト管理ツール（OSS）。MCPでAIと連携し、テストケース作成・実行を自動化。
-
-## 技術スタック
-
-- **Frontend**: React 19, React Router 7, Tailwind
-- **Backend**: Express 5, Prisma, PostgreSQL
-- **Infra**: Redis, RustFS, Docker（完全Docker開発）
+テスト管理ツール。MCPでAI Coding Agentと連携。
 
 ## コマンド
 
 ```bash
-# 起動・停止
-cd docker && docker compose up      # 開発サーバー起動
-docker compose down                  # 停止
-
-# pnpmコマンド（コンテナ経由）
-docker compose exec dev pnpm install
-docker compose exec dev pnpm test
-docker compose exec dev pnpm build
-docker compose exec dev pnpm lint
+cd docker && docker compose up           # 開発サーバー起動
+docker compose exec dev pnpm install     # 依存インストール
+docker compose exec dev pnpm test        # テスト実行
+docker compose exec dev pnpm build       # ビルド
+docker compose exec dev pnpm lint        # リント
 ```
 
 ## 構造
 
 ```
-apps/
-  admin/         # 管理者向けSPA
-  api/           # REST API
-  jobs/          # バッチ処理（Cloud Run Jobs）
-  mcp-server/    # AI連携（MCP Protocol）
-  web/           # ユーザー向けSPA
-  ws/            # WebSocketサーバー
-packages/
-  auth/          # 認証（OAuth, JWT）
-  db/            # Prismaスキーマ
-  shared/        # 共通型・バリデーション
-  storage/       # ファイルストレージ（S3/MinIO）
-  ui/            # 共通UIコンポーネント
-  ws-types/      # WebSocket型定義
+apps/   admin/ api/ jobs/ mcp-server/ web/ ws/
+packages/   auth/ db/ shared/ storage/ ui/ ws-types/
 ```
 
-## コーディング規約
+## 規約
 
-- コードのコメントは日本語で記載する
+- コメントは日本語
+- ADR: `docs/adr/`
+- Hooks: `.claude/hooks/` で品質ゲート自動実行
 
 ## 詳細
 

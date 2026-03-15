@@ -132,23 +132,17 @@ describe('runProjectCleanup（結合テスト）', () => {
     const user = await createTestUser();
 
     // 削除対象（31日以上前）
-    const oldDeleted1 = await createDeletedTestProject(
-      user.id,
-      daysAgo(31),
-      { name: 'Old Deleted 1' }
-    );
-    const oldDeleted2 = await createDeletedTestProject(
-      user.id,
-      daysAgo(60),
-      { name: 'Old Deleted 2' }
-    );
+    const oldDeleted1 = await createDeletedTestProject(user.id, daysAgo(31), {
+      name: 'Old Deleted 1',
+    });
+    const oldDeleted2 = await createDeletedTestProject(user.id, daysAgo(60), {
+      name: 'Old Deleted 2',
+    });
 
     // 削除対象外（30日未満）
-    const recentDeleted = await createDeletedTestProject(
-      user.id,
-      daysAgo(15),
-      { name: 'Recent Deleted' }
-    );
+    const recentDeleted = await createDeletedTestProject(user.id, daysAgo(15), {
+      name: 'Recent Deleted',
+    });
 
     // 削除対象外（アクティブ）
     const activeProject = await createTestProject(user.id, {

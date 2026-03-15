@@ -139,10 +139,7 @@ describe('notification store', () => {
       await useNotificationStore.getState().fetchMoreNotifications();
 
       expect(useNotificationStore.getState().isLoadingMore).toBe(false);
-      expect(console.error).toHaveBeenCalledWith(
-        '追加通知の取得に失敗:',
-        expect.any(Error)
-      );
+      expect(console.error).toHaveBeenCalledWith('追加通知の取得に失敗:', expect.any(Error));
     });
   });
 
@@ -162,17 +159,18 @@ describe('notification store', () => {
       await useNotificationStore.getState().fetchUnreadCount();
 
       expect(useNotificationStore.getState().unreadCount).toBe(3);
-      expect(console.error).toHaveBeenCalledWith(
-        '未読数の取得に失敗:',
-        expect.any(Error)
-      );
+      expect(console.error).toHaveBeenCalledWith('未読数の取得に失敗:', expect.any(Error));
     });
   });
 
   describe('fetchPreferences', () => {
     it('通知設定を取得する', async () => {
       const prefs = [
-        createMockNotificationPreference({ type: 'ORG_INVITATION', emailEnabled: true, inAppEnabled: true }),
+        createMockNotificationPreference({
+          type: 'ORG_INVITATION',
+          emailEnabled: true,
+          inAppEnabled: true,
+        }),
       ];
       mockApi.getPreferences.mockResolvedValue({ preferences: prefs });
 
@@ -182,19 +180,14 @@ describe('notification store', () => {
     });
 
     it('エラー時は設定を変更しない', async () => {
-      const existingPrefs = [
-        createMockNotificationPreference({ type: 'ORG_INVITATION' }),
-      ];
+      const existingPrefs = [createMockNotificationPreference({ type: 'ORG_INVITATION' })];
       useNotificationStore.setState({ preferences: existingPrefs });
       mockApi.getPreferences.mockRejectedValue(new Error('エラー'));
 
       await useNotificationStore.getState().fetchPreferences();
 
       expect(useNotificationStore.getState().preferences).toEqual(existingPrefs);
-      expect(console.error).toHaveBeenCalledWith(
-        '通知設定の取得に失敗:',
-        expect.any(Error)
-      );
+      expect(console.error).toHaveBeenCalledWith('通知設定の取得に失敗:', expect.any(Error));
     });
   });
 
@@ -229,10 +222,7 @@ describe('notification store', () => {
       const state = useNotificationStore.getState();
       expect(state.notifications[0].readAt).toBeNull();
       expect(state.unreadCount).toBe(1);
-      expect(console.error).toHaveBeenCalledWith(
-        '既読処理に失敗:',
-        expect.any(Error)
-      );
+      expect(console.error).toHaveBeenCalledWith('既読処理に失敗:', expect.any(Error));
     });
 
     it('未読数が0以下にならない', async () => {
@@ -278,10 +268,7 @@ describe('notification store', () => {
       const state = useNotificationStore.getState();
       expect(state.notifications[0].readAt).toBeNull();
       expect(state.unreadCount).toBe(1);
-      expect(console.error).toHaveBeenCalledWith(
-        '全既読処理に失敗:',
-        expect.any(Error)
-      );
+      expect(console.error).toHaveBeenCalledWith('全既読処理に失敗:', expect.any(Error));
     });
   });
 
@@ -315,10 +302,7 @@ describe('notification store', () => {
 
       expect(useNotificationStore.getState().notifications).toHaveLength(1);
       expect(useNotificationStore.getState().unreadCount).toBe(1);
-      expect(console.error).toHaveBeenCalledWith(
-        '通知の削除に失敗:',
-        expect.any(Error)
-      );
+      expect(console.error).toHaveBeenCalledWith('通知の削除に失敗:', expect.any(Error));
     });
 
     it('既読の通知を削除しても未読数は変わらない', async () => {
@@ -338,7 +322,11 @@ describe('notification store', () => {
     it('通知設定を更新する', async () => {
       useNotificationStore.setState({
         preferences: [
-          createMockNotificationPreference({ type: 'ORG_INVITATION', emailEnabled: true, inAppEnabled: true }),
+          createMockNotificationPreference({
+            type: 'ORG_INVITATION',
+            emailEnabled: true,
+            inAppEnabled: true,
+          }),
         ],
       });
       const updatedPref = createMockNotificationPreference({
@@ -348,10 +336,9 @@ describe('notification store', () => {
       });
       mockApi.updatePreference.mockResolvedValue({ preference: updatedPref });
 
-      await useNotificationStore.getState().updatePreference(
-        'ORG_INVITATION',
-        { emailEnabled: false }
-      );
+      await useNotificationStore
+        .getState()
+        .updatePreference('ORG_INVITATION', { emailEnabled: false });
 
       expect(useNotificationStore.getState().preferences[0]).toEqual(updatedPref);
     });
@@ -365,16 +352,12 @@ describe('notification store', () => {
       useNotificationStore.setState({ preferences: [originalPref] });
       mockApi.updatePreference.mockRejectedValue(new Error('エラー'));
 
-      await useNotificationStore.getState().updatePreference(
-        'ORG_INVITATION',
-        { emailEnabled: false }
-      );
+      await useNotificationStore
+        .getState()
+        .updatePreference('ORG_INVITATION', { emailEnabled: false });
 
       expect(useNotificationStore.getState().preferences[0]).toEqual(originalPref);
-      expect(console.error).toHaveBeenCalledWith(
-        '通知設定の更新に失敗:',
-        expect.any(Error)
-      );
+      expect(console.error).toHaveBeenCalledWith('通知設定の更新に失敗:', expect.any(Error));
     });
   });
 
@@ -385,9 +368,9 @@ describe('notification store', () => {
         unreadCount: 0,
       });
 
-      useNotificationStore.getState().handleNotificationReceived(
-        createMockNotification({ id: 'n-2', title: '新しい通知' })
-      );
+      useNotificationStore
+        .getState()
+        .handleNotificationReceived(createMockNotification({ id: 'n-2', title: '新しい通知' }));
 
       const state = useNotificationStore.getState();
       expect(state.notifications).toHaveLength(2);

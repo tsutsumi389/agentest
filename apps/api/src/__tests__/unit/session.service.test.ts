@@ -172,8 +172,9 @@ describe('SessionService', () => {
     it('存在しないセッションはNotFoundErrorを投げる', async () => {
       mockSessionRepo.findById.mockResolvedValue(null);
 
-      await expect(service.revokeSession('user-1', 'invalid-session'))
-        .rejects.toThrow(NotFoundError);
+      await expect(service.revokeSession('user-1', 'invalid-session')).rejects.toThrow(
+        NotFoundError
+      );
     });
 
     it('他ユーザーのセッションはAuthorizationErrorを投げる', async () => {
@@ -184,8 +185,9 @@ describe('SessionService', () => {
       };
       mockSessionRepo.findById.mockResolvedValue(mockSession);
 
-      await expect(service.revokeSession('user-1', 'session-1'))
-        .rejects.toThrow(AuthorizationError);
+      await expect(service.revokeSession('user-1', 'session-1')).rejects.toThrow(
+        AuthorizationError
+      );
     });
 
     it('既に失効済みのセッションはNotFoundErrorを投げる', async () => {
@@ -196,8 +198,7 @@ describe('SessionService', () => {
       };
       mockSessionRepo.findById.mockResolvedValue(mockSession);
 
-      await expect(service.revokeSession('user-1', 'session-1'))
-        .rejects.toThrow(NotFoundError);
+      await expect(service.revokeSession('user-1', 'session-1')).rejects.toThrow(NotFoundError);
     });
   });
 

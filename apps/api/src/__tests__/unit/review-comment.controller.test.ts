@@ -139,11 +139,9 @@ describe('ReviewCommentController', () => {
 
       await controller.update(req, res, mockNext);
 
-      expect(mockReviewCommentService.update).toHaveBeenCalledWith(
-        TEST_COMMENT_ID,
-        TEST_USER_ID,
-        { content: 'Updated comment' }
-      );
+      expect(mockReviewCommentService.update).toHaveBeenCalledWith(TEST_COMMENT_ID, TEST_USER_ID, {
+        content: 'Updated comment',
+      });
       expect(res.json).toHaveBeenCalledWith({ comment: mockComment });
     });
   });

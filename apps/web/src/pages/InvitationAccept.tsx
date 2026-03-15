@@ -1,7 +1,16 @@
 import { useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { useParams, useNavigate, Link } from 'react-router';
-import { Building2, User, Clock, CheckCircle, XCircle, AlertCircle, LogIn, LogOut } from 'lucide-react';
+import {
+  Building2,
+  User,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  LogIn,
+  LogOut,
+} from 'lucide-react';
 import { AgentestLogo } from '../components/ui/AgentestLogo';
 import { useAuthStore } from '../stores/auth';
 import { organizationsApi, ApiError } from '../lib/api';
@@ -29,7 +38,11 @@ function InvitationLayout({ children }: { children: ReactNode }) {
 /**
  * 招待情報カード
  */
-function InvitationInfoCard({ invitation, formatExpiresAt, getRoleLabel }: {
+function InvitationInfoCard({
+  invitation,
+  formatExpiresAt,
+  getRoleLabel,
+}: {
   invitation: InvitationDetail;
   formatExpiresAt: (expiresAt: string) => string;
   getRoleLabel: (role: string) => string;
@@ -40,9 +53,7 @@ function InvitationInfoCard({ invitation, formatExpiresAt, getRoleLabel }: {
         <Building2 className="w-5 h-5 text-foreground-muted flex-shrink-0" />
         <div>
           <div className="text-xs text-foreground-subtle">組織</div>
-          <div className="font-medium text-foreground">
-            {invitation.organization.name}
-          </div>
+          <div className="font-medium text-foreground">{invitation.organization.name}</div>
         </div>
       </div>
 
@@ -50,9 +61,7 @@ function InvitationInfoCard({ invitation, formatExpiresAt, getRoleLabel }: {
         <User className="w-5 h-5 text-foreground-muted flex-shrink-0" />
         <div>
           <div className="text-xs text-foreground-subtle">招待者</div>
-          <div className="font-medium text-foreground">
-            {invitation.invitedBy.name}
-          </div>
+          <div className="font-medium text-foreground">{invitation.invitedBy.name}</div>
         </div>
       </div>
 
@@ -60,9 +69,7 @@ function InvitationInfoCard({ invitation, formatExpiresAt, getRoleLabel }: {
         <Clock className="w-5 h-5 text-foreground-muted flex-shrink-0" />
         <div>
           <div className="text-xs text-foreground-subtle">有効期限</div>
-          <div className="font-medium text-foreground">
-            {formatExpiresAt(invitation.expiresAt)}
-          </div>
+          <div className="font-medium text-foreground">{formatExpiresAt(invitation.expiresAt)}</div>
         </div>
       </div>
 
@@ -237,9 +244,7 @@ export function InvitationAcceptPage() {
             {result === 'accepted' ? (
               <>
                 <CheckCircle className="w-12 h-12 text-success mb-4" />
-                <h1 className="text-lg font-semibold text-foreground mb-2">
-                  招待を承諾しました
-                </h1>
+                <h1 className="text-lg font-semibold text-foreground mb-2">招待を承諾しました</h1>
                 <p className="text-foreground-muted mb-6">
                   「{invitation.organization.name}」のメンバーになりました。
                 </p>
@@ -250,9 +255,7 @@ export function InvitationAcceptPage() {
             ) : (
               <>
                 <XCircle className="w-12 h-12 text-foreground-muted mb-4" />
-                <h1 className="text-lg font-semibold text-foreground mb-2">
-                  招待を辞退しました
-                </h1>
+                <h1 className="text-lg font-semibold text-foreground mb-2">招待を辞退しました</h1>
                 <p className="text-foreground-muted mb-6">
                   「{invitation.organization.name}」への招待を辞退しました。
                 </p>
@@ -300,9 +303,7 @@ export function InvitationAcceptPage() {
         <div className="card p-6">
           <div className="flex flex-col items-center text-center">
             {statusInfo.icon}
-            <h1 className="text-lg font-semibold text-foreground mb-2">
-              {statusInfo.title}
-            </h1>
+            <h1 className="text-lg font-semibold text-foreground mb-2">{statusInfo.title}</h1>
             <p className="text-foreground-muted mb-6">{statusInfo.message}</p>
             {isAuthenticated ? (
               <button onClick={goToDashboard} className="btn btn-secondary">
@@ -324,9 +325,7 @@ export function InvitationAcceptPage() {
     return (
       <InvitationLayout>
         <div className="card p-6">
-          <h1 className="text-lg font-semibold text-foreground text-center mb-6">
-            組織への招待
-          </h1>
+          <h1 className="text-lg font-semibold text-foreground text-center mb-6">組織への招待</h1>
 
           <InvitationInfoCard
             invitation={invitation}
@@ -345,10 +344,7 @@ export function InvitationAcceptPage() {
                 <br />
                 のアカウントでログインしてください。
               </p>
-              <Link
-                to={`/login?redirect=/invitations/${token}`}
-                className="btn btn-primary w-full"
-              >
+              <Link to={`/login?redirect=/invitations/${token}`} className="btn btn-primary w-full">
                 ログイン
               </Link>
             </div>
@@ -369,16 +365,15 @@ export function InvitationAcceptPage() {
               別のアカウントでログインしてください
             </h1>
             <p className="text-foreground-muted mb-4">
-              この招待は <span className="font-medium text-foreground">{invitation.email}</span> 宛てです。
+              この招待は <span className="font-medium text-foreground">{invitation.email}</span>{' '}
+              宛てです。
             </p>
             <p className="text-foreground-muted mb-6">
-              現在 <span className="font-medium text-foreground">{user.email}</span> でログインしています。
+              現在 <span className="font-medium text-foreground">{user.email}</span>{' '}
+              でログインしています。
             </p>
             <div className="space-y-3 w-full">
-              <button
-                onClick={handleLogout}
-                className="btn btn-primary w-full"
-              >
+              <button onClick={handleLogout} className="btn btn-primary w-full">
                 <LogOut className="w-4 h-4" />
                 ログアウトして別アカウントでログイン
               </button>
@@ -396,9 +391,7 @@ export function InvitationAcceptPage() {
   return (
     <InvitationLayout>
       <div className="card p-6">
-        <h1 className="text-lg font-semibold text-foreground text-center mb-6">
-          組織への招待
-        </h1>
+        <h1 className="text-lg font-semibold text-foreground text-center mb-6">組織への招待</h1>
 
         {error && (
           <div className="p-3 bg-danger/10 border border-danger/20 rounded-lg mb-4">
@@ -414,11 +407,7 @@ export function InvitationAcceptPage() {
 
         {/* アクションボタン */}
         <div className="space-y-3">
-          <button
-            onClick={handleAccept}
-            disabled={isProcessing}
-            className="btn btn-primary w-full"
-          >
+          <button onClick={handleAccept} disabled={isProcessing} className="btn btn-primary w-full">
             {isProcessing ? '処理中...' : '招待を承諾'}
           </button>
           <button

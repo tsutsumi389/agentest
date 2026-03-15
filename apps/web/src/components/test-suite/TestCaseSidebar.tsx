@@ -30,7 +30,13 @@ import {
   CircleDot,
 } from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
-import { testSuitesApi, testCasesApi, ApiError, type TestCase, type ProjectMemberRole } from '../../lib/api';
+import {
+  testSuitesApi,
+  testCasesApi,
+  ApiError,
+  type TestCase,
+  type ProjectMemberRole,
+} from '../../lib/api';
 import { toast } from '../../stores/toast';
 import { TestCaseSidebarSkeleton } from './TestCaseSidebarSkeleton';
 
@@ -89,7 +95,11 @@ function getRemainingDays(deletedAt: string | null | undefined): number {
 /**
  * フィルタ定義
  */
-const FILTER_DEFINITIONS: { key: TestCaseFilter; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+const FILTER_DEFINITIONS: {
+  key: TestCaseFilter;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}[] = [
   { key: 'active', label: 'アクティブ', icon: CircleDot },
   { key: 'draft', label: '下書き', icon: FileEdit },
   { key: 'archived', label: 'アーカイブ', icon: Archive },
@@ -116,14 +126,10 @@ function SortableTestCaseItem({
   isDeletedFilter?: boolean;
   onRestore?: (testCaseId: string) => void;
 }) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: testCase.id, disabled: !canReorder || isReordering || !!isDeletedFilter });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: testCase.id,
+    disabled: !canReorder || isReordering || !!isDeletedFilter,
+  });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -143,9 +149,10 @@ function SortableTestCaseItem({
       className={`
         flex items-center gap-2 p-2 rounded-md cursor-pointer transition-colors
         ${isDragging ? 'opacity-50 shadow-lg z-10' : ''}
-        ${isSelected
-          ? 'bg-accent-subtle text-accent'
-          : 'hover:bg-background-tertiary text-foreground'
+        ${
+          isSelected
+            ? 'bg-accent-subtle text-accent'
+            : 'hover:bg-background-tertiary text-foreground'
         }
       `}
       onClick={onSelect}
@@ -164,9 +171,7 @@ function SortableTestCaseItem({
       )}
 
       {/* ゴミ箱アイコン（ゴミ箱フィルタ時） */}
-      {isDeletedFilter && (
-        <Trash2 className="w-3.5 h-3.5 text-foreground-muted flex-shrink-0" />
-      )}
+      {isDeletedFilter && <Trash2 className="w-3.5 h-3.5 text-foreground-muted flex-shrink-0" />}
 
       {/* 優先度ドット（ゴミ箱フィルタ時は非表示） */}
       {!isDeletedFilter && (
@@ -183,7 +188,9 @@ function SortableTestCaseItem({
 
       {/* 残り日数バッジ（ゴミ箱フィルタ時） */}
       {remainingDays !== null && (
-        <span className={`text-xs flex-shrink-0 ${isWarning ? 'text-warning' : 'text-foreground-muted'}`}>
+        <span
+          className={`text-xs flex-shrink-0 ${isWarning ? 'text-warning' : 'text-foreground-muted'}`}
+        >
           残り{remainingDays}日
         </span>
       )}
@@ -326,7 +333,9 @@ export function TestCaseSidebar({
       const testCaseIds = newTestCases.map((tc) => tc.id);
       const response = await testSuitesApi.reorderTestCases(testSuiteId, testCaseIds);
       // サーバーから返された順序で更新
-      const reorderedTestCases = response.testCases.sort((a, b) => a.orderKey.localeCompare(b.orderKey));
+      const reorderedTestCases = response.testCases.sort((a, b) =>
+        a.orderKey.localeCompare(b.orderKey)
+      );
       setLocalTestCases(reorderedTestCases);
       // 親コンポーネントに通知
       onTestCasesReordered?.(reorderedTestCases);
@@ -364,9 +373,7 @@ export function TestCaseSidebar({
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-foreground text-sm flex items-center gap-2">
             テストケース
-            {isReordering && (
-              <Loader2 className="w-3 h-3 animate-spin text-foreground-muted" />
-            )}
+            {isReordering && <Loader2 className="w-3 h-3 animate-spin text-foreground-muted" />}
           </h3>
           {canEdit && (
             <button
@@ -410,9 +417,10 @@ export function TestCaseSidebar({
                   aria-pressed={isActive}
                   className={`
                     p-1.5 rounded-full transition-colors
-                    ${isActive
-                      ? 'bg-accent-subtle text-accent'
-                      : 'text-foreground-muted hover:text-foreground hover:bg-background-tertiary'
+                    ${
+                      isActive
+                        ? 'bg-accent-subtle text-accent'
+                        : 'text-foreground-muted hover:text-foreground hover:bg-background-tertiary'
                     }
                   `}
                 >
@@ -437,9 +445,10 @@ export function TestCaseSidebar({
             aria-label="テストスイート概要を表示"
             className={`
               w-full flex items-center gap-2 p-2 rounded-md text-left transition-colors
-              ${isOverviewMode
-                ? 'bg-accent-subtle text-accent'
-                : 'hover:bg-background-tertiary text-foreground'
+              ${
+                isOverviewMode
+                  ? 'bg-accent-subtle text-accent'
+                  : 'hover:bg-background-tertiary text-foreground'
               }
             `}
           >
@@ -460,9 +469,7 @@ export function TestCaseSidebar({
             ) : (
               <FileText className="w-10 h-10 text-foreground-subtle mx-auto mb-3" />
             )}
-            <p className="text-sm text-foreground-muted">
-              {emptyMessage}
-            </p>
+            <p className="text-sm text-foreground-muted">{emptyMessage}</p>
             {!isSearching && !isDeletedFilter && canEdit && (
               <button
                 onClick={onCreateClick}

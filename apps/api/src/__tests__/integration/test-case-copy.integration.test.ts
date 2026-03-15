@@ -38,7 +38,12 @@ vi.mock('@agentest/auth', () => ({
     }
     next();
   },
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -51,7 +56,10 @@ vi.mock('@agentest/auth', () => ({
 }));
 
 // テスト用認証設定関数
-function setTestAuth(user: { id: string; email: string } | null, projectRole: string | null = null) {
+function setTestAuth(
+  user: { id: string; email: string } | null,
+  projectRole: string | null = null
+) {
   mockAuthUser = user;
   mockProjectRole = projectRole;
 }
@@ -149,7 +157,10 @@ describe('Test Case Copy API Integration Tests', () => {
         await createTestCasePrecondition(testCase.id, { content: '前提条件2', orderKey: '00002' });
         await createTestCaseStep(testCase.id, { content: 'ステップ1', orderKey: '00001' });
         await createTestCaseStep(testCase.id, { content: 'ステップ2', orderKey: '00002' });
-        await createTestCaseExpectedResult(testCase.id, { content: '期待結果1', orderKey: '00001' });
+        await createTestCaseExpectedResult(testCase.id, {
+          content: '期待結果1',
+          orderKey: '00001',
+        });
 
         const response = await request(app)
           .post(`/api/test-cases/${testCase.id}/copy`)

@@ -140,11 +140,9 @@ describe('TestSuiteController', () => {
 
       await controller.delete(req, res, mockNext);
 
-      expect(mockTestSuiteService.softDelete).toHaveBeenCalledWith(
-        TEST_SUITE_ID,
-        TEST_USER_ID,
-        { groupId: undefined }
-      );
+      expect(mockTestSuiteService.softDelete).toHaveBeenCalledWith(TEST_SUITE_ID, TEST_USER_ID, {
+        groupId: undefined,
+      });
       expect(res.status).toHaveBeenCalledWith(204);
       expect(res.send).toHaveBeenCalled();
     });
@@ -404,11 +402,9 @@ describe('TestSuiteController', () => {
 
       await controller.restore(req, res, mockNext);
 
-      expect(mockTestSuiteService.restore).toHaveBeenCalledWith(
-        TEST_SUITE_ID,
-        TEST_USER_ID,
-        { groupId: undefined }
-      );
+      expect(mockTestSuiteService.restore).toHaveBeenCalledWith(TEST_SUITE_ID, TEST_USER_ID, {
+        groupId: undefined,
+      });
       expect(res.json).toHaveBeenCalledWith({ testSuite: mockSuite });
     });
   });

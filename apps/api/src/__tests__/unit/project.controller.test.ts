@@ -183,7 +183,12 @@ describe('ProjectController', () => {
       await controller.addMember(req, res, mockNext);
 
       expect(mockUserRepo.findByEmail).toHaveBeenCalledWith(newUserEmail);
-      expect(mockProjectService.addMember).toHaveBeenCalledWith(TEST_PROJECT_ID, newUserId, 'READ', TEST_USER_ID);
+      expect(mockProjectService.addMember).toHaveBeenCalledWith(
+        TEST_PROJECT_ID,
+        newUserId,
+        'READ',
+        TEST_USER_ID
+      );
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith({ member: mockMember });
     });
@@ -228,7 +233,11 @@ describe('ProjectController', () => {
 
       await controller.updateMemberRole(req, res, mockNext);
 
-      expect(mockProjectService.updateMemberRole).toHaveBeenCalledWith(TEST_PROJECT_ID, targetUserId, 'WRITE');
+      expect(mockProjectService.updateMemberRole).toHaveBeenCalledWith(
+        TEST_PROJECT_ID,
+        targetUserId,
+        'WRITE'
+      );
       expect(res.json).toHaveBeenCalledWith({ member: mockMember });
     });
   });
@@ -315,7 +324,10 @@ describe('ProjectController', () => {
 
       await controller.deleteEnvironment(req, res, mockNext);
 
-      expect(mockProjectService.deleteEnvironment).toHaveBeenCalledWith(TEST_PROJECT_ID, TEST_ENV_ID);
+      expect(mockProjectService.deleteEnvironment).toHaveBeenCalledWith(
+        TEST_PROJECT_ID,
+        TEST_ENV_ID
+      );
       expect(res.status).toHaveBeenCalledWith(204);
     });
   });
@@ -349,18 +361,13 @@ describe('ProjectController', () => {
           {
             id: 'suite-1',
             name: 'Test Suite',
-            testSuiteLabels: [
-              { label: { id: 'label-1', name: 'Label 1', color: '#ff0000' } },
-            ],
+            testSuiteLabels: [{ label: { id: 'label-1', name: 'Label 1', color: '#ff0000' } }],
             executions: [
               {
                 id: 'exec-1',
                 createdAt: new Date(),
                 environment: { id: 'env-1', name: 'Production' },
-                expectedResults: [
-                  { status: 'PASS' },
-                  { status: 'FAIL' },
-                ],
+                expectedResults: [{ status: 'PASS' }, { status: 'FAIL' }],
               },
             ],
           },

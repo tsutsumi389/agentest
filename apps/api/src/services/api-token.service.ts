@@ -169,16 +169,18 @@ export class ApiTokenService {
    * ユーザーのAPIキー一覧を取得
    * @param userId ユーザーID
    */
-  async listTokens(userId: string): Promise<Array<{
-    id: string;
-    name: string;
-    tokenPrefix: string;
-    scopes: string[];
-    expiresAt: Date | null;
-    lastUsedAt: Date | null;
-    revokedAt: Date | null;
-    createdAt: Date;
-  }>> {
+  async listTokens(userId: string): Promise<
+    Array<{
+      id: string;
+      name: string;
+      tokenPrefix: string;
+      scopes: string[];
+      expiresAt: Date | null;
+      lastUsedAt: Date | null;
+      revokedAt: Date | null;
+      createdAt: Date;
+    }>
+  > {
     const tokens = await this.tokenRepo.findByUserId(userId);
 
     return tokens.map((token) => ({

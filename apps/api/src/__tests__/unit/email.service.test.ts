@@ -58,9 +58,7 @@ describe('EmailService', () => {
         html: '<p>HTML</p>',
       });
 
-      expect(mockSendMail).toHaveBeenCalledWith(
-        expect.objectContaining({ html: '<p>HTML</p>' })
-      );
+      expect(mockSendMail).toHaveBeenCalledWith(expect.objectContaining({ html: '<p>HTML</p>' }));
     });
 
     it('送信エラー時はエラーを再スローする', async () => {

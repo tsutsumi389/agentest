@@ -84,12 +84,9 @@ describe('ProjectService - History & Restore', () => {
     it('履歴を作成できる', async () => {
       mockProjectRepo.createHistory.mockResolvedValue(mockHistory);
 
-      const result = await service.createHistory(
-        'project-1',
-        'user-1',
-        'CREATE',
-        { name: 'Test Project' }
-      );
+      const result = await service.createHistory('project-1', 'user-1', 'CREATE', {
+        name: 'Test Project',
+      });
 
       expect(mockProjectRepo.createHistory).toHaveBeenCalledWith({
         projectId: 'project-1',
@@ -172,7 +169,10 @@ describe('ProjectService - History & Restore', () => {
 
       const result = await service.getHistories('project-1', { limit: 1, offset: 0 });
 
-      expect(mockProjectRepo.getHistories).toHaveBeenCalledWith('project-1', { limit: 1, offset: 0 });
+      expect(mockProjectRepo.getHistories).toHaveBeenCalledWith('project-1', {
+        limit: 1,
+        offset: 0,
+      });
       expect(result.histories).toHaveLength(1);
       expect(result.total).toBe(2);
     });
@@ -193,8 +193,7 @@ describe('ProjectService - History & Restore', () => {
       mockProjectRepo.findById.mockResolvedValue(null);
       mockProjectRepo.findDeletedById.mockResolvedValue(null);
 
-      await expect(service.getHistories('invalid-project'))
-        .rejects.toThrow(NotFoundError);
+      await expect(service.getHistories('invalid-project')).rejects.toThrow(NotFoundError);
     });
   });
 
@@ -287,24 +286,20 @@ describe('ProjectService - History & Restore', () => {
 
       mockProjectRepo.findDeletedById.mockResolvedValue(deletedProject);
 
-      await expect(service.restore('project-1', 'user-1'))
-        .rejects.toThrow(ValidationError);
-      await expect(service.restore('project-1', 'user-1'))
-        .rejects.toThrow('30日以上経過');
+      await expect(service.restore('project-1', 'user-1')).rejects.toThrow(ValidationError);
+      await expect(service.restore('project-1', 'user-1')).rejects.toThrow('30日以上経過');
     });
 
     it('削除されていないプロジェクトはNotFoundErrorを投げる', async () => {
       mockProjectRepo.findDeletedById.mockResolvedValue(null);
 
-      await expect(service.restore('project-1', 'user-1'))
-        .rejects.toThrow(NotFoundError);
+      await expect(service.restore('project-1', 'user-1')).rejects.toThrow(NotFoundError);
     });
 
     it('存在しないプロジェクトはNotFoundErrorを投げる', async () => {
       mockProjectRepo.findDeletedById.mockResolvedValue(null);
 
-      await expect(service.restore('invalid-project', 'user-1'))
-        .rejects.toThrow(NotFoundError);
+      await expect(service.restore('invalid-project', 'user-1')).rejects.toThrow(NotFoundError);
     });
   });
 
@@ -407,8 +402,9 @@ describe('ProjectService - History & Restore', () => {
         return (fn as (tx: typeof mockPrisma) => unknown)(mockPrisma);
       });
 
-      await expect(service.update('project-1', { name: 'Updated' }, 'user-1'))
-        .rejects.toThrow('DB error');
+      await expect(service.update('project-1', { name: 'Updated' }, 'user-1')).rejects.toThrow(
+        'DB error'
+      );
     });
 
     it('softDelete中に履歴作成が失敗した場合、削除もロールバックされる', async () => {
@@ -419,8 +415,7 @@ describe('ProjectService - History & Restore', () => {
         return (fn as (tx: typeof mockPrisma) => unknown)(mockPrisma);
       });
 
-      await expect(service.softDelete('project-1', 'user-1'))
-        .rejects.toThrow('DB error');
+      await expect(service.softDelete('project-1', 'user-1')).rejects.toThrow('DB error');
     });
 
     it('restore中に履歴作成が失敗した場合、復元もロールバックされる', async () => {
@@ -432,8 +427,7 @@ describe('ProjectService - History & Restore', () => {
         return (fn as (tx: typeof mockPrisma) => unknown)(mockPrisma);
       });
 
-      await expect(service.restore('project-1', 'user-1'))
-        .rejects.toThrow('DB error');
+      await expect(service.restore('project-1', 'user-1')).rejects.toThrow('DB error');
     });
   });
 });

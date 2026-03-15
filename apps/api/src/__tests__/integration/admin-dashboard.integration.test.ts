@@ -74,8 +74,7 @@ describe('Admin Dashboard API Integration Tests', () => {
     });
 
     it('未認証の場合は401エラーを返す', async () => {
-      const response = await request(app)
-        .get('/admin/dashboard');
+      const response = await request(app).get('/admin/dashboard');
 
       expect(response.status).toBe(401);
     });
@@ -132,10 +131,7 @@ describe('Admin Dashboard API Integration Tests', () => {
       const execution = await createTestExecution(environment.id, testSuite.id);
 
       // 実行スナップショットを作成
-      const executionTestSuite = await createTestExecutionTestSuite(
-        execution.id,
-        testSuite.id
-      );
+      const executionTestSuite = await createTestExecutionTestSuite(execution.id, testSuite.id);
       const executionTestCase = await createTestExecutionTestCase(
         executionTestSuite.id,
         testCase.id

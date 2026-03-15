@@ -32,7 +32,7 @@ export class AdminAuditLogService {
     if (!input.action || input.action.trim() === '') {
       logger.warn(
         { adminUserId: input.adminUserId, targetType: input.targetType },
-        '管理者監査ログ: actionが空のため記録をスキップ',
+        '管理者監査ログ: actionが空のため記録をスキップ'
       );
       return;
     }

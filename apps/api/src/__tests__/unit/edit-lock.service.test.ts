@@ -92,9 +92,9 @@ describe('EditLockService', () => {
       };
       mockLockRepo.findByTarget.mockResolvedValue(existingLock);
 
-      await expect(
-        service.acquireLock('SUITE', 'suite-1', mockUser)
-      ).rejects.toThrow(LockConflictError);
+      await expect(service.acquireLock('SUITE', 'suite-1', mockUser)).rejects.toThrow(
+        LockConflictError
+      );
     });
 
     it('期限切れのロックは削除して新規ロックを取得できる', async () => {
@@ -196,9 +196,9 @@ describe('EditLockService', () => {
     it('存在しないロックはNotFoundErrorをスロー', async () => {
       mockLockRepo.findById.mockResolvedValue(null);
 
-      await expect(
-        service.updateHeartbeat('lock-not-exist', mockUser)
-      ).rejects.toThrow(NotFoundError);
+      await expect(service.updateHeartbeat('lock-not-exist', mockUser)).rejects.toThrow(
+        NotFoundError
+      );
     });
 
     it('他者のロックはAuthorizationErrorをスロー', async () => {
@@ -212,9 +212,7 @@ describe('EditLockService', () => {
       };
       mockLockRepo.findById.mockResolvedValue(existingLock);
 
-      await expect(
-        service.updateHeartbeat('lock-1', mockUser)
-      ).rejects.toThrow(AuthorizationError);
+      await expect(service.updateHeartbeat('lock-1', mockUser)).rejects.toThrow(AuthorizationError);
     });
   });
 
@@ -254,9 +252,7 @@ describe('EditLockService', () => {
       };
       mockLockRepo.findById.mockResolvedValue(existingLock);
 
-      await expect(
-        service.releaseLock('lock-1', mockUser)
-      ).rejects.toThrow(AuthorizationError);
+      await expect(service.releaseLock('lock-1', mockUser)).rejects.toThrow(AuthorizationError);
     });
   });
 

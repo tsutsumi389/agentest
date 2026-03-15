@@ -34,7 +34,10 @@ interface TestSuiteHistoryListProps {
 /**
  * 変更タイプの定義
  */
-const CHANGE_TYPES: Record<TestSuiteChangeType, { label: string; icon: typeof PlusCircle; color: string }> = {
+const CHANGE_TYPES: Record<
+  TestSuiteChangeType,
+  { label: string; icon: typeof PlusCircle; color: string }
+> = {
   CREATE: { label: '作成', icon: PlusCircle, color: 'text-green-500' },
   UPDATE: { label: '更新', icon: Pencil, color: 'text-blue-500' },
   DELETE: { label: '削除', icon: Trash2, color: 'text-danger' },
@@ -61,10 +64,7 @@ const CATEGORY_DEFINITIONS: Record<
  * カテゴリ別履歴の総数を取得
  */
 function getTotalHistoryCount(categorizedHistories: TestSuiteCategorizedHistories): number {
-  return (
-    categorizedHistories.basicInfo.length +
-    categorizedHistories.preconditions.length
-  );
+  return categorizedHistories.basicInfo.length + categorizedHistories.preconditions.length;
 }
 
 /**
@@ -78,7 +78,9 @@ function isMultipleHistoryGroup(item: TestSuiteHistoryGroupedItem): boolean {
 /**
  * カテゴリ別履歴から最初の履歴を取得
  */
-function getFirstHistory(categorizedHistories: TestSuiteCategorizedHistories): TestSuiteHistory | null {
+function getFirstHistory(
+  categorizedHistories: TestSuiteCategorizedHistories
+): TestSuiteHistory | null {
   for (const category of ['basicInfo', 'preconditions'] as const) {
     if (categorizedHistories[category].length > 0) {
       return categorizedHistories[category][0];
@@ -97,10 +99,11 @@ export function TestSuiteHistoryList({ testSuite }: TestSuiteHistoryListProps) {
   // React Queryで履歴を取得（グループ化済み）
   const { data, isLoading, error, refetch } = useQuery({
     queryKey: ['test-suite-histories', testSuite.id, page],
-    queryFn: () => testSuitesApi.getHistories(testSuite.id, {
-      limit: PAGE_SIZE,
-      offset: (page - 1) * PAGE_SIZE,
-    }),
+    queryFn: () =>
+      testSuitesApi.getHistories(testSuite.id, {
+        limit: PAGE_SIZE,
+        offset: (page - 1) * PAGE_SIZE,
+      }),
   });
 
   const groupedItems = data?.items || [];
@@ -132,7 +135,9 @@ export function TestSuiteHistoryList({ testSuite }: TestSuiteHistoryListProps) {
       <div className="card p-6">
         <h2 className="text-lg font-semibold text-foreground mb-4">変更履歴</h2>
         <div className="text-center py-12">
-          <p className="text-danger mb-4">{error instanceof Error ? error.message : '履歴の取得に失敗しました'}</p>
+          <p className="text-danger mb-4">
+            {error instanceof Error ? error.message : '履歴の取得に失敗しました'}
+          </p>
           <button className="btn btn-primary" onClick={() => refetch()}>
             再読み込み
           </button>
@@ -276,7 +281,10 @@ function hasChangeDetail(snapshot: Record<string, unknown>): boolean {
 /**
  * 変更内容のサマリーを取得
  */
-function getChangeSummary(snapshot: Record<string, unknown>, changeType: TestSuiteChangeType): string {
+function getChangeSummary(
+  snapshot: Record<string, unknown>,
+  changeType: TestSuiteChangeType
+): string {
   if (changeType === 'CREATE') {
     const name = snapshot.name as string | undefined;
     return name ? `テストスイート「${name}」を作成` : 'テストスイートを作成';
@@ -327,11 +335,7 @@ function DiffView({ snapshot }: { snapshot: Record<string, unknown> }) {
     return (
       <div className="space-y-2">
         {fields.name && (
-          <DiffField
-            label="名前"
-            before={fields.name.before}
-            after={fields.name.after}
-          />
+          <DiffField label="名前" before={fields.name.before} after={fields.name.after} />
         )}
         {fields.description && (
           <DiffField
@@ -382,15 +386,11 @@ function DiffView({ snapshot }: { snapshot: Record<string, unknown> }) {
 
   // 並び替えの場合
   if (changeDetail.type === 'PRECONDITION_REORDER') {
-    return (
-      <p className="text-xs text-foreground-muted italic">前提条件の順序を変更しました</p>
-    );
+    return <p className="text-xs text-foreground-muted italic">前提条件の順序を変更しました</p>;
   }
 
   if (changeDetail.type === 'TEST_CASE_REORDER') {
-    return (
-      <p className="text-xs text-foreground-muted italic">テストケースの順序を変更しました</p>
-    );
+    return <p className="text-xs text-foreground-muted italic">テストケースの順序を変更しました</p>;
   }
 
   return null;
@@ -399,15 +399,7 @@ function DiffView({ snapshot }: { snapshot: Record<string, unknown> }) {
 /**
  * 差分フィールド表示コンポーネント
  */
-function DiffField({
-  label,
-  before,
-  after,
-}: {
-  label: string;
-  before: string;
-  after: string;
-}) {
+function DiffField({ label, before, after }: { label: string; before: string; after: string }) {
   return (
     <div className="text-xs space-y-1">
       <p className="font-medium text-foreground-muted">{label}</p>
@@ -521,9 +513,7 @@ function HistoryItem({ history }: { history: TestSuiteHistory }) {
               <span title={formatDateTime(history.createdAt)}>
                 {formatRelativeTime(history.createdAt)}
               </span>
-              <span className="hidden md:inline ml-2">
-                ({formatDateTime(history.createdAt)})
-              </span>
+              <span className="hidden md:inline ml-2">({formatDateTime(history.createdAt)})</span>
             </p>
           </div>
         </div>
@@ -536,10 +526,7 @@ function HistoryItem({ history }: { history: TestSuiteHistory }) {
  * グループ化された履歴のサマリーを取得（カテゴリ別対応）
  */
 function getGroupSummary(categorizedHistories: TestSuiteCategorizedHistories): string {
-  const allHistories = [
-    ...categorizedHistories.basicInfo,
-    ...categorizedHistories.preconditions,
-  ];
+  const allHistories = [...categorizedHistories.basicInfo, ...categorizedHistories.preconditions];
   const allChangedFields = allHistories.flatMap((h) => getChangedFields(h.snapshot));
   const uniqueFields = [...new Set(allChangedFields)];
   if (uniqueFields.length === 0) {
@@ -564,7 +551,10 @@ function HistoryGroupItem({ group }: { group: TestSuiteHistoryGroupedItem }) {
 
   // カテゴリ別に表示するためのリスト（空でないカテゴリのみ）
   const nonEmptyCategories = (
-    Object.entries(group.categorizedHistories) as [keyof TestSuiteCategorizedHistories, TestSuiteHistory[]][]
+    Object.entries(group.categorizedHistories) as [
+      keyof TestSuiteCategorizedHistories,
+      TestSuiteHistory[],
+    ][]
   )
     .filter(([, histories]) => histories.length > 0)
     .sort(([a], [b]) => CATEGORY_DEFINITIONS[a].order - CATEGORY_DEFINITIONS[b].order);
@@ -611,15 +601,11 @@ function HistoryGroupItem({ group }: { group: TestSuiteHistoryGroupedItem }) {
               <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded text-blue-500 bg-background-tertiary">
                 <Pencil className="w-3 h-3" />
                 更新
-                <span className="text-foreground-muted">
-                  ({totalCount}件)
-                </span>
+                <span className="text-foreground-muted">({totalCount}件)</span>
               </span>
 
               {/* ユーザー名 */}
-              <span className="text-sm text-foreground">
-                {changedBy?.name || 'システム'}
-              </span>
+              <span className="text-sm text-foreground">{changedBy?.name || 'システム'}</span>
             </div>
 
             {/* サマリー表示 + 詳細ボタン */}
@@ -672,9 +658,7 @@ function HistoryGroupItem({ group }: { group: TestSuiteHistoryGroupedItem }) {
               <span title={formatDateTime(group.createdAt)}>
                 {formatRelativeTime(group.createdAt)}
               </span>
-              <span className="hidden md:inline ml-2">
-                ({formatDateTime(group.createdAt)})
-              </span>
+              <span className="hidden md:inline ml-2">({formatDateTime(group.createdAt)})</span>
             </p>
           </div>
         </div>

@@ -18,10 +18,25 @@ export { generateTimestamp } from '@agentest/shared';
 export const AUDIT_LOG_CATEGORIES = {
   AUTH: { label: '認証', icon: Shield, color: 'text-blue-500', bgColor: 'bg-blue-500/10' },
   USER: { label: 'ユーザー', icon: User, color: 'text-green-500', bgColor: 'bg-green-500/10' },
-  ORGANIZATION: { label: '組織', icon: Building2, color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
+  ORGANIZATION: {
+    label: '組織',
+    icon: Building2,
+    color: 'text-purple-500',
+    bgColor: 'bg-purple-500/10',
+  },
   MEMBER: { label: 'メンバー', icon: Users, color: 'text-orange-500', bgColor: 'bg-orange-500/10' },
-  PROJECT: { label: 'プロジェクト', icon: FolderKanban, color: 'text-cyan-500', bgColor: 'bg-cyan-500/10' },
-  API_TOKEN: { label: 'APIトークン', icon: Key, color: 'text-yellow-500', bgColor: 'bg-yellow-500/10' },
+  PROJECT: {
+    label: 'プロジェクト',
+    icon: FolderKanban,
+    color: 'text-cyan-500',
+    bgColor: 'bg-cyan-500/10',
+  },
+  API_TOKEN: {
+    label: 'APIトークン',
+    icon: Key,
+    color: 'text-yellow-500',
+    bgColor: 'bg-yellow-500/10',
+  },
 } as const;
 
 export type AuditLogCategoryKey = keyof typeof AUDIT_LOG_CATEGORIES;

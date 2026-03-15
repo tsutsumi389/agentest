@@ -710,11 +710,7 @@ export type {
 } from '@agentest/shared';
 
 // ファイル内で使用するためにインポート
-import type {
-  ReviewTargetType,
-  ReviewTargetField,
-  ReviewVerdict,
-} from '@agentest/shared';
+import type { ReviewTargetType, ReviewTargetField, ReviewVerdict } from '@agentest/shared';
 
 /** コメント作成リクエスト */
 export interface CreateReviewCommentRequest {

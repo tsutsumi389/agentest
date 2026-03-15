@@ -68,38 +68,41 @@ router.get('/users/:userId/projects', async (req: Request, res: Response, next: 
  * GET /internal/api/users/:userId/test-suites
  * ユーザーがアクセス可能なテストスイート一覧を取得
  */
-router.get('/users/:userId/test-suites', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { userId } = req.params;
-    const parseResult = getUserTestSuitesQuerySchema.safeParse(req.query);
+router.get(
+  '/users/:userId/test-suites',
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { userId } = req.params;
+      const parseResult = getUserTestSuitesQuerySchema.safeParse(req.query);
 
-    if (!parseResult.success) {
-      res.status(400).json({
-        error: 'Bad Request',
-        message: 'Invalid query parameters',
-        details: parseResult.error.flatten(),
+      if (!parseResult.success) {
+        res.status(400).json({
+          error: 'Bad Request',
+          message: 'Invalid query parameters',
+          details: parseResult.error.flatten(),
+        });
+        return;
+      }
+
+      const query = parseResult.data;
+      const [testSuites, total] = await Promise.all([
+        userService.getTestSuites(userId, query),
+        userService.countTestSuites(userId, query),
+      ]);
+
+      res.json({
+        testSuites,
+        pagination: {
+          total,
+          limit: query.limit,
+          offset: query.offset,
+          hasMore: query.offset + testSuites.length < total,
+        },
       });
-      return;
+    } catch (error) {
+      next(error);
     }
-
-    const query = parseResult.data;
-    const [testSuites, total] = await Promise.all([
-      userService.getTestSuites(userId, query),
-      userService.countTestSuites(userId, query),
-    ]);
-
-    res.json({
-      testSuites,
-      pagination: {
-        total,
-        limit: query.limit,
-        offset: query.offset,
-        hasMore: query.offset + testSuites.length < total,
-      },
-    });
-  } catch (error) {
-    next(error);
   }
-});
+);
 
 export default router;

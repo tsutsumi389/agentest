@@ -8,11 +8,14 @@ export type TestStatus = 'passed' | 'failed' | 'running' | 'pending' | 'skipped'
 /**
  * 状態ごとの設定
  */
-const statusConfig: Record<TestStatus, {
-  icon: React.ElementType;
-  className: string;
-  label: string;
-}> = {
+const statusConfig: Record<
+  TestStatus,
+  {
+    icon: React.ElementType;
+    className: string;
+    label: string;
+  }
+> = {
   passed: {
     icon: CheckCircle,
     className: 'bg-success-subtle text-success',

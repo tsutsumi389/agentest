@@ -86,7 +86,9 @@ describe('ProjectService - Environment Management', () => {
         name: 'Updated Name',
       });
 
-      const result = await service.updateEnvironment('project-1', 'env-1', { name: 'Updated Name' });
+      const result = await service.updateEnvironment('project-1', 'env-1', {
+        name: 'Updated Name',
+      });
 
       expect(mockProjectRepo.findById).toHaveBeenCalledWith('project-1');
       expect(mockPrisma.projectEnvironment.findUnique).toHaveBeenCalledWith({
@@ -127,16 +129,18 @@ describe('ProjectService - Environment Management', () => {
     it('存在しないプロジェクトはNotFoundErrorを投げる', async () => {
       mockProjectRepo.findById.mockResolvedValue(null);
 
-      await expect(service.updateEnvironment('invalid-project', 'env-1', { name: 'Test' }))
-        .rejects.toThrow(NotFoundError);
+      await expect(
+        service.updateEnvironment('invalid-project', 'env-1', { name: 'Test' })
+      ).rejects.toThrow(NotFoundError);
     });
 
     it('存在しない環境はNotFoundErrorを投げる', async () => {
       mockProjectRepo.findById.mockResolvedValue(mockProject);
       mockPrisma.projectEnvironment.findUnique.mockResolvedValue(null);
 
-      await expect(service.updateEnvironment('project-1', 'invalid-env', { name: 'Test' }))
-        .rejects.toThrow(NotFoundError);
+      await expect(
+        service.updateEnvironment('project-1', 'invalid-env', { name: 'Test' })
+      ).rejects.toThrow(NotFoundError);
     });
 
     it('異なるプロジェクトの環境への更新はNotFoundErrorを投げる', async () => {
@@ -144,8 +148,9 @@ describe('ProjectService - Environment Management', () => {
       mockProjectRepo.findById.mockResolvedValue(mockProject);
       mockPrisma.projectEnvironment.findUnique.mockResolvedValue(otherProjectEnv);
 
-      await expect(service.updateEnvironment('project-1', 'env-1', { name: 'Test' }))
-        .rejects.toThrow(NotFoundError);
+      await expect(
+        service.updateEnvironment('project-1', 'env-1', { name: 'Test' })
+      ).rejects.toThrow(NotFoundError);
     });
   });
 
@@ -197,16 +202,18 @@ describe('ProjectService - Environment Management', () => {
     it('存在しないプロジェクトはNotFoundErrorを投げる', async () => {
       mockProjectRepo.findById.mockResolvedValue(null);
 
-      await expect(service.deleteEnvironment('invalid-project', 'env-1'))
-        .rejects.toThrow(NotFoundError);
+      await expect(service.deleteEnvironment('invalid-project', 'env-1')).rejects.toThrow(
+        NotFoundError
+      );
     });
 
     it('存在しない環境はNotFoundErrorを投げる', async () => {
       mockProjectRepo.findById.mockResolvedValue(mockProject);
       mockPrisma.projectEnvironment.findUnique.mockResolvedValue(null);
 
-      await expect(service.deleteEnvironment('project-1', 'invalid-env'))
-        .rejects.toThrow(NotFoundError);
+      await expect(service.deleteEnvironment('project-1', 'invalid-env')).rejects.toThrow(
+        NotFoundError
+      );
     });
 
     it('異なるプロジェクトの環境への削除はNotFoundErrorを投げる', async () => {
@@ -214,8 +221,7 @@ describe('ProjectService - Environment Management', () => {
       mockProjectRepo.findById.mockResolvedValue(mockProject);
       mockPrisma.projectEnvironment.findUnique.mockResolvedValue(otherProjectEnv);
 
-      await expect(service.deleteEnvironment('project-1', 'env-1'))
-        .rejects.toThrow(NotFoundError);
+      await expect(service.deleteEnvironment('project-1', 'env-1')).rejects.toThrow(NotFoundError);
     });
   });
 
@@ -246,8 +252,9 @@ describe('ProjectService - Environment Management', () => {
       mockProjectRepo.findById.mockResolvedValue(mockProject);
       mockPrisma.projectEnvironment.findMany.mockResolvedValue(mockEnvironments);
 
-      await expect(service.reorderEnvironments('project-1', ['env-1', 'env-2', 'invalid-env']))
-        .rejects.toThrow(NotFoundError);
+      await expect(
+        service.reorderEnvironments('project-1', ['env-1', 'env-2', 'invalid-env'])
+      ).rejects.toThrow(NotFoundError);
     });
 
     it('空の配列でも処理できる', async () => {
@@ -263,8 +270,9 @@ describe('ProjectService - Environment Management', () => {
     it('存在しないプロジェクトはNotFoundErrorを投げる', async () => {
       mockProjectRepo.findById.mockResolvedValue(null);
 
-      await expect(service.reorderEnvironments('invalid-project', ['env-1']))
-        .rejects.toThrow(NotFoundError);
+      await expect(service.reorderEnvironments('invalid-project', ['env-1'])).rejects.toThrow(
+        NotFoundError
+      );
     });
 
     it('並び替え後に正しいsortOrderが設定される', async () => {
@@ -389,9 +397,7 @@ describe('ProjectService - Environment Management', () => {
     it('存在しないプロジェクトはNotFoundErrorを投げる', async () => {
       mockProjectRepo.findById.mockResolvedValue(null);
 
-      await expect(service.getEnvironments('invalid-project'))
-        .rejects.toThrow(NotFoundError);
+      await expect(service.getEnvironments('invalid-project')).rejects.toThrow(NotFoundError);
     });
   });
 });
-

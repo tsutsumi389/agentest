@@ -189,9 +189,7 @@ export function ReviewCommentItem({
           <ReviewStatusBadge status={comment.status} showLabel={false} />
           <span className="text-xs text-foreground-muted truncate">
             {TARGET_FIELD_LABELS[comment.targetField]}
-            {comment.targetType === 'CASE' && comment.targetName && (
-              <> - {comment.targetName}</>
-            )}
+            {comment.targetType === 'CASE' && comment.targetName && <> - {comment.targetName}</>}
           </span>
         </div>
         <div className="flex items-center gap-1">
@@ -232,8 +230,8 @@ export function ReviewCommentItem({
             </button>
           )}
           {/* 解決済み/未解決ボタン（編集権限のみ） */}
-          {canEdit && (
-            comment.status === 'OPEN' ? (
+          {canEdit &&
+            (comment.status === 'OPEN' ? (
               <button
                 type="button"
                 onClick={() => updateStatusMutation.mutate('RESOLVED')}
@@ -253,8 +251,7 @@ export function ReviewCommentItem({
               >
                 <RotateCcw className="w-4 h-4" />
               </button>
-            )
-          )}
+            ))}
         </div>
       </div>
 

@@ -33,10 +33,11 @@ export function ProjectsPage() {
   // プロジェクト一覧を取得
   const { data, isLoading } = useQuery({
     queryKey: ['user-projects', user?.id, apiOrganizationId, includeDeleted],
-    queryFn: () => usersApi.getProjects(user!.id, {
-      organizationId: apiOrganizationId,
-      includeDeleted,
-    }),
+    queryFn: () =>
+      usersApi.getProjects(user!.id, {
+        organizationId: apiOrganizationId,
+        includeDeleted,
+      }),
     enabled: !!user?.id,
   });
 
@@ -57,14 +58,9 @@ export function ProjectsPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">プロジェクト</h1>
-          <p className="text-foreground-muted mt-1">
-            テストプロジェクトを管理
-          </p>
+          <p className="text-foreground-muted mt-1">テストプロジェクトを管理</p>
         </div>
-        <button
-          onClick={() => setIsCreateModalOpen(true)}
-          className="btn btn-primary"
-        >
+        <button onClick={() => setIsCreateModalOpen(true)} className="btn btn-primary">
           <Plus className="w-4 h-4" />
           新規プロジェクト
         </button>
@@ -116,9 +112,7 @@ export function ProjectsPage() {
 
       {/* プロジェクトリスト */}
       {isLoading ? (
-        <div className="card p-8 text-center text-foreground-muted">
-          読み込み中...
-        </div>
+        <div className="card p-8 text-center text-foreground-muted">読み込み中...</div>
       ) : filteredProjects.length === 0 ? (
         <div className="card p-8 text-center">
           <FolderKanban className="w-12 h-12 text-foreground-subtle mx-auto mb-3" />
@@ -126,10 +120,7 @@ export function ProjectsPage() {
             {searchQuery ? 'プロジェクトが見つかりません' : 'プロジェクトがありません'}
           </p>
           {!searchQuery && (
-            <button
-              onClick={() => setIsCreateModalOpen(true)}
-              className="btn btn-primary"
-            >
+            <button onClick={() => setIsCreateModalOpen(true)} className="btn btn-primary">
               <Plus className="w-4 h-4" />
               プロジェクトを作成
             </button>
@@ -173,8 +164,12 @@ function ProjectCard({ project }: { project: ProjectWithRole }) {
       )}
 
       <div className="flex items-start justify-between mb-3">
-        <div className={`w-10 h-10 rounded flex items-center justify-center ${isDeleted ? 'bg-background-muted' : 'bg-accent-subtle'}`}>
-          <FolderKanban className={`w-5 h-5 ${isDeleted ? 'text-foreground-subtle' : 'text-accent'}`} />
+        <div
+          className={`w-10 h-10 rounded flex items-center justify-center ${isDeleted ? 'bg-background-muted' : 'bg-accent-subtle'}`}
+        >
+          <FolderKanban
+            className={`w-5 h-5 ${isDeleted ? 'text-foreground-subtle' : 'text-accent'}`}
+          />
         </div>
       </div>
 

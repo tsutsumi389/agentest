@@ -6,7 +6,10 @@ import { apiClient } from '../clients/api-client.js';
  * 入力スキーマ
  */
 export const getExecutionInputSchema = z.object({
-  executionId: z.string().uuid().describe('取得する実行のID。search_executionまたはcreate_executionで取得したIDを指定'),
+  executionId: z
+    .string()
+    .uuid()
+    .describe('取得する実行のID。search_executionまたはcreate_executionで取得したIDを指定'),
 });
 
 type GetExecutionInput = z.infer<typeof getExecutionInputSchema>;
@@ -181,7 +184,10 @@ interface GetExecutionResponse {
 /**
  * ハンドラー
  */
-const getExecutionHandler: ToolHandler<GetExecutionInput, GetExecutionResponse> = async (input, context) => {
+const getExecutionHandler: ToolHandler<GetExecutionInput, GetExecutionResponse> = async (
+  input,
+  context
+) => {
   const { userId } = context;
 
   if (!userId) {
@@ -189,9 +195,12 @@ const getExecutionHandler: ToolHandler<GetExecutionInput, GetExecutionResponse> 
   }
 
   // 内部APIを呼び出し
-  const response = await apiClient.get<GetExecutionResponse>(`/internal/api/executions/${input.executionId}`, {
-    userId,
-  });
+  const response = await apiClient.get<GetExecutionResponse>(
+    `/internal/api/executions/${input.executionId}`,
+    {
+      userId,
+    }
+  );
 
   return response;
 };

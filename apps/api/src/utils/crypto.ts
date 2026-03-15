@@ -27,9 +27,7 @@ function deriveKey(key: string): Buffer {
   if (cachedKey && cachedKey.raw === key) {
     return cachedKey.derived;
   }
-  const derived = Buffer.from(
-    crypto.hkdfSync('sha256', key, HKDF_SALT, HKDF_INFO, 32)
-  );
+  const derived = Buffer.from(crypto.hkdfSync('sha256', key, HKDF_SALT, HKDF_INFO, 32));
   cachedKey = { raw: key, derived };
   return derived;
 }
@@ -46,18 +44,14 @@ export function encrypt(plaintext: string, key: string): string {
     authTagLength: AUTH_TAG_LENGTH,
   });
 
-  const encrypted = Buffer.concat([
-    cipher.update(plaintext, 'utf8'),
-    cipher.final(),
-  ]);
+  const encrypted = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
 
   const authTag = cipher.getAuthTag();
 
-  return ENCRYPTED_PREFIX + [
-    iv.toString('base64'),
-    authTag.toString('base64'),
-    encrypted.toString('base64'),
-  ].join(':');
+  return (
+    ENCRYPTED_PREFIX +
+    [iv.toString('base64'), authTag.toString('base64'), encrypted.toString('base64')].join(':')
+  );
 }
 
 /**
@@ -95,10 +89,7 @@ export function decrypt(ciphertext: string, key: string): string {
   });
   decipher.setAuthTag(authTag);
 
-  const decrypted = Buffer.concat([
-    decipher.update(encrypted),
-    decipher.final(),
-  ]);
+  const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
 
   return decrypted.toString('utf8');
 }

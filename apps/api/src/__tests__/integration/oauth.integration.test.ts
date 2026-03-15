@@ -39,14 +39,16 @@ vi.mock('@agentest/auth', () => ({
     next();
   },
   // authenticate関数 - optional: trueの場合は認証失敗でもnextを呼ぶ
-  authenticate: (options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => {
-    if (mockAuthUser) {
-      req.user = mockAuthUser;
-    } else if (!options.optional) {
-      return next(new AuthenticationError('認証が必要です'));
-    }
-    next();
-  },
+  authenticate:
+    (options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) {
+        req.user = mockAuthUser;
+      } else if (!options.optional) {
+        return next(new AuthenticationError('認証が必要です'));
+      }
+      next();
+    },
   requireOrgRole: () => (_req: any, _res: any, next: any) => next(),
   requireProjectRole: () => (_req: any, _res: any, next: any) => next(),
   configurePassport: vi.fn(),
@@ -148,12 +150,10 @@ describe('OAuth API 結合テスト', () => {
     });
 
     it('異常系: invalid_client_metadata (必須フィールド欠落)', async () => {
-      const response = await request(app)
-        .post('/oauth/register')
-        .send({
-          client_name: 'Test Client',
-          // redirect_uris が欠落
-        });
+      const response = await request(app).post('/oauth/register').send({
+        client_name: 'Test Client',
+        // redirect_uris が欠落
+      });
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('invalid_client_metadata');
@@ -185,17 +185,15 @@ describe('OAuth API 結合テスト', () => {
     it('未認証ならログインページへリダイレクト', async () => {
       clearTestAuth();
 
-      const response = await request(app)
-        .get('/oauth/authorize')
-        .query({
-          response_type: 'code',
-          client_id: testClient.clientId,
-          redirect_uri: 'http://localhost:8080/callback',
-          code_challenge: 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM',
-          code_challenge_method: 'S256',
-          resource: 'http://localhost:3002',
-          state: 'random-state',
-        });
+      const response = await request(app).get('/oauth/authorize').query({
+        response_type: 'code',
+        client_id: testClient.clientId,
+        redirect_uri: 'http://localhost:8080/callback',
+        code_challenge: 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM',
+        code_challenge_method: 'S256',
+        resource: 'http://localhost:3002',
+        state: 'random-state',
+      });
 
       expect(response.status).toBe(302);
       expect(response.headers.location).toContain('/login');
@@ -211,17 +209,15 @@ describe('OAuth API 結合テスト', () => {
         createdAt: testUser.createdAt,
       });
 
-      const response = await request(app)
-        .get('/oauth/authorize')
-        .query({
-          response_type: 'code',
-          client_id: testClient.clientId,
-          redirect_uri: 'http://localhost:8080/callback',
-          code_challenge: 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM',
-          code_challenge_method: 'S256',
-          resource: 'http://localhost:3002',
-          state: 'random-state',
-        });
+      const response = await request(app).get('/oauth/authorize').query({
+        response_type: 'code',
+        client_id: testClient.clientId,
+        redirect_uri: 'http://localhost:8080/callback',
+        code_challenge: 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM',
+        code_challenge_method: 'S256',
+        resource: 'http://localhost:3002',
+        state: 'random-state',
+      });
 
       expect(response.status).toBe(302);
       expect(response.headers.location).toContain('/oauth/consent');
@@ -238,17 +234,15 @@ describe('OAuth API 結合テスト', () => {
         createdAt: testUser.createdAt,
       });
 
-      const response = await request(app)
-        .get('/oauth/authorize')
-        .query({
-          response_type: 'code',
-          client_id: '00000000-0000-0000-0000-000000000000',
-          redirect_uri: 'http://localhost:8080/callback',
-          code_challenge: 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM',
-          code_challenge_method: 'S256',
-          resource: 'http://localhost:3002',
-          state: 'random-state',
-        });
+      const response = await request(app).get('/oauth/authorize').query({
+        response_type: 'code',
+        client_id: '00000000-0000-0000-0000-000000000000',
+        redirect_uri: 'http://localhost:8080/callback',
+        code_challenge: 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM',
+        code_challenge_method: 'S256',
+        resource: 'http://localhost:3002',
+        state: 'random-state',
+      });
 
       expect(response.status).toBe(401);
       expect(response.body.error).toBe('invalid_client');
@@ -264,17 +258,15 @@ describe('OAuth API 結合テスト', () => {
         createdAt: testUser.createdAt,
       });
 
-      const response = await request(app)
-        .get('/oauth/authorize')
-        .query({
-          response_type: 'code',
-          client_id: testClient.clientId,
-          redirect_uri: 'http://localhost:9999/different',
-          code_challenge: 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM',
-          code_challenge_method: 'S256',
-          resource: 'http://localhost:3002',
-          state: 'random-state',
-        });
+      const response = await request(app).get('/oauth/authorize').query({
+        response_type: 'code',
+        client_id: testClient.clientId,
+        redirect_uri: 'http://localhost:9999/different',
+        code_challenge: 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM',
+        code_challenge_method: 'S256',
+        resource: 'http://localhost:3002',
+        state: 'random-state',
+      });
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('invalid_redirect_uri');
@@ -392,28 +384,22 @@ describe('OAuth API 結合テスト', () => {
 
     it('正常系: トークンを発行できる', async () => {
       // 認可コードを作成
-      const authCode = await createTestOAuthAuthorizationCode(
-        testClient.clientId,
-        testUser.id,
-        {
-          code: 'valid-auth-code',
-          codeChallenge,
-          codeChallengeMethod: 'S256',
-          redirectUri: 'http://localhost:8080/callback',
-          resource: 'http://localhost:3002',
-          scopes: ['mcp:read'],
-        }
-      );
+      const authCode = await createTestOAuthAuthorizationCode(testClient.clientId, testUser.id, {
+        code: 'valid-auth-code',
+        codeChallenge,
+        codeChallengeMethod: 'S256',
+        redirectUri: 'http://localhost:8080/callback',
+        resource: 'http://localhost:3002',
+        scopes: ['mcp:read'],
+      });
 
-      const response = await request(app)
-        .post('/oauth/token')
-        .send({
-          grant_type: 'authorization_code',
-          code: authCode.code,
-          redirect_uri: 'http://localhost:8080/callback',
-          client_id: testClient.clientId,
-          code_verifier: codeVerifier,
-        });
+      const response = await request(app).post('/oauth/token').send({
+        grant_type: 'authorization_code',
+        code: authCode.code,
+        redirect_uri: 'http://localhost:8080/callback',
+        client_id: testClient.clientId,
+        code_verifier: codeVerifier,
+      });
 
       expect(response.status).toBe(200);
       expect(response.body).toHaveProperty('access_token');
@@ -441,41 +427,33 @@ describe('OAuth API 結合テスト', () => {
     });
 
     it('異常系: invalid_grant (無効なcode)', async () => {
-      const response = await request(app)
-        .post('/oauth/token')
-        .send({
-          grant_type: 'authorization_code',
-          code: 'invalid-code',
-          redirect_uri: 'http://localhost:8080/callback',
-          client_id: testClient.clientId,
-          code_verifier: codeVerifier,
-        });
+      const response = await request(app).post('/oauth/token').send({
+        grant_type: 'authorization_code',
+        code: 'invalid-code',
+        redirect_uri: 'http://localhost:8080/callback',
+        client_id: testClient.clientId,
+        code_verifier: codeVerifier,
+      });
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('invalid_grant');
     });
 
     it('異常系: invalid_grant (期限切れcode)', async () => {
-      const authCode = await createTestOAuthAuthorizationCode(
-        testClient.clientId,
-        testUser.id,
-        {
-          code: 'expired-auth-code',
-          codeChallenge,
-          codeChallengeMethod: 'S256',
-          expiresAt: new Date(Date.now() - 1000), // 過去の日時
-        }
-      );
+      const authCode = await createTestOAuthAuthorizationCode(testClient.clientId, testUser.id, {
+        code: 'expired-auth-code',
+        codeChallenge,
+        codeChallengeMethod: 'S256',
+        expiresAt: new Date(Date.now() - 1000), // 過去の日時
+      });
 
-      const response = await request(app)
-        .post('/oauth/token')
-        .send({
-          grant_type: 'authorization_code',
-          code: authCode.code,
-          redirect_uri: 'http://localhost:8080/callback',
-          client_id: testClient.clientId,
-          code_verifier: codeVerifier,
-        });
+      const response = await request(app).post('/oauth/token').send({
+        grant_type: 'authorization_code',
+        code: authCode.code,
+        redirect_uri: 'http://localhost:8080/callback',
+        client_id: testClient.clientId,
+        code_verifier: codeVerifier,
+      });
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('invalid_grant');
@@ -483,25 +461,19 @@ describe('OAuth API 結合テスト', () => {
     });
 
     it('異常系: PKCE検証失敗', async () => {
-      const authCode = await createTestOAuthAuthorizationCode(
-        testClient.clientId,
-        testUser.id,
-        {
-          code: 'pkce-test-code',
-          codeChallenge,
-          codeChallengeMethod: 'S256',
-        }
-      );
+      const authCode = await createTestOAuthAuthorizationCode(testClient.clientId, testUser.id, {
+        code: 'pkce-test-code',
+        codeChallenge,
+        codeChallengeMethod: 'S256',
+      });
 
-      const response = await request(app)
-        .post('/oauth/token')
-        .send({
-          grant_type: 'authorization_code',
-          code: authCode.code,
-          redirect_uri: 'http://localhost:8080/callback',
-          client_id: testClient.clientId,
-          code_verifier: 'wrong-verifier-that-does-not-match-challenge',
-        });
+      const response = await request(app).post('/oauth/token').send({
+        grant_type: 'authorization_code',
+        code: authCode.code,
+        redirect_uri: 'http://localhost:8080/callback',
+        client_id: testClient.clientId,
+        code_verifier: 'wrong-verifier-that-does-not-match-challenge',
+      });
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('invalid_grant');
@@ -521,15 +493,11 @@ describe('OAuth API 結合テスト', () => {
     });
 
     it('正常系: active: true (有効なトークン)', async () => {
-      await createTestOAuthAccessToken(
-        testClient.clientId,
-        testUser.id,
-        {
-          tokenHash: hashToken('valid-token'),
-          scopes: ['mcp:read', 'mcp:write'],
-          audience: 'http://localhost:3002',
-        }
-      );
+      await createTestOAuthAccessToken(testClient.clientId, testUser.id, {
+        tokenHash: hashToken('valid-token'),
+        scopes: ['mcp:read', 'mcp:write'],
+        audience: 'http://localhost:3002',
+      });
 
       const response = await request(app)
         .post('/oauth/introspect')
@@ -545,14 +513,10 @@ describe('OAuth API 結合テスト', () => {
     });
 
     it('正常系: active: false (期限切れトークン)', async () => {
-      await createTestOAuthAccessToken(
-        testClient.clientId,
-        testUser.id,
-        {
-          tokenHash: hashToken('expired-token'),
-          expiresAt: new Date(Date.now() - 1000), // 過去
-        }
-      );
+      await createTestOAuthAccessToken(testClient.clientId, testUser.id, {
+        tokenHash: hashToken('expired-token'),
+        expiresAt: new Date(Date.now() - 1000), // 過去
+      });
 
       const response = await request(app)
         .post('/oauth/introspect')
@@ -564,14 +528,10 @@ describe('OAuth API 結合テスト', () => {
     });
 
     it('正常系: active: false (失効済みトークン)', async () => {
-      await createTestOAuthAccessToken(
-        testClient.clientId,
-        testUser.id,
-        {
-          tokenHash: hashToken('revoked-token'),
-          revokedAt: new Date(), // 失効済み
-        }
-      );
+      await createTestOAuthAccessToken(testClient.clientId, testUser.id, {
+        tokenHash: hashToken('revoked-token'),
+        revokedAt: new Date(), // 失効済み
+      });
 
       const response = await request(app)
         .post('/oauth/introspect')
@@ -603,17 +563,11 @@ describe('OAuth API 結合テスト', () => {
     });
 
     it('正常系: トークンを失効させる', async () => {
-      await createTestOAuthAccessToken(
-        testClient.clientId,
-        testUser.id,
-        {
-          tokenHash: hashToken('token-to-revoke'),
-        }
-      );
+      await createTestOAuthAccessToken(testClient.clientId, testUser.id, {
+        tokenHash: hashToken('token-to-revoke'),
+      });
 
-      const response = await request(app)
-        .post('/oauth/revoke')
-        .send({ token: 'token-to-revoke' });
+      const response = await request(app).post('/oauth/revoke').send({ token: 'token-to-revoke' });
 
       expect(response.status).toBe(200);
 
@@ -646,22 +600,16 @@ describe('OAuth API 結合テスト', () => {
     it('正常系: リフレッシュトークンで新しいアクセストークンを取得', async () => {
       // リフレッシュトークンをDBに作成
       const { createTestOAuthRefreshToken } = await import('./test-helpers.js');
-      await createTestOAuthRefreshToken(
-        testClient.clientId,
-        testUser.id,
-        {
-          tokenHash: hashToken('valid-refresh-token'),
-          scopes: ['mcp:read', 'mcp:write'],
-        }
-      );
+      await createTestOAuthRefreshToken(testClient.clientId, testUser.id, {
+        tokenHash: hashToken('valid-refresh-token'),
+        scopes: ['mcp:read', 'mcp:write'],
+      });
 
-      const response = await request(app)
-        .post('/oauth/token')
-        .send({
-          grant_type: 'refresh_token',
-          refresh_token: 'valid-refresh-token',
-          client_id: testClient.clientId,
-        });
+      const response = await request(app).post('/oauth/token').send({
+        grant_type: 'refresh_token',
+        refresh_token: 'valid-refresh-token',
+        client_id: testClient.clientId,
+      });
 
       expect(response.status).toBe(200);
       expect(response.body.access_token).toBeTruthy();
@@ -674,36 +622,28 @@ describe('OAuth API 結合テスト', () => {
 
     it('正常系: スコープのダウングレードが可能', async () => {
       const { createTestOAuthRefreshToken } = await import('./test-helpers.js');
-      await createTestOAuthRefreshToken(
-        testClient.clientId,
-        testUser.id,
-        {
-          tokenHash: hashToken('refresh-for-downgrade'),
-          scopes: ['mcp:read', 'mcp:write'],
-        }
-      );
+      await createTestOAuthRefreshToken(testClient.clientId, testUser.id, {
+        tokenHash: hashToken('refresh-for-downgrade'),
+        scopes: ['mcp:read', 'mcp:write'],
+      });
 
-      const response = await request(app)
-        .post('/oauth/token')
-        .send({
-          grant_type: 'refresh_token',
-          refresh_token: 'refresh-for-downgrade',
-          client_id: testClient.clientId,
-          scope: 'mcp:read',  // 元より少ないスコープ
-        });
+      const response = await request(app).post('/oauth/token').send({
+        grant_type: 'refresh_token',
+        refresh_token: 'refresh-for-downgrade',
+        client_id: testClient.clientId,
+        scope: 'mcp:read', // 元より少ないスコープ
+      });
 
       expect(response.status).toBe(200);
       expect(response.body.scope).toBe('mcp:read');
     });
 
     it('異常系: 存在しないリフレッシュトークン', async () => {
-      const response = await request(app)
-        .post('/oauth/token')
-        .send({
-          grant_type: 'refresh_token',
-          refresh_token: 'non-existent-token',
-          client_id: testClient.clientId,
-        });
+      const response = await request(app).post('/oauth/token').send({
+        grant_type: 'refresh_token',
+        refresh_token: 'non-existent-token',
+        client_id: testClient.clientId,
+      });
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('invalid_grant');
@@ -712,22 +652,16 @@ describe('OAuth API 結合テスト', () => {
 
     it('異常系: 期限切れのリフレッシュトークン', async () => {
       const { createTestOAuthRefreshToken } = await import('./test-helpers.js');
-      await createTestOAuthRefreshToken(
-        testClient.clientId,
-        testUser.id,
-        {
-          tokenHash: hashToken('expired-refresh-token'),
-          expiresAt: new Date(Date.now() - 1000), // 期限切れ
-        }
-      );
+      await createTestOAuthRefreshToken(testClient.clientId, testUser.id, {
+        tokenHash: hashToken('expired-refresh-token'),
+        expiresAt: new Date(Date.now() - 1000), // 期限切れ
+      });
 
-      const response = await request(app)
-        .post('/oauth/token')
-        .send({
-          grant_type: 'refresh_token',
-          refresh_token: 'expired-refresh-token',
-          client_id: testClient.clientId,
-        });
+      const response = await request(app).post('/oauth/token').send({
+        grant_type: 'refresh_token',
+        refresh_token: 'expired-refresh-token',
+        client_id: testClient.clientId,
+      });
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('invalid_grant');
@@ -736,22 +670,16 @@ describe('OAuth API 結合テスト', () => {
 
     it('異常系: 失効済みのリフレッシュトークン', async () => {
       const { createTestOAuthRefreshToken } = await import('./test-helpers.js');
-      await createTestOAuthRefreshToken(
-        testClient.clientId,
-        testUser.id,
-        {
-          tokenHash: hashToken('revoked-refresh-token'),
-          revokedAt: new Date(), // 失効済み
-        }
-      );
+      await createTestOAuthRefreshToken(testClient.clientId, testUser.id, {
+        tokenHash: hashToken('revoked-refresh-token'),
+        revokedAt: new Date(), // 失効済み
+      });
 
-      const response = await request(app)
-        .post('/oauth/token')
-        .send({
-          grant_type: 'refresh_token',
-          refresh_token: 'revoked-refresh-token',
-          client_id: testClient.clientId,
-        });
+      const response = await request(app).post('/oauth/token').send({
+        grant_type: 'refresh_token',
+        refresh_token: 'revoked-refresh-token',
+        client_id: testClient.clientId,
+      });
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('invalid_grant');
@@ -760,26 +688,20 @@ describe('OAuth API 結合テスト', () => {
 
     it('異常系: クライアントID不一致', async () => {
       const { createTestOAuthRefreshToken } = await import('./test-helpers.js');
-      await createTestOAuthRefreshToken(
-        testClient.clientId,
-        testUser.id,
-        {
-          tokenHash: hashToken('client-mismatch-token'),
-        }
-      );
+      await createTestOAuthRefreshToken(testClient.clientId, testUser.id, {
+        tokenHash: hashToken('client-mismatch-token'),
+      });
 
       // 別のクライアントIDで要求
       const otherClient = await createTestOAuthClient({
         clientName: 'Other Client',
       });
 
-      const response = await request(app)
-        .post('/oauth/token')
-        .send({
-          grant_type: 'refresh_token',
-          refresh_token: 'client-mismatch-token',
-          client_id: otherClient.clientId,
-        });
+      const response = await request(app).post('/oauth/token').send({
+        grant_type: 'refresh_token',
+        refresh_token: 'client-mismatch-token',
+        client_id: otherClient.clientId,
+      });
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('invalid_grant');
@@ -788,23 +710,17 @@ describe('OAuth API 結合テスト', () => {
 
     it('異常系: スコープの拡大は拒否', async () => {
       const { createTestOAuthRefreshToken } = await import('./test-helpers.js');
-      await createTestOAuthRefreshToken(
-        testClient.clientId,
-        testUser.id,
-        {
-          tokenHash: hashToken('scope-upgrade-token'),
-          scopes: ['mcp:read'], // 読み取りのみ
-        }
-      );
+      await createTestOAuthRefreshToken(testClient.clientId, testUser.id, {
+        tokenHash: hashToken('scope-upgrade-token'),
+        scopes: ['mcp:read'], // 読み取りのみ
+      });
 
-      const response = await request(app)
-        .post('/oauth/token')
-        .send({
-          grant_type: 'refresh_token',
-          refresh_token: 'scope-upgrade-token',
-          client_id: testClient.clientId,
-          scope: 'mcp:read mcp:write', // 書き込みも要求（元のスコープを超える）
-        });
+      const response = await request(app).post('/oauth/token').send({
+        grant_type: 'refresh_token',
+        refresh_token: 'scope-upgrade-token',
+        client_id: testClient.clientId,
+        scope: 'mcp:read mcp:write', // 書き込みも要求（元のスコープを超える）
+      });
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('invalid_scope');
@@ -823,13 +739,9 @@ describe('OAuth API 結合テスト', () => {
 
     it('正常系: リフレッシュトークンを失効させる', async () => {
       const { createTestOAuthRefreshToken } = await import('./test-helpers.js');
-      await createTestOAuthRefreshToken(
-        testClient.clientId,
-        testUser.id,
-        {
-          tokenHash: hashToken('refresh-to-revoke'),
-        }
-      );
+      await createTestOAuthRefreshToken(testClient.clientId, testUser.id, {
+        tokenHash: hashToken('refresh-to-revoke'),
+      });
 
       const response = await request(app)
         .post('/oauth/revoke')
@@ -896,15 +808,13 @@ describe('OAuth API 結合テスト', () => {
       expect(authCode).toBeTruthy();
 
       // 3. トークン発行
-      const tokenResponse = await request(app)
-        .post('/oauth/token')
-        .send({
-          grant_type: 'authorization_code',
-          code: authCode,
-          redirect_uri: 'http://localhost:8080/callback',
-          client_id: clientId,
-          code_verifier: codeVerifier,
-        });
+      const tokenResponse = await request(app).post('/oauth/token').send({
+        grant_type: 'authorization_code',
+        code: authCode,
+        redirect_uri: 'http://localhost:8080/callback',
+        client_id: clientId,
+        code_verifier: codeVerifier,
+      });
 
       expect(tokenResponse.status).toBe(200);
       expect(tokenResponse.body.access_token).toBeTruthy();
@@ -925,13 +835,11 @@ describe('OAuth API 結合テスト', () => {
       expect(introspectResponse.body.scope).toBe('mcp:read mcp:write');
 
       // 5. リフレッシュトークンで新しいアクセストークンを取得
-      const refreshResponse = await request(app)
-        .post('/oauth/token')
-        .send({
-          grant_type: 'refresh_token',
-          refresh_token: refreshToken,
-          client_id: clientId,
-        });
+      const refreshResponse = await request(app).post('/oauth/token').send({
+        grant_type: 'refresh_token',
+        refresh_token: refreshToken,
+        client_id: clientId,
+      });
 
       expect(refreshResponse.status).toBe(200);
       expect(refreshResponse.body.access_token).toBeTruthy();
@@ -947,9 +855,7 @@ describe('OAuth API 結合テスト', () => {
       expect(newIntrospectResponse.body.active).toBe(true);
 
       // 7. 元のアクセストークンを失効
-      const revokeResponse = await request(app)
-        .post('/oauth/revoke')
-        .send({ token: accessToken });
+      const revokeResponse = await request(app).post('/oauth/revoke').send({ token: accessToken });
 
       expect(revokeResponse.status).toBe(200);
 

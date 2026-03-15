@@ -81,7 +81,9 @@ describe('userRegisterSchema', () => {
 
 describe('userLoginSchema', () => {
   it('有効なデータを受け入れる', () => {
-    expect(userLoginSchema.safeParse({ email: 'test@example.com', password: 'any' }).success).toBe(true);
+    expect(userLoginSchema.safeParse({ email: 'test@example.com', password: 'any' }).success).toBe(
+      true
+    );
   });
 
   it('メールが無効な場合は拒否する', () => {
@@ -89,7 +91,9 @@ describe('userLoginSchema', () => {
   });
 
   it('パスワードが空の場合は拒否する', () => {
-    expect(userLoginSchema.safeParse({ email: 'test@example.com', password: '' }).success).toBe(false);
+    expect(userLoginSchema.safeParse({ email: 'test@example.com', password: '' }).success).toBe(
+      false
+    );
   });
 });
 
@@ -105,7 +109,9 @@ describe('passwordResetRequestSchema', () => {
 
 describe('passwordResetSchema', () => {
   it('有効なトークンとパスワードを受け入れる', () => {
-    expect(passwordResetSchema.safeParse({ token: 'abc123', password: 'Test1234!' }).success).toBe(true);
+    expect(passwordResetSchema.safeParse({ token: 'abc123', password: 'Test1234!' }).success).toBe(
+      true
+    );
   });
 
   it('トークンが空の場合は拒否する', () => {
@@ -113,7 +119,9 @@ describe('passwordResetSchema', () => {
   });
 
   it('パスワードが要件を満たさない場合は拒否する', () => {
-    expect(passwordResetSchema.safeParse({ token: 'abc123', password: 'weak' }).success).toBe(false);
+    expect(passwordResetSchema.safeParse({ token: 'abc123', password: 'weak' }).success).toBe(
+      false
+    );
   });
 });
 
@@ -129,24 +137,30 @@ describe('setPasswordSchema', () => {
 
 describe('changePasswordSchema', () => {
   it('有効な現在のパスワードと新しいパスワードを受け入れる', () => {
-    expect(changePasswordSchema.safeParse({
-      currentPassword: 'OldPass1!',
-      newPassword: 'NewPass1!',
-    }).success).toBe(true);
+    expect(
+      changePasswordSchema.safeParse({
+        currentPassword: 'OldPass1!',
+        newPassword: 'NewPass1!',
+      }).success
+    ).toBe(true);
   });
 
   it('新しいパスワードが要件を満たさない場合は拒否する', () => {
-    expect(changePasswordSchema.safeParse({
-      currentPassword: 'OldPass1!',
-      newPassword: 'weak',
-    }).success).toBe(false);
+    expect(
+      changePasswordSchema.safeParse({
+        currentPassword: 'OldPass1!',
+        newPassword: 'weak',
+      }).success
+    ).toBe(false);
   });
 
   it('現在のパスワードが空の場合は拒否する', () => {
-    expect(changePasswordSchema.safeParse({
-      currentPassword: '',
-      newPassword: 'NewPass1!',
-    }).success).toBe(false);
+    expect(
+      changePasswordSchema.safeParse({
+        currentPassword: '',
+        newPassword: 'NewPass1!',
+      }).success
+    ).toBe(false);
   });
 
   it('現在のパスワードと同じ新しいパスワードを拒否する', () => {

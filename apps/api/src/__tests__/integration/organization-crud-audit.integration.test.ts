@@ -33,7 +33,12 @@ vi.mock('@agentest/auth', () => ({
     next();
   },
   requireProjectRole: () => (_req: any, _res: any, next: any) => next(),
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -101,9 +106,7 @@ describe('Organization CRUD Audit Logs Integration Tests', () => {
       expect(auditLog?.userId).toBe(owner.id);
       expect(auditLog?.targetType).toBe('Organization');
       expect(auditLog?.targetId).toBe(orgId);
-      expect(auditLog?.details).toEqual(
-        expect.objectContaining({ name: 'New Organization' })
-      );
+      expect(auditLog?.details).toEqual(expect.objectContaining({ name: 'New Organization' }));
     });
   });
 
@@ -134,9 +137,7 @@ describe('Organization CRUD Audit Logs Integration Tests', () => {
       expect(auditLog?.userId).toBe(owner.id);
       expect(auditLog?.targetType).toBe('Organization');
       expect(auditLog?.targetId).toBe(organization.id);
-      expect(auditLog?.details).toEqual(
-        expect.objectContaining({ name: 'Updated Organization' })
-      );
+      expect(auditLog?.details).toEqual(expect.objectContaining({ name: 'Updated Organization' }));
     });
   });
 
@@ -149,9 +150,7 @@ describe('Organization CRUD Audit Logs Integration Tests', () => {
     });
 
     it('組織削除時に監査ログが記録される', async () => {
-      await request(app)
-        .delete(`/api/organizations/${organization.id}`)
-        .expect(204);
+      await request(app).delete(`/api/organizations/${organization.id}`).expect(204);
 
       // 監査ログが記録されていることを確認
       const auditLog = await prisma.auditLog.findFirst({
@@ -166,9 +165,7 @@ describe('Organization CRUD Audit Logs Integration Tests', () => {
       expect(auditLog?.userId).toBe(owner.id);
       expect(auditLog?.targetType).toBe('Organization');
       expect(auditLog?.targetId).toBe(organization.id);
-      expect(auditLog?.details).toEqual(
-        expect.objectContaining({ name: 'Test Organization' })
-      );
+      expect(auditLog?.details).toEqual(expect.objectContaining({ name: 'Test Organization' }));
     });
   });
 
@@ -315,9 +312,7 @@ describe('Organization CRUD Audit Logs Integration Tests', () => {
 
       setTestAuth({ id: invitedUser.id, email: invitedUser.email }, null);
 
-      await request(app)
-        .post('/api/organizations/invitations/accept-token/accept')
-        .expect(200);
+      await request(app).post('/api/organizations/invitations/accept-token/accept').expect(200);
 
       // 監査ログが記録されていることを確認
       const auditLog = await prisma.auditLog.findFirst({

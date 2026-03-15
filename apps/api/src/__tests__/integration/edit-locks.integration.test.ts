@@ -175,8 +175,9 @@ describe('Edit Locks API 結合テスト', () => {
       // ロックIDは同じ（更新されている）
       expect(secondResponse.body.lock.id).toBe(firstResponse.body.lock.id);
       // expiresAtが更新されている
-      expect(new Date(secondResponse.body.lock.expiresAt).getTime())
-        .toBeGreaterThanOrEqual(new Date(firstExpiresAt).getTime());
+      expect(new Date(secondResponse.body.lock.expiresAt).getTime()).toBeGreaterThanOrEqual(
+        new Date(firstExpiresAt).getTime()
+      );
     });
 
     it('他ユーザーがロック中の場合は409 Conflictエラー', async () => {
@@ -289,8 +290,9 @@ describe('Edit Locks API 結合テスト', () => {
       expect(heartbeatResponse.body.lock).toBeDefined();
       expect(heartbeatResponse.body.lock.id).toBe(lockId);
       // 有効期限が延長されている
-      expect(new Date(heartbeatResponse.body.lock.expiresAt).getTime())
-        .toBeGreaterThanOrEqual(new Date(originalExpiresAt).getTime());
+      expect(new Date(heartbeatResponse.body.lock.expiresAt).getTime()).toBeGreaterThanOrEqual(
+        new Date(originalExpiresAt).getTime()
+      );
     });
 
     it('ロック所有者以外は403エラー', async () => {
@@ -305,9 +307,7 @@ describe('Edit Locks API 結合テスト', () => {
       // user2でハートビートを試みる
       mockAuthUser = { id: user2.id, email: user2.email };
 
-      const response = await request(app)
-        .patch(`/api/locks/${lockId}/heartbeat`)
-        .expect(403);
+      const response = await request(app).patch(`/api/locks/${lockId}/heartbeat`).expect(403);
 
       expect(response.body.error.code).toBe('AUTHORIZATION_ERROR');
     });
@@ -345,9 +345,7 @@ describe('Edit Locks API 結合テスト', () => {
       const lockId = lockResponse.body.lock.id;
 
       // ロックを解放
-      await request(app)
-        .delete(`/api/locks/${lockId}`)
-        .expect(204);
+      await request(app).delete(`/api/locks/${lockId}`).expect(204);
 
       // ロックが解放されていることを確認
       const statusResponse = await request(app)
@@ -371,9 +369,7 @@ describe('Edit Locks API 結合テスト', () => {
       // user2で解放を試みる
       mockAuthUser = { id: user2.id, email: user2.email };
 
-      const response = await request(app)
-        .delete(`/api/locks/${lockId}`)
-        .expect(403);
+      const response = await request(app).delete(`/api/locks/${lockId}`).expect(403);
 
       expect(response.body.error.code).toBe('AUTHORIZATION_ERROR');
     });
@@ -405,9 +401,7 @@ describe('Edit Locks API 結合テスト', () => {
       // 管理者ユーザー（プロジェクトADMIN）で強制解放
       mockAuthUser = { id: adminUser.id, email: adminUser.email };
 
-      const response = await request(app)
-        .delete(`/api/locks/${lockId}/force`)
-        .expect(200);
+      const response = await request(app).delete(`/api/locks/${lockId}/force`).expect(200);
 
       expect(response.body.message).toBe('Lock forcibly released');
       expect(response.body.releasedLock).toBeDefined();
@@ -478,9 +472,7 @@ describe('Edit Locks API 結合テスト', () => {
       expect(heartbeatResponse.body.lock.id).toBe(lockId);
 
       // 4. ロックを解放
-      await request(app)
-        .delete(`/api/locks/${lockId}`)
-        .expect(204);
+      await request(app).delete(`/api/locks/${lockId}`).expect(204);
 
       // 5. ロック状態を確認（解放済み）
       const statusResponse2 = await request(app)

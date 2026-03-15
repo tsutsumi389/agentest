@@ -115,7 +115,10 @@ describe('TestCaseService - History & Restore', () => {
       expect(mockPrisma.testCase.findUnique).toHaveBeenCalledWith({
         where: { id: 'test-case-1' },
       });
-      expect(mockTestCaseRepo.getHistories).toHaveBeenCalledWith('test-case-1', { limit: 20, offset: 0 });
+      expect(mockTestCaseRepo.getHistories).toHaveBeenCalledWith('test-case-1', {
+        limit: 20,
+        offset: 0,
+      });
       expect(mockTestCaseRepo.countHistories).toHaveBeenCalledWith('test-case-1');
       expect(result.histories).toEqual(mockHistories);
       expect(result.total).toBe(2);
@@ -128,7 +131,10 @@ describe('TestCaseService - History & Restore', () => {
 
       const result = await service.getHistories('test-case-1', { limit: 1, offset: 5 });
 
-      expect(mockTestCaseRepo.getHistories).toHaveBeenCalledWith('test-case-1', { limit: 1, offset: 5 });
+      expect(mockTestCaseRepo.getHistories).toHaveBeenCalledWith('test-case-1', {
+        limit: 1,
+        offset: 5,
+      });
       expect(result.histories).toHaveLength(1);
       expect(result.total).toBe(10);
     });
@@ -158,7 +164,9 @@ describe('TestCaseService - History & Restore', () => {
     it('存在しないテストケースはNotFoundErrorを投げる', async () => {
       mockPrisma.testCase.findUnique.mockResolvedValue(null);
 
-      await expect(service.getHistories('invalid-case', { limit: 20, offset: 0 })).rejects.toThrow(NotFoundError);
+      await expect(service.getHistories('invalid-case', { limit: 20, offset: 0 })).rejects.toThrow(
+        NotFoundError
+      );
     });
 
     it('履歴にユーザー情報が含まれる', async () => {
@@ -264,7 +272,9 @@ describe('TestCaseService - History & Restore', () => {
       mockPrisma.testCase.findUnique.mockResolvedValue(mockTestCase); // 削除されていない状態
 
       await expect(service.restore('test-case-1', 'user-1')).rejects.toThrow(ConflictError);
-      await expect(service.restore('test-case-1', 'user-1')).rejects.toThrow('Test case is not deleted');
+      await expect(service.restore('test-case-1', 'user-1')).rejects.toThrow(
+        'Test case is not deleted'
+      );
     });
 
     it('存在しないテストケースはNotFoundErrorを投げる', async () => {
@@ -284,7 +294,9 @@ describe('TestCaseService - History & Restore', () => {
       mockTestCaseRepo.findDeletedById.mockResolvedValue(oldDeletedTestCase);
 
       await expect(service.restore('test-case-1', 'user-1')).rejects.toThrow(BadRequestError);
-      await expect(service.restore('test-case-1', 'user-1')).rejects.toThrow('復元期限（30日）を過ぎています');
+      await expect(service.restore('test-case-1', 'user-1')).rejects.toThrow(
+        '復元期限（30日）を過ぎています'
+      );
     });
 
     it('30日以内の削除済みテストケースは復元できる', async () => {
@@ -309,7 +321,9 @@ describe('TestCaseService - History & Restore', () => {
       mockPrisma.testSuite.findUnique.mockResolvedValue(mockDeletedTestSuite);
 
       await expect(service.restore('test-case-1', 'user-1')).rejects.toThrow(BadRequestError);
-      await expect(service.restore('test-case-1', 'user-1')).rejects.toThrow('削除済みテストスイートへの復元はできません');
+      await expect(service.restore('test-case-1', 'user-1')).rejects.toThrow(
+        '削除済みテストスイートへの復元はできません'
+      );
     });
 
     it('存在しないテストスイートへの復元はBadRequestErrorを投げる', async () => {
@@ -317,7 +331,9 @@ describe('TestCaseService - History & Restore', () => {
       mockPrisma.testSuite.findUnique.mockResolvedValue(null);
 
       await expect(service.restore('test-case-1', 'user-1')).rejects.toThrow(BadRequestError);
-      await expect(service.restore('test-case-1', 'user-1')).rejects.toThrow('テストスイートが存在しません');
+      await expect(service.restore('test-case-1', 'user-1')).rejects.toThrow(
+        'テストスイートが存在しません'
+      );
     });
 
     it('スナップショットにdeletedAtが含まれる', async () => {

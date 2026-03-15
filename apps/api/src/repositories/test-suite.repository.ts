@@ -42,7 +42,9 @@ export interface GroupedTestSuiteHistoriesResult {
 /**
  * changeDetail.typeからカテゴリを判定
  */
-function getCategoryFromChangeDetail(snapshot: Record<string, unknown>): keyof TestSuiteCategorizedHistories {
+function getCategoryFromChangeDetail(
+  snapshot: Record<string, unknown>
+): keyof TestSuiteCategorizedHistories {
   const changeDetail = snapshot.changeDetail as { type?: string } | undefined;
   if (!changeDetail?.type) {
     return 'basicInfo';
@@ -228,7 +230,10 @@ export class TestSuiteRepository {
   /**
    * テストスイートを検索
    */
-  async search(projectId: string, options: TestSuiteSearchOptions): Promise<{ items: TestSuiteSearchItem[]; total: number }> {
+  async search(
+    projectId: string,
+    options: TestSuiteSearchOptions
+  ): Promise<{ items: TestSuiteSearchItem[]; total: number }> {
     const { q, status, labelIds, limit, offset, sortBy, sortOrder, includeDeleted } = options;
 
     // 検索条件を構築
@@ -315,7 +320,10 @@ export class TestSuiteRepository {
    * グループ化された履歴一覧を取得
    * グループ単位でのページネーションを行い、ページ境界をまたぐグループの分断を防ぐ
    */
-  async getHistoriesGrouped(testSuiteId: string, options: { limit: number; offset: number }): Promise<GroupedTestSuiteHistoriesResult> {
+  async getHistoriesGrouped(
+    testSuiteId: string,
+    options: { limit: number; offset: number }
+  ): Promise<GroupedTestSuiteHistoriesResult> {
     // 1. グループ総数を取得（groupIdがnullの場合はidをグループとして扱う）
     const countResult = await prisma.$queryRaw<[{ group_count: bigint }]>`
       SELECT COUNT(DISTINCT COALESCE(group_id, id::text)) as group_count
@@ -386,8 +394,18 @@ export class TestSuiteRepository {
     const targetGroupIds = [...new Set(rawHistories.map((r) => r.effective_group_id))];
 
     // 3. 関連データ（ユーザー、エージェントセッション）を別途取得
-    const userIds = [...new Set(rawHistories.map((h) => h.changed_by_user_id).filter((id): id is string => id !== null))];
-    const sessionIds = [...new Set(rawHistories.map((h) => h.changed_by_agent_session_id).filter((id): id is string => id !== null))];
+    const userIds = [
+      ...new Set(
+        rawHistories.map((h) => h.changed_by_user_id).filter((id): id is string => id !== null)
+      ),
+    ];
+    const sessionIds = [
+      ...new Set(
+        rawHistories
+          .map((h) => h.changed_by_agent_session_id)
+          .filter((id): id is string => id !== null)
+      ),
+    ];
 
     const [users, sessions] = await Promise.all([
       userIds.length > 0
@@ -418,8 +436,10 @@ export class TestSuiteRepository {
       changeReason: h.change_reason,
       groupId: h.group_id,
       createdAt: h.created_at,
-      changedBy: h.changed_by_user_id ? userMap.get(h.changed_by_user_id) ?? null : null,
-      agentSession: h.changed_by_agent_session_id ? sessionMap.get(h.changed_by_agent_session_id) ?? null : null,
+      changedBy: h.changed_by_user_id ? (userMap.get(h.changed_by_user_id) ?? null) : null,
+      agentSession: h.changed_by_agent_session_id
+        ? (sessionMap.get(h.changed_by_agent_session_id) ?? null)
+        : null,
     }));
 
     // 4. グループ化してカテゴリ別に振り分け

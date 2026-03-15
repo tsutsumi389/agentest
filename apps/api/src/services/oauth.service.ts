@@ -177,11 +177,7 @@ export class OAuthService {
 
     // PKCE検証 (S256必須)
     if (input.code_challenge_method !== 'S256') {
-      throw new OAuthError(
-        'invalid_request',
-        'code_challenge_method must be S256',
-        400
-      );
+      throw new OAuthError('invalid_request', 'code_challenge_method must be S256', 400);
     }
 
     // スコープの検証
@@ -274,7 +270,13 @@ export class OAuthService {
     }
 
     // PKCE検証
-    if (!verifyCodeChallenge(input.code_verifier, authCode.codeChallenge, authCode.codeChallengeMethod)) {
+    if (
+      !verifyCodeChallenge(
+        input.code_verifier,
+        authCode.codeChallenge,
+        authCode.codeChallengeMethod
+      )
+    ) {
       throw new OAuthError('invalid_grant', 'code_verifier verification failed', 400);
     }
 
@@ -445,10 +447,13 @@ export class OAuthService {
       if (clientId && accessToken.clientId !== clientId) {
         // RFC 7009: クライアントが一致しない場合は何もしない
         // セキュリティ: 他クライアントのトークン失効試行をログに記録
-        logger.warn({
-          tokenClientId: accessToken.clientId,
-          requestClientId: clientId,
-        }, 'Token revocation attempt by different client');
+        logger.warn(
+          {
+            tokenClientId: accessToken.clientId,
+            requestClientId: clientId,
+          },
+          'Token revocation attempt by different client'
+        );
         return;
       }
 
@@ -464,10 +469,13 @@ export class OAuthService {
       if (clientId && refreshToken.clientId !== clientId) {
         // RFC 7009: クライアントが一致しない場合は何もしない
         // セキュリティ: 他クライアントのトークン失効試行をログに記録
-        logger.warn({
-          tokenClientId: refreshToken.clientId,
-          requestClientId: clientId,
-        }, 'Refresh token revocation attempt by different client');
+        logger.warn(
+          {
+            tokenClientId: refreshToken.clientId,
+            requestClientId: clientId,
+          },
+          'Refresh token revocation attempt by different client'
+        );
         return;
       }
 
@@ -485,7 +493,10 @@ export class OAuthService {
   /**
    * トークンからユーザーIDを取得（MCPサーバー向け）
    */
-  async validateAccessToken(token: string, expectedAudience?: string): Promise<{
+  async validateAccessToken(
+    token: string,
+    expectedAudience?: string
+  ): Promise<{
     userId: string;
     scopes: string[];
   } | null> {

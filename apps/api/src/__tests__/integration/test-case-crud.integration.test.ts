@@ -33,7 +33,12 @@ vi.mock('@agentest/auth', () => ({
   optionalAuth: () => (_req: any, _res: any, next: any) => next(),
   requireOrgRole: () => (_req: any, _res: any, next: any) => next(),
   requireProjectRole: () => (_req: any, _res: any, next: any) => next(),
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -47,20 +52,25 @@ vi.mock('@agentest/auth', () => ({
 
 // テストケース権限ミドルウェアをモック
 vi.mock('../../middleware/require-test-case-role.js', () => ({
-  requireTestCaseRole: (roles: string[], _options?: { allowDeletedTestCase?: boolean }) => (req: any, _res: any, next: any) => {
-    if (!mockAuthUser) {
-      return next(new AuthenticationError('認証が必要です'));
-    }
-    req.user = mockAuthUser;
-    if (!mockTestCaseRole || !roles.includes(mockTestCaseRole)) {
-      return next(new AuthorizationError('Insufficient permissions'));
-    }
-    next();
-  },
+  requireTestCaseRole:
+    (roles: string[], _options?: { allowDeletedTestCase?: boolean }) =>
+    (req: any, _res: any, next: any) => {
+      if (!mockAuthUser) {
+        return next(new AuthenticationError('認証が必要です'));
+      }
+      req.user = mockAuthUser;
+      if (!mockTestCaseRole || !roles.includes(mockTestCaseRole)) {
+        return next(new AuthorizationError('Insufficient permissions'));
+      }
+      next();
+    },
 }));
 
 // テスト用認証設定関数
-function setTestAuth(user: { id: string; email: string } | null, testCaseRole: string | null = 'OWNER') {
+function setTestAuth(
+  user: { id: string; email: string } | null,
+  testCaseRole: string | null = 'OWNER'
+) {
   mockAuthUser = user;
   mockTestCaseRole = testCaseRole;
 }
@@ -179,12 +189,10 @@ describe('テストケース CRUD 結合テスト', () => {
     it('存在しないテストスイートIDはエラー', async () => {
       setTestAuth({ id: owner.id, email: owner.email }, 'OWNER');
 
-      const response = await request(app)
-        .post('/api/test-cases')
-        .send({
-          testSuiteId: '00000000-0000-0000-0000-000000000000',
-          title: 'テストケース',
-        });
+      const response = await request(app).post('/api/test-cases').send({
+        testSuiteId: '00000000-0000-0000-0000-000000000000',
+        title: 'テストケース',
+      });
 
       // テストスイートが見つからない場合はエラー（404または400）
       expect([400, 404]).toContain(response.status);
@@ -245,9 +253,7 @@ describe('テストケース CRUD 結合テスト', () => {
     it('テストケース詳細を取得できる', async () => {
       setTestAuth({ id: owner.id, email: owner.email }, 'OWNER');
 
-      const response = await request(app)
-        .get(`/api/test-cases/${testCase.id}`)
-        .expect(200);
+      const response = await request(app).get(`/api/test-cases/${testCase.id}`).expect(200);
 
       expect(response.body.testCase.id).toBe(testCase.id);
       expect(response.body.testCase.title).toBe('テストケース詳細');
@@ -258,9 +264,7 @@ describe('テストケース CRUD 結合テスト', () => {
     it('steps, preconditions, expectedResultsが含まれる', async () => {
       setTestAuth({ id: owner.id, email: owner.email }, 'OWNER');
 
-      const response = await request(app)
-        .get(`/api/test-cases/${testCase.id}`)
-        .expect(200);
+      const response = await request(app).get(`/api/test-cases/${testCase.id}`).expect(200);
 
       expect(response.body.testCase.steps).toBeDefined();
       expect(response.body.testCase.steps).toHaveLength(2);
@@ -279,9 +283,7 @@ describe('テストケース CRUD 結合テスト', () => {
     it('testSuite情報が含まれる', async () => {
       setTestAuth({ id: owner.id, email: owner.email }, 'OWNER');
 
-      const response = await request(app)
-        .get(`/api/test-cases/${testCase.id}`)
-        .expect(200);
+      const response = await request(app).get(`/api/test-cases/${testCase.id}`).expect(200);
 
       expect(response.body.testCase.testSuite).toBeDefined();
       expect(response.body.testCase.testSuite.id).toBe(testSuite.id);
@@ -291,9 +293,7 @@ describe('テストケース CRUD 結合テスト', () => {
     it('createdByUser情報が含まれる', async () => {
       setTestAuth({ id: owner.id, email: owner.email }, 'OWNER');
 
-      const response = await request(app)
-        .get(`/api/test-cases/${testCase.id}`)
-        .expect(200);
+      const response = await request(app).get(`/api/test-cases/${testCase.id}`).expect(200);
 
       expect(response.body.testCase.createdByUser).toBeDefined();
       expect(response.body.testCase.createdByUser.id).toBe(owner.id);
@@ -313,17 +313,13 @@ describe('テストケース CRUD 結合テスト', () => {
     it('未認証は401エラー', async () => {
       clearTestAuth();
 
-      await request(app)
-        .get(`/api/test-cases/${testCase.id}`)
-        .expect(401);
+      await request(app).get(`/api/test-cases/${testCase.id}`).expect(401);
     });
 
     it('権限なし（mockTestCaseRole=null）は403エラー', async () => {
       setTestAuth({ id: reader.id, email: reader.email }, null);
 
-      const response = await request(app)
-        .get(`/api/test-cases/${testCase.id}`)
-        .expect(403);
+      const response = await request(app).get(`/api/test-cases/${testCase.id}`).expect(403);
 
       expect(response.body.error.code).toBe('AUTHORIZATION_ERROR');
     });
@@ -331,9 +327,7 @@ describe('テストケース CRUD 結合テスト', () => {
     it('READロールで取得可能', async () => {
       setTestAuth({ id: reader.id, email: reader.email }, 'READ');
 
-      const response = await request(app)
-        .get(`/api/test-cases/${testCase.id}`)
-        .expect(200);
+      const response = await request(app).get(`/api/test-cases/${testCase.id}`).expect(200);
 
       expect(response.body.testCase.id).toBe(testCase.id);
     });
@@ -438,17 +432,13 @@ describe('テストケース CRUD 結合テスト', () => {
     it('テストケースを論理削除できる', async () => {
       setTestAuth({ id: owner.id, email: owner.email }, 'OWNER');
 
-      await request(app)
-        .delete(`/api/test-cases/${testCase.id}`)
-        .expect(204);
+      await request(app).delete(`/api/test-cases/${testCase.id}`).expect(204);
     });
 
     it('deletedAtが設定される', async () => {
       setTestAuth({ id: owner.id, email: owner.email }, 'OWNER');
 
-      await request(app)
-        .delete(`/api/test-cases/${testCase.id}`)
-        .expect(204);
+      await request(app).delete(`/api/test-cases/${testCase.id}`).expect(204);
 
       // DBで論理削除を確認
       const deleted = await prisma.testCase.findUnique({
@@ -460,9 +450,7 @@ describe('テストケース CRUD 結合テスト', () => {
     it('READロールは403エラー', async () => {
       setTestAuth({ id: reader.id, email: reader.email }, 'READ');
 
-      await request(app)
-        .delete(`/api/test-cases/${testCase.id}`)
-        .expect(403);
+      await request(app).delete(`/api/test-cases/${testCase.id}`).expect(403);
     });
   });
 
@@ -501,9 +489,7 @@ describe('テストケース CRUD 結合テスト', () => {
     it('deletedAtがnullに戻る', async () => {
       setTestAuth({ id: owner.id, email: owner.email }, 'OWNER');
 
-      await request(app)
-        .post(`/api/test-cases/${testCase.id}/restore`)
-        .expect(200);
+      await request(app).post(`/api/test-cases/${testCase.id}/restore`).expect(200);
 
       // DBで確認
       const restored = await prisma.testCase.findUnique({

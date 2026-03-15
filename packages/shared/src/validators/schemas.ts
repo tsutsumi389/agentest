@@ -111,7 +111,11 @@ export const passwordSchema = z
 
 // ユーザー新規登録（メール/パスワード）
 export const userRegisterSchema = z.object({
-  email: z.string().email().max(255).transform((v) => v.toLowerCase().trim()),
+  email: z
+    .string()
+    .email()
+    .max(255)
+    .transform((v) => v.toLowerCase().trim()),
   password: passwordSchema,
   name: z.string().min(1).max(100).trim(),
 });
@@ -120,7 +124,10 @@ export type UserRegister = z.infer<typeof userRegisterSchema>;
 
 // ユーザーログイン（パスワード強度チェックは不要、ログイン時は任意文字列でOK）
 export const userLoginSchema = z.object({
-  email: z.string().email().transform((v) => v.toLowerCase().trim()),
+  email: z
+    .string()
+    .email()
+    .transform((v) => v.toLowerCase().trim()),
   password: z.string().min(1),
 });
 
@@ -128,7 +135,10 @@ export type UserLogin = z.infer<typeof userLoginSchema>;
 
 // パスワードリセット要求
 export const passwordResetRequestSchema = z.object({
-  email: z.string().email().transform((v) => v.toLowerCase().trim()),
+  email: z
+    .string()
+    .email()
+    .transform((v) => v.toLowerCase().trim()),
 });
 
 export type PasswordResetRequest = z.infer<typeof passwordResetRequestSchema>;
@@ -163,7 +173,11 @@ export type ChangePassword = z.infer<typeof changePasswordSchema>;
 
 // ユーザースキーマ
 export const userCreateSchema = z.object({
-  email: z.string().email().max(255).transform((v) => v.toLowerCase().trim()),
+  email: z
+    .string()
+    .email()
+    .max(255)
+    .transform((v) => v.toLowerCase().trim()),
   name: z.string().min(1).max(100),
   avatarUrl: z.string().url().nullish(),
 });
@@ -185,7 +199,10 @@ export const organizationUpdateSchema = z.object({
 });
 
 export const organizationInviteSchema = z.object({
-  email: z.string().email().transform((v) => v.toLowerCase().trim()),
+  email: z
+    .string()
+    .email()
+    .transform((v) => v.toLowerCase().trim()),
   role: organizationRoleSchema.exclude(['OWNER']),
 });
 
@@ -304,7 +321,14 @@ export const testSuiteSearchSchema = z.object({
   labelIds: z
     .string()
     .optional()
-    .transform((val) => (val ? val.split(',').map((s) => s.trim()).filter((s) => s.length > 0) : undefined))
+    .transform((val) =>
+      val
+        ? val
+            .split(',')
+            .map((s) => s.trim())
+            .filter((s) => s.length > 0)
+        : undefined
+    )
     .pipe(z.array(z.string().uuid()).optional()),
   limit: z.coerce.number().int().min(1).max(100).default(20),
   offset: z.coerce.number().int().min(0).default(0),
@@ -354,9 +378,18 @@ export const suggestionSearchSchema = z.object({
 
 // レビューコメントスキーマ
 export const reviewTargetTypeSchema = z.enum(['SUITE', 'CASE']);
-export const reviewTargetFieldSchema = z.enum(['TITLE', 'DESCRIPTION', 'PRECONDITION', 'STEP', 'EXPECTED_RESULT']);
+export const reviewTargetFieldSchema = z.enum([
+  'TITLE',
+  'DESCRIPTION',
+  'PRECONDITION',
+  'STEP',
+  'EXPECTED_RESULT',
+]);
 export const reviewStatusSchema = z.enum(['OPEN', 'RESOLVED']);
-export const reviewSessionStatusSchema = z.enum([ReviewSessionStatus.DRAFT, ReviewSessionStatus.SUBMITTED]);
+export const reviewSessionStatusSchema = z.enum([
+  ReviewSessionStatus.DRAFT,
+  ReviewSessionStatus.SUBMITTED,
+]);
 export const reviewVerdictSchema = z.enum([
   ReviewVerdict.APPROVED,
   ReviewVerdict.CHANGES_REQUESTED,
@@ -448,23 +481,25 @@ const auditLogCategories = [
 ] as const;
 
 // 監査ログエクスポートスキーマ
-export const auditLogExportSchema = z.object({
-  format: z.enum(['csv', 'json']),
-  category: z.enum(auditLogCategories).optional(),
-  startDate: z.coerce.date().optional(),
-  endDate: z.coerce.date().optional(),
-}).refine(
-  (data) => {
-    if (data.startDate && data.endDate) {
-      return data.startDate <= data.endDate;
+export const auditLogExportSchema = z
+  .object({
+    format: z.enum(['csv', 'json']),
+    category: z.enum(auditLogCategories).optional(),
+    startDate: z.coerce.date().optional(),
+    endDate: z.coerce.date().optional(),
+  })
+  .refine(
+    (data) => {
+      if (data.startDate && data.endDate) {
+        return data.startDate <= data.endDate;
+      }
+      return true;
+    },
+    {
+      message: 'startDateはendDate以前の日付を指定してください',
+      path: ['startDate'],
     }
-    return true;
-  },
-  {
-    message: 'startDateはendDate以前の日付を指定してください',
-    path: ['startDate'],
-  }
-);
+  );
 
 // 型エクスポート
 export type UserCreate = z.infer<typeof userCreateSchema>;
@@ -532,32 +567,34 @@ export type AdminUserSearch = z.infer<typeof adminUserSearchSchema>;
 // 管理者向け組織検索スキーマ
 // ============================================
 
-export const adminOrganizationSearchSchema = z.object({
-  // 検索クエリ
-  q: z.string().max(100).optional(),
-  // ステータスフィルタ
-  status: z.enum(['active', 'deleted', 'all']).default('active'),
-  // 日付フィルタ
-  createdFrom: z.string().datetime().optional(),
-  createdTo: z.string().datetime().optional(),
-  // ページネーション
-  page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-  // ソート
-  sortBy: z.enum(['createdAt', 'name']).default('createdAt'),
-  sortOrder: z.enum(['asc', 'desc']).default('desc'),
-}).refine(
-  (data) => {
-    if (data.createdFrom && data.createdTo) {
-      return new Date(data.createdFrom) <= new Date(data.createdTo);
+export const adminOrganizationSearchSchema = z
+  .object({
+    // 検索クエリ
+    q: z.string().max(100).optional(),
+    // ステータスフィルタ
+    status: z.enum(['active', 'deleted', 'all']).default('active'),
+    // 日付フィルタ
+    createdFrom: z.string().datetime().optional(),
+    createdTo: z.string().datetime().optional(),
+    // ページネーション
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+    // ソート
+    sortBy: z.enum(['createdAt', 'name']).default('createdAt'),
+    sortOrder: z.enum(['asc', 'desc']).default('desc'),
+  })
+  .refine(
+    (data) => {
+      if (data.createdFrom && data.createdTo) {
+        return new Date(data.createdFrom) <= new Date(data.createdTo);
+      }
+      return true;
+    },
+    {
+      message: 'createdFromはcreatedTo以前の日付を指定してください',
+      path: ['createdFrom'],
     }
-    return true;
-  },
-  {
-    message: 'createdFromはcreatedTo以前の日付を指定してください',
-    path: ['createdFrom'],
-  }
-);
+  );
 
 export type AdminOrganizationSearch = z.infer<typeof adminOrganizationSearchSchema>;
 
@@ -565,51 +602,58 @@ export type AdminOrganizationSearch = z.infer<typeof adminOrganizationSearchSche
 // 管理者向け監査ログ検索スキーマ
 // ============================================
 
-export const adminAuditLogSearchSchema = z.object({
-  // 検索クエリ（アクション名で部分一致）
-  q: z.string().max(100).optional(),
-  // カテゴリフィルタ（カンマ区切り → 配列変換）
-  category: z
-    .string()
-    .optional()
-    .transform((val) => val?.split(',').map((s) => s.trim()))
-    .pipe(z.array(z.enum([
-      AuditLogCategory.AUTH,
-      AuditLogCategory.USER,
-      AuditLogCategory.ORGANIZATION,
-      AuditLogCategory.MEMBER,
-      AuditLogCategory.PROJECT,
-      AuditLogCategory.API_TOKEN,
-    ])).optional()),
-  // 組織IDフィルタ
-  organizationId: z.string().uuid().optional(),
-  // ユーザーIDフィルタ
-  userId: z.string().uuid().optional(),
-  // 日付フィルタ
-  startDate: z.string().datetime().optional(),
-  endDate: z.string().datetime().optional(),
-  // ページネーション
-  page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(50),
-  // ソート
-  sortBy: z.enum(['createdAt']).default('createdAt'),
-  sortOrder: z.enum(['asc', 'desc']).default('desc'),
-}).refine(
-  (data) => {
-    // 両方指定されている場合のみ日付の前後関係をチェック
-    if (data.startDate && data.endDate) {
-      return new Date(data.startDate) <= new Date(data.endDate);
+export const adminAuditLogSearchSchema = z
+  .object({
+    // 検索クエリ（アクション名で部分一致）
+    q: z.string().max(100).optional(),
+    // カテゴリフィルタ（カンマ区切り → 配列変換）
+    category: z
+      .string()
+      .optional()
+      .transform((val) => val?.split(',').map((s) => s.trim()))
+      .pipe(
+        z
+          .array(
+            z.enum([
+              AuditLogCategory.AUTH,
+              AuditLogCategory.USER,
+              AuditLogCategory.ORGANIZATION,
+              AuditLogCategory.MEMBER,
+              AuditLogCategory.PROJECT,
+              AuditLogCategory.API_TOKEN,
+            ])
+          )
+          .optional()
+      ),
+    // 組織IDフィルタ
+    organizationId: z.string().uuid().optional(),
+    // ユーザーIDフィルタ
+    userId: z.string().uuid().optional(),
+    // 日付フィルタ
+    startDate: z.string().datetime().optional(),
+    endDate: z.string().datetime().optional(),
+    // ページネーション
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(50),
+    // ソート
+    sortBy: z.enum(['createdAt']).default('createdAt'),
+    sortOrder: z.enum(['asc', 'desc']).default('desc'),
+  })
+  .refine(
+    (data) => {
+      // 両方指定されている場合のみ日付の前後関係をチェック
+      if (data.startDate && data.endDate) {
+        return new Date(data.startDate) <= new Date(data.endDate);
+      }
+      return true;
+    },
+    {
+      message: 'startDateはendDate以前の日付を指定してください',
+      path: ['startDate'],
     }
-    return true;
-  },
-  {
-    message: 'startDateはendDate以前の日付を指定してください',
-    path: ['startDate'],
-  }
-);
+  );
 
 export type AdminAuditLogSearch = z.infer<typeof adminAuditLogSearchSchema>;
-
 
 // ============================================
 // システム管理者（AdminUser）検索スキーマ
@@ -618,53 +662,56 @@ export type AdminAuditLogSearch = z.infer<typeof adminAuditLogSearchSchema>;
 // システム管理者ロール
 const systemAdminRoleSchema = z.enum(['SUPER_ADMIN', 'ADMIN', 'VIEWER']);
 
-export const systemAdminSearchSchema = z.object({
-  // 検索クエリ（メール・名前で部分一致）
-  q: z.string().max(100).optional(),
-  // ロールフィルタ（カンマ区切り → 配列変換）
-  role: z
-    .string()
-    .optional()
-    .transform((val) => val?.split(',').map((s) => s.trim()))
-    .pipe(z.array(systemAdminRoleSchema).optional()),
-  // ステータスフィルタ
-  status: z.enum(['active', 'deleted', 'locked', 'all']).default('active'),
-  // 2FA有効状態フィルタ
-  totpEnabled: z.preprocess(
-    (val) => {
+export const systemAdminSearchSchema = z
+  .object({
+    // 検索クエリ（メール・名前で部分一致）
+    q: z.string().max(100).optional(),
+    // ロールフィルタ（カンマ区切り → 配列変換）
+    role: z
+      .string()
+      .optional()
+      .transform((val) => val?.split(',').map((s) => s.trim()))
+      .pipe(z.array(systemAdminRoleSchema).optional()),
+    // ステータスフィルタ
+    status: z.enum(['active', 'deleted', 'locked', 'all']).default('active'),
+    // 2FA有効状態フィルタ
+    totpEnabled: z.preprocess((val) => {
       if (val === 'true') return true;
       if (val === 'false') return false;
       return undefined;
+    }, z.boolean().optional()),
+    // 日付フィルタ
+    createdFrom: z.string().datetime().optional(),
+    createdTo: z.string().datetime().optional(),
+    // ページネーション
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+    // ソート
+    sortBy: z.enum(['createdAt', 'name', 'email', 'role', 'lastLoginAt']).default('createdAt'),
+    sortOrder: z.enum(['asc', 'desc']).default('desc'),
+  })
+  .refine(
+    (data) => {
+      if (data.createdFrom && data.createdTo) {
+        return new Date(data.createdFrom) <= new Date(data.createdTo);
+      }
+      return true;
     },
-    z.boolean().optional()
-  ),
-  // 日付フィルタ
-  createdFrom: z.string().datetime().optional(),
-  createdTo: z.string().datetime().optional(),
-  // ページネーション
-  page: z.coerce.number().int().min(1).default(1),
-  limit: z.coerce.number().int().min(1).max(100).default(20),
-  // ソート
-  sortBy: z.enum(['createdAt', 'name', 'email', 'role', 'lastLoginAt']).default('createdAt'),
-  sortOrder: z.enum(['asc', 'desc']).default('desc'),
-}).refine(
-  (data) => {
-    if (data.createdFrom && data.createdTo) {
-      return new Date(data.createdFrom) <= new Date(data.createdTo);
+    {
+      message: 'createdFromはcreatedTo以前の日付を指定してください',
+      path: ['createdFrom'],
     }
-    return true;
-  },
-  {
-    message: 'createdFromはcreatedTo以前の日付を指定してください',
-    path: ['createdFrom'],
-  }
-);
+  );
 
 export type SystemAdminSearch = z.infer<typeof systemAdminSearchSchema>;
 
 // システム管理者招待スキーマ
 export const systemAdminInviteSchema = z.object({
-  email: z.string().email('有効なメールアドレスを入力してください').max(255).transform((v) => v.toLowerCase().trim()),
+  email: z
+    .string()
+    .email('有効なメールアドレスを入力してください')
+    .max(255)
+    .transform((v) => v.toLowerCase().trim()),
   name: z.string().min(1, '名前は必須です').max(100),
   role: systemAdminRoleSchema,
 });
@@ -688,7 +735,11 @@ export type AcceptInvitation = z.infer<typeof acceptInvitationSchema>;
 
 // 初回セットアップスキーマ（SUPER_ADMIN作成）
 export const initialSetupSchema = z.object({
-  email: z.string().email('有効なメールアドレスを入力してください').max(255).transform((v) => v.toLowerCase().trim()),
+  email: z
+    .string()
+    .email('有効なメールアドレスを入力してください')
+    .max(255)
+    .transform((v) => v.toLowerCase().trim()),
   name: z.string().min(1, '名前は必須です').max(100).trim(),
   password: passwordSchema,
 });

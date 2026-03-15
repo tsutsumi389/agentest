@@ -70,11 +70,8 @@
       "project": ["src/**/*.ts"]
     }
   },
-  "ignore": [
-    "e2e/**"
-  ],
+  "ignore": ["e2e/**"],
   "ignoreDependencies": [
-    "prettier",
     "autoprefixer",
     "postcss",
     "tailwindcss",
@@ -83,7 +80,5 @@
     "@prisma/client",
     "vite-plugin-singlefile"
   ],
-  "ignoreBinaries": [
-    "playwright"
-  ]
+  "ignoreBinaries": ["playwright"]
 }

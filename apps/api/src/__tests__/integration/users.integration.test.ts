@@ -38,7 +38,12 @@ vi.mock('@agentest/auth', () => ({
   optionalAuth: () => (_req: any, _res: any, next: any) => next(),
   requireOrgRole: () => (_req: any, _res: any, next: any) => next(),
   requireProjectRole: () => (_req: any, _res: any, next: any) => next(),
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -88,9 +93,7 @@ describe('Users API Integration Tests', () => {
 
   describe('GET /api/users/:userId', () => {
     it('ユーザー情報を取得できる', async () => {
-      const response = await request(app)
-        .get(`/api/users/${testUser.id}`)
-        .expect(200);
+      const response = await request(app).get(`/api/users/${testUser.id}`).expect(200);
 
       expect(response.body.user.id).toBe(testUser.id);
       expect(response.body.user.email).toBe(testUser.email);
@@ -99,9 +102,7 @@ describe('Users API Integration Tests', () => {
     });
 
     it('他のユーザーIDへのアクセスは403エラー', async () => {
-      const response = await request(app)
-        .get('/api/users/non-existent-user-id')
-        .expect(403);
+      const response = await request(app).get('/api/users/non-existent-user-id').expect(403);
 
       expect(response.body.error.code).toBe('AUTHORIZATION_ERROR');
     });
@@ -109,9 +110,7 @@ describe('Users API Integration Tests', () => {
     it('未認証の場合は401エラー', async () => {
       clearTestAuth();
 
-      const response = await request(app)
-        .get(`/api/users/${testUser.id}`)
-        .expect(401);
+      const response = await request(app).get(`/api/users/${testUser.id}`).expect(401);
 
       expect(response.body.error.code).toBe('AUTHENTICATION_ERROR');
     });
@@ -210,9 +209,7 @@ describe('Users API Integration Tests', () => {
 
   describe('DELETE /api/users/:userId', () => {
     it('自分のアカウントを論理削除できる', async () => {
-      await request(app)
-        .delete(`/api/users/${testUser.id}`)
-        .expect(204);
+      await request(app).delete(`/api/users/${testUser.id}`).expect(204);
 
       // データベースで論理削除を確認
       const user = await prisma.user.findUnique({ where: { id: testUser.id } });
@@ -222,9 +219,7 @@ describe('Users API Integration Tests', () => {
     it('他のユーザーのアカウントは削除できない', async () => {
       const otherUser = await createTestUser({ email: 'other@example.com' });
 
-      const response = await request(app)
-        .delete(`/api/users/${otherUser.id}`)
-        .expect(403);
+      const response = await request(app).delete(`/api/users/${otherUser.id}`).expect(403);
 
       expect(response.body.error.code).toBe('AUTHORIZATION_ERROR');
 
@@ -240,9 +235,7 @@ describe('Users API Integration Tests', () => {
       await createTestAccount(testUser.id, { provider: 'github' });
       await createTestAccount(testUser.id, { provider: 'google' });
 
-      const response = await request(app)
-        .get(`/api/users/${testUser.id}/accounts`)
-        .expect(200);
+      const response = await request(app).get(`/api/users/${testUser.id}/accounts`).expect(200);
 
       expect(response.body.data).toHaveLength(2);
       expect(response.body.data.map((a: any) => a.provider)).toContain('github');
@@ -250,9 +243,7 @@ describe('Users API Integration Tests', () => {
     });
 
     it('連携がない場合は空配列', async () => {
-      const response = await request(app)
-        .get(`/api/users/${testUser.id}/accounts`)
-        .expect(200);
+      const response = await request(app).get(`/api/users/${testUser.id}/accounts`).expect(200);
 
       expect(response.body.data).toHaveLength(0);
     });
@@ -261,9 +252,7 @@ describe('Users API Integration Tests', () => {
       const otherUser = await createTestUser({ email: 'other@example.com' });
       await createTestAccount(otherUser.id, { provider: 'github' });
 
-      const response = await request(app)
-        .get(`/api/users/${otherUser.id}/accounts`)
-        .expect(403);
+      const response = await request(app).get(`/api/users/${otherUser.id}/accounts`).expect(403);
 
       expect(response.body.error.code).toBe('AUTHORIZATION_ERROR');
     });
@@ -424,9 +413,7 @@ describe('Users API Integration Tests', () => {
       const org = await createTestOrganization(testUser.id, { name: 'Test Org' });
       await createTestProject(testUser.id, { name: 'Org Project', organizationId: org.id });
 
-      const response = await request(app)
-        .get(`/api/users/${testUser.id}/projects`)
-        .expect(200);
+      const response = await request(app).get(`/api/users/${testUser.id}/projects`).expect(200);
 
       expect(response.body.projects).toHaveLength(2);
       expect(response.body.pagination).toBeDefined();
@@ -446,14 +433,14 @@ describe('Users API Integration Tests', () => {
       const memberProject = await createTestProject(otherUser.id, { name: 'Member Project' });
       await createTestProjectMember(memberProject.id, testUser.id, 'WRITE');
 
-      const response = await request(app)
-        .get(`/api/users/${testUser.id}/projects`)
-        .expect(200);
+      const response = await request(app).get(`/api/users/${testUser.id}/projects`).expect(200);
 
       expect(response.body.projects).toHaveLength(2);
 
       const ownerProjectData = response.body.projects.find((p: any) => p.name === 'Owner Project');
-      const memberProjectData = response.body.projects.find((p: any) => p.name === 'Member Project');
+      const memberProjectData = response.body.projects.find(
+        (p: any) => p.name === 'Member Project'
+      );
 
       expect(ownerProjectData.role).toBe('OWNER');
       expect(memberProjectData.role).toBe('WRITE');
@@ -537,9 +524,7 @@ describe('Users API Integration Tests', () => {
         data: { deletedAt: new Date() },
       });
 
-      const response = await request(app)
-        .get(`/api/users/${testUser.id}/projects`)
-        .expect(200);
+      const response = await request(app).get(`/api/users/${testUser.id}/projects`).expect(200);
 
       expect(response.body.projects).toHaveLength(1);
       expect(response.body.projects[0].name).toBe('Active Project');
@@ -618,9 +603,7 @@ describe('Users API Integration Tests', () => {
         data: { updatedAt: new Date('2024-06-01') },
       });
 
-      const response = await request(app)
-        .get(`/api/users/${testUser.id}/projects`)
-        .expect(200);
+      const response = await request(app).get(`/api/users/${testUser.id}/projects`).expect(200);
 
       expect(response.body.projects).toHaveLength(2);
       // 新しいものが先
@@ -629,9 +612,7 @@ describe('Users API Integration Tests', () => {
     });
 
     it('プロジェクトがない場合は空配列', async () => {
-      const response = await request(app)
-        .get(`/api/users/${testUser.id}/projects`)
-        .expect(200);
+      const response = await request(app).get(`/api/users/${testUser.id}/projects`).expect(200);
 
       expect(response.body.projects).toHaveLength(0);
       expect(response.body.pagination.total).toBe(0);
@@ -641,9 +622,7 @@ describe('Users API Integration Tests', () => {
       const otherUser = await createTestUser({ email: 'other@example.com' });
       await createTestProject(otherUser.id, { name: 'Other Project' });
 
-      const response = await request(app)
-        .get(`/api/users/${otherUser.id}/projects`)
-        .expect(403);
+      const response = await request(app).get(`/api/users/${otherUser.id}/projects`).expect(403);
 
       expect(response.body.error.code).toBe('AUTHORIZATION_ERROR');
     });
@@ -651,9 +630,7 @@ describe('Users API Integration Tests', () => {
     it('未認証の場合は401エラー', async () => {
       clearTestAuth();
 
-      const response = await request(app)
-        .get(`/api/users/${testUser.id}/projects`)
-        .expect(401);
+      const response = await request(app).get(`/api/users/${testUser.id}/projects`).expect(401);
 
       expect(response.body.error.code).toBe('AUTHENTICATION_ERROR');
     });
@@ -713,10 +690,16 @@ describe('Users API Integration Tests', () => {
         const org = await createTestOrganization(testUser.id, { name: 'Test Org' });
 
         // 組織のアクティブなプロジェクト
-        await createTestProject(testUser.id, { name: 'Active Org Project', organizationId: org.id });
+        await createTestProject(testUser.id, {
+          name: 'Active Org Project',
+          organizationId: org.id,
+        });
 
         // 組織の削除済みプロジェクト
-        const deletedOrgProject = await createTestProject(testUser.id, { name: 'Deleted Org Project', organizationId: org.id });
+        const deletedOrgProject = await createTestProject(testUser.id, {
+          name: 'Deleted Org Project',
+          organizationId: org.id,
+        });
         await prisma.project.update({
           where: { id: deletedOrgProject.id },
           data: { deletedAt: new Date() },
@@ -748,7 +731,10 @@ describe('Users API Integration Tests', () => {
         // 様々なパターンのプロジェクトを作成
         await createTestProject(testUser.id, { name: 'Target Active', organizationId: org.id });
 
-        const targetDeleted = await createTestProject(testUser.id, { name: 'Target Deleted', organizationId: org.id });
+        const targetDeleted = await createTestProject(testUser.id, {
+          name: 'Target Deleted',
+          organizationId: org.id,
+        });
         await prisma.project.update({
           where: { id: targetDeleted.id },
           data: { deletedAt: new Date() },
@@ -886,14 +872,25 @@ describe('Users API Integration Tests', () => {
       });
 
       // 実行スナップショットを作成
-      const execSuite = await createTestExecutionTestSuite(execution.id, testSuite.id, { name: testSuite.name });
-      const execCase = await createTestExecutionTestCase(execSuite.id, testCase.id, { title: testCase.title });
+      const execSuite = await createTestExecutionTestSuite(execution.id, testSuite.id, {
+        name: testSuite.name,
+      });
+      const execCase = await createTestExecutionTestCase(execSuite.id, testCase.id, {
+        title: testCase.title,
+      });
 
       // 期待結果と実行結果を作成
       for (let i = 0; i < judgments.length; i++) {
-        const expectedResult = await createTestCaseExpectedResult(testCase.id, { content: `Expected ${i}` });
-        const execExpResult = await createTestExecutionTestCaseExpectedResult(execCase.id, expectedResult.id);
-        await createTestExecutionExpectedResult(execution.id, execCase.id, execExpResult.id, { status: judgments[i] });
+        const expectedResult = await createTestCaseExpectedResult(testCase.id, {
+          content: `Expected ${i}`,
+        });
+        const execExpResult = await createTestExecutionTestCaseExpectedResult(
+          execCase.id,
+          expectedResult.id
+        );
+        await createTestExecutionExpectedResult(execution.id, execCase.id, execExpResult.id, {
+          status: judgments[i],
+        });
       }
 
       return { project, testSuite, testCase, environment, execution };
@@ -961,11 +958,22 @@ describe('Users API Integration Tests', () => {
         const execution = await prisma.execution.create({
           data: { testSuiteId: testSuite.id },
         });
-        const execSuite = await createTestExecutionTestSuite(execution.id, testSuite.id, { name: testSuite.name });
-        const execCase = await createTestExecutionTestCase(execSuite.id, testCase.id, { title: testCase.title });
-        const expectedResult = await createTestCaseExpectedResult(testCase.id, { content: 'Expected' });
-        const execExpResult = await createTestExecutionTestCaseExpectedResult(execCase.id, expectedResult.id);
-        await createTestExecutionExpectedResult(execution.id, execCase.id, execExpResult.id, { status: 'PASS' });
+        const execSuite = await createTestExecutionTestSuite(execution.id, testSuite.id, {
+          name: testSuite.name,
+        });
+        const execCase = await createTestExecutionTestCase(execSuite.id, testCase.id, {
+          title: testCase.title,
+        });
+        const expectedResult = await createTestCaseExpectedResult(testCase.id, {
+          content: 'Expected',
+        });
+        const execExpResult = await createTestExecutionTestCaseExpectedResult(
+          execCase.id,
+          expectedResult.id
+        );
+        await createTestExecutionExpectedResult(execution.id, execCase.id, execExpResult.id, {
+          status: 'PASS',
+        });
 
         const response = await request(app)
           .get(`/api/users/${testUser.id}/recent-executions`)

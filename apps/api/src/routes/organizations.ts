@@ -33,7 +33,11 @@ router.post('/invitations/:token/accept', requireAuth(authConfig), orgController
  * 招待を辞退
  * POST /api/organizations/invitations/:token/decline
  */
-router.post('/invitations/:token/decline', requireAuth(authConfig), orgController.declineInvitation);
+router.post(
+  '/invitations/:token/decline',
+  requireAuth(authConfig),
+  orgController.declineInvitation
+);
 
 // ====================================================================
 // 組織操作ルート（:organizationId パラメータを含む）
@@ -49,20 +53,35 @@ router.get('/:organizationId', requireAuth(authConfig), orgController.getById);
  * 組織更新
  * PATCH /api/organizations/:organizationId
  */
-router.patch('/:organizationId', requireAuth(authConfig), requireOrgRole(['OWNER', 'ADMIN']), orgController.update);
+router.patch(
+  '/:organizationId',
+  requireAuth(authConfig),
+  requireOrgRole(['OWNER', 'ADMIN']),
+  orgController.update
+);
 
 /**
  * 組織削除
  * DELETE /api/organizations/:organizationId
  */
-router.delete('/:organizationId', requireAuth(authConfig), requireOrgRole(['OWNER']), orgController.delete);
+router.delete(
+  '/:organizationId',
+  requireAuth(authConfig),
+  requireOrgRole(['OWNER']),
+  orgController.delete
+);
 
 /**
  * 組織復元
  * POST /api/organizations/:organizationId/restore
  * 削除済み組織のOWNERのみ実行可能
  */
-router.post('/:organizationId/restore', requireAuth(authConfig), requireOrgRole(['OWNER'], { allowDeletedOrg: true }), orgController.restore);
+router.post(
+  '/:organizationId/restore',
+  requireAuth(authConfig),
+  requireOrgRole(['OWNER'], { allowDeletedOrg: true }),
+  orgController.restore
+);
 
 /**
  * 組織メンバー一覧取得
@@ -74,37 +93,67 @@ router.get('/:organizationId/members', requireAuth(authConfig), orgController.ge
  * 組織に招待
  * POST /api/organizations/:organizationId/invitations
  */
-router.post('/:organizationId/invitations', requireAuth(authConfig), requireOrgRole(['OWNER', 'ADMIN']), orgController.invite);
+router.post(
+  '/:organizationId/invitations',
+  requireAuth(authConfig),
+  requireOrgRole(['OWNER', 'ADMIN']),
+  orgController.invite
+);
 
 /**
  * 保留中の招待一覧取得
  * GET /api/organizations/:organizationId/invitations
  */
-router.get('/:organizationId/invitations', requireAuth(authConfig), requireOrgRole(['OWNER', 'ADMIN']), orgController.getInvitations);
+router.get(
+  '/:organizationId/invitations',
+  requireAuth(authConfig),
+  requireOrgRole(['OWNER', 'ADMIN']),
+  orgController.getInvitations
+);
 
 /**
  * 招待を取消
  * DELETE /api/organizations/:organizationId/invitations/:invitationId
  */
-router.delete('/:organizationId/invitations/:invitationId', requireAuth(authConfig), requireOrgRole(['OWNER', 'ADMIN']), orgController.cancelInvitation);
+router.delete(
+  '/:organizationId/invitations/:invitationId',
+  requireAuth(authConfig),
+  requireOrgRole(['OWNER', 'ADMIN']),
+  orgController.cancelInvitation
+);
 
 /**
  * メンバーのロール更新
  * PATCH /api/organizations/:organizationId/members/:userId
  */
-router.patch('/:organizationId/members/:userId', requireAuth(authConfig), requireOrgRole(['OWNER', 'ADMIN']), orgController.updateMemberRole);
+router.patch(
+  '/:organizationId/members/:userId',
+  requireAuth(authConfig),
+  requireOrgRole(['OWNER', 'ADMIN']),
+  orgController.updateMemberRole
+);
 
 /**
  * メンバーを削除
  * DELETE /api/organizations/:organizationId/members/:userId
  */
-router.delete('/:organizationId/members/:userId', requireAuth(authConfig), requireOrgRole(['OWNER', 'ADMIN']), orgController.removeMember);
+router.delete(
+  '/:organizationId/members/:userId',
+  requireAuth(authConfig),
+  requireOrgRole(['OWNER', 'ADMIN']),
+  orgController.removeMember
+);
 
 /**
  * オーナー権限移譲
  * POST /api/organizations/:organizationId/transfer-ownership
  */
-router.post('/:organizationId/transfer-ownership', requireAuth(authConfig), requireOrgRole(['OWNER']), orgController.transferOwnership);
+router.post(
+  '/:organizationId/transfer-ownership',
+  requireAuth(authConfig),
+  requireOrgRole(['OWNER']),
+  orgController.transferOwnership
+);
 
 /**
  * 組織のプロジェクト一覧取得
@@ -116,12 +165,22 @@ router.get('/:organizationId/projects', requireAuth(authConfig), orgController.g
  * 監査ログ取得
  * GET /api/organizations/:organizationId/audit-logs
  */
-router.get('/:organizationId/audit-logs', requireAuth(authConfig), requireOrgRole(['OWNER', 'ADMIN']), orgController.getAuditLogs);
+router.get(
+  '/:organizationId/audit-logs',
+  requireAuth(authConfig),
+  requireOrgRole(['OWNER', 'ADMIN']),
+  orgController.getAuditLogs
+);
 
 /**
  * 監査ログエクスポート
  * GET /api/organizations/:organizationId/audit-logs/export
  */
-router.get('/:organizationId/audit-logs/export', requireAuth(authConfig), requireOrgRole(['OWNER', 'ADMIN']), orgController.exportAuditLogs);
+router.get(
+  '/:organizationId/audit-logs/export',
+  requireAuth(authConfig),
+  requireOrgRole(['OWNER', 'ADMIN']),
+  orgController.exportAuditLogs
+);
 
 export default router;

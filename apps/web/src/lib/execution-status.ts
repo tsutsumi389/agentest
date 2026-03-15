@@ -1,9 +1,5 @@
 import { Circle, CheckCircle2, XCircle, SkipForward, type LucideIcon } from 'lucide-react';
-import type {
-  PreconditionResultStatus,
-  StepResultStatus,
-  ExpectedResultStatus,
-} from './api';
+import type { PreconditionResultStatus, StepResultStatus, ExpectedResultStatus } from './api';
 
 /**
  * ステータス設定の型

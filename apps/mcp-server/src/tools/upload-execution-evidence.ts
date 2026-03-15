@@ -9,11 +9,30 @@ import { apiClient } from '../clients/api-client.js';
  */
 export const uploadExecutionEvidenceInputSchema = z.object({
   executionId: z.string().uuid().describe('テスト実行のID。create_executionで取得したIDを指定'),
-  expectedResultId: z.string().uuid().describe('エビデンスを添付する期待結果のID。get_executionのexpectedResultsから取得'),
-  filePath: z.string().min(1).describe('アップロードするファイルのローカルパス。例: /tmp/screenshot.png'),
-  fileName: z.string().min(1).max(255).optional().describe('ファイル名（省略時はfilePathから自動検出）。例: screenshot.png'),
-  fileType: z.string().min(1).optional().describe('MIMEタイプ（省略時は拡張子から自動検出）。例: image/png'),
-  description: z.string().max(2000).optional().describe('エビデンスの説明（最大2000文字）。何を示すエビデンスかを記載'),
+  expectedResultId: z
+    .string()
+    .uuid()
+    .describe('エビデンスを添付する期待結果のID。get_executionのexpectedResultsから取得'),
+  filePath: z
+    .string()
+    .min(1)
+    .describe('アップロードするファイルのローカルパス。例: /tmp/screenshot.png'),
+  fileName: z
+    .string()
+    .min(1)
+    .max(255)
+    .optional()
+    .describe('ファイル名（省略時はfilePathから自動検出）。例: screenshot.png'),
+  fileType: z
+    .string()
+    .min(1)
+    .optional()
+    .describe('MIMEタイプ（省略時は拡張子から自動検出）。例: image/png'),
+  description: z
+    .string()
+    .max(2000)
+    .optional()
+    .describe('エビデンスの説明（最大2000文字）。何を示すエビデンスかを記載'),
 });
 
 type UploadExecutionEvidenceInput = z.infer<typeof uploadExecutionEvidenceInputSchema>;
@@ -41,7 +60,10 @@ interface UploadExecutionEvidenceResult {
 /**
  * ハンドラー
  */
-const uploadExecutionEvidenceHandler: ToolHandler<UploadExecutionEvidenceInput, UploadExecutionEvidenceResult> = async (input, context) => {
+const uploadExecutionEvidenceHandler: ToolHandler<
+  UploadExecutionEvidenceInput,
+  UploadExecutionEvidenceResult
+> = async (input, context) => {
   const { userId } = context;
 
   if (!userId) {

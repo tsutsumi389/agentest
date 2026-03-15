@@ -1,5 +1,10 @@
 import type { Request, Response, NextFunction } from 'express';
-import { AuthenticationError, ValidationError, NotFoundError, AuthorizationError } from '@agentest/shared';
+import {
+  AuthenticationError,
+  ValidationError,
+  NotFoundError,
+  AuthorizationError,
+} from '@agentest/shared';
 import {
   systemAdminSearchSchema,
   systemAdminInviteSchema,
@@ -63,10 +68,9 @@ export class AdminAdminUsersController {
       // パスパラメータをバリデーション
       const parseResult = uuidSchema.safeParse(req.params.id);
       if (!parseResult.success) {
-        throw new ValidationError(
-          '無効な管理者IDです',
-          { id: ['有効なUUID形式で指定してください'] }
-        );
+        throw new ValidationError('無効な管理者IDです', {
+          id: ['有効なUUID形式で指定してください'],
+        });
       }
 
       const result = await this.service.findAdminUserById(parseResult.data);
@@ -98,10 +102,7 @@ export class AdminAdminUsersController {
         );
       }
 
-      const result = await this.service.inviteAdminUser(
-        parseResult.data,
-        req.adminUser!.id
-      );
+      const result = await this.service.inviteAdminUser(parseResult.data, req.adminUser!.id);
 
       res.status(201).json(result);
     } catch (error) {
@@ -120,10 +121,9 @@ export class AdminAdminUsersController {
       // パスパラメータをバリデーション
       const idParseResult = uuidSchema.safeParse(req.params.id);
       if (!idParseResult.success) {
-        throw new ValidationError(
-          '無効な管理者IDです',
-          { id: ['有効なUUID形式で指定してください'] }
-        );
+        throw new ValidationError('無効な管理者IDです', {
+          id: ['有効なUUID形式で指定してください'],
+        });
       }
 
       // リクエストボディをバリデーション
@@ -158,16 +158,12 @@ export class AdminAdminUsersController {
       // パスパラメータをバリデーション
       const parseResult = uuidSchema.safeParse(req.params.id);
       if (!parseResult.success) {
-        throw new ValidationError(
-          '無効な管理者IDです',
-          { id: ['有効なUUID形式で指定してください'] }
-        );
+        throw new ValidationError('無効な管理者IDです', {
+          id: ['有効なUUID形式で指定してください'],
+        });
       }
 
-      const result = await this.service.deleteAdminUser(
-        parseResult.data,
-        req.adminUser!.id
-      );
+      const result = await this.service.deleteAdminUser(parseResult.data, req.adminUser!.id);
 
       res.json(result);
     } catch (error) {
@@ -186,16 +182,12 @@ export class AdminAdminUsersController {
       // パスパラメータをバリデーション
       const parseResult = uuidSchema.safeParse(req.params.id);
       if (!parseResult.success) {
-        throw new ValidationError(
-          '無効な管理者IDです',
-          { id: ['有効なUUID形式で指定してください'] }
-        );
+        throw new ValidationError('無効な管理者IDです', {
+          id: ['有効なUUID形式で指定してください'],
+        });
       }
 
-      const result = await this.service.unlockAdminUser(
-        parseResult.data,
-        req.adminUser!.id
-      );
+      const result = await this.service.unlockAdminUser(parseResult.data, req.adminUser!.id);
 
       res.json(result);
     } catch (error) {
@@ -214,16 +206,12 @@ export class AdminAdminUsersController {
       // パスパラメータをバリデーション
       const parseResult = uuidSchema.safeParse(req.params.id);
       if (!parseResult.success) {
-        throw new ValidationError(
-          '無効な管理者IDです',
-          { id: ['有効なUUID形式で指定してください'] }
-        );
+        throw new ValidationError('無効な管理者IDです', {
+          id: ['有効なUUID形式で指定してください'],
+        });
       }
 
-      const result = await this.service.reset2FA(
-        parseResult.data,
-        req.adminUser!.id
-      );
+      const result = await this.service.reset2FA(parseResult.data, req.adminUser!.id);
 
       res.json(result);
     } catch (error) {

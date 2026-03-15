@@ -31,15 +31,11 @@ function RoleBadge({ role }: { role: AdminUserOrganization['role'] }) {
 /**
  * 所属組織セクション
  */
-export function UserOrganizationsSection({
-  organizations,
-}: UserOrganizationsSectionProps) {
+export function UserOrganizationsSection({ organizations }: UserOrganizationsSectionProps) {
   return (
     <div className="bg-background-secondary border border-border rounded-lg">
       <div className="px-4 py-3 border-b border-border">
-        <h2 className="text-sm font-medium text-foreground">
-          所属組織（{organizations.length}）
-        </h2>
+        <h2 className="text-sm font-medium text-foreground">所属組織（{organizations.length}）</h2>
       </div>
       {organizations.length === 0 ? (
         <div className="px-4 py-8 text-center text-foreground-muted">
@@ -67,9 +63,7 @@ export function UserOrganizationsSection({
                   key={org.id}
                   className="border-b border-border last:border-b-0 hover:bg-background-tertiary"
                 >
-                  <td className="px-4 py-3 text-sm text-foreground">
-                    {org.name}
-                  </td>
+                  <td className="px-4 py-3 text-sm text-foreground">{org.name}</td>
                   <td className="px-4 py-3">
                     <RoleBadge role={org.role} />
                   </td>

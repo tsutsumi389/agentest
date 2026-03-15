@@ -7,7 +7,7 @@ import type { APIRequestContext } from '@playwright/test';
 export class TestApiClient {
   constructor(
     private request: APIRequestContext,
-    private baseUrl: string,
+    private baseUrl: string
   ) {}
 
   // プロジェクト操作
@@ -46,7 +46,7 @@ export class TestApiClient {
     if (options?.limit) params.set('limit', String(options.limit));
     const query = params.toString() ? `?${params.toString()}` : '';
     const response = await this.request.get(
-      `${this.baseUrl}/api/test-suites/${testSuiteId}/executions${query}`,
+      `${this.baseUrl}/api/test-suites/${testSuiteId}/executions${query}`
     );
     return response.json();
   }
@@ -72,7 +72,11 @@ export class TestApiClient {
 
   async updateTestCase(
     testCaseId: string,
-    data: { title?: string; description?: string; priority?: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW' },
+    data: {
+      title?: string;
+      description?: string;
+      priority?: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+    }
   ) {
     const response = await this.request.patch(`${this.baseUrl}/api/test-cases/${testCaseId}`, {
       data,
@@ -87,23 +91,22 @@ export class TestApiClient {
 
   async restoreTestCase(testCaseId: string) {
     const response = await this.request.post(
-      `${this.baseUrl}/api/test-cases/${testCaseId}/restore`,
+      `${this.baseUrl}/api/test-cases/${testCaseId}/restore`
     );
     return response.json();
   }
 
   async copyTestCase(testCaseId: string, data?: { targetTestSuiteId?: string }) {
-    const response = await this.request.post(
-      `${this.baseUrl}/api/test-cases/${testCaseId}/copy`,
-      { data },
-    );
+    const response = await this.request.post(`${this.baseUrl}/api/test-cases/${testCaseId}/copy`, {
+      data,
+    });
     return response.json();
   }
 
   async reorderTestCases(testSuiteId: string, testCaseIds: string[]) {
     const response = await this.request.post(
       `${this.baseUrl}/api/test-suites/${testSuiteId}/test-cases/reorder`,
-      { data: { testCaseIds } },
+      { data: { testCaseIds } }
     );
     return response.json();
   }
@@ -112,7 +115,7 @@ export class TestApiClient {
   async addPrecondition(testCaseId: string, data: { content: string }) {
     const response = await this.request.post(
       `${this.baseUrl}/api/test-cases/${testCaseId}/preconditions`,
-      { data },
+      { data }
     );
     return response.json();
   }
@@ -120,14 +123,14 @@ export class TestApiClient {
   async updatePrecondition(testCaseId: string, preconditionId: string, data: { content: string }) {
     const response = await this.request.patch(
       `${this.baseUrl}/api/test-cases/${testCaseId}/preconditions/${preconditionId}`,
-      { data },
+      { data }
     );
     return response.json();
   }
 
   async deletePrecondition(testCaseId: string, preconditionId: string) {
     const response = await this.request.delete(
-      `${this.baseUrl}/api/test-cases/${testCaseId}/preconditions/${preconditionId}`,
+      `${this.baseUrl}/api/test-cases/${testCaseId}/preconditions/${preconditionId}`
     );
     return response;
   }
@@ -135,31 +138,30 @@ export class TestApiClient {
   async reorderPreconditions(testCaseId: string, preconditionIds: string[]) {
     const response = await this.request.post(
       `${this.baseUrl}/api/test-cases/${testCaseId}/preconditions/reorder`,
-      { data: { preconditionIds } },
+      { data: { preconditionIds } }
     );
     return response.json();
   }
 
   // ステップ操作
   async addStep(testCaseId: string, data: { content: string }) {
-    const response = await this.request.post(
-      `${this.baseUrl}/api/test-cases/${testCaseId}/steps`,
-      { data },
-    );
+    const response = await this.request.post(`${this.baseUrl}/api/test-cases/${testCaseId}/steps`, {
+      data,
+    });
     return response.json();
   }
 
   async updateStep(testCaseId: string, stepId: string, data: { content: string }) {
     const response = await this.request.patch(
       `${this.baseUrl}/api/test-cases/${testCaseId}/steps/${stepId}`,
-      { data },
+      { data }
     );
     return response.json();
   }
 
   async deleteStep(testCaseId: string, stepId: string) {
     const response = await this.request.delete(
-      `${this.baseUrl}/api/test-cases/${testCaseId}/steps/${stepId}`,
+      `${this.baseUrl}/api/test-cases/${testCaseId}/steps/${stepId}`
     );
     return response;
   }
@@ -167,7 +169,7 @@ export class TestApiClient {
   async reorderSteps(testCaseId: string, stepIds: string[]) {
     const response = await this.request.post(
       `${this.baseUrl}/api/test-cases/${testCaseId}/steps/reorder`,
-      { data: { stepIds } },
+      { data: { stepIds } }
     );
     return response.json();
   }
@@ -176,22 +178,26 @@ export class TestApiClient {
   async addExpectedResult(testCaseId: string, data: { content: string }) {
     const response = await this.request.post(
       `${this.baseUrl}/api/test-cases/${testCaseId}/expected-results`,
-      { data },
+      { data }
     );
     return response.json();
   }
 
-  async updateExpectedResult(testCaseId: string, expectedResultId: string, data: { content: string }) {
+  async updateExpectedResult(
+    testCaseId: string,
+    expectedResultId: string,
+    data: { content: string }
+  ) {
     const response = await this.request.patch(
       `${this.baseUrl}/api/test-cases/${testCaseId}/expected-results/${expectedResultId}`,
-      { data },
+      { data }
     );
     return response.json();
   }
 
   async deleteExpectedResult(testCaseId: string, expectedResultId: string) {
     const response = await this.request.delete(
-      `${this.baseUrl}/api/test-cases/${testCaseId}/expected-results/${expectedResultId}`,
+      `${this.baseUrl}/api/test-cases/${testCaseId}/expected-results/${expectedResultId}`
     );
     return response;
   }
@@ -199,7 +205,7 @@ export class TestApiClient {
   async reorderExpectedResults(testCaseId: string, expectedResultIds: string[]) {
     const response = await this.request.post(
       `${this.baseUrl}/api/test-cases/${testCaseId}/expected-results/reorder`,
-      { data: { expectedResultIds } },
+      { data: { expectedResultIds } }
     );
     return response.json();
   }
@@ -208,7 +214,7 @@ export class TestApiClient {
   async startExecution(testSuiteId: string, data?: { environmentId?: string }) {
     const response = await this.request.post(
       `${this.baseUrl}/api/test-suites/${testSuiteId}/executions`,
-      { data: data || {} },
+      { data: data || {} }
     );
     return response.json();
   }
@@ -220,7 +226,7 @@ export class TestApiClient {
 
   async getExecutionWithDetails(executionId: string) {
     const response = await this.request.get(
-      `${this.baseUrl}/api/executions/${executionId}/details`,
+      `${this.baseUrl}/api/executions/${executionId}/details`
     );
     return response.json();
   }
@@ -228,11 +234,11 @@ export class TestApiClient {
   async updatePreconditionResult(
     executionId: string,
     resultId: string,
-    data: { status: string; note?: string },
+    data: { status: string; note?: string }
   ) {
     const response = await this.request.patch(
       `${this.baseUrl}/api/executions/${executionId}/preconditions/${resultId}`,
-      { data },
+      { data }
     );
     return response.json();
   }
@@ -240,11 +246,11 @@ export class TestApiClient {
   async updateStepResult(
     executionId: string,
     resultId: string,
-    data: { status: string; note?: string },
+    data: { status: string; note?: string }
   ) {
     const response = await this.request.patch(
       `${this.baseUrl}/api/executions/${executionId}/steps/${resultId}`,
-      { data },
+      { data }
     );
     return response.json();
   }
@@ -252,11 +258,11 @@ export class TestApiClient {
   async updateExpectedResultResult(
     executionId: string,
     resultId: string,
-    data: { status: string; note?: string },
+    data: { status: string; note?: string }
   ) {
     const response = await this.request.patch(
       `${this.baseUrl}/api/executions/${executionId}/expected-results/${resultId}`,
-      { data },
+      { data }
     );
     return response.json();
   }
@@ -272,21 +278,21 @@ export class TestApiClient {
             buffer: Buffer.from('fake-image-data'),
           },
         },
-      },
+      }
     );
     return response.json();
   }
 
   async deleteEvidence(executionId: string, evidenceId: string) {
     const response = await this.request.delete(
-      `${this.baseUrl}/api/executions/${executionId}/evidences/${evidenceId}`,
+      `${this.baseUrl}/api/executions/${executionId}/evidences/${evidenceId}`
     );
     return response;
   }
 
   async getEvidenceDownloadUrl(executionId: string, evidenceId: string) {
     const response = await this.request.get(
-      `${this.baseUrl}/api/executions/${executionId}/evidences/${evidenceId}/download-url`,
+      `${this.baseUrl}/api/executions/${executionId}/evidences/${evidenceId}/download-url`
     );
     return response.json();
   }
@@ -294,7 +300,7 @@ export class TestApiClient {
   // 編集ロック操作
   async getLockStatus(targetType: 'SUITE' | 'CASE', targetId: string) {
     const response = await this.request.get(
-      `${this.baseUrl}/api/locks?targetType=${targetType}&targetId=${targetId}`,
+      `${this.baseUrl}/api/locks?targetType=${targetType}&targetId=${targetId}`
     );
     return response.json();
   }
@@ -347,22 +353,27 @@ export class TestApiClient {
 
   async updateOrganization(
     organizationId: string,
-    data: { name?: string; description?: string | null },
+    data: { name?: string; description?: string | null }
   ) {
-    const response = await this.request.patch(`${this.baseUrl}/api/organizations/${organizationId}`, {
-      data,
-    });
+    const response = await this.request.patch(
+      `${this.baseUrl}/api/organizations/${organizationId}`,
+      {
+        data,
+      }
+    );
     return response.json();
   }
 
   async deleteOrganization(organizationId: string) {
-    const response = await this.request.delete(`${this.baseUrl}/api/organizations/${organizationId}`);
+    const response = await this.request.delete(
+      `${this.baseUrl}/api/organizations/${organizationId}`
+    );
     return response;
   }
 
   async restoreOrganization(organizationId: string) {
     const response = await this.request.post(
-      `${this.baseUrl}/api/organizations/${organizationId}/restore`,
+      `${this.baseUrl}/api/organizations/${organizationId}/restore`
     );
     return response.json();
   }
@@ -370,22 +381,26 @@ export class TestApiClient {
   // 組織メンバー管理
   async getOrganizationMembers(organizationId: string) {
     const response = await this.request.get(
-      `${this.baseUrl}/api/organizations/${organizationId}/members`,
+      `${this.baseUrl}/api/organizations/${organizationId}/members`
     );
     return response.json();
   }
 
-  async updateMemberRole(organizationId: string, memberId: string, role: 'OWNER' | 'ADMIN' | 'MEMBER') {
+  async updateMemberRole(
+    organizationId: string,
+    memberId: string,
+    role: 'OWNER' | 'ADMIN' | 'MEMBER'
+  ) {
     const response = await this.request.patch(
       `${this.baseUrl}/api/organizations/${organizationId}/members/${memberId}`,
-      { data: { role } },
+      { data: { role } }
     );
     return response.json();
   }
 
   async removeMember(organizationId: string, memberId: string) {
     const response = await this.request.delete(
-      `${this.baseUrl}/api/organizations/${organizationId}/members/${memberId}`,
+      `${this.baseUrl}/api/organizations/${organizationId}/members/${memberId}`
     );
     return response;
   }
@@ -394,28 +409,28 @@ export class TestApiClient {
   async inviteMember(organizationId: string, data: { email: string; role: 'ADMIN' | 'MEMBER' }) {
     const response = await this.request.post(
       `${this.baseUrl}/api/organizations/${organizationId}/invitations`,
-      { data },
+      { data }
     );
     return response.json();
   }
 
   async getInvitations(organizationId: string) {
     const response = await this.request.get(
-      `${this.baseUrl}/api/organizations/${organizationId}/invitations`,
+      `${this.baseUrl}/api/organizations/${organizationId}/invitations`
     );
     return response.json();
   }
 
   async resendInvitation(organizationId: string, invitationId: string) {
     const response = await this.request.post(
-      `${this.baseUrl}/api/organizations/${organizationId}/invitations/${invitationId}/resend`,
+      `${this.baseUrl}/api/organizations/${organizationId}/invitations/${invitationId}/resend`
     );
     return response.json();
   }
 
   async cancelInvitation(organizationId: string, invitationId: string) {
     const response = await this.request.delete(
-      `${this.baseUrl}/api/organizations/${organizationId}/invitations/${invitationId}`,
+      `${this.baseUrl}/api/organizations/${organizationId}/invitations/${invitationId}`
     );
     return response;
   }
@@ -427,7 +442,7 @@ export class TestApiClient {
     if (params?.offset) searchParams.set('offset', String(params.offset));
     const query = searchParams.toString() ? `?${searchParams.toString()}` : '';
     const response = await this.request.get(
-      `${this.baseUrl}/api/organizations/${organizationId}/audit-logs${query}`,
+      `${this.baseUrl}/api/organizations/${organizationId}/audit-logs${query}`
     );
     return response.json();
   }
@@ -497,14 +512,14 @@ export class TestApiClient {
   async createEnvironment(projectId: string, data: { name: string; description?: string }) {
     const response = await this.request.post(
       `${this.baseUrl}/api/projects/${projectId}/environments`,
-      { data },
+      { data }
     );
     return response.json();
   }
 
   async getEnvironments(projectId: string) {
     const response = await this.request.get(
-      `${this.baseUrl}/api/projects/${projectId}/environments`,
+      `${this.baseUrl}/api/projects/${projectId}/environments`
     );
     return response.json();
   }
@@ -512,28 +527,30 @@ export class TestApiClient {
   async updateEnvironment(
     projectId: string,
     environmentId: string,
-    data: { name?: string; description?: string | null },
+    data: { name?: string; description?: string | null }
   ) {
     const response = await this.request.patch(
       `${this.baseUrl}/api/projects/${projectId}/environments/${environmentId}`,
-      { data },
+      { data }
     );
     return response.json();
   }
 
   async deleteEnvironment(projectId: string, environmentId: string) {
     const response = await this.request.delete(
-      `${this.baseUrl}/api/projects/${projectId}/environments/${environmentId}`,
+      `${this.baseUrl}/api/projects/${projectId}/environments/${environmentId}`
     );
     return response;
   }
 
   // ラベル管理
-  async createLabel(projectId: string, data: { name: string; color: string; description?: string | null }) {
-    const response = await this.request.post(
-      `${this.baseUrl}/api/projects/${projectId}/labels`,
-      { data },
-    );
+  async createLabel(
+    projectId: string,
+    data: { name: string; color: string; description?: string | null }
+  ) {
+    const response = await this.request.post(`${this.baseUrl}/api/projects/${projectId}/labels`, {
+      data,
+    });
     return response.json();
   }
 
@@ -545,18 +562,18 @@ export class TestApiClient {
   async updateLabel(
     projectId: string,
     labelId: string,
-    data: { name?: string; color?: string; description?: string | null },
+    data: { name?: string; color?: string; description?: string | null }
   ) {
     const response = await this.request.patch(
       `${this.baseUrl}/api/projects/${projectId}/labels/${labelId}`,
-      { data },
+      { data }
     );
     return response.json();
   }
 
   async deleteLabel(projectId: string, labelId: string) {
     const response = await this.request.delete(
-      `${this.baseUrl}/api/projects/${projectId}/labels/${labelId}`,
+      `${this.baseUrl}/api/projects/${projectId}/labels/${labelId}`
     );
     return response;
   }
@@ -564,14 +581,14 @@ export class TestApiClient {
   // 削除済みテストスイートの復元
   async restoreTestSuite(testSuiteId: string) {
     const response = await this.request.post(
-      `${this.baseUrl}/api/test-suites/${testSuiteId}/restore`,
+      `${this.baseUrl}/api/test-suites/${testSuiteId}/restore`
     );
     return response.json();
   }
 
   async getDeletedTestSuites(projectId: string) {
     const response = await this.request.get(
-      `${this.baseUrl}/api/projects/${projectId}/test-suites?deleted=true`,
+      `${this.baseUrl}/api/projects/${projectId}/test-suites?deleted=true`
     );
     return response.json();
   }
@@ -592,7 +609,7 @@ export class TestApiClient {
 
   async markNotificationAsRead(notificationId: string) {
     const response = await this.request.patch(
-      `${this.baseUrl}/api/notifications/${notificationId}/read`,
+      `${this.baseUrl}/api/notifications/${notificationId}/read`
     );
     return response.json();
   }
@@ -604,7 +621,7 @@ export class TestApiClient {
 
   async deleteNotification(notificationId: string) {
     const response = await this.request.delete(
-      `${this.baseUrl}/api/notifications/${notificationId}`,
+      `${this.baseUrl}/api/notifications/${notificationId}`
     );
     return response;
   }
@@ -617,11 +634,11 @@ export class TestApiClient {
 
   async updateNotificationPreference(
     type: string,
-    data: { emailEnabled?: boolean; inAppEnabled?: boolean },
+    data: { emailEnabled?: boolean; inAppEnabled?: boolean }
   ) {
     const response = await this.request.patch(
       `${this.baseUrl}/api/notifications/preferences/${type}`,
-      { data },
+      { data }
     );
     return response.json();
   }

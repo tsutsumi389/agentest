@@ -51,10 +51,7 @@ export function MentionInput({
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
   // デバウンス検索クエリ
-  const debouncedQuery = useDebounce(
-    mentionState.type !== 'idle' ? mentionState.query : '',
-    300
-  );
+  const debouncedQuery = useDebounce(mentionState.type !== 'idle' ? mentionState.query : '', 300);
 
   // テストスイートサジェスト取得
   const { data: suiteSuggestionsData, isLoading: isSuiteLoading } = useQuery({
@@ -66,7 +63,11 @@ export function MentionInput({
 
   // テストケースサジェスト取得
   const { data: caseSuggestionsData, isLoading: isCaseLoading } = useQuery({
-    queryKey: ['case-suggestions', mentionState.type === 'case-search' ? mentionState.suiteId : '', debouncedQuery],
+    queryKey: [
+      'case-suggestions',
+      mentionState.type === 'case-search' ? mentionState.suiteId : '',
+      debouncedQuery,
+    ],
     queryFn: () => {
       if (mentionState.type !== 'case-search') return { suggestions: [] };
       return testSuitesApi.suggestTestCases(mentionState.suiteId, { q: debouncedQuery, limit: 10 });
@@ -102,162 +103,183 @@ export function MentionInput({
   }, []);
 
   // 入力値変更ハンドラ
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    const cursorPos = e.target.selectionStart || 0;
-    onChange(newValue);
+  const handleInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const newValue = e.target.value;
+      const cursorPos = e.target.selectionStart || 0;
+      onChange(newValue);
 
-    // @の検出（最後の@を探す）
-    const lastAtIndex = newValue.lastIndexOf('@', cursorPos - 1);
+      // @の検出（最後の@を探す）
+      const lastAtIndex = newValue.lastIndexOf('@', cursorPos - 1);
 
-    if (lastAtIndex === -1) {
-      // @がない場合はidle
-      setMentionState({ type: 'idle' });
-      return;
-    }
+      if (lastAtIndex === -1) {
+        // @がない場合はidle
+        setMentionState({ type: 'idle' });
+        return;
+      }
 
-    // @以降のテキストを取得
-    const afterAt = newValue.slice(lastAtIndex + 1, cursorPos);
+      // @以降のテキストを取得
+      const afterAt = newValue.slice(lastAtIndex + 1, cursorPos);
 
-    // /があるかチェック
-    const slashIndex = afterAt.indexOf('/');
+      // /があるかチェック
+      const slashIndex = afterAt.indexOf('/');
 
-    if (mentionState.type === 'case-search' && slashIndex === -1) {
-      // case-search状態で/が消えた場合はsuite-searchに戻る
-      setMentionState({
-        type: 'suite-search',
-        query: afterAt,
-        startIndex: lastAtIndex,
-      });
-    } else if (mentionState.type === 'case-search' && slashIndex !== -1) {
-      // case-search状態で/以降のクエリを更新
-      const caseQuery = afterAt.slice(slashIndex + 1);
-      setMentionState(prev => {
-        if (prev.type !== 'case-search') return prev;
-        return {
-          ...prev,
-          query: caseQuery,
-        };
-      });
-    } else if (slashIndex === -1) {
-      // suite-search
-      setMentionState({
-        type: 'suite-search',
-        query: afterAt,
-        startIndex: lastAtIndex,
-      });
-    }
-  }, [onChange, mentionState.type]);
+      if (mentionState.type === 'case-search' && slashIndex === -1) {
+        // case-search状態で/が消えた場合はsuite-searchに戻る
+        setMentionState({
+          type: 'suite-search',
+          query: afterAt,
+          startIndex: lastAtIndex,
+        });
+      } else if (mentionState.type === 'case-search' && slashIndex !== -1) {
+        // case-search状態で/以降のクエリを更新
+        const caseQuery = afterAt.slice(slashIndex + 1);
+        setMentionState((prev) => {
+          if (prev.type !== 'case-search') return prev;
+          return {
+            ...prev,
+            query: caseQuery,
+          };
+        });
+      } else if (slashIndex === -1) {
+        // suite-search
+        setMentionState({
+          type: 'suite-search',
+          query: afterAt,
+          startIndex: lastAtIndex,
+        });
+      }
+    },
+    [onChange, mentionState.type]
+  );
 
   // テストスイート選択
-  const handleSuiteSelect = useCallback((suite: TestSuiteSuggestion) => {
-    if (mentionState.type !== 'suite-search') return;
+  const handleSuiteSelect = useCallback(
+    (suite: TestSuiteSuggestion) => {
+      if (mentionState.type !== 'suite-search') return;
 
-    // @クエリをスイート名+/に置き換え
-    const beforeAt = value.slice(0, mentionState.startIndex);
-    const afterQuery = value.slice(mentionState.startIndex + 1 + mentionState.query.length);
-    const newValue = `${beforeAt}@${suite.name}/${afterQuery}`;
-    onChange(newValue);
+      // @クエリをスイート名+/に置き換え
+      const beforeAt = value.slice(0, mentionState.startIndex);
+      const afterQuery = value.slice(mentionState.startIndex + 1 + mentionState.query.length);
+      const newValue = `${beforeAt}@${suite.name}/${afterQuery}`;
+      onChange(newValue);
 
-    // case-search状態に遷移
-    setMentionState({
-      type: 'case-search',
-      suiteId: suite.id,
-      suiteName: suite.name,
-      query: '',
-      startIndex: mentionState.startIndex,
-    });
-    setSelectedIndex(0);
+      // case-search状態に遷移
+      setMentionState({
+        type: 'case-search',
+        suiteId: suite.id,
+        suiteName: suite.name,
+        query: '',
+        startIndex: mentionState.startIndex,
+      });
+      setSelectedIndex(0);
 
-    // 入力欄にフォーカスを維持
-    inputRef.current?.focus();
-  }, [mentionState, value, onChange]);
+      // 入力欄にフォーカスを維持
+      inputRef.current?.focus();
+    },
+    [mentionState, value, onChange]
+  );
 
   // テストケース選択
-  const handleCaseSelect = useCallback(async (testCase: TestCaseSuggestion) => {
-    if (mentionState.type !== 'case-search') return;
+  const handleCaseSelect = useCallback(
+    async (testCase: TestCaseSuggestion) => {
+      if (mentionState.type !== 'case-search') return;
 
-    setIsLoadingDetails(true);
+      setIsLoadingDetails(true);
 
-    try {
-      // 詳細を取得
-      const { testCase: testCaseDetails } = await testCasesApi.getByIdWithDetails(testCase.id);
+      try {
+        // 詳細を取得
+        const { testCase: testCaseDetails } = await testCasesApi.getByIdWithDetails(testCase.id);
 
-      // @メンションをテストケースのタイトルに置き換え
-      const beforeAt = value.slice(0, mentionState.startIndex);
-      onChange(beforeAt + testCaseDetails.title);
+        // @メンションをテストケースのタイトルに置き換え
+        const beforeAt = value.slice(0, mentionState.startIndex);
+        onChange(beforeAt + testCaseDetails.title);
 
-      // 親コンポーネントに通知
-      onTestCaseSelect?.(testCaseDetails);
+        // 親コンポーネントに通知
+        onTestCaseSelect?.(testCaseDetails);
 
-      // idle状態に戻る
-      setMentionState({ type: 'idle' });
-    } catch {
-      // エラー時はそのまま
-    } finally {
-      setIsLoadingDetails(false);
-    }
-  }, [mentionState, value, onChange, onTestCaseSelect]);
+        // idle状態に戻る
+        setMentionState({ type: 'idle' });
+      } catch {
+        // エラー時はそのまま
+      } finally {
+        setIsLoadingDetails(false);
+      }
+    },
+    [mentionState, value, onChange, onTestCaseSelect]
+  );
 
   // キーボードナビゲーション
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (mentionState.type === 'idle') return;
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (mentionState.type === 'idle') return;
 
-    const suggestions = mentionState.type === 'suite-search' ? suiteSuggestions : caseSuggestions;
+      const suggestions = mentionState.type === 'suite-search' ? suiteSuggestions : caseSuggestions;
 
-    switch (e.key) {
-      case 'ArrowDown':
-        e.preventDefault();
-        setSelectedIndex(prev => (prev < suggestions.length - 1 ? prev + 1 : 0));
-        break;
-
-      case 'ArrowUp':
-        e.preventDefault();
-        setSelectedIndex(prev => (prev > 0 ? prev - 1 : suggestions.length - 1));
-        break;
-
-      case 'Enter':
-      case 'Tab':
-        if (suggestions.length > 0 && suggestions[selectedIndex]) {
+      switch (e.key) {
+        case 'ArrowDown':
           e.preventDefault();
-          if (mentionState.type === 'suite-search') {
-            handleSuiteSelect(suggestions[selectedIndex] as TestSuiteSuggestion);
-          } else {
-            handleCaseSelect(suggestions[selectedIndex] as TestCaseSuggestion);
+          setSelectedIndex((prev) => (prev < suggestions.length - 1 ? prev + 1 : 0));
+          break;
+
+        case 'ArrowUp':
+          e.preventDefault();
+          setSelectedIndex((prev) => (prev > 0 ? prev - 1 : suggestions.length - 1));
+          break;
+
+        case 'Enter':
+        case 'Tab':
+          if (suggestions.length > 0 && suggestions[selectedIndex]) {
+            e.preventDefault();
+            if (mentionState.type === 'suite-search') {
+              handleSuiteSelect(suggestions[selectedIndex] as TestSuiteSuggestion);
+            } else {
+              handleCaseSelect(suggestions[selectedIndex] as TestCaseSuggestion);
+            }
           }
-        }
-        break;
+          break;
 
-      case 'Escape':
-        e.preventDefault();
-        if (mentionState.type === 'case-search') {
-          // case-searchからsuite-searchに戻る
-          setMentionState({
-            type: 'suite-search',
-            query: mentionState.suiteName,
-            startIndex: mentionState.startIndex,
-          });
-        } else {
-          // suite-searchからidleに戻る
-          setMentionState({ type: 'idle' });
-        }
-        break;
+        case 'Escape':
+          e.preventDefault();
+          if (mentionState.type === 'case-search') {
+            // case-searchからsuite-searchに戻る
+            setMentionState({
+              type: 'suite-search',
+              query: mentionState.suiteName,
+              startIndex: mentionState.startIndex,
+            });
+          } else {
+            // suite-searchからidleに戻る
+            setMentionState({ type: 'idle' });
+          }
+          break;
 
-      case 'Backspace':
-        if (mentionState.type === 'case-search' && mentionState.query === '') {
-          // case-search状態でクエリが空の時、/を削除してsuite-searchに戻る
-          const beforeAt = value.slice(0, mentionState.startIndex);
-          const suitePart = `@${mentionState.suiteName}`;
-          onChange(beforeAt + suitePart);
-          setMentionState({
-            type: 'suite-search',
-            query: mentionState.suiteName,
-            startIndex: mentionState.startIndex,
-          });
-        }
-        break;
-    }
-  }, [mentionState, suiteSuggestions, caseSuggestions, selectedIndex, handleSuiteSelect, handleCaseSelect, value, onChange]);
+        case 'Backspace':
+          if (mentionState.type === 'case-search' && mentionState.query === '') {
+            // case-search状態でクエリが空の時、/を削除してsuite-searchに戻る
+            const beforeAt = value.slice(0, mentionState.startIndex);
+            const suitePart = `@${mentionState.suiteName}`;
+            onChange(beforeAt + suitePart);
+            setMentionState({
+              type: 'suite-search',
+              query: mentionState.suiteName,
+              startIndex: mentionState.startIndex,
+            });
+          }
+          break;
+      }
+    },
+    [
+      mentionState,
+      suiteSuggestions,
+      caseSuggestions,
+      selectedIndex,
+      handleSuiteSelect,
+      handleCaseSelect,
+      value,
+      onChange,
+    ]
+  );
 
   // ステータスバッジの色を取得
   const getStatusBadgeClass = (status: string) => {
@@ -358,15 +380,18 @@ export function MentionInput({
                       onClick={() => handleSuiteSelect(suite)}
                       className={`
                         w-full text-left px-3 py-2 transition-colors
-                        ${index === selectedIndex
-                          ? 'bg-accent-subtle text-foreground'
-                          : 'text-foreground-muted hover:bg-background-tertiary hover:text-foreground'
+                        ${
+                          index === selectedIndex
+                            ? 'bg-accent-subtle text-foreground'
+                            : 'text-foreground-muted hover:bg-background-tertiary hover:text-foreground'
                         }
                       `}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-medium truncate">{suite.name}</span>
-                        <span className={`text-xs px-1.5 py-0.5 rounded ${getStatusBadgeClass(suite.status)}`}>
+                        <span
+                          className={`text-xs px-1.5 py-0.5 rounded ${getStatusBadgeClass(suite.status)}`}
+                        >
                           {getStatusLabel(suite.status)}
                         </span>
                       </div>
@@ -386,15 +411,18 @@ export function MentionInput({
                       onClick={() => handleCaseSelect(testCase)}
                       className={`
                         w-full text-left px-3 py-2 transition-colors
-                        ${index === selectedIndex
-                          ? 'bg-accent-subtle text-foreground'
-                          : 'text-foreground-muted hover:bg-background-tertiary hover:text-foreground'
+                        ${
+                          index === selectedIndex
+                            ? 'bg-accent-subtle text-foreground'
+                            : 'text-foreground-muted hover:bg-background-tertiary hover:text-foreground'
                         }
                       `}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <span className="font-medium truncate">{testCase.title}</span>
-                        <span className={`text-xs px-1.5 py-0.5 rounded ${getStatusBadgeClass(testCase.status)}`}>
+                        <span
+                          className={`text-xs px-1.5 py-0.5 rounded ${getStatusBadgeClass(testCase.status)}`}
+                        >
                           {getStatusLabel(testCase.status)}
                         </span>
                       </div>
@@ -414,10 +442,12 @@ export function MentionInput({
               <kbd className="px-1 py-0.5 bg-background-tertiary rounded text-[10px]">↑↓</kbd> 選択
             </span>
             <span>
-              <kbd className="px-1 py-0.5 bg-background-tertiary rounded text-[10px]">Enter</kbd> 確定
+              <kbd className="px-1 py-0.5 bg-background-tertiary rounded text-[10px]">Enter</kbd>{' '}
+              確定
             </span>
             <span>
-              <kbd className="px-1 py-0.5 bg-background-tertiary rounded text-[10px]">Esc</kbd> 閉じる
+              <kbd className="px-1 py-0.5 bg-background-tertiary rounded text-[10px]">Esc</kbd>{' '}
+              閉じる
             </span>
           </div>
         </div>

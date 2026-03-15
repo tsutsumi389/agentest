@@ -171,9 +171,7 @@ describe('token-cache', () => {
     it('Redisエラー時もエラーを投げない（graceful degradation）', async () => {
       mockRedis.del.mockRejectedValue(new Error('Redis error'));
 
-      await expect(
-        invalidateTokenCache('oauth', 'test-token')
-      ).resolves.not.toThrow();
+      await expect(invalidateTokenCache('oauth', 'test-token')).resolves.not.toThrow();
 
       expect(mockLogger.error).toHaveBeenCalled();
     });

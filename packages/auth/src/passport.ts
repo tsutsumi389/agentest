@@ -16,14 +16,9 @@ export interface OAuthCallbackResult {
   };
 }
 
-export type OAuthCallback = (
-  profile: OAuthProfile
-) => Promise<OAuthCallbackResult>;
+export type OAuthCallback = (profile: OAuthProfile) => Promise<OAuthCallbackResult>;
 
-export function configurePassport(
-  config: AuthConfig,
-  onOAuth: OAuthCallback
-): void {
+export function configurePassport(config: AuthConfig, onOAuth: OAuthCallback): void {
   // GitHub Strategy
   if (config.oauth.github) {
     passport.use(
@@ -41,9 +36,7 @@ export function configurePassport(
           done: (error: Error | null, user?: OAuthCallbackResult) => void
         ) => {
           try {
-            const email =
-              profile.emails?.[0]?.value ||
-              `${profile.id}@users.noreply.github.com`;
+            const email = profile.emails?.[0]?.value || `${profile.id}@users.noreply.github.com`;
 
             const oauthProfile: OAuthProfile = {
               provider: 'github',
@@ -106,7 +99,6 @@ export function configurePassport(
       )
     );
   }
-
 }
 
 export { passport };

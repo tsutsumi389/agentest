@@ -68,11 +68,7 @@ export function ProfileSettings() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="flex items-center gap-4 mb-6">
           {user?.avatarUrl ? (
-            <img
-              src={user.avatarUrl}
-              alt={user.name}
-              className="w-16 h-16 rounded-full"
-            />
+            <img src={user.avatarUrl} alt={user.name} className="w-16 h-16 rounded-full" />
           ) : (
             <div className="w-16 h-16 rounded-full bg-accent-subtle flex items-center justify-center">
               <span className="text-2xl font-medium text-accent">
@@ -87,9 +83,7 @@ export function ProfileSettings() {
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
-            表示名
-          </label>
+          <label className="block text-sm font-medium text-foreground mb-1">表示名</label>
           <input
             type="text"
             value={name}
@@ -100,15 +94,11 @@ export function ProfileSettings() {
             className={`input max-w-md ${validationError ? 'border-danger focus:border-danger focus:ring-danger' : ''}`}
             disabled={isSaving}
           />
-          {validationError && (
-            <p className="text-xs text-danger mt-1">{validationError}</p>
-          )}
+          {validationError && <p className="text-xs text-danger mt-1">{validationError}</p>}
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
-            メールアドレス
-          </label>
+          <label className="block text-sm font-medium text-foreground mb-1">メールアドレス</label>
           <input
             type="email"
             value={user?.email || ''}
@@ -121,11 +111,7 @@ export function ProfileSettings() {
         </div>
 
         <div className="pt-4 flex gap-2">
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={isSaving || !hasChanges}
-          >
+          <button type="submit" className="btn btn-primary" disabled={isSaving || !hasChanges}>
             {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
             {isSaving ? '保存中...' : '保存'}
           </button>

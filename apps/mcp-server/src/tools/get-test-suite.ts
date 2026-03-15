@@ -6,7 +6,10 @@ import { apiClient } from '../clients/api-client.js';
  * 入力スキーマ
  */
 export const getTestSuiteInputSchema = z.object({
-  testSuiteId: z.string().uuid().describe('取得するテストスイートのID。search_test_suiteで取得したIDを指定'),
+  testSuiteId: z
+    .string()
+    .uuid()
+    .describe('取得するテストスイートのID。search_test_suiteで取得したIDを指定'),
 });
 
 type GetTestSuiteInput = z.infer<typeof getTestSuiteInputSchema>;
@@ -76,7 +79,10 @@ interface GetTestSuiteResponse {
 /**
  * ハンドラー
  */
-const getTestSuiteHandler: ToolHandler<GetTestSuiteInput, GetTestSuiteResponse> = async (input, context) => {
+const getTestSuiteHandler: ToolHandler<GetTestSuiteInput, GetTestSuiteResponse> = async (
+  input,
+  context
+) => {
   const { userId } = context;
 
   if (!userId) {
@@ -84,9 +90,12 @@ const getTestSuiteHandler: ToolHandler<GetTestSuiteInput, GetTestSuiteResponse> 
   }
 
   // 内部APIを呼び出し
-  const response = await apiClient.get<GetTestSuiteResponse>(`/internal/api/test-suites/${input.testSuiteId}`, {
-    userId,
-  });
+  const response = await apiClient.get<GetTestSuiteResponse>(
+    `/internal/api/test-suites/${input.testSuiteId}`,
+    {
+      userId,
+    }
+  );
 
   return response;
 };

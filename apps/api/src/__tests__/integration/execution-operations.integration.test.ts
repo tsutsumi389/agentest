@@ -28,7 +28,9 @@ let mockExecutionRole: string | null = null;
 
 // vi.hoistedを使用してモック関数を事前定義
 const { mockStorageUpload, mockStorageDelete, mockStorageGetDownloadUrl } = vi.hoisted(() => ({
-  mockStorageUpload: vi.fn().mockResolvedValue({ key: 'test-key', url: 'https://example.com/test', size: 1024 }),
+  mockStorageUpload: vi
+    .fn()
+    .mockResolvedValue({ key: 'test-key', url: 'https://example.com/test', size: 1024 }),
   mockStorageDelete: vi.fn().mockResolvedValue(undefined),
   mockStorageGetDownloadUrl: vi.fn().mockResolvedValue('https://minio.example.com/signed-url'),
 }));
@@ -53,7 +55,12 @@ vi.mock('@agentest/auth', () => ({
   optionalAuth: () => (_req: any, _res: any, next: any) => next(),
   requireOrgRole: () => (_req: any, _res: any, next: any) => next(),
   requireProjectRole: () => (_req: any, _res: any, next: any) => next(),
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -76,7 +83,10 @@ vi.mock('../../middleware/require-execution-role.js', () => ({
 }));
 
 // テスト用認証設定関数
-function setTestAuth(user: { id: string; email: string } | null, executionRole: string | null = null) {
+function setTestAuth(
+  user: { id: string; email: string } | null,
+  executionRole: string | null = null
+) {
   mockAuthUser = user;
   mockExecutionRole = executionRole;
 }
@@ -206,9 +216,13 @@ describe('Execution Operations API Integration Tests', () => {
       const execStep = await createTestExecutionTestCaseStep(execTestCase.id, 'step-1', {
         content: 'Step 1',
       });
-      const execExpectedResult = await createTestExecutionTestCaseExpectedResult(execTestCase.id, 'expected-1', {
-        content: 'Expected 1',
-      });
+      const execExpectedResult = await createTestExecutionTestCaseExpectedResult(
+        execTestCase.id,
+        'expected-1',
+        {
+          content: 'Expected 1',
+        }
+      );
 
       // 前提条件結果を作成
       await createTestExecutionPreconditionResult(execution.id, {});
@@ -219,9 +233,14 @@ describe('Execution Operations API Integration Tests', () => {
       });
 
       // 期待結果を作成
-      await createTestExecutionExpectedResult(execution.id, execTestCase.id, execExpectedResult.id, {
-        status: 'PENDING',
-      });
+      await createTestExecutionExpectedResult(
+        execution.id,
+        execTestCase.id,
+        execExpectedResult.id,
+        {
+          status: 'PENDING',
+        }
+      );
 
       setTestAuth({ id: reader.id, email: reader.email }, 'READ');
 
@@ -488,12 +507,21 @@ describe('Execution Operations API Integration Tests', () => {
       const execTestCase = await createTestExecutionTestCase(execTestSuite.id, 'tc-1', {
         title: 'Test Case 1',
       });
-      const execExpectedResultSnapshot = await createTestExecutionTestCaseExpectedResult(execTestCase.id, 'expected-1', {
-        content: 'Expected 1',
-      });
-      expectedResult = await createTestExecutionExpectedResult(execution.id, execTestCase.id, execExpectedResultSnapshot.id, {
-        status: 'PENDING',
-      });
+      const execExpectedResultSnapshot = await createTestExecutionTestCaseExpectedResult(
+        execTestCase.id,
+        'expected-1',
+        {
+          content: 'Expected 1',
+        }
+      );
+      expectedResult = await createTestExecutionExpectedResult(
+        execution.id,
+        execTestCase.id,
+        execExpectedResultSnapshot.id,
+        {
+          status: 'PENDING',
+        }
+      );
     });
 
     it('期待結果のステータスをPASSに更新できる', async () => {

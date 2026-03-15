@@ -1,10 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-  type ReactNode,
-} from 'react';
+import { createContext, useContext, useState, useCallback, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   reviewsApi,
@@ -43,10 +37,15 @@ interface ReviewSessionContextValue {
   loadDraftReview: (reviewId: string) => Promise<void>;
 
   // コメント操作
-  addComment: (data: Omit<CreateReviewCommentRequest, 'reviewId'>) => Promise<ReviewCommentWithReplies>;
+  addComment: (
+    data: Omit<CreateReviewCommentRequest, 'reviewId'>
+  ) => Promise<ReviewCommentWithReplies>;
   updateComment: (commentId: string, content: string) => Promise<ReviewCommentWithReplies>;
   deleteComment: (commentId: string) => Promise<void>;
-  updateCommentStatus: (commentId: string, status: ReviewStatus) => Promise<ReviewCommentWithReplies>;
+  updateCommentStatus: (
+    commentId: string,
+    status: ReviewStatus
+  ) => Promise<ReviewCommentWithReplies>;
 
   // 返信操作
   addReply: (commentId: string, content: string) => Promise<ReviewReply>;
@@ -116,40 +115,43 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // レビューを提出
-  const submitReview = useCallback(async (verdict: ReviewVerdict, summary?: string) => {
-    if (!currentReview) {
-      throw new Error('レビューが開始されていません');
-    }
+  const submitReview = useCallback(
+    async (verdict: ReviewVerdict, summary?: string) => {
+      if (!currentReview) {
+        throw new Error('レビューが開始されていません');
+      }
 
-    setIsLoading(true);
-    setError(null);
-    try {
-      await reviewsApi.submit(currentReview.id, { verdict, summary });
-      // レビューに含まれる全コメントのキャッシュを無効化
-      const uniqueTargets = new Set(
-        currentReview.comments.map((c) => `${c.targetType}:${c.targetId}`)
-      );
-      uniqueTargets.forEach((key) => {
-        const [targetType, targetId] = key.split(':');
-        queryClient.invalidateQueries({
-          queryKey: ['unresolved-comments', targetType, targetId],
+      setIsLoading(true);
+      setError(null);
+      try {
+        await reviewsApi.submit(currentReview.id, { verdict, summary });
+        // レビューに含まれる全コメントのキャッシュを無効化
+        const uniqueTargets = new Set(
+          currentReview.comments.map((c) => `${c.targetType}:${c.targetId}`)
+        );
+        uniqueTargets.forEach((key) => {
+          const [targetType, targetId] = key.split(':');
+          queryClient.invalidateQueries({
+            queryKey: ['unresolved-comments', targetType, targetId],
+          });
         });
-      });
-      // レビュー一覧のキャッシュを無効化
-      queryClient.invalidateQueries({
-        queryKey: ['test-suite-reviews', testSuiteId],
-      });
-      // 提出後はセッションをクリア
-      setCurrentReview(null);
-      setTestSuiteId(null);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'レビューの提出に失敗しました';
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentReview, queryClient, testSuiteId]);
+        // レビュー一覧のキャッシュを無効化
+        queryClient.invalidateQueries({
+          queryKey: ['test-suite-reviews', testSuiteId],
+        });
+        // 提出後はセッションをクリア
+        setCurrentReview(null);
+        setTestSuiteId(null);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'レビューの提出に失敗しました';
+        setError(message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [currentReview, queryClient, testSuiteId]
+  );
 
   // レビューをキャンセル（削除）
   const cancelReview = useCallback(async () => {
@@ -189,185 +191,208 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
   }, [currentReview, queryClient, testSuiteId]);
 
   // コメント追加
-  const addComment = useCallback(async (data: Omit<CreateReviewCommentRequest, 'reviewId'>) => {
-    if (!currentReview) {
-      throw new Error('レビューが開始されていません');
-    }
+  const addComment = useCallback(
+    async (data: Omit<CreateReviewCommentRequest, 'reviewId'>) => {
+      if (!currentReview) {
+        throw new Error('レビューが開始されていません');
+      }
 
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await reviewsApi.addComment(currentReview.id, data);
-      // レビューを再取得してコメント一覧を更新
-      const refreshed = await reviewsApi.getById(currentReview.id);
-      setCurrentReview(refreshed.review);
-      // コメント対象のキャッシュを無効化
-      queryClient.invalidateQueries({
-        queryKey: ['unresolved-comments', data.targetType, data.targetId],
-      });
-      return response.comment;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'コメントの追加に失敗しました';
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentReview, queryClient]);
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await reviewsApi.addComment(currentReview.id, data);
+        // レビューを再取得してコメント一覧を更新
+        const refreshed = await reviewsApi.getById(currentReview.id);
+        setCurrentReview(refreshed.review);
+        // コメント対象のキャッシュを無効化
+        queryClient.invalidateQueries({
+          queryKey: ['unresolved-comments', data.targetType, data.targetId],
+        });
+        return response.comment;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'コメントの追加に失敗しました';
+        setError(message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [currentReview, queryClient]
+  );
 
   // コメント更新
-  const updateComment = useCallback(async (commentId: string, content: string) => {
-    if (!currentReview) {
-      throw new Error('レビューが開始されていません');
-    }
+  const updateComment = useCallback(
+    async (commentId: string, content: string) => {
+      if (!currentReview) {
+        throw new Error('レビューが開始されていません');
+      }
 
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await reviewsApi.updateComment(currentReview.id, commentId, { content });
-      // レビューを再取得してコメント一覧を更新
-      const refreshed = await reviewsApi.getById(currentReview.id);
-      setCurrentReview(refreshed.review);
-      return response.comment;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'コメントの更新に失敗しました';
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentReview]);
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await reviewsApi.updateComment(currentReview.id, commentId, { content });
+        // レビューを再取得してコメント一覧を更新
+        const refreshed = await reviewsApi.getById(currentReview.id);
+        setCurrentReview(refreshed.review);
+        return response.comment;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'コメントの更新に失敗しました';
+        setError(message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [currentReview]
+  );
 
   // コメント削除
-  const deleteComment = useCallback(async (commentId: string) => {
-    if (!currentReview) {
-      throw new Error('レビューが開始されていません');
-    }
-
-    // 削除前にコメント情報を取得しておく
-    const comment = currentReview.comments.find((c) => c.id === commentId);
-
-    setIsLoading(true);
-    setError(null);
-    try {
-      await reviewsApi.deleteComment(currentReview.id, commentId);
-      // レビューを再取得してコメント一覧を更新
-      const refreshed = await reviewsApi.getById(currentReview.id);
-      setCurrentReview(refreshed.review);
-      // コメント対象のキャッシュを無効化
-      if (comment) {
-        queryClient.invalidateQueries({
-          queryKey: ['unresolved-comments', comment.targetType, comment.targetId],
-        });
+  const deleteComment = useCallback(
+    async (commentId: string) => {
+      if (!currentReview) {
+        throw new Error('レビューが開始されていません');
       }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'コメントの削除に失敗しました';
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentReview, queryClient]);
+
+      // 削除前にコメント情報を取得しておく
+      const comment = currentReview.comments.find((c) => c.id === commentId);
+
+      setIsLoading(true);
+      setError(null);
+      try {
+        await reviewsApi.deleteComment(currentReview.id, commentId);
+        // レビューを再取得してコメント一覧を更新
+        const refreshed = await reviewsApi.getById(currentReview.id);
+        setCurrentReview(refreshed.review);
+        // コメント対象のキャッシュを無効化
+        if (comment) {
+          queryClient.invalidateQueries({
+            queryKey: ['unresolved-comments', comment.targetType, comment.targetId],
+          });
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'コメントの削除に失敗しました';
+        setError(message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [currentReview, queryClient]
+  );
 
   // コメントステータス変更
-  const updateCommentStatus = useCallback(async (commentId: string, status: ReviewStatus) => {
-    if (!currentReview) {
-      throw new Error('レビューが開始されていません');
-    }
-
-    // ステータス変更前にコメント情報を取得しておく
-    const comment = currentReview.comments.find((c) => c.id === commentId);
-
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await reviewsApi.updateCommentStatus(currentReview.id, commentId, status);
-      // レビューを再取得してコメント一覧を更新
-      const refreshed = await reviewsApi.getById(currentReview.id);
-      setCurrentReview(refreshed.review);
-      // コメント対象のキャッシュを無効化（RESOLVED/OPENの切り替えで表示が変わるため）
-      if (comment) {
-        queryClient.invalidateQueries({
-          queryKey: ['unresolved-comments', comment.targetType, comment.targetId],
-        });
+  const updateCommentStatus = useCallback(
+    async (commentId: string, status: ReviewStatus) => {
+      if (!currentReview) {
+        throw new Error('レビューが開始されていません');
       }
-      return response.comment;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'ステータスの更新に失敗しました';
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentReview, queryClient]);
+
+      // ステータス変更前にコメント情報を取得しておく
+      const comment = currentReview.comments.find((c) => c.id === commentId);
+
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await reviewsApi.updateCommentStatus(currentReview.id, commentId, status);
+        // レビューを再取得してコメント一覧を更新
+        const refreshed = await reviewsApi.getById(currentReview.id);
+        setCurrentReview(refreshed.review);
+        // コメント対象のキャッシュを無効化（RESOLVED/OPENの切り替えで表示が変わるため）
+        if (comment) {
+          queryClient.invalidateQueries({
+            queryKey: ['unresolved-comments', comment.targetType, comment.targetId],
+          });
+        }
+        return response.comment;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'ステータスの更新に失敗しました';
+        setError(message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [currentReview, queryClient]
+  );
 
   // 返信追加
-  const addReply = useCallback(async (commentId: string, content: string) => {
-    if (!currentReview) {
-      throw new Error('レビューが開始されていません');
-    }
+  const addReply = useCallback(
+    async (commentId: string, content: string) => {
+      if (!currentReview) {
+        throw new Error('レビューが開始されていません');
+      }
 
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await reviewsApi.addReply(currentReview.id, commentId, { content });
-      // レビューを再取得してコメント一覧を更新
-      const refreshed = await reviewsApi.getById(currentReview.id);
-      setCurrentReview(refreshed.review);
-      return response.reply;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : '返信の追加に失敗しました';
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentReview]);
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await reviewsApi.addReply(currentReview.id, commentId, { content });
+        // レビューを再取得してコメント一覧を更新
+        const refreshed = await reviewsApi.getById(currentReview.id);
+        setCurrentReview(refreshed.review);
+        return response.reply;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : '返信の追加に失敗しました';
+        setError(message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [currentReview]
+  );
 
   // 返信更新
-  const updateReply = useCallback(async (commentId: string, replyId: string, content: string) => {
-    if (!currentReview) {
-      throw new Error('レビューが開始されていません');
-    }
+  const updateReply = useCallback(
+    async (commentId: string, replyId: string, content: string) => {
+      if (!currentReview) {
+        throw new Error('レビューが開始されていません');
+      }
 
-    setIsLoading(true);
-    setError(null);
-    try {
-      const response = await reviewsApi.updateReply(currentReview.id, commentId, replyId, { content });
-      // レビューを再取得してコメント一覧を更新
-      const refreshed = await reviewsApi.getById(currentReview.id);
-      setCurrentReview(refreshed.review);
-      return response.reply;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : '返信の更新に失敗しました';
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentReview]);
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await reviewsApi.updateReply(currentReview.id, commentId, replyId, {
+          content,
+        });
+        // レビューを再取得してコメント一覧を更新
+        const refreshed = await reviewsApi.getById(currentReview.id);
+        setCurrentReview(refreshed.review);
+        return response.reply;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : '返信の更新に失敗しました';
+        setError(message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [currentReview]
+  );
 
   // 返信削除
-  const deleteReply = useCallback(async (commentId: string, replyId: string) => {
-    if (!currentReview) {
-      throw new Error('レビューが開始されていません');
-    }
+  const deleteReply = useCallback(
+    async (commentId: string, replyId: string) => {
+      if (!currentReview) {
+        throw new Error('レビューが開始されていません');
+      }
 
-    setIsLoading(true);
-    setError(null);
-    try {
-      await reviewsApi.deleteReply(currentReview.id, commentId, replyId);
-      // レビューを再取得してコメント一覧を更新
-      const refreshed = await reviewsApi.getById(currentReview.id);
-      setCurrentReview(refreshed.review);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : '返信の削除に失敗しました';
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [currentReview]);
+      setIsLoading(true);
+      setError(null);
+      try {
+        await reviewsApi.deleteReply(currentReview.id, commentId, replyId);
+        // レビューを再取得してコメント一覧を更新
+        const refreshed = await reviewsApi.getById(currentReview.id);
+        setCurrentReview(refreshed.review);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : '返信の削除に失敗しました';
+        setError(message);
+        throw err;
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [currentReview]
+  );
 
   // レビューの再読み込み
   const refreshReview = useCallback(async () => {
@@ -415,11 +440,7 @@ export function ReviewSessionProvider({ children }: { children: ReactNode }) {
     clearSession,
   };
 
-  return (
-    <ReviewSessionContext.Provider value={value}>
-      {children}
-    </ReviewSessionContext.Provider>
-  );
+  return <ReviewSessionContext.Provider value={value}>{children}</ReviewSessionContext.Provider>;
 }
 
 /**

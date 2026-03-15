@@ -126,8 +126,7 @@ describe('OrganizationService', () => {
     it('招待が存在しない場合はNotFoundErrorを投げる', async () => {
       mockPrisma.organizationInvitation.findUnique.mockResolvedValue(null);
 
-      await expect(service.getInvitationByToken('invalid-token'))
-        .rejects.toThrow(NotFoundError);
+      await expect(service.getInvitationByToken('invalid-token')).rejects.toThrow(NotFoundError);
     });
 
     it('承諾済みの招待はstatus=acceptedを返す', async () => {
@@ -250,8 +249,7 @@ describe('OrganizationService', () => {
     it('組織が存在しない場合はNotFoundErrorを投げる', async () => {
       mockOrgRepo.findById.mockResolvedValue(null);
 
-      await expect(service.getPendingInvitations('invalid-org'))
-        .rejects.toThrow(NotFoundError);
+      await expect(service.getPendingInvitations('invalid-org')).rejects.toThrow(NotFoundError);
     });
 
     it('保留中の招待がない場合は空配列を返す', async () => {
@@ -293,32 +291,28 @@ describe('OrganizationService', () => {
     it('招待が存在しない場合はNotFoundErrorを投げる', async () => {
       mockPrisma.organizationInvitation.findUnique.mockResolvedValue(null);
 
-      await expect(service.cancelInvitation('org-1', 'invalid-inv'))
-        .rejects.toThrow(NotFoundError);
+      await expect(service.cancelInvitation('org-1', 'invalid-inv')).rejects.toThrow(NotFoundError);
     });
 
     it('異なる組織の招待を取消そうとするとAuthorizationErrorを投げる', async () => {
       const otherOrgInvitation = { ...mockInvitation, organizationId: 'org-2' };
       mockPrisma.organizationInvitation.findUnique.mockResolvedValue(otherOrgInvitation);
 
-      await expect(service.cancelInvitation('org-1', 'inv-1'))
-        .rejects.toThrow(AuthorizationError);
+      await expect(service.cancelInvitation('org-1', 'inv-1')).rejects.toThrow(AuthorizationError);
     });
 
     it('既に承諾された招待を取消そうとするとConflictErrorを投げる', async () => {
       const acceptedInvitation = { ...mockInvitation, acceptedAt: new Date() };
       mockPrisma.organizationInvitation.findUnique.mockResolvedValue(acceptedInvitation);
 
-      await expect(service.cancelInvitation('org-1', 'inv-1'))
-        .rejects.toThrow(ConflictError);
+      await expect(service.cancelInvitation('org-1', 'inv-1')).rejects.toThrow(ConflictError);
     });
 
     it('既に辞退された招待を取消そうとするとConflictErrorを投げる', async () => {
       const declinedInvitation = { ...mockInvitation, declinedAt: new Date() };
       mockPrisma.organizationInvitation.findUnique.mockResolvedValue(declinedInvitation);
 
-      await expect(service.cancelInvitation('org-1', 'inv-1'))
-        .rejects.toThrow(ConflictError);
+      await expect(service.cancelInvitation('org-1', 'inv-1')).rejects.toThrow(ConflictError);
     });
   });
 
@@ -369,24 +363,23 @@ describe('OrganizationService', () => {
     it('招待が存在しない場合はNotFoundErrorを投げる', async () => {
       mockPrisma.organizationInvitation.findUnique.mockResolvedValue(null);
 
-      await expect(service.declineInvitation('invalid-token', 'user-1'))
-        .rejects.toThrow(NotFoundError);
+      await expect(service.declineInvitation('invalid-token', 'user-1')).rejects.toThrow(
+        NotFoundError
+      );
     });
 
     it('既に承諾された招待を辞退しようとするとConflictErrorを投げる', async () => {
       const acceptedInvitation = { ...mockInvitation, acceptedAt: new Date() };
       mockPrisma.organizationInvitation.findUnique.mockResolvedValue(acceptedInvitation);
 
-      await expect(service.declineInvitation('token-1', 'user-1'))
-        .rejects.toThrow(ConflictError);
+      await expect(service.declineInvitation('token-1', 'user-1')).rejects.toThrow(ConflictError);
     });
 
     it('既に辞退された招待を辞退しようとするとConflictErrorを投げる', async () => {
       const declinedInvitation = { ...mockInvitation, declinedAt: new Date() };
       mockPrisma.organizationInvitation.findUnique.mockResolvedValue(declinedInvitation);
 
-      await expect(service.declineInvitation('token-1', 'user-1'))
-        .rejects.toThrow(ConflictError);
+      await expect(service.declineInvitation('token-1', 'user-1')).rejects.toThrow(ConflictError);
     });
 
     it('期限切れの招待を辞退しようとするとConflictErrorを投げる', async () => {
@@ -396,8 +389,7 @@ describe('OrganizationService', () => {
       };
       mockPrisma.organizationInvitation.findUnique.mockResolvedValue(expiredInvitation);
 
-      await expect(service.declineInvitation('token-1', 'user-1'))
-        .rejects.toThrow(ConflictError);
+      await expect(service.declineInvitation('token-1', 'user-1')).rejects.toThrow(ConflictError);
     });
 
     it('他人宛ての招待を辞退しようとするとAuthorizationErrorを投げる', async () => {
@@ -407,16 +399,18 @@ describe('OrganizationService', () => {
         email: 'other@example.com', // 異なるメールアドレス
       });
 
-      await expect(service.declineInvitation('token-1', 'user-1'))
-        .rejects.toThrow(AuthorizationError);
+      await expect(service.declineInvitation('token-1', 'user-1')).rejects.toThrow(
+        AuthorizationError
+      );
     });
 
     it('ユーザーが存在しない場合はAuthorizationErrorを投げる', async () => {
       mockPrisma.organizationInvitation.findUnique.mockResolvedValue(mockInvitation);
       mockPrisma.user.findUnique.mockResolvedValue(null);
 
-      await expect(service.declineInvitation('token-1', 'user-1'))
-        .rejects.toThrow(AuthorizationError);
+      await expect(service.declineInvitation('token-1', 'user-1')).rejects.toThrow(
+        AuthorizationError
+      );
     });
   });
 
@@ -456,10 +450,12 @@ describe('OrganizationService', () => {
         role: 'MEMBER',
       });
 
-      await expect(service.invite('org-1', 'inviter-1', {
-        email: 'existing@example.com',
-        role: 'MEMBER',
-      })).rejects.toThrow(ConflictError);
+      await expect(
+        service.invite('org-1', 'inviter-1', {
+          email: 'existing@example.com',
+          role: 'MEMBER',
+        })
+      ).rejects.toThrow(ConflictError);
     });
 
     it('保留中の招待がある場合はConflictErrorを投げる', async () => {
@@ -473,19 +469,23 @@ describe('OrganizationService', () => {
         declinedAt: null,
       });
 
-      await expect(service.invite('org-1', 'inviter-1', {
-        email: 'pending@example.com',
-        role: 'MEMBER',
-      })).rejects.toThrow(ConflictError);
+      await expect(
+        service.invite('org-1', 'inviter-1', {
+          email: 'pending@example.com',
+          role: 'MEMBER',
+        })
+      ).rejects.toThrow(ConflictError);
     });
 
     it('組織が存在しない場合はNotFoundErrorを投げる', async () => {
       mockOrgRepo.findById.mockResolvedValue(null);
 
-      await expect(service.invite('invalid-org', 'inviter-1', {
-        email: 'user@example.com',
-        role: 'MEMBER',
-      })).rejects.toThrow(NotFoundError);
+      await expect(
+        service.invite('invalid-org', 'inviter-1', {
+          email: 'user@example.com',
+          role: 'MEMBER',
+        })
+      ).rejects.toThrow(NotFoundError);
     });
   });
 
@@ -548,15 +548,17 @@ describe('OrganizationService', () => {
     it('組織が存在しない場合はNotFoundErrorを投げる', async () => {
       mockOrgRepo.findById.mockResolvedValue(null);
 
-      await expect(service.transferOwnership('invalid-org', 'owner-1', 'admin-1'))
-        .rejects.toThrow(NotFoundError);
+      await expect(service.transferOwnership('invalid-org', 'owner-1', 'admin-1')).rejects.toThrow(
+        NotFoundError
+      );
     });
 
     it('自分自身への移譲はConflictErrorを投げる', async () => {
       mockOrgRepo.findById.mockResolvedValue(mockOrg);
 
-      await expect(service.transferOwnership('org-1', 'owner-1', 'owner-1'))
-        .rejects.toThrow(ConflictError);
+      await expect(service.transferOwnership('org-1', 'owner-1', 'owner-1')).rejects.toThrow(
+        ConflictError
+      );
     });
 
     it('非オーナーからの移譲はAuthorizationErrorを投げる', async () => {
@@ -566,16 +568,18 @@ describe('OrganizationService', () => {
         role: 'ADMIN', // オーナーではない
       });
 
-      await expect(service.transferOwnership('org-1', 'admin-1', 'member-1'))
-        .rejects.toThrow(AuthorizationError);
+      await expect(service.transferOwnership('org-1', 'admin-1', 'member-1')).rejects.toThrow(
+        AuthorizationError
+      );
     });
 
     it('現オーナーがメンバーでない場合はAuthorizationErrorを投げる', async () => {
       mockOrgRepo.findById.mockResolvedValue(mockOrg);
       mockPrisma.organizationMember.findUnique.mockResolvedValueOnce(null);
 
-      await expect(service.transferOwnership('org-1', 'non-member', 'admin-1'))
-        .rejects.toThrow(AuthorizationError);
+      await expect(service.transferOwnership('org-1', 'non-member', 'admin-1')).rejects.toThrow(
+        AuthorizationError
+      );
     });
 
     it('新オーナーがメンバーでない場合はNotFoundErrorを投げる', async () => {
@@ -584,8 +588,9 @@ describe('OrganizationService', () => {
         .mockResolvedValueOnce(mockCurrentOwner) // 現オーナー確認
         .mockResolvedValueOnce(null); // 新オーナーが存在しない
 
-      await expect(service.transferOwnership('org-1', 'owner-1', 'non-member'))
-        .rejects.toThrow(NotFoundError);
+      await expect(service.transferOwnership('org-1', 'owner-1', 'non-member')).rejects.toThrow(
+        NotFoundError
+      );
     });
   });
 
@@ -646,16 +651,18 @@ describe('OrganizationService', () => {
     it('メンバーが存在しない場合はNotFoundErrorを投げる', async () => {
       mockPrisma.organizationMember.findUnique.mockResolvedValue(null);
 
-      await expect(service.updateMemberRole('org-1', 'invalid-user', 'ADMIN'))
-        .rejects.toThrow(NotFoundError);
+      await expect(service.updateMemberRole('org-1', 'invalid-user', 'ADMIN')).rejects.toThrow(
+        NotFoundError
+      );
     });
 
     it('OWNERのロール変更はConflictErrorを投げる', async () => {
       const mockOwner = { ...mockMember, role: 'OWNER' };
       mockPrisma.organizationMember.findUnique.mockResolvedValue(mockOwner);
 
-      await expect(service.updateMemberRole('org-1', 'owner-1', 'ADMIN'))
-        .rejects.toThrow(ConflictError);
+      await expect(service.updateMemberRole('org-1', 'owner-1', 'ADMIN')).rejects.toThrow(
+        ConflictError
+      );
     });
   });
 
@@ -683,8 +690,7 @@ describe('OrganizationService', () => {
     it('削除済み組織が見つからない場合はNotFoundErrorを投げる', async () => {
       mockOrgRepo.findDeletedById.mockResolvedValue(null);
 
-      await expect(service.restore('invalid-org', 'user-1'))
-        .rejects.toThrow(NotFoundError);
+      await expect(service.restore('invalid-org', 'user-1')).rejects.toThrow(NotFoundError);
     });
 
     it('猶予期間（30日）を過ぎている場合はConflictErrorを投げる', async () => {
@@ -697,8 +703,7 @@ describe('OrganizationService', () => {
       };
       mockOrgRepo.findDeletedById.mockResolvedValue(expiredOrg);
 
-      await expect(service.restore('org-1', 'user-1'))
-        .rejects.toThrow(ConflictError);
+      await expect(service.restore('org-1', 'user-1')).rejects.toThrow(ConflictError);
     });
 
     it('猶予期間内（29日目）の組織は復元できる', async () => {

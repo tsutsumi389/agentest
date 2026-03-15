@@ -62,22 +62,24 @@ describe('Internal API Update Endpoints Integration Tests', () => {
 
     // テストスイートを作成（事前条件付き）
     testSuite = await createTestSuite(testProject.id);
-    const suitePrecondition = await createTestPrecondition(testSuite.id, { content: 'Suite precondition' });
+    const suitePrecondition = await createTestPrecondition(testSuite.id, {
+      content: 'Suite precondition',
+    });
 
     // テストケースを作成
     testCase = await createTestCase(testSuite.id, { title: 'Test Case for Update' });
     const testStep = await createTestCaseStep(testCase.id, { content: 'Step 1' });
-    const testExpectedResult = await createTestCaseExpectedResult(testCase.id, { content: 'Expected result 1' });
+    const testExpectedResult = await createTestCaseExpectedResult(testCase.id, {
+      content: 'Expected result 1',
+    });
 
     // 実行を作成
     execution = await createTestExecution(testEnvironment.id, testSuite.id);
 
     // 実行時スナップショットを作成
-    executionTestSuite = await createTestExecutionTestSuite(
-      execution.id,
-      testSuite.id,
-      { name: testSuite.name }
-    );
+    executionTestSuite = await createTestExecutionTestSuite(execution.id, testSuite.id, {
+      name: testSuite.name,
+    });
 
     const executionSuitePrecondition = await createTestExecutionTestSuitePrecondition(
       executionTestSuite.id,
@@ -85,17 +87,13 @@ describe('Internal API Update Endpoints Integration Tests', () => {
       { content: suitePrecondition.content }
     );
 
-    executionTestCase = await createTestExecutionTestCase(
-      executionTestSuite.id,
-      testCase.id,
-      { title: testCase.title }
-    );
+    executionTestCase = await createTestExecutionTestCase(executionTestSuite.id, testCase.id, {
+      title: testCase.title,
+    });
 
-    const executionStep = await createTestExecutionTestCaseStep(
-      executionTestCase.id,
-      testStep.id,
-      { content: testStep.content }
-    );
+    const executionStep = await createTestExecutionTestCaseStep(executionTestCase.id, testStep.id, {
+      content: testStep.content,
+    });
 
     const executionExpectedResult = await createTestExecutionTestCaseExpectedResult(
       executionTestCase.id,
@@ -252,10 +250,7 @@ describe('Internal API Update Endpoints Integration Tests', () => {
           .query({ userId: testUser.id })
           .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
           .send({
-            steps: [
-              { content: 'New Step 1' },
-              { content: 'New Step 2' },
-            ],
+            steps: [{ content: 'New Step 1' }, { content: 'New Step 2' }],
           });
 
         expect(response.status).toBe(200);
@@ -395,7 +390,9 @@ describe('Internal API Update Endpoints Integration Tests', () => {
     describe('正常系', () => {
       it('事前条件結果をMETに更新できる', async () => {
         const response = await request(app)
-          .patch(`/internal/api/executions/${execution.id}/precondition-results/${suitePreconditionResult.id}`)
+          .patch(
+            `/internal/api/executions/${execution.id}/precondition-results/${suitePreconditionResult.id}`
+          )
           .query({ userId: testUser.id })
           .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
           .send({
@@ -410,7 +407,9 @@ describe('Internal API Update Endpoints Integration Tests', () => {
 
       it('事前条件結果をNOT_METに更新できる（noteあり）', async () => {
         const response = await request(app)
-          .patch(`/internal/api/executions/${execution.id}/precondition-results/${suitePreconditionResult.id}`)
+          .patch(
+            `/internal/api/executions/${execution.id}/precondition-results/${suitePreconditionResult.id}`
+          )
           .query({ userId: testUser.id })
           .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
           .send({
@@ -423,7 +422,6 @@ describe('Internal API Update Endpoints Integration Tests', () => {
         expect(response.body.preconditionResult.note).toBe('Environment not ready');
       });
     });
-
   });
 
   describe('PATCH /internal/api/executions/:executionId/step-results/:stepResultId', () => {
@@ -462,7 +460,9 @@ describe('Internal API Update Endpoints Integration Tests', () => {
     describe('異常系', () => {
       it('存在しないステップ結果は404を返す', async () => {
         const response = await request(app)
-          .patch(`/internal/api/executions/${execution.id}/step-results/00000000-0000-0000-0000-000000000000`)
+          .patch(
+            `/internal/api/executions/${execution.id}/step-results/00000000-0000-0000-0000-000000000000`
+          )
           .query({ userId: testUser.id })
           .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
           .send({
@@ -478,7 +478,9 @@ describe('Internal API Update Endpoints Integration Tests', () => {
     describe('正常系', () => {
       it('期待結果をPASSに更新できる', async () => {
         const response = await request(app)
-          .patch(`/internal/api/executions/${execution.id}/expected-results/${expectedResultResult.id}`)
+          .patch(
+            `/internal/api/executions/${execution.id}/expected-results/${expectedResultResult.id}`
+          )
           .query({ userId: testUser.id })
           .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
           .send({
@@ -493,7 +495,9 @@ describe('Internal API Update Endpoints Integration Tests', () => {
 
       it('期待結果をFAILに更新できる（noteあり）', async () => {
         const response = await request(app)
-          .patch(`/internal/api/executions/${execution.id}/expected-results/${expectedResultResult.id}`)
+          .patch(
+            `/internal/api/executions/${execution.id}/expected-results/${expectedResultResult.id}`
+          )
           .query({ userId: testUser.id })
           .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
           .send({
@@ -508,7 +512,9 @@ describe('Internal API Update Endpoints Integration Tests', () => {
 
       it('期待結果をSKIPPEDに更新できる', async () => {
         const response = await request(app)
-          .patch(`/internal/api/executions/${execution.id}/expected-results/${expectedResultResult.id}`)
+          .patch(
+            `/internal/api/executions/${execution.id}/expected-results/${expectedResultResult.id}`
+          )
           .query({ userId: testUser.id })
           .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
           .send({
@@ -526,7 +532,9 @@ describe('Internal API Update Endpoints Integration Tests', () => {
         const anotherUser = await createTestUser();
 
         const response = await request(app)
-          .patch(`/internal/api/executions/${execution.id}/expected-results/${expectedResultResult.id}`)
+          .patch(
+            `/internal/api/executions/${execution.id}/expected-results/${expectedResultResult.id}`
+          )
           .query({ userId: anotherUser.id })
           .set('X-Internal-API-Key', env.INTERNAL_API_SECRET)
           .send({

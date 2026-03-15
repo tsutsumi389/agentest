@@ -77,9 +77,13 @@ export function AcceptInvitationPage() {
       } catch (err) {
         if (err instanceof ApiError) {
           if (err.code === 'INVITATION_EXPIRED') {
-            setInvitationError('この招待は有効期限が切れています。管理者に再度招待を依頼してください。');
+            setInvitationError(
+              'この招待は有効期限が切れています。管理者に再度招待を依頼してください。'
+            );
           } else if (err.code === 'INVITATION_ALREADY_ACCEPTED') {
-            setInvitationError('この招待は既に受諾されています。ログインページからログインしてください。');
+            setInvitationError(
+              'この招待は既に受諾されています。ログインページからログインしてください。'
+            );
           } else {
             setInvitationError(err.message);
           }
@@ -136,9 +140,7 @@ export function AcceptInvitationPage() {
               <div className="w-10 h-10 rounded-lg bg-accent-muted flex items-center justify-center">
                 <Terminal className="w-6 h-6 text-accent" aria-hidden="true" />
               </div>
-              <span className="text-2xl font-bold text-foreground">
-                Agentest Admin
-              </span>
+              <span className="text-2xl font-bold text-foreground">Agentest Admin</span>
             </div>
           </div>
 
@@ -152,13 +154,11 @@ export function AcceptInvitationPage() {
                 アカウントが有効化されました
               </h1>
               <p className="text-foreground-muted mb-6">
-                パスワードの設定が完了しました。<br />
+                パスワードの設定が完了しました。
+                <br />
                 ログインページからログインしてください。
               </p>
-              <Link
-                to="/login"
-                className="btn btn-primary w-full"
-              >
+              <Link to="/login" className="btn btn-primary w-full">
                 ログインページへ
               </Link>
             </div>
@@ -196,9 +196,7 @@ export function AcceptInvitationPage() {
               <div className="w-10 h-10 rounded-lg bg-accent-muted flex items-center justify-center">
                 <Terminal className="w-6 h-6 text-accent" aria-hidden="true" />
               </div>
-              <span className="text-2xl font-bold text-foreground">
-                Agentest Admin
-              </span>
+              <span className="text-2xl font-bold text-foreground">Agentest Admin</span>
             </div>
           </div>
 
@@ -208,16 +206,11 @@ export function AcceptInvitationPage() {
               <div className="w-16 h-16 rounded-full bg-danger-muted flex items-center justify-center mb-4">
                 <AlertCircle className="w-8 h-8 text-danger" aria-hidden="true" />
               </div>
-              <h1 className="text-xl font-semibold text-foreground mb-2">
-                招待を確認できません
-              </h1>
+              <h1 className="text-xl font-semibold text-foreground mb-2">招待を確認できません</h1>
               <p className="text-foreground-muted mb-6">
                 {invitationError || '招待情報が見つかりません'}
               </p>
-              <Link
-                to="/login"
-                className="btn btn-secondary w-full"
-              >
+              <Link to="/login" className="btn btn-secondary w-full">
                 ログインページへ
               </Link>
             </div>
@@ -242,18 +235,14 @@ export function AcceptInvitationPage() {
             <div className="w-10 h-10 rounded-lg bg-accent-muted flex items-center justify-center">
               <Terminal className="w-6 h-6 text-accent" aria-hidden="true" />
             </div>
-            <span className="text-2xl font-bold text-foreground">
-              Agentest Admin
-            </span>
+            <span className="text-2xl font-bold text-foreground">Agentest Admin</span>
           </div>
           <p className="text-foreground-muted text-sm">管理者アカウントの設定</p>
         </div>
 
         {/* 招待情報カード */}
         <div className="card p-6 mb-4">
-          <h2 className="text-sm font-medium text-foreground-muted mb-3">
-            招待情報
-          </h2>
+          <h2 className="text-sm font-medium text-foreground-muted mb-3">招待情報</h2>
           <div className="space-y-3">
             <div className="flex items-center gap-3">
               <User className="w-4 h-4 text-foreground-subtle" aria-hidden="true" />
@@ -266,9 +255,7 @@ export function AcceptInvitationPage() {
               <Shield className="w-4 h-4 text-foreground-subtle" aria-hidden="true" />
               <div>
                 <p className="text-sm text-foreground-muted">ロール</p>
-                <p className="text-foreground font-medium">
-                  {getRoleLabel(invitation.role)}
-                </p>
+                <p className="text-foreground font-medium">{getRoleLabel(invitation.role)}</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
@@ -294,9 +281,7 @@ export function AcceptInvitationPage() {
 
         {/* パスワード設定フォーム */}
         <div className="card p-6">
-          <h1 className="text-lg font-semibold text-foreground mb-4">
-            パスワードを設定
-          </h1>
+          <h1 className="text-lg font-semibold text-foreground mb-4">パスワードを設定</h1>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* CLI風の装飾 */}
@@ -317,10 +302,7 @@ export function AcceptInvitationPage() {
 
             {/* パスワード入力 */}
             <div className="space-y-2">
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-foreground-muted"
-              >
+              <label htmlFor="password" className="block text-sm font-medium text-foreground-muted">
                 パスワード
               </label>
               <div className="relative">

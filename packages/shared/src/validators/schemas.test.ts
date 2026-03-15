@@ -203,14 +203,18 @@ describe('ユーザースキーマ', () => {
 
     it('名前の最大長は100文字', () => {
       const longName = 'a'.repeat(101);
-      expect(userCreateSchema.safeParse({ email: 'test@example.com', name: longName }).success).toBe(false);
+      expect(
+        userCreateSchema.safeParse({ email: 'test@example.com', name: longName }).success
+      ).toBe(false);
     });
   });
 
   describe('userUpdateSchema', () => {
     it('部分的な更新を受け入れる', () => {
       expect(userUpdateSchema.safeParse({ name: '新しい名前' }).success).toBe(true);
-      expect(userUpdateSchema.safeParse({ avatarUrl: 'https://example.com/new.png' }).success).toBe(true);
+      expect(userUpdateSchema.safeParse({ avatarUrl: 'https://example.com/new.png' }).success).toBe(
+        true
+      );
       expect(userUpdateSchema.safeParse({}).success).toBe(true);
     });
 
@@ -244,18 +248,26 @@ describe('組織スキーマ', () => {
 
     it('descriptionの最大長は500文字', () => {
       const longDesc = 'a'.repeat(501);
-      expect(organizationCreateSchema.safeParse({ name: 'test', description: longDesc }).success).toBe(false);
+      expect(
+        organizationCreateSchema.safeParse({ name: 'test', description: longDesc }).success
+      ).toBe(false);
     });
   });
 
   describe('organizationInviteSchema', () => {
     it('ADMINとMEMBERロールを受け入れる', () => {
-      expect(organizationInviteSchema.safeParse({ email: 'test@example.com', role: 'ADMIN' }).success).toBe(true);
-      expect(organizationInviteSchema.safeParse({ email: 'test@example.com', role: 'MEMBER' }).success).toBe(true);
+      expect(
+        organizationInviteSchema.safeParse({ email: 'test@example.com', role: 'ADMIN' }).success
+      ).toBe(true);
+      expect(
+        organizationInviteSchema.safeParse({ email: 'test@example.com', role: 'MEMBER' }).success
+      ).toBe(true);
     });
 
     it('OWNERロールを拒否する', () => {
-      expect(organizationInviteSchema.safeParse({ email: 'test@example.com', role: 'OWNER' }).success).toBe(false);
+      expect(
+        organizationInviteSchema.safeParse({ email: 'test@example.com', role: 'OWNER' }).success
+      ).toBe(false);
     });
   });
 });
@@ -343,7 +355,9 @@ describe('テストスイートスキーマ', () => {
 
     it('descriptionの最大長は2000文字', () => {
       const longDesc = 'a'.repeat(2001);
-      expect(testSuiteCreateSchema.safeParse({ name: 'test', description: longDesc }).success).toBe(false);
+      expect(testSuiteCreateSchema.safeParse({ name: 'test', description: longDesc }).success).toBe(
+        false
+      );
     });
   });
 
@@ -559,12 +573,14 @@ describe('レビュースキーマ', () => {
     });
 
     it('targetTypeはSUITEまたはCASE', () => {
-      expect(reviewCommentCreateSchema.safeParse({
-        targetType: 'SUITE',
-        targetId: '550e8400-e29b-41d4-a716-446655440000',
-        targetField: 'DESCRIPTION',
-        content: 'コメント',
-      }).success).toBe(true);
+      expect(
+        reviewCommentCreateSchema.safeParse({
+          targetType: 'SUITE',
+          targetId: '550e8400-e29b-41d4-a716-446655440000',
+          targetField: 'DESCRIPTION',
+          content: 'コメント',
+        }).success
+      ).toBe(true);
     });
 
     it('targetFieldの全ての値を受け入れる', () => {
@@ -573,21 +589,34 @@ describe('レビュースキーマ', () => {
         targetId: '550e8400-e29b-41d4-a716-446655440000',
         content: 'コメント',
       };
-      expect(reviewCommentCreateSchema.safeParse({ ...baseComment, targetField: 'TITLE' }).success).toBe(true);
-      expect(reviewCommentCreateSchema.safeParse({ ...baseComment, targetField: 'DESCRIPTION' }).success).toBe(true);
-      expect(reviewCommentCreateSchema.safeParse({ ...baseComment, targetField: 'PRECONDITION' }).success).toBe(true);
-      expect(reviewCommentCreateSchema.safeParse({ ...baseComment, targetField: 'STEP' }).success).toBe(true);
-      expect(reviewCommentCreateSchema.safeParse({ ...baseComment, targetField: 'EXPECTED_RESULT' }).success).toBe(true);
+      expect(
+        reviewCommentCreateSchema.safeParse({ ...baseComment, targetField: 'TITLE' }).success
+      ).toBe(true);
+      expect(
+        reviewCommentCreateSchema.safeParse({ ...baseComment, targetField: 'DESCRIPTION' }).success
+      ).toBe(true);
+      expect(
+        reviewCommentCreateSchema.safeParse({ ...baseComment, targetField: 'PRECONDITION' }).success
+      ).toBe(true);
+      expect(
+        reviewCommentCreateSchema.safeParse({ ...baseComment, targetField: 'STEP' }).success
+      ).toBe(true);
+      expect(
+        reviewCommentCreateSchema.safeParse({ ...baseComment, targetField: 'EXPECTED_RESULT' })
+          .success
+      ).toBe(true);
     });
 
     it('contentの最大長は2000文字', () => {
       const longContent = 'a'.repeat(2001);
-      expect(reviewCommentCreateSchema.safeParse({
-        targetType: 'CASE',
-        targetId: '550e8400-e29b-41d4-a716-446655440000',
-        targetField: 'TITLE',
-        content: longContent,
-      }).success).toBe(false);
+      expect(
+        reviewCommentCreateSchema.safeParse({
+          targetType: 'CASE',
+          targetId: '550e8400-e29b-41d4-a716-446655440000',
+          targetField: 'TITLE',
+          content: longContent,
+        }).success
+      ).toBe(false);
     });
   });
 
@@ -701,7 +730,6 @@ describe('管理者向けスキーマ', () => {
         sortOrder: 'desc',
       });
     });
-
   });
 
   describe('adminOrganizationSearchSchema', () => {
@@ -736,7 +764,6 @@ describe('管理者向けスキーマ', () => {
     });
   });
 });
-
 
 describe('システム管理者スキーマ', () => {
   describe('systemAdminSearchSchema', () => {
@@ -774,16 +801,20 @@ describe('システム管理者スキーマ', () => {
     });
 
     it('全てのロールを受け入れる', () => {
-      expect(systemAdminInviteSchema.safeParse({
-        email: 'admin@example.com',
-        name: '管理者',
-        role: 'SUPER_ADMIN',
-      }).success).toBe(true);
-      expect(systemAdminInviteSchema.safeParse({
-        email: 'admin@example.com',
-        name: '管理者',
-        role: 'VIEWER',
-      }).success).toBe(true);
+      expect(
+        systemAdminInviteSchema.safeParse({
+          email: 'admin@example.com',
+          name: '管理者',
+          role: 'SUPER_ADMIN',
+        }).success
+      ).toBe(true);
+      expect(
+        systemAdminInviteSchema.safeParse({
+          email: 'admin@example.com',
+          name: '管理者',
+          role: 'VIEWER',
+        }).success
+      ).toBe(true);
     });
   });
 

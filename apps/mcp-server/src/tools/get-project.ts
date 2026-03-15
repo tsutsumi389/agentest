@@ -6,7 +6,10 @@ import { apiClient } from '../clients/api-client.js';
  * 入力スキーマ
  */
 export const getProjectInputSchema = z.object({
-  projectId: z.string().uuid().describe('取得するプロジェクトのID。search_projectで取得したIDを指定'),
+  projectId: z
+    .string()
+    .uuid()
+    .describe('取得するプロジェクトのID。search_projectで取得したIDを指定'),
 });
 
 type GetProjectInput = z.infer<typeof getProjectInputSchema>;
@@ -52,7 +55,10 @@ interface GetProjectResponse {
 /**
  * ハンドラー
  */
-const getProjectHandler: ToolHandler<GetProjectInput, GetProjectResponse> = async (input, context) => {
+const getProjectHandler: ToolHandler<GetProjectInput, GetProjectResponse> = async (
+  input,
+  context
+) => {
   const { userId } = context;
 
   if (!userId) {
@@ -60,9 +66,12 @@ const getProjectHandler: ToolHandler<GetProjectInput, GetProjectResponse> = asyn
   }
 
   // 内部APIを呼び出し
-  const response = await apiClient.get<GetProjectResponse>(`/internal/api/projects/${input.projectId}`, {
-    userId,
-  });
+  const response = await apiClient.get<GetProjectResponse>(
+    `/internal/api/projects/${input.projectId}`,
+    {
+      userId,
+    }
+  );
 
   return response;
 };

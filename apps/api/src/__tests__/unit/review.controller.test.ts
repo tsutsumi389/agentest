@@ -185,7 +185,10 @@ describe('ReviewController', () => {
 
       await controller.getById(req, res, mockNext);
 
-      expect(mockReviewService.getAccessibleReview).toHaveBeenCalledWith(TEST_REVIEW_ID, TEST_USER_ID);
+      expect(mockReviewService.getAccessibleReview).toHaveBeenCalledWith(
+        TEST_REVIEW_ID,
+        TEST_USER_ID
+      );
       expect(res.json).toHaveBeenCalledWith({ review: mockReview });
     });
 
@@ -481,7 +484,11 @@ describe('ReviewController', () => {
 
       await controller.deleteComment(req, res, mockNext);
 
-      expect(mockReviewService.deleteComment).toHaveBeenCalledWith(TEST_REVIEW_ID, TEST_COMMENT_ID, TEST_USER_ID);
+      expect(mockReviewService.deleteComment).toHaveBeenCalledWith(
+        TEST_REVIEW_ID,
+        TEST_COMMENT_ID,
+        TEST_USER_ID
+      );
       expect(res.status).toHaveBeenCalledWith(204);
       expect(res.send).toHaveBeenCalled();
     });

@@ -21,10 +21,12 @@ async function cleanup() {
 
 // プロセスレベルの例外ハンドラ（main実行前に登録）
 registerProcessHandlers({
-  getShutdownFn: () => async (_signal, exitCode = 1) => {
-    await cleanup().catch(() => {});
-    process.exit(exitCode);
-  },
+  getShutdownFn:
+    () =>
+    async (_signal, exitCode = 1) => {
+      await cleanup().catch(() => {});
+      process.exit(exitCode);
+    },
   logger,
 });
 

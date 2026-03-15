@@ -1,14 +1,6 @@
 import { useState } from 'react';
-import {
-  ChevronDown,
-  ChevronUp,
-  MessageSquare,
-  Pencil,
-} from 'lucide-react';
-import {
-  type ReviewWithDetails,
-  type ReviewCommentWithReplies,
-} from '../../lib/api';
+import { ChevronDown, ChevronUp, MessageSquare, Pencil } from 'lucide-react';
+import { type ReviewWithDetails, type ReviewCommentWithReplies } from '../../lib/api';
 import { TARGET_FIELD_LABELS } from '../../lib/constants';
 import { ReviewVerdictBadge } from './ReviewVerdictBadge';
 import { ReviewStatusBadge } from './ReviewStatusBadge';
@@ -40,9 +32,7 @@ export function ReviewDetailContent({
 
   // 投稿者本人かつSUBMITTED状態の場合のみ編集可能
   const canEditVerdict =
-    currentUserId &&
-    review.author?.id === currentUserId &&
-    review.status === 'SUBMITTED';
+    currentUserId && review.author?.id === currentUserId && review.status === 'SUBMITTED';
 
   const submittedAt = review.submittedAt
     ? new Date(review.submittedAt).toLocaleString('ja-JP', {
@@ -60,11 +50,7 @@ export function ReviewDetailContent({
       <div className="space-y-4">
         {/* 著者と日時 */}
         <div className="flex items-center gap-3">
-          <AuthorAvatar
-            author={review.author}
-            agentSession={review.agentSession}
-            size="lg"
-          />
+          <AuthorAvatar author={review.author} agentSession={review.agentSession} size="lg" />
           <div>
             <div className="font-medium text-foreground">{authorName}</div>
             <div className="text-xs text-foreground-muted">{submittedAt}</div>
@@ -104,9 +90,7 @@ export function ReviewDetailContent({
         </h3>
 
         {review.comments.length === 0 ? (
-          <p className="text-sm text-foreground-muted py-4 text-center">
-            コメントはありません
-          </p>
+          <p className="text-sm text-foreground-muted py-4 text-center">コメントはありません</p>
         ) : (
           <div className="space-y-3">
             {review.comments.map((comment) => (
@@ -153,9 +137,7 @@ export function CommentCard({ comment }: CommentCardProps) {
           <ReviewStatusBadge status={comment.status} showLabel={false} />
           <span className="text-xs text-foreground-muted truncate">
             {TARGET_FIELD_LABELS[comment.targetField]}
-            {comment.targetType === 'CASE' && comment.targetName && (
-              <> - {comment.targetName}</>
-            )}
+            {comment.targetType === 'CASE' && comment.targetName && <> - {comment.targetName}</>}
           </span>
         </div>
       </div>
@@ -164,15 +146,9 @@ export function CommentCard({ comment }: CommentCardProps) {
       <div className="p-3">
         {/* 著者情報 */}
         <div className="flex items-center gap-2 mb-2">
-          <AuthorAvatar
-            author={comment.author}
-            agentSession={comment.agentSession}
-            size="sm"
-          />
+          <AuthorAvatar author={comment.author} agentSession={comment.agentSession} size="sm" />
           <div className="min-w-0">
-            <span className="text-sm font-medium text-foreground">
-              {authorName}
-            </span>
+            <span className="text-sm font-medium text-foreground">{authorName}</span>
             <span className="text-xs text-foreground-muted ml-2">
               {new Date(comment.createdAt).toLocaleString('ja-JP')}
             </span>
@@ -201,11 +177,7 @@ export function CommentCard({ comment }: CommentCardProps) {
             className="w-full flex items-center justify-between px-3 py-2 text-sm text-foreground-muted hover:text-foreground hover:bg-background-tertiary transition-colors"
           >
             <span>{comment.replies.length} 件の返信</span>
-            {isExpanded ? (
-              <ChevronUp className="w-4 h-4" />
-            ) : (
-              <ChevronDown className="w-4 h-4" />
-            )}
+            {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
           </button>
 
           {isExpanded && (

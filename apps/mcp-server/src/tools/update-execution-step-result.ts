@@ -8,9 +8,21 @@ import { apiClient } from '../clients/api-client.js';
 export const updateExecutionStepResultInputSchema = z.object({
   executionId: z.string().uuid().describe('テスト実行のID。create_executionで取得したIDを指定'),
   stepResultId: z.string().uuid().describe('ステップ結果のID。get_executionのstepResultsから取得'),
-  status: z.enum(['DONE', 'SKIPPED']).describe('実行結果: DONE（ステップを実行完了）, SKIPPED（ステップをスキップ）'),
-  note: z.string().max(2000).optional().describe('補足メモ（最大2000文字）。実行時の観察事項やスキップ理由を記録'),
-  agentName: z.string().max(100).optional().describe('実施したAIエージェントの名前（例：Claude Code Opus4.5）。MCPツール経由での実施時に記録'),
+  status: z
+    .enum(['DONE', 'SKIPPED'])
+    .describe('実行結果: DONE（ステップを実行完了）, SKIPPED（ステップをスキップ）'),
+  note: z
+    .string()
+    .max(2000)
+    .optional()
+    .describe('補足メモ（最大2000文字）。実行時の観察事項やスキップ理由を記録'),
+  agentName: z
+    .string()
+    .max(100)
+    .optional()
+    .describe(
+      '実施したAIエージェントの名前（例：Claude Code Opus4.5）。MCPツール経由での実施時に記録'
+    ),
 });
 
 type UpdateExecutionStepResultInput = z.infer<typeof updateExecutionStepResultInputSchema>;
@@ -33,7 +45,10 @@ interface UpdateExecutionStepResultResponse {
 /**
  * ハンドラー
  */
-const updateExecutionStepResultHandler: ToolHandler<UpdateExecutionStepResultInput, UpdateExecutionStepResultResponse> = async (input, context) => {
+const updateExecutionStepResultHandler: ToolHandler<
+  UpdateExecutionStepResultInput,
+  UpdateExecutionStepResultResponse
+> = async (input, context) => {
   const { userId } = context;
 
   if (!userId) {

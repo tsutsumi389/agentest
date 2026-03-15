@@ -44,9 +44,7 @@ function buildConicGradient(segments: DonutSegment[], total: number): string {
     const segmentAngle = (segment.value / total) * 360;
     const endAngle = currentAngle + segmentAngle;
 
-    gradientParts.push(
-      `${segment.color} ${currentAngle}deg ${endAngle}deg`
-    );
+    gradientParts.push(`${segment.color} ${currentAngle}deg ${endAngle}deg`);
     currentAngle = endAngle;
   }
 
@@ -104,9 +102,7 @@ export function DonutChart({
         }}
       >
         {isEmpty ? (
-          <span className="text-foreground-muted text-xs text-center px-2">
-            {emptyMessage}
-          </span>
+          <span className="text-foreground-muted text-xs text-center px-2">{emptyMessage}</span>
         ) : (
           centerContent
         )}

@@ -11,7 +11,6 @@ const validEnv = {
 };
 
 describe('envSchema', () => {
-
   describe('NODE_ENV', () => {
     it('development, production, testを受け入れる', () => {
       expect(envSchema.safeParse({ ...validEnv, NODE_ENV: 'development' }).success).toBe(true);
@@ -32,7 +31,9 @@ describe('envSchema', () => {
 
   describe('DATABASE_URL', () => {
     it('有効なURLを受け入れる', () => {
-      expect(envSchema.safeParse({ ...validEnv, DATABASE_URL: 'postgresql://localhost:5432/db' }).success).toBe(true);
+      expect(
+        envSchema.safeParse({ ...validEnv, DATABASE_URL: 'postgresql://localhost:5432/db' }).success
+      ).toBe(true);
     });
 
     it('無効なURLを拒否する', () => {
@@ -47,7 +48,9 @@ describe('envSchema', () => {
 
   describe('REDIS_URL', () => {
     it('有効なURLを受け入れる', () => {
-      expect(envSchema.safeParse({ ...validEnv, REDIS_URL: 'redis://localhost:6379' }).success).toBe(true);
+      expect(
+        envSchema.safeParse({ ...validEnv, REDIS_URL: 'redis://localhost:6379' }).success
+      ).toBe(true);
     });
 
     it('必須フィールド', () => {
@@ -58,23 +61,29 @@ describe('envSchema', () => {
 
   describe('JWT設定', () => {
     it('32文字以上のシークレットを受け入れる', () => {
-      expect(envSchema.safeParse({
-        ...validEnv,
-        JWT_ACCESS_SECRET: 'a'.repeat(32),
-        JWT_REFRESH_SECRET: 'b'.repeat(32),
-      }).success).toBe(true);
+      expect(
+        envSchema.safeParse({
+          ...validEnv,
+          JWT_ACCESS_SECRET: 'a'.repeat(32),
+          JWT_REFRESH_SECRET: 'b'.repeat(32),
+        }).success
+      ).toBe(true);
     });
 
     it('32文字未満のシークレットを拒否する', () => {
-      expect(envSchema.safeParse({
-        ...validEnv,
-        JWT_ACCESS_SECRET: 'short',
-      }).success).toBe(false);
+      expect(
+        envSchema.safeParse({
+          ...validEnv,
+          JWT_ACCESS_SECRET: 'short',
+        }).success
+      ).toBe(false);
 
-      expect(envSchema.safeParse({
-        ...validEnv,
-        JWT_REFRESH_SECRET: 'short',
-      }).success).toBe(false);
+      expect(
+        envSchema.safeParse({
+          ...validEnv,
+          JWT_REFRESH_SECRET: 'short',
+        }).success
+      ).toBe(false);
     });
 
     it('デフォルトの有効期限を適用する', () => {
@@ -118,10 +127,12 @@ describe('envSchema', () => {
     });
 
     it('GITHUB_CALLBACK_URLはURL形式が必要', () => {
-      expect(envSchema.safeParse({
-        ...validEnv,
-        GITHUB_CALLBACK_URL: 'invalid-url',
-      }).success).toBe(false);
+      expect(
+        envSchema.safeParse({
+          ...validEnv,
+          GITHUB_CALLBACK_URL: 'invalid-url',
+        }).success
+      ).toBe(false);
     });
   });
 
@@ -138,10 +149,12 @@ describe('envSchema', () => {
     });
 
     it('MINIO_ENDPOINTはURL形式が必要', () => {
-      expect(envSchema.safeParse({
-        ...validEnv,
-        MINIO_ENDPOINT: 'invalid',
-      }).success).toBe(false);
+      expect(
+        envSchema.safeParse({
+          ...validEnv,
+          MINIO_ENDPOINT: 'invalid',
+        }).success
+      ).toBe(false);
     });
   });
 

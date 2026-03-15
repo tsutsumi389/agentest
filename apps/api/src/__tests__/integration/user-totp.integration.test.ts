@@ -4,10 +4,7 @@ import type { Express } from 'express';
 import bcryptjs from 'bcryptjs';
 import { generateSync } from 'otplib';
 import { prisma } from '@agentest/db';
-import {
-  createTestUser,
-  cleanupTestData,
-} from './test-helpers.js';
+import { createTestUser, cleanupTestData } from './test-helpers.js';
 import { createApp } from '../../app.js';
 import { clearRateLimitKeys } from '../../lib/redis-store.js';
 
@@ -47,12 +44,8 @@ describe('User TOTP API Integration Tests', () => {
 
     const cookies = loginResponse.headers['set-cookie'];
     const cookieArray = Array.isArray(cookies) ? cookies : [cookies];
-    accessTokenCookie = cookieArray.find((c: string) =>
-      c.startsWith('access_token=')
-    ) as string;
-    refreshTokenCookie = cookieArray.find((c: string) =>
-      c.startsWith('refresh_token=')
-    ) as string;
+    accessTokenCookie = cookieArray.find((c: string) => c.startsWith('access_token=')) as string;
+    refreshTokenCookie = cookieArray.find((c: string) => c.startsWith('refresh_token=')) as string;
   });
 
   describe('GET /api/auth/2fa/status', () => {
@@ -197,9 +190,7 @@ describe('User TOTP API Integration Tests', () => {
     });
 
     it('未認証の場合は401エラー', async () => {
-      const response = await request(app)
-        .post('/api/auth/2fa/enable')
-        .send({ code: '123456' });
+      const response = await request(app).post('/api/auth/2fa/enable').send({ code: '123456' });
 
       expect(response.status).toBe(401);
     });
@@ -256,9 +247,7 @@ describe('User TOTP API Integration Tests', () => {
       const twoFactorToken = await loginAndGetTwoFactorToken();
       const validCode = generateSync({ secret: totpSecret });
 
-      await request(app)
-        .post('/api/auth/2fa/verify')
-        .send({ twoFactorToken, code: validCode });
+      await request(app).post('/api/auth/2fa/verify').send({ twoFactorToken, code: validCode });
 
       const logs = await prisma.auditLog.findMany({
         where: {

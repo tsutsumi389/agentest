@@ -107,7 +107,7 @@ describe('AdminAuditLogService', () => {
       expect(mockPrisma.adminAuditLog.create).not.toHaveBeenCalled();
       expect(mockLogger.warn).toHaveBeenCalledWith(
         { adminUserId: 'admin-1', targetType: undefined },
-        '管理者監査ログ: actionが空のため記録をスキップ',
+        '管理者監査ログ: actionが空のため記録をスキップ'
       );
     });
 

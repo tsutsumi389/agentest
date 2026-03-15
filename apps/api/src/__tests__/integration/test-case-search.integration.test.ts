@@ -37,7 +37,12 @@ vi.mock('@agentest/auth', () => ({
     }
     next();
   },
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -60,7 +65,10 @@ vi.mock('../../middlewares/require-test-suite-role.middleware.js', () => ({
 }));
 
 // テスト用認証設定関数
-function setTestAuth(user: { id: string; email: string } | null, projectRole: string | null = null) {
+function setTestAuth(
+  user: { id: string; email: string } | null,
+  projectRole: string | null = null
+) {
   mockAuthUser = user;
   mockProjectRole = projectRole;
 }
@@ -329,7 +337,9 @@ describe('Test Case Search API Integration Tests', () => {
         .expect(200);
 
       expect(response.body.testCases).toHaveLength(2);
-      expect(response.body.testCases.find((tc: any) => tc.title === 'ログイン成功テスト')).toBeUndefined();
+      expect(
+        response.body.testCases.find((tc: any) => tc.title === 'ログイン成功テスト')
+      ).toBeUndefined();
     });
 
     it('includeDeleted=trueで削除済みテストケースも含められる', async () => {
@@ -441,25 +451,19 @@ describe('Test Case Search API Integration Tests', () => {
       it('ADMINはテストケースを検索できる', async () => {
         setTestAuth({ id: admin.id, email: admin.email }, 'ADMIN');
 
-        await request(app)
-          .get(`/api/test-suites/${testSuite.id}/test-cases`)
-          .expect(200);
+        await request(app).get(`/api/test-suites/${testSuite.id}/test-cases`).expect(200);
       });
 
       it('WRITEはテストケースを検索できる', async () => {
         setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
 
-        await request(app)
-          .get(`/api/test-suites/${testSuite.id}/test-cases`)
-          .expect(200);
+        await request(app).get(`/api/test-suites/${testSuite.id}/test-cases`).expect(200);
       });
 
       it('READはテストケースを検索できる', async () => {
         setTestAuth({ id: reader.id, email: reader.email }, 'READ');
 
-        await request(app)
-          .get(`/api/test-suites/${testSuite.id}/test-cases`)
-          .expect(200);
+        await request(app).get(`/api/test-suites/${testSuite.id}/test-cases`).expect(200);
       });
     });
   });

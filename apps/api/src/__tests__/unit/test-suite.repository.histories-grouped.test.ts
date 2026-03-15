@@ -171,7 +171,13 @@ describe('TestSuiteRepository - getHistoriesGrouped', () => {
           changed_by_user_id: USER_ID,
           changed_by_agent_session_id: null,
           change_type: 'UPDATE',
-          snapshot: { changeDetail: { type: 'PRECONDITION_ADD', preconditionId: 'pre-1', added: { content: '前提条件1', orderKey: '00001' } } },
+          snapshot: {
+            changeDetail: {
+              type: 'PRECONDITION_ADD',
+              preconditionId: 'pre-1',
+              added: { content: '前提条件1', orderKey: '00001' },
+            },
+          },
           change_reason: null,
           group_id: GROUP_ID,
           created_at: new Date('2025-01-15T10:00:01Z'),
@@ -183,7 +189,12 @@ describe('TestSuiteRepository - getHistoriesGrouped', () => {
           changed_by_user_id: USER_ID,
           changed_by_agent_session_id: null,
           change_type: 'UPDATE',
-          snapshot: { changeDetail: { type: 'BASIC_INFO_UPDATE', fields: { name: { before: '旧', after: '新' } } } },
+          snapshot: {
+            changeDetail: {
+              type: 'BASIC_INFO_UPDATE',
+              fields: { name: { before: '旧', after: '新' } },
+            },
+          },
           change_reason: null,
           group_id: GROUP_ID,
           created_at: new Date('2025-01-15T10:00:00Z'),
@@ -217,7 +228,13 @@ describe('TestSuiteRepository - getHistoriesGrouped', () => {
           changed_by_user_id: USER_ID,
           changed_by_agent_session_id: null,
           change_type: 'UPDATE',
-          snapshot: { changeDetail: { type: 'PRECONDITION_ADD', preconditionId: 'pre-1', added: { content: '追加', orderKey: '00001' } } },
+          snapshot: {
+            changeDetail: {
+              type: 'PRECONDITION_ADD',
+              preconditionId: 'pre-1',
+              added: { content: '追加', orderKey: '00001' },
+            },
+          },
           change_reason: null,
           group_id: GROUP_ID,
           created_at: new Date('2025-01-15T10:00:03Z'),
@@ -229,7 +246,14 @@ describe('TestSuiteRepository - getHistoriesGrouped', () => {
           changed_by_user_id: USER_ID,
           changed_by_agent_session_id: null,
           change_type: 'UPDATE',
-          snapshot: { changeDetail: { type: 'PRECONDITION_UPDATE', preconditionId: 'pre-2', before: { content: '旧' }, after: { content: '新' } } },
+          snapshot: {
+            changeDetail: {
+              type: 'PRECONDITION_UPDATE',
+              preconditionId: 'pre-2',
+              before: { content: '旧' },
+              after: { content: '新' },
+            },
+          },
           change_reason: null,
           group_id: GROUP_ID,
           created_at: new Date('2025-01-15T10:00:02Z'),
@@ -241,7 +265,13 @@ describe('TestSuiteRepository - getHistoriesGrouped', () => {
           changed_by_user_id: USER_ID,
           changed_by_agent_session_id: null,
           change_type: 'UPDATE',
-          snapshot: { changeDetail: { type: 'PRECONDITION_DELETE', preconditionId: 'pre-3', deleted: { content: '削除', orderKey: '00003' } } },
+          snapshot: {
+            changeDetail: {
+              type: 'PRECONDITION_DELETE',
+              preconditionId: 'pre-3',
+              deleted: { content: '削除', orderKey: '00003' },
+            },
+          },
           change_reason: null,
           group_id: GROUP_ID,
           created_at: new Date('2025-01-15T10:00:01Z'),
@@ -253,7 +283,13 @@ describe('TestSuiteRepository - getHistoriesGrouped', () => {
           changed_by_user_id: USER_ID,
           changed_by_agent_session_id: null,
           change_type: 'UPDATE',
-          snapshot: { changeDetail: { type: 'PRECONDITION_REORDER', before: ['pre-1', 'pre-2'], after: ['pre-2', 'pre-1'] } },
+          snapshot: {
+            changeDetail: {
+              type: 'PRECONDITION_REORDER',
+              before: ['pre-1', 'pre-2'],
+              after: ['pre-2', 'pre-1'],
+            },
+          },
           change_reason: null,
           group_id: GROUP_ID,
           created_at: new Date('2025-01-15T10:00:00Z'),
@@ -280,7 +316,13 @@ describe('TestSuiteRepository - getHistoriesGrouped', () => {
         changed_by_user_id: USER_ID,
         changed_by_agent_session_id: null,
         change_type: 'UPDATE',
-        snapshot: { changeDetail: { type: 'TEST_CASE_REORDER', before: ['tc-1', 'tc-2'], after: ['tc-2', 'tc-1'] } },
+        snapshot: {
+          changeDetail: {
+            type: 'TEST_CASE_REORDER',
+            before: ['tc-1', 'tc-2'],
+            after: ['tc-2', 'tc-1'],
+          },
+        },
         change_reason: null,
         group_id: null,
         created_at: new Date('2025-01-15T10:00:00Z'),

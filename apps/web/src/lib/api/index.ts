@@ -13,7 +13,12 @@ export { testCasesApi } from './test-cases.js';
 export { executionsApi } from './executions.js';
 export { sessionsApi, accountsApi, passwordApi } from './sessions.js';
 export { organizationsApi } from './organizations.js';
-export { reviewCommentsApi, reviewsApi, getTestSuiteComments, getTestCaseComments } from './reviews.js';
+export {
+  reviewCommentsApi,
+  reviewsApi,
+  getTestSuiteComments,
+  getTestCaseComments,
+} from './reviews.js';
 export { apiTokensApi } from './tokens.js';
 export { labelsApi } from './labels.js';
 export { agentSessionsApi } from './agent-sessions.js';

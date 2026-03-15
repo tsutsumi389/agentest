@@ -175,7 +175,12 @@ describe('ExecutionService - Evidence', () => {
       mockFindById.mockResolvedValue(null);
 
       await expect(
-        service.uploadEvidence(TEST_EXECUTION_ID, TEST_EXPECTED_RESULT_ID, TEST_USER_ID, createMockFile())
+        service.uploadEvidence(
+          TEST_EXECUTION_ID,
+          TEST_EXPECTED_RESULT_ID,
+          TEST_USER_ID,
+          createMockFile()
+        )
       ).rejects.toThrow(NotFoundError);
     });
 
@@ -185,10 +190,20 @@ describe('ExecutionService - Evidence', () => {
       mockExpectedResultFindFirst.mockResolvedValue(null);
 
       await expect(
-        service.uploadEvidence(TEST_EXECUTION_ID, TEST_EXPECTED_RESULT_ID, TEST_USER_ID, createMockFile())
+        service.uploadEvidence(
+          TEST_EXECUTION_ID,
+          TEST_EXPECTED_RESULT_ID,
+          TEST_USER_ID,
+          createMockFile()
+        )
       ).rejects.toThrow(NotFoundError);
       await expect(
-        service.uploadEvidence(TEST_EXECUTION_ID, TEST_EXPECTED_RESULT_ID, TEST_USER_ID, createMockFile())
+        service.uploadEvidence(
+          TEST_EXECUTION_ID,
+          TEST_EXPECTED_RESULT_ID,
+          TEST_USER_ID,
+          createMockFile()
+        )
       ).rejects.toThrow('ExecutionExpectedResult');
     });
 
@@ -204,10 +219,20 @@ describe('ExecutionService - Evidence', () => {
       mockExpectedResultFindFirst.mockResolvedValue(mockExpectedResult);
 
       await expect(
-        service.uploadEvidence(TEST_EXECUTION_ID, TEST_EXPECTED_RESULT_ID, TEST_USER_ID, createMockFile())
+        service.uploadEvidence(
+          TEST_EXECUTION_ID,
+          TEST_EXPECTED_RESULT_ID,
+          TEST_USER_ID,
+          createMockFile()
+        )
       ).rejects.toThrow(BadRequestError);
       await expect(
-        service.uploadEvidence(TEST_EXECUTION_ID, TEST_EXPECTED_RESULT_ID, TEST_USER_ID, createMockFile())
+        service.uploadEvidence(
+          TEST_EXECUTION_ID,
+          TEST_EXPECTED_RESULT_ID,
+          TEST_USER_ID,
+          createMockFile()
+        )
       ).rejects.toThrow('エビデンスの上限（10件）に達しています');
     });
 
@@ -248,10 +273,19 @@ describe('ExecutionService - Evidence', () => {
       mockStorageUpload.mockResolvedValue({});
       mockEvidenceCreate.mockResolvedValue({});
 
-      await service.uploadEvidence(TEST_EXECUTION_ID, TEST_EXPECTED_RESULT_ID, TEST_USER_ID, mockFile);
+      await service.uploadEvidence(
+        TEST_EXECUTION_ID,
+        TEST_EXPECTED_RESULT_ID,
+        TEST_USER_ID,
+        mockFile
+      );
 
       expect(mockStorageUpload).toHaveBeenCalledWith(
-        expect.stringMatching(new RegExp(`^evidences/${TEST_EXECUTION_ID}/${TEST_EXPECTED_RESULT_ID}/.*_screenshot.png$`)),
+        expect.stringMatching(
+          new RegExp(
+            `^evidences/${TEST_EXECUTION_ID}/${TEST_EXPECTED_RESULT_ID}/.*_screenshot.png$`
+          )
+        ),
         mockFile.buffer,
         { contentType: 'image/png' }
       );
@@ -283,7 +317,9 @@ describe('ExecutionService - Evidence', () => {
     it('実行が存在しない場合はNotFoundErrorを投げる', async () => {
       mockFindById.mockResolvedValue(null);
 
-      await expect(service.deleteEvidence(TEST_EXECUTION_ID, TEST_EVIDENCE_ID)).rejects.toThrow(NotFoundError);
+      await expect(service.deleteEvidence(TEST_EXECUTION_ID, TEST_EVIDENCE_ID)).rejects.toThrow(
+        NotFoundError
+      );
     });
 
     it('エビデンスが存在しない場合はNotFoundErrorを投げる', async () => {
@@ -291,8 +327,12 @@ describe('ExecutionService - Evidence', () => {
       mockFindById.mockResolvedValue(mockExecution);
       mockEvidenceFindFirst.mockResolvedValue(null);
 
-      await expect(service.deleteEvidence(TEST_EXECUTION_ID, TEST_EVIDENCE_ID)).rejects.toThrow(NotFoundError);
-      await expect(service.deleteEvidence(TEST_EXECUTION_ID, TEST_EVIDENCE_ID)).rejects.toThrow('ExecutionEvidence');
+      await expect(service.deleteEvidence(TEST_EXECUTION_ID, TEST_EVIDENCE_ID)).rejects.toThrow(
+        NotFoundError
+      );
+      await expect(service.deleteEvidence(TEST_EXECUTION_ID, TEST_EVIDENCE_ID)).rejects.toThrow(
+        'ExecutionEvidence'
+      );
     });
   });
 
@@ -311,14 +351,18 @@ describe('ExecutionService - Evidence', () => {
 
       const result = await service.getEvidenceDownloadUrl(TEST_EXECUTION_ID, TEST_EVIDENCE_ID);
 
-      expect(mockPublicStorageGetDownloadUrl).toHaveBeenCalledWith(mockEvidence.fileUrl, { expiresIn: 3600 });
+      expect(mockPublicStorageGetDownloadUrl).toHaveBeenCalledWith(mockEvidence.fileUrl, {
+        expiresIn: 3600,
+      });
       expect(result).toBe(expectedUrl);
     });
 
     it('実行が存在しない場合はNotFoundErrorを投げる', async () => {
       mockFindById.mockResolvedValue(null);
 
-      await expect(service.getEvidenceDownloadUrl(TEST_EXECUTION_ID, TEST_EVIDENCE_ID)).rejects.toThrow(NotFoundError);
+      await expect(
+        service.getEvidenceDownloadUrl(TEST_EXECUTION_ID, TEST_EVIDENCE_ID)
+      ).rejects.toThrow(NotFoundError);
     });
 
     it('エビデンスが存在しない場合はNotFoundErrorを投げる', async () => {
@@ -326,12 +370,13 @@ describe('ExecutionService - Evidence', () => {
       mockFindById.mockResolvedValue(mockExecution);
       mockEvidenceFindFirst.mockResolvedValue(null);
 
-      await expect(service.getEvidenceDownloadUrl(TEST_EXECUTION_ID, TEST_EVIDENCE_ID)).rejects.toThrow(NotFoundError);
-      await expect(service.getEvidenceDownloadUrl(TEST_EXECUTION_ID, TEST_EVIDENCE_ID)).rejects.toThrow(
-        'ExecutionEvidence'
-      );
+      await expect(
+        service.getEvidenceDownloadUrl(TEST_EXECUTION_ID, TEST_EVIDENCE_ID)
+      ).rejects.toThrow(NotFoundError);
+      await expect(
+        service.getEvidenceDownloadUrl(TEST_EXECUTION_ID, TEST_EVIDENCE_ID)
+      ).rejects.toThrow('ExecutionEvidence');
     });
-
   });
 
   describe('createEvidenceUploadUrl', () => {
@@ -447,7 +492,9 @@ describe('ExecutionService - Evidence', () => {
 
       // エラーにならずに成功する
       const result = await service.createEvidenceUploadUrl(
-        TEST_EXECUTION_ID, TEST_EXPECTED_RESULT_ID, TEST_USER_ID,
+        TEST_EXECUTION_ID,
+        TEST_EXPECTED_RESULT_ID,
+        TEST_USER_ID,
         { fileName: 'test.png', fileType: 'image/png' }
       );
 
@@ -465,7 +512,9 @@ describe('ExecutionService - Evidence', () => {
       mockEvidenceCreate.mockResolvedValue({ id: TEST_EVIDENCE_ID });
 
       await service.createEvidenceUploadUrl(
-        TEST_EXECUTION_ID, TEST_EXPECTED_RESULT_ID, TEST_USER_ID,
+        TEST_EXECUTION_ID,
+        TEST_EXPECTED_RESULT_ID,
+        TEST_USER_ID,
         { fileName: '../../../etc/passwd', fileType: 'image/png' }
       );
 

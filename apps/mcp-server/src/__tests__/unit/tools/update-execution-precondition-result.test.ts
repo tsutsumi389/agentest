@@ -28,8 +28,12 @@ describe('updateExecutionPreconditionResultTool', () => {
 
   describe('ツール定義', () => {
     it('正しい名前と説明を持つ', () => {
-      expect(updateExecutionPreconditionResultTool.name).toBe('update_execution_precondition_result');
-      expect(updateExecutionPreconditionResultTool.description).toContain('前提条件チェック結果を記録');
+      expect(updateExecutionPreconditionResultTool.name).toBe(
+        'update_execution_precondition_result'
+      );
+      expect(updateExecutionPreconditionResultTool.description).toContain(
+        '前提条件チェック結果を記録'
+      );
     });
 
     it('入力スキーマが定義されている', () => {
@@ -62,38 +66,48 @@ describe('updateExecutionPreconditionResultTool', () => {
 
     it('executionIdとpreconditionResultIdとstatusは必須', () => {
       expect(() => updateExecutionPreconditionResultInputSchema.parse({})).toThrow();
-      expect(() => updateExecutionPreconditionResultInputSchema.parse({
-        executionId: TEST_EXECUTION_ID,
-      })).toThrow();
-      expect(() => updateExecutionPreconditionResultInputSchema.parse({
-        executionId: TEST_EXECUTION_ID,
-        preconditionResultId: TEST_PRECONDITION_RESULT_ID,
-      })).toThrow();
+      expect(() =>
+        updateExecutionPreconditionResultInputSchema.parse({
+          executionId: TEST_EXECUTION_ID,
+        })
+      ).toThrow();
+      expect(() =>
+        updateExecutionPreconditionResultInputSchema.parse({
+          executionId: TEST_EXECUTION_ID,
+          preconditionResultId: TEST_PRECONDITION_RESULT_ID,
+        })
+      ).toThrow();
     });
 
     it('無効なUUIDはエラー', () => {
-      expect(() => updateExecutionPreconditionResultInputSchema.parse({
-        executionId: 'invalid-uuid',
-        preconditionResultId: TEST_PRECONDITION_RESULT_ID,
-        status: 'MET',
-      })).toThrow();
+      expect(() =>
+        updateExecutionPreconditionResultInputSchema.parse({
+          executionId: 'invalid-uuid',
+          preconditionResultId: TEST_PRECONDITION_RESULT_ID,
+          status: 'MET',
+        })
+      ).toThrow();
     });
 
     it('無効なstatusはエラー', () => {
-      expect(() => updateExecutionPreconditionResultInputSchema.parse({
-        executionId: TEST_EXECUTION_ID,
-        preconditionResultId: TEST_PRECONDITION_RESULT_ID,
-        status: 'UNCHECKED',
-      })).toThrow();
+      expect(() =>
+        updateExecutionPreconditionResultInputSchema.parse({
+          executionId: TEST_EXECUTION_ID,
+          preconditionResultId: TEST_PRECONDITION_RESULT_ID,
+          status: 'UNCHECKED',
+        })
+      ).toThrow();
     });
 
     it('noteは2000文字以下', () => {
-      expect(() => updateExecutionPreconditionResultInputSchema.parse({
-        executionId: TEST_EXECUTION_ID,
-        preconditionResultId: TEST_PRECONDITION_RESULT_ID,
-        status: 'MET',
-        note: 'a'.repeat(2001),
-      })).toThrow();
+      expect(() =>
+        updateExecutionPreconditionResultInputSchema.parse({
+          executionId: TEST_EXECUTION_ID,
+          preconditionResultId: TEST_PRECONDITION_RESULT_ID,
+          status: 'MET',
+          note: 'a'.repeat(2001),
+        })
+      ).toThrow();
     });
   });
 

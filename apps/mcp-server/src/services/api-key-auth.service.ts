@@ -45,7 +45,10 @@ class ApiKeyAuthService {
     }
 
     // キャッシュ確認（フォーマットチェック後）
-    const cached = await getCachedTokenValidation<Omit<ApiKeyValidationResult, 'valid'>>('apikey', rawToken);
+    const cached = await getCachedTokenValidation<Omit<ApiKeyValidationResult, 'valid'>>(
+      'apikey',
+      rawToken
+    );
     if (cached) {
       return { valid: true, ...cached };
     }
@@ -66,7 +69,7 @@ class ApiKeyAuthService {
         return { valid: false };
       }
 
-      const result = await response.json() as ApiKeyValidationResult;
+      const result = (await response.json()) as ApiKeyValidationResult;
 
       // 有効な結果をキャッシュに保存（TTL: 300秒固定）
       // 無効トークンはキャッシュしない（ブルートフォース対策）

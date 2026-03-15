@@ -18,28 +18,32 @@ export function createApp(): Express {
   const app = express();
 
   // セキュリティミドルウェア
-  app.use(helmet({
-    contentSecurityPolicy: false, // MCP通信では不要
-  }));
+  app.use(
+    helmet({
+      contentSecurityPolicy: false, // MCP通信では不要
+    })
+  );
 
   // CORS設定（MCP Inspectorなどのクライアントからのアクセスを許可）
-  app.use(cors({
-    origin: env.CORS_ORIGIN.split(',').filter(Boolean),
-    credentials: true,
-    methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
-    // MCPプロトコルで使用するヘッダーを明示的に許可
-    allowedHeaders: [
-      'Content-Type',
-      'Authorization',
-      'Accept',
-      'X-MCP-Client-Id',
-      'X-MCP-Client-Name',
-      'X-MCP-Project-Id',
-      'Mcp-Session-Id',
-      'X-API-Key',
-    ],
-    exposedHeaders: ['Mcp-Session-Id'],
-  }));
+  app.use(
+    cors({
+      origin: env.CORS_ORIGIN.split(',').filter(Boolean),
+      credentials: true,
+      methods: ['GET', 'POST', 'DELETE', 'OPTIONS'],
+      // MCPプロトコルで使用するヘッダーを明示的に許可
+      allowedHeaders: [
+        'Content-Type',
+        'Authorization',
+        'Accept',
+        'X-MCP-Client-Id',
+        'X-MCP-Client-Name',
+        'X-MCP-Project-Id',
+        'Mcp-Session-Id',
+        'X-API-Key',
+      ],
+      exposedHeaders: ['Mcp-Session-Id'],
+    })
+  );
 
   // ボディパーサー（MCP用途では1MBで十分）
   app.use(express.json({ limit: '1mb' }));

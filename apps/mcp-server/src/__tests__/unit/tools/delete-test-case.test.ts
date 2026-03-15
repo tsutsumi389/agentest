@@ -50,9 +50,11 @@ describe('deleteTestCaseTool', () => {
     });
 
     it('無効なUUIDはエラー', () => {
-      expect(() => deleteTestCaseInputSchema.parse({
-        testCaseId: 'invalid-uuid',
-      })).toThrow();
+      expect(() =>
+        deleteTestCaseInputSchema.parse({
+          testCaseId: 'invalid-uuid',
+        })
+      ).toThrow();
     });
   });
 

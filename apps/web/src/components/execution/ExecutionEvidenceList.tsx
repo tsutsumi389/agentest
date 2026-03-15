@@ -168,12 +168,13 @@ export function ExecutionEvidenceList({
 
               {/* ファイル情報 */}
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-medium text-foreground truncate max-w-32" title={evidence.fileName}>
+                <p
+                  className="text-xs font-medium text-foreground truncate max-w-32"
+                  title={evidence.fileName}
+                >
                   {evidence.fileName}
                 </p>
-                <p className="text-xs text-foreground-muted">
-                  {formatFileSize(evidence.fileSize)}
-                </p>
+                <p className="text-xs text-foreground-muted">{formatFileSize(evidence.fileSize)}</p>
               </div>
 
               {/* アクションボタン */}
@@ -215,10 +216,7 @@ export function ExecutionEvidenceList({
 
               {/* 説明（ある場合はツールチップで表示） */}
               {evidence.description && (
-                <span
-                  className="sr-only"
-                  title={evidence.description}
-                >
+                <span className="sr-only" title={evidence.description}>
                   {evidence.description}
                 </span>
               )}

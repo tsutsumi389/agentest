@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { Loader2, CheckCircle } from 'lucide-react';
 import {
-  Loader2,
-  CheckCircle,
-} from 'lucide-react';
-import { testCasesApi, ApiError, type TestCaseExpectedResult, type ReviewCommentWithReplies } from '../../lib/api';
+  testCasesApi,
+  ApiError,
+  type TestCaseExpectedResult,
+  type ReviewCommentWithReplies,
+} from '../../lib/api';
 import { MarkdownPreview } from '../common/markdown';
 import { CommentableField } from '../review/CommentableField';
 import { CommentableItem } from '../review/CommentableItem';
@@ -32,7 +34,9 @@ export function TestCaseExpectedResultList({
   canEdit,
   onCommentAdded,
 }: TestCaseExpectedResultListProps) {
-  const [expectedResults, setExpectedResults] = useState<TestCaseExpectedResult[]>(initialExpectedResults || []);
+  const [expectedResults, setExpectedResults] = useState<TestCaseExpectedResult[]>(
+    initialExpectedResults || []
+  );
   const [isLoading, setIsLoading] = useState(!initialExpectedResults);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,7 +53,9 @@ export function TestCaseExpectedResultList({
 
       try {
         const response = await testCasesApi.getExpectedResults(testCaseId);
-        const sorted = response.expectedResults.sort((a, b) => a.orderKey.localeCompare(b.orderKey));
+        const sorted = response.expectedResults.sort((a, b) =>
+          a.orderKey.localeCompare(b.orderKey)
+        );
         setExpectedResults(sorted);
       } catch (err) {
         if (err instanceof ApiError) {

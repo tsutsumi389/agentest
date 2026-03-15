@@ -73,9 +73,9 @@ export class AccountRepository {
    * アカウントのトークンを復号する
    * 各トークンを独立して復号し、一方の失敗が他方に影響しないようにする
    */
-  private decryptAccountTokens<T extends { accessToken?: string | null; refreshToken?: string | null }>(
-    account: T
-  ): T {
+  private decryptAccountTokens<
+    T extends { accessToken?: string | null; refreshToken?: string | null },
+  >(account: T): T {
     const accountId = (account as Record<string, unknown>).id;
     let accessToken: string | null = null;
     let refreshToken: string | null = null;
@@ -83,13 +83,19 @@ export class AccountRepository {
     try {
       accessToken = decryptToken(account.accessToken, env.TOKEN_ENCRYPTION_KEY);
     } catch (error) {
-      logger.warn({ error, accountId }, 'accessTokenの復号に失敗（データ改ざんまたはキー不整合の可能性）');
+      logger.warn(
+        { error, accountId },
+        'accessTokenの復号に失敗（データ改ざんまたはキー不整合の可能性）'
+      );
     }
 
     try {
       refreshToken = decryptToken(account.refreshToken, env.TOKEN_ENCRYPTION_KEY);
     } catch (error) {
-      logger.warn({ error, accountId }, 'refreshTokenの復号に失敗（データ改ざんまたはキー不整合の可能性）');
+      logger.warn(
+        { error, accountId },
+        'refreshTokenの復号に失敗（データ改ざんまたはキー不整合の可能性）'
+      );
     }
 
     return { ...account, accessToken, refreshToken };

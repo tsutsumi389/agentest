@@ -10,7 +10,13 @@ import { DeleteProjectSection } from './DeleteProjectSection';
 import { LabelList } from '../label/LabelList';
 import { toast } from '../../stores/toast';
 
-export type SettingsSection = 'general' | 'members' | 'environments' | 'labels' | 'history' | 'danger';
+export type SettingsSection =
+  | 'general'
+  | 'members'
+  | 'environments'
+  | 'labels'
+  | 'history'
+  | 'danger';
 
 interface ProjectSettingsTabProps {
   project: Project;
@@ -54,13 +60,14 @@ export function ProjectSettingsTab({
                 onClick={() => onSectionChange(tab.id)}
                 className={`
                   w-full flex items-center gap-2 px-3 py-2 text-sm font-medium rounded transition-colors
-                  ${activeSection === tab.id
-                    ? tab.id === 'danger'
-                      ? 'bg-danger-subtle text-danger'
-                      : 'bg-accent-subtle text-accent'
-                    : tab.id === 'danger'
-                      ? 'text-danger hover:text-danger hover:bg-background-tertiary'
-                      : 'text-foreground-muted hover:text-foreground hover:bg-background-tertiary'
+                  ${
+                    activeSection === tab.id
+                      ? tab.id === 'danger'
+                        ? 'bg-danger-subtle text-danger'
+                        : 'bg-accent-subtle text-accent'
+                      : tab.id === 'danger'
+                        ? 'text-danger hover:text-danger hover:bg-background-tertiary'
+                        : 'text-foreground-muted hover:text-foreground hover:bg-background-tertiary'
                   }
                 `}
               >
@@ -75,32 +82,18 @@ export function ProjectSettingsTab({
       {/* コンテンツ */}
       <div className="flex-1">
         {activeSection === 'general' && (
-          <ProjectGeneralSettings
-            project={project}
-            onUpdated={onProjectUpdated}
-          />
+          <ProjectGeneralSettings project={project} onUpdated={onProjectUpdated} />
         )}
         {activeSection === 'members' && (
-          <ProjectMemberList
-            project={project}
-            currentRole={currentRole}
-          />
+          <ProjectMemberList project={project} currentRole={currentRole} />
         )}
         {activeSection === 'environments' && (
-          <EnvironmentList
-            project={project}
-            currentRole={currentRole}
-          />
+          <EnvironmentList project={project} currentRole={currentRole} />
         )}
         {activeSection === 'labels' && (
-          <LabelManagementSection
-            project={project}
-            currentRole={currentRole}
-          />
+          <LabelManagementSection project={project} currentRole={currentRole} />
         )}
-        {activeSection === 'history' && (
-          <HistoryList project={project} />
-        )}
+        {activeSection === 'history' && <HistoryList project={project} />}
         {activeSection === 'danger' && (
           <DeleteProjectSection
             project={project}
@@ -152,8 +145,13 @@ function LabelManagementSection({ project, currentRole }: LabelManagementSection
 
   // ラベル更新
   const updateMutation = useMutation({
-    mutationFn: ({ labelId, data }: { labelId: string; data: { name: string; description: string | null; color: string } }) =>
-      labelsApi.update(project.id, labelId, data),
+    mutationFn: ({
+      labelId,
+      data,
+    }: {
+      labelId: string;
+      data: { name: string; description: string | null; color: string };
+    }) => labelsApi.update(project.id, labelId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-labels', project.id] });
       toast.success('ラベルを更新しました');

@@ -56,14 +56,21 @@ test.describe('前提条件管理', () => {
       }
 
       // 前提条件セクション内の追加ボタンをクリック
-      const preconditionSection = page.locator('[data-testid="preconditions-section"]')
+      const preconditionSection = page
+        .locator('[data-testid="preconditions-section"]')
         .or(page.locator('section', { hasText: '前提条件' }))
-        .or(page.locator('div', { hasText: '前提条件' }).filter({ has: page.getByRole('button', { name: '追加' }) }));
+        .or(
+          page
+            .locator('div', { hasText: '前提条件' })
+            .filter({ has: page.getByRole('button', { name: '追加' }) })
+        );
       const addButton = preconditionSection.getByRole('button', { name: '追加' }).first();
       await addButton.click();
 
       // フォームが開いたら内容を入力
-      const input = page.getByPlaceholder(/前提条件を入力|内容/).or(page.locator('input[type="text"]').last());
+      const input = page
+        .getByPlaceholder(/前提条件を入力|内容/)
+        .or(page.locator('input[type="text"]').last());
       if (await input.isVisible({ timeout: 3000 }).catch(() => false)) {
         await input.fill('Database is initialized');
       }
@@ -129,7 +136,8 @@ test.describe('前提条件管理', () => {
       }
 
       // 前提条件の削除ボタンをクリック
-      const deleteButton = page.locator('[data-testid="delete-precondition"]')
+      const deleteButton = page
+        .locator('[data-testid="delete-precondition"]')
         .or(page.getByRole('button', { name: /削除/ }))
         .first();
       await deleteButton.click();
@@ -154,9 +162,15 @@ test.describe('前提条件管理', () => {
       testSuiteId: DEMO_TEST_SUITE_ID,
     });
 
-    const p1 = await apiClient.addPrecondition(testCase.testCase.id, { content: 'First precondition' });
-    const p2 = await apiClient.addPrecondition(testCase.testCase.id, { content: 'Second precondition' });
-    const p3 = await apiClient.addPrecondition(testCase.testCase.id, { content: 'Third precondition' });
+    const p1 = await apiClient.addPrecondition(testCase.testCase.id, {
+      content: 'First precondition',
+    });
+    const p2 = await apiClient.addPrecondition(testCase.testCase.id, {
+      content: 'Second precondition',
+    });
+    const p3 = await apiClient.addPrecondition(testCase.testCase.id, {
+      content: 'Third precondition',
+    });
 
     try {
       await page.goto(`/test-suites/${DEMO_TEST_SUITE_ID}?testCase=${testCase.testCase.id}`);
@@ -292,7 +306,8 @@ test.describe('ステップ管理', () => {
       }
 
       // ステップの削除ボタンをクリック
-      const deleteButton = page.locator('[data-testid="delete-step"]')
+      const deleteButton = page
+        .locator('[data-testid="delete-step"]')
         .or(page.getByRole('button', { name: /削除/ }))
         .first();
       await deleteButton.click();
@@ -412,7 +427,9 @@ test.describe('期待結果管理', () => {
       testSuiteId: DEMO_TEST_SUITE_ID,
     });
 
-    await apiClient.addExpectedResult(testCase.testCase.id, { content: 'Original expected result' });
+    await apiClient.addExpectedResult(testCase.testCase.id, {
+      content: 'Original expected result',
+    });
 
     try {
       await page.goto(`/test-suites/${DEMO_TEST_SUITE_ID}?testCase=${testCase.testCase.id}`);
@@ -439,7 +456,9 @@ test.describe('期待結果管理', () => {
       testSuiteId: DEMO_TEST_SUITE_ID,
     });
 
-    await apiClient.addExpectedResult(testCase.testCase.id, { content: 'Expected result to delete' });
+    await apiClient.addExpectedResult(testCase.testCase.id, {
+      content: 'Expected result to delete',
+    });
 
     try {
       await page.goto(`/test-suites/${DEMO_TEST_SUITE_ID}?testCase=${testCase.testCase.id}`);
@@ -455,7 +474,8 @@ test.describe('期待結果管理', () => {
       }
 
       // 期待結果の削除ボタンをクリック
-      const deleteButton = page.locator('[data-testid="delete-expected-result"]')
+      const deleteButton = page
+        .locator('[data-testid="delete-expected-result"]')
         .or(page.getByRole('button', { name: /削除/ }))
         .first();
       await deleteButton.click();

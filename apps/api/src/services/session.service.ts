@@ -70,10 +70,13 @@ export class SessionService {
       await this.sessionRepo.updateLastActiveAt(sessionId);
     } catch (error) {
       // セッションが存在しない場合は警告ログを出力
-      logger.warn({
-        err: error instanceof Error ? error : undefined,
-        sessionId,
-      }, 'セッション活動時刻の更新に失敗');
+      logger.warn(
+        {
+          err: error instanceof Error ? error : undefined,
+          sessionId,
+        },
+        'セッション活動時刻の更新に失敗'
+      );
     }
   }
 

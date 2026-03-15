@@ -89,9 +89,7 @@ describe('runProjectCleanup', () => {
       { id: 'proj-1', name: 'Project 1', deletedAt: new Date('2025-04-01') },
       { id: 'proj-2', name: 'Project 2', deletedAt: new Date('2025-04-02') },
     ];
-    const batch2 = [
-      { id: 'proj-3', name: 'Project 3', deletedAt: new Date('2025-04-03') },
-    ];
+    const batch2 = [{ id: 'proj-3', name: 'Project 3', deletedAt: new Date('2025-04-03') }];
 
     mockPrisma.project.findMany
       .mockResolvedValueOnce(batch1)
@@ -145,9 +143,7 @@ describe('runProjectCleanup', () => {
       { id: 'proj-3', name: 'Project 3', deletedAt: new Date('2025-04-03') },
     ];
 
-    mockPrisma.project.findMany
-      .mockResolvedValueOnce(projects)
-      .mockResolvedValueOnce([]);
+    mockPrisma.project.findMany.mockResolvedValueOnce(projects).mockResolvedValueOnce([]);
     mockPrisma.project.delete
       .mockResolvedValueOnce({ id: 'proj-1' })
       .mockRejectedValueOnce(new Error('削除エラー')) // 2件目でエラー
@@ -244,7 +240,10 @@ describe('runProjectCleanup', () => {
     await runProjectCleanup();
 
     expect(mockLogger.info).toHaveBeenCalledWith(
-      expect.objectContaining({ projectId: mockDeletedProject.id, projectName: mockDeletedProject.name }),
+      expect.objectContaining({
+        projectId: mockDeletedProject.id,
+        projectName: mockDeletedProject.name,
+      }),
       'プロジェクト削除開始'
     );
     expect(mockLogger.info).toHaveBeenCalledWith(

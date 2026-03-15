@@ -178,10 +178,7 @@ export function InvitationList({ organizationId, currentRole }: InvitationListPr
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-foreground">招待管理</h2>
         {canInvite && (
-          <button
-            className="btn btn-primary"
-            onClick={() => setIsInviteModalOpen(true)}
-          >
+          <button className="btn btn-primary" onClick={() => setIsInviteModalOpen(true)}>
             <Plus className="w-4 h-4" />
             メンバーを招待
           </button>
@@ -191,14 +188,9 @@ export function InvitationList({ organizationId, currentRole }: InvitationListPr
       {invitations.length === 0 ? (
         <div className="text-center py-8">
           <Mail className="w-12 h-12 text-foreground-subtle mx-auto mb-3" />
-          <p className="text-foreground-muted mb-4">
-            保留中の招待はありません
-          </p>
+          <p className="text-foreground-muted mb-4">保留中の招待はありません</p>
           {canInvite && (
-            <button
-              className="btn btn-secondary"
-              onClick={() => setIsInviteModalOpen(true)}
-            >
+            <button className="btn btn-secondary" onClick={() => setIsInviteModalOpen(true)}>
               <Plus className="w-4 h-4" />
               メンバーを招待
             </button>
@@ -214,14 +206,18 @@ export function InvitationList({ organizationId, currentRole }: InvitationListPr
               <div
                 key={invitation.id}
                 className={`flex items-center justify-between p-3 rounded-lg border bg-background-secondary transition-colors ${
-                  isExpired ? 'border-danger/30 opacity-60' : 'border-border hover:bg-background-tertiary'
+                  isExpired
+                    ? 'border-danger/30 opacity-60'
+                    : 'border-border hover:bg-background-tertiary'
                 }`}
               >
                 <div className="flex items-center gap-3 min-w-0">
                   {/* メールアイコン */}
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                    isExpired ? 'bg-danger-subtle' : 'bg-accent-subtle'
-                  }`}>
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      isExpired ? 'bg-danger-subtle' : 'bg-accent-subtle'
+                    }`}
+                  >
                     <Mail className={`w-5 h-5 ${isExpired ? 'text-danger' : 'text-accent'}`} />
                   </div>
 
@@ -231,9 +227,7 @@ export function InvitationList({ organizationId, currentRole }: InvitationListPr
                       <span className="font-medium text-foreground truncate">
                         {invitation.email}
                       </span>
-                      {isExpired && (
-                        <span className="badge badge-danger text-xs">期限切れ</span>
-                      )}
+                      {isExpired && <span className="badge badge-danger text-xs">期限切れ</span>}
                       {expirationStatus === 'expiring-soon' && (
                         <span className="badge badge-warning text-xs">まもなく期限切れ</span>
                       )}
@@ -275,10 +269,12 @@ export function InvitationList({ organizationId, currentRole }: InvitationListPr
                   {/* 取消ボタン */}
                   {canInvite && (
                     <button
-                      onClick={() => setCancelDialog({
-                        invitationId: invitation.id,
-                        email: invitation.email,
-                      })}
+                      onClick={() =>
+                        setCancelDialog({
+                          invitationId: invitation.id,
+                          email: invitation.email,
+                        })
+                      }
                       className="p-2 text-foreground-muted hover:text-danger hover:bg-danger-subtle rounded transition-colors"
                       aria-label="招待を取り消す"
                       title="招待を取り消す"

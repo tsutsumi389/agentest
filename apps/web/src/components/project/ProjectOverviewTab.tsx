@@ -1,5 +1,11 @@
 import { useState } from 'react';
-import { KpiSummaryCards, ResultDistributionChart, ExecutionStatusTable, RecentActivityTimeline, DashboardFilters } from './dashboard';
+import {
+  KpiSummaryCards,
+  ResultDistributionChart,
+  ExecutionStatusTable,
+  RecentActivityTimeline,
+  DashboardFilters,
+} from './dashboard';
 import { useProjectDashboard } from '../../hooks/useProjectDashboard';
 
 interface ProjectOverviewTabProps {
@@ -24,15 +30,11 @@ export function ProjectOverviewTab({ projectId }: ProjectOverviewTabProps) {
   });
 
   if (isLoading && !stats) {
-    return (
-      <div className="text-foreground-muted">読み込み中...</div>
-    );
+    return <div className="text-foreground-muted">読み込み中...</div>;
   }
 
   if (error || !stats) {
-    return (
-      <div className="text-danger">{error || 'データの取得に失敗しました'}</div>
-    );
+    return <div className="text-danger">{error || 'データの取得に失敗しました'}</div>;
   }
 
   return (

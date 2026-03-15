@@ -66,9 +66,7 @@ export const useOrganizationStore = create<OrganizationState & OrganizationActio
         // 選択中の組織が所属組織に含まれていない場合はリセット
         const { selectedOrganizationId } = get();
         if (selectedOrganizationId) {
-          const exists = organizations.some(
-            (o) => o.organization.id === selectedOrganizationId
-          );
+          const exists = organizations.some((o) => o.organization.id === selectedOrganizationId);
           if (!exists) {
             set({ selectedOrganizationId: null });
           }
@@ -112,9 +110,7 @@ export const useOrganizationStore = create<OrganizationState & OrganizationActio
             organizations: newOrganizations,
             // 削除した組織が選択中だった場合はリセット
             selectedOrganizationId:
-              state.selectedOrganizationId === organizationId
-                ? null
-                : state.selectedOrganizationId,
+              state.selectedOrganizationId === organizationId ? null : state.selectedOrganizationId,
           };
         });
       },

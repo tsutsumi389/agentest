@@ -4,13 +4,7 @@
  */
 
 /** サマリーカードの色タイプ */
-export type SummaryCardColor =
-  | 'success'
-  | 'danger'
-  | 'warning'
-  | 'muted'
-  | 'accent'
-  | 'running';
+export type SummaryCardColor = 'success' | 'danger' | 'warning' | 'muted' | 'accent' | 'running';
 
 interface SummaryCardProps {
   /** アイコンコンポーネント */

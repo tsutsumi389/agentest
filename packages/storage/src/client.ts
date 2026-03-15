@@ -337,7 +337,12 @@ export function createPublicStorageClient(env: NodeJS.ProcessEnv = process.env):
   return new StorageClient({
     endpoint: publicEndpoint,
     accessKeyId: getRequiredEnvVar(env, 'MINIO_ACCESS_KEY', 'MINIO_ROOT_USER', 'agentest'),
-    secretAccessKey: getRequiredEnvVar(env, 'MINIO_SECRET_KEY', 'MINIO_ROOT_PASSWORD', 'agentest123'),
+    secretAccessKey: getRequiredEnvVar(
+      env,
+      'MINIO_SECRET_KEY',
+      'MINIO_ROOT_PASSWORD',
+      'agentest123'
+    ),
     bucket: getRequiredEnvVar(env, 'MINIO_BUCKET', undefined, 'agentest'),
   });
 }
@@ -349,7 +354,12 @@ export function createStorageClient(env: NodeJS.ProcessEnv = process.env): Stora
   return new StorageClient({
     endpoint: getRequiredEnvVar(env, 'MINIO_ENDPOINT', undefined, 'http://localhost:9000'),
     accessKeyId: getRequiredEnvVar(env, 'MINIO_ACCESS_KEY', 'MINIO_ROOT_USER', 'agentest'),
-    secretAccessKey: getRequiredEnvVar(env, 'MINIO_SECRET_KEY', 'MINIO_ROOT_PASSWORD', 'agentest123'),
+    secretAccessKey: getRequiredEnvVar(
+      env,
+      'MINIO_SECRET_KEY',
+      'MINIO_ROOT_PASSWORD',
+      'agentest123'
+    ),
     bucket: getRequiredEnvVar(env, 'MINIO_BUCKET', undefined, 'agentest'),
   });
 }

@@ -18,7 +18,9 @@ const mockPrisma = vi.hoisted(() => ({
   adminUser: {
     count: vi.fn(),
   },
-  $transaction: vi.fn((callback: (tx: typeof mockTx) => Promise<unknown>, _options?: unknown) => callback(mockTx)),
+  $transaction: vi.fn((callback: (tx: typeof mockTx) => Promise<unknown>, _options?: unknown) =>
+    callback(mockTx)
+  ),
 }));
 
 vi.mock('@agentest/db', () => ({
@@ -36,7 +38,14 @@ vi.mock('bcryptjs', () => ({
 
 // loggerモック
 const { mockLogger } = vi.hoisted(() => {
-  const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn(), fatal: vi.fn(), child: vi.fn() };
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn(),
+  };
   mockLogger.child.mockReturnValue(mockLogger);
   return { mockLogger };
 });
@@ -312,10 +321,9 @@ describe('AdminSetupController', () => {
       await controller.setup(req, res, next);
 
       // $transaction の第2引数に isolationLevel が指定されること
-      expect(mockPrisma.$transaction).toHaveBeenCalledWith(
-        expect.any(Function),
-        { isolationLevel: 'Serializable' }
-      );
+      expect(mockPrisma.$transaction).toHaveBeenCalledWith(expect.any(Function), {
+        isolationLevel: 'Serializable',
+      });
     });
 
     it('存在チェックと作成がトランザクション内で実行されること', async () => {

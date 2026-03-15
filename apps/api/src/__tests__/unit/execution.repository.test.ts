@@ -124,19 +124,13 @@ describe('ExecutionRepository', () => {
           preconditions: [],
           testCases: [],
         },
-        preconditionResults: [
-          { id: 'precond-result-1', status: 'PASSED' },
-        ],
-        stepResults: [
-          { id: 'step-result-1', status: 'PASSED' },
-        ],
+        preconditionResults: [{ id: 'precond-result-1', status: 'PASSED' }],
+        stepResults: [{ id: 'step-result-1', status: 'PASSED' }],
         expectedResults: [
           {
             id: 'expected-result-1',
             status: 'PASSED',
-            evidences: [
-              { id: 'evidence-1', fileName: 'screenshot.png' },
-            ],
+            evidences: [{ id: 'evidence-1', fileName: 'screenshot.png' }],
           },
         ],
       };
@@ -276,7 +270,7 @@ describe('ExecutionRepository', () => {
           environment: {
             id: 'env-1',
             name: 'Development',
-                      },
+          },
         },
         {
           id: 'execution-2',
@@ -290,7 +284,7 @@ describe('ExecutionRepository', () => {
           environment: {
             id: 'env-2',
             name: 'Production',
-                      },
+          },
         },
       ];
       mockPrismaExecution.findMany.mockResolvedValue(mockExecutions);
@@ -342,7 +336,10 @@ describe('ExecutionRepository', () => {
     it('実行がない場合は空配列を返す', async () => {
       mockPrismaExecution.findMany.mockResolvedValue([]);
 
-      const result = await repository.findByTestSuiteId('suite-no-executions', { limit: 10, offset: 0 });
+      const result = await repository.findByTestSuiteId('suite-no-executions', {
+        limit: 10,
+        offset: 0,
+      });
 
       expect(result).toEqual([]);
     });

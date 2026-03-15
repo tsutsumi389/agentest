@@ -73,9 +73,7 @@ describe('getExecutionTool', () => {
       const context: ToolContext = { userId: '' };
       const input = { executionId: TEST_EXECUTION_ID };
 
-      await expect(getExecutionTool.handler(input, context)).rejects.toThrow(
-        '認証されていません'
-      );
+      await expect(getExecutionTool.handler(input, context)).rejects.toThrow('認証されていません');
       expect(mockApiClient.get).not.toHaveBeenCalled();
     });
 
@@ -122,20 +120,14 @@ describe('getExecutionTool', () => {
 
     it('結果データとエビデンスを含む実行を返す', async () => {
       const executionWithResults = createMockExecution({
-        preconditionResults: [
-          { id: 'pr-1', status: 'OK', note: null },
-        ],
-        stepResults: [
-          { id: 'sr-1', status: 'DONE', note: 'Executed successfully' },
-        ],
+        preconditionResults: [{ id: 'pr-1', status: 'OK', note: null }],
+        stepResults: [{ id: 'sr-1', status: 'DONE', note: 'Executed successfully' }],
         expectedResults: [
           {
             id: 'er-1',
             status: 'PASS',
             note: null,
-            evidences: [
-              { id: 'ev-1', fileName: 'screenshot.png', fileSize: 12345 },
-            ],
+            evidences: [{ id: 'ev-1', fileName: 'screenshot.png', fileSize: 12345 }],
           },
         ],
       });
@@ -174,9 +166,7 @@ describe('getExecutionTool', () => {
     });
 
     it('APIエラーを伝播する（403）', async () => {
-      mockApiClient.get.mockRejectedValueOnce(
-        new Error('Internal API error: 403 - Access denied')
-      );
+      mockApiClient.get.mockRejectedValueOnce(new Error('Internal API error: 403 - Access denied'));
 
       const context: ToolContext = { userId: TEST_USER_ID };
       const input = { executionId: TEST_EXECUTION_ID };

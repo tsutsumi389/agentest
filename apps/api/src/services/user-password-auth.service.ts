@@ -24,8 +24,7 @@ const SESSION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 // メールアドレス確認トークンの有効期限（24時間）
 const VERIFICATION_TOKEN_EXPIRY_MS = 24 * 60 * 60 * 1000;
 // タイミング攻撃対策用のダミーハッシュ（有効なbcrypt形式）
-const DUMMY_PASSWORD_HASH =
-  '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4bEaLwrMlxAqP6C2';
+const DUMMY_PASSWORD_HASH = '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4bEaLwrMlxAqP6C2';
 
 /**
  * ログイン結果（判別共用体）
@@ -44,8 +43,16 @@ export type LoginResult =
  * メール認証スキップ: JWTトークンペアを即発行
  */
 export type RegisterResult =
-  | { requiresEmailVerification: true; verificationToken: string; user: { id: string; email: string; name: string } }
-  | { requiresEmailVerification: false; tokens: TokenPair; user: { id: string; email: string; name: string } };
+  | {
+      requiresEmailVerification: true;
+      verificationToken: string;
+      user: { id: string; email: string; name: string };
+    }
+  | {
+      requiresEmailVerification: false;
+      tokens: TokenPair;
+      user: { id: string; email: string; name: string };
+    };
 
 /**
  * ユーザーパスワード認証サービス
@@ -213,7 +220,9 @@ export class UserPasswordAuthService {
 
     // アカウントロックチェック
     if (user.lockedUntil && user.lockedUntil > new Date()) {
-      throw new AuthenticationError('アカウントがロックされています。しばらく経ってから再度お試しください');
+      throw new AuthenticationError(
+        'アカウントがロックされています。しばらく経ってから再度お試しください'
+      );
     }
 
     // ロック期間が終了している場合、失敗回数をリセット
@@ -222,7 +231,11 @@ export class UserPasswordAuthService {
         where: { id: user.id },
         data: { failedAttempts: 0, lockedUntil: null },
       });
-      user = { ...user, failedAttempts: unlocked.failedAttempts, lockedUntil: unlocked.lockedUntil };
+      user = {
+        ...user,
+        failedAttempts: unlocked.failedAttempts,
+        lockedUntil: unlocked.lockedUntil,
+      };
     }
 
     // passwordHashがnull（OAuthのみユーザー）の場合
@@ -260,7 +273,11 @@ export class UserPasswordAuthService {
 
     // メールアドレス確認チェック
     if (!user.emailVerified) {
-      throw new AppError(401, 'EMAIL_NOT_VERIFIED', 'メールアドレスが確認されていません。受信トレイの確認メールをご確認ください');
+      throw new AppError(
+        401,
+        'EMAIL_NOT_VERIFIED',
+        'メールアドレスが確認されていません。受信トレイの確認メールをご確認ください'
+      );
     }
 
     // 2FA有効ユーザー: JWTを発行せず、一時トークンをRedisに保存して返す
@@ -268,7 +285,11 @@ export class UserPasswordAuthService {
       const twoFactorToken = crypto.randomBytes(32).toString('hex');
       const stored = await setUserTwoFactorToken(user.id, twoFactorToken);
       if (!stored) {
-        throw new AppError(500, 'INTERNAL_ERROR', '2FA認証の準備に失敗しました。しばらく経ってから再度お試しください');
+        throw new AppError(
+          500,
+          'INTERNAL_ERROR',
+          '2FA認証の準備に失敗しました。しばらく経ってから再度お試しください'
+        );
       }
 
       // パスワード認証成功: 失敗回数をリセット
@@ -458,7 +479,9 @@ export class UserPasswordAuthService {
 
     // 既にパスワードが設定済みの場合はエラー
     if (user.passwordHash) {
-      throw new ConflictError('パスワードは既に設定されています。変更する場合はパスワード変更機能を使用してください');
+      throw new ConflictError(
+        'パスワードは既に設定されています。変更する場合はパスワード変更機能を使用してください'
+      );
     }
 
     const passwordHash = await this.hashPassword(password);
@@ -493,7 +516,9 @@ export class UserPasswordAuthService {
 
     // パスワード未設定の場合
     if (!user.passwordHash) {
-      throw new BadRequestError('パスワードが設定されていません。パスワード設定機能を使用してください');
+      throw new BadRequestError(
+        'パスワードが設定されていません。パスワード設定機能を使用してください'
+      );
     }
 
     // 現在のパスワードを検証
@@ -566,7 +591,11 @@ export class UserPasswordAuthService {
     });
 
     // トークンの有効性を検証（情報漏洩防止のため統一エラーメッセージ）
-    if (!verificationToken || verificationToken.usedAt || verificationToken.expiresAt < new Date()) {
+    if (
+      !verificationToken ||
+      verificationToken.usedAt ||
+      verificationToken.expiresAt < new Date()
+    ) {
       throw new BadRequestError('メールアドレス確認トークンが無効です');
     }
 

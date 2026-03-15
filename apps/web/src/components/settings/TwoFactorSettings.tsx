@@ -150,29 +150,20 @@ export function TwoFactorSettings() {
         <div>
           <h2 className="text-lg font-semibold text-foreground">二要素認証</h2>
           <p className="text-sm text-foreground-muted mt-1">
-            {totpEnabled
-              ? '二要素認証は有効です'
-              : '二要素認証は無効です'}
+            {totpEnabled ? '二要素認証は有効です' : '二要素認証は無効です'}
           </p>
         </div>
-        {step === 'idle' && (
-          totpEnabled ? (
-            <button
-              className="btn btn-danger btn-sm"
-              onClick={handleStartDisable}
-            >
+        {step === 'idle' &&
+          (totpEnabled ? (
+            <button className="btn btn-danger btn-sm" onClick={handleStartDisable}>
               無効にする
             </button>
           ) : (
-            <button
-              className="btn btn-primary btn-sm"
-              onClick={handleStartSetup}
-            >
+            <button className="btn btn-primary btn-sm" onClick={handleStartSetup}>
               <Shield className="w-4 h-4" />
               セットアップ
             </button>
-          )
-        )}
+          ))}
       </div>
 
       {/* セットアップフロー */}
@@ -185,11 +176,7 @@ export function TwoFactorSettings() {
               </p>
               <div className="flex justify-center mb-3">
                 {isValidQrCodeDataUrl(setupData.qrCodeDataUrl) ? (
-                  <img
-                    src={setupData.qrCodeDataUrl}
-                    alt="2FA QRコード"
-                    className="w-48 h-48"
-                  />
+                  <img src={setupData.qrCodeDataUrl} alt="2FA QRコード" className="w-48 h-48" />
                 ) : (
                   <div className="w-48 h-48 flex items-center justify-center bg-background-tertiary rounded text-foreground-muted text-sm">
                     QRコードを表示できません
@@ -208,13 +195,19 @@ export function TwoFactorSettings() {
 
             <form onSubmit={handleEnable} className="space-y-3">
               {setupError && (
-                <div role="alert" className="text-sm text-error bg-error/10 border border-error/20 rounded-md px-3 py-2">
+                <div
+                  role="alert"
+                  className="text-sm text-error bg-error/10 border border-error/20 rounded-md px-3 py-2"
+                >
                   {setupError}
                 </div>
               )}
 
               <div>
-                <label htmlFor="setup-totp-code" className="block text-sm font-medium text-foreground mb-1">
+                <label
+                  htmlFor="setup-totp-code"
+                  className="block text-sm font-medium text-foreground mb-1"
+                >
                   認証コード
                 </label>
                 <input
@@ -262,13 +255,19 @@ export function TwoFactorSettings() {
             </p>
 
             {disableError && (
-              <div role="alert" className="text-sm text-error bg-error/10 border border-error/20 rounded-md px-3 py-2">
+              <div
+                role="alert"
+                className="text-sm text-error bg-error/10 border border-error/20 rounded-md px-3 py-2"
+              >
                 {disableError}
               </div>
             )}
 
             <div>
-              <label htmlFor="disable-password" className="block text-sm font-medium text-foreground mb-1">
+              <label
+                htmlFor="disable-password"
+                className="block text-sm font-medium text-foreground mb-1"
+              >
                 パスワード
               </label>
               <input

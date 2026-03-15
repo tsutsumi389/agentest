@@ -43,7 +43,10 @@ vi.mock('../../../clients/api-client.js', () => ({
 }));
 
 // モック設定後にインポート
-import { searchTestSuiteTool, searchTestSuiteInputSchema } from '../../../tools/search-test-suite.js';
+import {
+  searchTestSuiteTool,
+  searchTestSuiteInputSchema,
+} from '../../../tools/search-test-suite.js';
 
 // テスト用の固定UUID
 const TEST_USER_ID = '11111111-1111-1111-1111-111111111111';
@@ -237,9 +240,7 @@ describe('searchTestSuiteTool', () => {
     });
 
     it('APIエラーを伝播する', async () => {
-      mockApiClient.get.mockRejectedValueOnce(
-        new Error('Internal API error: 500 - Server error')
-      );
+      mockApiClient.get.mockRejectedValueOnce(new Error('Internal API error: 500 - Server error'));
 
       const context: ToolContext = { userId: TEST_USER_ID };
       const input = { limit: 20, offset: 0 };

@@ -25,12 +25,7 @@ function handleZodError(error: ZodError): ValidationError {
 /**
  * グローバルエラーハンドラーミドルウェア
  */
-export function errorHandler(
-  error: Error,
-  req: Request,
-  res: Response,
-  _next: NextFunction
-): void {
+export function errorHandler(error: Error, req: Request, res: Response, _next: NextFunction): void {
   // Multerエラーの場合
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
@@ -86,9 +81,7 @@ export function errorHandler(
   const response = {
     error: {
       code: 'INTERNAL_ERROR',
-      message: env.NODE_ENV === 'production'
-        ? 'サーバー内部エラーが発生しました'
-        : error.message,
+      message: env.NODE_ENV === 'production' ? 'サーバー内部エラーが発生しました' : error.message,
       statusCode,
       ...(env.NODE_ENV !== 'production' && { stack: error.stack }),
     },

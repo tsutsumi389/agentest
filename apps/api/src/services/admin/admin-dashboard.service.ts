@@ -5,10 +5,7 @@ import type {
   AdminDashboardOrgStats,
   AdminDashboardExecutionStats,
 } from '@agentest/shared';
-import {
-  getAdminDashboardCache,
-  setAdminDashboardCache,
-} from '../../lib/redis-store.js';
+import { getAdminDashboardCache, setAdminDashboardCache } from '../../lib/redis-store.js';
 
 // 定数
 const CACHE_TTL_SECONDS = 300; // 5分
@@ -29,12 +26,11 @@ export class AdminDashboardService {
     }
 
     // 並列でデータを取得
-    const [users, organizations, executions] =
-      await Promise.all([
-        this.getUserStats(),
-        this.getOrgStats(),
-        this.getExecutionStats(),
-      ]);
+    const [users, organizations, executions] = await Promise.all([
+      this.getUserStats(),
+      this.getOrgStats(),
+      this.getExecutionStats(),
+    ]);
 
     const stats: AdminDashboardStats = {
       users,

@@ -2,7 +2,14 @@ import { describe, it, expect, vi } from 'vitest';
 import type { z } from 'zod';
 
 const { mockLogger } = vi.hoisted(() => {
-  const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn(), fatal: vi.fn(), child: vi.fn() };
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn(),
+  };
   mockLogger.child.mockReturnValue(mockLogger);
   return { mockLogger };
 });
@@ -29,7 +36,10 @@ const productionSecrets = {
   INTERNAL_API_SECRET: 'production-internal-api-secret-32chars',
 };
 
-function validateEnv(envVars: Record<string, string | undefined>, isProduction = false): ValidationResult {
+function validateEnv(
+  envVars: Record<string, string | undefined>,
+  isProduction = false
+): ValidationResult {
   const envSchema = createEnvSchema(isProduction);
   const parsed = envSchema.safeParse(envVars);
   if (!parsed.success) {
@@ -41,13 +51,16 @@ function validateEnv(envVars: Record<string, string | undefined>, isProduction =
 describe('config/env', () => {
   describe('envSchema', () => {
     it('有効な環境変数でバリデーション成功', () => {
-      const result = validateEnv({
-        ...baseEnv,
-        ...productionSecrets,
-        NODE_ENV: 'production',
-        PORT: '3002',
-        HOST: 'localhost',
-      }, true);
+      const result = validateEnv(
+        {
+          ...baseEnv,
+          ...productionSecrets,
+          NODE_ENV: 'production',
+          PORT: '3002',
+          HOST: 'localhost',
+        },
+        true
+      );
 
       expect(result.success).toBe(true);
       if (result.success) {
@@ -157,7 +170,7 @@ describe('config/env', () => {
           JWT_REFRESH_SECRET: productionSecrets.JWT_REFRESH_SECRET,
           INTERNAL_API_SECRET: productionSecrets.INTERNAL_API_SECRET,
         },
-        true,
+        true
       );
 
       expect(result.success).toBe(false);
@@ -174,7 +187,7 @@ describe('config/env', () => {
           JWT_ACCESS_SECRET: productionSecrets.JWT_ACCESS_SECRET,
           INTERNAL_API_SECRET: productionSecrets.INTERNAL_API_SECRET,
         },
-        true,
+        true
       );
 
       expect(result.success).toBe(false);
@@ -191,7 +204,7 @@ describe('config/env', () => {
           JWT_ACCESS_SECRET: productionSecrets.JWT_ACCESS_SECRET,
           JWT_REFRESH_SECRET: productionSecrets.JWT_REFRESH_SECRET,
         },
-        true,
+        true
       );
 
       expect(result.success).toBe(false);
@@ -207,7 +220,7 @@ describe('config/env', () => {
           ...productionSecrets,
           NODE_ENV: 'production',
         },
-        true,
+        true
       );
 
       expect(result.success).toBe(true);

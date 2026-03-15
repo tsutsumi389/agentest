@@ -114,7 +114,10 @@ describe('TestSuiteService - History & Restore', () => {
       expect(mockPrisma.testSuite.findUnique).toHaveBeenCalledWith({
         where: { id: 'test-suite-1' },
       });
-      expect(mockTestSuiteRepo.getHistoriesGrouped).toHaveBeenCalledWith('test-suite-1', { limit: 20, offset: 0 });
+      expect(mockTestSuiteRepo.getHistoriesGrouped).toHaveBeenCalledWith('test-suite-1', {
+        limit: 20,
+        offset: 0,
+      });
       expect(result.items).toEqual(mockGroupedResult.items);
       expect(result.totalGroups).toBe(2);
       expect(result.total).toBe(2);
@@ -131,7 +134,10 @@ describe('TestSuiteService - History & Restore', () => {
 
       const result = await service.getHistories('test-suite-1', { limit: 1, offset: 5 });
 
-      expect(mockTestSuiteRepo.getHistoriesGrouped).toHaveBeenCalledWith('test-suite-1', { limit: 1, offset: 5 });
+      expect(mockTestSuiteRepo.getHistoriesGrouped).toHaveBeenCalledWith('test-suite-1', {
+        limit: 1,
+        offset: 5,
+      });
       expect(result.items).toHaveLength(1);
       expect(result.totalGroups).toBe(10);
       expect(result.total).toBe(15);
@@ -166,7 +172,9 @@ describe('TestSuiteService - History & Restore', () => {
     it('存在しないテストスイートはNotFoundErrorを投げる', async () => {
       mockPrisma.testSuite.findUnique.mockResolvedValue(null);
 
-      await expect(service.getHistories('invalid-suite', { limit: 20, offset: 0 })).rejects.toThrow(NotFoundError);
+      await expect(service.getHistories('invalid-suite', { limit: 20, offset: 0 })).rejects.toThrow(
+        NotFoundError
+      );
     });
   });
 
@@ -243,7 +251,9 @@ describe('TestSuiteService - History & Restore', () => {
       mockPrisma.testSuite.findUnique.mockResolvedValue(mockTestSuite); // 削除されていない状態
 
       await expect(service.restore('test-suite-1', 'user-1')).rejects.toThrow(ConflictError);
-      await expect(service.restore('test-suite-1', 'user-1')).rejects.toThrow('Test suite is not deleted');
+      await expect(service.restore('test-suite-1', 'user-1')).rejects.toThrow(
+        'Test suite is not deleted'
+      );
     });
 
     it('存在しないテストスイートはNotFoundErrorを投げる', async () => {

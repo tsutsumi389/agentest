@@ -132,9 +132,7 @@ describe('searchProjectTool', () => {
       const context: ToolContext = { userId: '' };
       const input = { limit: 50, offset: 0 };
 
-      await expect(searchProjectTool.handler(input, context)).rejects.toThrow(
-        '認証されていません'
-      );
+      await expect(searchProjectTool.handler(input, context)).rejects.toThrow('認証されていません');
       expect(mockApiClient.get).not.toHaveBeenCalled();
     });
 
@@ -178,9 +176,7 @@ describe('searchProjectTool', () => {
     });
 
     it('APIエラーを伝播する', async () => {
-      mockApiClient.get.mockRejectedValueOnce(
-        new Error('Internal API error: 500 - Server error')
-      );
+      mockApiClient.get.mockRejectedValueOnce(new Error('Internal API error: 500 - Server error'));
 
       const context: ToolContext = { userId: TEST_USER_ID };
       const input = { limit: 50, offset: 0 };

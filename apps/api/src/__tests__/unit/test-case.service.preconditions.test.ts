@@ -3,18 +3,54 @@ import { NotFoundError, BadRequestError } from '@agentest/shared';
 
 // トランザクション内モック
 const mockTx = vi.hoisted(() => ({
-  testCasePrecondition: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
-  testCaseStep: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
-  testCaseExpectedResult: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
+  testCasePrecondition: {
+    findFirst: vi.fn(),
+    findMany: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
+  testCaseStep: {
+    findFirst: vi.fn(),
+    findMany: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
+  testCaseExpectedResult: {
+    findFirst: vi.fn(),
+    findMany: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
   testCaseHistory: { create: vi.fn() },
   testCase: { findUnique: vi.fn(), update: vi.fn() },
   user: { findUnique: vi.fn() },
 }));
 
 const mockPrisma = vi.hoisted(() => ({
-  testCasePrecondition: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
-  testCaseStep: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
-  testCaseExpectedResult: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
+  testCasePrecondition: {
+    findMany: vi.fn(),
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
+  testCaseStep: {
+    findMany: vi.fn(),
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
+  testCaseExpectedResult: {
+    findMany: vi.fn(),
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
   testCaseHistory: { create: vi.fn() },
   testCase: { findUnique: vi.fn(), update: vi.fn() },
   $transaction: vi.fn((fn: (tx: typeof mockTx) => Promise<unknown>) => fn(mockTx)),
@@ -38,7 +74,12 @@ vi.mock('../../lib/redis-publisher.js', () => ({ publishDashboardUpdated: vi.fn(
 vi.mock('../../lib/events.js', () => ({ publishTestCaseUpdated: vi.fn() }));
 
 import { TestCaseService } from '../../services/test-case.service.js';
-import { TEST_USER_ID, TEST_CASE_ID, PRECONDITION_ID, createMockTestCase } from './test-case.service.test-helpers.js';
+import {
+  TEST_USER_ID,
+  TEST_CASE_ID,
+  PRECONDITION_ID,
+  createMockTestCase,
+} from './test-case.service.test-helpers.js';
 
 describe('TestCaseService（前提条件CRUD）', () => {
   let service: TestCaseService;
@@ -78,11 +119,18 @@ describe('TestCaseService（前提条件CRUD）', () => {
 
   describe('addPrecondition', () => {
     it('前提条件を追加できる', async () => {
-      const mockCreated = { id: PRECONDITION_ID, content: '新しい前提', orderKey: '00001', testCaseId: TEST_CASE_ID };
+      const mockCreated = {
+        id: PRECONDITION_ID,
+        content: '新しい前提',
+        orderKey: '00001',
+        testCaseId: TEST_CASE_ID,
+      };
       mockTx.testCasePrecondition.findFirst.mockResolvedValue(null);
       mockTx.testCasePrecondition.create.mockResolvedValue(mockCreated);
 
-      const result = await service.addPrecondition(TEST_CASE_ID, TEST_USER_ID, { content: '新しい前提' });
+      const result = await service.addPrecondition(TEST_CASE_ID, TEST_USER_ID, {
+        content: '新しい前提',
+      });
 
       expect(result).toEqual(mockCreated);
       expect(mockPrisma.$transaction).toHaveBeenCalled();
@@ -110,7 +158,10 @@ describe('TestCaseService（前提条件CRUD）', () => {
         orderKey: '00010',
       });
 
-      await service.addPrecondition(TEST_CASE_ID, TEST_USER_ID, { content: '前提', orderKey: '00010' });
+      await service.addPrecondition(TEST_CASE_ID, TEST_USER_ID, {
+        content: '前提',
+        orderKey: '00010',
+      });
 
       expect(mockTx.testCasePrecondition.create).toHaveBeenCalledWith({
         data: expect.objectContaining({ orderKey: '00010' }),
@@ -149,7 +200,12 @@ describe('TestCaseService（前提条件CRUD）', () => {
         orderKey: '00001',
       });
 
-      await service.addPrecondition(TEST_CASE_ID, TEST_USER_ID, { content: '前提' }, 'custom-group');
+      await service.addPrecondition(
+        TEST_CASE_ID,
+        TEST_USER_ID,
+        { content: '前提' },
+        'custom-group'
+      );
 
       expect(mockTx.testCaseHistory.create).toHaveBeenCalledWith({
         data: expect.objectContaining({ groupId: 'custom-group' }),
@@ -179,12 +235,9 @@ describe('TestCaseService（前提条件CRUD）', () => {
         orderKey: '00001',
       });
 
-      const result = await service.updatePrecondition(
-        TEST_CASE_ID,
-        PRECONDITION_ID,
-        TEST_USER_ID,
-        { content: '新内容' }
-      );
+      const result = await service.updatePrecondition(TEST_CASE_ID, PRECONDITION_ID, TEST_USER_ID, {
+        content: '新内容',
+      });
 
       expect(result).toEqual(expect.objectContaining({ content: '新内容' }));
       expect(mockPrisma.$transaction).toHaveBeenCalled();
@@ -199,7 +252,9 @@ describe('TestCaseService（前提条件CRUD）', () => {
       });
       mockTx.testCasePrecondition.update.mockResolvedValue({});
 
-      await service.updatePrecondition(TEST_CASE_ID, PRECONDITION_ID, TEST_USER_ID, { content: '新内容' });
+      await service.updatePrecondition(TEST_CASE_ID, PRECONDITION_ID, TEST_USER_ID, {
+        content: '新内容',
+      });
 
       expect(mockTx.testCaseHistory.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
@@ -222,12 +277,9 @@ describe('TestCaseService（前提条件CRUD）', () => {
         testCaseId: TEST_CASE_ID,
       });
 
-      const result = await service.updatePrecondition(
-        TEST_CASE_ID,
-        PRECONDITION_ID,
-        TEST_USER_ID,
-        { content: '同じ内容' }
-      );
+      const result = await service.updatePrecondition(TEST_CASE_ID, PRECONDITION_ID, TEST_USER_ID, {
+        content: '同じ内容',
+      });
 
       expect(result.content).toBe('同じ内容');
       expect(mockPrisma.$transaction).not.toHaveBeenCalled();
@@ -325,7 +377,8 @@ describe('TestCaseService（前提条件CRUD）', () => {
       ];
       mockPrisma.testCasePrecondition.findMany
         .mockResolvedValueOnce(existing) // 既存取得
-        .mockResolvedValueOnce([         // 更新後取得
+        .mockResolvedValueOnce([
+          // 更新後取得
           { id: 'p2', content: '前提2', orderKey: '00001' },
           { id: 'p1', content: '前提1', orderKey: '00002' },
         ]);

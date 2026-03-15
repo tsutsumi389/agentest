@@ -21,7 +21,10 @@ vi.mock('../ExecutionEvidenceUpload', () => ({
   ExecutionEvidenceUpload: () => <div data-testid="evidence-upload" />,
 }));
 
-const createExpectedResult = (id: string, content: string): ExecutionTestCaseExpectedResultSnapshot => ({
+const createExpectedResult = (
+  id: string,
+  content: string
+): ExecutionTestCaseExpectedResultSnapshot => ({
   id,
   executionTestCaseId: 'tc-1',
   originalExpectedResultId: 'orig-1',
@@ -96,9 +99,7 @@ describe('ExecutionExpectedResultList', () => {
     });
 
     it('isEditable=false のとき「エビデンスを追加」ボタンが表示されない', () => {
-      render(
-        <ExecutionExpectedResultList {...defaultProps} isEditable={false} />
-      );
+      render(<ExecutionExpectedResultList {...defaultProps} isEditable={false} />);
 
       expect(screen.queryByText('エビデンスを追加')).not.toBeInTheDocument();
     });

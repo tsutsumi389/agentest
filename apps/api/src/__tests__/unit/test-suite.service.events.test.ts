@@ -216,7 +216,13 @@ describe('TestSuiteService - イベント発行', () => {
       expect(mockPublishTestSuiteUpdated).toHaveBeenCalledWith(
         'test-suite-1',
         'project-1',
-        [{ field: 'precondition:update', oldValue: 'ユーザーがログインしている', newValue: '更新された前提条件' }],
+        [
+          {
+            field: 'precondition:update',
+            oldValue: 'ユーザーがログインしている',
+            newValue: '更新された前提条件',
+          },
+        ],
         { type: 'user', id: 'user-1', name: 'Test User' }
       );
     });
@@ -305,11 +311,13 @@ describe('TestSuiteService - イベント発行', () => {
       expect(mockPublishTestSuiteUpdated).toHaveBeenCalledWith(
         'test-suite-1',
         'project-1',
-        [{
-          field: 'precondition:reorder',
-          oldValue: ['precondition-1', 'precondition-2', 'precondition-3'],
-          newValue: ['precondition-3', 'precondition-1', 'precondition-2'],
-        }],
+        [
+          {
+            field: 'precondition:reorder',
+            oldValue: ['precondition-1', 'precondition-2', 'precondition-3'],
+            newValue: ['precondition-3', 'precondition-1', 'precondition-2'],
+          },
+        ],
         { type: 'user', id: 'user-1', name: 'Test User' }
       );
     });
@@ -336,9 +344,27 @@ describe('TestSuiteService - イベント発行', () => {
   // ============================================================
   describe('reorderTestCases', () => {
     const mockTestCases = [
-      { id: 'test-case-1', testSuiteId: 'test-suite-1', title: 'ケース1', orderKey: '00001', deletedAt: null },
-      { id: 'test-case-2', testSuiteId: 'test-suite-1', title: 'ケース2', orderKey: '00002', deletedAt: null },
-      { id: 'test-case-3', testSuiteId: 'test-suite-1', title: 'ケース3', orderKey: '00003', deletedAt: null },
+      {
+        id: 'test-case-1',
+        testSuiteId: 'test-suite-1',
+        title: 'ケース1',
+        orderKey: '00001',
+        deletedAt: null,
+      },
+      {
+        id: 'test-case-2',
+        testSuiteId: 'test-suite-1',
+        title: 'ケース2',
+        orderKey: '00002',
+        deletedAt: null,
+      },
+      {
+        id: 'test-case-3',
+        testSuiteId: 'test-suite-1',
+        title: 'ケース3',
+        orderKey: '00003',
+        deletedAt: null,
+      },
     ];
 
     beforeEach(() => {
@@ -360,11 +386,13 @@ describe('TestSuiteService - イベント発行', () => {
       expect(mockPublishTestSuiteUpdated).toHaveBeenCalledWith(
         'test-suite-1',
         'project-1',
-        [{
-          field: 'testCases:reorder',
-          oldValue: ['test-case-1', 'test-case-2', 'test-case-3'],
-          newValue: ['test-case-3', 'test-case-1', 'test-case-2'],
-        }],
+        [
+          {
+            field: 'testCases:reorder',
+            oldValue: ['test-case-1', 'test-case-2', 'test-case-3'],
+            newValue: ['test-case-3', 'test-case-1', 'test-case-2'],
+          },
+        ],
         { type: 'user', id: 'user-1', name: 'Test User' }
       );
     });

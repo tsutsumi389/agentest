@@ -4,10 +4,7 @@ import type { Express } from 'express';
 import bcryptjs from 'bcryptjs';
 import { generateSync } from 'otplib';
 import { prisma } from '@agentest/db';
-import {
-  createTestAdminUser,
-  cleanupTestData,
-} from './test-helpers.js';
+import { createTestAdminUser, cleanupTestData } from './test-helpers.js';
 import { createApp } from '../../app.js';
 
 describe('Admin TOTP API Integration Tests', () => {
@@ -37,18 +34,14 @@ describe('Admin TOTP API Integration Tests', () => {
     });
 
     // ログインしてセッションクッキーを取得
-    const loginResponse = await request(app)
-      .post('/admin/auth/login')
-      .send({
-        email: 'admin@example.com',
-        password: testPassword,
-      });
+    const loginResponse = await request(app).post('/admin/auth/login').send({
+      email: 'admin@example.com',
+      password: testPassword,
+    });
 
     const cookies = loginResponse.headers['set-cookie'];
     const cookieArray = Array.isArray(cookies) ? cookies : [cookies];
-    sessionCookie = cookieArray.find((c: string) =>
-      c.startsWith('admin_session=')
-    ) as string;
+    sessionCookie = cookieArray.find((c: string) => c.startsWith('admin_session=')) as string;
   });
 
   describe('POST /admin/auth/2fa/setup', () => {
@@ -67,9 +60,7 @@ describe('Admin TOTP API Integration Tests', () => {
     });
 
     it('監査ログが記録される', async () => {
-      await request(app)
-        .post('/admin/auth/2fa/setup')
-        .set('Cookie', sessionCookie);
+      await request(app).post('/admin/auth/2fa/setup').set('Cookie', sessionCookie);
 
       const logs = await prisma.adminAuditLog.findMany({
         where: {
@@ -142,9 +133,7 @@ describe('Admin TOTP API Integration Tests', () => {
 
     it('不正なコードで400エラー', async () => {
       // セットアップ
-      await request(app)
-        .post('/admin/auth/2fa/setup')
-        .set('Cookie', sessionCookie);
+      await request(app).post('/admin/auth/2fa/setup').set('Cookie', sessionCookie);
 
       // 不正なコード
       const response = await request(app)
@@ -175,9 +164,7 @@ describe('Admin TOTP API Integration Tests', () => {
     });
 
     it('未認証の場合は401エラー', async () => {
-      const response = await request(app)
-        .post('/admin/auth/2fa/enable')
-        .send({ code: '123456' });
+      const response = await request(app).post('/admin/auth/2fa/enable').send({ code: '123456' });
 
       expect(response.status).toBe(401);
     });
@@ -293,9 +280,7 @@ describe('Admin TOTP API Integration Tests', () => {
     });
 
     it('未認証の場合は401エラー', async () => {
-      const response = await request(app)
-        .post('/admin/auth/2fa/verify')
-        .send({ code: '123456' });
+      const response = await request(app).post('/admin/auth/2fa/verify').send({ code: '123456' });
 
       expect(response.status).toBe(401);
     });

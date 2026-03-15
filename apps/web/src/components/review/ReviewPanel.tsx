@@ -19,9 +19,7 @@ interface ReviewPanelProps {
  */
 export function ReviewPanel({ testSuiteId }: ReviewPanelProps) {
   const [selectedReviewId, setSelectedReviewId] = useState<string | null>(null);
-  const [verdictFilter, setVerdictFilter] = useState<ReviewVerdict | 'ALL'>(
-    'ALL'
-  );
+  const [verdictFilter, setVerdictFilter] = useState<ReviewVerdict | 'ALL'>('ALL');
 
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -140,10 +138,7 @@ export function ReviewPanel({ testSuiteId }: ReviewPanelProps) {
 
           {/* 下書きがある場合 */}
           {myDraft && !isReviewing && (
-            <DraftIndicator
-              reviewId={myDraft.id}
-              commentCount={myDraft._count.comments}
-            />
+            <DraftIndicator reviewId={myDraft.id} commentCount={myDraft._count.comments} />
           )}
         </div>
 
@@ -152,9 +147,7 @@ export function ReviewPanel({ testSuiteId }: ReviewPanelProps) {
           <span className="text-sm text-foreground-muted">フィルター:</span>
           <select
             value={verdictFilter}
-            onChange={(e) =>
-              setVerdictFilter(e.target.value as ReviewVerdict | 'ALL')
-            }
+            onChange={(e) => setVerdictFilter(e.target.value as ReviewVerdict | 'ALL')}
             className="input text-sm py-1.5"
           >
             <option value="ALL">すべて</option>
@@ -190,13 +183,7 @@ export function ReviewPanel({ testSuiteId }: ReviewPanelProps) {
 /**
  * 下書きインジケーター
  */
-function DraftIndicator({
-  reviewId,
-  commentCount,
-}: {
-  reviewId: string;
-  commentCount: number;
-}) {
+function DraftIndicator({ reviewId, commentCount }: { reviewId: string; commentCount: number }) {
   const { loadDraftReview, isLoading } = useReviewSession();
 
   const handleLoadDraft = async () => {
@@ -214,11 +201,7 @@ function DraftIndicator({
       disabled={isLoading}
       className="flex items-center gap-2 px-3 py-1.5 text-sm bg-warning-subtle text-warning rounded-lg hover:bg-warning/20 transition-colors"
     >
-      {isLoading ? (
-        <Loader2 className="w-4 h-4 animate-spin" />
-      ) : (
-        <FileEdit className="w-4 h-4" />
-      )}
+      {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileEdit className="w-4 h-4" />}
       <span>下書きを再開 ({commentCount}件のコメント)</span>
     </button>
   );

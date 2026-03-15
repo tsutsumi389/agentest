@@ -17,10 +17,7 @@ vi.mock('../../../repositories/agent-session.repository.js', () => ({
 }));
 
 // モック設定後にインポート
-import {
-  agentSessionService,
-  SESSION_CONFIG,
-} from '../../../services/agent-session.service.js';
+import { agentSessionService, SESSION_CONFIG } from '../../../services/agent-session.service.js';
 
 // テスト用の固定値
 const TEST_SESSION_ID = '11111111-1111-1111-1111-111111111111';
@@ -82,9 +79,7 @@ describe('agentSessionService', () => {
       };
       const updatedSession = { ...existingSession, lastHeartbeat: new Date() };
 
-      mockAgentSessionRepository.findActiveByProjectAndClient.mockResolvedValue(
-        existingSession
-      );
+      mockAgentSessionRepository.findActiveByProjectAndClient.mockResolvedValue(existingSession);
       mockAgentSessionRepository.updateHeartbeat.mockResolvedValue(updatedSession);
 
       const result = await agentSessionService.getOrCreateSession({
@@ -96,9 +91,7 @@ describe('agentSessionService', () => {
         TEST_PROJECT_ID,
         TEST_CLIENT_ID
       );
-      expect(mockAgentSessionRepository.updateHeartbeat).toHaveBeenCalledWith(
-        TEST_SESSION_ID
-      );
+      expect(mockAgentSessionRepository.updateHeartbeat).toHaveBeenCalledWith(TEST_SESSION_ID);
       expect(result).toEqual({
         session: updatedSession,
         isNew: false,
@@ -152,9 +145,9 @@ describe('agentSessionService', () => {
     it('セッションが見つからない場合はNotFoundError', async () => {
       mockAgentSessionRepository.findById.mockResolvedValue(null);
 
-      await expect(
-        agentSessionService.getSessionById(TEST_SESSION_ID)
-      ).rejects.toThrow('AgentSession');
+      await expect(agentSessionService.getSessionById(TEST_SESSION_ID)).rejects.toThrow(
+        'AgentSession'
+      );
     });
   });
 
@@ -180,9 +173,7 @@ describe('agentSessionService', () => {
     });
 
     it('ハートビートがタイムアウト秒数を超えると無効', () => {
-      const oldHeartbeat = new Date(
-        Date.now() - SESSION_CONFIG.HEARTBEAT_TIMEOUT * 1000 - 1000
-      );
+      const oldHeartbeat = new Date(Date.now() - SESSION_CONFIG.HEARTBEAT_TIMEOUT * 1000 - 1000);
       const session = {
         id: TEST_SESSION_ID,
         status: 'ACTIVE' as const,
@@ -194,9 +185,7 @@ describe('agentSessionService', () => {
 
     it('ハートビートがタイムアウト秒数ちょうどだと有効', () => {
       // タイムアウト境界より少し新しいハートビート
-      const recentHeartbeat = new Date(
-        Date.now() - (SESSION_CONFIG.HEARTBEAT_TIMEOUT - 1) * 1000
-      );
+      const recentHeartbeat = new Date(Date.now() - (SESSION_CONFIG.HEARTBEAT_TIMEOUT - 1) * 1000);
       const session = {
         id: TEST_SESSION_ID,
         status: 'ACTIVE' as const,
@@ -214,9 +203,7 @@ describe('agentSessionService', () => {
 
       const result = await agentSessionService.recordHeartbeat(TEST_SESSION_ID);
 
-      expect(mockAgentSessionRepository.updateHeartbeat).toHaveBeenCalledWith(
-        TEST_SESSION_ID
-      );
+      expect(mockAgentSessionRepository.updateHeartbeat).toHaveBeenCalledWith(TEST_SESSION_ID);
       expect(result).toEqual(mockSession);
     });
   });
@@ -228,9 +215,7 @@ describe('agentSessionService', () => {
 
       const result = await agentSessionService.endSession(TEST_SESSION_ID);
 
-      expect(mockAgentSessionRepository.endSession).toHaveBeenCalledWith(
-        TEST_SESSION_ID
-      );
+      expect(mockAgentSessionRepository.endSession).toHaveBeenCalledWith(TEST_SESSION_ID);
       expect(result).toEqual(mockSession);
     });
   });
@@ -243,13 +228,9 @@ describe('agentSessionService', () => {
       ];
       mockAgentSessionRepository.findActiveByProject.mockResolvedValue(mockSessions);
 
-      const result = await agentSessionService.getActiveSessionsByProject(
-        TEST_PROJECT_ID
-      );
+      const result = await agentSessionService.getActiveSessionsByProject(TEST_PROJECT_ID);
 
-      expect(mockAgentSessionRepository.findActiveByProject).toHaveBeenCalledWith(
-        TEST_PROJECT_ID
-      );
+      expect(mockAgentSessionRepository.findActiveByProject).toHaveBeenCalledWith(TEST_PROJECT_ID);
       expect(result).toEqual(mockSessions);
     });
   });
@@ -272,17 +253,12 @@ describe('agentSessionService', () => {
         { id: '1', status: 'ACTIVE' },
         { id: '2', status: 'ACTIVE' },
       ];
-      mockAgentSessionRepository.findTimedOutSessions.mockResolvedValue(
-        timedOutSessions
-      );
+      mockAgentSessionRepository.findTimedOutSessions.mockResolvedValue(timedOutSessions);
       mockAgentSessionRepository.markAsTimedOut.mockResolvedValue(2);
 
       const result = await agentSessionService.processTimedOutSessions();
 
-      expect(mockAgentSessionRepository.markAsTimedOut).toHaveBeenCalledWith([
-        '1',
-        '2',
-      ]);
+      expect(mockAgentSessionRepository.markAsTimedOut).toHaveBeenCalledWith(['1', '2']);
       expect(result).toBe(2);
     });
   });

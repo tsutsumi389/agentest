@@ -24,26 +24,29 @@ export const notificationsApi = {
   },
 
   // 未読数を取得
-  getUnreadCount: () =>
-    api.get<{ count: number }>('/api/notifications/unread-count'),
+  getUnreadCount: () => api.get<{ count: number }>('/api/notifications/unread-count'),
 
   // 通知を既読にする
   markAsRead: (id: string) =>
     api.patch<{ notification: Notification }>(`/api/notifications/${id}/read`),
 
   // 全て既読にする
-  markAllAsRead: () =>
-    api.post<{ updatedCount: number }>('/api/notifications/mark-all-read'),
+  markAllAsRead: () => api.post<{ updatedCount: number }>('/api/notifications/mark-all-read'),
 
   // 通知を削除
-  delete: (id: string) =>
-    api.delete<void>(`/api/notifications/${id}`),
+  delete: (id: string) => api.delete<void>(`/api/notifications/${id}`),
 
   // 通知設定を取得
   getPreferences: () =>
     api.get<{ preferences: NotificationPreference[] }>('/api/notifications/preferences'),
 
   // 通知設定を更新
-  updatePreference: (type: NotificationType, data: { emailEnabled?: boolean; inAppEnabled?: boolean }) =>
-    api.patch<{ preference: NotificationPreference }>(`/api/notifications/preferences/${type}`, data),
+  updatePreference: (
+    type: NotificationType,
+    data: { emailEnabled?: boolean; inAppEnabled?: boolean }
+  ) =>
+    api.patch<{ preference: NotificationPreference }>(
+      `/api/notifications/preferences/${type}`,
+      data
+    ),
 };

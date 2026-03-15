@@ -19,7 +19,10 @@ vi.mock('../../stores/auth', () => ({
 const { mockOrganizationStore } = vi.hoisted(() => {
   return {
     mockOrganizationStore: {
-      organizations: [] as Array<{ organization: { id: string; name: string; deletedAt: string | null }; role: string }>,
+      organizations: [] as Array<{
+        organization: { id: string; name: string; deletedAt: string | null };
+        role: string;
+      }>,
     },
   };
 });
@@ -35,17 +38,21 @@ vi.mock('../../lib/api', () => ({
 }));
 
 vi.mock('../../components/project/CreateProjectModal', () => ({
-  CreateProjectModal: vi.fn(({ isOpen, organizationId }: {
-    isOpen: boolean;
-    onClose: () => void;
-    organizationId?: string;
-  }) => (
-    isOpen ? (
-      <div data-testid="create-project-modal">
-        <span data-testid="modal-organization-id">{organizationId ?? 'undefined'}</span>
-      </div>
-    ) : null
-  )),
+  CreateProjectModal: vi.fn(
+    ({
+      isOpen,
+      organizationId,
+    }: {
+      isOpen: boolean;
+      onClose: () => void;
+      organizationId?: string;
+    }) =>
+      isOpen ? (
+        <div data-testid="create-project-modal">
+          <span data-testid="modal-organization-id">{organizationId ?? 'undefined'}</span>
+        </div>
+      ) : null
+  ),
 }));
 
 import { ProjectsPage } from '../Projects';
@@ -78,7 +85,7 @@ describe('ProjectsPage', () => {
 
       const select = screen.getByRole('combobox');
       const options = Array.from(select.querySelectorAll('option'));
-      const optionValues = options.map(o => o.getAttribute('value'));
+      const optionValues = options.map((o) => o.getAttribute('value'));
 
       expect(optionValues).not.toContain('all');
     });
@@ -95,7 +102,7 @@ describe('ProjectsPage', () => {
 
       const select = screen.getByRole('combobox');
       const options = Array.from(select.querySelectorAll('option'));
-      const optionValues = options.map(o => o.getAttribute('value'));
+      const optionValues = options.map((o) => o.getAttribute('value'));
 
       expect(optionValues).toContain('personal');
       expect(optionValues).toContain('org-1');

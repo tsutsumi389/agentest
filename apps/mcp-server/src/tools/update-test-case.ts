@@ -6,7 +6,11 @@ import { apiClient, checkLockStatus } from '../clients/api-client.js';
  * 子エンティティ更新用スキーマ（idあり→更新、idなし→新規作成）
  */
 const childEntityUpdateSchema = z.object({
-  id: z.string().uuid().optional().describe('既存要素のID。省略すると新規追加、指定すると内容を更新'),
+  id: z
+    .string()
+    .uuid()
+    .optional()
+    .describe('既存要素のID。省略すると新規追加、指定すると内容を更新'),
   content: z.string().min(1).max(10000).describe('テキスト内容（1-10000文字）。Markdown記法対応'),
 });
 
@@ -14,14 +18,43 @@ const childEntityUpdateSchema = z.object({
  * 入力スキーマ
  */
 export const updateTestCaseInputSchema = z.object({
-  testCaseId: z.string().uuid().describe('更新するテストケースのID。search_test_caseまたはget_test_suiteで取得したIDを指定'),
+  testCaseId: z
+    .string()
+    .uuid()
+    .describe('更新するテストケースのID。search_test_caseまたはget_test_suiteで取得したIDを指定'),
   title: z.string().min(1).max(200).optional().describe('新しいタイトル（1-200文字）'),
-  description: z.string().max(2000).nullable().optional().describe('新しい説明（最大2000文字）。nullを指定すると説明を削除。Markdown記法対応'),
-  priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).optional().describe('新しい優先度: LOW, MEDIUM, HIGH, CRITICAL'),
-  status: z.enum(['DRAFT', 'ACTIVE', 'ARCHIVED']).optional().describe('新しいステータス: DRAFT（下書き）, ACTIVE（有効）, ARCHIVED（アーカイブ済み）'),
-  preconditions: z.array(childEntityUpdateSchema).optional().describe('前提条件の配列。差分更新: idあり→内容更新、idなし→新規追加、配列に含まれないid→削除。get_test_caseで現在のIDを確認可能。contentはMarkdown記法対応'),
-  steps: z.array(childEntityUpdateSchema).optional().describe('テスト手順の配列。差分更新: idあり→内容更新、idなし→新規追加、配列に含まれないid→削除。get_test_caseで現在のIDを確認可能。contentはMarkdown記法対応'),
-  expectedResults: z.array(childEntityUpdateSchema).optional().describe('期待結果の配列。差分更新: idあり→内容更新、idなし→新規追加、配列に含まれないid→削除。get_test_caseで現在のIDを確認可能。contentはMarkdown記法対応'),
+  description: z
+    .string()
+    .max(2000)
+    .nullable()
+    .optional()
+    .describe('新しい説明（最大2000文字）。nullを指定すると説明を削除。Markdown記法対応'),
+  priority: z
+    .enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'])
+    .optional()
+    .describe('新しい優先度: LOW, MEDIUM, HIGH, CRITICAL'),
+  status: z
+    .enum(['DRAFT', 'ACTIVE', 'ARCHIVED'])
+    .optional()
+    .describe('新しいステータス: DRAFT（下書き）, ACTIVE（有効）, ARCHIVED（アーカイブ済み）'),
+  preconditions: z
+    .array(childEntityUpdateSchema)
+    .optional()
+    .describe(
+      '前提条件の配列。差分更新: idあり→内容更新、idなし→新規追加、配列に含まれないid→削除。get_test_caseで現在のIDを確認可能。contentはMarkdown記法対応'
+    ),
+  steps: z
+    .array(childEntityUpdateSchema)
+    .optional()
+    .describe(
+      'テスト手順の配列。差分更新: idあり→内容更新、idなし→新規追加、配列に含まれないid→削除。get_test_caseで現在のIDを確認可能。contentはMarkdown記法対応'
+    ),
+  expectedResults: z
+    .array(childEntityUpdateSchema)
+    .optional()
+    .describe(
+      '期待結果の配列。差分更新: idあり→内容更新、idなし→新規追加、配列に含まれないid→削除。get_test_caseで現在のIDを確認可能。contentはMarkdown記法対応'
+    ),
 });
 
 type UpdateTestCaseInput = z.infer<typeof updateTestCaseInputSchema>;
@@ -57,7 +90,10 @@ interface UpdateTestCaseResponse {
 /**
  * ハンドラー
  */
-const updateTestCaseHandler: ToolHandler<UpdateTestCaseInput, UpdateTestCaseResponse> = async (input, context) => {
+const updateTestCaseHandler: ToolHandler<UpdateTestCaseInput, UpdateTestCaseResponse> = async (
+  input,
+  context
+) => {
   const { userId } = context;
 
   if (!userId) {

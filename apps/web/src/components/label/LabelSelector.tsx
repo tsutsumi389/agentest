@@ -103,7 +103,9 @@ export function LabelSelector({
         ) : (
           <span className="text-foreground-subtle text-sm">{placeholder}</span>
         )}
-        <ChevronDown className={`w-4 h-4 ml-auto text-foreground-subtle transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown
+          className={`w-4 h-4 ml-auto text-foreground-subtle transition-transform ${isOpen ? 'rotate-180' : ''}`}
+        />
       </button>
 
       {/* ドロップダウン */}

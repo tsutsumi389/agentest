@@ -30,7 +30,12 @@ vi.mock('@agentest/auth', () => ({
   optionalAuth: () => (_req: any, _res: any, next: any) => next(),
   requireOrgRole: () => (_req: any, _res: any, next: any) => next(),
   requireProjectRole: () => (_req: any, _res: any, next: any) => next(),
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -46,20 +51,25 @@ vi.mock('@agentest/auth', () => ({
 // 結合テストではロールベースのアクセス制御パターンをテスト
 // 実際のDB権限チェックはユニットテストでカバー
 vi.mock('../../middleware/require-test-case-role.js', () => ({
-  requireTestCaseRole: (roles: string[], _options?: { allowDeletedTestCase?: boolean }) => (req: any, _res: any, next: any) => {
-    if (!mockAuthUser) {
-      return next(new AuthenticationError('認証が必要です'));
-    }
-    req.user = mockAuthUser;
-    if (!mockTestCaseRole || !roles.includes(mockTestCaseRole)) {
-      return next(new AuthorizationError('Insufficient permissions'));
-    }
-    next();
-  },
+  requireTestCaseRole:
+    (roles: string[], _options?: { allowDeletedTestCase?: boolean }) =>
+    (req: any, _res: any, next: any) => {
+      if (!mockAuthUser) {
+        return next(new AuthenticationError('認証が必要です'));
+      }
+      req.user = mockAuthUser;
+      if (!mockTestCaseRole || !roles.includes(mockTestCaseRole)) {
+        return next(new AuthorizationError('Insufficient permissions'));
+      }
+      next();
+    },
 }));
 
 // テスト用認証設定関数
-function setTestAuth(user: { id: string; email: string } | null, testCaseRole: string | null = 'OWNER') {
+function setTestAuth(
+  user: { id: string; email: string } | null,
+  testCaseRole: string | null = 'OWNER'
+) {
   mockAuthUser = user;
   mockTestCaseRole = testCaseRole;
 }
@@ -133,17 +143,13 @@ describe('Test Case Authorization Integration Tests', () => {
       it('401 - 未認証ユーザーは拒否', async () => {
         clearTestAuth();
 
-        await request(app)
-          .get(`/api/test-cases/${testCase.id}`)
-          .expect(401);
+        await request(app).get(`/api/test-cases/${testCase.id}`).expect(401);
       });
 
       it('403 - 権限のないユーザーは拒否', async () => {
         setTestAuth({ id: nonMember.id, email: nonMember.email }, null);
 
-        const response = await request(app)
-          .get(`/api/test-cases/${testCase.id}`)
-          .expect(403);
+        const response = await request(app).get(`/api/test-cases/${testCase.id}`).expect(403);
 
         expect(response.body.error.code).toBe('AUTHORIZATION_ERROR');
         expect(response.body.error.message).toBe('Insufficient permissions');
@@ -152,9 +158,7 @@ describe('Test Case Authorization Integration Tests', () => {
       it('200 - READロールで読み取り可能', async () => {
         setTestAuth({ id: reader.id, email: reader.email }, 'READ');
 
-        const response = await request(app)
-          .get(`/api/test-cases/${testCase.id}`)
-          .expect(200);
+        const response = await request(app).get(`/api/test-cases/${testCase.id}`).expect(200);
 
         expect(response.body.testCase.id).toBe(testCase.id);
       });
@@ -162,9 +166,7 @@ describe('Test Case Authorization Integration Tests', () => {
       it('200 - WRITEロールで読み取り可能', async () => {
         setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
 
-        const response = await request(app)
-          .get(`/api/test-cases/${testCase.id}`)
-          .expect(200);
+        const response = await request(app).get(`/api/test-cases/${testCase.id}`).expect(200);
 
         expect(response.body.testCase.id).toBe(testCase.id);
       });
@@ -172,9 +174,7 @@ describe('Test Case Authorization Integration Tests', () => {
       it('200 - ADMINロールで読み取り可能', async () => {
         setTestAuth({ id: admin.id, email: admin.email }, 'ADMIN');
 
-        const response = await request(app)
-          .get(`/api/test-cases/${testCase.id}`)
-          .expect(200);
+        const response = await request(app).get(`/api/test-cases/${testCase.id}`).expect(200);
 
         expect(response.body.testCase.id).toBe(testCase.id);
       });
@@ -182,9 +182,7 @@ describe('Test Case Authorization Integration Tests', () => {
       it('200 - OWNERロールで読み取り可能', async () => {
         setTestAuth({ id: owner.id, email: owner.email }, 'OWNER');
 
-        const response = await request(app)
-          .get(`/api/test-cases/${testCase.id}`)
-          .expect(200);
+        const response = await request(app).get(`/api/test-cases/${testCase.id}`).expect(200);
 
         expect(response.body.testCase.id).toBe(testCase.id);
       });
@@ -194,17 +192,13 @@ describe('Test Case Authorization Integration Tests', () => {
       it('403 - 権限のないユーザーは拒否', async () => {
         setTestAuth({ id: nonMember.id, email: nonMember.email }, null);
 
-        await request(app)
-          .get(`/api/test-cases/${testCase.id}/preconditions`)
-          .expect(403);
+        await request(app).get(`/api/test-cases/${testCase.id}/preconditions`).expect(403);
       });
 
       it('200 - READロールで読み取り可能', async () => {
         setTestAuth({ id: reader.id, email: reader.email }, 'READ');
 
-        await request(app)
-          .get(`/api/test-cases/${testCase.id}/preconditions`)
-          .expect(200);
+        await request(app).get(`/api/test-cases/${testCase.id}/preconditions`).expect(200);
       });
     });
   });
@@ -264,17 +258,13 @@ describe('Test Case Authorization Integration Tests', () => {
       it('403 - READロールは削除拒否', async () => {
         setTestAuth({ id: reader.id, email: reader.email }, 'READ');
 
-        await request(app)
-          .delete(`/api/test-cases/${testCase.id}`)
-          .expect(403);
+        await request(app).delete(`/api/test-cases/${testCase.id}`).expect(403);
       });
 
       it('204 - WRITEロールで削除可能', async () => {
         setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
 
-        await request(app)
-          .delete(`/api/test-cases/${testCase.id}`)
-          .expect(204);
+        await request(app).delete(`/api/test-cases/${testCase.id}`).expect(204);
 
         // 論理削除を確認
         const deleted = await prisma.testCase.findUnique({

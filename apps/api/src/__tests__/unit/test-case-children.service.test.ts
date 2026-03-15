@@ -3,7 +3,14 @@ import { BadRequestError } from '@agentest/shared';
 
 // ロガーモック
 const { mockLogger } = vi.hoisted(() => {
-  const mockLogger = { info: vi.fn(), error: vi.fn(), warn: vi.fn(), debug: vi.fn(), fatal: vi.fn(), child: vi.fn() };
+  const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+    fatal: vi.fn(),
+    child: vi.fn(),
+  };
   mockLogger.child.mockReturnValue(mockLogger);
   return { mockLogger };
 });
@@ -11,18 +18,54 @@ vi.mock('../../utils/logger.js', () => ({ logger: mockLogger }));
 
 // トランザクション内モック
 const mockTx = vi.hoisted(() => ({
-  testCasePrecondition: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
-  testCaseStep: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
-  testCaseExpectedResult: { findFirst: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
+  testCasePrecondition: {
+    findFirst: vi.fn(),
+    findMany: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
+  testCaseStep: {
+    findFirst: vi.fn(),
+    findMany: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
+  testCaseExpectedResult: {
+    findFirst: vi.fn(),
+    findMany: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
   testCaseHistory: { create: vi.fn() },
   testCase: { findUnique: vi.fn(), update: vi.fn() },
   user: { findUnique: vi.fn() },
 }));
 
 const mockPrisma = vi.hoisted(() => ({
-  testCasePrecondition: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
-  testCaseStep: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
-  testCaseExpectedResult: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), delete: vi.fn() },
+  testCasePrecondition: {
+    findMany: vi.fn(),
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
+  testCaseStep: {
+    findMany: vi.fn(),
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
+  testCaseExpectedResult: {
+    findMany: vi.fn(),
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
   testCaseHistory: { create: vi.fn() },
   testCase: { findUnique: vi.fn(), update: vi.fn() },
   $transaction: vi.fn((fn: (tx: typeof mockTx) => Promise<unknown>) => fn(mockTx)),
@@ -56,7 +99,12 @@ import {
   type HistorySnapshot,
   type ChildEntitySnapshot,
 } from '../../services/test-case-children.service.js';
-import { TEST_USER_ID, TEST_CASE_ID, TEST_SUITE_ID, createMockTestCase } from './test-case.service.test-helpers.js';
+import {
+  TEST_USER_ID,
+  TEST_CASE_ID,
+  TEST_SUITE_ID,
+  createMockTestCase,
+} from './test-case.service.test-helpers.js';
 
 // -------------------------------------------------------
 // protectedメソッドをテスト用に公開するサブクラス
@@ -65,14 +113,30 @@ class TestableChildrenService extends TestCaseChildrenService {
   public async exposedSyncChildEntitiesWithHistory(
     tx: any,
     testCaseId: string,
-    testCase: { id: string; testSuiteId: string; title: string; description: string | null; priority: string; status: string },
+    testCase: {
+      id: string;
+      testSuiteId: string;
+      title: string;
+      description: string | null;
+      priority: string;
+      status: string;
+    },
     userId: string,
     entityType: 'precondition' | 'step' | 'expectedResult',
     items: { id?: string; content: string }[],
     existingItems: { id: string; content: string; orderKey: string }[],
     groupId: string
   ) {
-    return this.syncChildEntitiesWithHistory(tx, testCaseId, testCase, userId, entityType, items, existingItems, groupId);
+    return this.syncChildEntitiesWithHistory(
+      tx,
+      testCaseId,
+      testCase,
+      userId,
+      entityType,
+      items,
+      existingItems,
+      groupId
+    );
   }
 }
 
@@ -212,9 +276,11 @@ describe('toJsonSnapshot', () => {
 
     const result = toJsonSnapshot(snapshot);
 
-    expect(result).toEqual(expect.objectContaining({
-      deletedAt: '2025-01-01T00:00:00Z',
-    }));
+    expect(result).toEqual(
+      expect.objectContaining({
+        deletedAt: '2025-01-01T00:00:00Z',
+      })
+    );
   });
 });
 
@@ -248,8 +314,14 @@ describe('TestCaseChildrenService.syncChildEntitiesWithHistory', () => {
       const existing = [{ id: 'p1', content: '削除対象', orderKey: '00001' }];
 
       await service.exposedSyncChildEntitiesWithHistory(
-        mockTx, TEST_CASE_ID, mockTestCase, TEST_USER_ID,
-        'precondition', [], existing, GROUP_ID
+        mockTx,
+        TEST_CASE_ID,
+        mockTestCase,
+        TEST_USER_ID,
+        'precondition',
+        [],
+        existing,
+        GROUP_ID
       );
 
       // 削除が呼ばれる
@@ -277,8 +349,14 @@ describe('TestCaseChildrenService.syncChildEntitiesWithHistory', () => {
       const existing = [{ id: 'p1', content: '旧内容', orderKey: '00001' }];
 
       await service.exposedSyncChildEntitiesWithHistory(
-        mockTx, TEST_CASE_ID, mockTestCase, TEST_USER_ID,
-        'precondition', [{ id: 'p1', content: '新内容' }], existing, GROUP_ID
+        mockTx,
+        TEST_CASE_ID,
+        mockTestCase,
+        TEST_USER_ID,
+        'precondition',
+        [{ id: 'p1', content: '新内容' }],
+        existing,
+        GROUP_ID
       );
 
       // 更新が呼ばれる（content + orderKey）
@@ -306,8 +384,14 @@ describe('TestCaseChildrenService.syncChildEntitiesWithHistory', () => {
       mockTx.testCasePrecondition.create.mockResolvedValue(mockCreated);
 
       await service.exposedSyncChildEntitiesWithHistory(
-        mockTx, TEST_CASE_ID, mockTestCase, TEST_USER_ID,
-        'precondition', [{ content: '新前提' }], [], GROUP_ID
+        mockTx,
+        TEST_CASE_ID,
+        mockTestCase,
+        TEST_USER_ID,
+        'precondition',
+        [{ content: '新前提' }],
+        [],
+        GROUP_ID
       );
 
       // 作成が呼ばれる
@@ -332,8 +416,14 @@ describe('TestCaseChildrenService.syncChildEntitiesWithHistory', () => {
       const existing = [{ id: 'p1', content: '同じ内容', orderKey: '00003' }];
 
       await service.exposedSyncChildEntitiesWithHistory(
-        mockTx, TEST_CASE_ID, mockTestCase, TEST_USER_ID,
-        'precondition', [{ id: 'p1', content: '同じ内容' }], existing, GROUP_ID
+        mockTx,
+        TEST_CASE_ID,
+        mockTestCase,
+        TEST_USER_ID,
+        'precondition',
+        [{ id: 'p1', content: '同じ内容' }],
+        existing,
+        GROUP_ID
       );
 
       // updateは呼ばれる（orderKeyの再計算のため）
@@ -348,8 +438,14 @@ describe('TestCaseChildrenService.syncChildEntitiesWithHistory', () => {
     it('存在しないIDを指定するとBadRequestErrorをスローする', async () => {
       await expect(
         service.exposedSyncChildEntitiesWithHistory(
-          mockTx, TEST_CASE_ID, mockTestCase, TEST_USER_ID,
-          'precondition', [{ id: 'non-existent', content: '不正' }], [], GROUP_ID
+          mockTx,
+          TEST_CASE_ID,
+          mockTestCase,
+          TEST_USER_ID,
+          'precondition',
+          [{ id: 'non-existent', content: '不正' }],
+          [],
+          GROUP_ID
         )
       ).rejects.toThrow(BadRequestError);
     });
@@ -357,8 +453,14 @@ describe('TestCaseChildrenService.syncChildEntitiesWithHistory', () => {
     it('存在しないIDのエラーメッセージにエンティティタイプが含まれる', async () => {
       await expect(
         service.exposedSyncChildEntitiesWithHistory(
-          mockTx, TEST_CASE_ID, mockTestCase, TEST_USER_ID,
-          'precondition', [{ id: 'bad-id', content: '不正' }], [], GROUP_ID
+          mockTx,
+          TEST_CASE_ID,
+          mockTestCase,
+          TEST_USER_ID,
+          'precondition',
+          [{ id: 'bad-id', content: '不正' }],
+          [],
+          GROUP_ID
         )
       ).rejects.toThrow('Invalid precondition ID: bad-id');
     });
@@ -370,8 +472,14 @@ describe('TestCaseChildrenService.syncChildEntitiesWithHistory', () => {
       const existing = [{ id: 's1', content: '削除ステップ', orderKey: '00001' }];
 
       await service.exposedSyncChildEntitiesWithHistory(
-        mockTx, TEST_CASE_ID, mockTestCase, TEST_USER_ID,
-        'step', [], existing, GROUP_ID
+        mockTx,
+        TEST_CASE_ID,
+        mockTestCase,
+        TEST_USER_ID,
+        'step',
+        [],
+        existing,
+        GROUP_ID
       );
 
       expect(mockTx.testCaseStep.delete).toHaveBeenCalledWith({ where: { id: 's1' } });
@@ -393,8 +501,14 @@ describe('TestCaseChildrenService.syncChildEntitiesWithHistory', () => {
       const existing = [{ id: 's1', content: '旧ステップ', orderKey: '00001' }];
 
       await service.exposedSyncChildEntitiesWithHistory(
-        mockTx, TEST_CASE_ID, mockTestCase, TEST_USER_ID,
-        'step', [{ id: 's1', content: '新ステップ' }], existing, GROUP_ID
+        mockTx,
+        TEST_CASE_ID,
+        mockTestCase,
+        TEST_USER_ID,
+        'step',
+        [{ id: 's1', content: '新ステップ' }],
+        existing,
+        GROUP_ID
       );
 
       expect(mockTx.testCaseStep.update).toHaveBeenCalledWith({
@@ -420,8 +534,14 @@ describe('TestCaseChildrenService.syncChildEntitiesWithHistory', () => {
       mockTx.testCaseStep.create.mockResolvedValue(mockCreated);
 
       await service.exposedSyncChildEntitiesWithHistory(
-        mockTx, TEST_CASE_ID, mockTestCase, TEST_USER_ID,
-        'step', [{ content: '新ステップ' }], [], GROUP_ID
+        mockTx,
+        TEST_CASE_ID,
+        mockTestCase,
+        TEST_USER_ID,
+        'step',
+        [{ content: '新ステップ' }],
+        [],
+        GROUP_ID
       );
 
       expect(mockTx.testCaseStep.create).toHaveBeenCalledWith({
@@ -444,8 +564,14 @@ describe('TestCaseChildrenService.syncChildEntitiesWithHistory', () => {
       const existing = [{ id: 's1', content: '同じステップ', orderKey: '00005' }];
 
       await service.exposedSyncChildEntitiesWithHistory(
-        mockTx, TEST_CASE_ID, mockTestCase, TEST_USER_ID,
-        'step', [{ id: 's1', content: '同じステップ' }], existing, GROUP_ID
+        mockTx,
+        TEST_CASE_ID,
+        mockTestCase,
+        TEST_USER_ID,
+        'step',
+        [{ id: 's1', content: '同じステップ' }],
+        existing,
+        GROUP_ID
       );
 
       expect(mockTx.testCaseStep.update).toHaveBeenCalledWith({
@@ -458,8 +584,14 @@ describe('TestCaseChildrenService.syncChildEntitiesWithHistory', () => {
     it('存在しないIDを指定するとBadRequestErrorをスローする', async () => {
       await expect(
         service.exposedSyncChildEntitiesWithHistory(
-          mockTx, TEST_CASE_ID, mockTestCase, TEST_USER_ID,
-          'step', [{ id: 'non-existent', content: '不正' }], [], GROUP_ID
+          mockTx,
+          TEST_CASE_ID,
+          mockTestCase,
+          TEST_USER_ID,
+          'step',
+          [{ id: 'non-existent', content: '不正' }],
+          [],
+          GROUP_ID
         )
       ).rejects.toThrow(BadRequestError);
     });
@@ -467,8 +599,14 @@ describe('TestCaseChildrenService.syncChildEntitiesWithHistory', () => {
     it('存在しないIDのエラーメッセージにエンティティタイプが含まれる', async () => {
       await expect(
         service.exposedSyncChildEntitiesWithHistory(
-          mockTx, TEST_CASE_ID, mockTestCase, TEST_USER_ID,
-          'step', [{ id: 'bad-id', content: '不正' }], [], GROUP_ID
+          mockTx,
+          TEST_CASE_ID,
+          mockTestCase,
+          TEST_USER_ID,
+          'step',
+          [{ id: 'bad-id', content: '不正' }],
+          [],
+          GROUP_ID
         )
       ).rejects.toThrow('Invalid step ID: bad-id');
     });
@@ -480,8 +618,14 @@ describe('TestCaseChildrenService.syncChildEntitiesWithHistory', () => {
       const existing = [{ id: 'e1', content: '削除期待結果', orderKey: '00001' }];
 
       await service.exposedSyncChildEntitiesWithHistory(
-        mockTx, TEST_CASE_ID, mockTestCase, TEST_USER_ID,
-        'expectedResult', [], existing, GROUP_ID
+        mockTx,
+        TEST_CASE_ID,
+        mockTestCase,
+        TEST_USER_ID,
+        'expectedResult',
+        [],
+        existing,
+        GROUP_ID
       );
 
       expect(mockTx.testCaseExpectedResult.delete).toHaveBeenCalledWith({ where: { id: 'e1' } });
@@ -503,8 +647,14 @@ describe('TestCaseChildrenService.syncChildEntitiesWithHistory', () => {
       const existing = [{ id: 'e1', content: '旧期待結果', orderKey: '00001' }];
 
       await service.exposedSyncChildEntitiesWithHistory(
-        mockTx, TEST_CASE_ID, mockTestCase, TEST_USER_ID,
-        'expectedResult', [{ id: 'e1', content: '新期待結果' }], existing, GROUP_ID
+        mockTx,
+        TEST_CASE_ID,
+        mockTestCase,
+        TEST_USER_ID,
+        'expectedResult',
+        [{ id: 'e1', content: '新期待結果' }],
+        existing,
+        GROUP_ID
       );
 
       expect(mockTx.testCaseExpectedResult.update).toHaveBeenCalledWith({
@@ -530,8 +680,14 @@ describe('TestCaseChildrenService.syncChildEntitiesWithHistory', () => {
       mockTx.testCaseExpectedResult.create.mockResolvedValue(mockCreated);
 
       await service.exposedSyncChildEntitiesWithHistory(
-        mockTx, TEST_CASE_ID, mockTestCase, TEST_USER_ID,
-        'expectedResult', [{ content: '新期待結果' }], [], GROUP_ID
+        mockTx,
+        TEST_CASE_ID,
+        mockTestCase,
+        TEST_USER_ID,
+        'expectedResult',
+        [{ content: '新期待結果' }],
+        [],
+        GROUP_ID
       );
 
       expect(mockTx.testCaseExpectedResult.create).toHaveBeenCalledWith({
@@ -554,8 +710,14 @@ describe('TestCaseChildrenService.syncChildEntitiesWithHistory', () => {
       const existing = [{ id: 'e1', content: '同じ期待結果', orderKey: '00010' }];
 
       await service.exposedSyncChildEntitiesWithHistory(
-        mockTx, TEST_CASE_ID, mockTestCase, TEST_USER_ID,
-        'expectedResult', [{ id: 'e1', content: '同じ期待結果' }], existing, GROUP_ID
+        mockTx,
+        TEST_CASE_ID,
+        mockTestCase,
+        TEST_USER_ID,
+        'expectedResult',
+        [{ id: 'e1', content: '同じ期待結果' }],
+        existing,
+        GROUP_ID
       );
 
       expect(mockTx.testCaseExpectedResult.update).toHaveBeenCalledWith({
@@ -568,8 +730,14 @@ describe('TestCaseChildrenService.syncChildEntitiesWithHistory', () => {
     it('存在しないIDを指定するとBadRequestErrorをスローする', async () => {
       await expect(
         service.exposedSyncChildEntitiesWithHistory(
-          mockTx, TEST_CASE_ID, mockTestCase, TEST_USER_ID,
-          'expectedResult', [{ id: 'non-existent', content: '不正' }], [], GROUP_ID
+          mockTx,
+          TEST_CASE_ID,
+          mockTestCase,
+          TEST_USER_ID,
+          'expectedResult',
+          [{ id: 'non-existent', content: '不正' }],
+          [],
+          GROUP_ID
         )
       ).rejects.toThrow(BadRequestError);
     });
@@ -577,8 +745,14 @@ describe('TestCaseChildrenService.syncChildEntitiesWithHistory', () => {
     it('存在しないIDのエラーメッセージにエンティティタイプが含まれる', async () => {
       await expect(
         service.exposedSyncChildEntitiesWithHistory(
-          mockTx, TEST_CASE_ID, mockTestCase, TEST_USER_ID,
-          'expectedResult', [{ id: 'bad-id', content: '不正' }], [], GROUP_ID
+          mockTx,
+          TEST_CASE_ID,
+          mockTestCase,
+          TEST_USER_ID,
+          'expectedResult',
+          [{ id: 'bad-id', content: '不正' }],
+          [],
+          GROUP_ID
         )
       ).rejects.toThrow('Invalid expectedResult ID: bad-id');
     });
@@ -595,11 +769,14 @@ describe('TestCaseChildrenService.syncChildEntitiesWithHistory', () => {
       mockTx.testCasePrecondition.create.mockResolvedValue(mockCreated);
 
       await service.exposedSyncChildEntitiesWithHistory(
-        mockTx, TEST_CASE_ID, mockTestCase, TEST_USER_ID,
+        mockTx,
+        TEST_CASE_ID,
+        mockTestCase,
+        TEST_USER_ID,
         'precondition',
         [
-          { id: 'p2', content: '更新後' },   // p2を更新
-          { content: '新規追加' },            // 新規作成（p1は削除）
+          { id: 'p2', content: '更新後' }, // p2を更新
+          { content: '新規追加' }, // 新規作成（p1は削除）
         ],
         existing,
         GROUP_ID
@@ -639,13 +816,12 @@ describe('TestCaseChildrenService.syncChildEntitiesWithHistory', () => {
         .mockResolvedValueOnce(mockCreated3);
 
       await service.exposedSyncChildEntitiesWithHistory(
-        mockTx, TEST_CASE_ID, mockTestCase, TEST_USER_ID,
+        mockTx,
+        TEST_CASE_ID,
+        mockTestCase,
+        TEST_USER_ID,
         'step',
-        [
-          { content: '1番目' },
-          { content: '2番目' },
-          { content: '3番目' },
-        ],
+        [{ content: '1番目' }, { content: '2番目' }, { content: '3番目' }],
         [],
         GROUP_ID
       );
@@ -668,7 +844,10 @@ describe('TestCaseChildrenService.syncChildEntitiesWithHistory', () => {
       mockTx.testCaseExpectedResult.create.mockResolvedValue(mockCreated);
 
       await service.exposedSyncChildEntitiesWithHistory(
-        mockTx, TEST_CASE_ID, mockTestCase, TEST_USER_ID,
+        mockTx,
+        TEST_CASE_ID,
+        mockTestCase,
+        TEST_USER_ID,
         'expectedResult',
         [{ content: '新規' }],
         existing,
@@ -688,8 +867,14 @@ describe('TestCaseChildrenService.syncChildEntitiesWithHistory', () => {
       ];
 
       await service.exposedSyncChildEntitiesWithHistory(
-        mockTx, TEST_CASE_ID, mockTestCase, TEST_USER_ID,
-        'step', [], existing, GROUP_ID
+        mockTx,
+        TEST_CASE_ID,
+        mockTestCase,
+        TEST_USER_ID,
+        'step',
+        [],
+        existing,
+        GROUP_ID
       );
 
       expect(mockTx.testCaseStep.delete).toHaveBeenCalledTimes(2);
@@ -701,8 +886,14 @@ describe('TestCaseChildrenService.syncChildEntitiesWithHistory', () => {
 
     it('既存・リクエストともに空の場合は何も実行しない', async () => {
       await service.exposedSyncChildEntitiesWithHistory(
-        mockTx, TEST_CASE_ID, mockTestCase, TEST_USER_ID,
-        'precondition', [], [], GROUP_ID
+        mockTx,
+        TEST_CASE_ID,
+        mockTestCase,
+        TEST_USER_ID,
+        'precondition',
+        [],
+        [],
+        GROUP_ID
       );
 
       expect(mockTx.testCasePrecondition.delete).not.toHaveBeenCalled();

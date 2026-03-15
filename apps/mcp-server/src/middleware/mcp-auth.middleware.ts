@@ -1,10 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { prisma } from '@agentest/db';
-import {
-  verifyAccessToken,
-  type JwtPayload,
-  type AuthConfig,
-} from '@agentest/auth';
+import { verifyAccessToken, type JwtPayload, type AuthConfig } from '@agentest/auth';
 import { AuthenticationError } from '@agentest/shared';
 import { env } from '../config/env.js';
 
@@ -45,11 +41,7 @@ function extractTokenFromCookie(req: Request): string | null {
 export function mcpAuthenticate() {
   const config = getMcpAuthConfig();
 
-  return async (
-    req: Request,
-    _res: Response,
-    next: NextFunction
-  ): Promise<void> => {
+  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     try {
       // Cookieからトークン抽出
       const token = extractTokenFromCookie(req);
@@ -89,4 +81,3 @@ export function mcpAuthenticate() {
     }
   };
 }
-

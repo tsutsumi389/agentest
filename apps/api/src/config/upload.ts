@@ -34,11 +34,7 @@ export const ALLOWED_MIME_TYPES = [
 /**
  * マジックバイト検証をスキップするテキスト系MIMEタイプ
  */
-export const TEXT_BASED_MIME_TYPES = new Set([
-  'text/plain',
-  'text/csv',
-  'application/json',
-]);
+export const TEXT_BASED_MIME_TYPES = new Set(['text/plain', 'text/csv', 'application/json']);
 
 /**
  * file-type が返すMIMEタイプとホワイトリストのMIMEタイプの等価マッピング
@@ -70,10 +66,7 @@ export function isAllowedMimeType(mimeType: string): boolean {
  *
  * @throws BadRequestError マジックバイトが検出できない場合、またはMIMEタイプが一致しない場合
  */
-export async function validateMagicBytes(
-  buffer: Buffer,
-  declaredMimeType: string
-): Promise<void> {
+export async function validateMagicBytes(buffer: Buffer, declaredMimeType: string): Promise<void> {
   // テキスト系MIMEタイプはマジックバイトがないためスキップ
   if (TEXT_BASED_MIME_TYPES.has(declaredMimeType)) {
     return;
@@ -91,9 +84,7 @@ export async function validateMagicBytes(
   const normalizedMime = MIME_EQUIVALENCES[detected.mime] ?? detected.mime;
 
   if (normalizedMime !== declaredMimeType) {
-    throw new BadRequestError(
-      'ファイルの内容が宣言されたMIMEタイプと一致しません'
-    );
+    throw new BadRequestError('ファイルの内容が宣言されたMIMEタイプと一致しません');
   }
 }
 

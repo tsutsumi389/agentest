@@ -90,21 +90,13 @@ describe('jwt', () => {
         testConfig.jwt.accessSecret
       );
 
-      expect(() => verifyAccessToken(fakeAccessToken, testConfig)).toThrow(
-        AuthenticationError
-      );
-      expect(() => verifyAccessToken(fakeAccessToken, testConfig)).toThrow(
-        'Invalid token type'
-      );
+      expect(() => verifyAccessToken(fakeAccessToken, testConfig)).toThrow(AuthenticationError);
+      expect(() => verifyAccessToken(fakeAccessToken, testConfig)).toThrow('Invalid token type');
     });
 
     it('無効なトークンでAuthenticationErrorをスローする', () => {
-      expect(() => verifyAccessToken('invalid-token', testConfig)).toThrow(
-        AuthenticationError
-      );
-      expect(() => verifyAccessToken('invalid-token', testConfig)).toThrow(
-        'Invalid token'
-      );
+      expect(() => verifyAccessToken('invalid-token', testConfig)).toThrow(AuthenticationError);
+      expect(() => verifyAccessToken('invalid-token', testConfig)).toThrow('Invalid token');
     });
 
     it('期限切れトークンでAuthenticationErrorをスローする', () => {
@@ -115,12 +107,8 @@ describe('jwt', () => {
         { expiresIn: '-1s' }
       );
 
-      expect(() => verifyAccessToken(expiredToken, testConfig)).toThrow(
-        AuthenticationError
-      );
-      expect(() => verifyAccessToken(expiredToken, testConfig)).toThrow(
-        'Token expired'
-      );
+      expect(() => verifyAccessToken(expiredToken, testConfig)).toThrow(AuthenticationError);
+      expect(() => verifyAccessToken(expiredToken, testConfig)).toThrow('Token expired');
     });
   });
 
@@ -148,18 +136,12 @@ describe('jwt', () => {
         testConfig.jwt.refreshSecret
       );
 
-      expect(() => verifyRefreshToken(fakeRefreshToken, testConfig)).toThrow(
-        AuthenticationError
-      );
-      expect(() => verifyRefreshToken(fakeRefreshToken, testConfig)).toThrow(
-        'Invalid token type'
-      );
+      expect(() => verifyRefreshToken(fakeRefreshToken, testConfig)).toThrow(AuthenticationError);
+      expect(() => verifyRefreshToken(fakeRefreshToken, testConfig)).toThrow('Invalid token type');
     });
 
     it('無効なトークンでAuthenticationErrorをスローする', () => {
-      expect(() => verifyRefreshToken('invalid-token', testConfig)).toThrow(
-        AuthenticationError
-      );
+      expect(() => verifyRefreshToken('invalid-token', testConfig)).toThrow(AuthenticationError);
       expect(() => verifyRefreshToken('invalid-token', testConfig)).toThrow(
         'Invalid refresh token'
       );
@@ -172,12 +154,8 @@ describe('jwt', () => {
         { expiresIn: '-1s' }
       );
 
-      expect(() => verifyRefreshToken(expiredToken, testConfig)).toThrow(
-        AuthenticationError
-      );
-      expect(() => verifyRefreshToken(expiredToken, testConfig)).toThrow(
-        'Refresh token expired'
-      );
+      expect(() => verifyRefreshToken(expiredToken, testConfig)).toThrow(AuthenticationError);
+      expect(() => verifyRefreshToken(expiredToken, testConfig)).toThrow('Refresh token expired');
     });
   });
 

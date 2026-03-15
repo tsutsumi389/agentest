@@ -118,9 +118,7 @@ export function AddProjectMemberModal({
     >
       <div className="card w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-foreground">
-            メンバーを追加
-          </h2>
+          <h2 className="text-lg font-semibold text-foreground">メンバーを追加</h2>
           <button
             onClick={handleClose}
             className="p-1 text-foreground-muted hover:text-foreground hover:bg-background-tertiary rounded transition-colors"
@@ -133,7 +131,10 @@ export function AddProjectMemberModal({
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* メールアドレス */}
           <div>
-            <label htmlFor="member-email" className="block text-sm font-medium text-foreground mb-1">
+            <label
+              htmlFor="member-email"
+              className="block text-sm font-medium text-foreground mb-1"
+            >
               メールアドレス <span className="text-danger">*</span>
             </label>
             <input
@@ -148,9 +149,7 @@ export function AddProjectMemberModal({
               placeholder="user@example.com"
               disabled={isSubmitting}
             />
-            {errors.email && (
-              <p className="text-xs text-danger mt-1">{errors.email}</p>
-            )}
+            {errors.email && <p className="text-xs text-danger mt-1">{errors.email}</p>}
             <p className="text-xs text-foreground-subtle mt-1">
               既存ユーザーのメールアドレスを入力してください
             </p>
@@ -158,9 +157,7 @@ export function AddProjectMemberModal({
 
           {/* ロール選択 */}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-2">
-              ロール
-            </label>
+            <label className="block text-sm font-medium text-foreground mb-2">ロール</label>
             <div className="space-y-2">
               <label className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-background-tertiary transition-colors">
                 <input
@@ -194,9 +191,7 @@ export function AddProjectMemberModal({
                 <Pencil className="w-4 h-4 text-success" />
                 <div>
                   <span className="text-sm font-medium text-foreground">編集者</span>
-                  <p className="text-xs text-foreground-muted">
-                    テストケース・実行の編集が可能
-                  </p>
+                  <p className="text-xs text-foreground-muted">テストケース・実行の編集が可能</p>
                 </div>
               </label>
 
@@ -213,9 +208,7 @@ export function AddProjectMemberModal({
                 <Eye className="w-4 h-4 text-foreground-muted" />
                 <div>
                   <span className="text-sm font-medium text-foreground">閲覧者</span>
-                  <p className="text-xs text-foreground-muted">
-                    閲覧のみ可能
-                  </p>
+                  <p className="text-xs text-foreground-muted">閲覧のみ可能</p>
                 </div>
               </label>
             </div>

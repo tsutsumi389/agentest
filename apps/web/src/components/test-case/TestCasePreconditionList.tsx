@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { Loader2, ClipboardList } from 'lucide-react';
 import {
-  Loader2,
-  ClipboardList,
-} from 'lucide-react';
-import { testCasesApi, ApiError, type TestCasePrecondition, type ReviewCommentWithReplies } from '../../lib/api';
+  testCasesApi,
+  ApiError,
+  type TestCasePrecondition,
+  type ReviewCommentWithReplies,
+} from '../../lib/api';
 import { MarkdownPreview } from '../common/markdown';
 import { CommentableItem } from '../review/CommentableItem';
 import { CommentableField } from '../review/CommentableField';
@@ -32,7 +34,9 @@ export function TestCasePreconditionList({
   canEdit,
   onCommentAdded,
 }: TestCasePreconditionListProps) {
-  const [preconditions, setPreconditions] = useState<TestCasePrecondition[]>(initialPreconditions || []);
+  const [preconditions, setPreconditions] = useState<TestCasePrecondition[]>(
+    initialPreconditions || []
+  );
   const [isLoading, setIsLoading] = useState(!initialPreconditions);
   const [error, setError] = useState<string | null>(null);
 

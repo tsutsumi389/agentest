@@ -11,7 +11,10 @@ vi.mock('../../../clients/api-client.js', () => ({
 }));
 
 // モック設定後にインポート
-import { createExecutionTool, createExecutionInputSchema } from '../../../tools/create-execution.js';
+import {
+  createExecutionTool,
+  createExecutionInputSchema,
+} from '../../../tools/create-execution.js';
 
 // テスト用の固定UUID
 const TEST_USER_ID = '11111111-1111-1111-1111-111111111111';
@@ -57,16 +60,20 @@ describe('createExecutionTool', () => {
     });
 
     it('無効なtestSuiteIdはエラー', () => {
-      expect(() => createExecutionInputSchema.parse({
-        testSuiteId: 'invalid-uuid',
-      })).toThrow();
+      expect(() =>
+        createExecutionInputSchema.parse({
+          testSuiteId: 'invalid-uuid',
+        })
+      ).toThrow();
     });
 
     it('無効なenvironmentIdはエラー', () => {
-      expect(() => createExecutionInputSchema.parse({
-        testSuiteId: TEST_SUITE_ID,
-        environmentId: 'invalid-uuid',
-      })).toThrow();
+      expect(() =>
+        createExecutionInputSchema.parse({
+          testSuiteId: TEST_SUITE_ID,
+          environmentId: 'invalid-uuid',
+        })
+      ).toThrow();
     });
   });
 

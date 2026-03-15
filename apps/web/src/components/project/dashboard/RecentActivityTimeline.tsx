@@ -78,11 +78,7 @@ export function RecentActivityTimeline({ stats, className }: RecentActivityTimel
       {/* アクティビティリスト（スクロール対応） */}
       <div className="overflow-y-auto space-y-2 max-h-[372px]">
         {recentActivities.map((activity) => (
-          <ActivityItem
-            key={activity.id}
-            activity={activity}
-            projectId={projectId}
-          />
+          <ActivityItem key={activity.id} activity={activity} projectId={projectId} />
         ))}
       </div>
     </div>
@@ -102,9 +98,10 @@ function ActivityItem({
   const config = ACTIVITY_CONFIG[activity.type];
   const Icon = config.icon;
   const linkTo = getActivityLink(activity, projectId);
-  const dateString = typeof activity.occurredAt === 'string'
-    ? activity.occurredAt
-    : activity.occurredAt.toISOString();
+  const dateString =
+    typeof activity.occurredAt === 'string'
+      ? activity.occurredAt
+      : activity.occurredAt.toISOString();
 
   return (
     <Link
@@ -143,10 +140,7 @@ function ActivityItem({
               <span className="text-foreground-subtle">·</span>
             </>
           )}
-          <time
-            dateTime={dateString}
-            title={formatDateTime(dateString)}
-          >
+          <time dateTime={dateString} title={formatDateTime(dateString)}>
             {formatRelativeTimeOrDefault(activity.occurredAt)}
           </time>
         </div>

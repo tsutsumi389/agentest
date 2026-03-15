@@ -74,7 +74,10 @@ export function ExecutionPreconditionList({
           if (!result) {
             console.error(`Precondition result not found for snapshot ID: ${precondition.id}`);
             return (
-              <div key={precondition.id} className="flex gap-3 py-3 border-b border-border last:border-b-0">
+              <div
+                key={precondition.id}
+                className="flex gap-3 py-3 border-b border-border last:border-b-0"
+              >
                 <div className="flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full bg-background-tertiary text-foreground-muted text-xs font-medium">
                   {index + 1}
                 </div>

@@ -37,7 +37,12 @@ vi.mock('@agentest/auth', () => ({
     }
     next();
   },
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -51,24 +56,26 @@ vi.mock('@agentest/auth', () => ({
 
 // テストスイート権限ミドルウェアをモック
 vi.mock('../../middleware/require-test-suite-role.js', () => ({
-  requireTestSuiteRole: (roles: string[], options?: { allowDeletedSuite?: boolean }) => async (req: any, _res: any, next: any) => {
-    if (!mockTestSuiteRole || !roles.includes(mockTestSuiteRole)) {
-      return next(new AuthorizationError('権限がありません'));
-    }
-    // テストスイートの存在チェック
-    const testSuiteId = req.params.testSuiteId;
-    if (testSuiteId) {
-      const testSuite = await prisma.testSuite.findUnique({ where: { id: testSuiteId } });
-      if (!testSuite) {
-        return next(new NotFoundError('TestSuite', testSuiteId));
+  requireTestSuiteRole:
+    (roles: string[], options?: { allowDeletedSuite?: boolean }) =>
+    async (req: any, _res: any, next: any) => {
+      if (!mockTestSuiteRole || !roles.includes(mockTestSuiteRole)) {
+        return next(new AuthorizationError('権限がありません'));
       }
-      // allowDeletedSuiteオプションのチェック
-      if (testSuite.deletedAt && !options?.allowDeletedSuite) {
-        return next(new NotFoundError('TestSuite', testSuiteId));
+      // テストスイートの存在チェック
+      const testSuiteId = req.params.testSuiteId;
+      if (testSuiteId) {
+        const testSuite = await prisma.testSuite.findUnique({ where: { id: testSuiteId } });
+        if (!testSuite) {
+          return next(new NotFoundError('TestSuite', testSuiteId));
+        }
+        // allowDeletedSuiteオプションのチェック
+        if (testSuite.deletedAt && !options?.allowDeletedSuite) {
+          return next(new NotFoundError('TestSuite', testSuiteId));
+        }
       }
-    }
-    next();
-  },
+      next();
+    },
 }));
 
 // テスト用認証設定関数
@@ -266,9 +273,7 @@ describe('テストスイートCRUD統合テスト', () => {
     });
 
     it('テストスイート詳細を取得できる', async () => {
-      const response = await request(app)
-        .get(`/api/test-suites/${testSuite.id}`)
-        .expect(200);
+      const response = await request(app).get(`/api/test-suites/${testSuite.id}`).expect(200);
 
       expect(response.body.testSuite).toBeDefined();
       expect(response.body.testSuite.id).toBe(testSuite.id);
@@ -285,9 +290,7 @@ describe('テストスイートCRUD統合テスト', () => {
       await createTestCase(testSuite.id, { title: 'テストケース1', orderKey: '00001' });
       await createTestCase(testSuite.id, { title: 'テストケース2', orderKey: '00002' });
 
-      const response = await request(app)
-        .get(`/api/test-suites/${testSuite.id}`)
-        .expect(200);
+      const response = await request(app).get(`/api/test-suites/${testSuite.id}`).expect(200);
 
       // findByIdは_countでpreconditionsとtestCasesの件数を返す（リレーション自体は含まない）
       expect(response.body.testSuite._count).toBeDefined();
@@ -306,9 +309,7 @@ describe('テストスイートCRUD統合テスト', () => {
     it('未認証は401エラー', async () => {
       clearTestAuth();
 
-      const response = await request(app)
-        .get(`/api/test-suites/${testSuite.id}`)
-        .expect(401);
+      const response = await request(app).get(`/api/test-suites/${testSuite.id}`).expect(401);
 
       expect(response.body.error.code).toBe('AUTHENTICATION_ERROR');
     });
@@ -316,9 +317,7 @@ describe('テストスイートCRUD統合テスト', () => {
     it('権限なし（mockTestSuiteRole=null）は403エラー', async () => {
       setTestAuth({ id: reader.id, email: reader.email }, 'READ', null);
 
-      const response = await request(app)
-        .get(`/api/test-suites/${testSuite.id}`)
-        .expect(403);
+      const response = await request(app).get(`/api/test-suites/${testSuite.id}`).expect(403);
 
       expect(response.body.error.code).toBe('AUTHORIZATION_ERROR');
     });
@@ -406,9 +405,7 @@ describe('テストスイートCRUD統合テスト', () => {
     });
 
     it('テストスイートを論理削除できる', async () => {
-      await request(app)
-        .delete(`/api/test-suites/${testSuite.id}`)
-        .expect(204);
+      await request(app).delete(`/api/test-suites/${testSuite.id}`).expect(204);
 
       // DBで論理削除されていることを確認
       const deletedSuite = await prisma.testSuite.findUnique({
@@ -421,23 +418,21 @@ describe('テストスイートCRUD統合テスト', () => {
     it('削除後にdeletedAtが設定されていることを確認', async () => {
       const beforeDelete = new Date();
 
-      await request(app)
-        .delete(`/api/test-suites/${testSuite.id}`)
-        .expect(204);
+      await request(app).delete(`/api/test-suites/${testSuite.id}`).expect(204);
 
       const deletedSuite = await prisma.testSuite.findUnique({
         where: { id: testSuite.id },
       });
       expect(deletedSuite?.deletedAt).not.toBeNull();
-      expect(new Date(deletedSuite!.deletedAt!).getTime()).toBeGreaterThanOrEqual(beforeDelete.getTime());
+      expect(new Date(deletedSuite!.deletedAt!).getTime()).toBeGreaterThanOrEqual(
+        beforeDelete.getTime()
+      );
     });
 
     it('READロールは403エラー', async () => {
       setTestAuth({ id: reader.id, email: reader.email }, 'READ', 'READ');
 
-      const response = await request(app)
-        .delete(`/api/test-suites/${testSuite.id}`)
-        .expect(403);
+      const response = await request(app).delete(`/api/test-suites/${testSuite.id}`).expect(403);
 
       expect(response.body.error.code).toBe('AUTHORIZATION_ERROR');
     });
@@ -445,9 +440,7 @@ describe('テストスイートCRUD統合テスト', () => {
     it('未認証は401エラー', async () => {
       clearTestAuth();
 
-      const response = await request(app)
-        .delete(`/api/test-suites/${testSuite.id}`)
-        .expect(401);
+      const response = await request(app).delete(`/api/test-suites/${testSuite.id}`).expect(401);
 
       expect(response.body.error.code).toBe('AUTHENTICATION_ERROR');
     });
@@ -483,9 +476,7 @@ describe('テストスイートCRUD統合テスト', () => {
     });
 
     it('復元後にdeletedAtがnullであることを確認', async () => {
-      await request(app)
-        .post(`/api/test-suites/${testSuite.id}/restore`)
-        .expect(200);
+      await request(app).post(`/api/test-suites/${testSuite.id}/restore`).expect(200);
 
       // DBで確認
       const restoredSuite = await prisma.testSuite.findUnique({
@@ -525,15 +516,11 @@ describe('テストスイートCRUD統合テスト', () => {
       });
 
       it('テストスイート一覧を取得できる', async () => {
-        await request(app)
-          .get(`/api/projects/${project.id}/test-suites`)
-          .expect(200);
+        await request(app).get(`/api/projects/${project.id}/test-suites`).expect(200);
       });
 
       it('テストスイート詳細を取得できる', async () => {
-        await request(app)
-          .get(`/api/test-suites/${testSuite.id}`)
-          .expect(200);
+        await request(app).get(`/api/test-suites/${testSuite.id}`).expect(200);
       });
 
       it('テストスイートを更新できる', async () => {
@@ -544,9 +531,7 @@ describe('テストスイートCRUD統合テスト', () => {
       });
 
       it('テストスイートを削除できる', async () => {
-        await request(app)
-          .delete(`/api/test-suites/${testSuite.id}`)
-          .expect(204);
+        await request(app).delete(`/api/test-suites/${testSuite.id}`).expect(204);
       });
 
       it('テストスイートを復元できる', async () => {
@@ -556,9 +541,7 @@ describe('テストスイートCRUD統合テスト', () => {
           data: { deletedAt: new Date() },
         });
 
-        await request(app)
-          .post(`/api/test-suites/${testSuite.id}/restore`)
-          .expect(200);
+        await request(app).post(`/api/test-suites/${testSuite.id}/restore`).expect(200);
       });
     });
 
@@ -578,15 +561,11 @@ describe('テストスイートCRUD統合テスト', () => {
       });
 
       it('テストスイート一覧を取得できる', async () => {
-        await request(app)
-          .get(`/api/projects/${project.id}/test-suites`)
-          .expect(200);
+        await request(app).get(`/api/projects/${project.id}/test-suites`).expect(200);
       });
 
       it('テストスイート詳細を取得できる', async () => {
-        await request(app)
-          .get(`/api/test-suites/${testSuite.id}`)
-          .expect(200);
+        await request(app).get(`/api/test-suites/${testSuite.id}`).expect(200);
       });
 
       it('テストスイートを更新できる', async () => {
@@ -597,9 +576,7 @@ describe('テストスイートCRUD統合テスト', () => {
       });
 
       it('テストスイートの削除は403エラー（ADMINのみ）', async () => {
-        await request(app)
-          .delete(`/api/test-suites/${testSuite.id}`)
-          .expect(403);
+        await request(app).delete(`/api/test-suites/${testSuite.id}`).expect(403);
       });
 
       it('テストスイートの復元は403エラー（ADMINのみ）', async () => {
@@ -609,9 +586,7 @@ describe('テストスイートCRUD統合テスト', () => {
           data: { deletedAt: new Date() },
         });
 
-        await request(app)
-          .post(`/api/test-suites/${testSuite.id}/restore`)
-          .expect(403);
+        await request(app).post(`/api/test-suites/${testSuite.id}/restore`).expect(403);
       });
     });
 
@@ -631,15 +606,11 @@ describe('テストスイートCRUD統合テスト', () => {
       });
 
       it('テストスイート一覧を取得できる', async () => {
-        await request(app)
-          .get(`/api/projects/${project.id}/test-suites`)
-          .expect(200);
+        await request(app).get(`/api/projects/${project.id}/test-suites`).expect(200);
       });
 
       it('テストスイート詳細を取得できる', async () => {
-        await request(app)
-          .get(`/api/test-suites/${testSuite.id}`)
-          .expect(200);
+        await request(app).get(`/api/test-suites/${testSuite.id}`).expect(200);
       });
 
       it('テストスイートの更新は403エラー', async () => {
@@ -650,9 +621,7 @@ describe('テストスイートCRUD統合テスト', () => {
       });
 
       it('テストスイートの削除は403エラー', async () => {
-        await request(app)
-          .delete(`/api/test-suites/${testSuite.id}`)
-          .expect(403);
+        await request(app).delete(`/api/test-suites/${testSuite.id}`).expect(403);
       });
 
       it('テストスイートの復元は403エラー', async () => {
@@ -662,9 +631,7 @@ describe('テストスイートCRUD統合テスト', () => {
           data: { deletedAt: new Date() },
         });
 
-        await request(app)
-          .post(`/api/test-suites/${testSuite.id}/restore`)
-          .expect(403);
+        await request(app).post(`/api/test-suites/${testSuite.id}/restore`).expect(403);
       });
     });
   });

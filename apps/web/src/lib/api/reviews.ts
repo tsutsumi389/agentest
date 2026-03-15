@@ -36,12 +36,13 @@ export const reviewCommentsApi = {
     api.patch<{ comment: ReviewCommentWithReplies }>(`/api/review-comments/${commentId}`, data),
 
   // コメント削除
-  delete: (commentId: string) =>
-    api.delete<void>(`/api/review-comments/${commentId}`),
+  delete: (commentId: string) => api.delete<void>(`/api/review-comments/${commentId}`),
 
   // ステータス変更
   updateStatus: (commentId: string, status: ReviewStatus) =>
-    api.patch<{ comment: ReviewCommentWithReplies }>(`/api/review-comments/${commentId}/status`, { status }),
+    api.patch<{ comment: ReviewCommentWithReplies }>(`/api/review-comments/${commentId}/status`, {
+      status,
+    }),
 
   // 返信作成
   createReply: (commentId: string, data: { content: string }) =>
@@ -104,12 +105,10 @@ export const reviewsApi = {
     api.post<{ review: ReviewWithDetails }>(`/api/test-suites/${testSuiteId}/reviews`, data),
 
   // 自分の下書きレビュー一覧取得
-  getDrafts: () =>
-    api.get<{ reviews: DraftReview[] }>('/api/reviews/drafts'),
+  getDrafts: () => api.get<{ reviews: DraftReview[] }>('/api/reviews/drafts'),
 
   // レビュー詳細取得
-  getById: (reviewId: string) =>
-    api.get<{ review: ReviewWithDetails }>(`/api/reviews/${reviewId}`),
+  getById: (reviewId: string) => api.get<{ review: ReviewWithDetails }>(`/api/reviews/${reviewId}`),
 
   // レビュー更新（DRAFTのみ）
   update: (reviewId: string, data: { summary?: string }) =>
@@ -124,8 +123,7 @@ export const reviewsApi = {
     api.patch<{ review: ReviewWithDetails }>(`/api/reviews/${reviewId}/verdict`, { verdict }),
 
   // レビュー削除（DRAFTのみ）
-  delete: (reviewId: string) =>
-    api.delete<void>(`/api/reviews/${reviewId}`),
+  delete: (reviewId: string) => api.delete<void>(`/api/reviews/${reviewId}`),
 
   // コメント追加
   addComment: (reviewId: string, data: CreateReviewCommentRequest) =>
@@ -133,7 +131,10 @@ export const reviewsApi = {
 
   // コメント更新
   updateComment: (reviewId: string, commentId: string, data: { content: string }) =>
-    api.patch<{ comment: ReviewCommentWithReplies }>(`/api/reviews/${reviewId}/comments/${commentId}`, data),
+    api.patch<{ comment: ReviewCommentWithReplies }>(
+      `/api/reviews/${reviewId}/comments/${commentId}`,
+      data
+    ),
 
   // コメント削除
   deleteComment: (reviewId: string, commentId: string) =>
@@ -141,15 +142,24 @@ export const reviewsApi = {
 
   // コメントステータス変更
   updateCommentStatus: (reviewId: string, commentId: string, status: ReviewStatus) =>
-    api.patch<{ comment: ReviewCommentWithReplies }>(`/api/reviews/${reviewId}/comments/${commentId}/status`, { status }),
+    api.patch<{ comment: ReviewCommentWithReplies }>(
+      `/api/reviews/${reviewId}/comments/${commentId}/status`,
+      { status }
+    ),
 
   // 返信追加
   addReply: (reviewId: string, commentId: string, data: { content: string }) =>
-    api.post<{ reply: ReviewReply }>(`/api/reviews/${reviewId}/comments/${commentId}/replies`, data),
+    api.post<{ reply: ReviewReply }>(
+      `/api/reviews/${reviewId}/comments/${commentId}/replies`,
+      data
+    ),
 
   // 返信更新
   updateReply: (reviewId: string, commentId: string, replyId: string, data: { content: string }) =>
-    api.patch<{ reply: ReviewReply }>(`/api/reviews/${reviewId}/comments/${commentId}/replies/${replyId}`, data),
+    api.patch<{ reply: ReviewReply }>(
+      `/api/reviews/${reviewId}/comments/${commentId}/replies/${replyId}`,
+      data
+    ),
 
   // 返信削除
   deleteReply: (reviewId: string, commentId: string, replyId: string) =>

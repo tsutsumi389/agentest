@@ -107,9 +107,7 @@ export function AuditLogs() {
             <ClipboardList className="w-6 h-6 text-accent" />
             <div>
               <h1 className="text-2xl font-bold text-foreground">監査ログ</h1>
-              <p className="text-foreground-muted mt-1">
-                システム全体の操作履歴を閲覧
-              </p>
+              <p className="text-foreground-muted mt-1">システム全体の操作履歴を閲覧</p>
             </div>
           </div>
           <button
@@ -124,10 +122,7 @@ export function AuditLogs() {
 
         {/* 検索・フィルター */}
         <div className="bg-background-secondary border border-border rounded-lg p-4 space-y-4">
-          <AuditLogSearchForm
-            value={params.q || ''}
-            onChange={(q) => updateParams({ q })}
-          />
+          <AuditLogSearchForm value={params.q || ''} onChange={(q) => updateParams({ q })} />
           <AuditLogFilters
             category={params.category || []}
             organizationId={params.organizationId || ''}
@@ -146,9 +141,7 @@ export function AuditLogs() {
         {/* テーブル */}
         <div className="bg-background-secondary border border-border rounded-lg">
           {isLoading ? (
-            <div className="text-center text-foreground-muted py-12">
-              読み込み中...
-            </div>
+            <div className="text-center text-foreground-muted py-12">読み込み中...</div>
           ) : data ? (
             <AuditLogTable
               auditLogs={data.auditLogs}
@@ -168,9 +161,7 @@ export function AuditLogs() {
       </div>
 
       {/* 詳細モーダル */}
-      {selectedLog && (
-        <AuditLogDetailModal log={selectedLog} onClose={handleCloseModal} />
-      )}
+      {selectedLog && <AuditLogDetailModal log={selectedLog} onClose={handleCloseModal} />}
     </div>
   );
 }

@@ -21,10 +21,7 @@ export class SessionController {
       // 現在のセッションIDを取得（リクエストに含まれている場合）
       const currentSessionId = req.sessionId;
 
-      const sessions = await this.sessionService.getUserSessions(
-        req.user.id,
-        currentSessionId
-      );
+      const sessions = await this.sessionService.getUserSessions(req.user.id, currentSessionId);
 
       res.json({ data: sessions });
     } catch (error) {
@@ -76,10 +73,7 @@ export class SessionController {
         throw new AuthenticationError('現在のセッションを特定できません');
       }
 
-      const result = await this.sessionService.revokeOtherSessions(
-        req.user.id,
-        req.sessionId
-      );
+      const result = await this.sessionService.revokeOtherSessions(req.user.id, req.sessionId);
 
       res.json({ data: result });
     } catch (error) {

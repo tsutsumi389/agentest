@@ -33,10 +33,9 @@ describe('useBodyScrollLock', () => {
 
   it('isLockedをfalseに変更するとoverflowが復元される', () => {
     document.body.style.overflow = '';
-    const { rerender } = renderHook(
-      ({ locked }) => useBodyScrollLock(locked),
-      { initialProps: { locked: true } }
-    );
+    const { rerender } = renderHook(({ locked }) => useBodyScrollLock(locked), {
+      initialProps: { locked: true },
+    });
     expect(document.body.style.overflow).toBe('hidden');
 
     rerender({ locked: false });

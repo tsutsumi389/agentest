@@ -54,29 +54,37 @@ describe('updateTestCaseTool', () => {
     });
 
     it('無効なUUIDはエラー', () => {
-      expect(() => updateTestCaseInputSchema.parse({
-        testCaseId: 'invalid-uuid',
-        title: 'Test Case',
-      })).toThrow();
+      expect(() =>
+        updateTestCaseInputSchema.parse({
+          testCaseId: 'invalid-uuid',
+          title: 'Test Case',
+        })
+      ).toThrow();
     });
 
     it('titleは1-200文字', () => {
-      expect(() => updateTestCaseInputSchema.parse({
-        testCaseId: TEST_CASE_ID,
-        title: '',
-      })).toThrow();
+      expect(() =>
+        updateTestCaseInputSchema.parse({
+          testCaseId: TEST_CASE_ID,
+          title: '',
+        })
+      ).toThrow();
 
-      expect(() => updateTestCaseInputSchema.parse({
-        testCaseId: TEST_CASE_ID,
-        title: 'a'.repeat(201),
-      })).toThrow();
+      expect(() =>
+        updateTestCaseInputSchema.parse({
+          testCaseId: TEST_CASE_ID,
+          title: 'a'.repeat(201),
+        })
+      ).toThrow();
     });
 
     it('descriptionは2000文字以下', () => {
-      expect(() => updateTestCaseInputSchema.parse({
-        testCaseId: TEST_CASE_ID,
-        description: 'a'.repeat(2001),
-      })).toThrow();
+      expect(() =>
+        updateTestCaseInputSchema.parse({
+          testCaseId: TEST_CASE_ID,
+          description: 'a'.repeat(2001),
+        })
+      ).toThrow();
     });
 
     it('descriptionはnullを許容', () => {
@@ -96,10 +104,12 @@ describe('updateTestCaseTool', () => {
     });
 
     it('無効なpriorityはエラー', () => {
-      expect(() => updateTestCaseInputSchema.parse({
-        testCaseId: TEST_CASE_ID,
-        priority: 'INVALID',
-      })).toThrow();
+      expect(() =>
+        updateTestCaseInputSchema.parse({
+          testCaseId: TEST_CASE_ID,
+          priority: 'INVALID',
+        })
+      ).toThrow();
     });
 
     it('有効なstatusを受け付ける', () => {
@@ -144,17 +154,21 @@ describe('updateTestCaseTool', () => {
     });
 
     it('子エンティティのcontentが空の場合はエラー', () => {
-      expect(() => updateTestCaseInputSchema.parse({
-        testCaseId: TEST_CASE_ID,
-        steps: [{ content: '' }],
-      })).toThrow();
+      expect(() =>
+        updateTestCaseInputSchema.parse({
+          testCaseId: TEST_CASE_ID,
+          steps: [{ content: '' }],
+        })
+      ).toThrow();
     });
 
     it('子エンティティのidが不正なUUIDの場合はエラー', () => {
-      expect(() => updateTestCaseInputSchema.parse({
-        testCaseId: TEST_CASE_ID,
-        steps: [{ id: 'invalid-uuid', content: 'Step' }],
-      })).toThrow();
+      expect(() =>
+        updateTestCaseInputSchema.parse({
+          testCaseId: TEST_CASE_ID,
+          steps: [{ id: 'invalid-uuid', content: 'Step' }],
+        })
+      ).toThrow();
     });
   });
 
@@ -201,7 +215,10 @@ describe('updateTestCaseTool', () => {
 
       expect(mockApiClient.patch).toHaveBeenCalledWith(
         `/internal/api/test-cases/${TEST_CASE_ID}`,
-        expect.objectContaining({ title: 'Updated Case', groupId: expect.stringMatching(/^[0-9a-f-]{36}$/) }),
+        expect.objectContaining({
+          title: 'Updated Case',
+          groupId: expect.stringMatching(/^[0-9a-f-]{36}$/),
+        }),
         { userId: TEST_USER_ID }
       );
       expect(result).toEqual(mockResponse);
@@ -235,7 +252,13 @@ describe('updateTestCaseTool', () => {
 
       expect(mockApiClient.patch).toHaveBeenCalledWith(
         `/internal/api/test-cases/${TEST_CASE_ID}`,
-        expect.objectContaining({ title: 'Updated Case', description: 'New Description', priority: 'HIGH', status: 'ACTIVE', groupId: expect.stringMatching(/^[0-9a-f-]{36}$/) }),
+        expect.objectContaining({
+          title: 'Updated Case',
+          description: 'New Description',
+          priority: 'HIGH',
+          status: 'ACTIVE',
+          groupId: expect.stringMatching(/^[0-9a-f-]{36}$/),
+        }),
         { userId: TEST_USER_ID }
       );
     });
@@ -291,21 +314,15 @@ describe('updateTestCaseTool', () => {
       const context: ToolContext = { userId: TEST_USER_ID };
       const input = {
         testCaseId: TEST_CASE_ID,
-        steps: [
-          { id: stepId, content: 'Updated step' },
-          { content: 'New step' },
-        ],
+        steps: [{ id: stepId, content: 'Updated step' }, { content: 'New step' }],
       };
 
-      const result = await updateTestCaseTool.handler(input, context) as typeof mockResponse;
+      const result = (await updateTestCaseTool.handler(input, context)) as typeof mockResponse;
 
       expect(mockApiClient.patch).toHaveBeenCalledWith(
         `/internal/api/test-cases/${TEST_CASE_ID}`,
         expect.objectContaining({
-          steps: [
-            { id: stepId, content: 'Updated step' },
-            { content: 'New step' },
-          ],
+          steps: [{ id: stepId, content: 'Updated step' }, { content: 'New step' }],
           groupId: expect.stringMatching(/^[0-9a-f-]{36}$/),
         }),
         { userId: TEST_USER_ID }
@@ -338,11 +355,15 @@ describe('updateTestCaseTool', () => {
         expectedResults: [],
       };
 
-      const result = await updateTestCaseTool.handler(input, context) as typeof mockResponse;
+      const result = (await updateTestCaseTool.handler(input, context)) as typeof mockResponse;
 
       expect(mockApiClient.patch).toHaveBeenCalledWith(
         `/internal/api/test-cases/${TEST_CASE_ID}`,
-        expect.objectContaining({ steps: [], expectedResults: [], groupId: expect.stringMatching(/^[0-9a-f-]{36}$/) }),
+        expect.objectContaining({
+          steps: [],
+          expectedResults: [],
+          groupId: expect.stringMatching(/^[0-9a-f-]{36}$/),
+        }),
         { userId: TEST_USER_ID }
       );
       expect(result.testCase.steps).toHaveLength(0);

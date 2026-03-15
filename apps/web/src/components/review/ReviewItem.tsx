@@ -39,19 +39,11 @@ export function ReviewItem({ review, onClick }: ReviewItemProps) {
         <div className="flex-1 min-w-0">
           {/* 著者行 */}
           <div className="flex items-center gap-2 mb-2">
-            <AuthorAvatar
-              author={review.author}
-              agentSession={review.agentSession}
-              size="lg"
-            />
+            <AuthorAvatar author={review.author} agentSession={review.agentSession} size="lg" />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-medium text-foreground text-sm truncate">
-                  {authorName}
-                </span>
-                <span className="text-xs text-foreground-muted">
-                  {submittedAt}
-                </span>
+                <span className="font-medium text-foreground text-sm truncate">{authorName}</span>
+                <span className="text-xs text-foreground-muted">{submittedAt}</span>
               </div>
             </div>
           </div>

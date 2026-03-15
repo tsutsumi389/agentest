@@ -67,9 +67,7 @@ export async function runHistoryCleanup(): Promise<void> {
   });
 
   const totalDeleted =
-    testCaseHistoryResult.count +
-    testSuiteHistoryResult.count +
-    projectHistoryResult.count;
+    testCaseHistoryResult.count + testSuiteHistoryResult.count + projectHistoryResult.count;
 
   logger.info(
     {

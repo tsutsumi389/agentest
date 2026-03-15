@@ -8,7 +8,11 @@ vi.mock('../../../lib/api', () => ({
     create: vi.fn().mockResolvedValue({ project: { id: 'proj-1', name: 'テスト' } }),
   },
   ApiError: class ApiError extends Error {
-    constructor(public statusCode: number, public code: string, message: string) {
+    constructor(
+      public statusCode: number,
+      public code: string,
+      message: string
+    ) {
       super(message);
       this.name = 'ApiError';
     }
@@ -47,11 +51,7 @@ function renderModal(props: { organizationId?: string } = {}) {
 
   const result = render(
     <QueryClientProvider client={queryClient}>
-      <CreateProjectModal
-        isOpen={true}
-        onClose={onClose}
-        organizationId={props.organizationId}
-      />
+      <CreateProjectModal isOpen={true} onClose={onClose} organizationId={props.organizationId} />
     </QueryClientProvider>
   );
 

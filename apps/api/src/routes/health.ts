@@ -8,7 +8,11 @@ const router: Router = Router();
 /**
  * データベース接続チェック
  */
-async function checkDatabase(): Promise<{ status: 'healthy' | 'unhealthy'; latency?: number; error?: string }> {
+async function checkDatabase(): Promise<{
+  status: 'healthy' | 'unhealthy';
+  latency?: number;
+  error?: string;
+}> {
   const start = Date.now();
   try {
     await prisma.$queryRaw`SELECT 1`;
@@ -21,7 +25,11 @@ async function checkDatabase(): Promise<{ status: 'healthy' | 'unhealthy'; laten
 /**
  * Redis接続チェック
  */
-async function checkRedis(): Promise<{ status: 'healthy' | 'unhealthy' | 'not_configured'; latency?: number; error?: string }> {
+async function checkRedis(): Promise<{
+  status: 'healthy' | 'unhealthy' | 'not_configured';
+  latency?: number;
+  error?: string;
+}> {
   if (!env.REDIS_URL) {
     return { status: 'not_configured' };
   }
@@ -50,12 +58,10 @@ async function checkRedis(): Promise<{ status: 'healthy' | 'unhealthy' | 'not_co
  * GET /health
  */
 router.get('/health', async (_req, res) => {
-  const [database, redis] = await Promise.all([
-    checkDatabase(),
-    checkRedis(),
-  ]);
+  const [database, redis] = await Promise.all([checkDatabase(), checkRedis()]);
 
-  const isHealthy = database.status === 'healthy' &&
+  const isHealthy =
+    database.status === 'healthy' &&
     (redis.status === 'healthy' || redis.status === 'not_configured');
 
   const health = {

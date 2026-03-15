@@ -128,9 +128,7 @@ describe('UserPasswordController', () => {
       await controller.setPassword(req, res, mockNext);
 
       expect(mockPasswordAuthService.setPassword).not.toHaveBeenCalled();
-      expect(mockNext).toHaveBeenCalledWith(
-        expect.objectContaining({ statusCode: 400 })
-      );
+      expect(mockNext).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 400 }));
     });
 
     it('パスワードが未入力の場合はバリデーションエラーになる', async () => {
@@ -142,9 +140,7 @@ describe('UserPasswordController', () => {
       await controller.setPassword(req, res, mockNext);
 
       expect(mockPasswordAuthService.setPassword).not.toHaveBeenCalled();
-      expect(mockNext).toHaveBeenCalledWith(
-        expect.objectContaining({ statusCode: 400 })
-      );
+      expect(mockNext).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 400 }));
     });
 
     it('既にパスワード設定済みの場合はnextにConflictErrorを渡す', async () => {
@@ -186,7 +182,10 @@ describe('UserPasswordController', () => {
 
     it('正しい現在のパスワードで新しいパスワードに変更できる（200を返す）', async () => {
       mockPasswordAuthService.changePassword.mockResolvedValue(undefined);
-      const req = mockRequest({ body: validBody, cookies: { refresh_token: 'test-refresh-token' } }) as Request;
+      const req = mockRequest({
+        body: validBody,
+        cookies: { refresh_token: 'test-refresh-token' },
+      }) as Request;
       const res = mockResponse() as Response;
 
       await controller.changePassword(req, res, mockNext);
@@ -236,9 +235,7 @@ describe('UserPasswordController', () => {
       await controller.changePassword(req, res, mockNext);
 
       expect(mockPasswordAuthService.changePassword).not.toHaveBeenCalled();
-      expect(mockNext).toHaveBeenCalledWith(
-        expect.objectContaining({ statusCode: 400 })
-      );
+      expect(mockNext).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 400 }));
     });
 
     it('currentPasswordが未入力の場合はバリデーションエラーになる', async () => {
@@ -250,9 +247,7 @@ describe('UserPasswordController', () => {
       await controller.changePassword(req, res, mockNext);
 
       expect(mockPasswordAuthService.changePassword).not.toHaveBeenCalled();
-      expect(mockNext).toHaveBeenCalledWith(
-        expect.objectContaining({ statusCode: 400 })
-      );
+      expect(mockNext).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 400 }));
     });
 
     it('パスワード未設定ユーザーの場合はnextにBadRequestErrorを渡す', async () => {

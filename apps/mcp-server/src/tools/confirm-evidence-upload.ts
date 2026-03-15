@@ -23,7 +23,10 @@ interface ConfirmEvidenceUploadResponse {
 /**
  * ハンドラー
  */
-const confirmEvidenceUploadHandler: ToolHandler<ConfirmEvidenceUploadInput, ConfirmEvidenceUploadResponse> = async (input, context) => {
+const confirmEvidenceUploadHandler: ToolHandler<
+  ConfirmEvidenceUploadInput,
+  ConfirmEvidenceUploadResponse
+> = async (input, context) => {
   const { userId } = context;
 
   if (!userId) {

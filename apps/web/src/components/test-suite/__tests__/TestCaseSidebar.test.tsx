@@ -18,7 +18,7 @@ vi.mock('../../../lib/api', () => ({
     constructor(
       public statusCode: number,
       public code: string,
-      message: string,
+      message: string
     ) {
       super(message);
     }
@@ -61,11 +61,7 @@ function renderWithProviders(ui: React.ReactElement) {
       queries: { retry: false },
     },
   });
-  return render(
-    <QueryClientProvider client={queryClient}>
-      {ui}
-    </QueryClientProvider>
-  );
+  return render(<QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>);
 }
 
 const defaultProps = {
@@ -109,9 +105,18 @@ describe('TestCaseSidebar', () => {
     it('他のフィルタは非選択状態になっている', () => {
       renderWithProviders(<TestCaseSidebar {...defaultProps} />);
 
-      expect(screen.getByRole('button', { name: '下書き' })).toHaveAttribute('aria-pressed', 'false');
-      expect(screen.getByRole('button', { name: 'アーカイブ' })).toHaveAttribute('aria-pressed', 'false');
-      expect(screen.getByRole('button', { name: 'ゴミ箱' })).toHaveAttribute('aria-pressed', 'false');
+      expect(screen.getByRole('button', { name: '下書き' })).toHaveAttribute(
+        'aria-pressed',
+        'false'
+      );
+      expect(screen.getByRole('button', { name: 'アーカイブ' })).toHaveAttribute(
+        'aria-pressed',
+        'false'
+      );
+      expect(screen.getByRole('button', { name: 'ゴミ箱' })).toHaveAttribute(
+        'aria-pressed',
+        'false'
+      );
     });
   });
 
@@ -121,8 +126,14 @@ describe('TestCaseSidebar', () => {
 
       fireEvent.click(screen.getByRole('button', { name: '下書き' }));
 
-      expect(screen.getByRole('button', { name: '下書き' })).toHaveAttribute('aria-pressed', 'true');
-      expect(screen.getByRole('button', { name: 'アクティブ' })).toHaveAttribute('aria-pressed', 'false');
+      expect(screen.getByRole('button', { name: '下書き' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+      expect(screen.getByRole('button', { name: 'アクティブ' })).toHaveAttribute(
+        'aria-pressed',
+        'false'
+      );
     });
 
     it('「アーカイブ」フィルタをクリックすると選択状態が切り替わる', () => {
@@ -130,7 +141,10 @@ describe('TestCaseSidebar', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'アーカイブ' }));
 
-      expect(screen.getByRole('button', { name: 'アーカイブ' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('button', { name: 'アーカイブ' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
     });
 
     it('「ゴミ箱」フィルタをクリックすると選択状態が切り替わる', () => {
@@ -138,14 +152,15 @@ describe('TestCaseSidebar', () => {
 
       fireEvent.click(screen.getByRole('button', { name: 'ゴミ箱' }));
 
-      expect(screen.getByRole('button', { name: 'ゴミ箱' })).toHaveAttribute('aria-pressed', 'true');
+      expect(screen.getByRole('button', { name: 'ゴミ箱' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
     });
 
     it('フィルタ切り替え時にonFilterChangeコールバックが呼ばれる', () => {
       const onFilterChange = vi.fn();
-      renderWithProviders(
-        <TestCaseSidebar {...defaultProps} onFilterChange={onFilterChange} />
-      );
+      renderWithProviders(<TestCaseSidebar {...defaultProps} onFilterChange={onFilterChange} />);
 
       fireEvent.click(screen.getByRole('button', { name: '下書き' }));
 
@@ -162,9 +177,7 @@ describe('TestCaseSidebar', () => {
     });
 
     it('テストケースが0件の場合、空メッセージを表示する', () => {
-      renderWithProviders(
-        <TestCaseSidebar {...defaultProps} testCases={[]} />
-      );
+      renderWithProviders(<TestCaseSidebar {...defaultProps} testCases={[]} />);
 
       expect(screen.getByText('テストケースがありません')).toBeInTheDocument();
     });
@@ -189,11 +202,7 @@ describe('TestCaseSidebar', () => {
 
     it('ゴミ箱フィルタ時、削除済みテストケースに残り日数バッジを表示する', () => {
       renderWithProviders(
-        <TestCaseSidebar
-          {...defaultProps}
-          testCases={deletedTestCases}
-          activeFilter="deleted"
-        />
+        <TestCaseSidebar {...defaultProps} testCases={deletedTestCases} activeFilter="deleted" />
       );
 
       // 残り日数表示を確認
@@ -203,11 +212,7 @@ describe('TestCaseSidebar', () => {
 
     it('残り3日以下の場合、警告スタイルが適用される', () => {
       renderWithProviders(
-        <TestCaseSidebar
-          {...defaultProps}
-          testCases={deletedTestCases}
-          activeFilter="deleted"
-        />
+        <TestCaseSidebar {...defaultProps} testCases={deletedTestCases} activeFilter="deleted" />
       );
 
       // 残り3日のテストケースは警告色
@@ -217,11 +222,7 @@ describe('TestCaseSidebar', () => {
 
     it('ゴミ箱フィルタ時、復元ボタンが各テストケースに表示される', () => {
       renderWithProviders(
-        <TestCaseSidebar
-          {...defaultProps}
-          testCases={deletedTestCases}
-          activeFilter="deleted"
-        />
+        <TestCaseSidebar {...defaultProps} testCases={deletedTestCases} activeFilter="deleted" />
       );
 
       const restoreButtons = screen.getAllByRole('button', { name: '復元' });
@@ -230,11 +231,7 @@ describe('TestCaseSidebar', () => {
 
     it('ゴミ箱が空の場合、適切な空メッセージを表示する', () => {
       renderWithProviders(
-        <TestCaseSidebar
-          {...defaultProps}
-          testCases={[]}
-          activeFilter="deleted"
-        />
+        <TestCaseSidebar {...defaultProps} testCases={[]} activeFilter="deleted" />
       );
 
       expect(screen.getByText('削除済みテストケースはありません')).toBeInTheDocument();
@@ -242,11 +239,7 @@ describe('TestCaseSidebar', () => {
 
     it('ゴミ箱フィルタ時、ドラッグハンドルが表示されない', () => {
       renderWithProviders(
-        <TestCaseSidebar
-          {...defaultProps}
-          testCases={deletedTestCases}
-          activeFilter="deleted"
-        />
+        <TestCaseSidebar {...defaultProps} testCases={deletedTestCases} activeFilter="deleted" />
       );
 
       expect(screen.queryByLabelText('ドラッグして並び替え')).not.toBeInTheDocument();
@@ -254,11 +247,7 @@ describe('TestCaseSidebar', () => {
 
     it('ゴミ箱フィルタ時、作成ボタンのリンクが表示されない', () => {
       renderWithProviders(
-        <TestCaseSidebar
-          {...defaultProps}
-          testCases={[]}
-          activeFilter="deleted"
-        />
+        <TestCaseSidebar {...defaultProps} testCases={[]} activeFilter="deleted" />
       );
 
       // 空状態でも「テストケースを作成」リンクは表示されない
@@ -281,11 +270,7 @@ describe('TestCaseSidebar', () => {
       });
 
       renderWithProviders(
-        <TestCaseSidebar
-          {...defaultProps}
-          testCases={deletedTestCases}
-          activeFilter="deleted"
-        />
+        <TestCaseSidebar {...defaultProps} testCases={deletedTestCases} activeFilter="deleted" />
       );
 
       const restoreButton = screen.getByRole('button', { name: '復元' });
@@ -302,11 +287,7 @@ describe('TestCaseSidebar', () => {
       });
 
       renderWithProviders(
-        <TestCaseSidebar
-          {...defaultProps}
-          testCases={deletedTestCases}
-          activeFilter="deleted"
-        />
+        <TestCaseSidebar {...defaultProps} testCases={deletedTestCases} activeFilter="deleted" />
       );
 
       fireEvent.click(screen.getByRole('button', { name: '復元' }));
@@ -320,11 +301,7 @@ describe('TestCaseSidebar', () => {
       vi.mocked(testCasesApi.restore).mockRejectedValue(new Error('復元失敗'));
 
       renderWithProviders(
-        <TestCaseSidebar
-          {...defaultProps}
-          testCases={deletedTestCases}
-          activeFilter="deleted"
-        />
+        <TestCaseSidebar {...defaultProps} testCases={deletedTestCases} activeFilter="deleted" />
       );
 
       fireEvent.click(screen.getByRole('button', { name: '復元' }));
@@ -351,17 +328,14 @@ describe('TestCaseSidebar', () => {
       // resolveを遅延させて二重クリックをシミュレート
       let resolveRestore: () => void;
       vi.mocked(testCasesApi.restore).mockImplementation(
-        () => new Promise<{ testCase: TestCase }>((resolve) => {
-          resolveRestore = () => resolve({ testCase: createTestCase({ id: 'tc-del-1' }) });
-        })
+        () =>
+          new Promise<{ testCase: TestCase }>((resolve) => {
+            resolveRestore = () => resolve({ testCase: createTestCase({ id: 'tc-del-1' }) });
+          })
       );
 
       renderWithProviders(
-        <TestCaseSidebar
-          {...defaultProps}
-          testCases={deletedTestCases}
-          activeFilter="deleted"
-        />
+        <TestCaseSidebar {...defaultProps} testCases={deletedTestCases} activeFilter="deleted" />
       );
 
       const restoreButton = screen.getByRole('button', { name: '復元' });
@@ -408,7 +382,8 @@ describe('TestCaseSidebar', () => {
     });
 
     it('長いタイトルでもtitleに全文が含まれる', () => {
-      const longTitle = 'これはとても長いテストケース名で、サイドバーの幅では表示しきれないほどの長さがあります';
+      const longTitle =
+        'これはとても長いテストケース名で、サイドバーの幅では表示しきれないほどの長さがあります';
       renderWithProviders(
         <TestCaseSidebar
           {...defaultProps}

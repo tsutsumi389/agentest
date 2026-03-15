@@ -1,5 +1,10 @@
 import { prisma } from '@agentest/db';
-import { NotFoundError, ConflictError, AuthorizationError, DELETION_GRACE_PERIOD_DAYS } from '@agentest/shared';
+import {
+  NotFoundError,
+  ConflictError,
+  AuthorizationError,
+  DELETION_GRACE_PERIOD_DAYS,
+} from '@agentest/shared';
 import { OrganizationRepository } from '../repositories/organization.repository.js';
 import { auditLogService } from './audit-log.service.js';
 import { notificationService } from './notification.service.js';
@@ -130,7 +135,11 @@ export class OrganizationService {
   /**
    * 招待を送信
    */
-  async invite(organizationId: string, invitedByUserId: string, data: { email: string; role: 'ADMIN' | 'MEMBER' }) {
+  async invite(
+    organizationId: string,
+    invitedByUserId: string,
+    data: { email: string; role: 'ADMIN' | 'MEMBER' }
+  ) {
     await this.findById(organizationId);
 
     // 既存ユーザーが既にメンバーかチェック
@@ -372,7 +381,9 @@ export class OrganizationService {
 
     // OWNERのロール変更は不可（transferOwnershipを使用）
     if (member.role === 'OWNER') {
-      throw new ConflictError('オーナーのロールは変更できません。オーナー権限移譲を使用してください');
+      throw new ConflictError(
+        'オーナーのロールは変更できません。オーナー権限移譲を使用してください'
+      );
     }
 
     const updatedMember = await prisma.organizationMember.update({
@@ -598,9 +609,7 @@ export class OrganizationService {
     // 猶予期間チェック
     const deletedAt = new Date(org.deletedAt!);
     const permanentDeletionDate = new Date(deletedAt);
-    permanentDeletionDate.setDate(
-      permanentDeletionDate.getDate() + DELETION_GRACE_PERIOD_DAYS
-    );
+    permanentDeletionDate.setDate(permanentDeletionDate.getDate() + DELETION_GRACE_PERIOD_DAYS);
 
     if (new Date() > permanentDeletionDate) {
       throw new ConflictError('復元期間（30日間）を過ぎています。この組織は復元できません');

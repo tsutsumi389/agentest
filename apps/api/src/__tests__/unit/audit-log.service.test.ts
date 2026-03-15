@@ -113,10 +113,7 @@ describe('AuditLogService', () => {
       // 例外が投げられないことを確認
       await expect(service.log(params)).resolves.toBeUndefined();
 
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        { err: error },
-        '監査ログの記録に失敗'
-      );
+      expect(mockLogger.error).toHaveBeenCalledWith({ err: error }, '監査ログの記録に失敗');
     });
 
     it('最小限のパラメータで記録できる', async () => {
@@ -158,10 +155,7 @@ describe('AuditLogService', () => {
 
       const result = await service.getByOrganization('org-1');
 
-      expect(mockAuditLogRepo.findByOrganization).toHaveBeenCalledWith(
-        'org-1',
-        {}
-      );
+      expect(mockAuditLogRepo.findByOrganization).toHaveBeenCalledWith('org-1', {});
       expect(result).toEqual({ logs: mockLogs, total: 2 });
     });
 
@@ -180,10 +174,7 @@ describe('AuditLogService', () => {
 
       const result = await service.getByOrganization('org-1', options);
 
-      expect(mockAuditLogRepo.findByOrganization).toHaveBeenCalledWith(
-        'org-1',
-        options
-      );
+      expect(mockAuditLogRepo.findByOrganization).toHaveBeenCalledWith('org-1', options);
       expect(result).toEqual({ logs: [mockLogs[1]], total: 1 });
     });
 
@@ -235,10 +226,7 @@ describe('AuditLogService', () => {
 
       const result = await service.getByUser('user-1', options);
 
-      expect(mockAuditLogRepo.findByUser).toHaveBeenCalledWith(
-        'user-1',
-        options
-      );
+      expect(mockAuditLogRepo.findByUser).toHaveBeenCalledWith('user-1', options);
       expect(result).toEqual({ logs: mockLogs, total: 1 });
     });
 
@@ -306,7 +294,9 @@ describe('AuditLogService', () => {
       const result = service.formatAsCSV([]);
 
       const headerLine = result.replace(BOM, '').split('\n')[0];
-      expect(headerLine).toBe('ID,日時,カテゴリ,アクション,ユーザー,対象タイプ,対象ID,IPアドレス,詳細');
+      expect(headerLine).toBe(
+        'ID,日時,カテゴリ,アクション,ユーザー,対象タイプ,対象ID,IPアドレス,詳細'
+      );
     });
 
     it('日時をISO形式で出力する', () => {
@@ -456,7 +446,9 @@ describe('AuditLogService', () => {
       const lines = result.replace(BOM, '').split('\n');
       // ヘッダー + 改行後の空行（rowsが空なので）
       expect(lines).toHaveLength(2);
-      expect(lines[0]).toBe('ID,日時,カテゴリ,アクション,ユーザー,対象タイプ,対象ID,IPアドレス,詳細');
+      expect(lines[0]).toBe(
+        'ID,日時,カテゴリ,アクション,ユーザー,対象タイプ,対象ID,IPアドレス,詳細'
+      );
       expect(lines[1]).toBe(''); // 空のデータ行
     });
 

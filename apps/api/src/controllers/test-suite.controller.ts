@@ -46,17 +46,26 @@ const reorderTestCasesSchema = z.object({
   groupId: z.string().uuid().optional(),
 });
 
-const deletePreconditionBodySchema = z.object({
-  groupId: z.string().uuid().optional(),
-}).optional().default({});
+const deletePreconditionBodySchema = z
+  .object({
+    groupId: z.string().uuid().optional(),
+  })
+  .optional()
+  .default({});
 
-const deleteTestSuiteBodySchema = z.object({
-  groupId: z.string().uuid().optional(),
-}).optional().default({});
+const deleteTestSuiteBodySchema = z
+  .object({
+    groupId: z.string().uuid().optional(),
+  })
+  .optional()
+  .default({});
 
-const restoreTestSuiteBodySchema = z.object({
-  groupId: z.string().uuid().optional(),
-}).optional().default({});
+const restoreTestSuiteBodySchema = z
+  .object({
+    groupId: z.string().uuid().optional(),
+  })
+  .optional()
+  .default({});
 
 const startExecutionSchema = z.object({
   environmentId: z.string().uuid().optional(),
@@ -108,7 +117,9 @@ export class TestSuiteController {
     try {
       const { testSuiteId } = req.params;
       const { groupId, ...data } = updateTestSuiteSchema.parse(req.body);
-      const testSuite = await this.testSuiteService.update(testSuiteId, req.user!.id, data, { groupId });
+      const testSuite = await this.testSuiteService.update(testSuiteId, req.user!.id, data, {
+        groupId,
+      });
 
       res.json({ testSuite });
     } catch (error) {
@@ -138,7 +149,10 @@ export class TestSuiteController {
     try {
       const { testSuiteId } = req.params;
       const searchParams = testCaseSearchSchema.parse(req.query);
-      const { items, total } = await this.testSuiteService.searchTestCases(testSuiteId, searchParams);
+      const { items, total } = await this.testSuiteService.searchTestCases(
+        testSuiteId,
+        searchParams
+      );
 
       res.json({
         testCases: items,
@@ -173,7 +187,12 @@ export class TestSuiteController {
     try {
       const { testSuiteId } = req.params;
       const { testCaseIds, groupId } = reorderTestCasesSchema.parse(req.body);
-      const testCases = await this.testSuiteService.reorderTestCases(testSuiteId, testCaseIds, req.user!.id, { groupId });
+      const testCases = await this.testSuiteService.reorderTestCases(
+        testSuiteId,
+        testCaseIds,
+        req.user!.id,
+        { groupId }
+      );
 
       res.json({ testCases });
     } catch (error) {
@@ -202,7 +221,12 @@ export class TestSuiteController {
     try {
       const { testSuiteId } = req.params;
       const { groupId, ...data } = addPreconditionSchema.parse(req.body);
-      const precondition = await this.testSuiteService.addPrecondition(testSuiteId, req.user!.id, data, { groupId });
+      const precondition = await this.testSuiteService.addPrecondition(
+        testSuiteId,
+        req.user!.id,
+        data,
+        { groupId }
+      );
 
       res.status(201).json({ precondition });
     } catch (error) {
@@ -218,7 +242,13 @@ export class TestSuiteController {
       const { testSuiteId } = req.params;
       const { preconditionId } = preconditionIdParamSchema.parse(req.params);
       const { groupId, ...data } = updatePreconditionSchema.parse(req.body);
-      const precondition = await this.testSuiteService.updatePrecondition(testSuiteId, preconditionId, req.user!.id, data, { groupId });
+      const precondition = await this.testSuiteService.updatePrecondition(
+        testSuiteId,
+        preconditionId,
+        req.user!.id,
+        data,
+        { groupId }
+      );
 
       res.json({ precondition });
     } catch (error) {
@@ -234,7 +264,9 @@ export class TestSuiteController {
       const { testSuiteId } = req.params;
       const { preconditionId } = preconditionIdParamSchema.parse(req.params);
       const { groupId } = deletePreconditionBodySchema.parse(req.body);
-      await this.testSuiteService.deletePrecondition(testSuiteId, preconditionId, req.user!.id, { groupId });
+      await this.testSuiteService.deletePrecondition(testSuiteId, preconditionId, req.user!.id, {
+        groupId,
+      });
 
       res.status(204).send();
     } catch (error) {
@@ -249,7 +281,12 @@ export class TestSuiteController {
     try {
       const { testSuiteId } = req.params;
       const { preconditionIds, groupId } = reorderPreconditionsSchema.parse(req.body);
-      const preconditions = await this.testSuiteService.reorderPreconditions(testSuiteId, preconditionIds, req.user!.id, { groupId });
+      const preconditions = await this.testSuiteService.reorderPreconditions(
+        testSuiteId,
+        preconditionIds,
+        req.user!.id,
+        { groupId }
+      );
 
       res.json({ preconditions });
     } catch (error) {
@@ -294,7 +331,10 @@ export class TestSuiteController {
     try {
       const { testSuiteId } = req.params;
       const { limit, offset } = paginationQuerySchema.parse(req.query);
-      const { items, totalGroups, total } = await this.testSuiteService.getHistories(testSuiteId, { limit, offset });
+      const { items, totalGroups, total } = await this.testSuiteService.getHistories(testSuiteId, {
+        limit,
+        offset,
+      });
 
       res.json({ items, totalGroups, total });
     } catch (error) {

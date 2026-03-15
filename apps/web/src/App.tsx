@@ -100,7 +100,10 @@ export function App() {
             <Route path="settings/notifications" element={<SettingsPage />} />
             <Route path="notifications" element={<NotificationsPage />} />
             <Route path="organizations" element={<OrganizationsPage />} />
-            <Route path="organizations/:organizationId/settings" element={<OrganizationSettingsPage />} />
+            <Route
+              path="organizations/:organizationId/settings"
+              element={<OrganizationSettingsPage />}
+            />
           </Route>
 
           {/* 404 */}

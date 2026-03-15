@@ -17,7 +17,12 @@ interface LabelBadgeProps {
  * ラベルバッジコンポーネント
  * GitHubのラベルのような表示
  */
-export function LabelBadge({ label, removable = false, onRemove, className = '' }: LabelBadgeProps) {
+export function LabelBadge({
+  label,
+  removable = false,
+  onRemove,
+  className = '',
+}: LabelBadgeProps) {
   const textColor = getContrastTextColor(label.color);
 
   return (

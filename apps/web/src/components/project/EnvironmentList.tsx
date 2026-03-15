@@ -10,7 +10,13 @@ import {
   ExternalLink,
   Server,
 } from 'lucide-react';
-import { projectsApi, ApiError, type ProjectEnvironment, type Project, type ProjectMemberRole } from '../../lib/api';
+import {
+  projectsApi,
+  ApiError,
+  type ProjectEnvironment,
+  type Project,
+  type ProjectMemberRole,
+} from '../../lib/api';
 import { toast } from '../../stores/toast';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { EnvironmentFormModal } from './EnvironmentFormModal';
@@ -233,9 +239,7 @@ export function EnvironmentList({ project, currentRole }: EnvironmentListProps) 
         });
       } else {
         // 新規作成時：isDefaultがtrueの場合、他の環境のisDefaultをfalseにする
-        const updated = savedEnv.isDefault
-          ? prev.map((e) => ({ ...e, isDefault: false }))
-          : prev;
+        const updated = savedEnv.isDefault ? prev.map((e) => ({ ...e, isDefault: false })) : prev;
         return [...updated, savedEnv].sort((a, b) => a.sortOrder - b.sortOrder);
       }
     });
@@ -251,9 +255,7 @@ export function EnvironmentList({ project, currentRole }: EnvironmentListProps) 
       const response = await projectsApi.updateEnvironment(project.id, env.id, { isDefault: true });
       // 他の環境のisDefaultをfalseにし、対象環境を更新
       setEnvironments((prev) =>
-        prev.map((e) =>
-          e.id === env.id ? response.environment : { ...e, isDefault: false }
-        )
+        prev.map((e) => (e.id === env.id ? response.environment : { ...e, isDefault: false }))
       );
       toast.success(`${env.name} をデフォルトに設定しました`);
     } catch (err) {
@@ -398,13 +400,9 @@ export function EnvironmentList({ project, currentRole }: EnvironmentListProps) 
         <div>
           <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
             環境設定
-            {isReordering && (
-              <Loader2 className="w-4 h-4 animate-spin text-foreground-muted" />
-            )}
+            {isReordering && <Loader2 className="w-4 h-4 animate-spin text-foreground-muted" />}
           </h2>
-          <p className="text-sm text-foreground-muted mt-1">
-            テスト実行環境を管理します
-          </p>
+          <p className="text-sm text-foreground-muted mt-1">テスト実行環境を管理します</p>
         </div>
         {canEdit && (
           <button className="btn btn-primary" onClick={handleOpenCreate} disabled={isReordering}>
@@ -454,9 +452,7 @@ export function EnvironmentList({ project, currentRole }: EnvironmentListProps) 
                 {/* 環境情報 */}
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-foreground truncate">
-                      {env.name}
-                    </span>
+                    <span className="font-medium text-foreground truncate">{env.name}</span>
                     {env.isDefault && (
                       <span className="badge badge-accent text-xs flex items-center gap-1">
                         <Star className="w-3 h-3" />

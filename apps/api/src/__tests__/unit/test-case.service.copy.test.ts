@@ -75,9 +75,7 @@ describe('TestCaseService - copy', () => {
       { id: 'step-1', content: 'ステップ1', orderKey: '00001' },
       { id: 'step-2', content: 'ステップ2', orderKey: '00002' },
     ],
-    expectedResults: [
-      { id: 'result-1', content: '期待結果1', orderKey: '00001' },
-    ],
+    expectedResults: [{ id: 'result-1', content: '期待結果1', orderKey: '00001' }],
   };
 
   const mockTargetTestSuite = {
@@ -368,9 +366,7 @@ describe('TestCaseService - copy', () => {
               createdByUser: { id: userId, name: 'User', avatarUrl: null },
               preconditions: [],
               steps: [],
-              expectedResults: [
-                { id: 'new-result-1', content: '期待結果1', orderKey: '00001' },
-              ],
+              expectedResults: [{ id: 'new-result-1', content: '期待結果1', orderKey: '00001' }],
             }),
           },
           testCasePrecondition: {
@@ -385,9 +381,9 @@ describe('TestCaseService - copy', () => {
             createMany: vi.fn().mockImplementation(({ data }) => {
               createManyData = data;
             }),
-            findMany: vi.fn().mockResolvedValue([
-              { id: 'new-result-1', content: '期待結果1', orderKey: '00001' },
-            ]),
+            findMany: vi
+              .fn()
+              .mockResolvedValue([{ id: 'new-result-1', content: '期待結果1', orderKey: '00001' }]),
           },
           testCaseHistory: {
             create: vi.fn(),
@@ -717,16 +713,18 @@ describe('TestCaseService - copy', () => {
       });
 
       await expect(service.copy(testCaseId, userId, {})).rejects.toThrow(BadRequestError);
-      await expect(service.copy(testCaseId, userId, {})).rejects.toThrow('削除済みテストケースはコピーできません');
+      await expect(service.copy(testCaseId, userId, {})).rejects.toThrow(
+        '削除済みテストケースはコピーできません'
+      );
     });
 
     it('存在しないコピー先テストスイートの場合NotFoundError', async () => {
       mockPrismaTestCase.findFirst.mockResolvedValue(mockSourceTestCase);
       mockPrismaTestSuite.findFirst.mockResolvedValue(null);
 
-      await expect(service.copy(testCaseId, userId, { targetTestSuiteId: 'non-existent-suite' })).rejects.toThrow(
-        NotFoundError
-      );
+      await expect(
+        service.copy(testCaseId, userId, { targetTestSuiteId: 'non-existent-suite' })
+      ).rejects.toThrow(NotFoundError);
     });
 
     it('別プロジェクトへのコピーはBadRequestError', async () => {
@@ -736,7 +734,9 @@ describe('TestCaseService - copy', () => {
         project: { id: 'different-project-id' },
       });
 
-      await expect(service.copy(testCaseId, userId, { targetTestSuiteId })).rejects.toThrow(BadRequestError);
+      await expect(service.copy(testCaseId, userId, { targetTestSuiteId })).rejects.toThrow(
+        BadRequestError
+      );
       await expect(service.copy(testCaseId, userId, { targetTestSuiteId })).rejects.toThrow(
         '異なるプロジェクトへのコピーはできません'
       );

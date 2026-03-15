@@ -110,9 +110,7 @@ describe('retry', () => {
   });
 
   it('失敗後にリトライして成功する', async () => {
-    const fn = vi.fn()
-      .mockRejectedValueOnce(new Error('fail1'))
-      .mockResolvedValue('success');
+    const fn = vi.fn().mockRejectedValueOnce(new Error('fail1')).mockResolvedValue('success');
 
     const promise = retry(fn);
 
@@ -129,15 +127,15 @@ describe('retry', () => {
     const error = new Error('always fails');
     const fn = vi.fn().mockRejectedValue(error);
 
-    await expect(retry(fn, { maxAttempts: 3, initialDelay: 1, maxDelay: 5 })).rejects.toThrow('always fails');
+    await expect(retry(fn, { maxAttempts: 3, initialDelay: 1, maxDelay: 5 })).rejects.toThrow(
+      'always fails'
+    );
     expect(fn).toHaveBeenCalledTimes(3);
     vi.useFakeTimers(); // 元に戻す
   });
 
   it('オプションをカスタマイズできる', async () => {
-    const fn = vi.fn()
-      .mockRejectedValueOnce(new Error('fail'))
-      .mockResolvedValue('success');
+    const fn = vi.fn().mockRejectedValueOnce(new Error('fail')).mockResolvedValue('success');
 
     const promise = retry(fn, {
       maxAttempts: 5,
@@ -153,7 +151,8 @@ describe('retry', () => {
   });
 
   it('maxDelayを超えないようにする', async () => {
-    const fn = vi.fn()
+    const fn = vi
+      .fn()
       .mockRejectedValueOnce(new Error('fail1'))
       .mockRejectedValueOnce(new Error('fail2'))
       .mockRejectedValueOnce(new Error('fail3'))

@@ -3,15 +3,7 @@ import { useNavigate } from 'react-router';
 import { formatDistanceToNow } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { getNotificationNavigationPath } from '../../lib/notification-navigation';
-import {
-  Mail,
-  UserPlus,
-  Users,
-  MessageSquare,
-  CheckCircle,
-  XCircle,
-  X,
-} from 'lucide-react';
+import { Mail, UserPlus, Users, MessageSquare, CheckCircle, XCircle, X } from 'lucide-react';
 import type { Notification, NotificationType } from '../../lib/api';
 
 interface NotificationItemProps {
@@ -93,21 +85,17 @@ export function NotificationItem({
       )}
 
       {/* アイコン */}
-      <div className="flex-shrink-0 mt-0.5 ml-2">
-        {getNotificationIcon(notification.type)}
-      </div>
+      <div className="flex-shrink-0 mt-0.5 ml-2">{getNotificationIcon(notification.type)}</div>
 
       {/* コンテンツ */}
       <div className="flex-1 min-w-0">
-        <p className={`text-sm ${isUnread ? 'font-medium text-foreground' : 'text-foreground-secondary'}`}>
+        <p
+          className={`text-sm ${isUnread ? 'font-medium text-foreground' : 'text-foreground-secondary'}`}
+        >
           {notification.title}
         </p>
-        <p className="text-xs text-foreground-muted mt-0.5 line-clamp-2">
-          {notification.body}
-        </p>
-        <p className="text-xs text-foreground-muted mt-1">
-          {timeAgo}
-        </p>
+        <p className="text-xs text-foreground-muted mt-0.5 line-clamp-2">{notification.body}</p>
+        <p className="text-xs text-foreground-muted mt-1">{timeAgo}</p>
       </div>
 
       {/* 削除ボタン（ホバー時のみ表示） */}

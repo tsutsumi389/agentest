@@ -14,13 +14,8 @@ interface OrganizationSelectorProps {
 export function OrganizationSelector({ onClose }: OrganizationSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const {
-    organizations,
-    selectedOrganization,
-    isPersonalMode,
-    selectOrganization,
-    isLoading,
-  } = useOrganization();
+  const { organizations, selectedOrganization, isPersonalMode, selectOrganization, isLoading } =
+    useOrganization();
 
   // 外側クリックで閉じる
   useEffect(() => {
@@ -93,9 +88,7 @@ export function OrganizationSelector({ onClose }: OrganizationSelectorProps) {
             </button>
 
             {/* 区切り線 */}
-            {organizations.length > 0 && (
-              <div className="my-1 border-t border-border" />
-            )}
+            {organizations.length > 0 && <div className="my-1 border-t border-border" />}
 
             {/* 組織一覧 */}
             {organizations.map(({ organization, role }) => {

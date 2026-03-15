@@ -81,26 +81,32 @@ describe('createTestCaseTool', () => {
     });
 
     it('無効なUUIDはエラー', () => {
-      expect(() => createTestCaseInputSchema.parse({
-        testSuiteId: 'invalid-uuid',
-        title: 'Test Case',
-      })).toThrow();
+      expect(() =>
+        createTestCaseInputSchema.parse({
+          testSuiteId: 'invalid-uuid',
+          title: 'Test Case',
+        })
+      ).toThrow();
     });
 
     it('無効なpriorityはエラー', () => {
-      expect(() => createTestCaseInputSchema.parse({
-        testSuiteId: TEST_SUITE_ID,
-        title: 'Test Case',
-        priority: 'INVALID',
-      })).toThrow();
+      expect(() =>
+        createTestCaseInputSchema.parse({
+          testSuiteId: TEST_SUITE_ID,
+          title: 'Test Case',
+          priority: 'INVALID',
+        })
+      ).toThrow();
     });
 
     it('無効なstatusはエラー', () => {
-      expect(() => createTestCaseInputSchema.parse({
-        testSuiteId: TEST_SUITE_ID,
-        title: 'Test Case',
-        status: 'INVALID',
-      })).toThrow();
+      expect(() =>
+        createTestCaseInputSchema.parse({
+          testSuiteId: TEST_SUITE_ID,
+          title: 'Test Case',
+          status: 'INVALID',
+        })
+      ).toThrow();
     });
 
     it('子エンティティを受け付ける', () => {
@@ -128,11 +134,13 @@ describe('createTestCaseTool', () => {
     });
 
     it('子エンティティのcontentが空の場合はエラー', () => {
-      expect(() => createTestCaseInputSchema.parse({
-        testSuiteId: TEST_SUITE_ID,
-        title: 'Test Case',
-        steps: [{ content: '' }],
-      })).toThrow();
+      expect(() =>
+        createTestCaseInputSchema.parse({
+          testSuiteId: TEST_SUITE_ID,
+          title: 'Test Case',
+          steps: [{ content: '' }],
+        })
+      ).toThrow();
     });
   });
 
@@ -298,7 +306,7 @@ describe('createTestCaseTool', () => {
         expectedResults: [{ content: 'Expected 1' }],
       };
 
-      const result = await createTestCaseTool.handler(input, context) as typeof mockResponse;
+      const result = (await createTestCaseTool.handler(input, context)) as typeof mockResponse;
 
       expect(mockApiClient.post).toHaveBeenCalledWith(
         '/internal/api/test-cases',

@@ -93,7 +93,7 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...customHeaders as Record<string, string>,
+    ...(customHeaders as Record<string, string>),
   };
 
   const config: RequestInit = {
@@ -112,7 +112,12 @@ async function request<T>(endpoint: string, options: RequestOptions = {}): Promi
   // 401エラー時の自動リフレッシュ処理
   if (response.status === 401) {
     // 認証系エンドポイントの401は除外（無限ループ防止・ログイン時のエラーコード伝播）
-    if (endpoint.includes('/auth/refresh') || endpoint.includes('/auth/me') || endpoint.includes('/auth/login') || endpoint.includes('/auth/2fa/verify')) {
+    if (
+      endpoint.includes('/auth/refresh') ||
+      endpoint.includes('/auth/me') ||
+      endpoint.includes('/auth/login') ||
+      endpoint.includes('/auth/2fa/verify')
+    ) {
       const contentType = response.headers.get('content-type');
       const isJson = contentType?.includes('application/json');
       const data = isJson ? await response.json() : null;
@@ -168,7 +173,7 @@ async function requestBlob(endpoint: string, options: RequestOptions = {}): Prom
   const { body, headers: customHeaders, ...rest } = options;
 
   const headers: Record<string, string> = {
-    ...customHeaders as Record<string, string>,
+    ...(customHeaders as Record<string, string>),
   };
 
   const config: RequestInit = {

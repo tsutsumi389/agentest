@@ -166,9 +166,10 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
       await notificationsApi.delete(id);
       set((state) => ({
         notifications: state.notifications.filter((n) => n.id !== id),
-        unreadCount: notification && !notification.readAt
-          ? Math.max(0, state.unreadCount - 1)
-          : state.unreadCount,
+        unreadCount:
+          notification && !notification.readAt
+            ? Math.max(0, state.unreadCount - 1)
+            : state.unreadCount,
       }));
     } catch (error) {
       console.error('通知の削除に失敗:', error);
@@ -182,9 +183,7 @@ export const useNotificationStore = create<NotificationState>((set, get) => ({
     try {
       const { preference } = await notificationsApi.updatePreference(type, data);
       set((state) => ({
-        preferences: state.preferences.map((p) =>
-          p.type === type ? preference : p
-        ),
+        preferences: state.preferences.map((p) => (p.type === type ? preference : p)),
       }));
     } catch (error) {
       console.error('通知設定の更新に失敗:', error);

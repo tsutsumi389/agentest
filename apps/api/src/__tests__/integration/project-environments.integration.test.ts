@@ -36,7 +36,12 @@ vi.mock('@agentest/auth', () => ({
     }
     next();
   },
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -49,7 +54,10 @@ vi.mock('@agentest/auth', () => ({
 }));
 
 // テスト用認証設定関数
-function setTestAuth(user: { id: string; email: string } | null, projectRole: string | null = null) {
+function setTestAuth(
+  user: { id: string; email: string } | null,
+  projectRole: string | null = null
+) {
   mockAuthUser = user;
   mockProjectRole = projectRole;
 }
@@ -498,9 +506,7 @@ describe('Project Environments API Integration Tests', () => {
       });
 
       it('環境一覧を取得できる', async () => {
-        await request(app)
-          .get(`/api/projects/${project.id}/environments`)
-          .expect(200);
+        await request(app).get(`/api/projects/${project.id}/environments`).expect(200);
       });
 
       it('環境を作成できる', async () => {
@@ -537,9 +543,7 @@ describe('Project Environments API Integration Tests', () => {
       });
 
       it('環境一覧を取得できる', async () => {
-        await request(app)
-          .get(`/api/projects/${project.id}/environments`)
-          .expect(200);
+        await request(app).get(`/api/projects/${project.id}/environments`).expect(200);
       });
 
       it('環境を作成できる', async () => {
@@ -576,9 +580,7 @@ describe('Project Environments API Integration Tests', () => {
       });
 
       it('環境一覧を取得できる', async () => {
-        await request(app)
-          .get(`/api/projects/${project.id}/environments`)
-          .expect(200);
+        await request(app).get(`/api/projects/${project.id}/environments`).expect(200);
       });
 
       it('環境を作成できない', async () => {

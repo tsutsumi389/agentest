@@ -25,11 +25,14 @@ export function TestSuiteNewPage() {
   const project = projectData?.project;
 
   // 作成成功時のコールバック
-  const handleSave = useCallback((createdTestSuiteId?: string) => {
-    if (createdTestSuiteId) {
-      navigate(`/test-suites/${createdTestSuiteId}`);
-    }
-  }, [navigate]);
+  const handleSave = useCallback(
+    (createdTestSuiteId?: string) => {
+      if (createdTestSuiteId) {
+        navigate(`/test-suites/${createdTestSuiteId}`);
+      }
+    },
+    [navigate]
+  );
 
   // キャンセル時のコールバック
   const handleCancel = useCallback(() => {

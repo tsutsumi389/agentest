@@ -30,16 +30,15 @@ export function useNotifications() {
   const markAllAsRead = useNotificationStore((state) => state.markAllAsRead);
   const deleteNotification = useNotificationStore((state) => state.deleteNotification);
   const updatePreference = useNotificationStore((state) => state.updatePreference);
-  const handleNotificationReceived = useNotificationStore((state) => state.handleNotificationReceived);
+  const handleNotificationReceived = useNotificationStore(
+    (state) => state.handleNotificationReceived
+  );
   const handleUnreadCountUpdate = useNotificationStore((state) => state.handleUnreadCountUpdate);
   const reset = useNotificationStore((state) => state.reset);
 
   // 初期データの取得
   const initialize = useCallback(async () => {
-    await Promise.all([
-      fetchNotifications(),
-      fetchUnreadCount(),
-    ]);
+    await Promise.all([fetchNotifications(), fetchUnreadCount()]);
   }, [fetchNotifications, fetchUnreadCount]);
 
   // WebSocket購読

@@ -124,7 +124,9 @@ describe('OAuthRepository', () => {
 
         mockPrisma.oAuthClient.findUnique.mockResolvedValue(mockClient);
 
-        const result = await repository.findClientByClientId('550e8400-e29b-41d4-a716-446655440000');
+        const result = await repository.findClientByClientId(
+          '550e8400-e29b-41d4-a716-446655440000'
+        );
 
         expect(mockPrisma.oAuthClient.findUnique).toHaveBeenCalledWith({
           where: {
@@ -338,7 +340,10 @@ describe('OAuthRepository', () => {
       it('特定のクライアントのトークンのみを失効させられる', async () => {
         mockPrisma.oAuthAccessToken.updateMany.mockResolvedValue({ count: 1 });
 
-        await repository.revokeAllAccessTokensByUserId('user-123', '550e8400-e29b-41d4-a716-446655440000');
+        await repository.revokeAllAccessTokensByUserId(
+          'user-123',
+          '550e8400-e29b-41d4-a716-446655440000'
+        );
 
         expect(mockPrisma.oAuthAccessToken.updateMany).toHaveBeenCalledWith({
           where: {

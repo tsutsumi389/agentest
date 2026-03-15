@@ -60,7 +60,9 @@ export function PreconditionList({
           <h2 className="font-semibold text-foreground">前提条件</h2>
         </div>
         <div className="text-center p-6">
-          <p className="text-danger mb-4">{error instanceof Error ? error.message : '前提条件一覧の取得に失敗しました'}</p>
+          <p className="text-danger mb-4">
+            {error instanceof Error ? error.message : '前提条件一覧の取得に失敗しました'}
+          </p>
           <button className="btn btn-primary" onClick={() => refetch()}>
             再読み込み
           </button>
@@ -84,9 +86,7 @@ export function PreconditionList({
         </div>
 
         {preconditions.length === 0 ? (
-          <div className="p-4 text-center text-foreground-muted">
-            前提条件が設定されていません
-          </div>
+          <div className="p-4 text-center text-foreground-muted">前提条件が設定されていません</div>
         ) : (
           <div className="p-4 space-y-2">
             {preconditions.map((precondition, index) => (

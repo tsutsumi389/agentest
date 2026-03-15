@@ -72,4 +72,3 @@ export async function sendEmail(params: SendEmailParams): Promise<void> {
 
   logger.debug({ to, subject }, 'メール送信');
 }
-

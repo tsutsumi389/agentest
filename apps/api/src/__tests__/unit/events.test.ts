@@ -77,7 +77,9 @@ describe('events.ts - イベント発行ヘルパー', () => {
         eventId: mockUUID,
         testSuiteId: 'suite-1',
         projectId: 'project-1',
-        changes: [{ field: 'precondition:update', oldValue: 'old content', newValue: 'new content' }],
+        changes: [
+          { field: 'precondition:update', oldValue: 'old content', newValue: 'new content' },
+        ],
         updatedBy: { type: 'user', id: 'user-1', name: 'Test User' },
       });
 

@@ -34,7 +34,12 @@ vi.mock('@agentest/auth', () => ({
     next();
   },
   requireProjectRole: () => (_req: any, _res: any, next: any) => next(),
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -340,9 +345,7 @@ describe('Organization Invitations API Integration Tests', () => {
       expect(auditLog).not.toBeNull();
       expect(auditLog?.category).toBe('MEMBER');
       expect(auditLog?.userId).toBe(owner.id);
-      expect(auditLog?.details).toEqual(
-        expect.objectContaining({ email: 'cancel@example.com' })
-      );
+      expect(auditLog?.details).toEqual(expect.objectContaining({ email: 'cancel@example.com' }));
     });
 
     it('招待を取消できる（ADMIN）', async () => {
@@ -455,9 +458,7 @@ describe('Organization Invitations API Integration Tests', () => {
       expect(auditLog).not.toBeNull();
       expect(auditLog?.category).toBe('MEMBER');
       expect(auditLog?.userId).toBe(invitedUser.id);
-      expect(auditLog?.details).toEqual(
-        expect.objectContaining({ email: 'invited@example.com' })
-      );
+      expect(auditLog?.details).toEqual(expect.objectContaining({ email: 'invited@example.com' }));
     });
 
     it('存在しない招待トークンは404エラー', async () => {

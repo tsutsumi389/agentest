@@ -69,40 +69,43 @@ export function InviteMemberModal({
   }, [isOpen, resetForm]);
 
   // キーボードイベントハンドラー（フォーカストラップ + ESCキー）
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (!isOpen || !modalRef.current) return;
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (!isOpen || !modalRef.current) return;
 
-    // ESCキーでモーダルを閉じる
-    if (e.key === 'Escape') {
-      onClose();
-      return;
-    }
+      // ESCキーでモーダルを閉じる
+      if (e.key === 'Escape') {
+        onClose();
+        return;
+      }
 
-    // フォーカストラップ
-    if (e.key === 'Tab') {
-      const focusableSelector = [
-        'button:not([disabled])',
-        'input:not([disabled])',
-        'select:not([disabled])',
-        '[tabindex]:not([tabindex="-1"])',
-      ].join(', ');
-      const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(focusableSelector);
-      const firstElement = focusableElements[0];
-      const lastElement = focusableElements[focusableElements.length - 1];
+      // フォーカストラップ
+      if (e.key === 'Tab') {
+        const focusableSelector = [
+          'button:not([disabled])',
+          'input:not([disabled])',
+          'select:not([disabled])',
+          '[tabindex]:not([tabindex="-1"])',
+        ].join(', ');
+        const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(focusableSelector);
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
 
-      if (e.shiftKey) {
-        if (document.activeElement === firstElement) {
-          e.preventDefault();
-          lastElement?.focus();
-        }
-      } else {
-        if (document.activeElement === lastElement) {
-          e.preventDefault();
-          firstElement?.focus();
+        if (e.shiftKey) {
+          if (document.activeElement === firstElement) {
+            e.preventDefault();
+            lastElement?.focus();
+          }
+        } else {
+          if (document.activeElement === lastElement) {
+            e.preventDefault();
+            firstElement?.focus();
+          }
         }
       }
-    }
-  }, [isOpen, onClose]);
+    },
+    [isOpen, onClose]
+  );
 
   // キーボードイベントリスナー
   useEffect(() => {
@@ -240,7 +243,9 @@ export function InviteMemberModal({
             </div>
             <h2 id="invite-member-title" className="text-lg font-semibold text-foreground">
               {createdInvitation
-                ? emailSent ? '招待を送信しました' : '招待リンク'
+                ? emailSent
+                  ? '招待を送信しました'
+                  : '招待リンク'
                 : 'メンバーを招待'}
             </h2>
           </div>
@@ -269,9 +274,7 @@ export function InviteMemberModal({
 
             {/* 招待リンク */}
             <div className="mb-4">
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                招待リンク
-              </label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">招待リンク</label>
               <div className="flex items-center gap-2">
                 <input
                   type="text"
@@ -296,7 +299,8 @@ export function InviteMemberModal({
             {/* 招待情報 */}
             <div className="text-sm text-foreground-muted space-y-1 mb-6">
               <p>
-                ロール: <span className="text-foreground">{role === 'ADMIN' ? '管理者' : 'メンバー'}</span>
+                ロール:{' '}
+                <span className="text-foreground">{role === 'ADMIN' ? '管理者' : 'メンバー'}</span>
               </p>
               <p>
                 有効期限: <span className="text-foreground">7日間</span>
@@ -305,18 +309,10 @@ export function InviteMemberModal({
 
             {/* アクションボタン */}
             <div className="flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={handleCreateAnother}
-                className="btn btn-secondary"
-              >
+              <button type="button" onClick={handleCreateAnother} className="btn btn-secondary">
                 別のメンバーを招待
               </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="btn btn-primary"
-              >
+              <button type="button" onClick={onClose} className="btn btn-primary">
                 閉じる
               </button>
             </div>
@@ -334,7 +330,10 @@ export function InviteMemberModal({
 
               {/* メールアドレス */}
               <div>
-                <label htmlFor="invite-email" className="block text-sm font-medium text-foreground mb-1.5">
+                <label
+                  htmlFor="invite-email"
+                  className="block text-sm font-medium text-foreground mb-1.5"
+                >
                   メールアドレス <span className="text-danger">*</span>
                 </label>
                 <input
@@ -358,7 +357,10 @@ export function InviteMemberModal({
 
               {/* ロール選択 */}
               <div>
-                <label htmlFor="invite-role" className="block text-sm font-medium text-foreground mb-1.5">
+                <label
+                  htmlFor="invite-role"
+                  className="block text-sm font-medium text-foreground mb-1.5"
+                >
                   ロール
                 </label>
                 <select
@@ -389,11 +391,7 @@ export function InviteMemberModal({
               >
                 キャンセル
               </button>
-              <button
-                type="submit"
-                className="btn btn-primary"
-                disabled={isSubmitting}
-              >
+              <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />

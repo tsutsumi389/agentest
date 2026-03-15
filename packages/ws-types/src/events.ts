@@ -341,7 +341,7 @@ export interface NotificationReceivedEvent extends BaseEvent {
   type: 'notification:received';
   notification: {
     id: string;
-    type: string;  // NotificationType
+    type: string; // NotificationType
     title: string;
     body: string;
     data: Record<string, unknown> | null;
@@ -368,11 +368,7 @@ export type NotificationEvent =
 // 統合型
 // ============================================
 
-export type ServerMessage =
-  | AuthenticatedMessage
-  | ErrorMessage
-  | PongMessage
-  | SubscribedMessage;
+export type ServerMessage = AuthenticatedMessage | ErrorMessage | PongMessage | SubscribedMessage;
 
 export type ServerEvent =
   | ExecutionEvent

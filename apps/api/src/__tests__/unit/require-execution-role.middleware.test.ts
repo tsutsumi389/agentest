@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
-import { AuthenticationError, AuthorizationError, NotFoundError, BadRequestError } from '@agentest/shared';
+import {
+  AuthenticationError,
+  AuthorizationError,
+  NotFoundError,
+  BadRequestError,
+} from '@agentest/shared';
 
 // prismaのモック（vi.hoistedを使用してホイスト問題を回避）
 const mockPrisma = vi.hoisted(() => ({

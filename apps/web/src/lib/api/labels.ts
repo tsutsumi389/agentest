@@ -1,9 +1,5 @@
 import { api } from './client.js';
-import type {
-  Label,
-  CreateLabelRequest,
-  UpdateLabelRequest,
-} from './types.js';
+import type { Label, CreateLabelRequest, UpdateLabelRequest } from './types.js';
 
 // ============================================
 // ラベルAPI

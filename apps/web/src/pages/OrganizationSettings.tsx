@@ -44,9 +44,7 @@ export function OrganizationSettingsPage() {
   const [error, setError] = useState<string | null>(null);
 
   // 現在のユーザーのロール
-  const currentRole = organizations.find(
-    (o) => o.organization.id === organizationId
-  )?.role;
+  const currentRole = organizations.find((o) => o.organization.id === organizationId)?.role;
 
   // 組織データを取得
   const fetchOrganization = useCallback(async () => {
@@ -109,9 +107,7 @@ export function OrganizationSettingsPage() {
       <div className="space-y-6">
         <div className="card p-8 text-center">
           <AlertTriangle className="w-12 h-12 text-warning mx-auto mb-4" />
-          <h2 className="text-lg font-semibold text-foreground mb-2">
-            アクセス権限がありません
-          </h2>
+          <h2 className="text-lg font-semibold text-foreground mb-2">アクセス権限がありません</h2>
           <p className="text-foreground-muted mb-4">
             組織設定にアクセスするには、オーナーまたは管理者権限が必要です。
           </p>
@@ -178,14 +174,17 @@ export function OrganizationSettingsPage() {
                   onClick={() => handleTabChange(tab.id)}
                   className={`
                     w-full flex items-center gap-2 px-3 py-2 text-sm font-medium rounded transition-colors
-                    ${activeTab === tab.id
-                      ? 'bg-accent-subtle text-accent'
-                      : 'text-foreground-muted hover:text-foreground hover:bg-background-tertiary'
+                    ${
+                      activeTab === tab.id
+                        ? 'bg-accent-subtle text-accent'
+                        : 'text-foreground-muted hover:text-foreground hover:bg-background-tertiary'
                     }
                     ${tab.id === 'danger' ? 'text-danger hover:text-danger' : ''}
                   `}
                 >
-                  <tab.icon className={`w-4 h-4 ${tab.id === 'danger' && activeTab !== tab.id ? 'text-danger' : ''}`} />
+                  <tab.icon
+                    className={`w-4 h-4 ${tab.id === 'danger' && activeTab !== tab.id ? 'text-danger' : ''}`}
+                  />
                   {tab.label}
                 </button>
               </li>
@@ -196,10 +195,7 @@ export function OrganizationSettingsPage() {
         {/* コンテンツ */}
         <div className="flex-1">
           {activeTab === 'general' && (
-            <GeneralSettings
-              organization={organization}
-              onUpdated={handleOrganizationUpdated}
-            />
+            <GeneralSettings organization={organization} onUpdated={handleOrganizationUpdated} />
           )}
           {activeTab === 'members' && (
             <MembersSettings organizationId={organization.id} currentRole={currentRole} />
@@ -207,9 +203,7 @@ export function OrganizationSettingsPage() {
           {activeTab === 'invitations' && (
             <InvitationsSettings organizationId={organization.id} currentRole={currentRole} />
           )}
-          {activeTab === 'audit-logs' && (
-            <AuditLogsSettings organizationId={organization.id} />
-          )}
+          {activeTab === 'audit-logs' && <AuditLogsSettings organizationId={organization.id} />}
           {activeTab === 'danger' && (
             <DangerSettings
               organization={organization}
@@ -252,9 +246,7 @@ function GeneralSettings({
     setErrors({});
   }, [organization]);
 
-  const hasChanges =
-    name !== organization.name ||
-    description !== (organization.description || '');
+  const hasChanges = name !== organization.name || description !== (organization.description || '');
 
   // 入力値を元に戻す
   const handleCancel = () => {
@@ -339,14 +331,15 @@ function GeneralSettings({
             className={`input w-full max-w-md ${errors.name ? 'border-danger focus:border-danger focus:ring-danger' : ''}`}
             disabled={isSaving}
           />
-          {errors.name && (
-            <p className="text-xs text-danger mt-1">{errors.name}</p>
-          )}
+          {errors.name && <p className="text-xs text-danger mt-1">{errors.name}</p>}
         </div>
 
         {/* 説明 */}
         <div>
-          <label htmlFor="org-description" className="block text-sm font-medium text-foreground mb-1">
+          <label
+            htmlFor="org-description"
+            className="block text-sm font-medium text-foreground mb-1"
+          >
             説明
           </label>
           <textarea
@@ -361,18 +354,12 @@ function GeneralSettings({
             disabled={isSaving}
             placeholder="組織の説明（任意）"
           />
-          {errors.description && (
-            <p className="text-xs text-danger mt-1">{errors.description}</p>
-          )}
+          {errors.description && <p className="text-xs text-danger mt-1">{errors.description}</p>}
         </div>
 
         {/* ボタン */}
         <div className="pt-4 flex gap-2">
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={isSaving || !hasChanges}
-          >
+          <button type="submit" className="btn btn-primary" disabled={isSaving || !hasChanges}>
             {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
             {isSaving ? '保存中...' : '保存'}
           </button>
@@ -402,9 +389,7 @@ function MembersSettings({
   organizationId: string;
   currentRole?: 'OWNER' | 'ADMIN' | 'MEMBER';
 }) {
-  return (
-    <MemberList organizationId={organizationId} currentRole={currentRole} />
-  );
+  return <MemberList organizationId={organizationId} currentRole={currentRole} />;
 }
 
 /**
@@ -417,9 +402,7 @@ function InvitationsSettings({
   organizationId: string;
   currentRole?: 'OWNER' | 'ADMIN' | 'MEMBER';
 }) {
-  return (
-    <InvitationList organizationId={organizationId} currentRole={currentRole} />
-  );
+  return <InvitationList organizationId={organizationId} currentRole={currentRole} />;
 }
 
 /**
@@ -453,8 +436,7 @@ function DangerSettings({
       <div className="card p-6 border-warning">
         <h3 className="text-lg font-semibold text-foreground mb-2">オーナー権限の移譲</h3>
         <p className="text-foreground-muted text-sm mb-4">
-          組織のオーナー権限を別のメンバーに移譲します。
-          移譲後、あなたは管理者権限になります。
+          組織のオーナー権限を別のメンバーに移譲します。 移譲後、あなたは管理者権限になります。
         </p>
         <button
           className="btn btn-secondary"

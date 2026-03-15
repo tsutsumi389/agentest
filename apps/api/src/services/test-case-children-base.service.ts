@@ -1,10 +1,6 @@
 import crypto from 'node:crypto';
 import { prisma, type Prisma } from '@agentest/db';
-import {
-  NotFoundError,
-  BadRequestError,
-  type TestCaseChangeDetail,
-} from '@agentest/shared';
+import { NotFoundError, BadRequestError, type TestCaseChangeDetail } from '@agentest/shared';
 import { TestCaseRepository } from '../repositories/test-case.repository.js';
 import { publishTestCaseUpdated } from '../lib/events.js';
 import { logger as baseLogger } from '../utils/logger.js';
@@ -70,7 +66,9 @@ export type HistorySnapshot = TestCaseSnapshot & {
 /**
  * スナップショットをPrismaのJSON型に変換
  */
-export function toJsonSnapshot(snapshot: TestCaseSnapshot | HistorySnapshot): Prisma.InputJsonValue {
+export function toJsonSnapshot(
+  snapshot: TestCaseSnapshot | HistorySnapshot
+): Prisma.InputJsonValue {
   return snapshot as unknown as Prisma.InputJsonValue;
 }
 
@@ -107,13 +105,11 @@ export class TestCaseChildrenBaseService {
   ): Promise<void> {
     try {
       const user = await tx.user.findUnique({ where: { id: userId } });
-      await publishTestCaseUpdated(
-        testCaseId,
-        testSuiteId,
-        projectId,
-        changes,
-        { type: 'user', id: userId, name: user?.name || 'Unknown' }
-      );
+      await publishTestCaseUpdated(testCaseId, testSuiteId, projectId, changes, {
+        type: 'user',
+        id: userId,
+        name: user?.name || 'Unknown',
+      });
     } catch (error) {
       this.logger.error({ err: error }, 'イベント発行エラー');
     }

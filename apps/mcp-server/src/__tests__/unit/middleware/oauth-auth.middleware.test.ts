@@ -94,10 +94,7 @@ describe('mcpOAuthAuthenticate', () => {
 
       await middleware(req as Request, res as Response, mockNext);
 
-      expect(mockValidateToken).toHaveBeenCalledWith(
-        TEST_ACCESS_TOKEN,
-        'http://localhost:3002'
-      );
+      expect(mockValidateToken).toHaveBeenCalledWith(TEST_ACCESS_TOKEN, 'http://localhost:3002');
       expect(mockPrismaUser.findUnique).toHaveBeenCalledWith({
         where: { id: TEST_USER_ID },
       });

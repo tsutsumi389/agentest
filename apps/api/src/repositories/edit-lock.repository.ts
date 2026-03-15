@@ -33,7 +33,10 @@ export class EditLockRepository {
   /**
    * ターゲット（スイート/ケース）でロックを検索
    */
-  async findByTarget(targetType: LockTargetType, targetId: string): Promise<EditLockWithOwner | null> {
+  async findByTarget(
+    targetType: LockTargetType,
+    targetId: string
+  ): Promise<EditLockWithOwner | null> {
     return prisma.editLock.findUnique({
       where: {
         targetType_targetId: {

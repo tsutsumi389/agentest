@@ -246,10 +246,7 @@ describe('AdminAuthService', () => {
         })
       ).rejects.toThrow(AuthenticationError);
 
-      expect(mockUserRepo.lockAccount).toHaveBeenCalledWith(
-        'admin-1',
-        expect.any(Date)
-      );
+      expect(mockUserRepo.lockAccount).toHaveBeenCalledWith('admin-1', expect.any(Date));
 
       // ロック時間が約30分後であることを確認
       const lockCall = mockUserRepo.lockAccount.mock.calls[0];
@@ -387,10 +384,7 @@ describe('AdminAuthService', () => {
       );
 
       expect(result).not.toBeNull();
-      expect(mockSessionService.refreshSession).toHaveBeenCalledWith(
-        'session-1',
-        expect.any(Date)
-      );
+      expect(mockSessionService.refreshSession).toHaveBeenCalledWith('session-1', expect.any(Date));
     });
 
     it('延長成功時に監査ログを記録する（SESSION_REFRESHED）', async () => {
@@ -398,13 +392,7 @@ describe('AdminAuthService', () => {
       mockSessionService.refreshSession.mockResolvedValue(newExpiresAt);
       mockAuditLogService.log.mockResolvedValue(undefined);
 
-      await service.refreshSession(
-        'admin-1',
-        'session-1',
-        new Date(),
-        '127.0.0.1',
-        'Test Browser'
-      );
+      await service.refreshSession('admin-1', 'session-1', new Date(), '127.0.0.1', 'Test Browser');
 
       expect(mockAuditLogService.log).toHaveBeenCalledWith(
         expect.objectContaining({

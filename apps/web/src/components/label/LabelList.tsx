@@ -10,7 +10,10 @@ interface LabelListProps {
   /** ラベル作成時のコールバック */
   onCreate: (data: { name: string; description: string | null; color: string }) => Promise<void>;
   /** ラベル更新時のコールバック */
-  onUpdate: (labelId: string, data: { name: string; description: string | null; color: string }) => Promise<void>;
+  onUpdate: (
+    labelId: string,
+    data: { name: string; description: string | null; color: string }
+  ) => Promise<void>;
   /** ラベル削除時のコールバック */
   onDelete: (labelId: string) => Promise<void>;
   /** ローディング中か */

@@ -6,13 +6,35 @@ import { apiClient } from '../clients/api-client.js';
  * 入力スキーマ
  */
 export const searchExecutionInputSchema = z.object({
-  testSuiteId: z.string().uuid().describe('実行履歴を検索するテストスイートID。search_test_suiteで取得したIDを指定'),
-  from: z.string().datetime().optional().describe('この日時以降の実行を検索（ISO 8601形式、例: 2024-01-01T00:00:00.000Z）'),
-  to: z.string().datetime().optional().describe('この日時以前の実行を検索（ISO 8601形式、例: 2024-01-31T23:59:59.999Z）'),
+  testSuiteId: z
+    .string()
+    .uuid()
+    .describe('実行履歴を検索するテストスイートID。search_test_suiteで取得したIDを指定'),
+  from: z
+    .string()
+    .datetime()
+    .optional()
+    .describe('この日時以降の実行を検索（ISO 8601形式、例: 2024-01-01T00:00:00.000Z）'),
+  to: z
+    .string()
+    .datetime()
+    .optional()
+    .describe('この日時以前の実行を検索（ISO 8601形式、例: 2024-01-31T23:59:59.999Z）'),
   limit: z.number().int().min(1).max(50).default(20).describe('取得件数（1-50、デフォルト: 20）'),
-  offset: z.number().int().min(0).default(0).describe('ページネーション用オフセット（デフォルト: 0）'),
-  sortBy: z.enum(['createdAt']).default('createdAt').describe('ソート項目（デフォルト: createdAt=作成日時）'),
-  sortOrder: z.enum(['asc', 'desc']).default('desc').describe('ソート順: asc（昇順）, desc（降順）。デフォルト: desc（新しい順）'),
+  offset: z
+    .number()
+    .int()
+    .min(0)
+    .default(0)
+    .describe('ページネーション用オフセット（デフォルト: 0）'),
+  sortBy: z
+    .enum(['createdAt'])
+    .default('createdAt')
+    .describe('ソート項目（デフォルト: createdAt=作成日時）'),
+  sortOrder: z
+    .enum(['asc', 'desc'])
+    .default('desc')
+    .describe('ソート順: asc（昇順）, desc（降順）。デフォルト: desc（新しい順）'),
 });
 
 type SearchExecutionInput = z.infer<typeof searchExecutionInputSchema>;

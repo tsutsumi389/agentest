@@ -171,7 +171,13 @@ describe('TestCaseRepository - getHistoriesGrouped', () => {
           changed_by_user_id: USER_ID,
           changed_by_agent_session_id: null,
           change_type: 'UPDATE',
-          snapshot: { changeDetail: { type: 'STEP_ADD', stepId: 'step-1', added: { content: 'ステップ1', orderKey: 'a' } } },
+          snapshot: {
+            changeDetail: {
+              type: 'STEP_ADD',
+              stepId: 'step-1',
+              added: { content: 'ステップ1', orderKey: 'a' },
+            },
+          },
           change_reason: null,
           group_id: GROUP_ID,
           created_at: new Date('2025-01-15T10:00:03Z'),
@@ -183,7 +189,14 @@ describe('TestCaseRepository - getHistoriesGrouped', () => {
           changed_by_user_id: USER_ID,
           changed_by_agent_session_id: null,
           change_type: 'UPDATE',
-          snapshot: { changeDetail: { type: 'PRECONDITION_UPDATE', preconditionId: 'pre-1', before: { content: '旧' }, after: { content: '新' } } },
+          snapshot: {
+            changeDetail: {
+              type: 'PRECONDITION_UPDATE',
+              preconditionId: 'pre-1',
+              before: { content: '旧' },
+              after: { content: '新' },
+            },
+          },
           change_reason: null,
           group_id: GROUP_ID,
           created_at: new Date('2025-01-15T10:00:02Z'),
@@ -195,7 +208,13 @@ describe('TestCaseRepository - getHistoriesGrouped', () => {
           changed_by_user_id: USER_ID,
           changed_by_agent_session_id: null,
           change_type: 'UPDATE',
-          snapshot: { changeDetail: { type: 'EXPECTED_RESULT_DELETE', expectedResultId: 'exp-1', deleted: { content: '削除', orderKey: 'a' } } },
+          snapshot: {
+            changeDetail: {
+              type: 'EXPECTED_RESULT_DELETE',
+              expectedResultId: 'exp-1',
+              deleted: { content: '削除', orderKey: 'a' },
+            },
+          },
           change_reason: null,
           group_id: GROUP_ID,
           created_at: new Date('2025-01-15T10:00:01Z'),
@@ -207,7 +226,12 @@ describe('TestCaseRepository - getHistoriesGrouped', () => {
           changed_by_user_id: USER_ID,
           changed_by_agent_session_id: null,
           change_type: 'UPDATE',
-          snapshot: { changeDetail: { type: 'BASIC_INFO_UPDATE', fields: { title: { before: '旧', after: '新' } } } },
+          snapshot: {
+            changeDetail: {
+              type: 'BASIC_INFO_UPDATE',
+              fields: { title: { before: '旧', after: '新' } },
+            },
+          },
           change_reason: null,
           group_id: GROUP_ID,
           created_at: new Date('2025-01-15T10:00:00Z'),
@@ -274,7 +298,14 @@ describe('TestCaseRepository - getHistoriesGrouped', () => {
           changed_by_user_id: USER_ID,
           changed_by_agent_session_id: null,
           change_type: 'CREATE',
-          snapshot: { changeDetail: { type: 'COPY', sourceTestCaseId: 'src-1', sourceTitle: '元', targetTestSuiteId: 'suite-1' } },
+          snapshot: {
+            changeDetail: {
+              type: 'COPY',
+              sourceTestCaseId: 'src-1',
+              sourceTitle: '元',
+              targetTestSuiteId: 'suite-1',
+            },
+          },
           change_reason: null,
           group_id: null,
           created_at: new Date('2025-01-15T10:00:00Z'),

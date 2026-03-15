@@ -27,11 +27,7 @@ interface ReviewSubmitModalProps {
  * レビュー提出モーダルコンポーネント
  * 評価を選択してレビューを提出する
  */
-export function ReviewSubmitModal({
-  isOpen,
-  onClose,
-  commentCount,
-}: ReviewSubmitModalProps) {
+export function ReviewSubmitModal({ isOpen, onClose, commentCount }: ReviewSubmitModalProps) {
   const { submitReview, isLoading } = useReviewSession();
   const modalRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
@@ -117,10 +113,7 @@ export function ReviewSubmitModal({
   return (
     <div className="fixed inset-0 z-modal flex items-center justify-center p-4">
       {/* オーバーレイ */}
-      <div
-        className="absolute inset-0 bg-black/50"
-        onClick={!isSubmitting ? onClose : undefined}
-      />
+      <div className="absolute inset-0 bg-black/50" onClick={!isSubmitting ? onClose : undefined} />
 
       {/* モーダル */}
       <div
@@ -133,10 +126,7 @@ export function ReviewSubmitModal({
       >
         {/* ヘッダー */}
         <div className="flex items-center justify-between p-4 border-b border-border">
-          <h2
-            id="submit-modal-title"
-            className="text-lg font-semibold text-foreground"
-          >
+          <h2 id="submit-modal-title" className="text-lg font-semibold text-foreground">
             レビューを提出
           </h2>
           <button
@@ -189,12 +179,16 @@ export function ReviewSubmitModal({
                       className="sr-only"
                       disabled={isSubmitting}
                     />
-                    <Icon className={`w-5 h-5 mt-0.5 flex-shrink-0 ${isSelected ? '' : 'text-foreground-muted'}`} />
+                    <Icon
+                      className={`w-5 h-5 mt-0.5 flex-shrink-0 ${isSelected ? '' : 'text-foreground-muted'}`}
+                    />
                     <div className="flex-1 min-w-0">
                       <div className={`font-medium ${isSelected ? '' : 'text-foreground'}`}>
                         {option.label}
                       </div>
-                      <div className={`text-xs mt-0.5 ${isSelected ? 'opacity-80' : 'text-foreground-muted'}`}>
+                      <div
+                        className={`text-xs mt-0.5 ${isSelected ? 'opacity-80' : 'text-foreground-muted'}`}
+                      >
                         {option.description}
                       </div>
                     </div>
@@ -206,10 +200,7 @@ export function ReviewSubmitModal({
 
           {/* サマリー入力 */}
           <div className="space-y-2">
-            <label
-              htmlFor="review-summary"
-              className="block text-sm font-medium text-foreground"
-            >
+            <label htmlFor="review-summary" className="block text-sm font-medium text-foreground">
               サマリー（任意）
             </label>
             <textarea

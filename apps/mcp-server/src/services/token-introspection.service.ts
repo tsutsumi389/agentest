@@ -10,9 +10,9 @@ const logger = baseLogger.child({ module: 'token-introspection' });
 export interface IntrospectionResult {
   active: boolean;
   client_id?: string;
-  sub?: string;       // ユーザーID
+  sub?: string; // ユーザーID
   scope?: string;
-  aud?: string;       // Audience (RFC 8707)
+  aud?: string; // Audience (RFC 8707)
   exp?: number;
   iat?: number;
 }
@@ -49,7 +49,7 @@ export class TokenIntrospectionService {
         return { active: false };
       }
 
-      const result = await response.json() as IntrospectionResult;
+      const result = (await response.json()) as IntrospectionResult;
       return result;
     } catch (error) {
       logger.error({ err: error }, 'Token introspection error');
@@ -61,13 +61,19 @@ export class TokenIntrospectionService {
    * トークンを検証し、Audience（resource）が期待値と一致するか確認
    * キャッシュが有効な場合、同一トークンの再検証時はAPIコールをスキップ
    */
-  async validateToken(token: string, expectedAudience?: string): Promise<{
+  async validateToken(
+    token: string,
+    expectedAudience?: string
+  ): Promise<{
     valid: boolean;
     userId?: string;
     scopes?: string[];
   }> {
     // キャッシュ確認
-    const cached = await getCachedTokenValidation<{ userId: string; scopes: string[] }>('oauth', token);
+    const cached = await getCachedTokenValidation<{ userId: string; scopes: string[] }>(
+      'oauth',
+      token
+    );
     if (cached) {
       return { valid: true, ...cached };
     }

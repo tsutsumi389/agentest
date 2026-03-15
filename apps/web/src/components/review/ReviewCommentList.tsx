@@ -71,7 +71,10 @@ export function ReviewCommentList({
   const fieldOptions = targetType === 'SUITE' ? SUITE_FIELD_OPTIONS : CASE_FIELD_OPTIONS;
 
   // クエリキー（フィルタ条件を含める）
-  const queryKey = ['review-comments', { targetType, targetId, status: statusFilter, field: fieldFilter }];
+  const queryKey = [
+    'review-comments',
+    { targetType, targetId, status: statusFilter, field: fieldFilter },
+  ];
 
   // コメント一覧取得
   const { data, isLoading, error } = useQuery({
@@ -209,9 +212,7 @@ export function ReviewCommentList({
       {isFormOpen && isReviewing && (
         <div className="card p-4 space-y-3">
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              対象フィールド
-            </label>
+            <label className="block text-sm font-medium text-foreground mb-1">対象フィールド</label>
             <select
               value={selectedField}
               onChange={(e) => setSelectedField(e.target.value as ReviewTargetField)}
@@ -241,14 +242,10 @@ export function ReviewCommentList({
           <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
           <p>レビューコメントはまだありません</p>
           {canEdit && isReviewing && (
-            <p className="text-sm mt-1">
-              「コメント追加」ボタンからコメントを追加できます
-            </p>
+            <p className="text-sm mt-1">「コメント追加」ボタンからコメントを追加できます</p>
           )}
           {canEdit && !isReviewing && (
-            <p className="text-sm mt-1">
-              レビューを開始してコメントを追加できます
-            </p>
+            <p className="text-sm mt-1">レビューを開始してコメントを追加できます</p>
           )}
         </div>
       ) : (

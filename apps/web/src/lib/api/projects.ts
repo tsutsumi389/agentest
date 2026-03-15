@@ -51,11 +51,17 @@ export const projectsApi = {
   createEnvironment: (projectId: string, data: CreateEnvironmentRequest) =>
     api.post<{ environment: ProjectEnvironment }>(`/api/projects/${projectId}/environments`, data),
   updateEnvironment: (projectId: string, environmentId: string, data: UpdateEnvironmentRequest) =>
-    api.patch<{ environment: ProjectEnvironment }>(`/api/projects/${projectId}/environments/${environmentId}`, data),
+    api.patch<{ environment: ProjectEnvironment }>(
+      `/api/projects/${projectId}/environments/${environmentId}`,
+      data
+    ),
   deleteEnvironment: (projectId: string, environmentId: string) =>
     api.delete<void>(`/api/projects/${projectId}/environments/${environmentId}`),
   reorderEnvironments: (projectId: string, environmentIds: string[]) =>
-    api.post<{ environments: ProjectEnvironment[] }>(`/api/projects/${projectId}/environments/reorder`, { environmentIds }),
+    api.post<{ environments: ProjectEnvironment[] }>(
+      `/api/projects/${projectId}/environments/reorder`,
+      { environmentIds }
+    ),
 
   // 履歴管理
   getHistories: (projectId: string, params?: { limit?: number; offset?: number }) => {

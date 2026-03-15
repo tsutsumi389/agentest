@@ -22,7 +22,6 @@ import {
  * 子エンティティ操作はTestCaseChildrenServiceを継承
  */
 export class TestCaseService extends TestCaseChildrenService {
-
   /**
    * テストケースを作成（子エンティティ含む）
    */
@@ -281,7 +280,11 @@ export class TestCaseService extends TestCaseChildrenService {
   /**
    * テストケースをコピー
    */
-  async copy(testCaseId: string, userId: string, data: { targetTestSuiteId?: string; title?: string }) {
+  async copy(
+    testCaseId: string,
+    userId: string,
+    data: { targetTestSuiteId?: string; title?: string }
+  ) {
     // 1. コピー元テストケース取得（子エンティティ含む）
     const sourceTestCase = await prisma.testCase.findFirst({
       where: { id: testCaseId },
@@ -321,139 +324,142 @@ export class TestCaseService extends TestCaseChildrenService {
 
     // 6. トランザクションでコピー実行
     const groupId = crypto.randomUUID();
-    return prisma.$transaction(async (tx) => {
-      // orderKey取得
-      const lastTestCase = await tx.testCase.findFirst({
-        where: { testSuiteId: targetTestSuiteId },
-        orderBy: { orderKey: 'desc' },
-      });
-      const orderKey = getNextOrderKey(lastTestCase?.orderKey ?? null);
+    return prisma.$transaction(
+      async (tx) => {
+        // orderKey取得
+        const lastTestCase = await tx.testCase.findFirst({
+          where: { testSuiteId: targetTestSuiteId },
+          orderBy: { orderKey: 'desc' },
+        });
+        const orderKey = getNextOrderKey(lastTestCase?.orderKey ?? null);
 
-      // テストケース作成（ステータスはDRAFT固定）
-      const newTestCase = await tx.testCase.create({
-        data: {
-          testSuiteId: targetTestSuiteId,
-          title: newTitle,
-          description: sourceTestCase.description,
-          priority: sourceTestCase.priority,
-          status: 'DRAFT',
-          orderKey,
-          createdByUserId: userId,
-        },
-      });
+        // テストケース作成（ステータスはDRAFT固定）
+        const newTestCase = await tx.testCase.create({
+          data: {
+            testSuiteId: targetTestSuiteId,
+            title: newTitle,
+            description: sourceTestCase.description,
+            priority: sourceTestCase.priority,
+            status: 'DRAFT',
+            orderKey,
+            createdByUserId: userId,
+          },
+        });
 
-      // 子エンティティをコピー
-      if (sourceTestCase.preconditions.length > 0) {
-        await tx.testCasePrecondition.createMany({
-          data: sourceTestCase.preconditions.map((p) => ({
-            testCaseId: newTestCase.id,
+        // 子エンティティをコピー
+        if (sourceTestCase.preconditions.length > 0) {
+          await tx.testCasePrecondition.createMany({
+            data: sourceTestCase.preconditions.map((p) => ({
+              testCaseId: newTestCase.id,
+              content: p.content,
+              orderKey: p.orderKey,
+            })),
+          });
+        }
+
+        if (sourceTestCase.steps.length > 0) {
+          await tx.testCaseStep.createMany({
+            data: sourceTestCase.steps.map((s) => ({
+              testCaseId: newTestCase.id,
+              content: s.content,
+              orderKey: s.orderKey,
+            })),
+          });
+        }
+
+        if (sourceTestCase.expectedResults.length > 0) {
+          await tx.testCaseExpectedResult.createMany({
+            data: sourceTestCase.expectedResults.map((e) => ({
+              testCaseId: newTestCase.id,
+              content: e.content,
+              orderKey: e.orderKey,
+            })),
+          });
+        }
+
+        // 新しく作成された子エンティティを取得
+        const newPreconditions = await tx.testCasePrecondition.findMany({
+          where: { testCaseId: newTestCase.id },
+          orderBy: { orderKey: 'asc' },
+        });
+        const newSteps = await tx.testCaseStep.findMany({
+          where: { testCaseId: newTestCase.id },
+          orderBy: { orderKey: 'asc' },
+        });
+        const newExpectedResults = await tx.testCaseExpectedResult.findMany({
+          where: { testCaseId: newTestCase.id },
+          orderBy: { orderKey: 'asc' },
+        });
+
+        // 履歴記録
+        const snapshot: HistorySnapshot = {
+          id: newTestCase.id,
+          testSuiteId: newTestCase.testSuiteId,
+          title: newTestCase.title,
+          description: newTestCase.description,
+          priority: newTestCase.priority,
+          status: newTestCase.status,
+          preconditions: newPreconditions.map((p) => ({
+            id: p.id,
             content: p.content,
             orderKey: p.orderKey,
           })),
-        });
-      }
-
-      if (sourceTestCase.steps.length > 0) {
-        await tx.testCaseStep.createMany({
-          data: sourceTestCase.steps.map((s) => ({
-            testCaseId: newTestCase.id,
+          steps: newSteps.map((s) => ({
+            id: s.id,
             content: s.content,
             orderKey: s.orderKey,
           })),
-        });
-      }
-
-      if (sourceTestCase.expectedResults.length > 0) {
-        await tx.testCaseExpectedResult.createMany({
-          data: sourceTestCase.expectedResults.map((e) => ({
-            testCaseId: newTestCase.id,
+          expectedResults: newExpectedResults.map((e) => ({
+            id: e.id,
             content: e.content,
             orderKey: e.orderKey,
           })),
+          changeDetail: {
+            type: 'COPY',
+            sourceTestCaseId: testCaseId,
+            sourceTitle: sourceTestCase.title,
+            targetTestSuiteId,
+          },
+        };
+
+        await tx.testCaseHistory.create({
+          data: {
+            testCaseId: newTestCase.id,
+            changedByUserId: userId,
+            changeType: 'CREATE',
+            snapshot: toJsonSnapshot(snapshot),
+            groupId,
+          },
         });
-      }
 
-      // 新しく作成された子エンティティを取得
-      const newPreconditions = await tx.testCasePrecondition.findMany({
-        where: { testCaseId: newTestCase.id },
-        orderBy: { orderKey: 'asc' },
-      });
-      const newSteps = await tx.testCaseStep.findMany({
-        where: { testCaseId: newTestCase.id },
-        orderBy: { orderKey: 'asc' },
-      });
-      const newExpectedResults = await tx.testCaseExpectedResult.findMany({
-        where: { testCaseId: newTestCase.id },
-        orderBy: { orderKey: 'asc' },
-      });
+        // テストケース更新イベント発行（エラー時も処理継続）
+        try {
+          const user = await tx.user.findUnique({ where: { id: userId } });
+          await publishTestCaseUpdated(
+            newTestCase.id,
+            newTestCase.testSuiteId,
+            targetTestSuite.project.id,
+            [{ field: 'copy', oldValue: testCaseId, newValue: newTestCase.id }],
+            { type: 'user', id: userId, name: user?.name || 'Unknown' }
+          );
+        } catch (error) {
+          this.logger.error({ err: error }, 'イベント発行エラー');
+        }
 
-      // 履歴記録
-      const snapshot: HistorySnapshot = {
-        id: newTestCase.id,
-        testSuiteId: newTestCase.testSuiteId,
-        title: newTestCase.title,
-        description: newTestCase.description,
-        priority: newTestCase.priority,
-        status: newTestCase.status,
-        preconditions: newPreconditions.map((p) => ({
-          id: p.id,
-          content: p.content,
-          orderKey: p.orderKey,
-        })),
-        steps: newSteps.map((s) => ({
-          id: s.id,
-          content: s.content,
-          orderKey: s.orderKey,
-        })),
-        expectedResults: newExpectedResults.map((e) => ({
-          id: e.id,
-          content: e.content,
-          orderKey: e.orderKey,
-        })),
-        changeDetail: {
-          type: 'COPY',
-          sourceTestCaseId: testCaseId,
-          sourceTitle: sourceTestCase.title,
-          targetTestSuiteId,
-        },
-      };
-
-      await tx.testCaseHistory.create({
-        data: {
-          testCaseId: newTestCase.id,
-          changedByUserId: userId,
-          changeType: 'CREATE',
-          snapshot: toJsonSnapshot(snapshot),
-          groupId,
-        },
-      });
-
-      // テストケース更新イベント発行（エラー時も処理継続）
-      try {
-        const user = await tx.user.findUnique({ where: { id: userId } });
-        await publishTestCaseUpdated(
-          newTestCase.id,
-          newTestCase.testSuiteId,
-          targetTestSuite.project.id,
-          [{ field: 'copy', oldValue: testCaseId, newValue: newTestCase.id }],
-          { type: 'user', id: userId, name: user?.name || 'Unknown' }
-        );
-      } catch (error) {
-        this.logger.error({ err: error }, 'イベント発行エラー');
-      }
-
-      // 詳細情報を含めて返却
-      return tx.testCase.findUnique({
-        where: { id: newTestCase.id },
-        include: {
-          testSuite: { select: { id: true, name: true, projectId: true } },
-          createdByUser: { select: { id: true, name: true, avatarUrl: true } },
-          preconditions: { orderBy: { orderKey: 'asc' } },
-          steps: { orderBy: { orderKey: 'asc' } },
-          expectedResults: { orderBy: { orderKey: 'asc' } },
-        },
-      });
-    }, { timeout: 15000 });
+        // 詳細情報を含めて返却
+        return tx.testCase.findUnique({
+          where: { id: newTestCase.id },
+          include: {
+            testSuite: { select: { id: true, name: true, projectId: true } },
+            createdByUser: { select: { id: true, name: true, avatarUrl: true } },
+            preconditions: { orderBy: { orderKey: 'asc' } },
+            steps: { orderBy: { orderKey: 'asc' } },
+            expectedResults: { orderBy: { orderKey: 'asc' } },
+          },
+        });
+      },
+      { timeout: 15000 }
+    );
   }
 
   /**
@@ -618,7 +624,10 @@ export class TestCaseService extends TestCaseChildrenService {
         if (testCaseData.title !== undefined && testCaseData.title !== testCase.title) {
           fields.title = { before: testCase.title, after: testCaseData.title };
         }
-        if (testCaseData.description !== undefined && testCaseData.description !== testCase.description) {
+        if (
+          testCaseData.description !== undefined &&
+          testCaseData.description !== testCase.description
+        ) {
           fields.description = { before: testCase.description, after: testCaseData.description };
         }
         if (testCaseData.priority !== undefined && testCaseData.priority !== testCase.priority) {

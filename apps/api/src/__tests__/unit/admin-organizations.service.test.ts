@@ -44,20 +44,22 @@ describe('AdminOrganizationsService', () => {
 
   describe('findOrganizations', () => {
     // モック組織データを生成するヘルパー
-    const createMockOrganizationData = (overrides: Partial<{
-      id: string;
-      name: string;
-      description: string | null;
-      avatarUrl: string | null;
-      createdAt: Date;
-      updatedAt: Date;
-      deletedAt: Date | null;
-      _count: { members: number; projects: number };
-      members: {
-        role: string;
-        user: { id: string; name: string; email: string; avatarUrl: string | null };
-      }[];
-    }> = {}) => ({
+    const createMockOrganizationData = (
+      overrides: Partial<{
+        id: string;
+        name: string;
+        description: string | null;
+        avatarUrl: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        deletedAt: Date | null;
+        _count: { members: number; projects: number };
+        members: {
+          role: string;
+          user: { id: string; name: string; email: string; avatarUrl: string | null };
+        }[];
+      }> = {}
+    ) => ({
       id: '550e8400-e29b-41d4-a716-446655440000',
       name: 'Test Organization',
       description: 'Test description',
@@ -389,39 +391,41 @@ describe('AdminOrganizationsService', () => {
     const validOrgId = '550e8400-e29b-41d4-a716-446655440000';
 
     // モック組織詳細データを生成するヘルパー
-    const createMockOrganizationDetailData = (overrides: Partial<{
-      id: string;
-      name: string;
-      description: string | null;
-      avatarUrl: string | null;
-      createdAt: Date;
-      updatedAt: Date;
-      deletedAt: Date | null;
-      _count: { members: number; projects: number };
-      members: {
-        id: string;
-        role: string;
-        joinedAt: Date;
-        user: { id: string; name: string; email: string; avatarUrl: string | null };
-      }[];
-      projects: {
+    const createMockOrganizationDetailData = (
+      overrides: Partial<{
         id: string;
         name: string;
         description: string | null;
+        avatarUrl: string | null;
         createdAt: Date;
-        _count: { members: number; testSuites: number };
-      }[];
-      auditLogs: {
-        id: string;
-        category: string;
-        action: string;
-        targetType: string | null;
-        targetId: string | null;
-        ipAddress: string | null;
-        createdAt: Date;
-        user: { id: string; name: string; email: string } | null;
-      }[];
-    }> = {}) => ({
+        updatedAt: Date;
+        deletedAt: Date | null;
+        _count: { members: number; projects: number };
+        members: {
+          id: string;
+          role: string;
+          joinedAt: Date;
+          user: { id: string; name: string; email: string; avatarUrl: string | null };
+        }[];
+        projects: {
+          id: string;
+          name: string;
+          description: string | null;
+          createdAt: Date;
+          _count: { members: number; testSuites: number };
+        }[];
+        auditLogs: {
+          id: string;
+          category: string;
+          action: string;
+          targetType: string | null;
+          targetId: string | null;
+          ipAddress: string | null;
+          createdAt: Date;
+          user: { id: string; name: string; email: string } | null;
+        }[];
+      }> = {}
+    ) => ({
       id: validOrgId,
       name: 'Test Organization',
       description: 'Test description',

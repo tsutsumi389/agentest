@@ -11,8 +11,7 @@ const MAX_FAILED_ATTEMPTS = 5;
 // アカウントロック時間（30分）
 const LOCK_DURATION_MS = 30 * 60 * 1000;
 // タイミング攻撃対策用のダミーハッシュ（有効なbcrypt形式）
-const DUMMY_PASSWORD_HASH =
-  '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4bEaLwrMlxAqP6C2';
+const DUMMY_PASSWORD_HASH = '$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/X4bEaLwrMlxAqP6C2';
 
 /**
  * ログイン入力
@@ -88,7 +87,9 @@ export class AdminAuthService {
         ipAddress,
         userAgent,
       });
-      throw new AuthenticationError('アカウントがロックされています。しばらく経ってから再度お試しください');
+      throw new AuthenticationError(
+        'アカウントがロックされています。しばらく経ってから再度お試しください'
+      );
     }
 
     // パスワード検証
@@ -179,12 +180,7 @@ export class AdminAuthService {
   /**
    * プロフィール更新（名前変更）
    */
-  async updateProfile(
-    adminUserId: string,
-    name: string,
-    ipAddress?: string,
-    userAgent?: string
-  ) {
+  async updateProfile(adminUserId: string, name: string, ipAddress?: string, userAgent?: string) {
     const updated = await this.userRepo.updateName(adminUserId, name);
 
     await this.auditLogService.log({
@@ -254,10 +250,7 @@ export class AdminAuthService {
     ipAddress?: string,
     userAgent?: string
   ): Promise<Date | null> {
-    const newExpiresAt = await this.sessionService.refreshSession(
-      sessionId,
-      createdAt
-    );
+    const newExpiresAt = await this.sessionService.refreshSession(sessionId, createdAt);
 
     if (newExpiresAt) {
       await this.auditLogService.log({

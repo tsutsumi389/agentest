@@ -51,13 +51,7 @@ interface SortableHeaderProps {
 /**
  * ソート可能なテーブルヘッダー
  */
-function SortableHeader({
-  column,
-  sortBy,
-  sortOrder,
-  onSort,
-  children,
-}: SortableHeaderProps) {
+function SortableHeader({ column, sortBy, sortOrder, onSort, children }: SortableHeaderProps) {
   return (
     <th
       className="px-4 py-3 text-left text-sm font-medium text-foreground-muted cursor-pointer hover:text-foreground select-none"
@@ -97,20 +91,10 @@ export function UserTable({
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-b border-border">
-              <SortableHeader
-                column="name"
-                sortBy={sortBy}
-                sortOrder={sortOrder}
-                onSort={onSort}
-              >
+              <SortableHeader column="name" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort}>
                 ユーザー
               </SortableHeader>
-              <SortableHeader
-                column="email"
-                sortBy={sortBy}
-                sortOrder={sortOrder}
-                onSort={onSort}
-              >
+              <SortableHeader column="email" sortBy={sortBy} sortOrder={sortOrder} onSort={onSort}>
                 メール
               </SortableHeader>
               <th className="px-4 py-3 text-left text-sm font-medium text-foreground-muted">
@@ -132,10 +116,7 @@ export function UserTable({
           <tbody>
             {users.length === 0 ? (
               <tr>
-                <td
-                  colSpan={5}
-                  className="px-4 py-12 text-center text-foreground-muted"
-                >
+                <td colSpan={5} className="px-4 py-12 text-center text-foreground-muted">
                   ユーザーが見つかりません
                 </td>
               </tr>
@@ -178,9 +159,7 @@ export function UserTable({
                   </td>
 
                   {/* メール */}
-                  <td className="px-4 py-3 text-sm text-foreground-muted">
-                    {user.email}
-                  </td>
+                  <td className="px-4 py-3 text-sm text-foreground-muted">{user.email}</td>
 
                   {/* 統計 */}
                   <td className="px-4 py-3">

@@ -1,11 +1,6 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
-import {
-  testSuitesApi,
-  ApiError,
-  type TestSuite,
-  type Precondition,
-} from '../../lib/api';
+import { testSuitesApi, ApiError, type TestSuite, type Precondition } from '../../lib/api';
 import { toast } from '../../stores/toast';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import {
@@ -39,11 +34,12 @@ const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(na
 function CharacterCounter({ current, max }: { current: number; max: number }) {
   if (current < max * 0.8) return null;
 
-  const colorClass = current >= max
-    ? 'text-danger'
-    : current >= max * 0.9
-      ? 'text-warning'
-      : 'text-foreground-muted';
+  const colorClass =
+    current >= max
+      ? 'text-danger'
+      : current >= max * 0.9
+        ? 'text-warning'
+        : 'text-foreground-muted';
 
   return (
     <p className={`text-xs mt-1 ${colorClass}`}>
@@ -83,7 +79,9 @@ export function TestSuiteForm({
   // フォーム値の状態（作成時は空、編集時は既存値）
   const [name, setName] = useState(testSuite?.name || '');
   const [description, setDescription] = useState(testSuite?.description || '');
-  const [status, setStatus] = useState<'DRAFT' | 'ACTIVE' | 'ARCHIVED'>(testSuite?.status || 'DRAFT');
+  const [status, setStatus] = useState<'DRAFT' | 'ACTIVE' | 'ARCHIVED'>(
+    testSuite?.status || 'DRAFT'
+  );
 
   // 前提条件の状態（作成時は空配列、編集時は既存値）
   const [preconditions, setPreconditions] = useState<ListItem[]>(
@@ -114,7 +112,8 @@ export function TestSuiteForm({
       // 作成モード: 何か入力があれば変更ありと判定
       const hasName = name.trim().length > 0;
       const hasDescription = description.trim().length > 0;
-      const hasPreconditions = preconditions.filter((p) => !p.isDeleted && p.content.trim()).length > 0;
+      const hasPreconditions =
+        preconditions.filter((p) => !p.isDeleted && p.content.trim()).length > 0;
       return hasName || hasDescription || hasPreconditions;
     }
 
@@ -226,7 +225,12 @@ export function TestSuiteForm({
         const groupId = crypto.randomUUID();
 
         // 基本情報の更新
-        const updates: { name?: string; description?: string; status?: 'DRAFT' | 'ACTIVE' | 'ARCHIVED'; groupId?: string } = {};
+        const updates: {
+          name?: string;
+          description?: string;
+          status?: 'DRAFT' | 'ACTIVE' | 'ARCHIVED';
+          groupId?: string;
+        } = {};
         if (trimmedName !== (testSuite?.name || '')) {
           updates.name = trimmedName;
         }
@@ -271,7 +275,10 @@ export function TestSuiteForm({
     // 新規追加された項目を処理
     const newItems: { tempId: string; realId: string }[] = [];
     for (const item of preconditions.filter((i) => i.isNew && !i.isDeleted && i.content.trim())) {
-      const result = await testSuitesApi.addPrecondition(testSuite.id, { content: item.content.trim(), groupId });
+      const result = await testSuitesApi.addPrecondition(testSuite.id, {
+        content: item.content.trim(),
+        groupId,
+      });
       newItems.push({ tempId: item.id, realId: result.precondition.id });
     }
 
@@ -279,7 +286,10 @@ export function TestSuiteForm({
     for (const item of preconditions.filter(
       (i) => !i.isNew && !i.isDeleted && i.content.trim() !== i.originalContent
     )) {
-      await testSuitesApi.updatePrecondition(testSuite.id, item.id, { content: item.content.trim(), groupId });
+      await testSuitesApi.updatePrecondition(testSuite.id, item.id, {
+        content: item.content.trim(),
+        groupId,
+      });
     }
 
     // 並び順の更新
@@ -290,9 +300,7 @@ export function TestSuiteForm({
         return newItem ? newItem.realId : item.id;
       });
       // 並び順が変わっている場合のみreorderを呼び出す
-      const currentOrder = preconditions
-        .filter((i) => !i.isNew && !i.isDeleted)
-        .map((i) => i.id);
+      const currentOrder = preconditions.filter((i) => !i.isNew && !i.isDeleted).map((i) => i.id);
       const hasOrderChanged =
         orderedIds.length !== currentOrder.length ||
         orderedIds.some((id, index) => id !== currentOrder[index]);
@@ -317,17 +325,13 @@ export function TestSuiteForm({
 
   // リスト項目の更新
   const updateListItem = useCallback((id: string, content: string) => {
-    setPreconditions((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, content } : item))
-    );
+    setPreconditions((prev) => prev.map((item) => (item.id === id ? { ...item, content } : item)));
   }, []);
 
   // リスト項目の削除
   const deleteListItem = useCallback((id: string) => {
     setPreconditions((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, isDeleted: true } : item
-      )
+      prev.map((item) => (item.id === id ? { ...item, isDeleted: true } : item))
     );
   }, []);
 
@@ -338,15 +342,12 @@ export function TestSuiteForm({
   );
 
   // Ctrl/Cmd+Enter でフォーム送信
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLFormElement>) => {
-      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        e.currentTarget.requestSubmit();
-      }
-    },
-    []
-  );
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLFormElement>) => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      e.currentTarget.requestSubmit();
+    }
+  }, []);
 
   // セクション展開/折りたたみのトグル
   const toggleSection = (section: keyof typeof expandedSections) => {
@@ -361,9 +362,7 @@ export function TestSuiteForm({
       {/* ヘッダー（編集モードのみ表示） */}
       {!isCreateMode && (
         <div className="flex-shrink-0 p-4 border-b border-border">
-          <h2 className="text-lg font-semibold text-foreground">
-            テストスイート編集
-          </h2>
+          <h2 className="text-lg font-semibold text-foreground">テストスイート編集</h2>
         </div>
       )}
 
@@ -389,7 +388,10 @@ export function TestSuiteForm({
 
         {/* 説明 */}
         <div>
-          <label htmlFor="suite-description" className="block text-sm font-medium text-foreground mb-1">
+          <label
+            htmlFor="suite-description"
+            className="block text-sm font-medium text-foreground mb-1"
+          >
             説明
           </label>
           <MarkdownEditor
@@ -404,13 +406,15 @@ export function TestSuiteForm({
 
         {/* ステータス（ARCHIVEDの場合はトグル無効） */}
         <div>
-          <label className="block text-sm font-medium text-foreground mb-1">
-            ステータス
-          </label>
+          <label className="block text-sm font-medium text-foreground mb-1">ステータス</label>
           {!isCreateMode && status === 'ARCHIVED' ? (
             <p className="text-sm text-foreground-muted">アーカイブ</p>
           ) : (
-            <div className="inline-flex rounded-md border border-border" role="radiogroup" aria-label="ステータス">
+            <div
+              className="inline-flex rounded-md border border-border"
+              role="radiogroup"
+              aria-label="ステータス"
+            >
               {STATUS_TOGGLE_OPTIONS.map((option) => (
                 <button
                   key={option.value}
@@ -457,11 +461,7 @@ export function TestSuiteForm({
         >
           キャンセル
         </button>
-        <button
-          type="submit"
-          className="btn btn-primary"
-          disabled={!name.trim() || isSaving}
-        >
+        <button type="submit" className="btn btn-primary" disabled={!name.trim() || isSaving}>
           {isSaving ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />

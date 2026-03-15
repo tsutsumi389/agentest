@@ -24,9 +24,7 @@ export function ProjectGeneralSettings({ project, onUpdated }: ProjectGeneralSet
     setErrors({});
   }, [project]);
 
-  const hasChanges =
-    name !== project.name ||
-    description !== (project.description || '');
+  const hasChanges = name !== project.name || description !== (project.description || '');
 
   // 入力値を元に戻す
   const handleCancel = () => {
@@ -111,14 +109,15 @@ export function ProjectGeneralSettings({ project, onUpdated }: ProjectGeneralSet
             className={`input w-full max-w-md ${errors.name ? 'border-danger focus:border-danger focus:ring-danger' : ''}`}
             disabled={isSaving}
           />
-          {errors.name && (
-            <p className="text-xs text-danger mt-1">{errors.name}</p>
-          )}
+          {errors.name && <p className="text-xs text-danger mt-1">{errors.name}</p>}
         </div>
 
         {/* 説明 */}
         <div>
-          <label htmlFor="project-description" className="block text-sm font-medium text-foreground mb-1">
+          <label
+            htmlFor="project-description"
+            className="block text-sm font-medium text-foreground mb-1"
+          >
             説明
           </label>
           <textarea
@@ -133,36 +132,26 @@ export function ProjectGeneralSettings({ project, onUpdated }: ProjectGeneralSet
             disabled={isSaving}
             placeholder="プロジェクトの説明（任意）"
           />
-          {errors.description && (
-            <p className="text-xs text-danger mt-1">{errors.description}</p>
-          )}
+          {errors.description && <p className="text-xs text-danger mt-1">{errors.description}</p>}
         </div>
 
         {/* 所属組織（読み取り専用） */}
         {project.organization && (
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1">
-              所属組織
-            </label>
+            <label className="block text-sm font-medium text-foreground mb-1">所属組織</label>
             <input
               type="text"
               value={project.organization.name}
               disabled
               className="input w-full max-w-md bg-background-tertiary"
             />
-            <p className="text-xs text-foreground-subtle mt-1">
-              所属組織は変更できません
-            </p>
+            <p className="text-xs text-foreground-subtle mt-1">所属組織は変更できません</p>
           </div>
         )}
 
         {/* ボタン */}
         <div className="pt-4 flex gap-2">
-          <button
-            type="submit"
-            className="btn btn-primary"
-            disabled={isSaving || !hasChanges}
-          >
+          <button type="submit" className="btn btn-primary" disabled={isSaving || !hasChanges}>
             {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
             {isSaving ? '保存中...' : '保存'}
           </button>

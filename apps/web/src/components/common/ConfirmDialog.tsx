@@ -54,9 +54,8 @@ export function ConfirmDialog({
         onCancel();
       }
       if (e.key === 'Tab' && modalRef.current) {
-        const focusableElements = modalRef.current.querySelectorAll<HTMLElement>(
-          'button:not([disabled])'
-        );
+        const focusableElements =
+          modalRef.current.querySelectorAll<HTMLElement>('button:not([disabled])');
         const firstElement = focusableElements[0];
         const lastElement = focusableElements[focusableElements.length - 1];
 
@@ -86,10 +85,7 @@ export function ConfirmDialog({
   return (
     <div className="fixed inset-0 z-modal flex items-center justify-center">
       {/* オーバーレイ */}
-      <div
-        className="absolute inset-0 bg-black/50"
-        onClick={onCancel}
-      />
+      <div className="absolute inset-0 bg-black/50" onClick={onCancel} />
       {/* ダイアログ */}
       <div
         ref={modalRef}
@@ -99,9 +95,11 @@ export function ConfirmDialog({
         aria-labelledby="confirm-dialog-title"
       >
         <div className="flex items-start gap-4">
-          <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-            isDanger ? 'bg-danger-subtle' : 'bg-warning-subtle'
-          }`}>
+          <div
+            className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
+              isDanger ? 'bg-danger-subtle' : 'bg-warning-subtle'
+            }`}
+          >
             <AlertTriangle className={`w-5 h-5 ${isDanger ? 'text-danger' : 'text-warning'}`} />
           </div>
           <div className="flex-1">

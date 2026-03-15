@@ -48,24 +48,21 @@ export function useExecutionRealtime(executionId: string | undefined) {
     );
 
     // ステップ更新 → キャッシュ内の該当結果のstatus/noteをパッチ
-    const unsubStep = wsClient.on<ExecutionStepUpdatedEvent>(
-      'execution:step_updated',
-      (event) => {
-        if (event.executionId !== executionId) return;
-        queryClient.setQueryData<{ execution: ExecutionWithDetails }>(queryKey, (old) => {
-          if (!old) return old;
-          return {
-            execution: {
-              ...old.execution,
-              stepResults: old.execution.stepResults.map((r) =>
-                r.id === event.resultId ? { ...r, status: event.status, note: event.note } : r
-              ),
-            },
-          };
-        });
-        queryClient.invalidateQueries({ queryKey, refetchType: 'none' });
-      }
-    );
+    const unsubStep = wsClient.on<ExecutionStepUpdatedEvent>('execution:step_updated', (event) => {
+      if (event.executionId !== executionId) return;
+      queryClient.setQueryData<{ execution: ExecutionWithDetails }>(queryKey, (old) => {
+        if (!old) return old;
+        return {
+          execution: {
+            ...old.execution,
+            stepResults: old.execution.stepResults.map((r) =>
+              r.id === event.resultId ? { ...r, status: event.status, note: event.note } : r
+            ),
+          },
+        };
+      });
+      queryClient.invalidateQueries({ queryKey, refetchType: 'none' });
+    });
 
     // 期待結果更新 → キャッシュ内の該当結果のstatus/noteをパッチ
     const unsubExpected = wsClient.on<ExecutionExpectedResultUpdatedEvent>(

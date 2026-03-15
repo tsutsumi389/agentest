@@ -26,7 +26,13 @@ describe('AdminUsersController', () => {
 
     // モックリクエスト・レスポンスを初期化
     mockReq = {
-      adminUser: { id: 'admin-123', email: 'admin@example.com', name: 'Admin', role: 'ADMIN', totpEnabled: false },
+      adminUser: {
+        id: 'admin-123',
+        email: 'admin@example.com',
+        name: 'Admin',
+        role: 'ADMIN',
+        totpEnabled: false,
+      },
       params: {},
       query: {},
     };
@@ -145,7 +151,9 @@ describe('AdminUsersController', () => {
           deletedAt: null,
           activity: { lastActiveAt: '2024-01-20T12:00:00.000Z', activeSessionCount: 2 },
           stats: { organizationCount: 1, projectCount: 3, testSuiteCount: 5, executionCount: 20 },
-          organizations: [{ id: 'org-1', name: 'Test Org', role: 'MEMBER', joinedAt: '2024-01-10T00:00:00.000Z' }],
+          organizations: [
+            { id: 'org-1', name: 'Test Org', role: 'MEMBER', joinedAt: '2024-01-10T00:00:00.000Z' },
+          ],
           oauthProviders: [{ provider: 'github', createdAt: '2024-01-05T00:00:00.000Z' }],
           recentAuditLogs: [],
         },

@@ -25,11 +25,7 @@ export function UserDetailHeader({ user }: UserDetailHeaderProps) {
       <div className="flex items-center gap-4">
         {/* アバター */}
         {user.avatarUrl ? (
-          <img
-            src={user.avatarUrl}
-            alt={user.name}
-            className="w-16 h-16 rounded-full"
-          />
+          <img src={user.avatarUrl} alt={user.name} className="w-16 h-16 rounded-full" />
         ) : (
           <div className="w-16 h-16 rounded-full bg-accent-muted flex items-center justify-center">
             <span className="text-2xl font-medium text-accent">

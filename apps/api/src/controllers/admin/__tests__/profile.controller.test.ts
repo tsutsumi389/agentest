@@ -108,9 +108,7 @@ describe('AdminProfileController', () => {
       await controller.updateProfile(req, res, mockNext);
 
       expect(mockAuthService.updateProfile).not.toHaveBeenCalled();
-      expect(mockNext).toHaveBeenCalledWith(
-        expect.objectContaining({ statusCode: 400 })
-      );
+      expect(mockNext).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 400 }));
     });
 
     it('nameが未入力の場合はバリデーションエラー', async () => {
@@ -120,9 +118,7 @@ describe('AdminProfileController', () => {
       await controller.updateProfile(req, res, mockNext);
 
       expect(mockAuthService.updateProfile).not.toHaveBeenCalled();
-      expect(mockNext).toHaveBeenCalledWith(
-        expect.objectContaining({ statusCode: 400 })
-      );
+      expect(mockNext).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 400 }));
     });
 
     it('nameが100文字超の場合はバリデーションエラー', async () => {
@@ -132,9 +128,7 @@ describe('AdminProfileController', () => {
       await controller.updateProfile(req, res, mockNext);
 
       expect(mockAuthService.updateProfile).not.toHaveBeenCalled();
-      expect(mockNext).toHaveBeenCalledWith(
-        expect.objectContaining({ statusCode: 400 })
-      );
+      expect(mockNext).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 400 }));
     });
 
     it('adminUserがない場合はAuthenticationError', async () => {
@@ -143,9 +137,7 @@ describe('AdminProfileController', () => {
 
       await controller.updateProfile(req, res, mockNext);
 
-      expect(mockNext).toHaveBeenCalledWith(
-        expect.objectContaining({ statusCode: 401 })
-      );
+      expect(mockNext).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 401 }));
     });
 
     it('サービスエラー時はnextにエラーを渡す', async () => {
@@ -196,9 +188,7 @@ describe('AdminProfileController', () => {
       await controller.changePassword(req, res, mockNext);
 
       expect(mockAuthService.changePassword).not.toHaveBeenCalled();
-      expect(mockNext).toHaveBeenCalledWith(
-        expect.objectContaining({ statusCode: 400 })
-      );
+      expect(mockNext).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 400 }));
     });
 
     it('currentPasswordが空の場合はバリデーションエラー', async () => {
@@ -210,9 +200,7 @@ describe('AdminProfileController', () => {
       await controller.changePassword(req, res, mockNext);
 
       expect(mockAuthService.changePassword).not.toHaveBeenCalled();
-      expect(mockNext).toHaveBeenCalledWith(
-        expect.objectContaining({ statusCode: 400 })
-      );
+      expect(mockNext).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 400 }));
     });
 
     it('同じパスワードの場合はバリデーションエラー', async () => {
@@ -224,9 +212,7 @@ describe('AdminProfileController', () => {
       await controller.changePassword(req, res, mockNext);
 
       expect(mockAuthService.changePassword).not.toHaveBeenCalled();
-      expect(mockNext).toHaveBeenCalledWith(
-        expect.objectContaining({ statusCode: 400 })
-      );
+      expect(mockNext).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 400 }));
     });
 
     it('adminUserがない場合はAuthenticationError', async () => {
@@ -235,9 +221,7 @@ describe('AdminProfileController', () => {
 
       await controller.changePassword(req, res, mockNext);
 
-      expect(mockNext).toHaveBeenCalledWith(
-        expect.objectContaining({ statusCode: 401 })
-      );
+      expect(mockNext).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 401 }));
     });
 
     it('サービスエラー時はnextにエラーを渡す', async () => {

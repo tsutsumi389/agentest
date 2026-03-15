@@ -36,12 +36,10 @@ describe('Admin Auth API Integration Tests', () => {
 
   describe('POST /admin/auth/login', () => {
     it('正しい認証情報でログインできる', async () => {
-      const response = await request(app)
-        .post('/admin/auth/login')
-        .send({
-          email: 'admin@example.com',
-          password: testPassword,
-        });
+      const response = await request(app).post('/admin/auth/login').send({
+        email: 'admin@example.com',
+        password: testPassword,
+      });
 
       expect(response.status).toBe(200);
       expect(response.body.admin).toBeDefined();
@@ -51,32 +49,26 @@ describe('Admin Auth API Integration Tests', () => {
     });
 
     it('セッションクッキーが設定される', async () => {
-      const response = await request(app)
-        .post('/admin/auth/login')
-        .send({
-          email: 'admin@example.com',
-          password: testPassword,
-        });
+      const response = await request(app).post('/admin/auth/login').send({
+        email: 'admin@example.com',
+        password: testPassword,
+      });
 
       expect(response.status).toBe(200);
       const cookies = response.headers['set-cookie'];
       expect(cookies).toBeDefined();
       const cookieArray = Array.isArray(cookies) ? cookies : [cookies];
-      const sessionCookie = cookieArray.find((c: string) =>
-        c.startsWith('admin_session=')
-      );
+      const sessionCookie = cookieArray.find((c: string) => c.startsWith('admin_session='));
       expect(sessionCookie).toBeDefined();
       expect(sessionCookie).toContain('HttpOnly');
       expect(sessionCookie).toContain('Path=/admin');
     });
 
     it('セッションがDBに作成される', async () => {
-      await request(app)
-        .post('/admin/auth/login')
-        .send({
-          email: 'admin@example.com',
-          password: testPassword,
-        });
+      await request(app).post('/admin/auth/login').send({
+        email: 'admin@example.com',
+        password: testPassword,
+      });
 
       const sessions = await prisma.adminSession.findMany({
         where: { adminUserId: testAdminUser.id },
@@ -87,12 +79,10 @@ describe('Admin Auth API Integration Tests', () => {
     });
 
     it('監査ログが記録される', async () => {
-      await request(app)
-        .post('/admin/auth/login')
-        .send({
-          email: 'admin@example.com',
-          password: testPassword,
-        });
+      await request(app).post('/admin/auth/login').send({
+        email: 'admin@example.com',
+        password: testPassword,
+      });
 
       const logs = await prisma.adminAuditLog.findMany({
         where: {
@@ -105,12 +95,10 @@ describe('Admin Auth API Integration Tests', () => {
     });
 
     it('不正パスワードで401エラー', async () => {
-      const response = await request(app)
-        .post('/admin/auth/login')
-        .send({
-          email: 'admin@example.com',
-          password: 'wrong-password',
-        });
+      const response = await request(app).post('/admin/auth/login').send({
+        email: 'admin@example.com',
+        password: 'wrong-password',
+      });
 
       expect(response.status).toBe(401);
       expect(response.body.error).toBeDefined();
@@ -119,12 +107,10 @@ describe('Admin Auth API Integration Tests', () => {
     it('5回失敗でアカウントロック', async () => {
       // 5回失敗させる
       for (let i = 0; i < 5; i++) {
-        await request(app)
-          .post('/admin/auth/login')
-          .send({
-            email: 'admin@example.com',
-            password: 'wrong-password',
-          });
+        await request(app).post('/admin/auth/login').send({
+          email: 'admin@example.com',
+          password: 'wrong-password',
+        });
       }
 
       // アカウントがロックされていることを確認
@@ -146,12 +132,10 @@ describe('Admin Auth API Integration Tests', () => {
         },
       });
 
-      const response = await request(app)
-        .post('/admin/auth/login')
-        .send({
-          email: 'admin@example.com',
-          password: testPassword,
-        });
+      const response = await request(app).post('/admin/auth/login').send({
+        email: 'admin@example.com',
+        password: testPassword,
+      });
 
       expect(response.status).toBe(401);
       expect(response.body.error.message).toContain('ロック');
@@ -167,35 +151,29 @@ describe('Admin Auth API Integration Tests', () => {
         },
       });
 
-      const response = await request(app)
-        .post('/admin/auth/login')
-        .send({
-          email: 'admin@example.com',
-          password: testPassword,
-        });
+      const response = await request(app).post('/admin/auth/login').send({
+        email: 'admin@example.com',
+        password: testPassword,
+      });
 
       expect(response.status).toBe(200);
       expect(response.body.admin).toBeDefined();
     });
 
     it('メール形式不正で400エラー', async () => {
-      const response = await request(app)
-        .post('/admin/auth/login')
-        .send({
-          email: 'invalid-email',
-          password: testPassword,
-        });
+      const response = await request(app).post('/admin/auth/login').send({
+        email: 'invalid-email',
+        password: testPassword,
+      });
 
       expect(response.status).toBe(400);
     });
 
     it('存在しないユーザーで401エラー', async () => {
-      const response = await request(app)
-        .post('/admin/auth/login')
-        .send({
-          email: 'nonexistent@example.com',
-          password: testPassword,
-        });
+      const response = await request(app).post('/admin/auth/login').send({
+        email: 'nonexistent@example.com',
+        password: testPassword,
+      });
 
       expect(response.status).toBe(401);
     });
@@ -207,34 +185,26 @@ describe('Admin Auth API Integration Tests', () => {
 
     beforeEach(async () => {
       // ログインしてセッショントークンを取得
-      const loginResponse = await request(app)
-        .post('/admin/auth/login')
-        .send({
-          email: 'admin@example.com',
-          password: testPassword,
-        });
+      const loginResponse = await request(app).post('/admin/auth/login').send({
+        email: 'admin@example.com',
+        password: testPassword,
+      });
 
       const cookies = loginResponse.headers['set-cookie'];
       const cookieArray = Array.isArray(cookies) ? cookies : [cookies];
-      sessionCookie = cookieArray.find((c: string) =>
-        c.startsWith('admin_session=')
-      ) as string;
+      sessionCookie = cookieArray.find((c: string) => c.startsWith('admin_session=')) as string;
       sessionToken = sessionCookie.split(';')[0].split('=')[1];
     });
 
     it('ログアウトに成功する', async () => {
-      const response = await request(app)
-        .post('/admin/auth/logout')
-        .set('Cookie', sessionCookie);
+      const response = await request(app).post('/admin/auth/logout').set('Cookie', sessionCookie);
 
       expect(response.status).toBe(200);
       expect(response.body.message).toBe('ログアウトしました');
     });
 
     it('セッションが失効する', async () => {
-      await request(app)
-        .post('/admin/auth/logout')
-        .set('Cookie', sessionCookie);
+      await request(app).post('/admin/auth/logout').set('Cookie', sessionCookie);
 
       const session = await prisma.adminSession.findFirst({
         where: { tokenHash: hashToken(sessionToken) },
@@ -244,9 +214,7 @@ describe('Admin Auth API Integration Tests', () => {
     });
 
     it('クッキーがクリアされる', async () => {
-      const response = await request(app)
-        .post('/admin/auth/logout')
-        .set('Cookie', sessionCookie);
+      const response = await request(app).post('/admin/auth/logout').set('Cookie', sessionCookie);
 
       expect(response.status).toBe(200);
       const cookies = response.headers['set-cookie'];
@@ -271,24 +239,18 @@ describe('Admin Auth API Integration Tests', () => {
 
     beforeEach(async () => {
       // ログインしてセッショントークンを取得
-      const loginResponse = await request(app)
-        .post('/admin/auth/login')
-        .send({
-          email: 'admin@example.com',
-          password: testPassword,
-        });
+      const loginResponse = await request(app).post('/admin/auth/login').send({
+        email: 'admin@example.com',
+        password: testPassword,
+      });
 
       const cookies = loginResponse.headers['set-cookie'];
       const cookieArray = Array.isArray(cookies) ? cookies : [cookies];
-      sessionCookie = cookieArray.find((c: string) =>
-        c.startsWith('admin_session=')
-      ) as string;
+      sessionCookie = cookieArray.find((c: string) => c.startsWith('admin_session=')) as string;
     });
 
     it('認証済み管理者情報を取得できる', async () => {
-      const response = await request(app)
-        .get('/admin/auth/me')
-        .set('Cookie', sessionCookie);
+      const response = await request(app).get('/admin/auth/me').set('Cookie', sessionCookie);
 
       expect(response.status).toBe(200);
       expect(response.body.admin).toBeDefined();
@@ -306,9 +268,7 @@ describe('Admin Auth API Integration Tests', () => {
         data: { expiresAt: new Date(Date.now() - 1000) },
       });
 
-      const response = await request(app)
-        .get('/admin/auth/me')
-        .set('Cookie', sessionCookie);
+      const response = await request(app).get('/admin/auth/me').set('Cookie', sessionCookie);
 
       expect(response.status).toBe(401);
     });
@@ -323,9 +283,7 @@ describe('Admin Auth API Integration Tests', () => {
         data: { revokedAt: new Date() },
       });
 
-      const response = await request(app)
-        .get('/admin/auth/me')
-        .set('Cookie', sessionCookie);
+      const response = await request(app).get('/admin/auth/me').set('Cookie', sessionCookie);
 
       expect(response.status).toBe(401);
     });
@@ -342,24 +300,18 @@ describe('Admin Auth API Integration Tests', () => {
 
     beforeEach(async () => {
       // ログインしてセッショントークンを取得
-      const loginResponse = await request(app)
-        .post('/admin/auth/login')
-        .send({
-          email: 'admin@example.com',
-          password: testPassword,
-        });
+      const loginResponse = await request(app).post('/admin/auth/login').send({
+        email: 'admin@example.com',
+        password: testPassword,
+      });
 
       const cookies = loginResponse.headers['set-cookie'];
       const cookieArray = Array.isArray(cookies) ? cookies : [cookies];
-      sessionCookie = cookieArray.find((c: string) =>
-        c.startsWith('admin_session=')
-      ) as string;
+      sessionCookie = cookieArray.find((c: string) => c.startsWith('admin_session=')) as string;
     });
 
     it('セッション延長に成功する', async () => {
-      const response = await request(app)
-        .post('/admin/auth/refresh')
-        .set('Cookie', sessionCookie);
+      const response = await request(app).post('/admin/auth/refresh').set('Cookie', sessionCookie);
 
       expect(response.status).toBe(200);
       expect(response.body.expiresAt).toBeDefined();
@@ -377,9 +329,7 @@ describe('Admin Auth API Integration Tests', () => {
         },
       });
 
-      const response = await request(app)
-        .post('/admin/auth/refresh')
-        .set('Cookie', sessionCookie);
+      const response = await request(app).post('/admin/auth/refresh').set('Cookie', sessionCookie);
 
       expect(response.status).toBe(401);
       expect(response.body.error.message).toContain('再度ログイン');

@@ -41,9 +41,7 @@ test.describe('組織一覧', () => {
 
       // 作成した組織のIDをAPIから取得（クリーンアップ用）
       const orgs = await apiClient.getUserOrganizations();
-      const createdOrg = orgs.organizations.find(
-        (o) => o.organization.name === orgName,
-      );
+      const createdOrg = orgs.organizations.find((o) => o.organization.name === orgName);
       if (createdOrg) {
         createdOrgId = createdOrg.organization.id;
       }
@@ -77,7 +75,10 @@ test.describe('組織設定', () => {
   test.beforeAll(async ({ request }) => {
     // テスト用の組織を作成
     const { TestApiClient } = await import('../../helpers/api-client');
-    const apiClient = new TestApiClient(request, process.env.E2E_WEB_URL || 'http://localhost:3000');
+    const apiClient = new TestApiClient(
+      request,
+      process.env.E2E_WEB_URL || 'http://localhost:3000'
+    );
     const result = await apiClient.createOrganization({ name: `Settings Test Org ${Date.now()}` });
     testOrgId = result.organization.id;
   });
@@ -86,7 +87,10 @@ test.describe('組織設定', () => {
     // テスト用の組織を削除
     if (testOrgId) {
       const { TestApiClient } = await import('../../helpers/api-client');
-      const apiClient = new TestApiClient(request, process.env.E2E_WEB_URL || 'http://localhost:3000');
+      const apiClient = new TestApiClient(
+        request,
+        process.env.E2E_WEB_URL || 'http://localhost:3000'
+      );
       await apiClient.deleteOrganization(testOrgId);
     }
   });
@@ -130,7 +134,10 @@ test.describe('メンバー管理', () => {
   test.beforeAll(async ({ request }) => {
     // テスト用の組織を作成
     const { TestApiClient } = await import('../../helpers/api-client');
-    const apiClient = new TestApiClient(request, process.env.E2E_WEB_URL || 'http://localhost:3000');
+    const apiClient = new TestApiClient(
+      request,
+      process.env.E2E_WEB_URL || 'http://localhost:3000'
+    );
     const result = await apiClient.createOrganization({ name: `Member Test Org ${Date.now()}` });
     testOrgId = result.organization.id;
   });
@@ -139,7 +146,10 @@ test.describe('メンバー管理', () => {
     // テスト用の組織を削除
     if (testOrgId) {
       const { TestApiClient } = await import('../../helpers/api-client');
-      const apiClient = new TestApiClient(request, process.env.E2E_WEB_URL || 'http://localhost:3000');
+      const apiClient = new TestApiClient(
+        request,
+        process.env.E2E_WEB_URL || 'http://localhost:3000'
+      );
       await apiClient.deleteOrganization(testOrgId);
     }
   });
@@ -149,7 +159,9 @@ test.describe('メンバー管理', () => {
     await page.goto(`/organizations/${testOrgId}/settings?tab=members`);
 
     // メンバー管理セクションが表示される
-    await expect(page.getByRole('heading', { name: 'メンバー管理' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'メンバー管理' })).toBeVisible({
+      timeout: 10000,
+    });
 
     // 少なくとも1人のメンバー（自分）が表示される - 「オーナー」ロールを確認
     await expect(page.getByText('オーナー')).toBeVisible({ timeout: 10000 });
@@ -160,7 +172,9 @@ test.describe('メンバー管理', () => {
     await page.goto(`/organizations/${testOrgId}/settings?tab=members`);
 
     // メンバー管理セクションが表示される
-    await expect(page.getByRole('heading', { name: 'メンバー管理' })).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: 'メンバー管理' })).toBeVisible({
+      timeout: 10000,
+    });
 
     // ロール表示（オーナー）が見える
     await expect(page.getByText('オーナー')).toBeVisible({ timeout: 10000 });
@@ -173,7 +187,10 @@ test.describe('招待管理', () => {
   test.beforeAll(async ({ request }) => {
     // テスト用の組織を作成
     const { TestApiClient } = await import('../../helpers/api-client');
-    const apiClient = new TestApiClient(request, process.env.E2E_WEB_URL || 'http://localhost:3000');
+    const apiClient = new TestApiClient(
+      request,
+      process.env.E2E_WEB_URL || 'http://localhost:3000'
+    );
     const result = await apiClient.createOrganization({ name: `Invite Test Org ${Date.now()}` });
     testOrgId = result.organization.id;
   });
@@ -182,7 +199,10 @@ test.describe('招待管理', () => {
     // テスト用の組織を削除
     if (testOrgId) {
       const { TestApiClient } = await import('../../helpers/api-client');
-      const apiClient = new TestApiClient(request, process.env.E2E_WEB_URL || 'http://localhost:3000');
+      const apiClient = new TestApiClient(
+        request,
+        process.env.E2E_WEB_URL || 'http://localhost:3000'
+      );
       await apiClient.deleteOrganization(testOrgId);
     }
   });
@@ -228,13 +248,18 @@ test.describe('招待管理', () => {
     await page.goto(`/organizations/${testOrgId}/settings?tab=invitations`);
 
     // 保留中の招待が表示される
-    await expect(page.getByText(testEmail).or(page.getByText(/保留中/))).toBeVisible({ timeout: 10000 });
+    await expect(page.getByText(testEmail).or(page.getByText(/保留中/))).toBeVisible({
+      timeout: 10000,
+    });
   });
 
   test('招待をキャンセルできる', async ({ page, apiClient }) => {
     // 招待を作成
     const testEmail = `e2e-cancel-${Date.now()}@example.com`;
-    const inviteResult = await apiClient.inviteMember(testOrgId, { email: testEmail, role: 'MEMBER' });
+    const inviteResult = await apiClient.inviteMember(testOrgId, {
+      email: testEmail,
+      role: 'MEMBER',
+    });
 
     // 招待設定に遷移
     await page.goto(`/organizations/${testOrgId}/settings?tab=invitations`);
@@ -243,14 +268,22 @@ test.describe('招待管理', () => {
     await expect(page.getByText(testEmail)).toBeVisible({ timeout: 10000 });
 
     // 対象メールを含む招待行を見つけて「招待を取り消す」ボタンをクリック
-    const inviteRow = page.locator('div').filter({ hasText: testEmail }).filter({ has: page.getByRole('button', { name: '招待を取り消す' }) });
+    const inviteRow = page
+      .locator('div')
+      .filter({ hasText: testEmail })
+      .filter({ has: page.getByRole('button', { name: '招待を取り消す' }) });
     await inviteRow.getByRole('button', { name: '招待を取り消す' }).first().click();
 
     // 確認ダイアログが表示される
-    await expect(page.getByRole('heading', { name: /招待.*取り消/ })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: /招待.*取り消/ })).toBeVisible({
+      timeout: 5000,
+    });
 
     // 確認ダイアログで確定ボタンをクリック
-    await page.getByRole('button', { name: /取り消す/ }).last().click();
+    await page
+      .getByRole('button', { name: /取り消す/ })
+      .last()
+      .click();
 
     // 成功メッセージが表示される
     await expect(page.getByText(/取り消しました/)).toBeVisible({ timeout: 10000 });
@@ -263,7 +296,10 @@ test.describe('監査ログ', () => {
   test.beforeAll(async ({ request }) => {
     // テスト用の組織を作成
     const { TestApiClient } = await import('../../helpers/api-client');
-    const apiClient = new TestApiClient(request, process.env.E2E_WEB_URL || 'http://localhost:3000');
+    const apiClient = new TestApiClient(
+      request,
+      process.env.E2E_WEB_URL || 'http://localhost:3000'
+    );
     const result = await apiClient.createOrganization({ name: `Audit Test Org ${Date.now()}` });
     testOrgId = result.organization.id;
   });
@@ -272,7 +308,10 @@ test.describe('監査ログ', () => {
     // テスト用の組織を削除
     if (testOrgId) {
       const { TestApiClient } = await import('../../helpers/api-client');
-      const apiClient = new TestApiClient(request, process.env.E2E_WEB_URL || 'http://localhost:3000');
+      const apiClient = new TestApiClient(
+        request,
+        process.env.E2E_WEB_URL || 'http://localhost:3000'
+      );
       await apiClient.deleteOrganization(testOrgId);
     }
   });
@@ -301,7 +340,9 @@ test.describe('危険な操作', () => {
       await page.goto(`/organizations/${testOrgId}/settings?tab=danger`);
 
       // 組織削除セクションが表示される
-      await expect(page.getByRole('heading', { name: '組織を削除' })).toBeVisible({ timeout: 10000 });
+      await expect(page.getByRole('heading', { name: '組織を削除' })).toBeVisible({
+        timeout: 10000,
+      });
 
       // 削除ボタンが表示される
       await expect(page.getByRole('button', { name: '組織を削除' })).toBeVisible();
@@ -324,7 +365,9 @@ test.describe('危険な操作', () => {
     await page.getByRole('button', { name: '組織を削除' }).first().click();
 
     // 確認モーダルが表示される
-    await expect(page.getByRole('heading', { name: '組織を削除' }).last()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByRole('heading', { name: '組織を削除' }).last()).toBeVisible({
+      timeout: 10000,
+    });
 
     // 組織名を入力して確認
     const confirmInput = page.getByPlaceholder(orgName);
@@ -338,7 +381,10 @@ test.describe('危険な操作', () => {
     // 削除処理が完了するまで待機（ボタンが「削除中...」に変わり、その後リダイレクト）
     // 組織一覧に戻るか、成功メッセージが表示される
     await expect(
-      page.getByText(/削除しました/).or(page.getByRole('heading', { name: '組織', level: 1 })).first()
+      page
+        .getByText(/削除しました/)
+        .or(page.getByRole('heading', { name: '組織', level: 1 }))
+        .first()
     ).toBeVisible({ timeout: 30000 });
   });
 });

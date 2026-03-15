@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { Loader2, ListOrdered } from 'lucide-react';
 import {
-  Loader2,
-  ListOrdered,
-} from 'lucide-react';
-import { testCasesApi, ApiError, type TestCaseStep, type ReviewCommentWithReplies } from '../../lib/api';
+  testCasesApi,
+  ApiError,
+  type TestCaseStep,
+  type ReviewCommentWithReplies,
+} from '../../lib/api';
 import { MarkdownPreview } from '../common/markdown';
 import { CommentableField } from '../review/CommentableField';
 import { CommentableItem } from '../review/CommentableItem';

@@ -18,7 +18,16 @@ import { AuthenticationError, AuthorizationError } from '@agentest/shared';
  * グループ化されたレスポンスから履歴を平坦化するヘルパー
  * categorizedHistoriesの全カテゴリから履歴を抽出
  */
-function flattenHistories(items: { categorizedHistories: { basicInfo: unknown[]; preconditions: unknown[]; steps: unknown[]; expectedResults: unknown[] } }[]): unknown[] {
+function flattenHistories(
+  items: {
+    categorizedHistories: {
+      basicInfo: unknown[];
+      preconditions: unknown[];
+      steps: unknown[];
+      expectedResults: unknown[];
+    };
+  }[]
+): unknown[] {
   return items.flatMap((item) => [
     ...item.categorizedHistories.basicInfo,
     ...item.categorizedHistories.preconditions,
@@ -44,13 +53,20 @@ vi.mock('@agentest/auth', () => ({
   },
   optionalAuth: () => (_req: any, _res: any, next: any) => next(),
   requireOrgRole: () => (_req: any, _res: any, next: any) => next(),
-  requireProjectRole: (roles: string[], _options?: { allowDeletedProject?: boolean }) => (_req: any, _res: any, next: any) => {
-    if (!mockProjectRole || !roles.includes(mockProjectRole)) {
-      return next(new AuthorizationError('権限がありません'));
-    }
-    next();
-  },
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  requireProjectRole:
+    (roles: string[], _options?: { allowDeletedProject?: boolean }) =>
+    (_req: any, _res: any, next: any) => {
+      if (!mockProjectRole || !roles.includes(mockProjectRole)) {
+        return next(new AuthorizationError('権限がありません'));
+      }
+      next();
+    },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -64,12 +80,14 @@ vi.mock('@agentest/auth', () => ({
 
 // テストケース権限ミドルウェアをモック
 vi.mock('../../middleware/require-test-case-role.js', () => ({
-  requireTestCaseRole: (roles: string[], _options?: { allowDeletedTestCase?: boolean }) => (_req: any, _res: any, next: any) => {
-    if (!mockTestCaseRole || !roles.includes(mockTestCaseRole)) {
-      return next(new AuthorizationError('権限がありません'));
-    }
-    next();
-  },
+  requireTestCaseRole:
+    (roles: string[], _options?: { allowDeletedTestCase?: boolean }) =>
+    (_req: any, _res: any, next: any) => {
+      if (!mockTestCaseRole || !roles.includes(mockTestCaseRole)) {
+        return next(new AuthorizationError('権限がありません'));
+      }
+      next();
+    },
 }));
 
 // テスト用認証設定関数
@@ -195,7 +213,9 @@ describe('Test Case History & Restore API Integration Tests', () => {
         .get(`/api/test-cases/${testCase.id}/histories`)
         .expect(200);
 
-      const histories = flattenHistories(response.body.items) as { changedBy: { id: string; name: string } }[];
+      const histories = flattenHistories(response.body.items) as {
+        changedBy: { id: string; name: string };
+      }[];
       const updateHistory = histories[0];
       expect(updateHistory.changedBy).toHaveProperty('id', admin.id);
       expect(updateHistory.changedBy).toHaveProperty('name', 'Admin');
@@ -327,9 +347,7 @@ describe('Test Case History & Restore API Integration Tests', () => {
     });
 
     it('復元後に履歴が記録される', async () => {
-      await request(app)
-        .post(`/api/test-cases/${testCase.id}/restore`)
-        .expect(200);
+      await request(app).post(`/api/test-cases/${testCase.id}/restore`).expect(200);
 
       const history = await prisma.testCaseHistory.findFirst({
         where: {
@@ -429,14 +447,10 @@ describe('Test Case History & Restore API Integration Tests', () => {
 
     it('復元後は通常のテストケース操作ができる', async () => {
       // まず復元
-      await request(app)
-        .post(`/api/test-cases/${testCase.id}/restore`)
-        .expect(200);
+      await request(app).post(`/api/test-cases/${testCase.id}/restore`).expect(200);
 
       // テストケース詳細を取得できる
-      const response = await request(app)
-        .get(`/api/test-cases/${testCase.id}`)
-        .expect(200);
+      const response = await request(app).get(`/api/test-cases/${testCase.id}`).expect(200);
 
       expect(response.body.testCase.id).toBe(testCase.id);
       expect(response.body.testCase.deletedAt).toBeNull();
@@ -468,9 +482,7 @@ describe('Test Case History & Restore API Integration Tests', () => {
     });
 
     it('テストケース削除時に履歴が作成される', async () => {
-      await request(app)
-        .delete(`/api/test-cases/${testCase.id}`)
-        .expect(204);
+      await request(app).delete(`/api/test-cases/${testCase.id}`).expect(204);
 
       const history = await prisma.testCaseHistory.findFirst({
         where: {
@@ -500,25 +512,19 @@ describe('Test Case History & Restore API Integration Tests', () => {
       it('ADMINは履歴を閲覧できる', async () => {
         setTestAuth({ id: admin.id, email: admin.email }, 'ADMIN');
 
-        await request(app)
-          .get(`/api/test-cases/${testCase.id}/histories`)
-          .expect(200);
+        await request(app).get(`/api/test-cases/${testCase.id}/histories`).expect(200);
       });
 
       it('WRITEは履歴を閲覧できる', async () => {
         setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
 
-        await request(app)
-          .get(`/api/test-cases/${testCase.id}/histories`)
-          .expect(200);
+        await request(app).get(`/api/test-cases/${testCase.id}/histories`).expect(200);
       });
 
       it('READは履歴を閲覧できる', async () => {
         setTestAuth({ id: reader.id, email: reader.email }, 'READ');
 
-        await request(app)
-          .get(`/api/test-cases/${testCase.id}/histories`)
-          .expect(200);
+        await request(app).get(`/api/test-cases/${testCase.id}/histories`).expect(200);
       });
     });
 
@@ -534,17 +540,13 @@ describe('Test Case History & Restore API Integration Tests', () => {
       it('ADMINはテストケースを復元できる', async () => {
         setTestAuth({ id: admin.id, email: admin.email }, 'ADMIN');
 
-        await request(app)
-          .post(`/api/test-cases/${testCase.id}/restore`)
-          .expect(200);
+        await request(app).post(`/api/test-cases/${testCase.id}/restore`).expect(200);
       });
 
       it('WRITEはテストケースを復元できる', async () => {
         setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
 
-        await request(app)
-          .post(`/api/test-cases/${testCase.id}/restore`)
-          .expect(200);
+        await request(app).post(`/api/test-cases/${testCase.id}/restore`).expect(200);
       });
 
       it('READはテストケースを復元できない', async () => {

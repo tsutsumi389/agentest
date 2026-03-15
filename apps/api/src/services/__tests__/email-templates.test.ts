@@ -61,9 +61,7 @@ describe('generatePasswordResetEmail', () => {
       resetUrl: 'javascript:alert("xss")',
     };
 
-    expect(() =>
-      emailService.generatePasswordResetEmail(params),
-    ).toThrow();
+    expect(() => emailService.generatePasswordResetEmail(params)).toThrow();
   });
 
   it('textにリセットURL（プレーンテキスト）が含まれる', () => {
@@ -133,9 +131,7 @@ describe('generateEmailVerificationEmail', () => {
       verificationUrl: 'javascript:alert("xss")',
     };
 
-    expect(() =>
-      emailService.generateEmailVerificationEmail(params),
-    ).toThrow();
+    expect(() => emailService.generateEmailVerificationEmail(params)).toThrow();
   });
 
   it('textに確認URL（プレーンテキスト）が含まれる', () => {
@@ -166,8 +162,7 @@ describe('generateWelcomeEmail', () => {
     const result = emailService.generateWelcomeEmail(defaultParams);
 
     const hasExpectedSubject =
-      result.subject.includes('ようこそ') ||
-      result.subject.includes('アカウント作成');
+      result.subject.includes('ようこそ') || result.subject.includes('アカウント作成');
 
     expect(hasExpectedSubject).toBe(true);
   });
@@ -202,8 +197,6 @@ describe('generateWelcomeEmail', () => {
       loginUrl: 'javascript:alert("xss")',
     };
 
-    expect(() =>
-      emailService.generateWelcomeEmail(params),
-    ).toThrow();
+    expect(() => emailService.generateWelcomeEmail(params)).toThrow();
   });
 });

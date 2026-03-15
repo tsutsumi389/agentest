@@ -238,7 +238,10 @@ describe('RegisterPage', () => {
     });
 
     it('登録成功後にメール確認ページに遷移する', async () => {
-      mockAuthApi.register.mockResolvedValue({ message: '確認メールを送信しました', user: { id: 'user-1', email: 'test@example.com', name: 'テスト' } });
+      mockAuthApi.register.mockResolvedValue({
+        message: '確認メールを送信しました',
+        user: { id: 'user-1', email: 'test@example.com', name: 'テスト' },
+      });
 
       renderRegisterPage();
 
@@ -255,14 +258,14 @@ describe('RegisterPage', () => {
       fireEvent.click(screen.getByRole('button', { name: 'アカウント作成' }));
 
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith('/check-email?email=test%40example.com', { replace: true });
+        expect(mockNavigate).toHaveBeenCalledWith('/check-email?email=test%40example.com', {
+          replace: true,
+        });
       });
     });
 
     it('メール重複エラー時にメッセージが表示される', async () => {
-      mockAuthApi.register.mockRejectedValue(
-        new Error('このメールアドレスは既に登録されています')
-      );
+      mockAuthApi.register.mockRejectedValue(new Error('このメールアドレスは既に登録されています'));
 
       renderRegisterPage();
 

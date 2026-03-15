@@ -233,7 +233,9 @@ describe('LoginPage', () => {
     });
 
     it('ログイン失敗時にエラーメッセージが表示される', async () => {
-      mockAuthApi.login.mockRejectedValue(new Error('メールアドレスまたはパスワードが正しくありません'));
+      mockAuthApi.login.mockRejectedValue(
+        new Error('メールアドレスまたはパスワードが正しくありません')
+      );
 
       renderLoginPage();
 
@@ -253,7 +255,9 @@ describe('LoginPage', () => {
     });
 
     it('ログイン失敗後にパスワード入力欄がクリアされる', async () => {
-      mockAuthApi.login.mockRejectedValue(new Error('メールアドレスまたはパスワードが正しくありません'));
+      mockAuthApi.login.mockRejectedValue(
+        new Error('メールアドレスまたはパスワードが正しくありません')
+      );
 
       renderLoginPage();
 
@@ -332,10 +336,9 @@ describe('LoginPage', () => {
       fireEvent.click(screen.getByRole('button', { name: 'ログイン' }));
 
       await waitFor(() => {
-        expect(mockNavigate).toHaveBeenCalledWith(
-          '/2fa/verify?redirect=%2Fprojects%2F123',
-          { replace: true }
-        );
+        expect(mockNavigate).toHaveBeenCalledWith('/2fa/verify?redirect=%2Fprojects%2F123', {
+          replace: true,
+        });
       });
     });
 

@@ -61,14 +61,16 @@ export function parseEnv(env: NodeJS.ProcessEnv = process.env): Env {
   const result = envSchema.safeParse(env);
   if (!result.success) {
     const formatted = result.error.format();
-    console.error(JSON.stringify({
-      level: 'fatal',
-      service: 'shared',
-      module: 'env',
-      msg: 'Environment validation failed',
-      errors: formatted,
-      time: new Date().toISOString(),
-    }));
+    console.error(
+      JSON.stringify({
+        level: 'fatal',
+        service: 'shared',
+        module: 'env',
+        msg: 'Environment validation failed',
+        errors: formatted,
+        time: new Date().toISOString(),
+      })
+    );
     throw new Error('Invalid environment configuration');
   }
   return result.data;

@@ -2,7 +2,18 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useSearchParams, useNavigate, Link } from 'react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Calendar } from 'lucide-react';
-import { testSuitesApi, testCasesApi, projectsApi, labelsApi, type TestCase, type TestSuite, type ProjectMemberRole, type ReviewCommentWithReplies, type Label, type Execution } from '../lib/api';
+import {
+  testSuitesApi,
+  testCasesApi,
+  projectsApi,
+  labelsApi,
+  type TestCase,
+  type TestSuite,
+  type ProjectMemberRole,
+  type ReviewCommentWithReplies,
+  type Label,
+  type Execution,
+} from '../lib/api';
 import { formatDateTime, formatRelativeTime } from '../lib/date';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import { useAuth } from '../hooks/useAuth';
@@ -11,9 +22,16 @@ import { usePageSidebar } from '../components/Layout';
 import { useTestSuiteRealtime } from '../hooks/useTestSuiteRealtime';
 import { useTestCaseRealtime } from '../hooks/useTestCaseRealtime';
 import { toast } from '../stores/toast';
-import { TestSuiteHeader, type TabType, type TestCaseTabType } from '../components/test-suite/TestSuiteHeader';
+import {
+  TestSuiteHeader,
+  type TabType,
+  type TestCaseTabType,
+} from '../components/test-suite/TestSuiteHeader';
 import { TestCaseSidebar, type TestCaseFilter } from '../components/test-suite/TestCaseSidebar';
-import { TestCaseDetailPanel, useTestCaseDetails } from '../components/test-case/TestCaseDetailPanel';
+import {
+  TestCaseDetailPanel,
+  useTestCaseDetails,
+} from '../components/test-case/TestCaseDetailPanel';
 import { CopyTestCaseModal } from '../components/test-case/CopyTestCaseModal';
 import { TestCaseForm } from '../components/test-case/TestCaseForm';
 import { TestSuiteForm } from '../components/test-suite/TestSuiteForm';
@@ -64,40 +82,49 @@ export function TestSuiteCasesPage() {
   useTestCaseRealtime(selectedTestCaseId ?? undefined);
 
   // タブ変更ハンドラ
-  const handleTabChange = useCallback((tab: TabType) => {
-    const newParams = new URLSearchParams(searchParams);
-    newParams.set('tab', tab);
-    // タブ切り替え時はテストケース選択を解除
-    newParams.delete('testCase');
-    newParams.delete('testCaseTab');
-    newParams.delete('mode');
-    setSearchParams(newParams);
-  }, [searchParams, setSearchParams]);
-
-  // テストケースタブ変更ハンドラ
-  const handleTestCaseTabChange = useCallback((tab: TestCaseTabType) => {
-    const newParams = new URLSearchParams(searchParams);
-    newParams.set('testCaseTab', tab);
-    setSearchParams(newParams);
-  }, [searchParams, setSearchParams]);
-
-  // テストケース選択ハンドラ（URLを更新）
-  const handleSelectTestCase = useCallback((testCaseId: string | null) => {
-    const newParams = new URLSearchParams(searchParams);
-    // 作成モードを解除
-    newParams.delete('mode');
-    if (testCaseId) {
-      newParams.set('testCase', testCaseId);
-      // 新しいテストケース選択時はタブをリセット
-      newParams.delete('testCaseTab');
-    } else {
+  const handleTabChange = useCallback(
+    (tab: TabType) => {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set('tab', tab);
+      // タブ切り替え時はテストケース選択を解除
       newParams.delete('testCase');
       newParams.delete('testCaseTab');
-    }
-    // テストケース編集モードもリセット
-    setIsTestCaseEditMode(false);
-    setSearchParams(newParams);
-  }, [searchParams, setSearchParams]);
+      newParams.delete('mode');
+      setSearchParams(newParams);
+    },
+    [searchParams, setSearchParams]
+  );
+
+  // テストケースタブ変更ハンドラ
+  const handleTestCaseTabChange = useCallback(
+    (tab: TestCaseTabType) => {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set('testCaseTab', tab);
+      setSearchParams(newParams);
+    },
+    [searchParams, setSearchParams]
+  );
+
+  // テストケース選択ハンドラ（URLを更新）
+  const handleSelectTestCase = useCallback(
+    (testCaseId: string | null) => {
+      const newParams = new URLSearchParams(searchParams);
+      // 作成モードを解除
+      newParams.delete('mode');
+      if (testCaseId) {
+        newParams.set('testCase', testCaseId);
+        // 新しいテストケース選択時はタブをリセット
+        newParams.delete('testCaseTab');
+      } else {
+        newParams.delete('testCase');
+        newParams.delete('testCaseTab');
+      }
+      // テストケース編集モードもリセット
+      setIsTestCaseEditMode(false);
+      setSearchParams(newParams);
+    },
+    [searchParams, setSearchParams]
+  );
 
   // 作成モード開始ハンドラ
   const handleStartCreateMode = useCallback(() => {
@@ -108,14 +135,17 @@ export function TestSuiteCasesPage() {
   }, [searchParams, setSearchParams]);
 
   // 作成モード終了ハンドラ（作成されたテストケースIDがあればそれを選択）
-  const handleExitCreateMode = useCallback((createdTestCaseId?: string) => {
-    const newParams = new URLSearchParams(searchParams);
-    newParams.delete('mode');
-    if (createdTestCaseId) {
-      newParams.set('testCase', createdTestCaseId);
-    }
-    setSearchParams(newParams);
-  }, [searchParams, setSearchParams]);
+  const handleExitCreateMode = useCallback(
+    (createdTestCaseId?: string) => {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('mode');
+      if (createdTestCaseId) {
+        newParams.set('testCase', createdTestCaseId);
+      }
+      setSearchParams(newParams);
+    },
+    [searchParams, setSearchParams]
+  );
 
   // 概要表示ハンドラ（テストケース選択を解除して概要タブを表示）
   const handleShowOverview = useCallback(() => {
@@ -167,10 +197,14 @@ export function TestSuiteCasesPage() {
   // フィルタに応じたAPI パラメータ
   const filterParams = (() => {
     switch (sidebarFilter) {
-      case 'active': return { status: 'ACTIVE' };
-      case 'draft': return { status: 'DRAFT' };
-      case 'archived': return { status: 'ARCHIVED' };
-      case 'deleted': return { includeDeleted: true };
+      case 'active':
+        return { status: 'ACTIVE' };
+      case 'draft':
+        return { status: 'DRAFT' };
+      case 'archived':
+        return { status: 'ARCHIVED' };
+      case 'deleted':
+        return { includeDeleted: true };
     }
   })();
 
@@ -213,8 +247,7 @@ export function TestSuiteCasesPage() {
 
   // テストスイートのステータス変更
   const statusChangeMutation = useMutation({
-    mutationFn: (status: 'ACTIVE' | 'ARCHIVED') =>
-      testSuitesApi.update(testSuiteId!, { status }),
+    mutationFn: (status: 'ACTIVE' | 'ARCHIVED') => testSuitesApi.update(testSuiteId!, { status }),
     onSuccess: (data) => {
       queryClient.setQueryData(['test-suite', testSuiteId], { testSuite: data.testSuite });
       // プロジェクト一覧のキャッシュも無効化
@@ -259,7 +292,7 @@ export function TestSuiteCasesPage() {
   // useEffectの依存配列で無限ループを引き起こす
   const testCases = useMemo(() => {
     if (sidebarFilter === 'deleted') {
-      return (casesData?.testCases || []).filter(tc => tc.deletedAt != null);
+      return (casesData?.testCases || []).filter((tc) => tc.deletedAt != null);
     }
     return casesData?.testCases || [];
   }, [casesData?.testCases, sidebarFilter]);
@@ -270,13 +303,15 @@ export function TestSuiteCasesPage() {
   const selectedTestCaseDetail = selectedTestCaseData?.testCase;
 
   // TestSuiteHeaderに渡すテストケース情報
-  const selectedTestCaseInfo = selectedTestCaseDetail ? {
-    id: selectedTestCaseDetail.id,
-    title: selectedTestCaseDetail.title,
-    priority: selectedTestCaseDetail.priority,
-    status: selectedTestCaseDetail.status,
-    deletedAt: selectedTestCaseDetail.deletedAt,
-  } : undefined;
+  const selectedTestCaseInfo = selectedTestCaseDetail
+    ? {
+        id: selectedTestCaseDetail.id,
+        title: selectedTestCaseDetail.title,
+        priority: selectedTestCaseDetail.priority,
+        status: selectedTestCaseDetail.status,
+        deletedAt: selectedTestCaseDetail.deletedAt,
+      }
+    : undefined;
 
   // 実行開始ボタンのクリックハンドラ
   const handleStartExecution = useCallback(() => {
@@ -290,9 +325,14 @@ export function TestSuiteCasesPage() {
   }, [environments.length, startExecutionMutation]);
 
   // テストケース並び替え後の更新ハンドラ
-  const handleTestCasesReordered = useCallback((reorderedTestCases: TestCase[]) => {
-    queryClient.setQueryData(['test-suite-cases', testSuiteId, sidebarFilter], { testCases: reorderedTestCases });
-  }, [queryClient, testSuiteId, sidebarFilter]);
+  const handleTestCasesReordered = useCallback(
+    (reorderedTestCases: TestCase[]) => {
+      queryClient.setQueryData(['test-suite-cases', testSuiteId, sidebarFilter], {
+        testCases: reorderedTestCases,
+      });
+    },
+    [queryClient, testSuiteId, sidebarFilter]
+  );
 
   // サイドバーにテストケース一覧を表示
   useEffect(() => {
@@ -317,7 +357,21 @@ export function TestSuiteCasesPage() {
     );
 
     return () => setSidebarContent(null);
-  }, [testSuiteId, testCases, selectedTestCaseId, currentRole, isLoadingCases, setSidebarContent, handleTestCasesReordered, handleSelectTestCase, handleStartCreateMode, isCreateMode, handleShowOverview, sidebarFilter, handleSidebarFilterChange]);
+  }, [
+    testSuiteId,
+    testCases,
+    selectedTestCaseId,
+    currentRole,
+    isLoadingCases,
+    setSidebarContent,
+    handleTestCasesReordered,
+    handleSelectTestCase,
+    handleStartCreateMode,
+    isCreateMode,
+    handleShowOverview,
+    sidebarFilter,
+    handleSidebarFilterChange,
+  ]);
 
   if (isLoadingSuite) {
     return (
@@ -338,7 +392,9 @@ export function TestSuiteCasesPage() {
   // 編集モード時: TestSuiteFormを表示
   if (isEditMode) {
     // 前提条件をorderKeyでソート
-    const sortedPreconditions = [...preconditions].sort((a, b) => a.orderKey.localeCompare(b.orderKey));
+    const sortedPreconditions = [...preconditions].sort((a, b) =>
+      a.orderKey.localeCompare(b.orderKey)
+    );
 
     return (
       <div className="h-full flex flex-col">
@@ -353,7 +409,9 @@ export function TestSuiteCasesPage() {
               onSave={() => {
                 setIsEditMode(false);
                 queryClient.invalidateQueries({ queryKey: ['test-suite', testSuiteId] });
-                queryClient.invalidateQueries({ queryKey: ['test-suite-preconditions', testSuiteId] });
+                queryClient.invalidateQueries({
+                  queryKey: ['test-suite-preconditions', testSuiteId],
+                });
               }}
               onCancel={() => setIsEditMode(false)}
             />
@@ -425,7 +483,9 @@ export function TestSuiteCasesPage() {
                 onClose={() => handleSelectTestCase(null)}
                 onUpdated={() => {
                   queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
-                  queryClient.invalidateQueries({ queryKey: ['test-case-details', selectedTestCaseId] });
+                  queryClient.invalidateQueries({
+                    queryKey: ['test-case-details', selectedTestCaseId],
+                  });
                 }}
                 onDeleted={() => {
                   handleSelectTestCase(null);
@@ -454,13 +514,9 @@ export function TestSuiteCasesPage() {
                   <ExecutionHistoryList testSuiteId={testSuiteId!} projectId={suite.projectId} />
                 )}
 
-                {currentTab === 'review' && (
-                  <ReviewPanel testSuiteId={testSuiteId} />
-                )}
+                {currentTab === 'review' && <ReviewPanel testSuiteId={testSuiteId} />}
 
-                {currentTab === 'history' && (
-                  <TestSuiteHistoryList testSuite={suite} />
-                )}
+                {currentTab === 'history' && <TestSuiteHistoryList testSuite={suite} />}
 
                 {currentTab === 'settings' && (
                   <SettingsTab
@@ -470,7 +526,9 @@ export function TestSuiteCasesPage() {
                       queryClient.setQueryData(['test-suite', testSuiteId], { testSuite: updated });
                     }}
                     onLabelsUpdated={() => {
-                      queryClient.invalidateQueries({ queryKey: ['test-suite-labels', testSuiteId] });
+                      queryClient.invalidateQueries({
+                        queryKey: ['test-suite-labels', testSuiteId],
+                      });
                     }}
                   />
                 )}
@@ -564,9 +622,7 @@ export function OverviewTab({
               <MarkdownPreview content={description} />
             </div>
           ) : (
-            <div className="p-4 text-center text-foreground-muted">
-              説明なし
-            </div>
+            <div className="p-4 text-center text-foreground-muted">説明なし</div>
           )}
         </div>
       </CommentableField>
@@ -586,14 +642,17 @@ export function OverviewTab({
         </div>
 
         {executions.length === 0 ? (
-          <div className="p-6 text-center text-foreground-muted">
-            実行履歴がありません
-          </div>
+          <div className="p-6 text-center text-foreground-muted">実行履歴がありません</div>
         ) : (
           <div className="divide-y divide-border">
             {executions.map((execution) => {
               // judgmentCountsから値を取得
-              const counts = execution.judgmentCounts || { PASS: 0, FAIL: 0, PENDING: 0, SKIPPED: 0 };
+              const counts = execution.judgmentCounts || {
+                PASS: 0,
+                FAIL: 0,
+                PENDING: 0,
+                SKIPPED: 0,
+              };
               const total = counts.PASS + counts.FAIL + counts.PENDING + counts.SKIPPED;
               // 合格率を計算（PENDING も分母に含める）
               const passRate = total > 0 ? Math.round((counts.PASS / total) * 100) : 0;
@@ -632,7 +691,10 @@ export function OverviewTab({
                             size="sm"
                           />
                         </div>
-                        <span className="text-xs text-foreground-muted font-code shrink-0" data-testid="pass-rate-label">
+                        <span
+                          className="text-xs text-foreground-muted font-code shrink-0"
+                          data-testid="pass-rate-label"
+                        >
                           {counts.PASS}/{total} ({passRate}%)
                         </span>
                       </div>
@@ -665,7 +727,8 @@ function SettingsTab({ testSuite, currentRole, onUpdated, onLabelsUpdated }: Set
 
   // ADMIN権限があるかどうか
   const canEdit = currentRole === 'OWNER' || currentRole === 'ADMIN';
-  const canEditLabels = currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'WRITE';
+  const canEditLabels =
+    currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'WRITE';
 
   // プロジェクトのラベル一覧を取得
   const { data: projectLabelsData, isLoading: isLoadingProjectLabels } = useQuery({

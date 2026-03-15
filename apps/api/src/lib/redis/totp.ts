@@ -42,9 +42,7 @@ export async function setTotpSetupSecret(
  * TOTPセットアップ用の秘密鍵を取得
  * @param adminUserId 管理者ユーザーID
  */
-export async function getTotpSetupSecret(
-  adminUserId: string
-): Promise<string | null> {
+export async function getTotpSetupSecret(adminUserId: string): Promise<string | null> {
   const redis = getRedisClient();
   if (!redis) {
     return null;
@@ -63,9 +61,7 @@ export async function getTotpSetupSecret(
  * TOTPセットアップ用の秘密鍵を削除
  * @param adminUserId 管理者ユーザーID
  */
-export async function deleteTotpSetupSecret(
-  adminUserId: string
-): Promise<boolean> {
+export async function deleteTotpSetupSecret(adminUserId: string): Promise<boolean> {
   const redis = getRedisClient();
   if (!redis) {
     return false;
@@ -122,10 +118,7 @@ export async function markTotpCodeUsed(
  * 注: この関数は確認専用のため、Redis未設定時はfalse（未使用）を返す。
  * 本番環境でのセキュリティはmarkTotpCodeUsed側で担保される。
  */
-export async function isTotpCodeUsed(
-  adminUserId: string,
-  code: string
-): Promise<boolean> {
+export async function isTotpCodeUsed(adminUserId: string, code: string): Promise<boolean> {
   const redis = getRedisClient();
   if (!redis) {
     // Redis未設定時はfalseを返す（安全側：後続のmarkTotpCodeUsedでエラーになる）
@@ -179,9 +172,7 @@ export async function setUserTotpSetupSecret(
  * ユーザーTOTPセットアップ用の秘密鍵を取得
  * @param userId ユーザーID
  */
-export async function getUserTotpSetupSecret(
-  userId: string
-): Promise<string | null> {
+export async function getUserTotpSetupSecret(userId: string): Promise<string | null> {
   const redis = getRedisClient();
   if (!redis) {
     return null;
@@ -200,9 +191,7 @@ export async function getUserTotpSetupSecret(
  * ユーザーTOTPセットアップ用の秘密鍵を削除
  * @param userId ユーザーID
  */
-export async function deleteUserTotpSetupSecret(
-  userId: string
-): Promise<boolean> {
+export async function deleteUserTotpSetupSecret(userId: string): Promise<boolean> {
   const redis = getRedisClient();
   if (!redis) {
     return false;
@@ -257,10 +246,7 @@ export async function markUserTotpCodeUsed(
  * @param userId ユーザーID
  * @param code TOTPコード
  */
-export async function isUserTotpCodeUsed(
-  userId: string,
-  code: string
-): Promise<boolean> {
+export async function isUserTotpCodeUsed(userId: string, code: string): Promise<boolean> {
   const redis = getRedisClient();
   if (!redis) {
     return false;

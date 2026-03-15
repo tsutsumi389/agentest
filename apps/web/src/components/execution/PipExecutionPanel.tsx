@@ -78,7 +78,9 @@ function PipStatusButtons<T extends string>({
     return (
       <div className="flex items-center gap-1.5">
         <IconComponent className={`w-4 h-4 ${currentOption.config.colorClass}`} />
-        <span className={`text-sm ${currentOption.config.colorClass}`}>{currentOption.config.label}</span>
+        <span className={`text-sm ${currentOption.config.colorClass}`}>
+          {currentOption.config.label}
+        </span>
       </div>
     );
   }
@@ -226,9 +228,13 @@ export function PipExecutionPanel({
 
     // 1. スイートレベル前提条件（最初のテストケースのみ）
     if (isFirstTestCase) {
-      const sortedSuitePreconditions = [...suitePreconditions].sort((a, b) => a.orderKey.localeCompare(b.orderKey));
+      const sortedSuitePreconditions = [...suitePreconditions].sort((a, b) =>
+        a.orderKey.localeCompare(b.orderKey)
+      );
       sortedSuitePreconditions.forEach((precond, index) => {
-        const result = preconditionResults.find((r) => r.executionSuitePreconditionId === precond.id);
+        const result = preconditionResults.find(
+          (r) => r.executionSuitePreconditionId === precond.id
+        );
         if (result) {
           items.push({
             type: 'suite-precondition',
@@ -243,7 +249,9 @@ export function PipExecutionPanel({
     }
 
     // 2. テストケースレベル前提条件
-    const sortedCasePreconditions = [...casePreconditions].sort((a, b) => a.orderKey.localeCompare(b.orderKey));
+    const sortedCasePreconditions = [...casePreconditions].sort((a, b) =>
+      a.orderKey.localeCompare(b.orderKey)
+    );
     sortedCasePreconditions.forEach((precond, index) => {
       const result = preconditionResults.find((r) => r.executionCasePreconditionId === precond.id);
       if (result) {
@@ -275,7 +283,9 @@ export function PipExecutionPanel({
     });
 
     // 4. 期待結果
-    const sortedExpectedResults = [...expectedResults].sort((a, b) => a.orderKey.localeCompare(b.orderKey));
+    const sortedExpectedResults = [...expectedResults].sort((a, b) =>
+      a.orderKey.localeCompare(b.orderKey)
+    );
     sortedExpectedResults.forEach((er, index) => {
       const result = expectedResultResults.find((r) => r.executionExpectedResultId === er.id);
       if (result) {
@@ -291,7 +301,16 @@ export function PipExecutionPanel({
     });
 
     return items;
-  }, [isFirstTestCase, suitePreconditions, casePreconditions, steps, expectedResults, preconditionResults, stepResults, expectedResultResults]);
+  }, [
+    isFirstTestCase,
+    suitePreconditions,
+    casePreconditions,
+    steps,
+    expectedResults,
+    preconditionResults,
+    stepResults,
+    expectedResultResults,
+  ]);
 
   // 現在のインデックス
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -357,7 +376,11 @@ export function PipExecutionPanel({
     const handleKeyDown = (e: KeyboardEvent) => {
       // 入力フィールドにフォーカスがある場合はスキップ
       const target = e.target as HTMLElement;
-      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.tagName === 'SELECT') {
+      if (
+        target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT'
+      ) {
         return;
       }
       if (e.key === 'ArrowLeft') {
@@ -371,23 +394,32 @@ export function PipExecutionPanel({
   }, [pipWindow, goToPrevious, goToNext]);
 
   // 現在のアイテムの結果データを取得
-  const currentPreconditionResult = (currentItem?.type === 'suite-precondition' || currentItem?.type === 'case-precondition')
-    ? preconditionResults.find((r) => r.id === currentItem.resultId)
-    : null;
-  const currentStepResult = currentItem?.type === 'step'
-    ? stepResults.find((r) => r.id === currentItem.resultId)
-    : null;
-  const currentExpectedResult = currentItem?.type === 'expected'
-    ? expectedResultResults.find((r) => r.id === currentItem.resultId)
-    : null;
+  const currentPreconditionResult =
+    currentItem?.type === 'suite-precondition' || currentItem?.type === 'case-precondition'
+      ? preconditionResults.find((r) => r.id === currentItem.resultId)
+      : null;
+  const currentStepResult =
+    currentItem?.type === 'step' ? stepResults.find((r) => r.id === currentItem.resultId) : null;
+  const currentExpectedResult =
+    currentItem?.type === 'expected'
+      ? expectedResultResults.find((r) => r.id === currentItem.resultId)
+      : null;
 
   // アイテム種類ごとのラベルとスタイル
   const getItemTypeConfig = (type: NavigableItem['type']) => {
     switch (type) {
       case 'suite-precondition':
-        return { label: 'スイート前提条件', bgClass: 'bg-purple-900/30', textClass: 'text-purple-400' };
+        return {
+          label: 'スイート前提条件',
+          bgClass: 'bg-purple-900/30',
+          textClass: 'text-purple-400',
+        };
       case 'case-precondition':
-        return { label: 'ケース前提条件', bgClass: 'bg-purple-900/30', textClass: 'text-purple-400' };
+        return {
+          label: 'ケース前提条件',
+          bgClass: 'bg-purple-900/30',
+          textClass: 'text-purple-400',
+        };
       case 'step':
         return { label: 'ステップ', bgClass: 'bg-accent-subtle', textClass: 'text-accent' };
       case 'expected':
@@ -469,15 +501,11 @@ export function PipExecutionPanel({
             <ChevronRight
               className={`w-4 h-4 text-foreground-muted transition-transform ${isDescriptionExpanded ? 'rotate-90' : ''}`}
             />
-            <h1 className="text-sm font-medium text-foreground truncate flex-1">
-              {testCaseTitle}
-            </h1>
+            <h1 className="text-sm font-medium text-foreground truncate flex-1">{testCaseTitle}</h1>
           </button>
         ) : (
           <div className="px-4 py-2">
-            <h1 className="text-sm font-medium text-foreground truncate">
-              {testCaseTitle}
-            </h1>
+            <h1 className="text-sm font-medium text-foreground truncate">{testCaseTitle}</h1>
           </div>
         )}
         {/* 説明の展開表示 */}
@@ -492,7 +520,9 @@ export function PipExecutionPanel({
       <main className="flex-1 p-4 space-y-4 overflow-auto">
         {/* 種類とインデックス表示 */}
         <div className="flex items-center gap-2">
-          <span className={`text-xs font-medium px-2 py-0.5 rounded ${itemTypeConfig.bgClass} ${itemTypeConfig.textClass}`}>
+          <span
+            className={`text-xs font-medium px-2 py-0.5 rounded ${itemTypeConfig.bgClass} ${itemTypeConfig.textClass}`}
+          >
             {itemTypeConfig.label}
           </span>
           <span className="text-sm text-foreground-muted">
@@ -508,7 +538,9 @@ export function PipExecutionPanel({
         {/* ノート */}
         <div className="space-y-1">
           <span className="text-xs text-foreground-muted">ノート:</span>
-          {(currentItem.type === 'suite-precondition' || currentItem.type === 'case-precondition') && currentPreconditionResult ? (
+          {(currentItem.type === 'suite-precondition' ||
+            currentItem.type === 'case-precondition') &&
+          currentPreconditionResult ? (
             <InlineNoteEditor
               value={currentPreconditionResult.note}
               onChange={(note) => onPreconditionNoteChange(currentPreconditionResult.id, note)}
@@ -538,7 +570,8 @@ export function PipExecutionPanel({
 
       {/* フッター: ステータスボタン */}
       <footer className="flex items-center justify-center px-4 py-3 border-t border-border bg-background-secondary">
-        {(currentItem.type === 'suite-precondition' || currentItem.type === 'case-precondition') && currentPreconditionResult ? (
+        {(currentItem.type === 'suite-precondition' || currentItem.type === 'case-precondition') &&
+        currentPreconditionResult ? (
           <PipStatusButtons
             value={currentPreconditionResult.status}
             options={preconditionResultStatusOptions}

@@ -291,9 +291,9 @@ describe('TestCaseService（コアCRUD）', () => {
     it('テストケースが存在しない場合はNotFoundErrorを投げる', async () => {
       mockTestCaseRepo.findById.mockResolvedValue(null);
 
-      await expect(
-        service.update(TEST_CASE_ID, TEST_USER_ID, { title: '更新' })
-      ).rejects.toThrow(NotFoundError);
+      await expect(service.update(TEST_CASE_ID, TEST_USER_ID, { title: '更新' })).rejects.toThrow(
+        NotFoundError
+      );
     });
   });
 

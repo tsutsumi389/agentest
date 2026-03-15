@@ -141,10 +141,7 @@ describe('WebSocketブロードキャスト 統合テスト', () => {
   // ------------------------------------------
   // ヘルパー：認証済みクライアントを接続してチャネルを購読
   // ------------------------------------------
-  async function connectAndSubscribe(
-    token: string,
-    channels: string[]
-  ): Promise<WebSocket> {
+  async function connectAndSubscribe(token: string, channels: string[]): Promise<WebSocket> {
     const ws = new WebSocket(serverUrl);
     clients.push(ws);
 
@@ -196,7 +193,7 @@ describe('WebSocketブロードキャスト 統合テスト', () => {
 
     broadcastToChannel(channel, event);
 
-    const received = await waitForAnyMessage(ws) as { type: string; eventId: string };
+    const received = (await waitForAnyMessage(ws)) as { type: string; eventId: string };
 
     expect(received.type).toBe('test_suite:updated');
     expect(received.eventId).toBe('test-event-1');
@@ -219,7 +216,7 @@ describe('WebSocketブロードキャスト 統合テスト', () => {
 
     broadcastToChannel(projectChannel, event);
 
-    const received = await waitForAnyMessage(ws) as { type: string; projectId: string };
+    const received = (await waitForAnyMessage(ws)) as { type: string; projectId: string };
 
     expect(received.type).toBe('dashboard:updated');
     expect(received.projectId).toBe(TEST_PROJECT_ID);
@@ -270,7 +267,7 @@ describe('WebSocketブロードキャスト 統合テスト', () => {
 
     broadcastToChannel(channel, lockEvent);
 
-    const received = await waitForAnyMessage(ws) as {
+    const received = (await waitForAnyMessage(ws)) as {
       type: string;
       lockId: string;
       targetType: string;
@@ -299,7 +296,7 @@ describe('WebSocketブロードキャスト 統合テスト', () => {
 
     broadcastToChannel(channel, releaseEvent);
 
-    const received = await waitForAnyMessage(ws) as {
+    const received = (await waitForAnyMessage(ws)) as {
       type: string;
       lockId: string;
       targetType: string;
@@ -331,7 +328,7 @@ describe('WebSocketブロードキャスト 統合テスト', () => {
 
     broadcastToChannel(channel, executionEvent);
 
-    const received = await waitForAnyMessage(ws) as {
+    const received = (await waitForAnyMessage(ws)) as {
       type: string;
       executionId: string;
       testSuiteId: string;
@@ -366,7 +363,7 @@ describe('WebSocketブロードキャスト 統合テスト', () => {
 
     broadcastToChannel(channel, presenceJoinEvent);
 
-    const received = await waitForAnyMessage(ws) as {
+    const received = (await waitForAnyMessage(ws)) as {
       type: string;
       channel: string;
       user: { id: string; name: string };
@@ -394,7 +391,7 @@ describe('WebSocketブロードキャスト 統合テスト', () => {
 
     broadcastToChannel(channel, presenceLeaveEvent);
 
-    const received = await waitForAnyMessage(ws) as {
+    const received = (await waitForAnyMessage(ws)) as {
       type: string;
       channel: string;
       userId: string;
@@ -457,8 +454,12 @@ describe('WebSocketブロードキャスト 統合テスト', () => {
     clients.push(ws2);
 
     await Promise.all([
-      new Promise<void>((resolve) => { ws1.on('open', resolve); }),
-      new Promise<void>((resolve) => { ws2.on('open', resolve); }),
+      new Promise<void>((resolve) => {
+        ws1.on('open', resolve);
+      }),
+      new Promise<void>((resolve) => {
+        ws2.on('open', resolve);
+      }),
     ]);
 
     // authenticateメッセージで認証
@@ -473,10 +474,7 @@ describe('WebSocketブロードキャスト 統合テスト', () => {
       timestamp: Date.now(),
     });
 
-    await Promise.all([
-      waitForMessage(ws1, 'authenticated'),
-      waitForMessage(ws2, 'authenticated'),
-    ]);
+    await Promise.all([waitForMessage(ws1, 'authenticated'), waitForMessage(ws2, 'authenticated')]);
 
     // ユーザー1にのみイベントを送信
     const notificationEvent = {
@@ -496,7 +494,7 @@ describe('WebSocketブロードキャスト 統合テスト', () => {
     sendToUser(TEST_USER_ID, notificationEvent);
 
     // ユーザー1はメッセージを受信
-    const received = await waitForAnyMessage(ws1) as { type: string; eventId: string };
+    const received = (await waitForAnyMessage(ws1)) as { type: string; eventId: string };
     expect(received.type).toBe('notification:received');
     expect(received.eventId).toBe('notif-event-1');
 
@@ -512,8 +510,12 @@ describe('WebSocketブロードキャスト 統合テスト', () => {
     clients.push(ws2);
 
     await Promise.all([
-      new Promise<void>((resolve) => { ws1.on('open', resolve); }),
-      new Promise<void>((resolve) => { ws2.on('open', resolve); }),
+      new Promise<void>((resolve) => {
+        ws1.on('open', resolve);
+      }),
+      new Promise<void>((resolve) => {
+        ws2.on('open', resolve);
+      }),
     ]);
 
     // authenticateメッセージで認証
@@ -528,10 +530,7 @@ describe('WebSocketブロードキャスト 統合テスト', () => {
       timestamp: Date.now(),
     });
 
-    await Promise.all([
-      waitForMessage(ws1, 'authenticated'),
-      waitForMessage(ws2, 'authenticated'),
-    ]);
+    await Promise.all([waitForMessage(ws1, 'authenticated'), waitForMessage(ws2, 'authenticated')]);
 
     const event = {
       type: 'notification:unread_count' as const,
@@ -580,7 +579,7 @@ describe('WebSocketブロードキャスト 統合テスト', () => {
       capturedRedisMessageHandler(channel, JSON.stringify(event));
     }
 
-    const received = await waitForAnyMessage(ws) as { type: string; eventId: string };
+    const received = (await waitForAnyMessage(ws)) as { type: string; eventId: string };
 
     expect(received.type).toBe('test_case:updated');
     expect(received.eventId).toBe('redis-event-1');
@@ -625,7 +624,7 @@ describe('WebSocketブロードキャスト 統合テスト', () => {
 
     broadcastToChannel(channel, agentEvent);
 
-    const received = await waitForAnyMessage(ws) as {
+    const received = (await waitForAnyMessage(ws)) as {
       type: string;
       sessionId: string;
       clientName: string;
@@ -667,7 +666,7 @@ describe('WebSocketブロードキャスト 統合テスト', () => {
 
     broadcastToChannel(channel, reviewEvent);
 
-    const received = await waitForAnyMessage(ws) as {
+    const received = (await waitForAnyMessage(ws)) as {
       type: string;
       comment: { id: string; content: string };
     };
@@ -742,7 +741,7 @@ describe('WebSocketブロードキャスト 統合テスト', () => {
     broadcastToChannel(channel, event);
 
     // ws2のみがメッセージを受信
-    const received = await waitForAnyMessage(ws2) as { type: string; eventId: string };
+    const received = (await waitForAnyMessage(ws2)) as { type: string; eventId: string };
     expect(received.eventId).toBe('after-disconnect-event');
   });
 });

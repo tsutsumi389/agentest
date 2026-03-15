@@ -19,7 +19,10 @@ vi.mock('@agentest/shared', () => ({
     }
   },
   ValidationError: class ValidationError extends Error {
-    constructor(message: string, public fields: Record<string, string[]>) {
+    constructor(
+      message: string,
+      public fields: Record<string, string[]>
+    ) {
       super(message);
       this.name = 'ValidationError';
     }
@@ -39,7 +42,13 @@ import { AdminAuditLogsController } from '../../controllers/admin/audit-logs.con
 
 // モックリクエストヘルパー
 const mockRequest = (overrides = {}): Partial<Request> => ({
-  adminUser: { id: 'admin-1', email: 'admin@test.com', name: 'Admin', role: 'SUPER_ADMIN', totpEnabled: false },
+  adminUser: {
+    id: 'admin-1',
+    email: 'admin@test.com',
+    name: 'Admin',
+    role: 'SUPER_ADMIN',
+    totpEnabled: false,
+  },
   params: {},
   body: {},
   query: {},

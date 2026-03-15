@@ -28,7 +28,9 @@ test.describe('テスト実行開始', () => {
     await startButton.click();
 
     // モーダルが表示されるのを待つ
-    await expect(page.getByRole('heading', { name: 'テスト実行を開始' })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: 'テスト実行を開始' })).toBeVisible({
+      timeout: 5000,
+    });
 
     // モーダル内の実行開始ボタンをJavaScriptで直接クリック
     const executeButton = page.getByRole('button', { name: '実行開始' }).last();
@@ -41,7 +43,9 @@ test.describe('テスト実行開始', () => {
     await expect(page).toHaveURL(/\/executions\//, { timeout: 15000 });
 
     // クリーンアップ（エラーを無視）
-    await apiClient.deleteTestCase(DEMO_PROJECT_ID, DEMO_TEST_SUITE_ID, testCase.testCase.id).catch(() => {});
+    await apiClient
+      .deleteTestCase(DEMO_PROJECT_ID, DEMO_TEST_SUITE_ID, testCase.testCase.id)
+      .catch(() => {});
   });
 
   test('環境を選択して実行できる', async ({ page, apiClient }) => {
@@ -64,7 +68,9 @@ test.describe('テスト実行開始', () => {
     await startButton.click();
 
     // モーダルが表示されるのを待つ
-    await expect(page.getByRole('heading', { name: 'テスト実行を開始' })).toBeVisible({ timeout: 5000 });
+    await expect(page.getByRole('heading', { name: 'テスト実行を開始' })).toBeVisible({
+      timeout: 5000,
+    });
 
     // 環境選択（デフォルトでDevelopmentが選択されている）
     // Development はデフォルトで選択済みなのでスキップ可能
@@ -80,7 +86,9 @@ test.describe('テスト実行開始', () => {
     await expect(page).toHaveURL(/\/executions\//, { timeout: 15000 });
 
     // クリーンアップ（エラーを無視）
-    await apiClient.deleteTestCase(DEMO_PROJECT_ID, DEMO_TEST_SUITE_ID, testCase.testCase.id).catch(() => {});
+    await apiClient
+      .deleteTestCase(DEMO_PROJECT_ID, DEMO_TEST_SUITE_ID, testCase.testCase.id)
+      .catch(() => {});
   });
 
   test('実行中のステータスが表示される', async ({ page, apiClient }) => {
@@ -184,7 +192,9 @@ test.describe('テスト実施記録', () => {
       testSuiteId: DEMO_TEST_SUITE_ID,
     });
 
-    await apiClient.addExpectedResult(testCase.testCase.id, { content: 'Form is submitted successfully' });
+    await apiClient.addExpectedResult(testCase.testCase.id, {
+      content: 'Form is submitted successfully',
+    });
 
     try {
       const execution = await apiClient.startExecution(DEMO_TEST_SUITE_ID);
@@ -338,11 +348,7 @@ test.describe('エビデンス管理', () => {
 
       const expectedResults = executionDetails.execution.expectedResults;
       if (expectedResults.length > 0) {
-        await apiClient.uploadEvidence(
-          execution.execution.id,
-          expectedResults[0].id,
-          'test.png'
-        );
+        await apiClient.uploadEvidence(execution.execution.id, expectedResults[0].id, 'test.png');
       }
 
       await page.goto(`/executions/${execution.execution.id}`);
@@ -381,11 +387,7 @@ test.describe('エビデンス管理', () => {
 
       const expectedResults = executionDetails.execution.expectedResults;
       if (expectedResults.length > 0) {
-        await apiClient.uploadEvidence(
-          execution.execution.id,
-          expectedResults[0].id,
-          'test.png'
-        );
+        await apiClient.uploadEvidence(execution.execution.id, expectedResults[0].id, 'test.png');
       }
 
       await page.goto(`/executions/${execution.execution.id}`);

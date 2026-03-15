@@ -15,11 +15,7 @@ interface ReviewListProps {
  * レビュー一覧コンポーネント
  * 提出済みレビューのリスト表示
  */
-export function ReviewList({
-  reviews,
-  isLoading,
-  onReviewClick,
-}: ReviewListProps) {
+export function ReviewList({ reviews, isLoading, onReviewClick }: ReviewListProps) {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -33,9 +29,7 @@ export function ReviewList({
       <div className="flex flex-col items-center justify-center py-12 text-foreground-muted">
         <MessageSquareOff className="w-12 h-12 mb-3 opacity-50" />
         <p className="text-sm">まだレビューがありません</p>
-        <p className="text-xs mt-1">
-          「レビューを開始」ボタンからレビューを投稿できます
-        </p>
+        <p className="text-xs mt-1">「レビューを開始」ボタンからレビューを投稿できます</p>
       </div>
     );
   }
@@ -43,11 +37,7 @@ export function ReviewList({
   return (
     <div className="space-y-3">
       {reviews.map((review) => (
-        <ReviewItem
-          key={review.id}
-          review={review}
-          onClick={() => onReviewClick(review.id)}
-        />
+        <ReviewItem key={review.id} review={review} onClick={() => onReviewClick(review.id)} />
       ))}
     </div>
   );

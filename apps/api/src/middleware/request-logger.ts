@@ -21,7 +21,7 @@ const options: Options<IncomingMessage, ServerResponse> = {
   },
   // ステータスコードに応じたログレベル
   customLogLevel: (_req, res, error) => {
-    if (error || (res.statusCode >= 500)) return 'error';
+    if (error || res.statusCode >= 500) return 'error';
     if (res.statusCode >= 400) return 'warn';
     return 'info';
   },

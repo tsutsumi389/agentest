@@ -211,10 +211,7 @@ export class UserService {
     // プロジェクトアクセス条件（共通）
     // projectId指定時も認可チェックを行う
     const accessCondition = {
-      OR: [
-        { members: { some: { userId } } },
-        { organization: { members: { some: { userId } } } },
-      ],
+      OR: [{ members: { some: { userId } } }, { organization: { members: { some: { userId } } } }],
       deletedAt: null,
     };
 

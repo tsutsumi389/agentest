@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { TestCaseRepository, type TestCaseSearchOptions } from '../../repositories/test-case.repository.js';
+import {
+  TestCaseRepository,
+  type TestCaseSearchOptions,
+} from '../../repositories/test-case.repository.js';
 
 // Prisma のモック（vi.hoistedでホイスティング問題を回避）
 const mockPrismaTestCase = vi.hoisted(() => ({
@@ -180,7 +183,11 @@ describe('TestCaseRepository - search', () => {
         expect.objectContaining({
           where: expect.objectContaining({
             OR: expect.arrayContaining([
-              { expectedResults: { some: { content: { contains: '表示される', mode: 'insensitive' } } } },
+              {
+                expectedResults: {
+                  some: { content: { contains: '表示される', mode: 'insensitive' } },
+                },
+              },
             ]),
           }),
         })

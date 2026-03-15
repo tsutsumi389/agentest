@@ -76,7 +76,9 @@ describe('TwoFactorVerifyPage', () => {
     it('認証アプリの説明テキストが表示される', () => {
       renderPage();
 
-      expect(screen.getByText(/認証アプリに表示されている6桁のコードを入力してください/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/認証アプリに表示されている6桁のコードを入力してください/)
+      ).toBeInTheDocument();
     });
 
     it('ログインに戻るリンクが表示される', () => {

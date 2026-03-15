@@ -204,14 +204,11 @@ export class SystemAdminService {
     if (status === 'active') {
       // アクティブ = 削除されておらず、ロックもされていない
       where.deletedAt = null;
-      const andConditions = Array.isArray(where.AND) ? where.AND : (where.AND ? [where.AND] : []);
+      const andConditions = Array.isArray(where.AND) ? where.AND : where.AND ? [where.AND] : [];
       where.AND = [
         ...andConditions,
         {
-          OR: [
-            { lockedUntil: null },
-            { lockedUntil: { lt: new Date() } },
-          ],
+          OR: [{ lockedUntil: null }, { lockedUntil: { lt: new Date() } }],
         },
       ];
     } else if (status === 'deleted') {
@@ -371,7 +368,10 @@ export class SystemAdminService {
     });
 
     if (existingUser && !existingUser.deletedAt) {
-      throw new BusinessError('ADMIN_USER_ALREADY_EXISTS', 'このメールアドレスは既に登録されています');
+      throw new BusinessError(
+        'ADMIN_USER_ALREADY_EXISTS',
+        'このメールアドレスは既に登録されています'
+      );
     }
 
     // 既存の未使用招待をチェック
@@ -876,5 +876,4 @@ export class SystemAdminService {
       message: '2FA設定をリセットしました',
     };
   }
-
 }

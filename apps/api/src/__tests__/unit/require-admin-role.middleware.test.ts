@@ -18,10 +18,7 @@ vi.mock('../../services/admin/admin-session.service.js', () => ({
 }));
 
 // ミドルウェアのインポートはモック設定後
-import {
-  requireAdminRole,
-  requireAdminAuth,
-} from '../../middleware/require-admin-role.js';
+import { requireAdminRole, requireAdminAuth } from '../../middleware/require-admin-role.js';
 
 // モックリクエスト・レスポンス・ネクスト
 function createMockReq(overrides: Partial<Request> = {}): Request {

@@ -79,9 +79,9 @@ describe('AdminDashboardService', () => {
       // ユーザー統計のモック
       const mockCount = vi.mocked(prisma.user.count);
       mockCount
-        .mockResolvedValueOnce(100)  // total
-        .mockResolvedValueOnce(15)   // newThisMonth
-        .mockResolvedValueOnce(60);  // activeUsers
+        .mockResolvedValueOnce(100) // total
+        .mockResolvedValueOnce(15) // newThisMonth
+        .mockResolvedValueOnce(60); // activeUsers
 
       // 他のモック
       vi.mocked(prisma.organization.count).mockResolvedValue(0);
@@ -106,9 +106,9 @@ describe('AdminDashboardService', () => {
       // 組織統計のモック
       const mockOrgCount = vi.mocked(prisma.organization.count);
       mockOrgCount
-        .mockResolvedValueOnce(50)   // total
-        .mockResolvedValueOnce(5)    // newThisMonth
-        .mockResolvedValueOnce(30);  // activeOrgs
+        .mockResolvedValueOnce(50) // total
+        .mockResolvedValueOnce(5) // newThisMonth
+        .mockResolvedValueOnce(30); // activeOrgs
 
       vi.mocked(prisma.executionExpectedResult.groupBy).mockResolvedValue([]);
 

@@ -26,7 +26,10 @@ interface HistoryListProps {
 /**
  * 変更タイプの定義
  */
-const CHANGE_TYPES: Record<ProjectChangeType, { label: string; icon: typeof PlusCircle; color: string }> = {
+const CHANGE_TYPES: Record<
+  ProjectChangeType,
+  { label: string; icon: typeof PlusCircle; color: string }
+> = {
   CREATE: { label: '作成', icon: PlusCircle, color: 'text-green-500' },
   UPDATE: { label: '更新', icon: Pencil, color: 'text-blue-500' },
   DELETE: { label: '削除', icon: Trash2, color: 'text-danger' },
@@ -154,8 +157,8 @@ export function HistoryList({ project }: HistoryListProps) {
           {totalPages > 1 && (
             <div className="flex items-center justify-between mt-6 pt-4 border-t border-border">
               <p className="text-sm text-foreground-muted">
-                {total}件中 {(page - 1) * PAGE_SIZE + 1} -{' '}
-                {Math.min(page * PAGE_SIZE, total)}件を表示
+                {total}件中 {(page - 1) * PAGE_SIZE + 1} - {Math.min(page * PAGE_SIZE, total)}
+                件を表示
               </p>
 
               <div className="flex items-center gap-2">
@@ -300,9 +303,7 @@ function HistoryItem({ history }: { history: ProjectHistory }) {
               <span title={formatDateTime(history.createdAt)}>
                 {formatRelativeTime(history.createdAt)}
               </span>
-              <span className="hidden md:inline ml-2">
-                ({formatDateTime(history.createdAt)})
-              </span>
+              <span className="hidden md:inline ml-2">({formatDateTime(history.createdAt)})</span>
             </p>
           </div>
         </div>

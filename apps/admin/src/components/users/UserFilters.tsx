@@ -24,10 +24,7 @@ export function UserFilters({
   onClear,
 }: UserFiltersProps) {
   // フィルターがアクティブか判定
-  const hasActiveFilters =
-    status !== 'active' ||
-    createdFrom !== '' ||
-    createdTo !== '';
+  const hasActiveFilters = status !== 'active' || createdFrom !== '' || createdTo !== '';
 
   return (
     <div className="space-y-4">

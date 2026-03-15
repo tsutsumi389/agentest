@@ -1,6 +1,14 @@
-import { prisma, type ReviewTargetType, type ReviewTargetField, type ReviewStatus } from '@agentest/db';
+import {
+  prisma,
+  type ReviewTargetType,
+  type ReviewTargetField,
+  type ReviewStatus,
+} from '@agentest/db';
 import { NotFoundError, AuthorizationError, BadRequestError } from '@agentest/shared';
-import { ReviewCommentRepository, type ReviewCommentSearchOptions } from '../repositories/review-comment.repository.js';
+import {
+  ReviewCommentRepository,
+  type ReviewCommentSearchOptions,
+} from '../repositories/review-comment.repository.js';
 import { authorizationService } from './authorization.service.js';
 
 /**
@@ -23,7 +31,10 @@ export class ReviewCommentService {
   /**
    * 対象リソースの存在確認とプロジェクトID取得
    */
-  private async getTargetProjectId(targetType: ReviewTargetType, targetId: string): Promise<string> {
+  private async getTargetProjectId(
+    targetType: ReviewTargetType,
+    targetId: string
+  ): Promise<string> {
     if (targetType === 'SUITE') {
       const testSuite = await prisma.testSuite.findFirst({
         where: { id: targetId, deletedAt: null },
@@ -105,7 +116,10 @@ export class ReviewCommentService {
     const projectId = await this.getTargetProjectId(comment.targetType, comment.targetId);
 
     // プロジェクト権限確認（WRITE以上）
-    const hasPermission = await authorizationService.checkProjectRole(userId, projectId, ['ADMIN', 'WRITE']);
+    const hasPermission = await authorizationService.checkProjectRole(userId, projectId, [
+      'ADMIN',
+      'WRITE',
+    ]);
     if (!hasPermission) {
       throw new AuthorizationError('Insufficient permissions to update comment status');
     }
@@ -137,7 +151,10 @@ export class ReviewCommentService {
     const projectId = await this.getTargetProjectId(comment.targetType, comment.targetId);
 
     // プロジェクト権限確認（WRITE以上）
-    const hasPermission = await authorizationService.checkProjectRole(userId, projectId, ['ADMIN', 'WRITE']);
+    const hasPermission = await authorizationService.checkProjectRole(userId, projectId, [
+      'ADMIN',
+      'WRITE',
+    ]);
     if (!hasPermission) {
       throw new AuthorizationError('Insufficient permissions to create reply');
     }

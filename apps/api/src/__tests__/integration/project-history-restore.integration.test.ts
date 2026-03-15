@@ -29,14 +29,21 @@ vi.mock('@agentest/auth', () => ({
   optionalAuth: () => (_req: any, _res: any, next: any) => next(),
   requireOrgRole: () => (_req: any, _res: any, next: any) => next(),
   // allowDeletedProjectオプションを考慮したモック
-  requireProjectRole: (roles: string[], _options?: { allowDeletedProject?: boolean }) => (_req: any, _res: any, next: any) => {
-    // allowDeletedProjectオプションが設定されている場合は削除済みプロジェクトへのアクセスを許可
-    if (!mockProjectRole || !roles.includes(mockProjectRole)) {
-      return next(new AuthorizationError('権限がありません'));
-    }
-    next();
-  },
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  requireProjectRole:
+    (roles: string[], _options?: { allowDeletedProject?: boolean }) =>
+    (_req: any, _res: any, next: any) => {
+      // allowDeletedProjectオプションが設定されている場合は削除済みプロジェクトへのアクセスを許可
+      if (!mockProjectRole || !roles.includes(mockProjectRole)) {
+        return next(new AuthorizationError('権限がありません'));
+      }
+      next();
+    },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -130,27 +137,21 @@ describe('Project History & Restore API Integration Tests', () => {
     it('履歴一覧を取得できる', async () => {
       setTestAuth({ id: reader.id, email: reader.email }, 'READ');
 
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/histories`)
-        .expect(200);
+      const response = await request(app).get(`/api/projects/${project.id}/histories`).expect(200);
 
       expect(response.body.histories).toHaveLength(2);
       expect(response.body.total).toBe(2);
     });
 
     it('履歴は作成日時の降順で返される', async () => {
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/histories`)
-        .expect(200);
+      const response = await request(app).get(`/api/projects/${project.id}/histories`).expect(200);
 
       expect(response.body.histories[0].changeType).toBe('UPDATE'); // 後に作成された方が先
       expect(response.body.histories[1].changeType).toBe('CREATE');
     });
 
     it('履歴には変更者情報が含まれる', async () => {
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/histories`)
-        .expect(200);
+      const response = await request(app).get(`/api/projects/${project.id}/histories`).expect(200);
 
       const updateHistory = response.body.histories[0];
       expect(updateHistory.changedBy).toHaveProperty('id', admin.id);
@@ -199,9 +200,7 @@ describe('Project History & Restore API Integration Tests', () => {
         data: { deletedAt: new Date() },
       });
 
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/histories`)
-        .expect(200);
+      const response = await request(app).get(`/api/projects/${project.id}/histories`).expect(200);
 
       expect(response.body.histories).toHaveLength(2);
     });
@@ -241,9 +240,7 @@ describe('Project History & Restore API Integration Tests', () => {
     it('未認証の場合は401エラー', async () => {
       clearTestAuth();
 
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/histories`)
-        .expect(401);
+      const response = await request(app).get(`/api/projects/${project.id}/histories`).expect(401);
 
       expect(response.body.error.code).toBe('AUTHENTICATION_ERROR');
     });
@@ -251,9 +248,7 @@ describe('Project History & Restore API Integration Tests', () => {
     it('権限がない場合は403エラー', async () => {
       setTestAuth({ id: reader.id, email: reader.email }, null);
 
-      const response = await request(app)
-        .get(`/api/projects/${project.id}/histories`)
-        .expect(403);
+      const response = await request(app).get(`/api/projects/${project.id}/histories`).expect(403);
 
       expect(response.body.error.code).toBe('AUTHORIZATION_ERROR');
     });
@@ -272,9 +267,7 @@ describe('Project History & Restore API Integration Tests', () => {
     });
 
     it('ADMINが削除済みプロジェクトを復元できる', async () => {
-      const response = await request(app)
-        .post(`/api/projects/${project.id}/restore`)
-        .expect(200);
+      const response = await request(app).post(`/api/projects/${project.id}/restore`).expect(200);
 
       expect(response.body.project).toHaveProperty('id', project.id);
       expect(response.body.project.deletedAt).toBeNull();
@@ -287,9 +280,7 @@ describe('Project History & Restore API Integration Tests', () => {
     });
 
     it('復元後に履歴が記録される', async () => {
-      await request(app)
-        .post(`/api/projects/${project.id}/restore`)
-        .expect(200);
+      await request(app).post(`/api/projects/${project.id}/restore`).expect(200);
 
       const history = await prisma.projectHistory.findFirst({
         where: {
@@ -314,9 +305,7 @@ describe('Project History & Restore API Integration Tests', () => {
         data: { deletedAt: null },
       });
 
-      const response = await request(app)
-        .post(`/api/projects/${project.id}/restore`)
-        .expect(404);
+      const response = await request(app).post(`/api/projects/${project.id}/restore`).expect(404);
 
       expect(response.body.error.code).toBe('NOT_FOUND');
     });
@@ -330,9 +319,7 @@ describe('Project History & Restore API Integration Tests', () => {
         data: { deletedAt },
       });
 
-      const response = await request(app)
-        .post(`/api/projects/${project.id}/restore`)
-        .expect(400);
+      const response = await request(app).post(`/api/projects/${project.id}/restore`).expect(400);
 
       expect(response.body.error.code).toBe('VALIDATION_ERROR');
       expect(response.body.error.message).toContain('30日');
@@ -347,9 +334,7 @@ describe('Project History & Restore API Integration Tests', () => {
         data: { deletedAt },
       });
 
-      const response = await request(app)
-        .post(`/api/projects/${project.id}/restore`)
-        .expect(200);
+      const response = await request(app).post(`/api/projects/${project.id}/restore`).expect(200);
 
       expect(response.body.project.deletedAt).toBeNull();
     });
@@ -363,9 +348,7 @@ describe('Project History & Restore API Integration Tests', () => {
         data: { deletedAt },
       });
 
-      const response = await request(app)
-        .post(`/api/projects/${project.id}/restore`)
-        .expect(200);
+      const response = await request(app).post(`/api/projects/${project.id}/restore`).expect(200);
 
       expect(response.body.project.deletedAt).toBeNull();
     });
@@ -373,9 +356,7 @@ describe('Project History & Restore API Integration Tests', () => {
     it('WRITE権限ではプロジェクトを復元できない', async () => {
       setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
 
-      const response = await request(app)
-        .post(`/api/projects/${project.id}/restore`)
-        .expect(403);
+      const response = await request(app).post(`/api/projects/${project.id}/restore`).expect(403);
 
       expect(response.body.error.code).toBe('AUTHORIZATION_ERROR');
     });
@@ -383,9 +364,7 @@ describe('Project History & Restore API Integration Tests', () => {
     it('READ権限ではプロジェクトを復元できない', async () => {
       setTestAuth({ id: reader.id, email: reader.email }, 'READ');
 
-      const response = await request(app)
-        .post(`/api/projects/${project.id}/restore`)
-        .expect(403);
+      const response = await request(app).post(`/api/projects/${project.id}/restore`).expect(403);
 
       expect(response.body.error.code).toBe('AUTHORIZATION_ERROR');
     });
@@ -393,9 +372,7 @@ describe('Project History & Restore API Integration Tests', () => {
     it('未認証の場合は401エラー', async () => {
       clearTestAuth();
 
-      const response = await request(app)
-        .post(`/api/projects/${project.id}/restore`)
-        .expect(401);
+      const response = await request(app).post(`/api/projects/${project.id}/restore`).expect(401);
 
       expect(response.body.error.code).toBe('AUTHENTICATION_ERROR');
     });
@@ -410,14 +387,10 @@ describe('Project History & Restore API Integration Tests', () => {
 
     it('復元後は通常のプロジェクト操作ができる', async () => {
       // まず復元
-      await request(app)
-        .post(`/api/projects/${project.id}/restore`)
-        .expect(200);
+      await request(app).post(`/api/projects/${project.id}/restore`).expect(200);
 
       // プロジェクト詳細を取得できる
-      const response = await request(app)
-        .get(`/api/projects/${project.id}`)
-        .expect(200);
+      const response = await request(app).get(`/api/projects/${project.id}`).expect(200);
 
       expect(response.body.project.id).toBe(project.id);
       expect(response.body.project.deletedAt).toBeNull();
@@ -487,9 +460,7 @@ describe('Project History & Restore API Integration Tests', () => {
     });
 
     it('プロジェクト削除時に履歴が作成される', async () => {
-      await request(app)
-        .delete(`/api/projects/${project.id}`)
-        .expect(204);
+      await request(app).delete(`/api/projects/${project.id}`).expect(204);
 
       const history = await prisma.projectHistory.findFirst({
         where: {
@@ -524,25 +495,19 @@ describe('Project History & Restore API Integration Tests', () => {
       it('ADMINは履歴を閲覧できる', async () => {
         setTestAuth({ id: admin.id, email: admin.email }, 'ADMIN');
 
-        await request(app)
-          .get(`/api/projects/${project.id}/histories`)
-          .expect(200);
+        await request(app).get(`/api/projects/${project.id}/histories`).expect(200);
       });
 
       it('WRITEは履歴を閲覧できる', async () => {
         setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
 
-        await request(app)
-          .get(`/api/projects/${project.id}/histories`)
-          .expect(200);
+        await request(app).get(`/api/projects/${project.id}/histories`).expect(200);
       });
 
       it('READは履歴を閲覧できる', async () => {
         setTestAuth({ id: reader.id, email: reader.email }, 'READ');
 
-        await request(app)
-          .get(`/api/projects/${project.id}/histories`)
-          .expect(200);
+        await request(app).get(`/api/projects/${project.id}/histories`).expect(200);
       });
     });
 
@@ -558,25 +523,19 @@ describe('Project History & Restore API Integration Tests', () => {
       it('ADMINはプロジェクトを復元できる', async () => {
         setTestAuth({ id: admin.id, email: admin.email }, 'ADMIN');
 
-        await request(app)
-          .post(`/api/projects/${project.id}/restore`)
-          .expect(200);
+        await request(app).post(`/api/projects/${project.id}/restore`).expect(200);
       });
 
       it('WRITEはプロジェクトを復元できない', async () => {
         setTestAuth({ id: writer.id, email: writer.email }, 'WRITE');
 
-        await request(app)
-          .post(`/api/projects/${project.id}/restore`)
-          .expect(403);
+        await request(app).post(`/api/projects/${project.id}/restore`).expect(403);
       });
 
       it('READはプロジェクトを復元できない', async () => {
         setTestAuth({ id: reader.id, email: reader.email }, 'READ');
 
-        await request(app)
-          .post(`/api/projects/${project.id}/restore`)
-          .expect(403);
+        await request(app).post(`/api/projects/${project.id}/restore`).expect(403);
       });
     });
   });

@@ -17,7 +17,10 @@ export class ProjectDashboardService {
   /**
    * プロジェクトダッシュボード統計を取得
    */
-  async getDashboard(projectId: string, filters?: DashboardFilterParams): Promise<ProjectDashboardStats> {
+  async getDashboard(
+    projectId: string,
+    filters?: DashboardFilterParams
+  ): Promise<ProjectDashboardStats> {
     // プロジェクトの存在確認
     const project = await prisma.project.findFirst({
       where: { id: projectId, deletedAt: null },

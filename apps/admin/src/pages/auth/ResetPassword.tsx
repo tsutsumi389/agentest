@@ -1,14 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useParams, Link } from 'react-router';
-import {
-  Terminal,
-  Lock,
-  Loader2,
-  AlertCircle,
-  CheckCircle,
-  Eye,
-  EyeOff,
-} from 'lucide-react';
+import { Terminal, Lock, Loader2, AlertCircle, CheckCircle, Eye, EyeOff } from 'lucide-react';
 import { checkPasswordRequirements, allPasswordRequirementsMet } from '@agentest/shared';
 import { passwordResetApi, ApiError } from '../../lib/api';
 import { PasswordRequirementsList } from '../../components/auth/PasswordRequirementsList';
@@ -72,9 +64,7 @@ export function ResetPasswordPage() {
               <div className="w-10 h-10 rounded-lg bg-accent-muted flex items-center justify-center">
                 <Terminal className="w-6 h-6 text-accent" aria-hidden="true" />
               </div>
-              <span className="text-2xl font-bold text-foreground">
-                Agentest Admin
-              </span>
+              <span className="text-2xl font-bold text-foreground">Agentest Admin</span>
             </div>
           </div>
           <div className="card p-6">
@@ -82,9 +72,7 @@ export function ResetPasswordPage() {
               <div className="w-16 h-16 rounded-full bg-danger-muted flex items-center justify-center mb-4">
                 <AlertCircle className="w-8 h-8 text-danger" aria-hidden="true" />
               </div>
-              <h1 className="text-xl font-semibold text-foreground mb-2">
-                無効なリンク
-              </h1>
+              <h1 className="text-xl font-semibold text-foreground mb-2">無効なリンク</h1>
               <p className="text-foreground-muted mb-6">
                 パスワードリセットのトークンが指定されていません。
               </p>
@@ -111,9 +99,7 @@ export function ResetPasswordPage() {
               <div className="w-10 h-10 rounded-lg bg-accent-muted flex items-center justify-center">
                 <Terminal className="w-6 h-6 text-accent" aria-hidden="true" />
               </div>
-              <span className="text-2xl font-bold text-foreground">
-                Agentest Admin
-              </span>
+              <span className="text-2xl font-bold text-foreground">Agentest Admin</span>
             </div>
           </div>
           <div className="card p-6">
@@ -124,9 +110,7 @@ export function ResetPasswordPage() {
               <h1 className="text-xl font-semibold text-foreground mb-2">
                 パスワードをリセットしました
               </h1>
-              <p className="text-foreground-muted mb-6">
-                新しいパスワードでログインしてください。
-              </p>
+              <p className="text-foreground-muted mb-6">新しいパスワードでログインしてください。</p>
               <Link to="/login" className="btn btn-primary w-full">
                 ログインページへ
               </Link>
@@ -150,9 +134,7 @@ export function ResetPasswordPage() {
             <div className="w-10 h-10 rounded-lg bg-accent-muted flex items-center justify-center">
               <Terminal className="w-6 h-6 text-accent" aria-hidden="true" />
             </div>
-            <span className="text-2xl font-bold text-foreground">
-              Agentest Admin
-            </span>
+            <span className="text-2xl font-bold text-foreground">Agentest Admin</span>
           </div>
           <p className="text-foreground-muted text-sm">新しいパスワードを設定</p>
         </div>
@@ -178,10 +160,7 @@ export function ResetPasswordPage() {
 
             {/* パスワード入力 */}
             <div className="space-y-2">
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-foreground-muted"
-              >
+              <label htmlFor="password" className="block text-sm font-medium text-foreground-muted">
                 新しいパスワード
               </label>
               <div className="relative">

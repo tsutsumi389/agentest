@@ -34,7 +34,12 @@ vi.mock('@agentest/auth', () => ({
     next();
   },
   requireProjectRole: () => (_req: any, _res: any, next: any) => next(),
-  authenticate: (_options: { optional?: boolean } = {}) => (req: any, _res: any, next: any) => { if (mockAuthUser) req.user = mockAuthUser; next(); },
+  authenticate:
+    (_options: { optional?: boolean } = {}) =>
+    (req: any, _res: any, next: any) => {
+      if (mockAuthUser) req.user = mockAuthUser;
+      next();
+    },
   configurePassport: vi.fn(),
   passport: { initialize: vi.fn(), authenticate: vi.fn() },
   generateTokens: vi.fn(),
@@ -223,7 +228,9 @@ describe('Organization Audit Logs Export API Integration Tests', () => {
           .expect(200);
 
         // ヘッダー行を確認
-        expect(response.text).toContain('ID,日時,カテゴリ,アクション,ユーザー,対象タイプ,対象ID,IPアドレス,詳細');
+        expect(response.text).toContain(
+          'ID,日時,カテゴリ,アクション,ユーザー,対象タイプ,対象ID,IPアドレス,詳細'
+        );
         // データ行の内容を確認
         expect(response.text).toContain('ORGANIZATION');
         expect(response.text).toContain('organization.update');
@@ -550,7 +557,14 @@ describe('Organization Audit Logs Export API Integration Tests', () => {
       });
 
       it('全てのカテゴリでフィルタできる', async () => {
-        const categories = ['AUTH', 'USER', 'ORGANIZATION', 'MEMBER', 'PROJECT', 'API_TOKEN'] as const;
+        const categories = [
+          'AUTH',
+          'USER',
+          'ORGANIZATION',
+          'MEMBER',
+          'PROJECT',
+          'API_TOKEN',
+        ] as const;
 
         for (const category of categories) {
           await createTestAuditLog({

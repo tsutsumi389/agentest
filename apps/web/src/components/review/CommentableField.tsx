@@ -81,13 +81,7 @@ export function CommentableField({
 
   // 未解決コメントをフィルタリング（レビュー中でない場合）
   const unresolvedComments = !isReviewing
-    ? getCommentsForTarget(
-        unresolvedData?.comments || [],
-        targetType,
-        targetId,
-        targetField,
-        null
-      )
+    ? getCommentsForTarget(unresolvedData?.comments || [], targetType, targetId, targetField, null)
     : [];
 
   // 編集権限の判定（デフォルトはfalseで安全側に倒す）

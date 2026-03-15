@@ -11,19 +11,30 @@ vi.mock('../../lib/api', () => ({
 }));
 
 vi.mock('../../components/test-suite/TestSuiteForm', () => ({
-  TestSuiteForm: vi.fn(({ mode, projectId, onSave, onCancel }: {
-    mode: string;
-    projectId: string;
-    onSave: (id?: string) => void;
-    onCancel: () => void;
-  }) => (
-    <div data-testid="test-suite-form">
-      <span data-testid="form-mode">{mode}</span>
-      <span data-testid="form-project-id">{projectId}</span>
-      <button data-testid="form-save" onClick={() => onSave('new-suite-id')}>保存</button>
-      <button data-testid="form-cancel" onClick={() => onCancel()}>キャンセル</button>
-    </div>
-  )),
+  TestSuiteForm: vi.fn(
+    ({
+      mode,
+      projectId,
+      onSave,
+      onCancel,
+    }: {
+      mode: string;
+      projectId: string;
+      onSave: (id?: string) => void;
+      onCancel: () => void;
+    }) => (
+      <div data-testid="test-suite-form">
+        <span data-testid="form-mode">{mode}</span>
+        <span data-testid="form-project-id">{projectId}</span>
+        <button data-testid="form-save" onClick={() => onSave('new-suite-id')}>
+          保存
+        </button>
+        <button data-testid="form-cancel" onClick={() => onCancel()}>
+          キャンセル
+        </button>
+      </div>
+    )
+  ),
 }));
 
 import { projectsApi } from '../../lib/api';
@@ -48,8 +59,14 @@ function renderWithProviders(searchParams: string = '') {
       <MemoryRouter initialEntries={[path]}>
         <Routes>
           <Route path="test-suites/new" element={<TestSuiteNewPage />} />
-          <Route path="test-suites/:testSuiteId" element={<div data-testid="suite-detail">スイート詳細</div>} />
-          <Route path="projects/:projectId" element={<div data-testid="project-detail">プロジェクト詳細</div>} />
+          <Route
+            path="test-suites/:testSuiteId"
+            element={<div data-testid="suite-detail">スイート詳細</div>}
+          />
+          <Route
+            path="projects/:projectId"
+            element={<div data-testid="project-detail">プロジェクト詳細</div>}
+          />
         </Routes>
       </MemoryRouter>
     </QueryClientProvider>

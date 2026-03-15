@@ -37,7 +37,12 @@ vi.mock('@aws-sdk/s3-request-presigner', () => ({
 }));
 
 // モック設定後にインポート
-import { StorageClient, createStorageClient, createPublicStorageClient, type StorageConfig } from './client.js';
+import {
+  StorageClient,
+  createStorageClient,
+  createPublicStorageClient,
+  type StorageConfig,
+} from './client.js';
 import {
   PutObjectCommand,
   GetObjectCommand,
@@ -142,7 +147,9 @@ describe('StorageClient', () => {
 
     it('有効なキーを許可する', async () => {
       mockSend.mockResolvedValue({});
-      await expect(client.upload('valid/path/file.txt', Buffer.from('test'))).resolves.toBeDefined();
+      await expect(
+        client.upload('valid/path/file.txt', Buffer.from('test'))
+      ).resolves.toBeDefined();
     });
 
     it('全メソッドでキー検証が行われる', async () => {
@@ -493,11 +500,9 @@ describe('StorageClient', () => {
 
       await client.getUploadUrl('test-key.txt');
 
-      expect(mockGetSignedUrl).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.anything(),
-        { expiresIn: 3600 }
-      );
+      expect(mockGetSignedUrl).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
+        expiresIn: 3600,
+      });
     });
   });
 
@@ -526,11 +531,9 @@ describe('StorageClient', () => {
 
       await client.getDownloadUrl('test-key.txt');
 
-      expect(mockGetSignedUrl).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.anything(),
-        { expiresIn: 3600 }
-      );
+      expect(mockGetSignedUrl).toHaveBeenCalledWith(expect.anything(), expect.anything(), {
+        expiresIn: 3600,
+      });
     });
   });
 

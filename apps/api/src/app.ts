@@ -23,29 +23,33 @@ export function createApp(): Express {
   }
 
   // セキュリティミドルウェア
-  app.use(helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        scriptSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", 'data:', 'https:'],
-        connectSrc: ["'self'", 'wss:', 'https:'],
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", 'data:', 'https:'],
+          connectSrc: ["'self'", 'wss:', 'https:'],
+        },
       },
-    },
-    hsts: {
-      maxAge: 31536000,
-      includeSubDomains: true,
-    },
-  }));
+      hsts: {
+        maxAge: 31536000,
+        includeSubDomains: true,
+      },
+    })
+  );
 
   // CORS（/.well-knownエンドポイント含む全てのルートに適用）
-  app.use(cors({
-    origin: env.CORS_ORIGIN.split(','),
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'mcp-protocol-version'],
-  }));
+  app.use(
+    cors({
+      origin: env.CORS_ORIGIN.split(','),
+      credentials: true,
+      methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization', 'mcp-protocol-version'],
+    })
+  );
 
   // ボディパーサー（Base64エンコードされたファイルアップロードのため50MBに設定）
   app.use(express.json({ limit: '50mb' }));

@@ -75,15 +75,21 @@ const envSchema = z.object({
     : z.string().min(32).default('development-totp-encryption-key-32char-minimum-length'),
 
   // SMTP（メール送信）
-  SMTP_HOST: z.string().default('mailpit'),       // dev/staging: mailpit
-  SMTP_PORT: z.coerce.number().default(1025),     // dev/staging: 1025
-  SMTP_USER: z.string().optional(),               // mailpitでは不要
-  SMTP_PASS: z.string().optional(),               // mailpitでは不要
+  SMTP_HOST: z.string().default('mailpit'), // dev/staging: mailpit
+  SMTP_PORT: z.coerce.number().default(1025), // dev/staging: 1025
+  SMTP_USER: z.string().optional(), // mailpitでは不要
+  SMTP_PASS: z.string().optional(), // mailpitでは不要
   SMTP_FROM: z.string().email().default('noreply@agentest.local'),
-  SMTP_SECURE: z.string().default('false').transform((val) => val === 'true'), // 本番: true
+  SMTP_SECURE: z
+    .string()
+    .default('false')
+    .transform((val) => val === 'true'), // 本番: true
 
   // メール認証要否（セルフホスト環境では false でスキップ可能）
-  REQUIRE_EMAIL_VERIFICATION: z.string().default('true').transform((val) => val === 'true'),
+  REQUIRE_EMAIL_VERIFICATION: z
+    .string()
+    .default('true')
+    .transform((val) => val === 'true'),
 });
 
 // 環境変数を検証
@@ -91,13 +97,18 @@ function validateEnv() {
   const parsed = envSchema.safeParse(process.env);
 
   if (!parsed.success) {
-    logger.fatal({ fieldErrors: parsed.error.flatten().fieldErrors }, '環境変数のバリデーションエラー');
+    logger.fatal(
+      { fieldErrors: parsed.error.flatten().fieldErrors },
+      '環境変数のバリデーションエラー'
+    );
     throw new Error('環境変数が不正です');
   }
 
   // メール認証スキップ時の警告（本番環境）
   if (!parsed.data.REQUIRE_EMAIL_VERIFICATION && parsed.data.NODE_ENV === 'production') {
-    logger.warn('REQUIRE_EMAIL_VERIFICATION=false: メール認証がスキップされます。本番環境では推奨されません');
+    logger.warn(
+      'REQUIRE_EMAIL_VERIFICATION=false: メール認証がスキップされます。本番環境では推奨されません'
+    );
   }
 
   return parsed.data;

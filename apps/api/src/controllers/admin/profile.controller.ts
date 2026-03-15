@@ -6,7 +6,11 @@ import { extractClientInfo } from '../../middleware/session.middleware.js';
 
 // プロフィール更新のバリデーション
 const updateProfileSchema = z.object({
-  name: z.string().min(1, '名前を入力してください').max(100, '名前は100文字以内で入力してください').trim(),
+  name: z
+    .string()
+    .min(1, '名前を入力してください')
+    .max(100, '名前は100文字以内で入力してください')
+    .trim(),
 });
 
 /**

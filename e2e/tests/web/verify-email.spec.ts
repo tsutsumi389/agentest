@@ -37,7 +37,9 @@ test.describe('メールアドレス確認ページ', () => {
 
     // 成功メッセージの確認
     await expect(page.getByText('メールアドレスが確認されました')).toBeVisible();
-    await expect(page.getByText('アカウントが有効化されました。ログインしてご利用ください。')).toBeVisible();
+    await expect(
+      page.getByText('アカウントが有効化されました。ログインしてご利用ください。')
+    ).toBeVisible();
 
     // ログインボタンの確認
     await expect(page.getByRole('link', { name: 'ログインする' })).toBeVisible();
@@ -49,7 +51,9 @@ test.describe('メールアドレス確認ページ', () => {
       route.fulfill({
         status: 400,
         contentType: 'application/json',
-        body: JSON.stringify({ error: { message: '確認トークンが無効または期限切れです', code: 'INVALID_TOKEN' } }),
+        body: JSON.stringify({
+          error: { message: '確認トークンが無効または期限切れです', code: 'INVALID_TOKEN' },
+        }),
       });
     });
 

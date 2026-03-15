@@ -41,7 +41,10 @@ describe('AuthorizationService', () => {
           role: 'WRITE',
         });
 
-        const result = await service.checkProjectRole(TEST_USER_ID, TEST_PROJECT_ID, ['WRITE', 'ADMIN']);
+        const result = await service.checkProjectRole(TEST_USER_ID, TEST_PROJECT_ID, [
+          'WRITE',
+          'ADMIN',
+        ]);
 
         expect(result).toBe(true);
         expect(mockPrisma.projectMember.findUnique).toHaveBeenCalledWith({

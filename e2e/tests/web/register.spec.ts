@@ -59,7 +59,8 @@ test.describe('新規登録ページ', () => {
         status: 201,
         contentType: 'application/json',
         body: JSON.stringify({
-          message: '確認メールを送信しました。メール内のリンクをクリックしてアカウントを有効化してください。',
+          message:
+            '確認メールを送信しました。メール内のリンクをクリックしてアカウントを有効化してください。',
           user: { id: 'test-id', email: testEmail, name: 'テストユーザー' },
         }),
       });
@@ -75,7 +76,9 @@ test.describe('新規登録ページ', () => {
     await page.getByRole('button', { name: 'アカウント作成' }).click();
 
     // メール確認待ちページにリダイレクトされる
-    await expect(page).toHaveURL(new RegExp(`/check-email\\?email=${encodeURIComponent(testEmail)}`));
+    await expect(page).toHaveURL(
+      new RegExp(`/check-email\\?email=${encodeURIComponent(testEmail)}`)
+    );
     await expect(page.getByRole('heading', { name: 'メールアドレスの確認' })).toBeVisible();
     await expect(page.getByText('確認メールを送信しました')).toBeVisible();
   });

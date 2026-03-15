@@ -7,13 +7,30 @@ import { apiClient } from '../clients/api-client.js';
  */
 export const updateExecutionPreconditionResultInputSchema = z.object({
   executionId: z.string().uuid().describe('テスト実行のID。create_executionで取得したIDを指定'),
-  preconditionResultId: z.string().uuid().describe('前提条件結果のID。get_executionのpreconditionResultsから取得'),
-  status: z.enum(['MET', 'NOT_MET']).describe('判定結果: MET（条件を満たしている）, NOT_MET（条件を満たしていない）'),
-  note: z.string().max(2000).optional().describe('補足メモ（最大2000文字）。条件の確認方法や問題点を記録'),
-  agentName: z.string().max(100).optional().describe('実施したAIエージェントの名前（例：Claude Code Opus4.5）。MCPツール経由での実施時に記録'),
+  preconditionResultId: z
+    .string()
+    .uuid()
+    .describe('前提条件結果のID。get_executionのpreconditionResultsから取得'),
+  status: z
+    .enum(['MET', 'NOT_MET'])
+    .describe('判定結果: MET（条件を満たしている）, NOT_MET（条件を満たしていない）'),
+  note: z
+    .string()
+    .max(2000)
+    .optional()
+    .describe('補足メモ（最大2000文字）。条件の確認方法や問題点を記録'),
+  agentName: z
+    .string()
+    .max(100)
+    .optional()
+    .describe(
+      '実施したAIエージェントの名前（例：Claude Code Opus4.5）。MCPツール経由での実施時に記録'
+    ),
 });
 
-type UpdateExecutionPreconditionResultInput = z.infer<typeof updateExecutionPreconditionResultInputSchema>;
+type UpdateExecutionPreconditionResultInput = z.infer<
+  typeof updateExecutionPreconditionResultInputSchema
+>;
 
 /**
  * レスポンス型
@@ -33,7 +50,10 @@ interface UpdateExecutionPreconditionResultResponse {
 /**
  * ハンドラー
  */
-const updateExecutionPreconditionResultHandler: ToolHandler<UpdateExecutionPreconditionResultInput, UpdateExecutionPreconditionResultResponse> = async (input, context) => {
+const updateExecutionPreconditionResultHandler: ToolHandler<
+  UpdateExecutionPreconditionResultInput,
+  UpdateExecutionPreconditionResultResponse
+> = async (input, context) => {
   const { userId } = context;
 
   if (!userId) {
@@ -55,9 +75,10 @@ const updateExecutionPreconditionResultHandler: ToolHandler<UpdateExecutionPreco
 /**
  * ツール定義
  */
-export const updateExecutionPreconditionResultTool: ToolDefinition<UpdateExecutionPreconditionResultInput> = {
-  name: 'update_execution_precondition_result',
-  description: `テスト実行中の前提条件チェック結果を記録します。
+export const updateExecutionPreconditionResultTool: ToolDefinition<UpdateExecutionPreconditionResultInput> =
+  {
+    name: 'update_execution_precondition_result',
+    description: `テスト実行中の前提条件チェック結果を記録します。
 
 必須: executionId, preconditionResultId, status
 オプション: note, agentName
@@ -68,6 +89,6 @@ export const updateExecutionPreconditionResultTool: ToolDefinition<UpdateExecuti
 ワークフロー: create_execution → get_execution（結果IDを取得）→ このツールで前提条件を確認 → update_execution_step_resultでステップ実行。
 
 agentNameには実施したAIエージェントの名前を指定してください（例：Claude Code Opus4.5）。`,
-  inputSchema: updateExecutionPreconditionResultInputSchema,
-  handler: updateExecutionPreconditionResultHandler,
-};
+    inputSchema: updateExecutionPreconditionResultInputSchema,
+    handler: updateExecutionPreconditionResultHandler,
+  };

@@ -49,7 +49,11 @@ export async function runProjectCleanup(): Promise<void> {
     for (const project of projects) {
       try {
         logger.info(
-          { projectId: project.id, projectName: project.name, deletedAt: project.deletedAt?.toISOString() },
+          {
+            projectId: project.id,
+            projectName: project.name,
+            deletedAt: project.deletedAt?.toISOString(),
+          },
           'プロジェクト削除開始'
         );
 
