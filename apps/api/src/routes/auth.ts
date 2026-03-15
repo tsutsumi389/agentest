@@ -3,9 +3,8 @@ import { passport, requireAuth, generateTokens } from '@agentest/auth';
 import { prisma } from '@agentest/db';
 import { AuthController } from '../controllers/auth.controller.js';
 import { UserTotpController } from '../controllers/user-totp.controller.js';
-import { authConfig } from '../config/auth.js';
+import { authConfig, SESSION_EXPIRY_MS, LINK_MODE_COOKIE } from '../config/auth.js';
 import { env } from '../config/env.js';
-import { SessionService } from '../services/session.service.js';
 import { extractClientInfo } from '../middleware/session.middleware.js';
 import { hashToken } from '../utils/pkce.js';
 import { rateLimiter } from '../middleware/rate-limiter.js';
@@ -13,9 +12,6 @@ import { rateLimiter } from '../middleware/rate-limiter.js';
 const router: Router = Router();
 const authController = new AuthController();
 const userTotpController = new UserTotpController();
-
-// OAuth連携追加モードを示すクッキー設定
-const LINK_MODE_COOKIE = 'oauth_link_mode';
 const linkCookieOptions = {
   httpOnly: true,
   secure: env.NODE_ENV === 'production',
@@ -226,10 +222,8 @@ router.post(
 
 // テスト用ログインエンドポイント（非本番環境のみ）
 if (env.NODE_ENV !== 'production') {
-  const sessionService = new SessionService();
-  const SESSION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
-
-  const cookieOptions = {
+  // テスト環境用のクッキー設定（secure: false）
+  const testCookieOptions = {
     httpOnly: true,
     secure: false,
     sameSite: 'strict' as const,
@@ -256,32 +250,36 @@ if (env.NODE_ENV !== 'production') {
       // クライアント情報を抽出
       const clientInfo = extractClientInfo(req);
 
-      // リフレッシュトークンとセッションを保存（ハッシュ化して保存）
+      // リフレッシュトークンとセッションを保存（トランザクションでアトミックに実行）
       const tokenHash = hashToken(tokens.refreshToken);
-      await Promise.all([
-        prisma.refreshToken.create({
-          data: {
-            userId: user.id,
-            tokenHash,
-            expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
-          },
-        }),
-        sessionService.createSession({
-          userId: user.id,
-          tokenHash,
-          userAgent: clientInfo.userAgent,
-          ipAddress: clientInfo.ipAddress,
-          expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
-        }),
-      ]);
+      await prisma.$transaction(async (tx) => {
+        await Promise.all([
+          tx.refreshToken.create({
+            data: {
+              userId: user.id,
+              tokenHash,
+              expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
+            },
+          }),
+          tx.session.create({
+            data: {
+              userId: user.id,
+              tokenHash,
+              userAgent: clientInfo.userAgent,
+              ipAddress: clientInfo.ipAddress,
+              expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
+            },
+          }),
+        ]);
+      });
 
       // クッキーに設定
       res.cookie('access_token', tokens.accessToken, {
-        ...cookieOptions,
+        ...testCookieOptions,
         maxAge: 15 * 60 * 1000, // 15分
       });
       res.cookie('refresh_token', tokens.refreshToken, {
-        ...cookieOptions,
+        ...testCookieOptions,
         maxAge: SESSION_EXPIRY_MS,
       });
 

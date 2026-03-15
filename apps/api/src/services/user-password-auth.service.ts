@@ -4,7 +4,7 @@ import { prisma, type Prisma } from '@agentest/db';
 import { generateTokens, type TokenPair } from '@agentest/auth';
 import { AppError, AuthenticationError, ConflictError, BadRequestError } from '@agentest/shared';
 import { env } from '../config/env.js';
-import { authConfig } from '../config/auth.js';
+import { authConfig, SESSION_EXPIRY_MS } from '../config/auth.js';
 import { hashToken } from '../utils/pkce.js';
 import { setUserTwoFactorToken } from '../lib/redis-store.js';
 import { logger as baseLogger } from '../utils/logger.js';
@@ -19,8 +19,6 @@ const MAX_FAILED_ATTEMPTS = 5;
 const LOCK_DURATION_MS = 30 * 60 * 1000;
 // パスワードリセットトークンの有効期限（1時間）
 const RESET_TOKEN_EXPIRY_MS = 60 * 60 * 1000;
-// セッション有効期限（7日）
-const SESSION_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000;
 // メールアドレス確認トークンの有効期限（24時間）
 const VERIFICATION_TOKEN_EXPIRY_MS = 24 * 60 * 60 * 1000;
 // タイミング攻撃対策用のダミーハッシュ（有効なbcrypt形式）
@@ -226,6 +224,7 @@ export class UserPasswordAuthService {
     }
 
     // ロック期間が終了している場合、失敗回数をリセット
+    let alreadyReset = false;
     if (user.lockedUntil && user.lockedUntil <= new Date()) {
       const unlocked = await prisma.user.update({
         where: { id: user.id },
@@ -236,6 +235,7 @@ export class UserPasswordAuthService {
         failedAttempts: unlocked.failedAttempts,
         lockedUntil: unlocked.lockedUntil,
       };
+      alreadyReset = true;
     }
 
     // passwordHashがnull（OAuthのみユーザー）の場合
@@ -292,11 +292,13 @@ export class UserPasswordAuthService {
         );
       }
 
-      // パスワード認証成功: 失敗回数をリセット
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { failedAttempts: 0, lockedUntil: null },
-      });
+      // パスワード認証成功: 失敗回数をリセット（ロック解除で既にリセット済みの場合はスキップ）
+      if (!alreadyReset) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { failedAttempts: 0, lockedUntil: null },
+        });
+      }
 
       logger.info({ userId: user.id, email }, 'ログイン成功（2FA検証待ち）');
 
@@ -309,17 +311,7 @@ export class UserPasswordAuthService {
 
     // トランザクションで失敗回数リセットとトークン保存をアトミックに実行
     await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      // ログイン成功: 失敗回数をリセット
-      await tx.user.update({
-        where: { id: user.id },
-        data: {
-          failedAttempts: 0,
-          lockedUntil: null,
-        },
-      });
-
-      // RefreshTokenとSessionを保存
-      await Promise.all([
+      const ops: Promise<unknown>[] = [
         tx.refreshToken.create({
           data: {
             userId: user.id,
@@ -336,7 +328,19 @@ export class UserPasswordAuthService {
             expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
           },
         }),
-      ]);
+      ];
+
+      // ロック解除で既にリセット済みの場合はスキップ
+      if (!alreadyReset) {
+        ops.push(
+          tx.user.update({
+            where: { id: user.id },
+            data: { failedAttempts: 0, lockedUntil: null },
+          })
+        );
+      }
+
+      await Promise.all(ops);
     });
 
     logger.info({ userId: user.id, email }, 'ログイン成功');
