@@ -31,25 +31,6 @@ describe('SessionService', () => {
     service = new SessionService();
   });
 
-  describe('createSession', () => {
-    it('新しいセッションを作成できる（tokenHashを使用）', async () => {
-      const sessionData = {
-        userId: 'user-1',
-        tokenHash: 'abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890',
-        userAgent: 'Mozilla/5.0',
-        ipAddress: '192.168.1.1',
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      };
-      const mockSession = { id: 'session-1', ...sessionData };
-      mockSessionRepo.create.mockResolvedValue(mockSession);
-
-      const result = await service.createSession(sessionData);
-
-      expect(mockSessionRepo.create).toHaveBeenCalledWith(sessionData);
-      expect(result).toEqual(mockSession);
-    });
-  });
-
   describe('getSessionByToken', () => {
     it('有効なセッションを取得できる（トークンをハッシュ化して検索）', async () => {
       const mockSession = {

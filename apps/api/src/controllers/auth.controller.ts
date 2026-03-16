@@ -10,7 +10,13 @@ import {
   passwordResetRequestSchema,
   passwordResetSchema,
 } from '@agentest/shared';
-import { authConfig, SESSION_EXPIRY_MS, LINK_MODE_COOKIE } from '../config/auth.js';
+import { Prisma } from '@agentest/db';
+import {
+  authConfig,
+  SESSION_EXPIRY_MS,
+  LINK_MODE_COOKIE,
+  persistAuthSession,
+} from '../config/auth.js';
 import { env } from '../config/env.js';
 import { UserPasswordAuthService } from '../services/user-password-auth.service.js';
 import { UserTotpService } from '../services/user-totp.service.js';
@@ -121,24 +127,13 @@ export class AuthController {
         });
 
         // 新しいリフレッシュトークンとセッションを保存（ハッシュ化して保存）
-        await Promise.all([
-          tx.refreshToken.create({
-            data: {
-              userId: user.id,
-              tokenHash: newTokenHash,
-              expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
-            },
-          }),
-          tx.session.create({
-            data: {
-              userId: user.id,
-              tokenHash: newTokenHash,
-              userAgent: clientInfo.userAgent,
-              ipAddress: clientInfo.ipAddress,
-              expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
-            },
-          }),
-        ]);
+        await persistAuthSession(tx, {
+          userId: user.id,
+          tokenHash: newTokenHash,
+          userAgent: clientInfo.userAgent,
+          ipAddress: clientInfo.ipAddress,
+          expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
+        });
       });
 
       // クッキーに設定（生トークン）
@@ -260,26 +255,16 @@ export class AuthController {
       // JWT発行 + セッション作成（トランザクションでアトミックに実行）
       const tokens = generateTokens(user.id, user.email, authConfig);
       const tokenHash = hashToken(tokens.refreshToken);
+      const expiresAt = new Date(Date.now() + SESSION_EXPIRY_MS);
 
       await prisma.$transaction(async (tx) => {
-        await Promise.all([
-          tx.refreshToken.create({
-            data: {
-              userId: user.id,
-              tokenHash,
-              expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
-            },
-          }),
-          tx.session.create({
-            data: {
-              userId: user.id,
-              tokenHash,
-              userAgent: clientInfo.userAgent,
-              ipAddress: clientInfo.ipAddress,
-              expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
-            },
-          }),
-        ]);
+        await persistAuthSession(tx, {
+          userId: user.id,
+          tokenHash,
+          userAgent: clientInfo.userAgent,
+          ipAddress: clientInfo.ipAddress,
+          expiresAt,
+        });
       });
 
       // クッキーにJWT設定
@@ -576,25 +561,15 @@ export class AuthController {
 
       // リフレッシュトークンとセッションを保存（ハッシュ化して保存）
       const tokenHash = hashToken(tokens.refreshToken);
+      const expiresAt = new Date(Date.now() + SESSION_EXPIRY_MS);
       await prisma.$transaction(async (tx) => {
-        await Promise.all([
-          tx.refreshToken.create({
-            data: {
-              userId: oauthUser.userId,
-              tokenHash,
-              expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
-            },
-          }),
-          tx.session.create({
-            data: {
-              userId: oauthUser.userId,
-              tokenHash,
-              userAgent: clientInfo.userAgent,
-              ipAddress: clientInfo.ipAddress,
-              expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
-            },
-          }),
-        ]);
+        await persistAuthSession(tx, {
+          userId: oauthUser.userId,
+          tokenHash,
+          userAgent: clientInfo.userAgent,
+          ipAddress: clientInfo.ipAddress,
+          expiresAt,
+        });
       });
 
       // クッキーに設定（生トークン）
@@ -666,11 +641,7 @@ export class AuthController {
       });
     } catch (error) {
       // Prismaのユニーク制約違反（P2002）をユーザーフレンドリーなメッセージに変換
-      if (
-        error instanceof Error &&
-        'code' in error &&
-        (error as { code: string }).code === 'P2002'
-      ) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         return { success: false, error: `この${profile.provider}アカウントは既に連携されています` };
       }
       throw error;

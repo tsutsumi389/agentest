@@ -1,3 +1,4 @@
+import type { Prisma } from '@agentest/db';
 import { env } from './env.js';
 
 // セッション有効期限（7日）
@@ -34,9 +35,41 @@ export const adminAuthConfig = {
   sessionCookie: 'admin_session',
   /** 管理者クッキー設定 */
   cookieOptions: {
-    httpOnly: true,
-    secure: env.NODE_ENV === 'production',
-    sameSite: 'strict' as const,
+    ...authConfig.cookie,
     path: '/admin',
   },
 };
+
+/**
+ * RefreshTokenとSessionをトランザクション内で作成する共通ヘルパー
+ *
+ * Prisma interactive transactionは単一コネクションでシリアル実行されるため、
+ * Promise.allではなく逐次awaitを使用する
+ */
+export async function persistAuthSession(
+  tx: Prisma.TransactionClient,
+  params: {
+    userId: string;
+    tokenHash: string;
+    userAgent?: string;
+    ipAddress?: string;
+    expiresAt: Date;
+  }
+): Promise<void> {
+  await tx.refreshToken.create({
+    data: {
+      userId: params.userId,
+      tokenHash: params.tokenHash,
+      expiresAt: params.expiresAt,
+    },
+  });
+  await tx.session.create({
+    data: {
+      userId: params.userId,
+      tokenHash: params.tokenHash,
+      userAgent: params.userAgent,
+      ipAddress: params.ipAddress,
+      expiresAt: params.expiresAt,
+    },
+  });
+}

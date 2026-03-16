@@ -1,5 +1,5 @@
 import { NotFoundError, AuthorizationError } from '@agentest/shared';
-import { SessionRepository, type CreateSessionData } from '../repositories/session.repository.js';
+import { SessionRepository } from '../repositories/session.repository.js';
 import { hashToken } from '../utils/pkce.js';
 import { logger as baseLogger } from '../utils/logger.js';
 
@@ -23,13 +23,6 @@ export interface SessionInfo {
  */
 export class SessionService {
   private sessionRepo = new SessionRepository();
-
-  /**
-   * 新しいセッションを作成
-   */
-  async createSession(data: CreateSessionData) {
-    return this.sessionRepo.create(data);
-  }
 
   /**
    * トークンでセッションを取得

@@ -69,25 +69,29 @@ const mockPrisma = vi.hoisted(() => ({
 }));
 vi.mock('@agentest/db', () => ({ prisma: mockPrisma }));
 
-// authConfigモック
-vi.mock('../../config/auth.js', () => ({
-  authConfig: {
-    jwt: {
-      accessSecret: 'test-access-secret',
-      refreshSecret: 'test-refresh-secret',
-      accessExpiry: '15m',
-      refreshExpiry: '7d',
+// authConfigモック（persistAuthSessionは実装をそのまま使用）
+vi.mock('../../config/auth.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../config/auth.js')>();
+  return {
+    ...actual,
+    authConfig: {
+      jwt: {
+        accessSecret: 'test-access-secret',
+        refreshSecret: 'test-refresh-secret',
+        accessExpiry: '15m',
+        refreshExpiry: '7d',
+      },
+      cookie: {
+        httpOnly: true,
+        secure: false,
+        sameSite: 'strict',
+        path: '/',
+      },
+      oauth: {},
     },
-    cookie: {
-      httpOnly: true,
-      secure: false,
-      sameSite: 'strict',
-      path: '/',
-    },
-    oauth: {},
-  },
-  SESSION_EXPIRY_MS: 7 * 24 * 60 * 60 * 1000,
-}));
+    SESSION_EXPIRY_MS: 7 * 24 * 60 * 60 * 1000,
+  };
+});
 
 // envモック
 const mockEnv = vi.hoisted(() => ({
