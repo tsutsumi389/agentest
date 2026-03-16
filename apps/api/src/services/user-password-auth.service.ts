@@ -4,7 +4,7 @@ import { prisma, type Prisma } from '@agentest/db';
 import { generateTokens, type TokenPair } from '@agentest/auth';
 import { AppError, AuthenticationError, ConflictError, BadRequestError } from '@agentest/shared';
 import { env } from '../config/env.js';
-import { authConfig, SESSION_EXPIRY_MS } from '../config/auth.js';
+import { authConfig, SESSION_EXPIRY_MS, persistAuthSession } from '../config/auth.js';
 import { hashToken } from '../utils/pkce.js';
 import { setUserTwoFactorToken } from '../lib/redis-store.js';
 import { logger as baseLogger } from '../utils/logger.js';
@@ -116,24 +116,13 @@ export class UserPasswordAuthService {
         const tokens = generateTokens(user.id, user.email, authConfig);
         const tokenHash = hashToken(tokens.refreshToken);
 
-        await Promise.all([
-          tx.refreshToken.create({
-            data: {
-              userId: user.id,
-              tokenHash,
-              expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
-            },
-          }),
-          tx.session.create({
-            data: {
-              userId: user.id,
-              tokenHash,
-              userAgent,
-              ipAddress,
-              expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
-            },
-          }),
-        ]);
+        await persistAuthSession(tx, {
+          userId: user.id,
+          tokenHash,
+          userAgent,
+          ipAddress,
+          expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
+        });
 
         return { user, tokens };
       });
@@ -224,7 +213,6 @@ export class UserPasswordAuthService {
     }
 
     // ロック期間が終了している場合、失敗回数をリセット
-    let alreadyReset = false;
     if (user.lockedUntil && user.lockedUntil <= new Date()) {
       const unlocked = await prisma.user.update({
         where: { id: user.id },
@@ -235,7 +223,6 @@ export class UserPasswordAuthService {
         failedAttempts: unlocked.failedAttempts,
         lockedUntil: unlocked.lockedUntil,
       };
-      alreadyReset = true;
     }
 
     // passwordHashがnull（OAuthのみユーザー）の場合
@@ -293,7 +280,7 @@ export class UserPasswordAuthService {
       }
 
       // パスワード認証成功: 失敗回数をリセット（ロック解除で既にリセット済みの場合はスキップ）
-      if (!alreadyReset) {
+      if (user.failedAttempts !== 0 || user.lockedUntil !== null) {
         await prisma.user.update({
           where: { id: user.id },
           data: { failedAttempts: 0, lockedUntil: null },
@@ -308,39 +295,25 @@ export class UserPasswordAuthService {
     // 2FA無効ユーザー: 従来通りJWT発行
     const tokens = generateTokens(user.id, user.email, authConfig);
     const tokenHash = hashToken(tokens.refreshToken);
+    const expiresAt = new Date(Date.now() + SESSION_EXPIRY_MS);
 
     // トランザクションで失敗回数リセットとトークン保存をアトミックに実行
     await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      const ops: Promise<unknown>[] = [
-        tx.refreshToken.create({
-          data: {
-            userId: user.id,
-            tokenHash,
-            expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
-          },
-        }),
-        tx.session.create({
-          data: {
-            userId: user.id,
-            tokenHash,
-            userAgent,
-            ipAddress,
-            expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
-          },
-        }),
-      ];
-
       // ロック解除で既にリセット済みの場合はスキップ
-      if (!alreadyReset) {
-        ops.push(
-          tx.user.update({
-            where: { id: user.id },
-            data: { failedAttempts: 0, lockedUntil: null },
-          })
-        );
+      if (user.failedAttempts !== 0 || user.lockedUntil !== null) {
+        await tx.user.update({
+          where: { id: user.id },
+          data: { failedAttempts: 0, lockedUntil: null },
+        });
       }
 
-      await Promise.all(ops);
+      await persistAuthSession(tx, {
+        userId: user.id,
+        tokenHash,
+        userAgent,
+        ipAddress,
+        expiresAt,
+      });
     });
 
     logger.info({ userId: user.id, email }, 'ログイン成功');

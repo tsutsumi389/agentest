@@ -3,7 +3,12 @@ import { passport, requireAuth, generateTokens } from '@agentest/auth';
 import { prisma } from '@agentest/db';
 import { AuthController } from '../controllers/auth.controller.js';
 import { UserTotpController } from '../controllers/user-totp.controller.js';
-import { authConfig, SESSION_EXPIRY_MS, LINK_MODE_COOKIE } from '../config/auth.js';
+import {
+  authConfig,
+  SESSION_EXPIRY_MS,
+  LINK_MODE_COOKIE,
+  persistAuthSession,
+} from '../config/auth.js';
 import { env } from '../config/env.js';
 import { extractClientInfo } from '../middleware/session.middleware.js';
 import { hashToken } from '../utils/pkce.js';
@@ -13,10 +18,8 @@ const router: Router = Router();
 const authController = new AuthController();
 const userTotpController = new UserTotpController();
 const linkCookieOptions = {
-  httpOnly: true,
-  secure: env.NODE_ENV === 'production',
-  sameSite: 'lax' as const, // OAuthリダイレクトで必要
-  path: '/',
+  ...authConfig.cookie,
+  sameSite: 'lax' as const, // OAuthリダイレクトで必要（strictではなくlax）
   maxAge: 5 * 60 * 1000, // 5分間有効
 };
 
@@ -252,25 +255,15 @@ if (env.NODE_ENV !== 'production') {
 
       // リフレッシュトークンとセッションを保存（トランザクションでアトミックに実行）
       const tokenHash = hashToken(tokens.refreshToken);
+      const expiresAt = new Date(Date.now() + SESSION_EXPIRY_MS);
       await prisma.$transaction(async (tx) => {
-        await Promise.all([
-          tx.refreshToken.create({
-            data: {
-              userId: user.id,
-              tokenHash,
-              expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
-            },
-          }),
-          tx.session.create({
-            data: {
-              userId: user.id,
-              tokenHash,
-              userAgent: clientInfo.userAgent,
-              ipAddress: clientInfo.ipAddress,
-              expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS),
-            },
-          }),
-        ]);
+        await persistAuthSession(tx, {
+          userId: user.id,
+          tokenHash,
+          userAgent: clientInfo.userAgent,
+          ipAddress: clientInfo.ipAddress,
+          expiresAt,
+        });
       });
 
       // クッキーに設定
