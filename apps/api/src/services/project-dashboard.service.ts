@@ -99,28 +99,26 @@ export class ProjectDashboardService {
       ? { id: { in: filteredTestSuiteIds }, projectId, deletedAt: null }
       : { projectId, deletedAt: null };
 
-    // テストスイート総数
-    const totalTestSuites = await prisma.testSuite.count({
-      where: testSuiteWhere,
-    });
-
-    // テストケース総数
-    const totalTestCases = await prisma.testCase.count({
-      where: {
-        testSuite: testSuiteWhere,
-        deletedAt: null,
-      },
-    });
-
-    // 期待結果総数
-    const totalExpectedResults = await prisma.testCaseExpectedResult.count({
-      where: {
-        testCase: {
+    // 3つのカウントを並行で取得
+    const [totalTestSuites, totalTestCases, totalExpectedResults] = await Promise.all([
+      prisma.testSuite.count({
+        where: testSuiteWhere,
+      }),
+      prisma.testCase.count({
+        where: {
           testSuite: testSuiteWhere,
           deletedAt: null,
         },
-      },
-    });
+      }),
+      prisma.testCaseExpectedResult.count({
+        where: {
+          testCase: {
+            testSuite: testSuiteWhere,
+            deletedAt: null,
+          },
+        },
+      }),
+    ]);
 
     return {
       totalTestSuites,

@@ -19,32 +19,93 @@ export async function getRecentActivities(
     ? { id: { in: filteredTestSuiteIds }, projectId, deletedAt: null }
     : { projectId, deletedAt: null };
 
-  // 実行イベント
-  const recentExecutions = await prisma.execution.findMany({
-    where: {
-      testSuite: testSuiteWhere,
-      ...(environmentId && { environmentId }),
-    },
-    orderBy: { createdAt: 'desc' },
-    take: RECENT_ACTIVITIES_LIMIT,
-    select: {
-      id: true,
-      createdAt: true,
-      testSuite: {
-        select: {
-          id: true,
-          name: true,
+  // 3種類のイベントを並行で取得
+  const [recentExecutions, recentTestCaseUpdates, recentReviews] = await Promise.all([
+    prisma.execution.findMany({
+      where: {
+        testSuite: testSuiteWhere,
+        ...(environmentId && { environmentId }),
+      },
+      orderBy: { createdAt: 'desc' },
+      take: RECENT_ACTIVITIES_LIMIT,
+      select: {
+        id: true,
+        createdAt: true,
+        testSuite: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        executedByUser: {
+          select: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+          },
         },
       },
-      executedByUser: {
-        select: {
-          id: true,
-          name: true,
-          avatarUrl: true,
+    }),
+    prisma.testCaseHistory.findMany({
+      where: {
+        testCase: {
+          testSuite: testSuiteWhere,
+        },
+        changeType: 'UPDATE',
+      },
+      orderBy: { createdAt: 'desc' },
+      take: RECENT_ACTIVITIES_LIMIT,
+      select: {
+        id: true,
+        createdAt: true,
+        testCase: {
+          select: {
+            id: true,
+            title: true,
+            testSuite: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
+          },
+        },
+        changedBy: {
+          select: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+          },
         },
       },
-    },
-  });
+    }),
+    prisma.review.findMany({
+      where: {
+        testSuite: testSuiteWhere,
+        status: 'SUBMITTED',
+      },
+      orderBy: { submittedAt: 'desc' },
+      take: RECENT_ACTIVITIES_LIMIT,
+      select: {
+        id: true,
+        submittedAt: true,
+        verdict: true,
+        testSuite: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
+        author: {
+          select: {
+            id: true,
+            name: true,
+            avatarUrl: true,
+          },
+        },
+      },
+    }),
+  ]);
 
   for (const execution of recentExecutions) {
     activities.push({
@@ -63,41 +124,6 @@ export async function getRecentActivities(
         : undefined,
     });
   }
-
-  // テストケース更新イベント
-  const recentTestCaseUpdates = await prisma.testCaseHistory.findMany({
-    where: {
-      testCase: {
-        testSuite: testSuiteWhere,
-      },
-      changeType: 'UPDATE',
-    },
-    orderBy: { createdAt: 'desc' },
-    take: RECENT_ACTIVITIES_LIMIT,
-    select: {
-      id: true,
-      createdAt: true,
-      testCase: {
-        select: {
-          id: true,
-          title: true,
-          testSuite: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-        },
-      },
-      changedBy: {
-        select: {
-          id: true,
-          name: true,
-          avatarUrl: true,
-        },
-      },
-    },
-  });
 
   for (const history of recentTestCaseUpdates) {
     activities.push({
@@ -118,34 +144,6 @@ export async function getRecentActivities(
         : undefined,
     });
   }
-
-  // レビュー提出イベント
-  const recentReviews = await prisma.review.findMany({
-    where: {
-      testSuite: testSuiteWhere,
-      status: 'SUBMITTED',
-    },
-    orderBy: { submittedAt: 'desc' },
-    take: RECENT_ACTIVITIES_LIMIT,
-    select: {
-      id: true,
-      submittedAt: true,
-      verdict: true,
-      testSuite: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-      author: {
-        select: {
-          id: true,
-          name: true,
-          avatarUrl: true,
-        },
-      },
-    },
-  });
 
   for (const review of recentReviews) {
     const verdictText =
