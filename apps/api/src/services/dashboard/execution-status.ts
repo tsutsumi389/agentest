@@ -12,30 +12,6 @@ import type {
 const EXECUTION_STATUS_DEFAULT_LIMIT = 10;
 
 /**
- * テスト実行状況（テストスイート単位）を取得
- */
-export async function getExecutionStatusSuites(
-  projectId: string,
-  filteredTestSuiteIds?: string[],
-  environmentId?: string,
-  limit: number = EXECUTION_STATUS_DEFAULT_LIMIT
-): Promise<ExecutionStatusSuites> {
-  const [failingSuites, skippedSuites, neverExecutedSuites, inProgressSuites] = await Promise.all([
-    getFailingSuites(projectId, filteredTestSuiteIds, environmentId, limit),
-    getSkippedSuites(projectId, filteredTestSuiteIds, environmentId, limit),
-    getNeverExecutedSuites(projectId, filteredTestSuiteIds, limit),
-    getInProgressSuites(projectId, filteredTestSuiteIds, environmentId, limit),
-  ]);
-
-  return {
-    failingSuites,
-    skippedSuites,
-    neverExecutedSuites,
-    inProgressSuites,
-  };
-}
-
-/**
  * テストスイートのwhere条件を構築するヘルパー
  */
 function buildTestSuiteWhere(projectId: string, filteredTestSuiteIds?: string[]) {
@@ -45,136 +21,104 @@ function buildTestSuiteWhere(projectId: string, filteredTestSuiteIds?: string[])
 }
 
 /**
- * 失敗中テストスイートを取得
- * 最終実行の期待結果にFAILを含むテストスイート
+ * テスト実行状況（テストスイート単位）を取得
  */
-async function getFailingSuites(
+export async function getExecutionStatusSuites(
   projectId: string,
   filteredTestSuiteIds?: string[],
   environmentId?: string,
   limit: number = EXECUTION_STATUS_DEFAULT_LIMIT
-): Promise<PaginatedList<FailingTestSuiteItem>> {
+): Promise<ExecutionStatusSuites> {
   const testSuiteWhere = buildTestSuiteWhere(projectId, filteredTestSuiteIds);
 
-  // 全テストスイートと最新実行を取得
-  const testSuites = await prisma.testSuite.findMany({
-    where: testSuiteWhere,
-    select: {
-      id: true,
-      name: true,
-      executions: {
-        where: environmentId ? { environmentId } : {},
-        orderBy: { createdAt: 'desc' },
-        take: 1,
-        select: {
-          id: true,
-          createdAt: true,
-          environment: {
-            select: { id: true, name: true },
-          },
-          expectedResults: {
-            select: { status: true },
+  // 最新実行を持つテストスイートと未実行テストスイートを並行で取得（1+1クエリ）
+  const [suitesWithExecution, neverExecutedSuites] = await Promise.all([
+    prisma.testSuite.findMany({
+      where: testSuiteWhere,
+      select: {
+        id: true,
+        name: true,
+        executions: {
+          where: environmentId ? { environmentId } : {},
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: {
+            id: true,
+            createdAt: true,
+            environment: {
+              select: { id: true, name: true },
+            },
+            expectedResults: {
+              select: { status: true },
+            },
           },
         },
       },
-    },
-  });
+    }),
+    getNeverExecutedSuites(projectId, filteredTestSuiteIds, limit),
+  ]);
 
-  // FAILを含むものをフィルタリング
+  // 1回のクエリ結果から3種類のリストを同時に構築
   const failingItems: FailingTestSuiteItem[] = [];
+  const skippedItems: SkippedTestSuiteItem[] = [];
+  const inProgressItems: InProgressTestSuiteItem[] = [];
 
-  for (const suite of testSuites) {
+  for (const suite of suitesWithExecution) {
     const lastExecution = suite.executions[0];
     if (!lastExecution) continue;
 
-    const failCount = lastExecution.expectedResults.filter((r) => r.status === 'FAIL').length;
+    const results = lastExecution.expectedResults;
+    const totalExpectedResults = results.length;
+
+    // 各ステータスのカウントを1回のループで集計
+    let failCount = 0;
+    let skippedCount = 0;
+    let pendingCount = 0;
+    for (const r of results) {
+      if (r.status === 'FAIL') failCount++;
+      else if (r.status === 'SKIPPED') skippedCount++;
+      else if (r.status === 'PENDING') pendingCount++;
+    }
+
+    const base = {
+      testSuiteId: suite.id,
+      testSuiteName: suite.name,
+      lastExecutionId: lastExecution.id,
+      lastExecutedAt: lastExecution.createdAt,
+      environment: lastExecution.environment,
+      totalExpectedResults,
+    };
 
     if (failCount > 0) {
-      failingItems.push({
-        testSuiteId: suite.id,
-        testSuiteName: suite.name,
-        lastExecutionId: lastExecution.id,
-        lastExecutedAt: lastExecution.createdAt,
-        environment: lastExecution.environment,
-        failCount,
-        totalExpectedResults: lastExecution.expectedResults.length,
-      });
+      failingItems.push({ ...base, failCount });
     }
-  }
-
-  // 失敗件数でソート
-  failingItems.sort((a, b) => b.failCount - a.failCount);
-
-  return {
-    items: failingItems.slice(0, limit),
-    total: failingItems.length,
-  };
-}
-
-/**
- * スキップ中テストスイートを取得
- * 最終実行の期待結果にSKIPPEDを含むテストスイート
- */
-async function getSkippedSuites(
-  projectId: string,
-  filteredTestSuiteIds?: string[],
-  environmentId?: string,
-  limit: number = EXECUTION_STATUS_DEFAULT_LIMIT
-): Promise<PaginatedList<SkippedTestSuiteItem>> {
-  const testSuiteWhere = buildTestSuiteWhere(projectId, filteredTestSuiteIds);
-
-  // 全テストスイートと最新実行を取得
-  const testSuites = await prisma.testSuite.findMany({
-    where: testSuiteWhere,
-    select: {
-      id: true,
-      name: true,
-      executions: {
-        where: environmentId ? { environmentId } : {},
-        orderBy: { createdAt: 'desc' },
-        take: 1,
-        select: {
-          id: true,
-          createdAt: true,
-          environment: {
-            select: { id: true, name: true },
-          },
-          expectedResults: {
-            select: { status: true },
-          },
-        },
-      },
-    },
-  });
-
-  // SKIPPEDを含むものをフィルタリング
-  const skippedItems: SkippedTestSuiteItem[] = [];
-
-  for (const suite of testSuites) {
-    const lastExecution = suite.executions[0];
-    if (!lastExecution) continue;
-
-    const skippedCount = lastExecution.expectedResults.filter((r) => r.status === 'SKIPPED').length;
-
     if (skippedCount > 0) {
-      skippedItems.push({
-        testSuiteId: suite.id,
-        testSuiteName: suite.name,
-        lastExecutionId: lastExecution.id,
-        lastExecutedAt: lastExecution.createdAt,
-        environment: lastExecution.environment,
-        skippedCount,
-        totalExpectedResults: lastExecution.expectedResults.length,
-      });
+      skippedItems.push({ ...base, skippedCount });
+    }
+    if (pendingCount > 0) {
+      inProgressItems.push({ ...base, pendingCount });
     }
   }
 
-  // スキップ件数でソート
+  // 各リストをソートしてlimit件に絞る
+  failingItems.sort((a, b) => b.failCount - a.failCount);
   skippedItems.sort((a, b) => b.skippedCount - a.skippedCount);
+  inProgressItems.sort((a, b) => b.pendingCount - a.pendingCount);
 
   return {
-    items: skippedItems.slice(0, limit),
-    total: skippedItems.length,
+    failingSuites: {
+      items: failingItems.slice(0, limit),
+      total: failingItems.length,
+    },
+    skippedSuites: {
+      items: skippedItems.slice(0, limit),
+      total: skippedItems.length,
+    },
+    neverExecutedSuites,
+    inProgressSuites: {
+      items: inProgressItems.slice(0, limit),
+      total: inProgressItems.length,
+    },
   };
 }
 
@@ -223,72 +167,5 @@ async function getNeverExecutedSuites(
   return {
     items: neverExecutedItems.slice(0, limit),
     total: neverExecutedItems.length,
-  };
-}
-
-/**
- * 実行中テストスイートを取得
- * 最終実行の期待結果にPENDINGを含むテストスイート
- */
-async function getInProgressSuites(
-  projectId: string,
-  filteredTestSuiteIds?: string[],
-  environmentId?: string,
-  limit: number = EXECUTION_STATUS_DEFAULT_LIMIT
-): Promise<PaginatedList<InProgressTestSuiteItem>> {
-  const testSuiteWhere = buildTestSuiteWhere(projectId, filteredTestSuiteIds);
-
-  // 全テストスイートと最新実行を取得
-  const testSuites = await prisma.testSuite.findMany({
-    where: testSuiteWhere,
-    select: {
-      id: true,
-      name: true,
-      executions: {
-        where: environmentId ? { environmentId } : {},
-        orderBy: { createdAt: 'desc' },
-        take: 1,
-        select: {
-          id: true,
-          createdAt: true,
-          environment: {
-            select: { id: true, name: true },
-          },
-          expectedResults: {
-            select: { status: true },
-          },
-        },
-      },
-    },
-  });
-
-  // PENDINGを含むものをフィルタリング
-  const inProgressItems: InProgressTestSuiteItem[] = [];
-
-  for (const suite of testSuites) {
-    const lastExecution = suite.executions[0];
-    if (!lastExecution) continue;
-
-    const pendingCount = lastExecution.expectedResults.filter((r) => r.status === 'PENDING').length;
-
-    if (pendingCount > 0) {
-      inProgressItems.push({
-        testSuiteId: suite.id,
-        testSuiteName: suite.name,
-        lastExecutionId: lastExecution.id,
-        lastExecutedAt: lastExecution.createdAt,
-        environment: lastExecution.environment,
-        pendingCount,
-        totalExpectedResults: lastExecution.expectedResults.length,
-      });
-    }
-  }
-
-  // 未判定件数でソート
-  inProgressItems.sort((a, b) => b.pendingCount - a.pendingCount);
-
-  return {
-    items: inProgressItems.slice(0, limit),
-    total: inProgressItems.length,
   };
 }

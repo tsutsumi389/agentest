@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router';
+import { Link } from 'react-router';
 import { Play, Pencil, MessageSquare, ChevronRight, History } from 'lucide-react';
 import type {
   ProjectDashboardStats,
@@ -9,6 +9,8 @@ import { formatRelativeTimeOrDefault, formatDateTime } from '../../../lib/date';
 
 interface RecentActivityTimelineProps {
   stats: ProjectDashboardStats;
+  /** プロジェクトID */
+  projectId: string;
   /** 追加のCSSクラス */
   className?: string;
 }
@@ -45,14 +47,11 @@ const ACTIVITY_CONFIG: Record<
  * 最近の活動タイムラインコンポーネント
  * プロジェクトの最近のアクティビティをタイムライン形式で表示
  */
-export function RecentActivityTimeline({ stats, className }: RecentActivityTimelineProps) {
-  const { projectId } = useParams<{ projectId: string }>();
-
-  // projectIdが取得できない場合は何も表示しない
-  if (!projectId) {
-    return null;
-  }
-
+export function RecentActivityTimeline({
+  stats,
+  projectId,
+  className,
+}: RecentActivityTimelineProps) {
   const { recentActivities } = stats;
 
   // 活動がない場合は空状態を表示

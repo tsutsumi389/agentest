@@ -22,45 +22,34 @@ export function RecentExecutionsList({ userId }: RecentExecutionsListProps) {
 
   const executions = data?.executions || [];
 
-  // ローディング状態
+  // カード本体のコンテンツを状態に応じて決定
+  let content: React.ReactNode;
+
   if (isLoading) {
-    return (
-      <div className="card">
-        <div className="p-4 border-b border-border">
-          <h2 className="font-semibold text-foreground">最近のテスト実行</h2>
-        </div>
-        <div className="p-8 text-center">
-          <Loader2 className="w-6 h-6 animate-spin text-foreground-muted mx-auto" />
-        </div>
+    content = (
+      <div className="p-8 text-center">
+        <Loader2 className="w-6 h-6 animate-spin text-foreground-muted mx-auto" />
       </div>
     );
-  }
-
-  // エラー状態
-  if (isError) {
-    return (
-      <div className="card">
-        <div className="p-4 border-b border-border">
-          <h2 className="font-semibold text-foreground">最近のテスト実行</h2>
-        </div>
-        <div className="p-4">
-          <p className="text-sm text-danger">テスト実行結果の取得に失敗しました</p>
-        </div>
+  } else if (isError) {
+    content = (
+      <div className="p-4">
+        <p className="text-sm text-danger">テスト実行結果の取得に失敗しました</p>
       </div>
     );
-  }
-
-  // 空状態
-  if (executions.length === 0) {
-    return (
-      <div className="card">
-        <div className="p-4 border-b border-border">
-          <h2 className="font-semibold text-foreground">最近のテスト実行</h2>
-        </div>
-        <div className="p-8 text-center">
-          <Play className="w-12 h-12 text-foreground-subtle mx-auto mb-3" />
-          <p className="text-foreground-muted">まだテスト実行結果がありません</p>
-        </div>
+  } else if (executions.length === 0) {
+    content = (
+      <div className="p-8 text-center">
+        <Play className="w-12 h-12 text-foreground-subtle mx-auto mb-3" />
+        <p className="text-foreground-muted">まだテスト実行結果がありません</p>
+      </div>
+    );
+  } else {
+    content = (
+      <div className="divide-y divide-border">
+        {executions.map((execution) => (
+          <ExecutionItem key={execution.executionId} execution={execution} />
+        ))}
       </div>
     );
   }
@@ -70,12 +59,7 @@ export function RecentExecutionsList({ userId }: RecentExecutionsListProps) {
       <div className="flex items-center justify-between p-4 border-b border-border">
         <h2 className="font-semibold text-foreground">最近のテスト実行</h2>
       </div>
-
-      <div className="divide-y divide-border">
-        {executions.map((execution) => (
-          <ExecutionItem key={execution.executionId} execution={execution} />
-        ))}
-      </div>
+      {content}
     </div>
   );
 }
@@ -88,7 +72,7 @@ function ExecutionItem({ execution }: { execution: RecentExecutionItem }) {
   const total =
     judgmentCounts.PASS + judgmentCounts.FAIL + judgmentCounts.PENDING + judgmentCounts.SKIPPED;
 
-  // 成功率を計算
+  // 成功率を計算（未判定を除いた完了分に対する割合）
   const completedTotal = judgmentCounts.PASS + judgmentCounts.FAIL + judgmentCounts.SKIPPED;
   const passRate =
     completedTotal > 0 ? Math.round((judgmentCounts.PASS / completedTotal) * 100) : 0;
