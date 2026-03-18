@@ -13,19 +13,18 @@ export function ProfileSettings() {
   const [isSaving, setIsSaving] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  // ユーザー情報が変更されたら入力値をリセット
-  useEffect(() => {
-    setName(user?.name || '');
-    setValidationError(null);
-  }, [user?.name]);
-
-  const hasChanges = name !== user?.name;
-
-  // 入力値を元に戻す
-  const handleCancel = () => {
+  // フォームをリセット
+  const resetForm = () => {
     setName(user?.name || '');
     setValidationError(null);
   };
+
+  // ユーザー情報が変更されたら入力値をリセット
+  useEffect(() => {
+    resetForm();
+  }, [user?.name]);
+
+  const hasChanges = name.trim() !== (user?.name?.trim() || '');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,7 +71,7 @@ export function ProfileSettings() {
           ) : (
             <div className="w-16 h-16 rounded-full bg-accent-subtle flex items-center justify-center">
               <span className="text-2xl font-medium text-accent">
-                {user?.name?.charAt(0).toUpperCase()}
+                {user?.name?.[0]?.toUpperCase() || '?'}
               </span>
             </div>
           )}
@@ -116,12 +115,7 @@ export function ProfileSettings() {
             {isSaving ? '保存中...' : '保存'}
           </button>
           {hasChanges && (
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={handleCancel}
-              disabled={isSaving}
-            >
+            <button type="button" className="btn btn-ghost" onClick={resetForm} disabled={isSaving}>
               キャンセル
             </button>
           )}
