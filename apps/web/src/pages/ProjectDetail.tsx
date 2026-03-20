@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useEffect } from 'react';
+import { useCallback, useMemo, useEffect, useRef } from 'react';
 import { useParams, Link, useSearchParams } from 'react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -26,7 +26,7 @@ import { TestSuiteRowSkeleton } from '../components/test-suite/TestSuiteRowSkele
 import { useAuth } from '../hooks/useAuth';
 import { ProjectOverviewTab } from '../components/project/ProjectOverviewTab';
 import { ProjectSettingsTab, type SettingsSection } from '../components/project/ProjectSettingsTab';
-import { useTestSuiteFilterParams } from '../hooks/useTestSuiteFilterParams';
+import { useTestSuiteFilterParams, DEFAULT_SEARCH_PARAMS } from '../hooks/useTestSuiteFilterParams';
 
 /**
  * プロジェクト詳細ページ
@@ -42,7 +42,6 @@ export function ProjectDetailPage() {
   const {
     filters: suiteSearchParams,
     setFilters: setSuiteSearchParams,
-    currentPage,
     setPage: handlePageChange,
   } = useTestSuiteFilterParams(urlSearchParams, setUrlSearchParams);
   const queryClient = useQueryClient();
@@ -51,27 +50,31 @@ export function ProjectDetailPage() {
   const currentTab = (urlSearchParams.get('tab') as ProjectTab) || 'overview';
   const settingsSection = (urlSearchParams.get('section') as SettingsSection) || 'general';
 
+  // urlSearchParamsをrefで保持（callbackの不要な再生成を防止）
+  const urlSearchParamsRef = useRef(urlSearchParams);
+  urlSearchParamsRef.current = urlSearchParams;
+
   // タブ変更ハンドラ
   const handleTabChange = useCallback(
     (tab: ProjectTab) => {
-      const newParams = new URLSearchParams(urlSearchParams);
+      const newParams = new URLSearchParams(urlSearchParamsRef.current);
       newParams.set('tab', tab);
       if (tab !== 'settings') {
         newParams.delete('section');
       }
       setUrlSearchParams(newParams);
     },
-    [urlSearchParams, setUrlSearchParams]
+    [setUrlSearchParams]
   );
 
   // 設定セクション変更ハンドラ
   const handleSettingsSectionChange = useCallback(
     (section: SettingsSection) => {
-      const newParams = new URLSearchParams(urlSearchParams);
+      const newParams = new URLSearchParams(urlSearchParamsRef.current);
       newParams.set('section', section);
       setUrlSearchParams(newParams, { replace: true });
     },
-    [urlSearchParams, setUrlSearchParams]
+    [setUrlSearchParams]
   );
 
   // プロジェクト情報を取得
@@ -138,11 +141,6 @@ export function ProjectDetailPage() {
       handleTabChange('overview');
     }
   }, [currentTab, currentRole, isAdmin, handleTabChange]);
-
-  // ページネーション計算
-  const limit = suiteSearchParams.limit || 20;
-  const offset = suiteSearchParams.offset || 0;
-  const totalPages = totalCount ? Math.ceil(totalCount / limit) : 1;
 
   // プロジェクト更新後のコールバック
   const handleProjectUpdated = useCallback(
@@ -243,10 +241,6 @@ export function ProjectDetailPage() {
           totalCount={totalCount}
           isAdmin={isAdmin}
           labels={labels}
-          currentPage={currentPage}
-          totalPages={totalPages}
-          offset={offset}
-          limit={limit}
           onPageChange={handlePageChange}
           projectId={projectId!}
         />
@@ -277,10 +271,6 @@ interface TestSuiteListContentProps {
   totalCount: number | undefined;
   isAdmin: boolean;
   labels: Label[];
-  currentPage: number;
-  totalPages: number;
-  offset: number;
-  limit: number;
   onPageChange: (page: number) => void;
   projectId: string;
 }
@@ -293,13 +283,52 @@ function TestSuiteListContent({
   totalCount,
   isAdmin,
   labels,
-  currentPage,
-  totalPages,
-  offset,
-  limit,
   onPageChange,
   projectId,
 }: TestSuiteListContentProps) {
+  // ページネーション値を導出
+  const limit = suiteSearchParams.limit || DEFAULT_SEARCH_PARAMS.limit!;
+  const offset = suiteSearchParams.offset || 0;
+  const totalPages = totalCount ? Math.ceil(totalCount / limit) : 1;
+  const currentPage = Math.floor(offset / limit) + 1;
+
+  // フィルター適用状態を判定
+  const hasActiveFilters = !!(
+    suiteSearchParams.q ||
+    suiteSearchParams.labelIds?.length ||
+    suiteSearchParams.status !== DEFAULT_SEARCH_PARAMS.status
+  );
+  const hasAnyFilters = hasActiveFilters || !!suiteSearchParams.includeDeleted;
+
+  // ページ番号配列を事前計算
+  const pageNumbers = useMemo(() => {
+    const pages: (number | 'ellipsis')[] = [];
+    if (totalPages <= 5) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      pages.push(1);
+      if (currentPage > 3) {
+        pages.push('ellipsis');
+      }
+      const start = Math.max(2, currentPage - 1);
+      const end = Math.min(totalPages - 1, currentPage + 1);
+      for (let i = start; i <= end; i++) {
+        if (!pages.includes(i)) {
+          pages.push(i);
+        }
+      }
+      if (currentPage < totalPages - 2) {
+        pages.push('ellipsis');
+      }
+      if (!pages.includes(totalPages)) {
+        pages.push(totalPages);
+      }
+    }
+    return pages;
+  }, [currentPage, totalPages]);
+
   return (
     <div className="card">
       <div className="p-4 border-b border-border space-y-4">
@@ -319,18 +348,11 @@ function TestSuiteListContent({
         <div className="p-8 text-center">
           <FileText className="w-12 h-12 text-foreground-subtle mx-auto mb-3" />
           <p className="text-foreground-muted mb-4">
-            {suiteSearchParams.q ||
-            suiteSearchParams.labelIds?.length ||
-            suiteSearchParams.includeDeleted ||
-            suiteSearchParams.status !== 'ACTIVE'
+            {hasAnyFilters
               ? '条件に一致するテストスイートがありません'
               : 'テストスイートがありません'}
           </p>
-          {!(
-            suiteSearchParams.q ||
-            suiteSearchParams.labelIds?.length ||
-            suiteSearchParams.status !== 'ACTIVE'
-          ) && (
+          {!hasActiveFilters && (
             <Link to={`/test-suites/new?projectId=${projectId}`} className="btn btn-primary">
               <Plus className="w-4 h-4" />
               テストスイートを作成
@@ -361,66 +383,27 @@ function TestSuiteListContent({
                   <ChevronLeft className="w-4 h-4" />
                 </button>
 
-                {/* ページ番号 */}
-                {(() => {
-                  const pages: (number | 'ellipsis')[] = [];
-                  const showEllipsisStart = currentPage > 3;
-                  const showEllipsisEnd = currentPage < totalPages - 2;
-
-                  if (totalPages <= 5) {
-                    // 5ページ以下の場合は全て表示
-                    for (let i = 1; i <= totalPages; i++) {
-                      pages.push(i);
-                    }
-                  } else {
-                    // 最初のページ
-                    pages.push(1);
-
-                    if (showEllipsisStart) {
-                      pages.push('ellipsis');
-                    }
-
-                    // 現在のページ周辺
-                    const start = Math.max(2, currentPage - 1);
-                    const end = Math.min(totalPages - 1, currentPage + 1);
-                    for (let i = start; i <= end; i++) {
-                      if (!pages.includes(i)) {
-                        pages.push(i);
-                      }
-                    }
-
-                    if (showEllipsisEnd) {
-                      pages.push('ellipsis');
-                    }
-
-                    // 最後のページ
-                    if (!pages.includes(totalPages)) {
-                      pages.push(totalPages);
-                    }
-                  }
-
-                  return pages.map((page, index) =>
-                    page === 'ellipsis' ? (
-                      <span key={`ellipsis-${index}`} className="px-2 text-foreground-muted">
-                        ...
-                      </span>
-                    ) : (
-                      <button
-                        key={page}
-                        onClick={() => onPageChange(page)}
-                        className={`px-3 py-1 rounded text-sm transition-colors ${
-                          currentPage === page
-                            ? 'bg-accent text-background'
-                            : 'text-foreground-muted hover:text-foreground hover:bg-background-tertiary'
-                        }`}
-                        aria-label={`${page}ページ目`}
-                        aria-current={currentPage === page ? 'page' : undefined}
-                      >
-                        {page}
-                      </button>
-                    )
-                  );
-                })()}
+                {pageNumbers.map((page, index) =>
+                  page === 'ellipsis' ? (
+                    <span key={`ellipsis-${index}`} className="px-2 text-foreground-muted">
+                      ...
+                    </span>
+                  ) : (
+                    <button
+                      key={page}
+                      onClick={() => onPageChange(page)}
+                      className={`px-3 py-1 rounded text-sm transition-colors ${
+                        currentPage === page
+                          ? 'bg-accent text-background'
+                          : 'text-foreground-muted hover:text-foreground hover:bg-background-tertiary'
+                      }`}
+                      aria-label={`${page}ページ目`}
+                      aria-current={currentPage === page ? 'page' : undefined}
+                    >
+                      {page}
+                    </button>
+                  )
+                )}
 
                 <button
                   onClick={() => onPageChange(currentPage + 1)}
@@ -457,17 +440,17 @@ const judgmentDisplayOrder: Array<keyof typeof judgmentDisplayConfig> = [
   'SKIPPED',
 ];
 
+// ステータス表示設定（ACTIVEは非表示）
+const statusConfig: Record<'DRAFT' | 'ARCHIVED', { className: string; label: string }> = {
+  DRAFT: { className: 'badge-warning', label: '下書き' },
+  ARCHIVED: { className: 'badge', label: 'アーカイブ' },
+};
+
 /**
  * テストスイート行
  */
 function TestSuiteRow({ suite }: { suite: TestSuite }) {
   const isDeleted = !!suite.deletedAt;
-
-  // ステータス表示設定（ACTIVEは非表示）
-  const statusConfig: Record<'DRAFT' | 'ARCHIVED', { className: string; label: string }> = {
-    DRAFT: { className: 'badge-warning', label: '下書き' },
-    ARCHIVED: { className: 'badge', label: 'アーカイブ' },
-  };
 
   return (
     <Link
@@ -511,53 +494,10 @@ function TestSuiteRow({ suite }: { suite: TestSuite }) {
           </div>
           <div className="flex items-center gap-3 text-sm text-foreground-muted">
             <span>{suite._count?.testCases || 0} テストケース</span>
-            {/* 最終実行結果表示（環境名 + プログレスバー + 合格率 + 判定結果カウント） */}
-            {!isDeleted &&
-              suite.lastExecution &&
-              (() => {
-                const { environment, judgmentCounts } = suite.lastExecution;
-                const total =
-                  judgmentCounts.PASS +
-                  judgmentCounts.FAIL +
-                  judgmentCounts.PENDING +
-                  judgmentCounts.SKIPPED;
-                const completedTotal =
-                  judgmentCounts.PASS + judgmentCounts.FAIL + judgmentCounts.SKIPPED;
-                const passRate =
-                  completedTotal > 0 ? Math.round((judgmentCounts.PASS / completedTotal) * 100) : 0;
-                return (
-                  <>
-                    <span className="text-foreground-subtle">•</span>
-                    <span className="flex items-center gap-2">
-                      {environment && (
-                        <span className="text-foreground-muted">{environment.name}</span>
-                      )}
-                      <span className="w-24">
-                        <ProgressBar
-                          passed={judgmentCounts.PASS}
-                          failed={judgmentCounts.FAIL}
-                          skipped={judgmentCounts.SKIPPED}
-                          total={total}
-                          size="sm"
-                        />
-                      </span>
-                      <span className="text-foreground-muted text-xs font-medium">{passRate}%</span>
-                      {/* 判定結果カウント（0件は非表示） */}
-                      {judgmentDisplayOrder.map((status) => {
-                        const count = judgmentCounts[status];
-                        if (count === 0) return null;
-                        const config = judgmentDisplayConfig[status];
-                        return (
-                          <span key={status} className={config.className}>
-                            {count}
-                            {config.label}
-                          </span>
-                        );
-                      })}
-                    </span>
-                  </>
-                );
-              })()}
+            {/* 最終実行結果表示 */}
+            {!isDeleted && suite.lastExecution && (
+              <LastExecutionSummary execution={suite.lastExecution} />
+            )}
           </div>
         </div>
       </div>
@@ -571,5 +511,51 @@ function TestSuiteRow({ suite }: { suite: TestSuite }) {
         )}
       </div>
     </Link>
+  );
+}
+
+/**
+ * 最終実行結果のサマリー表示
+ */
+function LastExecutionSummary({
+  execution,
+}: {
+  execution: NonNullable<TestSuite['lastExecution']>;
+}) {
+  const { environment, judgmentCounts } = execution;
+  const total =
+    judgmentCounts.PASS + judgmentCounts.FAIL + judgmentCounts.PENDING + judgmentCounts.SKIPPED;
+  const completedTotal = judgmentCounts.PASS + judgmentCounts.FAIL + judgmentCounts.SKIPPED;
+  const passRate =
+    completedTotal > 0 ? Math.round((judgmentCounts.PASS / completedTotal) * 100) : 0;
+
+  return (
+    <>
+      <span className="text-foreground-subtle">•</span>
+      <span className="flex items-center gap-2">
+        {environment && <span className="text-foreground-muted">{environment.name}</span>}
+        <span className="w-24">
+          <ProgressBar
+            passed={judgmentCounts.PASS}
+            failed={judgmentCounts.FAIL}
+            skipped={judgmentCounts.SKIPPED}
+            total={total}
+            size="sm"
+          />
+        </span>
+        <span className="text-foreground-muted text-xs font-medium">{passRate}%</span>
+        {judgmentDisplayOrder.map((status) => {
+          const count = judgmentCounts[status];
+          if (count === 0) return null;
+          const config = judgmentDisplayConfig[status];
+          return (
+            <span key={status} className={config.className}>
+              {count}
+              {config.label}
+            </span>
+          );
+        })}
+      </span>
+    </>
   );
 }
