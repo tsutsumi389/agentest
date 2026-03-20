@@ -2,6 +2,9 @@
 # Stop: エージェント完了時にリント＋テスト検証を実行
 set -euo pipefail
 
+# プロジェクトルートに移動（worktree等で別cwdから実行された場合の対策）
+cd "$(git rev-parse --show-toplevel 2>/dev/null || echo '.')"
+
 # 無限ループ防止
 if [ "${STOP_HOOK_ACTIVE:-}" = "1" ]; then
   exit 0
