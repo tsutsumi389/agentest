@@ -115,23 +115,20 @@ export function TestSuiteSearchFilter({
     return () => clearTimeout(timer);
   }, [searchInput, onFiltersChange]);
 
-  // 外側クリックでドロップダウンを閉じる
+  // ドロップダウンが開いている時のみリスナーを登録（外側クリック + ESCキー）
   useEffect(() => {
+    if (!isLabelOpen && !isSortOpen) return;
+
     function handleClickOutside(event: MouseEvent) {
-      if (labelRef.current && !labelRef.current.contains(event.target as Node)) {
+      if (isLabelOpen && labelRef.current && !labelRef.current.contains(event.target as Node)) {
         setIsLabelOpen(false);
         setLabelSearchQuery('');
       }
-      if (sortRef.current && !sortRef.current.contains(event.target as Node)) {
+      if (isSortOpen && sortRef.current && !sortRef.current.contains(event.target as Node)) {
         setIsSortOpen(false);
       }
     }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
-  // ESCキーでドロップダウンを閉じる
-  useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') {
         setIsLabelOpen(false);
@@ -139,9 +136,14 @@ export function TestSuiteSearchFilter({
         setLabelSearchQuery('');
       }
     }
+
+    document.addEventListener('mousedown', handleClickOutside);
     document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isLabelOpen, isSortOpen]);
 
   // ラベルドロップダウンを開いたとき、検索入力にフォーカス
   useEffect(() => {

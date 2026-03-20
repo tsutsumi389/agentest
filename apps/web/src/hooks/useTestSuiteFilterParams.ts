@@ -156,11 +156,8 @@ export function useTestSuiteFilterParams(
 ): UseTestSuiteFilterParamsReturn {
   const filters = useMemo(() => parseFiltersFromURL(searchParams), [searchParams]);
 
-  const currentPage = useMemo(() => {
-    const limit = filters.limit || DEFAULT_SEARCH_PARAMS.limit!;
-    const offset = filters.offset || 0;
-    return Math.floor(offset / limit) + 1;
-  }, [filters.limit, filters.offset]);
+  const currentPage =
+    Math.floor((filters.offset || 0) / (filters.limit || DEFAULT_SEARCH_PARAMS.limit!)) + 1;
 
   const setFilters = useCallback(
     (newFilters: TestSuiteSearchParams) => {
