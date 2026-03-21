@@ -26,6 +26,7 @@ import {
 } from '../../lib/api';
 import { type TestCaseChangeDetail } from '@agentest/shared';
 import { formatDateTime, formatRelativeTime } from '../../lib/date';
+import { PRIORITY_LABELS, STATUS_LABELS } from '../../lib/constants';
 
 interface TestCaseHistoryListProps {
   /** テストケース */
@@ -242,25 +243,6 @@ const FIELD_LABELS: Record<string, string> = {
   description: '説明',
   priority: '優先度',
   status: 'ステータス',
-};
-
-/**
- * 優先度のラベル
- */
-const PRIORITY_LABELS: Record<string, string> = {
-  CRITICAL: '緊急',
-  HIGH: '高',
-  MEDIUM: '中',
-  LOW: '低',
-};
-
-/**
- * ステータスのラベル
- */
-const STATUS_LABELS: Record<string, string> = {
-  DRAFT: '下書き',
-  ACTIVE: 'アクティブ',
-  ARCHIVED: 'アーカイブ',
 };
 
 /**

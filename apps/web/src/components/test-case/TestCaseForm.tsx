@@ -1,32 +1,21 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Loader2 } from 'lucide-react';
-import { arrayMove } from '@dnd-kit/sortable';
-import { type DragEndEvent } from '@dnd-kit/core';
 import { testCasesApi, ApiError, type TestCaseWithDetails } from '../../lib/api';
+import { PRIORITY_OPTIONS, STATUS_TOGGLE_OPTIONS } from '../../lib/constants';
 import { toast } from '../../stores/toast';
 import { MentionInput } from '../common/MentionInput';
 import { ConfirmDialog } from '../common/ConfirmDialog';
-import { DynamicListSection, useDndSensors, type ListItem } from '../common/DynamicListSection';
+import {
+  DynamicListSection,
+  useDndSensors,
+  addListItem,
+  updateListItem,
+  deleteListItem,
+  createDragEndHandler,
+  type ListItem,
+} from '../common/DynamicListSection';
 import { MarkdownEditor } from '../common/markdown';
-
-/**
- * 優先度オプション
- */
-const PRIORITY_OPTIONS = [
-  { value: 'CRITICAL', label: '緊急' },
-  { value: 'HIGH', label: '高' },
-  { value: 'MEDIUM', label: '中' },
-  { value: 'LOW', label: '低' },
-] as const;
-
-/**
- * ステータストグルオプション（下書き/アクティブ）
- */
-const STATUS_TOGGLE_OPTIONS = [
-  { value: 'DRAFT', label: '下書き' },
-  { value: 'ACTIVE', label: 'アクティブ' },
-] as const;
 
 interface TestCaseFormProps {
   /** フォームモード */
@@ -287,26 +276,27 @@ export function TestCaseForm({
         // 新規作成時も子エンティティを同一グループとして扱うためのgroupIdを生成
         const groupId = crypto.randomUUID();
 
-        // 前提条件を追加
-        for (const item of activeItems.preconditions) {
-          await testCasesApi.addPrecondition(createdTestCase.id, {
-            content: item.content.trim(),
-            groupId,
-          });
-        }
-
-        // ステップを追加
-        for (const item of activeItems.steps) {
-          await testCasesApi.addStep(createdTestCase.id, { content: item.content.trim(), groupId });
-        }
-
-        // 期待結果を追加
-        for (const item of activeItems.expectedResults) {
-          await testCasesApi.addExpectedResult(createdTestCase.id, {
-            content: item.content.trim(),
-            groupId,
-          });
-        }
+        // 各項目を並列で追加
+        await Promise.all([
+          ...activeItems.preconditions.map((item) =>
+            testCasesApi.addPrecondition(createdTestCase.id, {
+              content: item.content.trim(),
+              groupId,
+            })
+          ),
+          ...activeItems.steps.map((item) =>
+            testCasesApi.addStep(createdTestCase.id, {
+              content: item.content.trim(),
+              groupId,
+            })
+          ),
+          ...activeItems.expectedResults.map((item) =>
+            testCasesApi.addExpectedResult(createdTestCase.id, {
+              content: item.content.trim(),
+              groupId,
+            })
+          ),
+        ]);
 
         queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
         toast.success('テストケースを作成しました');
@@ -343,14 +333,12 @@ export function TestCaseForm({
           await testCasesApi.update(testCase.id, updates);
         }
 
-        // 前提条件の差分更新
-        await updateListItems(testCase.id, 'precondition', preconditions, groupId);
-
-        // ステップの差分更新
-        await updateListItems(testCase.id, 'step', steps, groupId);
-
-        // 期待結果の差分更新
-        await updateListItems(testCase.id, 'expectedResult', expectedResults, groupId);
+        // 前提条件・ステップ・期待結果の差分更新を並列実行
+        await Promise.all([
+          updateListItems(testCase.id, 'precondition', preconditions, groupId),
+          updateListItems(testCase.id, 'step', steps, groupId),
+          updateListItems(testCase.id, 'expectedResult', expectedResults, groupId),
+        ]);
 
         queryClient.invalidateQueries({ queryKey: ['test-case-details', testCase.id] });
         queryClient.invalidateQueries({ queryKey: ['test-suite-cases', testSuiteId] });
@@ -409,30 +397,36 @@ export function TestCaseForm({
       },
     }[type];
 
-    // 削除された項目を処理
-    for (const item of items.filter((i) => i.isDeleted && !i.isNew)) {
-      await api.delete(testCaseId, item.id, groupId);
-    }
+    // 削除された項目を並列処理
+    await Promise.all(
+      items
+        .filter((i) => i.isDeleted && !i.isNew)
+        .map((item) => api.delete(testCaseId, item.id, groupId))
+    );
 
-    // 新規追加された項目を処理
-    const newItems: { tempId: string; realId: string }[] = [];
-    for (const item of items.filter((i) => i.isNew && !i.isDeleted && i.content.trim())) {
-      const result = await api.add(testCaseId, { content: item.content.trim(), groupId });
-      const realId =
-        'precondition' in result
-          ? result.precondition.id
-          : 'step' in result
-            ? result.step.id
-            : result.expectedResult.id;
-      newItems.push({ tempId: item.id, realId });
-    }
+    // 新規追加された項目を並列処理
+    const addResults = await Promise.all(
+      items
+        .filter((i) => i.isNew && !i.isDeleted && i.content.trim())
+        .map(async (item) => {
+          const result = await api.add(testCaseId, { content: item.content.trim(), groupId });
+          const realId =
+            'precondition' in result
+              ? result.precondition.id
+              : 'step' in result
+                ? result.step.id
+                : result.expectedResult.id;
+          return { tempId: item.id, realId };
+        })
+    );
+    const newItems = addResults;
 
-    // 更新された項目を処理
-    for (const item of items.filter(
-      (i) => !i.isNew && !i.isDeleted && i.content.trim() !== i.originalContent
-    )) {
-      await api.update(testCaseId, item.id, { content: item.content.trim(), groupId });
-    }
+    // 更新された項目を並列処理
+    await Promise.all(
+      items
+        .filter((i) => !i.isNew && !i.isDeleted && i.content.trim() !== i.originalContent)
+        .map((item) => api.update(testCaseId, item.id, { content: item.content.trim(), groupId }))
+    );
 
     // 並び順の更新
     const activeItems = items.filter((i) => !i.isDeleted && i.content.trim());
@@ -452,63 +446,6 @@ export function TestCaseForm({
       }
     }
   };
-
-  // リスト項目の追加
-  const addListItem = (setter: React.Dispatch<React.SetStateAction<ListItem[]>>) => {
-    setter((prev) => [
-      ...prev,
-      {
-        id: crypto.randomUUID(),
-        content: '',
-        isNew: true,
-      },
-    ]);
-  };
-
-  // リスト項目の更新
-  const updateListItem = (
-    setter: React.Dispatch<React.SetStateAction<ListItem[]>>,
-    id: string,
-    content: string
-  ) => {
-    setter((prev) => prev.map((item) => (item.id === id ? { ...item, content } : item)));
-  };
-
-  // リスト項目の削除
-  const deleteListItem = (setter: React.Dispatch<React.SetStateAction<ListItem[]>>, id: string) => {
-    setter((prev) => prev.map((item) => (item.id === id ? { ...item, isDeleted: true } : item)));
-  };
-
-  // ドラッグ終了時のハンドラ
-  const handleDragEnd = useCallback(
-    (
-      event: DragEndEvent,
-      items: ListItem[],
-      setter: React.Dispatch<React.SetStateAction<ListItem[]>>
-    ) => {
-      const { active, over } = event;
-
-      if (!over || active.id === over.id) {
-        return;
-      }
-
-      const activeItems = items.filter((i) => !i.isDeleted);
-      const oldIndex = activeItems.findIndex((i) => i.id === active.id);
-      const newIndex = activeItems.findIndex((i) => i.id === over.id);
-
-      if (oldIndex === -1 || newIndex === -1) {
-        return;
-      }
-
-      setter((prev) => {
-        const activeItems = prev.filter((i) => !i.isDeleted);
-        const deletedItems = prev.filter((i) => i.isDeleted);
-        const reordered = arrayMove(activeItems, oldIndex, newIndex);
-        return [...reordered, ...deletedItems];
-      });
-    },
-    []
-  );
 
   // セクション展開/折りたたみのトグル
   const toggleSection = (section: keyof typeof expandedSections) => {
@@ -632,7 +569,7 @@ export function TestCaseForm({
           onAdd={() => addListItem(setPreconditions)}
           onUpdate={(id, content) => updateListItem(setPreconditions, id, content)}
           onDelete={(id) => deleteListItem(setPreconditions, id)}
-          onDragEnd={(event) => handleDragEnd(event, preconditions, setPreconditions)}
+          onDragEnd={createDragEndHandler(preconditions, setPreconditions)}
           sensors={sensors}
           placeholder="前提条件を入力...（Markdown対応）"
           useMarkdown
@@ -647,7 +584,7 @@ export function TestCaseForm({
           onAdd={() => addListItem(setSteps)}
           onUpdate={(id, content) => updateListItem(setSteps, id, content)}
           onDelete={(id) => deleteListItem(setSteps, id)}
-          onDragEnd={(event) => handleDragEnd(event, steps, setSteps)}
+          onDragEnd={createDragEndHandler(steps, setSteps)}
           sensors={sensors}
           placeholder="手順を入力...（Markdown対応）"
           useMarkdown
@@ -662,7 +599,7 @@ export function TestCaseForm({
           onAdd={() => addListItem(setExpectedResults)}
           onUpdate={(id, content) => updateListItem(setExpectedResults, id, content)}
           onDelete={(id) => deleteListItem(setExpectedResults, id)}
-          onDragEnd={(event) => handleDragEnd(event, expectedResults, setExpectedResults)}
+          onDragEnd={createDragEndHandler(expectedResults, setExpectedResults)}
           sensors={sensors}
           placeholder="期待結果を入力...（Markdown対応）"
           useMarkdown

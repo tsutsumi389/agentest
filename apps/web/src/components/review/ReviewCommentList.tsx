@@ -11,6 +11,7 @@ import {
   type ProjectMemberRole,
 } from '../../lib/api';
 import { toast } from '../../stores/toast';
+import { hasWritePermission } from '../../lib/permissions';
 import { useReviewSession } from '../../contexts/ReviewSessionContext';
 import { ReviewCommentItem } from './ReviewCommentItem';
 import { ReviewCommentForm } from './ReviewCommentForm';
@@ -65,7 +66,7 @@ export function ReviewCommentList({
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // 編集権限
-  const canEdit = currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'WRITE';
+  const canEdit = hasWritePermission(currentRole);
 
   // フィールドオプション
   const fieldOptions = targetType === 'SUITE' ? SUITE_FIELD_OPTIONS : CASE_FIELD_OPTIONS;

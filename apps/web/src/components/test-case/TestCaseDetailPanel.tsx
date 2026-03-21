@@ -8,10 +8,9 @@ import {
   type TestCaseWithDetails,
   type ProjectMemberRole,
 } from '../../lib/api';
+import { hasWritePermission } from '../../lib/permissions';
 import { useReviewSession } from '../../contexts/ReviewSessionContext';
-import { TestCasePreconditionList } from './TestCasePreconditionList';
-import { TestCaseStepList } from './TestCaseStepList';
-import { TestCaseExpectedResultList } from './TestCaseExpectedResultList';
+import { TestCaseItemList } from './TestCaseItemList';
 import { TestCaseHistoryList } from './TestCaseHistoryList';
 import { DeleteTestCaseSection } from './DeleteTestCaseSection';
 import { CommentableField } from '../review/CommentableField';
@@ -79,7 +78,7 @@ export function TestCaseDetailPanel({
   const testCase = testCaseData?.testCase;
 
   // 権限チェック
-  const canEdit = currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'WRITE';
+  const canEdit = hasWritePermission(currentRole);
 
   // 更新時のハンドラ
   const handleUpdated = (updatedTestCase: TestCase) => {
@@ -223,27 +222,30 @@ function OverviewTab({ testCase, canEdit }: { testCase: TestCaseWithDetails; can
       </CommentableField>
 
       {/* 前提条件 */}
-      <TestCasePreconditionList
+      <TestCaseItemList
+        type="precondition"
         testCaseId={testCase.id}
-        initialPreconditions={testCase.preconditions}
+        initialItems={testCase.preconditions}
         comments={comments}
         canEdit={canEdit}
         onCommentAdded={handleCommentAdded}
       />
 
       {/* テスト手順 */}
-      <TestCaseStepList
+      <TestCaseItemList
+        type="step"
         testCaseId={testCase.id}
-        initialSteps={testCase.steps}
+        initialItems={testCase.steps}
         comments={comments}
         canEdit={canEdit}
         onCommentAdded={handleCommentAdded}
       />
 
       {/* 期待結果 */}
-      <TestCaseExpectedResultList
+      <TestCaseItemList
+        type="expectedResult"
         testCaseId={testCase.id}
-        initialExpectedResults={testCase.expectedResults}
+        initialItems={testCase.expectedResults}
         comments={comments}
         canEdit={canEdit}
         onCommentAdded={handleCommentAdded}

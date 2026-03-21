@@ -15,6 +15,7 @@ import {
   type Execution,
 } from '../lib/api';
 import { formatDateTime, formatRelativeTime } from '../lib/date';
+import { hasWritePermission } from '../lib/permissions';
 import { ProgressBar } from '../components/ui/ProgressBar';
 import { useAuth } from '../hooks/useAuth';
 import { useCurrentProject } from '../hooks/useCurrentProject';
@@ -599,7 +600,7 @@ export function OverviewTab({
   const displayComments: ReviewCommentWithReplies[] = currentReview?.comments || [];
 
   // 編集権限の判定（WRITE以上）
-  const canEdit = currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'WRITE';
+  const canEdit = hasWritePermission(currentRole);
 
   return (
     <div className="space-y-6">
@@ -727,8 +728,7 @@ function SettingsTab({ testSuite, currentRole, onUpdated, onLabelsUpdated }: Set
 
   // ADMIN権限があるかどうか
   const canEdit = currentRole === 'OWNER' || currentRole === 'ADMIN';
-  const canEditLabels =
-    currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'WRITE';
+  const canEditLabels = hasWritePermission(currentRole);
 
   // プロジェクトのラベル一覧を取得
   const { data: projectLabelsData, isLoading: isLoadingProjectLabels } = useQuery({

@@ -18,6 +18,7 @@ import {
   type ProjectMemberRole,
 } from '../../lib/api';
 import { toast } from '../../stores/toast';
+import { hasWritePermission } from '../../lib/permissions';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { EnvironmentFormModal } from './EnvironmentFormModal';
 
@@ -182,7 +183,7 @@ export function EnvironmentList({ project, currentRole }: EnvironmentListProps) 
   const [isReordering, setIsReordering] = useState(false);
 
   // 権限チェック
-  const canEdit = currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'WRITE';
+  const canEdit = hasWritePermission(currentRole);
   const canDelete = currentRole === 'OWNER' || currentRole === 'ADMIN';
 
   // 環境一覧を取得
