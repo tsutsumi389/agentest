@@ -10,7 +10,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/safety-gate.sh"
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/safety-gate.sh\""
           }
         ]
       }
@@ -21,7 +21,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/post-lint.sh"
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/post-lint.sh\""
           }
         ]
       }
@@ -31,7 +31,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/stop-gate.sh"
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/stop-gate.sh\""
           }
         ]
       }
