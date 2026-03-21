@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import { Search, X, ChevronDown, Check, ArrowUpDown, Tag } from 'lucide-react';
 import type { TestSuiteSearchParams, Label } from '../../lib/api';
+import { useDebounce } from '../../hooks/useDebounce';
 
 /**
  * ステータスオプション（トグルボタングループ用）
@@ -71,6 +72,7 @@ export function TestSuiteSearchFilter({
   labels = [],
 }: TestSuiteSearchFilterProps) {
   const [searchInput, setSearchInput] = useState(filters.q || '');
+  const debouncedSearchInput = useDebounce(searchInput, 300);
   const [isLabelOpen, setIsLabelOpen] = useState(false);
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [labelSearchQuery, setLabelSearchQuery] = useState('');
@@ -105,15 +107,13 @@ export function TestSuiteSearchFilter({
   const currentSortLabel =
     SORT_COMBINED_OPTIONS.find((o) => o.value === currentSortValue)?.label || '更新日(新しい順)';
 
-  // 検索入力のデバウンス
+  // デバウンスされた検索値をフィルターに反映
   useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchInput !== filtersRef.current.q) {
-        onFiltersChange({ ...filtersRef.current, q: searchInput || undefined, offset: 0 });
-      }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [searchInput, onFiltersChange]);
+    const currentQ = filtersRef.current.q || '';
+    if (debouncedSearchInput !== currentQ) {
+      onFiltersChange({ ...filtersRef.current, q: debouncedSearchInput || undefined, offset: 0 });
+    }
+  }, [debouncedSearchInput, onFiltersChange]);
 
   // ドロップダウンが開いている時のみリスナーを登録（外側クリック + ESCキー）
   useEffect(() => {

@@ -42,6 +42,7 @@ export function ProjectDetailPage() {
   const {
     filters: suiteSearchParams,
     setFilters: setSuiteSearchParams,
+    currentPage: suiteCurrentPage,
     setPage: handlePageChange,
   } = useTestSuiteFilterParams(urlSearchParams, setUrlSearchParams);
   const queryClient = useQueryClient();
@@ -241,6 +242,7 @@ export function ProjectDetailPage() {
           totalCount={totalCount}
           isAdmin={isAdmin}
           labels={labels}
+          currentPage={suiteCurrentPage}
           onPageChange={handlePageChange}
           projectId={projectId!}
         />
@@ -271,6 +273,7 @@ interface TestSuiteListContentProps {
   totalCount: number | undefined;
   isAdmin: boolean;
   labels: Label[];
+  currentPage: number;
   onPageChange: (page: number) => void;
   projectId: string;
 }
@@ -283,6 +286,7 @@ function TestSuiteListContent({
   totalCount,
   isAdmin,
   labels,
+  currentPage,
   onPageChange,
   projectId,
 }: TestSuiteListContentProps) {
@@ -290,7 +294,6 @@ function TestSuiteListContent({
   const limit = suiteSearchParams.limit || DEFAULT_SEARCH_PARAMS.limit!;
   const offset = suiteSearchParams.offset || 0;
   const totalPages = totalCount ? Math.ceil(totalCount / limit) : 1;
-  const currentPage = Math.floor(offset / limit) + 1;
 
   // フィルター適用状態を判定
   const hasActiveFilters = !!(
@@ -308,21 +311,24 @@ function TestSuiteListContent({
         pages.push(i);
       }
     } else {
+      const added = new Set<number>();
       pages.push(1);
+      added.add(1);
       if (currentPage > 3) {
         pages.push('ellipsis');
       }
       const start = Math.max(2, currentPage - 1);
       const end = Math.min(totalPages - 1, currentPage + 1);
       for (let i = start; i <= end; i++) {
-        if (!pages.includes(i)) {
+        if (!added.has(i)) {
           pages.push(i);
+          added.add(i);
         }
       }
       if (currentPage < totalPages - 2) {
         pages.push('ellipsis');
       }
-      if (!pages.includes(totalPages)) {
+      if (!added.has(totalPages)) {
         pages.push(totalPages);
       }
     }
