@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
 import type { useSearchParams } from 'react-router';
 import type { TestSuiteSearchParams } from '../lib/api';
 
@@ -154,33 +154,40 @@ export function useTestSuiteFilterParams(
   searchParams: URLSearchParams,
   setSearchParams: ReturnType<typeof useSearchParams>[1]
 ): UseTestSuiteFilterParamsReturn {
-  const filters = useMemo(() => parseFiltersFromURL(searchParams), [searchParams]);
+  // searchParams.toString()をキーにしてオブジェクト参照の不安定性を回避
+  const searchParamsString = searchParams.toString();
+  const filters = useMemo(() => parseFiltersFromURL(searchParams), [searchParamsString]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const currentPage =
     Math.floor((filters.offset || 0) / (filters.limit || DEFAULT_SEARCH_PARAMS.limit!)) + 1;
 
+  // 最新のsearchParamsをrefで保持（コールバックの不要な再生成を防止）
+  const searchParamsRef = useRef(searchParams);
+  searchParamsRef.current = searchParams;
+
   const setFilters = useCallback(
     (newFilters: TestSuiteSearchParams) => {
-      const params = filtersToURLParams(newFilters, searchParams);
+      const params = filtersToURLParams(newFilters, searchParamsRef.current);
       setSearchParams(params, { replace: true });
     },
-    [searchParams, setSearchParams]
+    [setSearchParams]
   );
 
   const setPage = useCallback(
     (page: number) => {
-      const limit = filters.limit || DEFAULT_SEARCH_PARAMS.limit!;
-      const newFilters = { ...filters, offset: (page - 1) * limit };
-      const params = filtersToURLParams(newFilters, searchParams);
+      const currentFilters = parseFiltersFromURL(searchParamsRef.current);
+      const limit = currentFilters.limit || DEFAULT_SEARCH_PARAMS.limit!;
+      const newFilters = { ...currentFilters, offset: (page - 1) * limit };
+      const params = filtersToURLParams(newFilters, searchParamsRef.current);
       setSearchParams(params, { replace: true });
     },
-    [filters, searchParams, setSearchParams]
+    [setSearchParams]
   );
 
   const resetFilters = useCallback(() => {
-    const params = filtersToURLParams(DEFAULT_SEARCH_PARAMS, searchParams);
+    const params = filtersToURLParams(DEFAULT_SEARCH_PARAMS, searchParamsRef.current);
     setSearchParams(params, { replace: true });
-  }, [searchParams, setSearchParams]);
+  }, [setSearchParams]);
 
   return {
     filters,
