@@ -1,17 +1,8 @@
-import { useState, useEffect } from 'react';
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from '@dnd-kit/core';
+import { useState, useEffect, useMemo } from 'react';
+import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core';
 import {
   arrayMove,
   SortableContext,
-  sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
@@ -38,6 +29,8 @@ import {
   type ProjectMemberRole,
 } from '../../lib/api';
 import { toast } from '../../stores/toast';
+import { hasWritePermission } from '../../lib/permissions';
+import { useDndSensors } from '../common/DynamicListSection';
 import { TestCaseSidebarSkeleton } from './TestCaseSidebarSkeleton';
 
 /** ステータスフィルタの種類 */
@@ -246,38 +239,32 @@ export function TestCaseSidebar({
   const isSearching = searchQuery.trim().length > 0;
 
   // 権限チェック
-  const canEdit = currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'WRITE';
+  const canEdit = hasWritePermission(currentRole);
   // 検索中またはゴミ箱フィルタ時は並び替えを無効化
   const canReorder = canEdit && !isSearching && !isDeletedFilter;
 
   // dnd-kit センサー設定
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
-  );
+  const sensors = useDndSensors();
 
-  // orderKeyでソート
-  const sortedTestCases = [...testCases].sort((a, b) => a.orderKey.localeCompare(b.orderKey));
+  // orderKeyでソート（メモ化）
+  const sortedTestCases = useMemo(
+    () => [...testCases].sort((a, b) => a.orderKey.localeCompare(b.orderKey)),
+    [testCases]
+  );
 
   // ローカルの状態があればそれを使用、なければpropsのデータを使用
   const displayTestCases = localTestCases.length > 0 ? localTestCases : sortedTestCases;
 
-  // 検索フィルタリング
-  const filteredTestCases = isSearching
-    ? displayTestCases.filter((tc) => {
-        const query = searchQuery.toLowerCase();
-        return (
-          tc.title.toLowerCase().includes(query) ||
-          (tc.description?.toLowerCase().includes(query) ?? false)
-        );
-      })
-    : displayTestCases;
+  // 検索フィルタリング（メモ化）
+  const filteredTestCases = useMemo(() => {
+    if (!isSearching) return displayTestCases;
+    const query = searchQuery.toLowerCase();
+    return displayTestCases.filter(
+      (tc) =>
+        tc.title.toLowerCase().includes(query) ||
+        (tc.description?.toLowerCase().includes(query) ?? false)
+    );
+  }, [displayTestCases, isSearching, searchQuery]);
 
   // フィルタ変更ハンドラ
   const handleFilterChange = (filter: TestCaseFilter) => {

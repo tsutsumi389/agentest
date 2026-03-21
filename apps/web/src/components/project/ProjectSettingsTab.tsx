@@ -9,6 +9,7 @@ import { HistoryList } from './HistoryList';
 import { DeleteProjectSection } from './DeleteProjectSection';
 import { LabelList } from '../label/LabelList';
 import { toast } from '../../stores/toast';
+import { hasWritePermission } from '../../lib/permissions';
 
 export type SettingsSection =
   | 'general'
@@ -118,7 +119,7 @@ function LabelManagementSection({ project, currentRole }: LabelManagementSection
   const queryClient = useQueryClient();
 
   // 編集権限の判定
-  const canEdit = currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'WRITE';
+  const canEdit = hasWritePermission(currentRole);
   const canDelete = currentRole === 'OWNER' || currentRole === 'ADMIN';
 
   // ラベル一覧を取得

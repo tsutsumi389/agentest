@@ -41,6 +41,24 @@ export const STATUS_LABELS: Record<string, string> = {
 };
 
 /**
+ * 優先度の選択オプション
+ */
+export const PRIORITY_OPTIONS = [
+  { value: 'CRITICAL', label: '緊急' },
+  { value: 'HIGH', label: '高' },
+  { value: 'MEDIUM', label: '中' },
+  { value: 'LOW', label: '低' },
+] as const;
+
+/**
+ * ステータストグルオプション（下書き/アクティブ）
+ */
+export const STATUS_TOGGLE_OPTIONS = [
+  { value: 'DRAFT', label: '下書き' },
+  { value: 'ACTIVE', label: 'アクティブ' },
+] as const;
+
+/**
  * レビューターゲットフィールドのラベル
  */
 export const TARGET_FIELD_LABELS: Record<string, string> = {

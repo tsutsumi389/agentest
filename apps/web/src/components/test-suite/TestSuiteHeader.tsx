@@ -20,6 +20,7 @@ import {
   STATUS_LABELS,
 } from '../../lib/constants';
 import { LabelBadgeList } from '../ui/LabelBadge';
+import { hasWritePermission } from '../../lib/permissions';
 import { Breadcrumb, type BreadcrumbItem } from '../ui/Breadcrumb';
 
 /**
@@ -123,7 +124,7 @@ export function TestSuiteHeader({
   projectName,
 }: TestSuiteHeaderProps) {
   // 編集権限チェック
-  const canEdit = currentRole === 'OWNER' || currentRole === 'ADMIN' || currentRole === 'WRITE';
+  const canEdit = hasWritePermission(currentRole);
 
   // テストケース選択中かどうか
   const isTestCaseMode = !!selectedTestCase;
