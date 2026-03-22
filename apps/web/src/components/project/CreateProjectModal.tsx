@@ -7,22 +7,19 @@ import { projectsApi, ApiError } from '../../lib/api';
 interface CreateProjectModalProps {
   isOpen: boolean;
   onClose: () => void;
-  /** 組織ID。未指定の場合は個人プロジェクトとして作成 */
   organizationId?: string;
 }
 
-/**
- * プロジェクト作成モーダル
- */
 export function CreateProjectModal({ isOpen, onClose, organizationId }: CreateProjectModalProps) {
   const queryClient = useQueryClient();
   const { organizations } = useOrganizationStore();
   const nameInputRef = useRef<HTMLInputElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
 
-  // 組織名を取得（モーダルタイトル用）
   const organizationName = organizationId
     ? organizations.find(({ organization }) => organization.id === organizationId)?.organization
         .name
@@ -37,15 +34,13 @@ export function CreateProjectModal({ isOpen, onClose, organizationId }: CreatePr
     },
   });
 
-  // フォームをリセットしてモーダルを閉じる
   const handleClose = useCallback(() => {
     setName('');
     setDescription('');
     createMutation.reset();
-    onClose();
-  }, [onClose, createMutation]);
+    onCloseRef.current();
+  }, [createMutation.reset]);
 
-  // モーダルオープン時にフォーカス設定
   useEffect(() => {
     if (isOpen) {
       requestAnimationFrame(() => {
@@ -54,7 +49,6 @@ export function CreateProjectModal({ isOpen, onClose, organizationId }: CreatePr
     }
   }, [isOpen]);
 
-  // ESCキーでモーダルを閉じる
   useEffect(() => {
     if (!isOpen) return;
 
@@ -70,7 +64,6 @@ export function CreateProjectModal({ isOpen, onClose, organizationId }: CreatePr
 
   if (!isOpen) return null;
 
-  // 背景クリックでモーダルを閉じる
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (e.target === e.currentTarget && !createMutation.isPending) {
       handleClose();
@@ -86,16 +79,11 @@ export function CreateProjectModal({ isOpen, onClose, organizationId }: CreatePr
     });
   };
 
-  // エラーメッセージを取得
-  const getErrorMessage = () => {
-    if (!createMutation.isError) return null;
-    if (createMutation.error instanceof ApiError) {
-      return createMutation.error.message;
-    }
-    return 'プロジェクトの作成に失敗しました';
-  };
-
-  const errorMessage = getErrorMessage();
+  const errorMessage = createMutation.isError
+    ? createMutation.error instanceof ApiError
+      ? createMutation.error.message
+      : 'プロジェクトの作成に失敗しました'
+    : null;
 
   return (
     <div
@@ -120,7 +108,6 @@ export function CreateProjectModal({ isOpen, onClose, organizationId }: CreatePr
           </button>
         </div>
 
-        {/* エラーメッセージ */}
         {errorMessage && (
           <div className="mb-4 p-3 bg-danger-subtle border border-danger rounded text-sm text-danger">
             {errorMessage}
