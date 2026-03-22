@@ -7,30 +7,18 @@ import { useOrganizationStore } from '../stores/organization';
 import { usersApi, type ProjectWithRole } from '../lib/api';
 import { CreateProjectModal } from '../components/project/CreateProjectModal';
 
-/** 組織フィルターの選択肢 */
-type OrganizationFilter = 'personal' | string;
-
-/**
- * プロジェクト一覧ページ
- */
 export function ProjectsPage() {
   const { user } = useAuthStore();
-  const { organizations } = useOrganizationStore();
+  const { organizations, selectedOrganizationId } = useOrganizationStore();
   const [searchQuery, setSearchQuery] = useState('');
-  const { selectedOrganizationId } = useOrganizationStore();
-  const [organizationFilter, setOrganizationFilter] = useState<OrganizationFilter>(
+  const [organizationFilter, setOrganizationFilter] = useState(
     selectedOrganizationId ?? 'personal'
   );
   const [includeDeleted, setIncludeDeleted] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  // APIに渡すorganizationIdを計算
-  const apiOrganizationId = useMemo(() => {
-    if (organizationFilter === 'personal') return null;
-    return organizationFilter;
-  }, [organizationFilter]);
+  const apiOrganizationId = organizationFilter === 'personal' ? null : organizationFilter;
 
-  // プロジェクト一覧を取得
   const { data, isLoading } = useQuery({
     queryKey: ['user-projects', user?.id, apiOrganizationId, includeDeleted],
     queryFn: () =>
@@ -41,20 +29,16 @@ export function ProjectsPage() {
     enabled: !!user?.id,
   });
 
-  // クライアントサイドで名前検索フィルターを適用
-  // 注: APIにはqパラメータがあるが、プロジェクト数が少ない想定のためクライアントサイドで即時フィルタリング。
-  // 大量プロジェクト対応が必要な場合はデバウンス付きAPI検索に変更を検討
+  // APIにはqパラメータがあるが、プロジェクト数が少ない想定のためクライアントサイドで即時フィルタリング
   const filteredProjects = useMemo(() => {
     const projects = data?.projects || [];
     if (!searchQuery) return projects;
-    return projects.filter((project) =>
-      project.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const query = searchQuery.toLowerCase();
+    return projects.filter((project) => project.name.toLowerCase().includes(query));
   }, [data?.projects, searchQuery]);
 
   return (
     <div className="space-y-6">
-      {/* ヘッダー */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">プロジェクト</h1>
@@ -66,9 +50,7 @@ export function ProjectsPage() {
         </button>
       </div>
 
-      {/* 検索・フィルター */}
       <div className="flex flex-col sm:flex-row gap-3">
-        {/* 検索 */}
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-subtle" />
           <input
@@ -80,7 +62,6 @@ export function ProjectsPage() {
           />
         </div>
 
-        {/* 組織フィルター */}
         <div className="relative">
           <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-foreground-subtle" />
           <select
@@ -97,7 +78,6 @@ export function ProjectsPage() {
           </select>
         </div>
 
-        {/* 削除済み表示切替 */}
         <label className="flex items-center gap-2 px-3 cursor-pointer text-sm text-foreground-muted hover:text-foreground">
           <input
             type="checkbox"
@@ -110,7 +90,6 @@ export function ProjectsPage() {
         </label>
       </div>
 
-      {/* プロジェクトリスト */}
       {isLoading ? (
         <div className="card p-8 text-center text-foreground-muted">読み込み中...</div>
       ) : filteredProjects.length === 0 ? (
@@ -134,19 +113,15 @@ export function ProjectsPage() {
         </div>
       )}
 
-      {/* 作成モーダル */}
       <CreateProjectModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        organizationId={organizationFilter === 'personal' ? undefined : organizationFilter}
+        organizationId={apiOrganizationId ?? undefined}
       />
     </div>
   );
 }
 
-/**
- * プロジェクトカード
- */
 function ProjectCard({ project }: { project: ProjectWithRole }) {
   const isDeleted = !!project.deletedAt;
 
@@ -155,7 +130,6 @@ function ProjectCard({ project }: { project: ProjectWithRole }) {
       to={`/projects/${project.id}`}
       className={`card card-hover p-4 block relative ${isDeleted ? 'opacity-50 grayscale' : ''}`}
     >
-      {/* 削除済みバッジ */}
       {isDeleted && (
         <div className="absolute top-2 right-2 badge badge-danger flex items-center gap-1">
           <Trash2 className="w-3 h-3" />
