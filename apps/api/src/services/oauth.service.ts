@@ -20,6 +20,7 @@ import {
   SUPPORTED_SCOPES,
 } from '../validators/oauth.validator.js';
 import { env } from '../config/env.js';
+import { CimdService, CimdResolveError } from './cimd/cimd-service.js';
 
 // 認可コード有効期限: 10分
 const AUTHORIZATION_CODE_EXPIRES_IN = 10 * 60 * 1000;
@@ -48,7 +49,21 @@ export class OAuthError extends Error {
  * OAuth サービス
  */
 export class OAuthService {
-  constructor(private repository: IOAuthRepository = new OAuthRepository()) {}
+  private readonly cimdService: CimdService;
+
+  constructor(
+    private repository: IOAuthRepository = new OAuthRepository(),
+    cimdService?: CimdService
+  ) {
+    this.cimdService =
+      cimdService ??
+      new CimdService({
+        repository: this.repository,
+        maxBytes: env.CIMD_MAX_BYTES,
+        timeoutMs: env.CIMD_FETCH_TIMEOUT_MS,
+        defaultCacheTtlSec: env.CIMD_CACHE_TTL_SEC,
+      });
+  }
 
   // ============================================
   // Authorization Server Metadata
@@ -68,7 +83,31 @@ export class OAuthService {
       code_challenge_methods_supported: ['S256'],
       token_endpoint_auth_methods_supported: ['none'],
       scopes_supported: SUPPORTED_SCOPES,
+      // MCP仕様 (2025-11): CIMD (Client ID Metadata Document) サポートを広告
+      // draft-ietf-oauth-client-id-metadata-document-00
+      client_id_metadata_document_supported: true,
     };
+  }
+
+  /**
+   * client_id を解決して有効な OAuthClient を返す。
+   *
+   * - UUID 形式 → DCR 経路 (DBから検索)
+   * - HTTPS URL → CIMD 経路 (キャッシュ判定 + 必要に応じてフェッチ)
+   *
+   * 解決失敗時は OAuthError(invalid_client) を投げる。
+   */
+  async resolveClient(clientId: string): Promise<OAuthClient> {
+    try {
+      return await this.cimdService.resolveClient(clientId);
+    } catch (err) {
+      if (err instanceof CimdResolveError) {
+        const description =
+          err.path === 'cimd' ? `CIMD client resolution failed: ${err.reason}` : 'Client not found';
+        throw new OAuthError('invalid_client', description, 401);
+      }
+      throw err;
+    }
   }
 
   // ============================================
@@ -160,13 +199,11 @@ export class OAuthService {
     scopes: string[];
     redirectUri: string;
   }> {
-    // クライアント検証
-    const client = await this.repository.findClientByClientId(input.client_id);
-    if (!client) {
-      throw new OAuthError('invalid_client', 'Client not found', 401);
-    }
+    // クライアント検証 (CIMD URL or DCR UUID 経路を内部で分岐)
+    const client = await this.resolveClient(input.client_id);
 
     // redirect_uri検証 (登録済みURIとの照合)
+    // CIMD 経路ではメタデータ宣言の redirect_uris が upsert で保存されているため同じ比較で動作する
     if (!client.redirectUris.includes(input.redirect_uri)) {
       throw new OAuthError(
         'invalid_redirect_uri',

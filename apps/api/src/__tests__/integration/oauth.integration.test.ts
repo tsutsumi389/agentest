@@ -108,6 +108,8 @@ describe('OAuth API 結合テスト', () => {
       expect(response.body.response_types_supported).toEqual(['code']);
       expect(response.body.grant_types_supported).toEqual(['authorization_code', 'refresh_token']);
       expect(response.body.code_challenge_methods_supported).toEqual(['S256']);
+      // CIMD (draft-ietf-oauth-client-id-metadata-document-00) サポート広告
+      expect(response.body.client_id_metadata_document_supported).toBe(true);
     });
   });
 

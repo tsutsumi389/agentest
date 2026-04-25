@@ -7,6 +7,8 @@ import { computeCodeChallenge } from '../../utils/pkce.js';
 const createMockRepository = (): IOAuthRepository => ({
   createClient: vi.fn(),
   findClientByClientId: vi.fn(),
+  upsertCimdClient: vi.fn(),
+  touchCimdClient: vi.fn(),
   createAuthorizationCode: vi.fn(),
   findAuthorizationCodeByCode: vi.fn(),
   markAuthorizationCodeAsUsed: vi.fn(),

@@ -19,6 +19,21 @@ export const SUPPORTED_SCOPES = [
 ] as const;
 
 /**
+ * client_id スキーマ
+ * - DCR 経路では UUID
+ * - CIMD 経路では HTTPS URL
+ *
+ * authorize / token / revoke エンドポイントの起点で受け入れる必要がある。
+ * 経路分岐は CimdService.resolveClient が行う。
+ */
+const cimdUrlSchema = z
+  .string()
+  .url()
+  .refine((v) => v.startsWith('https://'), 'client_id URL must use https');
+
+export const clientIdSchema = z.union([z.string().uuid(), cimdUrlSchema]);
+
+/**
  * 動的クライアント登録リクエスト (RFC 7591)
  */
 export const clientRegistrationSchema = z.object({
@@ -43,7 +58,7 @@ export type ClientRegistrationInput = z.infer<typeof clientRegistrationSchema>;
  */
 export const authorizeRequestSchema = z.object({
   response_type: z.literal('code'),
-  client_id: z.string().uuid(),
+  client_id: clientIdSchema,
   redirect_uri: z.string().url(),
   code_challenge: z.string().min(43).max(128), // Base64URL encoded SHA256
   code_challenge_method: z.literal('S256'),
@@ -61,7 +76,7 @@ export const authorizationCodeTokenRequestSchema = z.object({
   grant_type: z.literal('authorization_code'),
   code: z.string().min(1),
   redirect_uri: z.string().url(),
-  client_id: z.string().uuid(),
+  client_id: clientIdSchema,
   code_verifier: z.string().min(43).max(128), // RFC 7636: PKCE
   resource: z.string().url().optional(), // RFC 8707
 });
@@ -76,7 +91,7 @@ export type AuthorizationCodeTokenRequestInput = z.infer<
 export const refreshTokenRequestSchema = z.object({
   grant_type: z.literal('refresh_token'),
   refresh_token: z.string().min(1),
-  client_id: z.string().uuid(),
+  client_id: clientIdSchema,
   scope: z.string().optional(), // スコープのダウングレードが可能
 });
 
@@ -106,7 +121,7 @@ export type IntrospectionRequestInput = z.infer<typeof introspectionRequestSchem
  */
 export const revokeRequestSchema = z.object({
   token: z.string().min(1),
-  client_id: z.string().uuid().optional(),
+  client_id: clientIdSchema.optional(),
 });
 
 export type RevokeRequestInput = z.infer<typeof revokeRequestSchema>;
