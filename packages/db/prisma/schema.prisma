@@ -1046,10 +1046,11 @@ model AuditLog {
 // OAuth 2.1 認証モデル (RFC 9728, RFC 7591, RFC 8707)
 // ============================================
 
-// OAuthクライアント (動的クライアント登録: RFC 7591)
+// OAuthクライアント (動的クライアント登録: RFC 7591 / CIMD: draft-ietf-oauth-client-id-metadata-document-00)
 model OAuthClient {
   id                      String    @id @default(uuid())
-  clientId                String    @unique @map("client_id") @db.VarChar(255)
+  // CIMD では client_id が HTTPS URL になり得るため最大 2048 文字を許容
+  clientId                String    @unique @map("client_id") @db.VarChar(2048)
   clientSecret            String?   @map("client_secret") @db.VarChar(255)
   clientSecretExpiresAt   DateTime? @map("client_secret_expires_at")
   clientIdIssuedAt        DateTime  @default(now()) @map("client_id_issued_at")
@@ -1064,6 +1065,13 @@ model OAuthClient {
   softwareId              String?   @map("software_id") @db.VarChar(255)
   softwareVersion         String?   @map("software_version") @db.VarChar(50)
   isActive                Boolean   @default(true) @map("is_active")
+  // CIMD関連フィールド
+  isCimd                  Boolean   @default(false) @map("is_cimd")
+  metadataUrl             String?   @map("metadata_url") @db.VarChar(2048)
+  metadataFetchedAt       DateTime? @map("metadata_fetched_at")
+  metadataExpiresAt       DateTime? @map("metadata_expires_at")
+  metadataEtag            String?   @map("metadata_etag") @db.VarChar(255)
+  jwksUri                 String?   @map("jwks_uri")
   createdAt               DateTime  @default(now()) @map("created_at")
   updatedAt               DateTime  @updatedAt @map("updated_at")
 
@@ -1078,7 +1086,7 @@ model OAuthClient {
 model OAuthAuthorizationCode {
   id                  String    @id @default(uuid())
   code                String    @unique @db.VarChar(255)
-  clientId            String    @map("client_id")
+  clientId            String    @map("client_id") @db.VarChar(2048)
   userId              String    @map("user_id")
   redirectUri         String    @map("redirect_uri")
   scopes              String[]
@@ -1100,7 +1108,7 @@ model OAuthAuthorizationCode {
 model OAuthAccessToken {
   id             String    @id @default(uuid())
   tokenHash      String    @unique @map("token_hash") @db.VarChar(64)
-  clientId       String    @map("client_id")
+  clientId       String    @map("client_id") @db.VarChar(2048)
   userId         String    @map("user_id")
   scopes         String[]
   audience       String    @db.VarChar(500) // RFC 8707
@@ -1122,7 +1130,7 @@ model OAuthAccessToken {
 model OAuthRefreshToken {
   id        String    @id @default(uuid())
   tokenHash String    @unique @map("token_hash") @db.VarChar(64)
-  clientId  String    @map("client_id")
+  clientId  String    @map("client_id") @db.VarChar(2048)
   userId    String    @map("user_id")
   scopes    String[]
   audience  String    @db.VarChar(500) // RFC 8707

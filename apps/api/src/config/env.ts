@@ -90,6 +90,18 @@ const envSchema = z.object({
     .string()
     .default('true')
     .transform((val) => val === 'true'),
+
+  // CIMD (Client ID Metadata Document) 取得設定
+  // メタデータドキュメントのサイズ上限 (5KB)
+  CIMD_MAX_BYTES: z.coerce
+    .number()
+    .int()
+    .positive()
+    .default(5 * 1024),
+  // メタデータ取得時のタイムアウト (ms)
+  CIMD_FETCH_TIMEOUT_MS: z.coerce.number().int().positive().default(5_000),
+  // Cache-Controlヘッダがない場合のデフォルトTTL (秒)
+  CIMD_CACHE_TTL_SEC: z.coerce.number().int().positive().default(3_600),
 });
 
 // 環境変数を検証

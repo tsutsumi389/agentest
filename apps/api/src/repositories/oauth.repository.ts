@@ -14,6 +14,8 @@ export interface IOAuthRepository {
   // クライアント
   createClient(data: CreateClientInput): Promise<OAuthClient>;
   findClientByClientId(clientId: string): Promise<OAuthClient | null>;
+  upsertCimdClient(data: UpsertCimdClientInput): Promise<OAuthClient>;
+  touchCimdClient(data: TouchCimdClientInput): Promise<OAuthClient>;
 
   // 認可コード
   createAuthorizationCode(data: CreateAuthorizationCodeInput): Promise<OAuthAuthorizationCode>;
@@ -45,6 +47,32 @@ export interface CreateClientInput {
   logoUri?: string;
   softwareId?: string;
   softwareVersion?: string;
+}
+
+export interface UpsertCimdClientInput {
+  /** CIMD URL = clientId */
+  clientId: string;
+  clientName: string;
+  redirectUris: string[];
+  grantTypes: string[];
+  responseTypes: string[];
+  tokenEndpointAuthMethod: string;
+  scopes: string[];
+  clientUri?: string;
+  logoUri?: string;
+  softwareId?: string;
+  softwareVersion?: string;
+  jwksUri?: string;
+  metadataFetchedAt: Date;
+  metadataExpiresAt: Date | null;
+  metadataEtag?: string;
+}
+
+export interface TouchCimdClientInput {
+  clientId: string;
+  metadataFetchedAt: Date;
+  metadataExpiresAt: Date | null;
+  metadataEtag?: string;
 }
 
 export interface CreateAuthorizationCodeInput {
@@ -109,6 +137,62 @@ export class OAuthRepository implements IOAuthRepository {
   async findClientByClientId(clientId: string): Promise<OAuthClient | null> {
     return this.db.oAuthClient.findUnique({
       where: { clientId, isActive: true },
+    });
+  }
+
+  async upsertCimdClient(data: UpsertCimdClientInput): Promise<OAuthClient> {
+    return this.db.oAuthClient.upsert({
+      where: { clientId: data.clientId },
+      create: {
+        clientId: data.clientId,
+        clientName: data.clientName,
+        redirectUris: data.redirectUris,
+        grantTypes: data.grantTypes,
+        responseTypes: data.responseTypes,
+        tokenEndpointAuthMethod: data.tokenEndpointAuthMethod,
+        scopes: data.scopes,
+        clientUri: data.clientUri,
+        logoUri: data.logoUri,
+        softwareId: data.softwareId,
+        softwareVersion: data.softwareVersion,
+        isCimd: true,
+        isActive: true,
+        metadataUrl: data.clientId,
+        metadataFetchedAt: data.metadataFetchedAt,
+        metadataExpiresAt: data.metadataExpiresAt,
+        metadataEtag: data.metadataEtag,
+        jwksUri: data.jwksUri,
+      },
+      update: {
+        clientName: data.clientName,
+        redirectUris: data.redirectUris,
+        grantTypes: data.grantTypes,
+        responseTypes: data.responseTypes,
+        tokenEndpointAuthMethod: data.tokenEndpointAuthMethod,
+        scopes: data.scopes,
+        clientUri: data.clientUri,
+        logoUri: data.logoUri,
+        softwareId: data.softwareId,
+        softwareVersion: data.softwareVersion,
+        isCimd: true,
+        isActive: true,
+        metadataUrl: data.clientId,
+        metadataFetchedAt: data.metadataFetchedAt,
+        metadataExpiresAt: data.metadataExpiresAt,
+        metadataEtag: data.metadataEtag,
+        jwksUri: data.jwksUri,
+      },
+    });
+  }
+
+  async touchCimdClient(data: TouchCimdClientInput): Promise<OAuthClient> {
+    return this.db.oAuthClient.update({
+      where: { clientId: data.clientId },
+      data: {
+        metadataFetchedAt: data.metadataFetchedAt,
+        metadataExpiresAt: data.metadataExpiresAt,
+        ...(data.metadataEtag !== undefined && { metadataEtag: data.metadataEtag }),
+      },
     });
   }
 
