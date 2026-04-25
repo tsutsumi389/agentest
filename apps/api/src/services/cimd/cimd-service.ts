@@ -13,7 +13,10 @@ import {
 const logger = baseLogger.child({ module: 'cimd' });
 
 export class CimdResolveError extends Error {
-  constructor(public readonly reason: string) {
+  constructor(
+    public readonly reason: string,
+    public readonly path: 'cimd' | 'dcr' = 'cimd'
+  ) {
     super(reason);
     this.name = 'CimdResolveError';
   }
@@ -68,9 +71,19 @@ export class CimdService {
       // DCR 経路 (UUID 形式または非 https URL → DCR にフォールバック)
       const client = await this.repository.findClientByClientId(clientId);
       if (!client) {
-        throw new CimdResolveError('client not found (DCR path)');
+        throw new CimdResolveError('client not found (DCR path)', 'dcr');
       }
       return client;
+    }
+
+    // CIMD URL の形状検証はキャッシュ参照より前に1回だけ実施
+    try {
+      validateCimdUrl(clientId);
+    } catch (err) {
+      if (err instanceof CimdUrlError) {
+        throw new CimdResolveError(`invalid CIMD URL: ${err.reason}`);
+      }
+      throw err;
     }
 
     // CIMD 経路: in-flight キャッシュで重複抑止
@@ -85,15 +98,6 @@ export class CimdService {
   }
 
   private async resolveCimdClient(clientId: string): Promise<OAuthClient> {
-    try {
-      validateCimdUrl(clientId);
-    } catch (err) {
-      if (err instanceof CimdUrlError) {
-        throw new CimdResolveError(`invalid CIMD URL: ${err.reason}`);
-      }
-      throw err;
-    }
-
     const cached = await this.repository.findClientByClientId(clientId);
     const now = this.now();
 

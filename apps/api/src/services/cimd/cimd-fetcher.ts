@@ -1,4 +1,4 @@
-import { safeFetchJson, type SafeFetchTransport } from '../../utils/safe-fetch.js';
+import { safeFetchJson, headerString, type SafeFetchTransport } from '../../utils/safe-fetch.js';
 
 /**
  * CIMD (Client ID Metadata Document) ドキュメントの取得層。
@@ -44,26 +44,6 @@ export interface FetchCimdResult {
   fetchedAt: Date;
 }
 
-/**
- * Cache-Control ヘッダ値から max-age を抽出する。
- *
- * - "no-store" のときは 0 を返す
- * - max-age が見つからなければ undefined
- */
-function extractMaxAge(cacheControl: string | undefined): number | 'no-store' | undefined {
-  if (!cacheControl) return undefined;
-  const lower = cacheControl.toLowerCase();
-  if (/(^|,\s*)no-store(\s*,|$)/.test(lower)) return 'no-store';
-  const match = /max-age\s*=\s*(\d+)/.exec(lower);
-  if (!match) return undefined;
-  return Number.parseInt(match[1], 10);
-}
-
-function headerValue(value: string | string[] | undefined): string | undefined {
-  if (Array.isArray(value)) return value[0];
-  return value;
-}
-
 export async function fetchCimdMetadata(
   url: string,
   opts: FetchCimdOptions
@@ -96,7 +76,7 @@ export async function fetchCimdMetadata(
       metadata: null,
       etag: opts.etag,
       expiresAt: computeExpiresAt(
-        headerValue(response.headers['cache-control']),
+        headerString(response.headers['cache-control']),
         opts.defaultCacheTtlSec,
         now
       ),
@@ -123,9 +103,9 @@ export async function fetchCimdMetadata(
   return {
     status: 200,
     metadata,
-    etag: headerValue(response.headers['etag']),
+    etag: headerString(response.headers['etag']),
     expiresAt: computeExpiresAt(
-      headerValue(response.headers['cache-control']),
+      headerString(response.headers['cache-control']),
       opts.defaultCacheTtlSec,
       now
     ),
@@ -136,21 +116,20 @@ export async function fetchCimdMetadata(
 /**
  * Cache-Control から有効期限を算出する。
  *
+ * - no-store → now と等しい (即時期限切れ)
  * - max-age=N → now + N秒
- * - no-store → now と等しい (期限切れ即時)
- * - 何もなければ → now + defaultCacheTtlSec秒
+ * - いずれもなければ → now + defaultTtlSec秒
  */
 function computeExpiresAt(
   cacheControl: string | undefined,
   defaultTtlSec: number,
   now: Date
 ): Date {
-  const maxAge = extractMaxAge(cacheControl);
-  if (maxAge === 'no-store') {
+  const lower = cacheControl?.toLowerCase();
+  if (lower && /(^|,\s*)no-store(\s*,|$)/.test(lower)) {
     return new Date(now.getTime());
   }
-  if (typeof maxAge === 'number') {
-    return new Date(now.getTime() + maxAge * 1000);
-  }
-  return new Date(now.getTime() + defaultTtlSec * 1000);
+  const match = lower ? /max-age\s*=\s*(\d+)/.exec(lower) : null;
+  const ttlSec = match ? Number.parseInt(match[1], 10) : defaultTtlSec;
+  return new Date(now.getTime() + ttlSec * 1000);
 }

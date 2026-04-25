@@ -23,31 +23,29 @@ const FORBIDDEN_AUTH_METHODS = new Set([
   'client_secret_jwt',
 ]);
 
-const cimdMetadataSchema = z
-  .object({
-    client_id: z.string().url(),
-    client_name: z.string().min(1).max(200).optional(),
-    redirect_uris: z.array(z.string().url()).min(1),
-    grant_types: z
-      .array(z.string())
-      .default(['authorization_code'])
-      .refine(
-        (arr) => arr.every((g) => g === 'authorization_code' || g === 'refresh_token'),
-        'unsupported grant_type'
-      ),
-    response_types: z
-      .array(z.string())
-      .default(['code'])
-      .refine((arr) => arr.every((r) => r === 'code'), 'unsupported response_type'),
-    token_endpoint_auth_method: z.string().default('none'),
-    scope: z.string().optional(),
-    client_uri: z.string().url().optional(),
-    logo_uri: z.string().url().optional(),
-    software_id: z.string().max(255).optional(),
-    software_version: z.string().max(50).optional(),
-    jwks_uri: z.string().url().optional(),
-  })
-  .passthrough();
+const cimdMetadataSchema = z.object({
+  client_id: z.string().url(),
+  client_name: z.string().min(1).max(200).optional(),
+  redirect_uris: z.array(z.string().url()).min(1),
+  grant_types: z
+    .array(z.string())
+    .default(['authorization_code'])
+    .refine(
+      (arr) => arr.every((g) => g === 'authorization_code' || g === 'refresh_token'),
+      'unsupported grant_type'
+    ),
+  response_types: z
+    .array(z.string())
+    .default(['code'])
+    .refine((arr) => arr.every((r) => r === 'code'), 'unsupported response_type'),
+  token_endpoint_auth_method: z.string().default('none'),
+  scope: z.string().optional(),
+  client_uri: z.string().url().optional(),
+  logo_uri: z.string().url().optional(),
+  software_id: z.string().max(255).optional(),
+  software_version: z.string().max(50).optional(),
+  jwks_uri: z.string().url().optional(),
+});
 
 export type CimdMetadata = z.infer<typeof cimdMetadataSchema>;
 

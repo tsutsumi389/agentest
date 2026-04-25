@@ -21,7 +21,6 @@ import {
 } from '../validators/oauth.validator.js';
 import { env } from '../config/env.js';
 import { CimdService, CimdResolveError } from './cimd/cimd-service.js';
-import { isCimdClientId } from './cimd/cimd-url.js';
 
 // 認可コード有効期限: 10分
 const AUTHORIZATION_CODE_EXPIRES_IN = 10 * 60 * 1000;
@@ -103,9 +102,8 @@ export class OAuthService {
       return await this.cimdService.resolveClient(clientId);
     } catch (err) {
       if (err instanceof CimdResolveError) {
-        const description = isCimdClientId(clientId)
-          ? `CIMD client resolution failed: ${err.reason}`
-          : 'Client not found';
+        const description =
+          err.path === 'cimd' ? `CIMD client resolution failed: ${err.reason}` : 'Client not found';
         throw new OAuthError('invalid_client', description, 401);
       }
       throw err;
